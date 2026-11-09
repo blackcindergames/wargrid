@@ -5,6 +5,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Containers = preload("res://scripts/simulation/containers.gd")
 const Yield = preload("res://scripts/simulation/avoid_yield.gd")
+const Reserve = preload("res://scripts/simulation/avoid_reserve.gd")
 
 const VEHICLE: int = 1
 const INFANTRY: int = 2
@@ -74,6 +75,7 @@ static func begin_tick(sim: Simulation, ids: Array[int]) -> bool:
 		if destination != null:
 			index = floori(destination[1]) * width + floori(destination[0])
 			if reserved[index] == 0: reserved[index] = id + 1
+	if mode == "reserve": Reserve.begin_tick(sim, ids)
 	return true
 
 static func index_of(point: Array) -> int:
@@ -85,7 +87,7 @@ static func cell_of(point: Array) -> Vector2i:
 static func record(sim: Simulation, id: int) -> Dictionary:
 	var found: Variant = sim._avoid.get(id)
 	if found != null: return found
-	var fresh := {"blocked": 0, "ghost_until": 0, "resume": null, "retry_tick": 0, "order": null, "side_route": null}
+	var fresh := {"blocked": 0, "ghost_until": 0, "resume": null, "retry_tick": 0, "order": null, "side_route": null, "claim": -1, "stage": 0, "wait_until": 0}
 	sim._avoid[id] = fresh
 	return fresh
 
@@ -107,6 +109,9 @@ static func busy(unit: Dictionary) -> bool:
 	return Containers.entering(unit)
 
 static func advance(sim: Simulation, unit: Dictionary) -> void:
+	if mode == "reserve":
+		Reserve.advance(sim, unit)
+		return
 	var id: int = unit.id
 	var kind_bits: int = info(unit.kind)
 	if kind_bits & CLASS_MASK == 0:
