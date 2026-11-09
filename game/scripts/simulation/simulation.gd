@@ -14,6 +14,7 @@ const Salvage = preload("res://scripts/simulation/salvage.gd")
 const Locomotion = preload("res://scripts/simulation/locomotion.gd")
 const Allocation = preload("res://scripts/simulation/destination_allocation.gd")
 const Navigation = preload("res://scripts/simulation/grid_navigation.gd")
+const Avoidance = preload("res://scripts/simulation/avoidance.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const PATH_REQUESTS_PER_TICK: int = 8
 const START_DELAY_TICKS: int = 2
@@ -48,6 +49,7 @@ var _navigation_local: int = 0
 var _map: Dictionary = {}
 const RNG_SEED: int = 0x2545F491
 var _rng: int = RNG_SEED
+var _avoid: Dictionary = {}
 
 func _init(blocked_cells: Array[Vector2i] = [], size: Vector2i = Navigation.SIZE) -> void:
 	_navigation = Navigation.new(blocked_cells, size)
@@ -547,9 +549,12 @@ func step() -> void:
 	zone = Profiler.begin()
 	var before: Dictionary = {}
 	for id in armed: before[id] = _entities[id].position
+	var avoiding: bool = Avoidance.begin_tick(self, ids)
 	for id in ids:
 		var unit: Dictionary = _entities[id]
-		if unit.status == "moving": _advance(unit)
+		if unit.status == "moving":
+			if avoiding: Avoidance.advance(self, unit)
+			else: _advance(unit)
 		elif unit.status != "path_pending": unit.speed = 0.0
 	Containers.step(self)
 	Horde.step(self,armed)

@@ -126,6 +126,18 @@ func route(from: Vector2, to: Vector2) -> Array[Vector2]:
 		points.pop_front()
 	return points
 
+# Spike: route with extra temporary obstacles; the grid is restored before returning.
+func route_avoiding(from: Vector2, to: Vector2, cells: Array[Vector2i]) -> Array[Vector2]:
+	var toggled: Array[Vector2i] = []
+	for cell in cells:
+		if _grid.region.has_point(cell) and not _grid.is_point_solid(cell):
+			_grid.set_point_solid(cell, true)
+			toggled.append(cell)
+	var points: Array[Vector2] = route(from, to)
+	for cell in toggled:
+		_grid.set_point_solid(cell, false)
+	return points
+
 func snapshot() -> Dictionary:
 	if _snapshot_cache.is_empty():
 		var cells: Array = []
