@@ -65,10 +65,21 @@ static func issue_opponent(sim: RefCounted, player: int = 2, attack_tick: int = 
 	issue_opponents(sim, [player], attack_tick)
 
 static func issue_opponents(sim: RefCounted, players: Array[int], attack_tick: int = ATTACK_TICK) -> void:
-	if sim.tick() % DECISION_TICKS != 0: return
-	var zone: int = Profiler.begin()
-	for player in players: _decide(sim, player, attack_tick, _real(sim).bot_state())
-	Profiler.end(&"opponent.decide", zone)
+	for player in players:
+		if not decides(sim.tick(), player): continue
+		var zone: int = Profiler.begin()
+		decide(sim, player, attack_tick)
+		Profiler.end(&"opponent.decide", zone)
+
+# Seat k decides on ticks k, k + 30, ...: six seats on one tick made the team match's worst tick.
+static func decides(tick: int, player: int) -> bool:
+	return tick % DECISION_TICKS == player % DECISION_TICKS
+
+static func next_decision(tick: int, player: int) -> int:
+	return tick + 1 + posmod(player - tick - 1, DECISION_TICKS)
+
+static func decide(sim: RefCounted, player: int, attack_tick: int = ATTACK_TICK) -> void:
+	_decide(sim, player, attack_tick, _real(sim).bot_state())
 
 # A seat wrapper or command recorder is rebuilt every decision; memory and state live on the simulation.
 static func _real(seat_or_sim: RefCounted) -> RefCounted:

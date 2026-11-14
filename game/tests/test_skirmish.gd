@@ -21,7 +21,7 @@ const ASHFALL := "res://data/maps/ashfall.json"
 const CHOSEN: Array[int] = [5, 1]
 
 func cases() -> Array[Callable]:
-	return [test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_four_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_wave_targets_base_unless_enemy_near, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
+	return [test_bot_seats_decide_on_their_own_ticks, test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_four_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_wave_targets_base_unless_enemy_near, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
 
 func _owned(items: Array, player: int) -> Array:
 	return items.filter(func(item: Dictionary) -> bool: return item.owner == player)
@@ -76,7 +76,7 @@ func test_roster_production(runner) -> bool:
 	return true
 
 func _decide(sim: RefCounted) -> void:
-	if sim.snapshot().tick % 30 == 0: Skirmish.issue_opponent(sim)
+	if Skirmish.decides(sim.tick(), 2): Skirmish.decide(sim, 2)
 
 func test_bot_cycles_unit_list(runner) -> bool:
 	var sim = Skirmish.create()
@@ -96,13 +96,13 @@ func test_bot_cycles_unit_list(runner) -> bool:
 
 func test_bot_reads_seat_faction(runner) -> bool:
 	var sim = Skirmish.create(true, "ai", {1: "usa", 2: "china"})
-	Skirmish.issue_opponent(sim)
+	Skirmish.decide(sim, 2)
 	sim.step()
 	var site: Array = _built(sim.snapshot().buildings, 2).map(func(b: Dictionary) -> String: return b.kind)
 	runner.check(site == ["china_command_center", "china_power_plant"], "B4 the opponent reads the build order from its seat's faction, got " + str(site))
 	Economy.add_completed(sim, 2, "china_barracks", Vector2i(20, 20))
 	for i in 59: sim.step()
-	Skirmish.issue_opponent(sim)
+	Skirmish.decide(sim, 2)
 	sim.step()
 	var queued: Array = _owned(sim.snapshot().buildings, 2).filter(func(b: Dictionary) -> bool: return not b.queue.is_empty())
 	runner.check(not queued.is_empty() and queued.all(func(b: Dictionary) -> bool: return b.queue[0].kind == "china_rifle_infantry"), "B4 the opponent trains the faction's unit for the producer, got " + str(queued))
@@ -164,7 +164,7 @@ func test_bot_leaves_rebuild_alone(runner) -> bool:
 
 func test_opponent_pays_and_retries(runner) -> bool:
 	var sim = Skirmish.create()
-	Skirmish.issue_opponent(sim)
+	Skirmish.decide(sim, 2)
 	sim.step()
 	var first: Dictionary = sim.snapshot()
 	runner.check(_built(first.buildings, 2).size() == 1 and _built(first.buildings, 2)[0].kind == "usa_power_plant" and _built(first.buildings, 2)[0].origin == [38, 12] and first.players[1].credits == 9200, "O1 first decision places the mirrored reactor and pays 800")
@@ -192,7 +192,7 @@ func test_opponent_pays_and_retries(runner) -> bool:
 	runner.check(sim.snapshot().last_sequences.any(func(entry: Dictionary) -> bool: return entry.player == 2 and entry.sequence >= 5), "O1 sequences continue from the snapshot")
 	var poor = _world(100)
 	var before: Dictionary = poor.snapshot()
-	Skirmish.issue_opponent(poor)
+	Skirmish.decide(poor, 2)
 	runner.check(poor.snapshot() == before, "O1 unaffordable site changes nothing")
 	return true
 
@@ -242,20 +242,20 @@ func test_opponent_attack_policy(runner) -> bool:
 	runner.check(_attack_targets(sim, army).is_empty(), "A3 no attack orders before tick 5400")
 	_bot_until_attack(sim, army, Skirmish.ATTACK_TICK + 4000)
 	runner.check(_attack_targets(sim, army) == [first, first, first, first], "A3 the wave shares the best-scored target, a builder, got " + str(_attack_targets(sim, army)))
-	_to_tick(sim, sim.tick() + Skirmish.DECISION_TICKS - sim.tick() % Skirmish.DECISION_TICKS)
-	Skirmish.issue_opponent(sim)
+	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+	Skirmish.decide(sim, 2)
 	runner.check(sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "attack").is_empty(), "A3 attackers are not reissued")
 	sim.remove_object(1)
 	for expected in [first, second, barracks, reactor, depot, 2]:
-		_to_tick(sim, sim.tick() + Skirmish.DECISION_TICKS - sim.tick() % Skirmish.DECISION_TICKS)
-		Skirmish.issue_opponent(sim)
+		_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+		Skirmish.decide(sim, 2)
 		sim.step()
 		runner.check(_attack_targets(sim, army) == [expected, expected, expected, expected], "A3 next target by score " + str(expected) + ", got " + str(_attack_targets(sim, army)))
 		sim.remove_object(expected)
 	var lone = _world(10000)
 	lone.remove_object(1)
 	var before: Dictionary = lone.snapshot()
-	Skirmish.issue_opponent(lone)
+	Skirmish.decide(lone, 2)
 	runner.check(lone.snapshot() == before, "A3 an eliminated opponent submits nothing")
 	return true
 
@@ -288,8 +288,8 @@ func test_wave_target_removed_same_tick(runner) -> bool:
 	runner.check(sim.snapshot().pending_commands.any(func(command: Dictionary) -> bool: return command.type == "attack" and command.target_id == world[2]), "W2 the wave order against the building is queued before it is removed")
 	sim.remove_object(world[2])
 	sim.step()
-	_to_tick(sim, sim.tick() + Skirmish.DECISION_TICKS - sim.tick() % Skirmish.DECISION_TICKS)
-	Skirmish.issue_opponent(sim)
+	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+	Skirmish.decide(sim, 2)
 	sim.step()
 	runner.check(_attack_targets(sim, world[1]) == [world[3], world[3], world[3], world[3]], "W2 wave retargets the remaining unit after its target vanished, got " + str(_attack_targets(sim, world[1])))
 	return true
@@ -304,14 +304,14 @@ func test_wave_fights_unit_met_on_the_way(runner) -> bool:
 	for unit in sim.snapshot().entities:
 		if world[1].has(unit.id): wave_at += Vector2(unit.position[0], unit.position[1]) / world[1].size()
 	var met: int = sim.spawn(1, wave_at + Vector2(0.0, 6.0), "usa_rifle_infantry")
-	_to_tick(sim, sim.tick() + Skirmish.DECISION_TICKS - sim.tick() % Skirmish.DECISION_TICKS)
-	Skirmish.issue_opponent(sim)
+	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+	Skirmish.decide(sim, 2)
 	sim.step()
 	runner.check(_attack_targets(sim, world[1]) == [met, met, met, met], "W3 a wave marching to a base fights an enemy unit that comes within reach, got " + str(_attack_targets(sim, world[1])))
 	sim.remove_object(met)
 	sim.step()
-	_to_tick(sim, sim.tick() + Skirmish.DECISION_TICKS - sim.tick() % Skirmish.DECISION_TICKS)
-	Skirmish.issue_opponent(sim)
+	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+	Skirmish.decide(sim, 2)
 	sim.step()
 	runner.check(_attack_targets(sim, world[1]).has(world[2]) and not _attack_targets(sim, world[1]).has(met), "W3 once the unit is dead the wave resumes, got " + str(_attack_targets(sim, world[1])))
 	return true
@@ -335,8 +335,8 @@ func _defence_world(runner) -> Array:
 	return [sim, edge]
 
 func _decide_now(sim: RefCounted) -> void:
-	_to_tick(sim, (sim.snapshot().tick / 30 + 1) * 30)
-	Skirmish.issue_opponent(sim, 1)
+	_to_tick(sim, Skirmish.next_decision(sim.snapshot().tick, 1))
+	Skirmish.decide(sim, 1)
 	sim.step()
 
 func _mode(sim: RefCounted, id: int) -> Dictionary:
@@ -659,8 +659,7 @@ func test_bot_rally_follows_chosen_start(runner) -> bool:
 	var ashfall := MapData.load(ASHFALL)
 	var sim = _chosen_sim()
 	sim.spawn(1, Vector2(MapData.start_cell(ashfall, 3)) + Vector2(0.5, 0.5), "usa_rifle_infantry")
-	var players: Array[int] = [1]
-	Skirmish.issue_opponents(sim, players, 0)
+	Skirmish.decide(sim, 1, 0)
 	var seat5 := Vector2(MapData.start_cell(ashfall, 5)) + Vector2(0.5, 0.5)
 	var moves: Array = sim.snapshot().pending_commands.filter(func(c: Dictionary) -> bool: return c.type == "move" and c.player == 1)
 	runner.check(moves.size() == 1 and moves[0].target == [seat5.x, seat5.y], "SK-S3 player 1's wave rally is seat 5's start cell, got %s" % str(moves))
@@ -790,4 +789,27 @@ func test_bot_state_is_a_copy(runner) -> bool:
 	b.buildings[0].hp -= 1
 	b.players[0].credits += 1
 	runner.check(sim.snapshot() == before, "BS2 changing the bot state changes nothing in the simulation")
+	return true
+
+func test_bot_seats_decide_on_their_own_ticks(runner) -> bool:
+	var sim = TeamMatch.create()
+	var seats: Array[int] = []
+	for entry in TeamMatch.SEATS: seats.append(entry.seat)
+	var seen := {}
+	var first := {}
+	var commands: int = 0
+	var off: int = 0
+	for tick in range(90):
+		Skirmish.issue_opponents(sim, seats)
+		for command: Dictionary in sim.snapshot().pending_commands:
+			var key := Vector2i(command.player, command.sequence)
+			if seen.has(key): continue
+			seen[key] = true
+			commands += 1
+			if command.tick % Skirmish.DECISION_TICKS != command.player % Skirmish.DECISION_TICKS: off += 1
+			if not first.has(command.player): first[command.player] = command.tick
+		sim.step()
+	runner.check(commands > 0 and off == 0, "BT1 bot seat k issues commands only on ticks where tick mod 30 equals k mod 30 (%d commands, %d off)" % [commands, off])
+	for seat in seats:
+		runner.check(first.get(seat, -1) == seat, "BT1 seat %d first decides at tick %d" % [seat, seat])
 	return true

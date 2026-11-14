@@ -240,12 +240,12 @@ func _bot_orders(sim, kind: String) -> int:
 func test_bot_trains_builder_without_one(runner) -> bool:
 	var sim = Skirmish.create(false)
 	sim.remove_object(3)
-	Skirmish.issue_opponent(sim)
+	Skirmish.decide(sim, 2)
 	runner.check(_bot_orders(sim, "usa_builder") == 1, "B1 the bot trains a builder from its command center when it has none")
 	EconomyFixture.steps(sim, 400)
 	runner.check(sim.snapshot().entities.any(func(u: Dictionary) -> bool: return u.owner == 2 and u.kind == "usa_builder"), "B1 the trained builder exists")
 	var other = Skirmish.create(false)
-	Skirmish.issue_opponent(other)
+	Skirmish.decide(other, 2)
 	runner.check(_bot_orders(other, "usa_builder") == 0, "B1 a bot with a builder trains none")
 	return true
 
@@ -254,7 +254,7 @@ func test_bot_without_command_center(runner) -> bool:
 	sim.remove_object(3)
 	sim.remove_object(4)
 	EconomyFixture.add_completed(sim, 2, "usa_barracks", Vector2i(34, 12))
-	Skirmish.issue_opponent(sim)
+	Skirmish.decide(sim, 2)
 	EconomyFixture.steps(sim, 2)
 	runner.check(_bot_orders(sim, "usa_builder") == 0 and sim.snapshot().buildings.any(func(b: Dictionary) -> bool: return b.owner == 2 and not b.queue.is_empty() and b.queue[0].kind == "usa_rifle_infantry"), "B2 without a command center or builder the bot keeps producing elsewhere")
 	return true

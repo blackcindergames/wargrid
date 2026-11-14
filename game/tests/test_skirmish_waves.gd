@@ -30,7 +30,7 @@ func _run(sim: RefCounted, tick: int) -> void:
 		sim.step()
 
 func _decide(sim: RefCounted) -> void:
-	Skirmish.issue_opponent(sim)
+	Skirmish.decide(sim, 2)
 	sim.step()
 
 func _targets(sim: RefCounted, ids: Array) -> Array:
@@ -47,10 +47,10 @@ func test_lone_unit_waits_for_timeout(runner) -> bool:
 	var sim = _world()
 	var plant: int = Economy.add_completed(sim, 1, "usa_power_plant", Vector2i(10, 20))
 	var unit: Array = _rally_units(sim, 1)
-	_run(sim, Skirmish.ATTACK_TICK + Skirmish.WAVE_TIMEOUT - Skirmish.DECISION_TICKS)
+	_run(sim, Skirmish.ATTACK_TICK + Skirmish.WAVE_TIMEOUT - Skirmish.DECISION_TICKS + 2)
 	_decide(sim)
 	runner.check(_targets(sim, unit) == [null], "W1 a lone unit waits at the rally before the timeout, got " + str(_targets(sim, unit)))
-	_run(sim, Skirmish.ATTACK_TICK + Skirmish.WAVE_TIMEOUT)
+	_run(sim, Skirmish.ATTACK_TICK + Skirmish.WAVE_TIMEOUT + 2)
 	_decide(sim)
 	runner.check(_targets(sim, unit) == [plant], "W1 the lone unit attacks once WAVE_TIMEOUT ticks passed, got " + str(_targets(sim, unit)))
 	return true
@@ -63,7 +63,7 @@ func test_full_wave_releases_at_once(runner) -> bool:
 	_decide(sim)
 	runner.check(_targets(sim, ids).all(func(target) -> bool: return target == null), "W2 below WAVE_MIN the units keep waiting")
 	ids.append_array(_rally_units(sim, 1, Skirmish.WAVE_MIN - 1))
-	_run(sim, sim.tick() + Skirmish.DECISION_TICKS - sim.tick() % Skirmish.DECISION_TICKS)
+	_run(sim, Skirmish.next_decision(sim.tick(), 2))
 	_decide(sim)
 	runner.check(_all(_targets(sim, ids), plant), "W2 WAVE_MIN idle units attack together at once, got " + str(_targets(sim, ids)))
 	return true
@@ -77,7 +77,7 @@ func test_wave_shares_and_repicks_target(runner) -> bool:
 	var shared: Variant = _targets(sim, ids)[0]
 	runner.check(plants.has(shared) and _all(_targets(sim, ids), shared), "W3 the wave shares one target although units stand nearer different ones, got " + str(_targets(sim, ids)))
 	sim.remove_object(shared)
-	_run(sim, sim.tick() + Skirmish.DECISION_TICKS - sim.tick() % Skirmish.DECISION_TICKS)
+	_run(sim, Skirmish.next_decision(sim.tick(), 2))
 	_decide(sim)
 	var other: int = plants[1] if shared == plants[0] else plants[0]
 	runner.check(_all(_targets(sim, ids), other), "W3 the wave re-picks one shared target after it died, got " + str(_targets(sim, ids)))

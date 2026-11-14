@@ -40,7 +40,7 @@ func test_recorder_logs_accepted_commands(runner) -> bool:
 func test_bot_through_recorder_keeps_memory(runner) -> bool:
 	var sim = Skirmish.create(true, "ai", {1: "usa", 2: "china"})
 	var recorder = CommandRecorder.new(sim)
-	Skirmish.issue_opponents(recorder, [2] as Array[int], 0)
+	Skirmish.decide(recorder, 2, 0)
 	runner.check(sim.has_meta(Skirmish.BOT_META), "RP2 the bot keeps its memory on the real simulation")
 	var commands: Array[Dictionary] = recorder.commands()
 	runner.check(not commands.is_empty() and commands.all(func(command: Dictionary) -> bool: return command.player == 2), "RP2 only player 2 commands are recorded, got %d" % commands.size())

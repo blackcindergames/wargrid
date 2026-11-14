@@ -9,7 +9,8 @@ Last command / cases / checks / failures / exit / marker: none on the branch (th
 Known red case or blocker: plan approval pending (external readiness review applied 2026-11-14, evidence row below). All 21 Questions decided (user, 2026-11-14). Night settings re-checked at the refresh: worktree folder and Edit rule, compare_replays.py, python3 -I for $L scripts, mkdir -p under flatter-worst-ticks, ssh/scp to the Deck present; $L exists; git status, diff, log, add, commit and archive not named (the handoff's proposed copy adds them; scp fallback in Task D0 Step 4)
 Approved decisions, pre-authorizations used, deferred gates: package note "Flatter worst ticks" (user, 2026-11-13); local commits per GREEN task only if the night handoff grants them; benchmark only if the handoff pre-approves it; no budget, ceiling or ASSUMED_SLOWDOWN touched; budget 384 route cells (user, 2026-11-14, round 1); X2 built, erase-and-append kept under the Task 4 Step 6 criterion, worst ticks measured then gated where deterministic (user, 2026-11-14, round 2); Steam Deck rows D0 and D7 report-only, a window on the Deck approved for tonight, Firefox fallback to native rows only (user, 2026-11-14 evening)
 Usage so far (python3 tools/session_usage.py <session files>): n/a
-Next exact action: coordinator commits Task 1; then Task 2 (D0 STARTED; fetch when edges.txt prints DONE)
+Task 3 (2026-11-14 night): GREEN with only R red. Suite `CASES 917 CHECKS 146289 FAILURES 9` (TB3, TB4, Fm1, Cs1, S1 x2, HUD1, VR1 x2), exit 1, logs t3-suite.log; team match won tick=29762 winner=2; profile PROFILE COMPLETE 10; lint 0, warnings 0. Changed: skirmish.gd, test_skirmish.gd, test_skirmish_waves.gd, test_factions.gd, test_playtest_replay.gd, test_skirmish_scene.gd, this file. One unlisted T3-class edit (OD2), see Stagger table.
+Next exact action: coordinator commits Task 3; then Task 4
 ```
 
 Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-ticks.md) (refreshed onto `4c21d1a`). Spec: `docs/packages.md` night lane item 4 and package note "Flatter worst ticks"; `docs/reference/simulation-reference-review.md` §5.2, §5.8, "Review 2026-11-13"; `docs/reference/hordes300-combat-fire.md`. Logs: `~/projects/wargrid-overnight-work/flatter-worst-ticks/logs/` (outside the repository). Deck logs: `$L/deck/`.
@@ -22,7 +23,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 | D0 | Steam Deck rows on the base (start; fetch when done), report-only | Sonnet | STARTED 22:40 (unit wargrid-flatter-base running; fetch pending) |
 | 1 | Retaliators sent home through one reservation map (RS1-RS3), hordes300 benchmark mechanics check | Sonnet | GREEN (uncommitted) |
 | 2 | Bot state, old gate (BS1, BS2), cost probe | Sonnet | GREEN (uncommitted) |
-| 3 | Bot seats on their own tick (BT1), test edits T1-T4 | Sonnet | not started |
+| 3 | Bot seats on their own tick (BT1), test edits T1-T4 | Sonnet | GREEN (uncommitted; only R red) |
 | 4 | Path budget by route cells (PB1-PB4, X2), movement benchmark mechanics check, queue-place criterion (Question 8) | Sonnet | not started |
 | 5 | The one re-pin | Sonnet | not started |
 | 6 | Worst ticks after the changes: count lines, five measured runs | Sonnet | not started |
@@ -57,18 +58,18 @@ Final R (Task 0 Step 4; fixed afterwards):
 
 | # | Pin | Expected (on `4c21d1a`, same as on `74950e5`) | Task 0 | In R | Task 1 | Task 2 | Task 3 | Task 4 | Task 5 new value | Tasks 6-8 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| V1 | `FINAL_DIGEST` | `3958ceaab11986af` | present, equal | yes | | | | | | |
-| V2 | `TEAM_CORE_SERIES` | `8513092129969516499` | present, equal | yes | | | | | | |
-| V3 | `S1_CORE_SERIES`, `TERMINAL_TICK`, `WINNER` | `4004499097874677431`, `8753`, `1` | present, equal | yes | | | | | | |
-| V4 | `CHINA_TERMINAL_TICK`, `CHINA_WINNER`; `FRC_TERMINAL_TICK`, `FRC_WINNER` | `11578`, `2`; `48321`, `1` | present, equal | yes | | | | | | |
-| V5 | `test_state_hash.gd` `PINNED` | `01e256834bdd4dfb` | present, equal | yes | | | | | | |
-| V6 | `test_view_rows.gd` `EXPECTED_DIGEST` | `7c7fbc8d…48a9e7` | present, equal | yes | | | | | | |
+| V1 | `FINAL_DIGEST` | `3958ceaab11986af` | present, equal | yes | | | red: TB3 `4a8649bd8771d81e` at tick 20000 | | | |
+| V2 | `TEAM_CORE_SERIES` | `8513092129969516499` | present, equal | yes | | | red: TB4 `2358232358664745134` | | | |
+| V3 | `S1_CORE_SERIES`, `TERMINAL_TICK`, `WINNER` | `4004499097874677431`, `8753`, `1` | present, equal | yes | | | red: core `3669587849112293937`, tick 8564, winner 1 (inside window) | | | |
+| V4 | `CHINA_TERMINAL_TICK`, `CHINA_WINNER`; `FRC_TERMINAL_TICK`, `FRC_WINNER` | `11578`, `2`; `48321`, `1` | present, equal | yes | | | red: China 24423 / winner 2 (Cs1); FRC 37214 / winner 1 (Fm1); both inside caps | | | |
+| V5 | `test_state_hash.gd` `PINNED` | `01e256834bdd4dfb` | present, equal | yes | | | green (moves with the budget only, as in the review) | | | |
+| V6 | `test_view_rows.gd` `EXPECTED_DIGEST` | `7c7fbc8d…48a9e7` | present, equal | yes | | | red: VR1 x2, `9b513ac33f0caa2fbc3ea79df22860258ffbd4e4db4716120403d06bb9172e85` | | | |
 | V7 | `SS6_PINNED` | unchanged | present, unchanged | **no** | | | | | | |
-| V8 | four traces | `*-before.tsv` through Task 2; `*-t5.tsv` from Task 5 | saved: 4 `*-before.tsv` | yes | | | | | | |
+| V8 | four traces | `*-before.tsv` through Task 2; `*-t5.tsv` from Task 5 | saved: 4 `*-before.tsv` | yes | | | traces written as `*-t3.tsv` (differ by design) | | | |
 | V9 | netplay match terminal tick | `9129` | present, equal | yes | | | | | | |
-| V10 | `run_team_match.sh` | `won tick=39497 winner=2 units_peak=271` | present, equal | yes | | | | | | |
+| V10 | `run_team_match.sh` | `won tick=39497 winner=2 units_peak=271` | present, equal | yes | | | `won tick=29762 winner=2 units_peak=273` (exit 1, pin line) | | | |
 | V11 | `git diff … -- game/tests \| rg '^-\s*const'` | empty before Task 5; R lines only after | n/a | — | | | | | | |
-| V12 | `test_skirmish_scene.gd` `HUD_TEXTS` (HUD1, `:646`) | as on the base | present (HUD_TEXTS :646, checked :676) | yes (moves with the stagger, review) | | | | | | |
+| V12 | `test_skirmish_scene.gd` `HUD_TEXTS` (HUD1, `:646`) | as on the base | present (HUD_TEXTS :646, checked :676) | yes (moves with the stagger, review) | | | red: HUD1 | | | |
 | V13 | `input_script_rows.gd` `IC1_ROWS`, `IC2_ROWS` | as on the base | present (IC1_ROWS :3, IC2_ROWS :27) | yes by the census rule (expected not to move, derived) | | | | | | |
 | (census) | pins added by the Task 0 rule (`test_dock_lock.gd` `COMMAND_ROWS` is a command-name list, outside R) | | none added: regex hits are exactly V1-V7, V12, V13 and `test_dock_lock.gd:29` COMMAND_ROWS (outside R); tools: 9129 (run_netplay.sh:91) and `won tick` (run_team_match.sh:13) as V9, V10 | | | | | | | |
 
@@ -109,12 +110,12 @@ Non-pin checks that go red and their allowed edit (review, measured on `74950e5`
 
 | Item | Value |
 |---|---|
-| BT1 red on Task 2 code; green | |
-| Allowed test edits applied (file:line, kind T1 / T2 / T3 / T4); T1 census count | |
-| `decide` no-op mutation: O1, A3, B1 positive checks red | |
-| Red checks after the edits (must all be R; value reported) | |
-| Team match line (exit 1 expected on the pin; `won` below 45000) | |
-| team match `opponent.decide` max and calls per tick; `bot_state` mean / max; `step` mean / max | |
+| BT1 red on Task 2 code; green | red: `CASES 1 CHECKS 7 FAILURES 7` (6 commands, all 6 off; first ticks 1,2,8,4,5,6 instead of tick 0); green after `decides`/`next_decision`/`decide`: `CHECKS 7 FAILURES 0` |
+| Allowed test edits applied (file:line, kind T1 / T2 / T3 / T4); T1 census count | T1 (single-shot to `decide`): test_skirmish.gd 10 calls (O1 `:167`/`:195`, A3 `:246` `:251` `:258`, B4 `:99` `:105`, W2 `:292`, W3 `:308` `:314`) + `_decide_now` `:339` + SK-S3 rally `:663` (now `Skirmish.decide(sim, 1, 0)`) + `_decide` helper `:79` gated with `Skirmish.decides`; test_skirmish_waves.gd `_decide` helper; test_factions.gd 3 (B1 x2, B2); test_playtest_replay.gd RP2. T2: 5 `_to_tick(... next_decision(sim.tick(), 2))` + `_decide_now` + waves 2 (`:66`, `:80`). T3: waves W1 two bounds `+ 2`. T4: K2 as specified. One unlisted edit, T3 class: `test_skirmish_scene.gd` OD2 `test_offline_driver_bot_memory_on_simulation` loop bound `Skirmish.ATTACK_TICK` -> `Skirmish.next_decision(Skirmish.ATTACK_TICK, 2)` (the single `driver.step` must land on seat 2's tick; red otherwise, not in the plan's measured list; flagged to the coordinator) |
+| `decide` no-op mutation: O1, A3, B1 positive checks red | yes: O1 "first decision places the mirrored..." red (case then incomplete), A3 7 checks red, B1 "trains a builder" and "trained builder exists" red; reverted (`cmp` against backup silent) |
+| Red checks after the edits (must all be R; value reported) | `CASES 917 CHECKS 146289 FAILURES 9`, all R: TB3, TB4 (V1, V2), Fm1 and Cs1 (V4), S1 pinned outcome and core series (V3), HUD1 (V12), VR1 x2 (V6); values in the pin table above |
+| Team match line (exit 1 expected on the pin; `won` below 45000) | `TEAM MATCH won tick=29762 winner=2 units_peak=273`, exit 1; `TEAM TIMING` p50 1.806 p95 3.259 p99 4.673 max 11.791 ms |
+| team match `opponent.decide` max and calls per tick; `bot_state` mean / max; `step` mean / max | decide max 3.362 ms (was 7.749), 0.20 calls/tick (seat decisions; was 0.03 shared, so 0.18 per seat-tick of 6 seats = 0.03 x 6); `bot_state` mean 0.0354 / max 0.549 ms; `step` mean 1.693 / max 10.770 ms (was 1.344 / 10.640; the match runs 10k fewer ticks, so denser per tick). `PROFILE COMPLETE 10`, exit 0, load about 2 during the team match and the profile |
 
 ## Route cells (Task 4)
 
