@@ -9,7 +9,7 @@ Last command / cases / checks / failures / exit / marker: none on the branch (th
 Known red case or blocker: plan approval pending (external readiness review applied 2026-11-14, evidence row below). All 21 Questions decided (user, 2026-11-14). Night settings re-checked at the refresh: worktree folder and Edit rule, compare_replays.py, python3 -I for $L scripts, mkdir -p under flatter-worst-ticks, ssh/scp to the Deck present; $L exists; git status, diff, log, add, commit and archive not named (the handoff's proposed copy adds them; scp fallback in Task D0 Step 4)
 Approved decisions, pre-authorizations used, deferred gates: package note "Flatter worst ticks" (user, 2026-11-13); local commits per GREEN task only if the night handoff grants them; benchmark only if the handoff pre-approves it; no budget, ceiling or ASSUMED_SLOWDOWN touched; budget 384 route cells (user, 2026-11-14, round 1); X2 built, erase-and-append kept under the Task 4 Step 6 criterion, worst ticks measured then gated where deterministic (user, 2026-11-14, round 2); Steam Deck rows D0 and D7 report-only, a window on the Deck approved for tonight, Firefox fallback to native rows only (user, 2026-11-14 evening)
 Usage so far (python3 tools/session_usage.py <session files>): n/a
-Next exact action: Task D0 (Deck rows on the base), then Task 1
+Next exact action: Task 1 (D0 STARTED; fetch when edges.txt prints DONE)
 ```
 
 Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-ticks.md) (refreshed onto `4c21d1a`). Spec: `docs/packages.md` night lane item 4 and package note "Flatter worst ticks"; `docs/reference/simulation-reference-review.md` §5.2, §5.8, "Review 2026-11-13"; `docs/reference/hordes300-combat-fire.md`. Logs: `~/projects/wargrid-overnight-work/flatter-worst-ticks/logs/` (outside the repository). Deck logs: `$L/deck/`.
@@ -19,7 +19,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 | Task | What | Model | Status |
 |---|---|---|---|
 | 0 | Baseline: worktree, import, suite and traces, pins and R census, profile, benchmark, team match, netplay match | Sonnet | GREEN (uncommitted) |
-| D0 | Steam Deck rows on the base (start; fetch when done), report-only | Sonnet | not started |
+| D0 | Steam Deck rows on the base (start; fetch when done), report-only | Sonnet | STARTED 22:40 (unit wargrid-flatter-base running; fetch pending) |
 | 1 | Retaliators sent home through one reservation map (RS1-RS3), hordes300 benchmark mechanics check | Sonnet | not started |
 | 2 | Bot state, old gate (BS1, BS2), cost probe | Sonnet | not started |
 | 3 | Bot seats on their own tick (BT1), test edits T1-T4 | Sonnet | not started |
@@ -239,14 +239,14 @@ Never a gate (user, 2026-11-14). Deck address: night handoff only. Logs: `$L/dec
 
 | Item | Base (Task D0) | After (Task D7) |
 |---|---|---|
-| Tree | `4c21d1a` | |
-| Preflight (ACAD, Desktop Mode, Firefox version, load) | | |
+| Tree | `4c21d1a` (git archive; scratch worktree under $L/deck) | |
+| Preflight (ACAD, Desktop Mode, Firefox version, load) | OK: ACAD 1, Desktop Mode, Firefox 160.0, load 0.07, no leftover units or folder | |
 | Godot install: SHA-256 checked (`install.log`) | | (reused or installed) |
 | ACAD at every edge; Deck load range (`edges.txt`) | | |
 | `FAILED` / `SKIPPED` edge lines | | |
 | Native profile x3: `PROFILE COMPLETE 10` each; hand-off sum per tick per workload, median [range] | | |
 | Native combat x3: ten `COMBAT` lines each; p95 median [range] / p99 per layout | | |
-| Web Bench export (exit, files); `hordes300` added in the scratch copy | | |
+| Web Bench export (exit, files); `hordes300` added in the scratch copy | import 0, export 0; index.html/wasm/pck present; copied to Deck | |
 | Firefox runs: `cross_origin_isolated=true`, `BENCH DONE`, UA version | | |
 | Firefox: team match (end tick) p50 / p95 [range] / p99 / max | | |
 | Firefox: combat open, dense, hordes300 p50 / p95 [range] / p99 | | |
