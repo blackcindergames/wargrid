@@ -1,15 +1,15 @@
 # Flatter worst ticks verification
 
 ```text
-Resume record (updated 2026-11-14 at the refresh onto 4c21d1a; no task run yet)
-Branch / base commit / working-tree state: flatter-worst-ticks (not created; Task 0 creates it and ~/projects/wargrid-wt-flatter from main) / main 4c21d1a / n/a
-Last green task / next incomplete task: none / Task 0
+Resume record (updated 2026-11-14 night, Task 0 done)
+Branch / base commit / working-tree state: flatter-worst-ticks in ~/projects/wargrid-wt-flatter / base 9c8c505 (main 4c21d1a + prep) / only this file modified
+Last green task / next incomplete task: Task 0 / Task D0
 Changed paths since last commit: none on the branch (this file and the plan are new in ~/projects/wargrid, uncommitted)
 Last command / cases / checks / failures / exit / marker: none on the branch (the review's measurements ran on scratch copies of 74950e5; evidence rows below)
 Known red case or blocker: plan approval pending (external readiness review applied 2026-11-14, evidence row below). All 21 Questions decided (user, 2026-11-14). Night settings re-checked at the refresh: worktree folder and Edit rule, compare_replays.py, python3 -I for $L scripts, mkdir -p under flatter-worst-ticks, ssh/scp to the Deck present; $L exists; git status, diff, log, add, commit and archive not named (the handoff's proposed copy adds them; scp fallback in Task D0 Step 4)
 Approved decisions, pre-authorizations used, deferred gates: package note "Flatter worst ticks" (user, 2026-11-13); local commits per GREEN task only if the night handoff grants them; benchmark only if the handoff pre-approves it; no budget, ceiling or ASSUMED_SLOWDOWN touched; budget 384 route cells (user, 2026-11-14, round 1); X2 built, erase-and-append kept under the Task 4 Step 6 criterion, worst ticks measured then gated where deterministic (user, 2026-11-14, round 2); Steam Deck rows D0 and D7 report-only, a window on the Deck approved for tonight, Firefox fallback to native rows only (user, 2026-11-14 evening)
 Usage so far (python3 tools/session_usage.py <session files>): n/a
-Next exact action: Task 0 Step 1 (worktree from main 4c21d1a), then Task D0 before Task 1
+Next exact action: Task D0 (Deck rows on the base), then Task 1
 ```
 
 Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-ticks.md) (refreshed onto `4c21d1a`). Spec: `docs/packages.md` night lane item 4 and package note "Flatter worst ticks"; `docs/reference/simulation-reference-review.md` §5.2, §5.8, "Review 2026-11-13"; `docs/reference/hordes300-combat-fire.md`. Logs: `~/projects/wargrid-overnight-work/flatter-worst-ticks/logs/` (outside the repository). Deck logs: `$L/deck/`.
@@ -18,7 +18,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 
 | Task | What | Model | Status |
 |---|---|---|---|
-| 0 | Baseline: worktree, import, suite and traces, pins and R census, profile, benchmark, team match, netplay match | Sonnet | not started |
+| 0 | Baseline: worktree, import, suite and traces, pins and R census, profile, benchmark, team match, netplay match | Sonnet | GREEN (uncommitted) |
 | D0 | Steam Deck rows on the base (start; fetch when done), report-only | Sonnet | not started |
 | 1 | Retaliators sent home through one reservation map (RS1-RS3), hordes300 benchmark mechanics check | Sonnet | not started |
 | 2 | Bot state, old gate (BS1, BS2), cost probe | Sonnet | not started |
@@ -35,21 +35,21 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 
 | Item | Value |
 |---|---|
-| Tree | |
-| `uptime` at start / end (suite, profile, benchmark) | |
-| Full suite: wall seconds, CASES, CHECKS, exit | |
-| Trace files (`replay`, `economy`, `combat`, `team` `-before.tsv`), line counts | |
-| Anchor drift against the plan | |
-| `issue_opponent(s)` callers (count, files) | |
-| Profile: team match `step` mean / max | |
-| Profile: team match `opponent.decide` max, calls per tick; `snapshot` mean / max | |
-| Profile: team match `step.service_paths` max, `route` max; top `PROFILE_SLOW` lines | |
-| Profile: hordes300 `step.combat_fire` max, `assign_move.unavailable` max, `allocation.assign` max, `step` max | |
-| Benchmark: `WORST TICK` lines; combat p95 / p99 per row | |
-| Benchmark: movement open / dense `queue_peak`, `queue_drain_ticks` (Task 7's drain ceiling = 2 × these) | |
-| Benchmark: hordes300 `allocation_calls` max (every allocation a full scan before Task 1; Task 7 mutation (e) reference) | |
-| `run_team_match.sh` line; `TEAM TIMING` max and p99; `team_match` profile `opponent.decide`, `step.service_paths`, `step` max (one run) | |
-| `run_netplay.sh match` terminal tick | |
+| Tree | main 4c21d1a + prep commit 9c8c505; worktree ~/projects/wargrid-wt-flatter, branch flatter-worst-ticks, clean |
+| `uptime` at start / end (suite, profile, benchmark) | suite 1.47 -> (see t0-uptime.txt); profile 2.52 -> 1.33; benchmark 1.20 -> 1.11 (1-min load); alone, no godot/generalszh processes |
+| Full suite: wall seconds, CASES, CHECKS, exit | 56 s, CASES 911, CHECKS 146267, FAILURES 0, exit 0, TESTS PASSED 146267 |
+| Trace files (`replay`, `economy`, `combat`, `team` `-before.tsv`), line counts | replay 1200, economy 1200, combat 1200, team 100 (in $L) |
+| Anchor drift against the plan | none: every symbol of Step 5 found once or as expected; all pin files and lines as in the plan (K2 test_skirmish_scene.gd:41, HUD_TEXTS :646/:676, IC rows :3/:27) |
+| `issue_opponent(s)` callers (count, files) | 59 hits of `issue_opponents?(` in game/ = 2 definitions + 1 internal delegate + 56 callers; 15 files: scripts/debug/team_match.gd, benchmarks/run_profile.gd, scripts/net/headless_client.gd, scripts/match/offline_driver.gd, scripts/simulation/scripted_human.gd, skirmish.gd (3), tests: test_defences 1, test_view_rows 3, test_factions 5, test_skirmish_waves 2, test_team_match 2, test_skirmish_match 5, test_skirmish 28, test_playtest_replay 1, test_lockstep 4 |
+| Profile: team match `step` mean / max | 1.344 / 10.640 ms (t0-profile.log, exit 0, PROFILE COMPLETE 10) |
+| Profile: team match `opponent.decide` max, calls per tick; `snapshot` mean / max | decide max 7.749 ms, 0.03 calls/tick (mean 0.142); snapshot 0.021 / 1.034 ms |
+| Profile: team match `step.service_paths` max, `route` max; top `PROFILE_SLOW` lines | service_paths max 9.512, route max 9.506 ms; PROFILE_SLOW: tick 0 step 8.500 (apply_orders 8.386), 30492 step 10.640 (service_paths 9.512), 30480 10.506, 29130 9.948, 30478 9.774, 30490 9.661 |
+| Profile: hordes300 `step.combat_fire` max, `assign_move.unavailable` max, `allocation.assign` max, `step` max | combat_fire 5.594, assign_move.unavailable 4.241, allocation.assign 0.970, step 7.868 ms |
+| Benchmark: `WORST TICK` lines; combat p95 / p99 per row | WORST TICK ms: movement open 3.535 (t1262), dense 3.675 (t1281); combat open 2.662, dense 3.218, contact 3.625, skirmish3v3 1.635, transports 1.772, defences 2.562, docks 0.640, hordes300 7.605 (t776), ramp 1.658, frc 2.518, lockstep 0.166. p95/p99: open 1.845/2.145, dense 1.829/2.124, contact 1.183/1.553, skirmish3v3 1.352/1.451, transports 1.11/1.2, defences 0.787/2.123, docks 0.586/0.605, hordes300 2.911/3.403, ramp 0.666/1.233, frc 0.856/1.143. exit 0; BENCHMARK PASSED 2, COMBAT BENCHMARK PASSED 10, LOCKSTEP BENCHMARK PASSED 1; `BUDGET EXCEEDED open dense hordes300 (regression ceilings held)` (accepted line) |
+| Benchmark: movement open / dense `queue_peak`, `queue_drain_ticks` (Task 7's drain ceiling = 2 × these) | open 292 / 38; dense 292 / 38 (ceiling 76 each) |
+| Benchmark: hordes300 `allocation_calls` max (every allocation a full scan before Task 1; Task 7 mutation (e) reference) | max 20.0 (n 1800, p50 0, p95 0, p99 3.0); retaliations_window=159 |
+| `run_team_match.sh` line; `TEAM TIMING` max and p99; `team_match` profile `opponent.decide`, `step.service_paths`, `step` max (one run) | `TEAM MATCH won tick=39497 winner=2 units_peak=271` (exit 0); TEAM TIMING p50 1.359 p95 2.384 p99 7.943 max 30.119 ms; profile decide max 8.047, service_paths max 17.867, step max 21.880 ms (host load varies between runs) |
+| `run_netplay.sh match` terminal tick | 9129 (NETPLAY PASSED match 13.0 s, exit 0) |
 
 ## Pinned values and Re-pin list
 
@@ -57,20 +57,22 @@ Final R (Task 0 Step 4; fixed afterwards):
 
 | # | Pin | Expected (on `4c21d1a`, same as on `74950e5`) | Task 0 | In R | Task 1 | Task 2 | Task 3 | Task 4 | Task 5 new value | Tasks 6-8 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| V1 | `FINAL_DIGEST` | `3958ceaab11986af` | | yes | | | | | | |
-| V2 | `TEAM_CORE_SERIES` | `8513092129969516499` | | yes | | | | | | |
-| V3 | `S1_CORE_SERIES`, `TERMINAL_TICK`, `WINNER` | `4004499097874677431`, `8753`, `1` | | yes | | | | | | |
-| V4 | `CHINA_TERMINAL_TICK`, `CHINA_WINNER`; `FRC_TERMINAL_TICK`, `FRC_WINNER` | `11578`, `2`; `48321`, `1` | | yes | | | | | | |
-| V5 | `test_state_hash.gd` `PINNED` | `01e256834bdd4dfb` | | yes | | | | | | |
-| V6 | `test_view_rows.gd` `EXPECTED_DIGEST` | `7c7fbc8d…48a9e7` | | yes | | | | | | |
-| V7 | `SS6_PINNED` | unchanged | | **no** | | | | | | |
-| V8 | four traces | `*-before.tsv` through Task 2; `*-t5.tsv` from Task 5 | | yes | | | | | | |
-| V9 | netplay match terminal tick | `9129` | | yes | | | | | | |
-| V10 | `run_team_match.sh` | `won tick=39497 winner=2 units_peak=271` | | yes | | | | | | |
-| V11 | `git diff … -- game/tests \| rg '^-\s*const'` | empty before Task 5; R lines only after | | — | | | | | | |
-| V12 | `test_skirmish_scene.gd` `HUD_TEXTS` (HUD1, `:646`) | as on the base | | yes (moves with the stagger, review) | | | | | | |
-| V13 | `input_script_rows.gd` `IC1_ROWS`, `IC2_ROWS` | as on the base | | yes by the census rule (expected not to move, derived) | | | | | | |
-| (census) | pins added by the Task 0 rule (`test_dock_lock.gd` `COMMAND_ROWS` is a command-name list, outside R) | | | | | | | | | |
+| V1 | `FINAL_DIGEST` | `3958ceaab11986af` | present, equal | yes | | | | | | |
+| V2 | `TEAM_CORE_SERIES` | `8513092129969516499` | present, equal | yes | | | | | | |
+| V3 | `S1_CORE_SERIES`, `TERMINAL_TICK`, `WINNER` | `4004499097874677431`, `8753`, `1` | present, equal | yes | | | | | | |
+| V4 | `CHINA_TERMINAL_TICK`, `CHINA_WINNER`; `FRC_TERMINAL_TICK`, `FRC_WINNER` | `11578`, `2`; `48321`, `1` | present, equal | yes | | | | | | |
+| V5 | `test_state_hash.gd` `PINNED` | `01e256834bdd4dfb` | present, equal | yes | | | | | | |
+| V6 | `test_view_rows.gd` `EXPECTED_DIGEST` | `7c7fbc8d…48a9e7` | present, equal | yes | | | | | | |
+| V7 | `SS6_PINNED` | unchanged | present, unchanged | **no** | | | | | | |
+| V8 | four traces | `*-before.tsv` through Task 2; `*-t5.tsv` from Task 5 | saved: 4 `*-before.tsv` | yes | | | | | | |
+| V9 | netplay match terminal tick | `9129` | present, equal | yes | | | | | | |
+| V10 | `run_team_match.sh` | `won tick=39497 winner=2 units_peak=271` | present, equal | yes | | | | | | |
+| V11 | `git diff … -- game/tests \| rg '^-\s*const'` | empty before Task 5; R lines only after | n/a | — | | | | | | |
+| V12 | `test_skirmish_scene.gd` `HUD_TEXTS` (HUD1, `:646`) | as on the base | present (HUD_TEXTS :646, checked :676) | yes (moves with the stagger, review) | | | | | | |
+| V13 | `input_script_rows.gd` `IC1_ROWS`, `IC2_ROWS` | as on the base | present (IC1_ROWS :3, IC2_ROWS :27) | yes by the census rule (expected not to move, derived) | | | | | | |
+| (census) | pins added by the Task 0 rule (`test_dock_lock.gd` `COMMAND_ROWS` is a command-name list, outside R) | | none added: regex hits are exactly V1-V7, V12, V13 and `test_dock_lock.gd:29` COMMAND_ROWS (outside R); tools: 9129 (run_netplay.sh:91) and `won tick` (run_team_match.sh:13) as V9, V10 | | | | | | | |
+
+Final R = V1-V6, V9, V10, V12, V13 (as planned; no census additions). Splash index (evidence only, `PROFILE` lines in t0-profile.log): calls per tick 0.00-0.34 with mean 0.001-0.044 ms in contact, skirmish3v3, open, dense, team_match (0.18/tick, 0.034 ms); no zone line in hordes300 or large_196 at mean level; no growth with workload size beyond calls/tick.
 
 Bounds that never move (checked at Task 5): `CHINA_TICK_CAP` 45000, `FRC_TICK_CAP` 50000, S1 window 7000-17999, team match cap 45000. Any winner inside them (plan Questions 11, 20).
 
