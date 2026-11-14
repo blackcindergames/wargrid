@@ -7,6 +7,8 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const WARMUP: int = 300
 const SAMPLES: int = 1800
 # Regression ceilings for rows that exceed the budget: worst of 13 quiet runs + 5% (T3, 2026-11-08); raise only with user approval and a ledger line.
+# Deterministic counts measured on 12fd911 (Flatter worst ticks), rule in its plan: raise only with user approval and a ledger line.
+const HORDES_FULL_SCANS_CEILING: int = 4
 const STRESS_CEILING := {"open": [2.10, 2.59], "dense": [2.64, 3.95], "hordes300": [3.07, 4.05]}
 func _initialize() -> void:
 	_run.call_deferred()
@@ -166,6 +168,9 @@ func _measure(layout: String) -> bool:
 			return false
 		if window_reserved == 0:
 			push_error("Combat benchmark: no retaliator was sent home through the reservation map inside the timed window")
+			return false
+		if full_scans_peak > HORDES_FULL_SCANS_CEILING:
+			push_error("Combat benchmark: full-scan allocations in one tick over the ceiling for hordes300")
 			return false
 		return true
 	if layout == "docks":

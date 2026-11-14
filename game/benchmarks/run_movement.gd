@@ -4,6 +4,11 @@ const Workload = preload("res://scripts/debug/movement_workload.gd")
 const Stats = preload("res://scripts/debug/timing_stats.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 
+# Deterministic counts measured on 12fd911 (Flatter worst ticks), rule in its plan: raise only with user approval and a ledger line.
+const QUEUE_DRAIN_CEILING := {"open": 76, "dense": 76}
+# Deterministic counts measured on 12fd911 (Flatter worst ticks), rule in its plan: raise only with user approval and a ledger line.
+const PATH_CELLS_CEILING := {"open": 500, "dense": 500}
+
 func _initialize() -> void:
 	_run.call_deferred()
 
@@ -73,6 +78,9 @@ func _measure(layout: String) -> bool:
 		return false
 	if capped == 0:
 		push_error("Benchmark: the path budget never bound inside the timed window for " + layout)
+		return false
+	if queue_drain > QUEUE_DRAIN_CEILING[layout] or cells_peak > PATH_CELLS_CEILING[layout]:
+		push_error("Benchmark: path queue drain or per-tick route cells over the ceiling for " + layout)
 		return false
 	var summary: Dictionary = Stats.summary(samples)
 	print("HEADLESS ", layout, " tick_ms=", JSON.stringify(summary), " command_tick_ms=", JSON.stringify(Stats.summary(command_samples)),

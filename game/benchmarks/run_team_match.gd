@@ -8,6 +8,9 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 
 const WARMUP: int = 300
 const TOP_SLOW: int = 10
+# Deterministic counts measured on 12fd911 (Flatter worst ticks), rule in its plan: raise only with user approval and a ledger line.
+const TEAM_PATH_CELLS_CEILING: int = 804
+const TEAM_DECISIONS_PER_TICK: int = 1
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -59,5 +62,7 @@ func _count_paths(paths: Dictionary, sim: Simulation, state: Dictionary, decidin
 	paths.max_decisions = maxi(paths.max_decisions, deciding)
 
 func _paths_ok(paths: Dictionary) -> bool:
-	print("TEAM PATHS capped_ticks=", paths.capped_ticks, " max_cells=", paths.max_cells, " max_queue=", paths.max_queue, " max_decisions=", paths.max_decisions)
-	return true
+	var ok: bool = paths.capped_ticks > 0 and paths.max_cells <= TEAM_PATH_CELLS_CEILING and paths.max_decisions == TEAM_DECISIONS_PER_TICK
+	print("TEAM PATHS ", "PASS" if ok else "FAIL", " capped_ticks=", paths.capped_ticks, " max_cells=", paths.max_cells, " ceiling=", TEAM_PATH_CELLS_CEILING, " max_queue=", paths.max_queue, " max_decisions=", paths.max_decisions)
+	if not ok: push_error("Team match: the path budget never bound, or per-tick route cells or bot decisions over the ceiling")
+	return ok

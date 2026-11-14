@@ -21,14 +21,14 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 | Task | What | Model | Status |
 |---|---|---|---|
 | 0 | Baseline: worktree, import, suite and traces, pins and R census, profile, benchmark, team match, netplay match | Sonnet | GREEN (uncommitted) |
-| D0 | Steam Deck rows on the base (start; fetch when done), report-only | Sonnet | STARTED 22:40 (unit wargrid-flatter-base running; fetch pending) |
+| D0 | Steam Deck rows on the base (start; fetch when done), report-only | Sonnet | PARTIAL 23:40: FETCHED; native rows 3/3 complete, Firefox 1/3 (grep bug stopped the job after run 1); table filled; Deck folder kept for D7 |
 | 1 | Retaliators sent home through one reservation map (RS1-RS3), hordes300 benchmark mechanics check | Sonnet | GREEN (uncommitted) |
 | 2 | Bot state, old gate (BS1, BS2), cost probe | Sonnet | GREEN (uncommitted) |
 | 3 | Bot seats on their own tick (BT1), test edits T1-T4 | Sonnet | GREEN (uncommitted; only R red) |
 | 4 | Path budget by route cells (PB1-PB4, X2), movement benchmark mechanics check, queue-place criterion (Question 8) | Sonnet | GREEN (uncommitted; only R red) |
 | 5 | The one re-pin | Sonnet | not started |
 | 6 | Worst ticks after the changes: count lines, five measured runs | Sonnet | done (uncommitted) |
-| 7 | Count gates from Task 6's numbers, red by mutation | Sonnet | not started |
+| 7 | Count gates from Task 6's numbers, red by mutation | Sonnet | GREEN (uncommitted) |
 | D7 | Steam Deck rows on the branch head (start; fetch and clean up when done), report-only | Sonnet | not started |
 | 8 | Docs and package gate (ledger row) | Sonnet | not started |
 | 9 | Fresh-context branch review, one fix round, `/ponytail-review` | Opus (high) | not started |
@@ -248,13 +248,13 @@ Wall-clock (untagged runs; report-only):
 
 | Figure | Row and file | Task 6 value | Threshold (rule) | Mutation | Red seen | Installed |
 |---|---|---|---|---|---|---|
-| `queue_drain_ticks` open / dense | `run_movement.gd` | | 2 × Task 0 | (a) budget 128 | | |
-| `path_cells_peak_window` open / dense | `run_movement.gd` | | ceil(1.25 ×) | (b) budget 768 | | |
-| `max_decisions` | `run_team_match.gd` | | exactly 1 | (c) shared tick | | |
-| `max_cells` | `run_team_match.gd` | | ceil(1.25 ×) | (b) budget 768 | | |
-| `capped_ticks` | `run_team_match.gd` | | > 0 | (d) budget 1000000 | | |
-| `full_scans_peak_window` | `run_combat.gd` | | max(ceil(1.25 ×), +1) | (e) Task 1 Step 5 reverted | | |
-| Green: `SUITE(t7)` `cmp` against `*-t5.tsv`; benchmark; team match `TEAM PATHS PASS`; static gates | | | | | | |
+| `queue_drain_ticks` open / dense | `run_movement.gd` | 60 / 60 | 76 / 76 (2 x Task 0's 38; 60 sits under it) | (a) budget 128 | yes: `over the ceiling for open` (t7-red-a.log) | yes |
+| `path_cells_peak_window` open / dense | `run_movement.gd` | 400 / 400 | 500 / 500 | (b) budget 768 | yes: movement `over the ceiling for open`; (t7-red-b.log) | yes |
+| `max_decisions` | `run_team_match.gd` | 1 | exactly 1 | (c) shared tick | yes: `TEAM PATHS FAIL ... max_decisions=6` (t7-red-c3-team.log; first tries failed to compile or ran no bots, discarded) | yes |
+| `max_cells` | `run_team_match.gd` | 643 | 804 (ceil 803.75) | (b) budget 768 | yes: `TEAM PATHS FAIL max_cells=1027 ceiling=804` | yes |
+| `capped_ticks` | `run_team_match.gd` | 853 | > 0 | (d) budget 1000000 | yes: `TEAM PATHS FAIL capped_ticks=0` | yes |
+| `full_scans_peak_window` | `run_combat.gd` | 3 | 4 (max(ceil 3.75, 3+1)) | (e) Task 1 Step 5 reverted (+ reserved block deleted) | yes: full_scans_peak_window=38, `full-scan allocations ... over the ceiling` | yes |
+| Green: `SUITE(t7)` exit 0, CASES 922 CHECKS 146175, `TESTS PASSED 146175`, four traces `cmp` silent against `*-t5.tsv`; `run_benchmark.sh` exit 0 with its markers (`path_cells_peak_window=400`, `queue_drain_ticks=60`, `full_scans_peak_window=3`); `run_team_match.sh` exit 0, `TEAM PATHS PASS capped_ticks=853 max_cells=643 ceiling=804 max_decisions=1`; `run_checks.sh` `CHECKS PASSED 5`. All mutations reverted (`git diff --stat` shows only benchmark, script and doc files). | | | | | | |
 
 ## Deck rows (Tasks D0 and D7, report-only)
 
@@ -264,15 +264,15 @@ Never a gate (user, 2026-11-14). Deck address: night handoff only. Logs: `$L/dec
 |---|---|---|
 | Tree | `4c21d1a` (git archive; scratch worktree under $L/deck) | |
 | Preflight (ACAD, Desktop Mode, Firefox version, load) | OK: ACAD 1, Desktop Mode, Firefox 160.0, load 0.07, no leftover units or folder | |
-| Godot install: SHA-256 checked (`install.log`) | | (reused or installed) |
-| ACAD at every edge; Deck load range (`edges.txt`) | | |
-| `FAILED` / `SKIPPED` edge lines | | |
-| Native profile x3: `PROFILE COMPLETE 10` each; hand-off sum per tick per workload, median [range] | | |
-| Native combat x3: ten `COMBAT` lines each; p95 median [range] / p99 per layout | | |
+| Godot install: SHA-256 checked (`install.log`) | installed 4.7.2 via `install_godot.py` against the CI SHA-256 (empty log, script exits on failure; no `INSTALL FAILED`) | (reused or installed) |
+| ACAD at every edge; Deck load range (`edges.txt`) | ACAD 1 at all edges; 1-min load 0.03-1.26 (22:40-23:28) | |
+| `FAILED` / `SKIPPED` edge lines | `WEB FAILED run 1` at 23:28:45, then `DONE`: the job stopped after one Firefox run. Cause: its check greps `cross_origin_isolated=true`, the bench prints `cross_origin_isolated=1`; the run itself is complete (below). Morning item: fix the grep to `=1`/`=true` for Task D7 | |
+| Native profile x3: `PROFILE COMPLETE 10` each; hand-off sum per tick per workload, median [range] | 3/3 `PROFILE COMPLETE 10`, exit=0. view_state+copy+sort+batch ms: movement open 4.731 [4.718-4.741], dense 4.667 [4.661-4.672]; team match 4.510 [4.505-4.516]; large_196 6.088 [6.078-6.090]; combat hordes300 6.366 [6.282-6.372], open 3.152 [3.140-3.184], dense 2.753 [2.749-2.760], skirmish3v3 1.848, contact 1.081, skirmish match 0.886. Team match `step` mean 5.26-5.29, max 31.6-32.0 | |
+| Native combat x3: ten `COMBAT` lines each; p95 median [range] / p99 per layout | 3/3 logs, 26 `COMBAT` lines each (more than ten layouts), exit=1 (expected). p95 [range] / p99 / max ms: open 6.760 [6.748-6.781] / 7.756 / 9.618; dense 6.674 [6.643-6.699] / 7.561 / 11.173; contact 4.075 / 5.385 / 12.322; skirmish3v3 4.684 / 5.006 / 5.549; hordes300 10.632 [10.599-10.663] / 12.357 / 26.754 (`$L/deck/base-combat.txt` has all) | |
 | Web Bench export (exit, files); `hordes300` added in the scratch copy | import 0, export 0; index.html/wasm/pck present; copied to Deck | |
-| Firefox runs: `cross_origin_isolated=true`, `BENCH DONE`, UA version | | |
-| Firefox: team match (end tick) p50 / p95 [range] / p99 / max | | |
-| Firefox: combat open, dense, hordes300 p50 / p95 [range] / p99 | | |
+| Firefox runs: `cross_origin_isolated=true`, `BENCH DONE`, UA version | 1 of 3 runs: `cross_origin_isolated=1`, `BENCH DONE`, Firefox 160.0. Runs 2 and 3 not run (job stopped, see FAILED line); the 1-run row has no range | |
+| Firefox: team match (end tick) p50 / p95 [range] / p99 / max | won tick 39497: 7.52 / 12.92 / 43.4 / 73.9 (n=1; mean 8.245; worst tick 9540) | |
+| Firefox: combat open, dense, hordes300 p50 / p95 [range] / p99 | open 6.74 / 9.94 / 11.26; dense 5.52 / 9.88 / 11.30; hordes300 11.04 / 15.58 / 18.02 (n=1); also contact 1.40 / 6.20 / 8.18, skirmish3v3 3.12 / 7.14 / 7.58; movement open p95 4.24, dense 4.52 | |
 | After ÷ base per row | — | |
 | Deck cleaned up (folder, units, profiles, no Godot process) | — | |
 
