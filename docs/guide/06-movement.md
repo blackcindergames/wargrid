@@ -79,7 +79,7 @@ Every per-second rate is divided by a literal 30, the tick rate ([chapter 4](04-
 
 **Blocked is final until the next command.** A unit with no route, no reachable goal or a goal cut off by a new obstacle becomes `blocked`, loses its order and stays put. A plain move order has no retry timer; collectors and combat chases bring their own (chapters 7 and 8). Whenever the blocked cells change (a building placed or destroyed, a source removed, terrain replaced), the simulation empties the path queue and re-queues every moving unit; the M4 scenario envelope measured 19 ticks to drain it with 150 units pending at the peak ([M4 envelope](../reference/m4-scenario-envelope.md)).
 
-**Two costs are bursty, and neither is bounded by work done.**
+**Two costs are bursty; only the destination allocation is not bounded by work done.**
 
 - *Route search* is capped by route cells per tick (`PATH_CELLS_PER_TICK`), a stand-in for searched cells that the navigation does not report. Before, it was capped by request count and the team match's worst `service_paths` tick was 9.5 ms; now about 3.4 ms ([verification](../reference/flatter-worst-ticks-verification.md)). A queue built by one event drains slower than before (60 ticks against 38 in the movement benchmark).
 - *Allocation* is uncapped and runs inside order application. Since the ring rewrite it peaks at 0.15 ms in that match (measured, same profile); the 2 to 6 ms per call in the [M4 envelope](../reference/m4-scenario-envelope.md) predate the rewrite. Besides orders, a new unit leaving its factory for the rally point ([chapter 7](07-economy.md)) and a retaliating unit walking home ([chapter 8](08-combat.md)) call it once each. A halted attack-move unit resumes without it.
@@ -107,4 +107,4 @@ Two smaller limits are written in the code. A `shortcut:` comment in `destinatio
 - Previous: [5. Presentation](05-presentation.md). Next: [7. Economy](07-economy.md).
 
 ---
-Checked against `b88dc0f`. Files: `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/simulation/destination_allocation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/tests/test_allocation.gd`
+Checked against `d78b564`. Files: `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/simulation/destination_allocation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/tests/test_allocation.gd`
