@@ -105,7 +105,7 @@ In the art lab style (`[` `]` question, `Tab` variant, click page), only what co
 
 ### P5 tests, first steps first
 
-1. **Seeded fuzz and invariant test** (moved from P4): random maps, buildings and orders; invariants: no unit inside static blocked cells, every order ends arrived or blocked-with-no-path, no unit without progress for longer than the stuck limit, snapshot round-trip equal.
+1. **Seeded fuzz and invariant test** (moved from P4): random maps, buildings and orders; invariants: no unit inside static blocked cells, every order ends arrived or blocked-with-no-path, no unit without progress for longer than the stuck limit, two runs of the same seed give equal snapshots at every checkpoint (corrected 2026-11-14: the simulation has `snapshot()` but no restore, so a save-restore round trip is not testable yet; a restore is an open item from the OpenTTD research).
 2. **Cross-platform path determinism test** (2026-11-10 item 8): fixed scenarios whose route lists are compared across macOS, Linux and Windows CI, like the trace comparison; a difference means integer costs in our own search.
 3. Behaviour tests per piece: mesh build matches the fine grid (every open dilated cell covered once), B's straightened path length against A within the spike's bounds, body-safe straightening never crosses a dilated blocked cell, local detour around a parked unit, wake on a freed cell, squeeze-in, front-first goals.
 4. **Same-tick interaction cases** for the new state (toggle switch) and every changed command path: toggle against move, attack-move, stop, build, dock, unit removal, building placement in the same tick.
