@@ -4,6 +4,7 @@ extends RefCounted
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Combat = preload("res://scripts/simulation/combat.gd")
 const Fixture = preload("res://tests/combat_fixture.gd")
+const Groups = preload("res://tests/test_groups.gd")
 
 func cases() -> Array[Callable]:
 	return [test_chase_repaths_staggered, test_attack_chase, test_unreachable_attack, test_attack_move_resumes, test_attack_move_resume_keeps_slots, test_guard_retarget, test_pursuit_respects_reservations, test_new_attack_plans_immediately, test_unreachable_scan_target_dropped]
@@ -105,6 +106,8 @@ func test_unreachable_attack(runner) -> bool:
 			break
 	runner.check(progressed, "A2 opening the wall lets the attack progress at the next retry")
 	var many := Simulation.new([], Vector2i(32, 32))
+	var counting := Groups.CountingNavigation.new([], Vector2i(32, 32))
+	many._navigation = counting
 	var victim: int = many.spawn(2, Vector2(28.5, 16.5), "usa_builder")
 	var ids: Array = []
 	for i in range(20):
@@ -112,15 +115,12 @@ func test_unreachable_attack(runner) -> bool:
 		ids.append(many.spawn(1, Vector2(2.5 + i % 5, 2.5 + i / 5), "usa_rifle_infantry"))
 	Fixture.send(many, {"type": "attack", "entity_ids": ids, "target_id": victim})
 	for tick in range(30):
-		var before := {}
-		for entity in many.snapshot().entities:
-			before[entity.id] = entity.status
+		counting.sizes.clear()
 		many.step()
-		var assigned: int = 0
-		for entity in many.snapshot().entities:
-			if before[entity.id] == "path_pending" and entity.status != "path_pending":
-				assigned += 1
-		runner.check(assigned <= 8, "A2 at most 8 path queries per tick")
+		var sizes: Array[int] = counting.sizes
+		var spent: int = 0
+		for size in sizes: spent += size
+		runner.check(sizes.is_empty() or spent - sizes.back() < Simulation.PATH_CELLS_PER_TICK, "A2 a tick starts no search after its route cells reach the budget")
 	var late: int = many.spawn(1, Vector2(1.5, 20.5), "usa_rifle_infantry")
 	Fixture.send(many, {"type": "attack", "entity_ids": [late], "target_id": victim})
 	many.step()

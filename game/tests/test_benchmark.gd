@@ -101,13 +101,17 @@ func test_snapshot_size_ceiling(runner) -> bool:
 	return Economy.run_legacy_speed(runner, _test_snapshot_size_ceiling)
 
 func _test_snapshot_size_ceiling(runner) -> bool:
-	# Step 38 is the peak (routes full, queue just drained). The snapshot is copied twice per tick; raise a ceiling only deliberately and add a performance-ledger row.
+	# Measured when the path queue has just drained (routes full). The snapshot is copied twice per tick; raise a ceiling only deliberately and add a performance-ledger row.
 	var ceilings := {"open": 84119, "dense": 84983}
 	for layout in ceilings:
 		var sim: RefCounted = Workload.create(layout)
 		Workload.issue_leg(sim, 0)
-		for i in range(38):
+		sim.step()
+		var steps: int = 1
+		while not sim.snapshot().path_queue.is_empty() and steps < 300:
 			sim.step()
+			steps += 1
+		runner.check(sim.snapshot().path_queue.is_empty(), "BM snapshot ceiling measured once the queue drained")
 		var state: Dictionary = sim.snapshot()
 		var busiest: int = 0
 		for unit in state.entities:

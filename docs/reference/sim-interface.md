@@ -60,7 +60,7 @@ Status: describes the code at e3a4b2b plus the view rows change, task 2 (2026-11
 
 ## Not interface
 - Every `_`-prefixed member. Known leaks: `scripts/debug/combat_workload.gd` and `movement_workload.gd` read and write sim privates (`_entities`, `_buildings`, `_pending`, `_next_entity_id`, `_replace_union`), and `scripts/net/headless_client.gd` `_test_hooks` writes `_sim._players`.
-- Diagnostic counters, not interface (benchmarks and tests only): `combat_work`, `horde_checks`, `scan_chases`, `retaliations`, `navigation_builds`, `navigation_local_updates`, `allocation_calls`, `reserved_allocations` (allocations the last step served from the reservation map). `simulation.gd`
+- Diagnostic counters, not interface (benchmarks and tests only): `combat_work`, `horde_checks`, `scan_chases`, `retaliations`, `navigation_builds`, `navigation_local_updates`, `allocation_calls`, `reserved_allocations` (allocations the last step served from the reservation map). `path_cells` (route cells the last step's path service charged). `simulation.gd`
 - `next_random()`: sim-internal RNG step (`simulation.gd`). Called by `combat.gd`, `salvage.gd`, `horde.gd` inside the folder; the one outside caller is `tests/test_combat.gd` `test_rng_sequence`.
 
 ## Rule for tests (user, 2026-11-09)

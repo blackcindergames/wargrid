@@ -131,11 +131,17 @@ func _team_match() -> void:
 	Profiler.reset()
 	Profiler.enabled = true
 	var peak: int = 0
+	var capped: int = 0
+	var max_cells: int = 0
 	while not sim.match_over() and sim.tick() < TeamMatch.TEAM_TICK_CAP:
 		if sim.tick() == WARMUP: _phase("team_match", true)
 		TeamMatch.step(sim)
 		_frame(sim)
 		peak = maxi(peak, sim._entities.size())
+		if sim.tick() > WARMUP:
+			max_cells = maxi(max_cells, sim.path_cells())
+			if sim.path_cells() >= Simulation.PATH_CELLS_PER_TICK: capped += 1
 	_phase("team_match", false)
 	Profiler.enabled = false
+	print("PROFILE_PATHS team_match capped_ticks=", capped, " max_cells=", max_cells, " budget=", Simulation.PATH_CELLS_PER_TICK)
 	print("PROFILE_END team_match ticks=", sim.tick(), " status=", sim.snapshot().match.status, " peak_entities=", peak)

@@ -1,16 +1,17 @@
 # Flatter worst ticks verification
 
 ```text
-Resume record (updated 2026-11-14 night, Task 1 done)
+Resume record (updated 2026-11-14 night, Task 4 done)
 Branch / base commit / working-tree state: flatter-worst-ticks in ~/projects/wargrid-wt-flatter / base 9c8c505 (main 4c21d1a + prep) / only this file modified
-Last green task / next incomplete task: Task 1 (uncommitted) / Task 2
+Last green task / next incomplete task: Task 4 (uncommitted) / Task 5
 Changed paths since last commit: none on the branch (this file and the plan are new in ~/projects/wargrid, uncommitted)
 Last command / cases / checks / failures / exit / marker: none on the branch (the review's measurements ran on scratch copies of 74950e5; evidence rows below)
 Known red case or blocker: plan approval pending (external readiness review applied 2026-11-14, evidence row below). All 21 Questions decided (user, 2026-11-14). Night settings re-checked at the refresh: worktree folder and Edit rule, compare_replays.py, python3 -I for $L scripts, mkdir -p under flatter-worst-ticks, ssh/scp to the Deck present; $L exists; git status, diff, log, add, commit and archive not named (the handoff's proposed copy adds them; scp fallback in Task D0 Step 4)
 Approved decisions, pre-authorizations used, deferred gates: package note "Flatter worst ticks" (user, 2026-11-13); local commits per GREEN task only if the night handoff grants them; benchmark only if the handoff pre-approves it; no budget, ceiling or ASSUMED_SLOWDOWN touched; budget 384 route cells (user, 2026-11-14, round 1); X2 built, erase-and-append kept under the Task 4 Step 6 criterion, worst ticks measured then gated where deterministic (user, 2026-11-14, round 2); Steam Deck rows D0 and D7 report-only, a window on the Deck approved for tonight, Firefox fallback to native rows only (user, 2026-11-14 evening)
 Usage so far (python3 tools/session_usage.py <session files>): n/a
 Task 3 (2026-11-14 night): GREEN with only R red. Suite `CASES 917 CHECKS 146289 FAILURES 9` (TB3, TB4, Fm1, Cs1, S1 x2, HUD1, VR1 x2), exit 1, logs t3-suite.log; team match won tick=29762 winner=2; profile PROFILE COMPLETE 10; lint 0, warnings 0. Changed: skirmish.gd, test_skirmish.gd, test_skirmish_waves.gd, test_factions.gd, test_playtest_replay.gd, test_skirmish_scene.gd, this file. One unlisted T3-class edit (OD2), see Stagger table.
-Next exact action: coordinator commits Task 3; then Task 4
+Task 4 (2026-11-14 night): GREEN with only R red. Suite `CASES 922 CHECKS 146175 FAILURES 10` (TB3, TB4, Fm1, Cs1, S1 x2, HUD1, H1, VR1 x2; all in R), exit 1, logs t4-suite.log; PB1-PB4, X2, X2r/X2m new; budget 384; queue-place criterion met, erase-and-append kept (no fallback); lint 0, warnings 0, run_checks CHECKS PASSED 5, test_sim_boundary 0; profile PROFILE COMPLETE 10; benchmark exit 0, accepted line only; team match `won tick=38786 winner=2 units_peak=268` (exit 1 on the pin line). Changed: simulation.gd, test_groups.gd, test_combat_navigation.gd, test_benchmark.gd, run_movement.gd, run_profile.gd, sim-interface.md, this file. No CASE_SECONDS entry (X2 cases under 1 s). Probe tree left at $L/probe-tree (morning item: git worktree remove).
+Next exact action: coordinator commits Task 4; then Task 5 (the one re-pin)
 ```
 
 Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-ticks.md) (refreshed onto `4c21d1a`). Spec: `docs/packages.md` night lane item 4 and package note "Flatter worst ticks"; `docs/reference/simulation-reference-review.md` §5.2, §5.8, "Review 2026-11-13"; `docs/reference/hordes300-combat-fire.md`. Logs: `~/projects/wargrid-overnight-work/flatter-worst-ticks/logs/` (outside the repository). Deck logs: `$L/deck/`.
@@ -24,7 +25,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 | 1 | Retaliators sent home through one reservation map (RS1-RS3), hordes300 benchmark mechanics check | Sonnet | GREEN (uncommitted) |
 | 2 | Bot state, old gate (BS1, BS2), cost probe | Sonnet | GREEN (uncommitted) |
 | 3 | Bot seats on their own tick (BT1), test edits T1-T4 | Sonnet | GREEN (uncommitted; only R red) |
-| 4 | Path budget by route cells (PB1-PB4, X2), movement benchmark mechanics check, queue-place criterion (Question 8) | Sonnet | not started |
+| 4 | Path budget by route cells (PB1-PB4, X2), movement benchmark mechanics check, queue-place criterion (Question 8) | Sonnet | GREEN (uncommitted; only R red) |
 | 5 | The one re-pin | Sonnet | not started |
 | 6 | Worst ticks after the changes: count lines, five measured runs | Sonnet | not started |
 | 7 | Count gates from Task 6's numbers, red by mutation | Sonnet | not started |
@@ -58,18 +59,18 @@ Final R (Task 0 Step 4; fixed afterwards):
 
 | # | Pin | Expected (on `4c21d1a`, same as on `74950e5`) | Task 0 | In R | Task 1 | Task 2 | Task 3 | Task 4 | Task 5 new value | Tasks 6-8 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| V1 | `FINAL_DIGEST` | `3958ceaab11986af` | present, equal | yes | | | red: TB3 `4a8649bd8771d81e` at tick 20000 | | | |
-| V2 | `TEAM_CORE_SERIES` | `8513092129969516499` | present, equal | yes | | | red: TB4 `2358232358664745134` | | | |
-| V3 | `S1_CORE_SERIES`, `TERMINAL_TICK`, `WINNER` | `4004499097874677431`, `8753`, `1` | present, equal | yes | | | red: core `3669587849112293937`, tick 8564, winner 1 (inside window) | | | |
-| V4 | `CHINA_TERMINAL_TICK`, `CHINA_WINNER`; `FRC_TERMINAL_TICK`, `FRC_WINNER` | `11578`, `2`; `48321`, `1` | present, equal | yes | | | red: China 24423 / winner 2 (Cs1); FRC 37214 / winner 1 (Fm1); both inside caps | | | |
-| V5 | `test_state_hash.gd` `PINNED` | `01e256834bdd4dfb` | present, equal | yes | | | green (moves with the budget only, as in the review) | | | |
-| V6 | `test_view_rows.gd` `EXPECTED_DIGEST` | `7c7fbc8d…48a9e7` | present, equal | yes | | | red: VR1 x2, `9b513ac33f0caa2fbc3ea79df22860258ffbd4e4db4716120403d06bb9172e85` | | | |
+| V1 | `FINAL_DIGEST` | `3958ceaab11986af` | present, equal | yes | | | red: TB3 `4a8649bd8771d81e` at tick 20000 | red: TB3 `d2f386fa273a0048` at tick 20000 | | |
+| V2 | `TEAM_CORE_SERIES` | `8513092129969516499` | present, equal | yes | | | red: TB4 `2358232358664745134` | red: TB4 `7092199221456895974` | | |
+| V3 | `S1_CORE_SERIES`, `TERMINAL_TICK`, `WINNER` | `4004499097874677431`, `8753`, `1` | present, equal | yes | | | red: core `3669587849112293937`, tick 8564, winner 1 (inside window) | red: core `8224641749915322152`, tick 8626, winner 1 | | |
+| V4 | `CHINA_TERMINAL_TICK`, `CHINA_WINNER`; `FRC_TERMINAL_TICK`, `FRC_WINNER` | `11578`, `2`; `48321`, `1` | present, equal | yes | | | red: China 24423 / winner 2 (Cs1); FRC 37214 / winner 1 (Fm1); both inside caps | red: China 24757 / winner 1 (Cs1); FRC 37178 / winner 1 (Fm1); both inside caps | | |
+| V5 | `test_state_hash.gd` `PINNED` | `01e256834bdd4dfb` | present, equal | yes | | | green (moves with the budget only, as in the review) | red (H1): `8248d9c74bdd4dfb` | | |
+| V6 | `test_view_rows.gd` `EXPECTED_DIGEST` | `7c7fbc8d…48a9e7` | present, equal | yes | | | red: VR1 x2, `9b513ac33f0caa2fbc3ea79df22860258ffbd4e4db4716120403d06bb9172e85` | red: VR1 x2, `5dce6afed36f1c8b57c590308ff8c067a37e5883fd707499e341b277d37ecb65` | | |
 | V7 | `SS6_PINNED` | unchanged | present, unchanged | **no** | | | | | | |
 | V8 | four traces | `*-before.tsv` through Task 2; `*-t5.tsv` from Task 5 | saved: 4 `*-before.tsv` | yes | | | traces written as `*-t3.tsv` (differ by design) | | | |
 | V9 | netplay match terminal tick | `9129` | present, equal | yes | | | | | | |
-| V10 | `run_team_match.sh` | `won tick=39497 winner=2 units_peak=271` | present, equal | yes | | | `won tick=29762 winner=2 units_peak=273` (exit 1, pin line) | | | |
+| V10 | `run_team_match.sh` | `won tick=39497 winner=2 units_peak=271` | present, equal | yes | | | `won tick=29762 winner=2 units_peak=273` (exit 1, pin line) | `won tick=38786 winner=2 units_peak=268` (exit 1, pin line) | | |
 | V11 | `git diff … -- game/tests \| rg '^-\s*const'` | empty before Task 5; R lines only after | n/a | — | | | | | | |
-| V12 | `test_skirmish_scene.gd` `HUD_TEXTS` (HUD1, `:646`) | as on the base | present (HUD_TEXTS :646, checked :676) | yes (moves with the stagger, review) | | | red: HUD1 | | | |
+| V12 | `test_skirmish_scene.gd` `HUD_TEXTS` (HUD1, `:646`) | as on the base | present (HUD_TEXTS :646, checked :676) | yes (moves with the stagger, review) | | | red: HUD1 | red: HUD1 (text moved) | | |
 | V13 | `input_script_rows.gd` `IC1_ROWS`, `IC2_ROWS` | as on the base | present (IC1_ROWS :3, IC2_ROWS :27) | yes by the census rule (expected not to move, derived) | | | | | | |
 | (census) | pins added by the Task 0 rule (`test_dock_lock.gd` `COMMAND_ROWS` is a command-name list, outside R) | | none added: regex hits are exactly V1-V7, V12, V13 and `test_dock_lock.gd:29` COMMAND_ROWS (outside R); tools: 9129 (run_netplay.sh:91) and `won tick` (run_team_match.sh:13) as V9, V10 | | | | | | | |
 
@@ -123,53 +124,53 @@ Expected from the review (today's cap; `verify-copy/logs/p-*-b0.tsv`): team matc
 
 | Scenario | requests | route cells per request p50 / p95 / max | searched cells per request p50 / p95 / max | searched ÷ route | per-tick route sum p99 / max | per-tick searched max | ticks with more than 8 requests | max queue length |
 |---|---|---|---|---|---|---|---|---|
-| team match (V10 line unchanged by the probe: yes / no) | | | | | | | | |
-| movement open (one leg) | | | | | | | | |
-| movement dense (one leg) | | | | | | | | |
-| combat open | | | | | | | | |
-| combat dense | | | | | | | | |
-| combat hordes300 | | | | | | | | |
+| team match (V10 line unchanged by the probe: yes, `won tick=29762 winner=2`) | 14972 | 10 / 192 / 284 | 27 / 7399 / 15052 | 21.81 | 1557 / 2157 | 110835 | 0 (cap 8 never exceeded) | 233 |
+| movement open (one leg) | 300 | 81 / 94 / 99 | 244 / 283 / 298 | 3.01 | 738 / 738 | 2222 | 0 | 300 |
+| movement dense (one leg) | 300 | 81 / 94 / 99 | 227 / 267 / 281 | 2.82 | 738 / 738 | 2046 | 0 | 300 |
+| combat open | 1309 | 6 / 54 / 64 | 16 / 163 / 193 | 2.93 | 440 / 443 | 1337 | 0 | 300 |
+| combat dense | 1134 | 6 / 55 / 64 | 17 / 252 / 372 | 3.69 | 441 / 443 | 2224 | 0 | 300 |
+| combat hordes300 | 1814 | 8 / 61 / 73 | 22 / 181 / 220 | 2.92 | 502 / 538 | 1622 | 0 | 300 |
 
 | Item | Value |
 |---|---|
-| PB1-PB4 red on today's cap (stub `path_cells`) | |
-| Rewritten checks (G7 → PB1, G8, A2, snapshot ceiling step: drain step, totals, busiest unit) | |
-| Mutations (a)-(c) | |
-| Movement benchmark red on the stub (`path budget never bound`, exit 1); green `path_capped_window` open / dense | |
-| `PROFILE_PATHS team_match` (capped ticks, max cells; review: 847 at 384) | |
-| team match `step.service_paths` max, `route` max, `step` max, `opponent.decide` max | |
-| Movement `queue_peak` / `queue_drain_ticks` open, dense (Task 0 → Task 4; stop if more than double; review: dense 38 → 60 at 384) | |
-| Combat p95 / p99 per row; `WORST TICK` lines | |
-| Red checks in the suite (must all be R; value reported) | |
-| Team match line | |
+| PB1-PB4 red on today's cap (stub `path_cells`) | `t4-red-test_groups.log`: PB1 phases 0 and 1, PB2, PB3, PB4 and X2 / X2m per-tick budget rule fail by name (`CASES 15 FAILURES 7`); every other X2 check passes on today's code |
+| Rewritten checks (G7 → PB1, G8, A2, snapshot ceiling step: drain step, totals, busiest unit) | all green at 384; BM5 per-unit and total ceilings held at the drain step (`test_benchmark` CASES 27 FAILURES 0); A2 green on the stub too (pins the rule, trivially met there) |
+| Mutations (a)-(c) | (a) empty route not charged: PB3 red; (b) skip a search that would cross the budget (scratch form with a Manhattan estimate, first request always served, so PB2 itself stayed green): PB1 x6, X2 full-budget rule, X2 and X2m drain bound red; (c) no reset: PB1 x9, PB2, PB3, PB4, X2, X2m, G8, G3 red (23 failures); (d) budget 1000000: PB1 bound, PB2, X2 bound red; all reverted (`git diff --stat` = Owns paths) |
+| Movement benchmark red on the stub (`path budget never bound`, exit 1); green `path_capped_window` open / dense | red: exit 1, error hit for `open` (`t4-movement-red.log`); green: 60 / 60 |
+| `PROFILE_PATHS team_match` (capped ticks, max cells; review: 847 at 384) | `capped_ticks=853 max_cells=643 budget=384` |
+| team match `step.service_paths` max, `route` max, `step` max, `opponent.decide` max | 3.435, 3.433, 5.170, 2.127 ms (Task 3: 9.5, 9.5, 10.77, 3.362); `PROFILE COMPLETE 10`, exit 0, load 2.72 -> 1.87 |
+| Movement `queue_peak` / `queue_drain_ticks` open, dense (Task 0 → Task 4; stop if more than double; review: dense 38 → 60 at 384) | open 292 / 38 -> 295 / 60; dense 292 / 38 -> 295 / 60 (1.58x, under 2x; one-leg WAIT drain 56 each, the benchmark's max over legs 60 is at least that) |
+| Combat p95 / p99 per row; `WORST TICK` lines | p95 / p99: open 1.874 / 2.221, dense 1.833 / 2.138, contact 1.174 / 1.531, skirmish3v3 1.339 / 1.442, transports 1.121 / 1.216, defences 0.774 / 2.154, docks 0.584 / 0.602, hordes300 2.903 / 3.392, ramp 0.65 / 1.227, frc 0.884 / 1.07. WORST TICK ms: movement open 3.489 dense 3.544; combat open 2.584, dense 2.901, contact 3.576, skirmish3v3 1.696, transports 1.758, defences 2.590, docks 0.618, hordes300 3.993, ramp 1.798, frc 1.768, lockstep 0.161. exit 0; BENCHMARK PASSED 2, COMBAT BENCHMARK PASSED 10, LOCKSTEP BENCHMARK PASSED 1; only the accepted `BUDGET EXCEEDED open dense hordes300 (regression ceilings held)`; load 1.96 -> 1.49, nothing else running |
+| Red checks in the suite (must all be R; value reported) | `CASES 922 CHECKS 146175 FAILURES 10`, all R: TB3, TB4, Fm1, Cs1, S1 x2, HUD1, H1 (V5), VR1 x2; values in the pin table; traces `*-t4.tsv` in $L (not compared: V8 moves at Task 5) |
+| Team match line | `TEAM MATCH won tick=38786 winner=2 units_peak=268` (exit 1 on the pin line, as the review's model); `TEAM TIMING` p50 1.414 p95 2.832 p99 3.855 max 6.468 ms |
 
 X2 (derived expectation, plan "Expected values": today 23 ticks; at 384 about 90, between 89 and 132; at least about 34200 route cells):
 
 | Item | Today (Step 2, 8-request cap) | Task 4 (384) |
 |---|---|---|
-| `X2 ashfall` `drain_ticks` / `route_cells` / `max_queue` / `capped_ticks` / `searches` | | |
-| X2 checks red on today's code (only the per-tick budget rule expected) | | — |
-| X2r / X2m checks | | |
-| Mutation (d) `PATH_CELLS_PER_TICK` 1000000: "X2 the budget bound" red | — | |
-| Case seconds (both X2 cases; `CASE_SECONDS` entries added) | | |
-| Drain ratio against today (morning feel item) | — | |
+| `X2 ashfall` `drain_ticks` / `route_cells` / `max_queue` / `capped_ticks` / `searches` | 23 / 42390 / 172 / 22 / 180 | 88 / 42390 / 178 / 87 / 180 |
+| X2 checks red on today's code (only the per-tick budget rule expected) | only `X2 each tick starts no search…` and `X2m the re-queued burst…` | — |
+| X2r / X2m checks | all green except X2m budget rule (red as expected) | all green |
+| Mutation (d) `PATH_CELLS_PER_TICK` 1000000: "X2 the budget bound" red | — | red (0 ticks), as designed |
+| Case seconds (both X2 cases; `CASE_SECONDS` entries added) | — | each run ends in 1.2 s wall including Godot start (a trivial case also 1.2 s): under 1 s, no entries |
+| Drain ratio against today (morning feel item) | — | 88 / 23 = 3.8x (beyond the 2x rule, which was set on the 64 x 64 rows; the work bound holds); route cells 42390 vs the derived 34200 |
 
 ## Queue place (Task 4, Question 8)
 
 | Scenario | requests | drain | max_queue | max_wait | p99_wait | max_reappends | units_reappended |
 |---|---|---|---|---|---|---|---|
-| team match, probe tree (today's cap) | | — | | | | | |
-| team match, `$W` | | — | | | | | |
-| movement open (one leg) | | | | | | | |
-| movement dense (one leg) | | | | | | | |
-| X2 | | | | | | | |
+| team match, probe tree (today's cap) | 5962 | — | 225 | 30 | 28 | 2 | 148 |
+| team match, `$W` | 3287 | — | 146 | 47 | 36 | 1 | 9 |
+| movement open (one leg) | 295 | 56 | 295 | 56 | 56 | 0 | 0 |
+| movement dense (one leg) | 295 | 56 | 295 | 56 | 56 | 0 | 0 |
+| X2 | 178 | 88 | 178 | 88 | 87 | 0 | 0 |
 
 | Criterion | Value | Met |
 |---|---|---|
-| (a) movement and X2: `max_reappends == 0`, `max_wait == drain` | | |
-| (b) team: `max_reappends <= max(2, today's)` | | |
-| (c) team: `max_wait <= 3 × X2 drain_ticks` | | |
-| Fallback (keep the chaser's slot): not needed / applied (PB5 red first, then green; suite red only on R and P1) / reverted and Task 4 parked (why) | | |
+| (a) movement and X2: `max_reappends == 0`, `max_wait == drain` | 0 and 56 / 56 / 88 (X2 = `X2 ashfall` drain 88) | yes |
+| (b) team: `max_reappends <= max(2, today's)` | 1 <= max(2, 2) | yes |
+| (c) team: `max_wait <= 3 × X2 drain_ticks` | 47 <= 264 | yes |
+| Fallback (keep the chaser's slot): not needed / applied (PB5 red first, then green; suite red only on R and P1) / reverted and Task 4 parked (why) | not needed (erase-and-append kept; no PB5, `combat.gd` untouched) | — |
 
 ## Re-pin (Task 5)
 

@@ -18,7 +18,8 @@ const Profiler = preload("res://scripts/debug/profiler.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const HASH_RING_SIZE: int = 64
-const PATH_REQUESTS_PER_TICK: int = 8
+# Route cells stand in for searched cells, which AStarGrid2D does not report; sized so a 300-unit order drains in under twice the 8-request time.
+const PATH_CELLS_PER_TICK: int = 384
 const START_DELAY_TICKS: int = 2
 var _navigation: RefCounted
 
@@ -44,6 +45,7 @@ var _chases: Dictionary = {}
 var _scan_chases: int = 0
 var _retaliations: int = 0
 var _allocation_calls: int = 0
+var _path_cells: int = 0
 # Cell -> ground positions plus destinations there; open only while Combat.object_removed sends retaliators home.
 var _reserved: Dictionary = {}
 var _reserving: bool = false
@@ -514,10 +516,11 @@ func _stop_unit(unit: Dictionary) -> void:
 	_path_queue.erase(unit.id)
 
 func _service_paths() -> void:
-	for i in range(mini(PATH_REQUESTS_PER_TICK, _path_queue.size())):
+	_path_cells = 0
+	while _path_cells < PATH_CELLS_PER_TICK and not _path_queue.is_empty():
 		var id: int = _path_queue.pop_front()
 		var zone: int = Profiler.begin()
-		_assign_route(_entities[id])
+		_path_cells += _assign_route(_entities[id])
 		Profiler.end(&"route", zone)
 
 func combat_work() -> int:
@@ -551,6 +554,9 @@ func command_results() -> Array[Dictionary]:
 
 func allocation_calls() -> int:
 	return _allocation_calls
+
+func path_cells() -> int:
+	return _path_cells
 
 func reserved_allocations() -> int:
 	return _reserved_allocations
@@ -676,11 +682,12 @@ func hash_ring() -> PackedStringArray:
 		rows.append("%d\t%08x%08x" % [t, (h >> 32) & StateHash.MASK, h & StateHash.MASK])
 	return rows
 
-func _assign_route(unit: Dictionary) -> void:
+func _assign_route(unit: Dictionary) -> int:
 	var from := Vector2(unit.position[0], unit.position[1])
 	var to := Vector2(unit.destination[0], unit.destination[1])
 	unit.route = []
-	for point: Variant in _navigation.route(from, to):
+	var points: Array[Vector2] = _navigation.route(from, to)
+	for point: Vector2 in points:
 		unit.route.append(_frozen([point.x, point.y]))
 	if unit.route.size() > 1 and _behind(from, unit.route[0], unit.route[1]): unit.route.pop_front()
 	unit.status = "blocked" if unit.route.is_empty() else "moving"
@@ -688,6 +695,8 @@ func _assign_route(unit: Dictionary) -> void:
 	if unit.status == "blocked":
 		unit.order = null
 		unit.destination = null
+	# A search that finds nothing may have searched its whole region, so nothing else starts this tick.
+	return points.size() if not points.is_empty() else PATH_CELLS_PER_TICK
 
 func _behind(from: Vector2, first: Array, second: Array) -> bool:
 	return (first[0] - from.x) * (second[0] - first[0]) + (first[1] - from.y) * (second[1] - first[1]) < 0.0

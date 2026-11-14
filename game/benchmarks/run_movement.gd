@@ -27,6 +27,7 @@ func _measure(layout: String) -> bool:
 	var queue_peak: int = 0
 	var queue_drain: int = 0
 	var completed: int = 0
+	var capped: int = 0
 	for tick in range(2100):
 		var start: int = Time.get_ticks_usec()
 		var command_tick: bool = leg == -1 or Workload.settled(sim)
@@ -41,6 +42,7 @@ func _measure(layout: String) -> bool:
 		var elapsed: float = (Time.get_ticks_usec() - start) / 1000.0
 		if tick >= 300:
 			samples.append(elapsed)
+			if sim.path_cells() >= Simulation.PATH_CELLS_PER_TICK: capped += 1
 		if command_tick:
 			command_samples.append(elapsed)
 		var state: Dictionary = sim.snapshot()
@@ -67,10 +69,13 @@ func _measure(layout: String) -> bool:
 	if destinations.size() != 300 or samples.size() != 1800 or completed < 1:
 		push_error("Benchmark incomplete workload")
 		return false
+	if capped == 0:
+		push_error("Benchmark: the path budget never bound inside the timed window for " + layout)
+		return false
 	var summary: Dictionary = Stats.summary(samples)
 	print("HEADLESS ", layout, " tick_ms=", JSON.stringify(summary), " command_tick_ms=", JSON.stringify(Stats.summary(command_samples)),
 		" queue_peak=", queue_peak, " queue_drain_ticks=", queue_drain, " timed_counts=", JSON.stringify(timed_counts),
-		" completed_legs=", completed, " drain_ticks=", drain_ticks, " final_counts=", JSON.stringify(_counts(sim.snapshot())), " unique_destinations=", destinations.size())
+		" completed_legs=", completed, " drain_ticks=", drain_ticks, " final_counts=", JSON.stringify(_counts(sim.snapshot())), " unique_destinations=", destinations.size(), " path_capped_window=", capped)
 	print(Stats.worst_tick_line("movement", layout, samples, 300))
 	var within_budget: bool = Stats.within(summary, Stats.BUDGET_P95_MS, Stats.BUDGET_P99_MS)
 	print("BUDGET ", "PASS" if within_budget else "FAIL", " ", layout, " simulation_only")
