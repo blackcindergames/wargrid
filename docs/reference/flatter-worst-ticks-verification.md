@@ -3,7 +3,7 @@
 ```text
 Resume record (updated 2026-11-14 night, Task 5 done)
 Branch / base commit / working-tree state: flatter-worst-ticks in ~/projects/wargrid-wt-flatter / base 9c8c505 (main 4c21d1a + prep) / only this file modified
-Last green task / next incomplete task: Task 5 (re-pin committed) / Task 6
+Last green task / next incomplete task: Task 6 (measured, uncommitted) / Task 7
 Changed paths since last commit: none on the branch (this file and the plan are new in ~/projects/wargrid, uncommitted)
 Last command / cases / checks / failures / exit / marker: none on the branch (the review's measurements ran on scratch copies of 74950e5; evidence rows below)
 Known red case or blocker: plan approval pending (external readiness review applied 2026-11-14, evidence row below). All 21 Questions decided (user, 2026-11-14). Night settings re-checked at the refresh: worktree folder and Edit rule, compare_replays.py, python3 -I for $L scripts, mkdir -p under flatter-worst-ticks, ssh/scp to the Deck present; $L exists; git status, diff, log, add, commit and archive not named (the handoff's proposed copy adds them; scp fallback in Task D0 Step 4)
@@ -27,7 +27,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 | 3 | Bot seats on their own tick (BT1), test edits T1-T4 | Sonnet | GREEN (uncommitted; only R red) |
 | 4 | Path budget by route cells (PB1-PB4, X2), movement benchmark mechanics check, queue-place criterion (Question 8) | Sonnet | GREEN (uncommitted; only R red) |
 | 5 | The one re-pin | Sonnet | not started |
-| 6 | Worst ticks after the changes: count lines, five measured runs | Sonnet | not started |
+| 6 | Worst ticks after the changes: count lines, five measured runs | Sonnet | done (uncommitted) |
 | 7 | Count gates from Task 6's numbers, red by mutation | Sonnet | not started |
 | D7 | Steam Deck rows on the branch head (start; fetch and clean up when done), report-only | Sonnet | not started |
 | 8 | Docs and package gate (ledger row) | Sonnet | not started |
@@ -210,37 +210,39 @@ Sanity row (review, measured on scratch copies with stagger plus budget; a diffe
 
 ## Worst ticks after the changes (Task 6)
 
-Tree: . Runs alone; `uptime` at start / end per run; tagged runs ("host under load") rerun once.
+Tree: flatter-worst-ticks at the Task 5 re-pin commit 12fd911 plus the three report-only count lines (uncommitted). Runs alone; `uptime` at start / end per run; tagged runs ("host under load") rerun once.
 
 | Run | benchmark load start / end, exit | team match load, exit | profile load, exit |
 |---|---|---|---|
-| 1 | | | |
-| 2 | | | — (3 runs only) |
-| 3 | | | |
-| 4 | | | — |
-| 5 | | | — |
+| 1 | 3.75 / 3.08, exit 0, host under load; rerun 1b 1.58 / 1.32, exit 0 | 1.31 / 1.33, exit 0 | 1.54 / 1.20, exit 0 |
+| 2 | 2.99 / 2.67, exit 0, host under load; rerun 2b 1.32 / 1.62, exit 0 | 1.31 / 1.36, exit 0 | 1.18 / 1.35, exit 0 |
+| 3 | 2.53 / 1.92, exit 0, host under load; rerun 3b 1.57 / 1.38, exit 0 | 1.33 / 1.18, exit 0 | 1.33 / 1.73, exit 0 |
+| 4 | 1.84 / 1.47, exit 0 | 1.18 / 1.24, exit 0 | — |
+| 5 | 1.51 / 1.34, exit 0 | 1.54 / 1.50, exit 0 | — |
+
+All five benchmark runs print `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`; team runs `TEAM MATCH won tick=38786 winner=2 units_peak=268`; profiles `PROFILE COMPLETE 10`. Wall-clock below uses the five untagged benchmark runs (1b, 2b, 3b, 4, 5). Logs `$L/t6-*.log`. SUITE(t6): exit 0, CASES 922, CHECKS 146175, FAILURES 0, `TESTS PASSED 146175`; the four traces `cmp` silent against `*-t5.tsv`; `run_checks.sh` `CHECKS PASSED 5`.
 
 Deterministic counts (must be identical in every run; a difference is a stop):
 
 | Count | Row | Value (all runs) |
 |---|---|---|
-| movement open / dense `queue_drain_ticks` | `run_movement.gd` | |
-| movement open / dense `path_cells_peak_window`, `path_capped_window` | `run_movement.gd` | |
-| hordes300 `full_scans_peak_window`, `reserved_window` | `run_combat.gd` | |
-| team `capped_ticks`, `max_cells`, `max_queue`, `max_decisions` | `run_team_match.gd` | |
-| `X2 ashfall` line (SUITE(t6)) | `test_groups.gd` | |
+| movement open / dense `queue_drain_ticks` | `run_movement.gd` | 60 / 60 (Task 0: 38 / 38) |
+| movement open / dense `path_cells_peak_window`, `path_capped_window` | `run_movement.gd` | 400 / 400, 60 / 60 |
+| hordes300 `full_scans_peak_window`, `reserved_window` | `run_combat.gd` | 3, 160 (Task 0 allocation_calls max 20) |
+| team `capped_ticks`, `max_cells`, `max_queue`, `max_decisions` | `run_team_match.gd` | 853, 643, 146, 1 |
+| `X2 ashfall` line (SUITE(t6)) | `test_groups.gd` | drain_ticks=88 route_cells=42390 max_queue=178 capped_ticks=87 searches=180 |
 
 Wall-clock (untagged runs; report-only):
 
 | Figure | Task 0 | min / median / max | spread | proposed ceiling (worst + 5 %, not installed) |
 |---|---|---|---|---|
-| `WORST TICK` movement open / dense | | | | |
-| `WORST TICK` combat hordes300, contact (and the other 9 lines) | | | | |
-| `TEAM TIMING` max / p99 | | | | |
-| team `opponent.decide` max | | | | |
-| team `step.service_paths` max | | | | |
-| team `step` max | | | | |
-| hordes300 `step.combat_fire` max (`run_profile.sh`) | | | | |
+| `WORST TICK` movement open / dense | 3.535 / 3.675 | 3.413 / 3.455 / 3.472; 3.495 / 3.528 / 3.641 | 1.7 % / 4.1 % | 3.646 / 3.823 |
+| `WORST TICK` combat hordes300, contact (and the other 9 lines) | hordes300 7.605; open 2.662, dense 3.218, contact 3.625, skirmish3v3 1.635, transports 1.772, defences 2.562, docks 0.640, ramp 1.658, frc 2.518, lockstep 0.166 | hordes300 3.944 / 3.961 / 3.986 (1.1 %, ceil 4.185); contact 3.558 / 3.590 / 3.617 (1.6 %, 3.798); open 2.573 / 2.583 / 2.620 (1.8 %, 2.751); dense 2.885 / 2.898 / 4.662 (61 %, one spike run, 4.895); skirmish3v3 1.679 / 1.693 / 1.711 (1.9 %, 1.797); transports 1.748 / 1.759 / 1.771 (1.3 %, 1.860); defences 2.573 / 2.590 / 2.605 (1.2 %, 2.735); docks 0.623 / 0.632 / 0.654 (4.9 %, 0.687); ramp 1.769 / 1.777 / 1.811 (2.4 %, 1.902); frc 1.770 / 1.782 / 1.804 (1.9 %, 1.894); lockstep 0.160 / 0.166 / 0.176 (9.6 %, 0.185) | see cell | see cell |
+| `TEAM TIMING` max / p99 | 30.119 / 7.943 | max 6.344 / 6.377 / 6.419; p99 3.832 / 3.840 / 3.862 | 1.2 % / 0.8 % | 6.740 / 4.055 |
+| team `opponent.decide` max | 8.047 | 2.109 / 2.135 / 2.145 | 1.7 % | 2.252 |
+| team `step.service_paths` max | 9.512 (profile run) | 3.381 / 3.416 / 3.454 | 2.1 % | 3.627 |
+| team `step` max | 10.640 (profile run) | 5.144 / 5.190 / 5.230 | 1.7 % | 5.492 |
+| hordes300 `step.combat_fire` max (`run_profile.sh`) | 5.594 | 1.501 / 1.514 / 1.516 (3 runs) | 1.0 % | 1.592 |
 
 ## Count gates (Task 7)
 
