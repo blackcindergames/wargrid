@@ -99,7 +99,7 @@ Reference only: Wargrid's own meanings for words that appear across the chapters
 - **Lockstep**: every peer runs the full simulation and only commands travel. A peer may step tick N only once it holds every seat's packet for N, so all peers stay on the same tick. `game/scripts/net/lockstep.gd` (`submit`, `receive`, `advance`).
 - **Match**: one game from start to a winner. The simulation holds its state (`setup`, `ongoing`, ended) and ends it as won or drawn when at most one team still owns a building that counts for victory. `game/scripts/simulation/simulation.gd` (`start_match`, `_evaluate_match`).
 - **Milestone (M0 to M9)**: a numbered stage of the plan in [blueprint §7](../blueprint.md#7-milestones-and-exit-criteria). Done: M0 project skeleton, M1 one vehicle, M2 groups and obstacles, M3 base and supplies, M4 combat, M5 online lockstep, M6 teams and a full-size map, M7 three factions. Proposed: M8 bots, M9 3v3 online. A decimal (M4.1, M5.1) is a follow-up from a playtest. "Ground batch A" is a planned, not yet designed milestone of ground-combat features (turret aiming, line of sight).
-- **Path request**: a unit that needs a route waits in a queue with status `path_pending`. Only a limited number of requests are answered per tick, so a large move order spreads over several ticks. `game/scripts/simulation/simulation.gd` (`_service_paths`, `_assign_route`).
+- **Path request**: a unit that needs a route waits in a queue with status `path_pending`. Requests are answered up to a budget of route cells per tick, so a large move order spreads over several ticks. `game/scripts/simulation/simulation.gd` (`_service_paths`, `_assign_route`).
 - **Presentation**: everything that draws, plays sound or shows UI. It draws the state the drivers hand it (from `view_state`) and never changes simulation state. `game/scripts/presentation/`.
 - **Relay**: the Go server in `relay/`. It forwards each seat's per-tick packets to the other seats of a room, announces `start` with the delay and the match seed, and never runs the simulation. `relay/main.go`, `relay/room.go`.
 - **Replay**: a run reproduced from its recorded commands alone, tick by tick. Tests compare per-tick hashes of two runs; the headless client replays a relay log and writes `StateHash.digest` rows. `game/tests/test_replay.gd`, `game/scripts/net/headless_client.gd` (`_replay_oracle`).
@@ -114,4 +114,4 @@ Reference only: Wargrid's own meanings for words that appear across the chapters
 - **View rows**: the unit part of `view_state`, stored column by column in packed arrays (`id`, `owner`, `kind`, `hp`, `x`, `y`, `status`, `flags`, ...) instead of one dictionary per unit. Presentation reads them by row index; `index_of` finds a unit's row by id. `game/scripts/simulation/view_rows.gd`.
 
 ---
-Checked against `60b6674`. Files: the chapters listed above.
+Checked against `b88dc0f`. Files: the chapters listed above.

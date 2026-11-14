@@ -11,7 +11,8 @@ Approved decisions, pre-authorizations used, deferred gates: package note "Flatt
 Usage so far (python3 tools/session_usage.py <session files>): n/a
 Task 3 (2026-11-14 night): GREEN with only R red. Suite `CASES 917 CHECKS 146289 FAILURES 9` (TB3, TB4, Fm1, Cs1, S1 x2, HUD1, VR1 x2), exit 1, logs t3-suite.log; team match won tick=29762 winner=2; profile PROFILE COMPLETE 10; lint 0, warnings 0. Changed: skirmish.gd, test_skirmish.gd, test_skirmish_waves.gd, test_factions.gd, test_playtest_replay.gd, test_skirmish_scene.gd, this file. One unlisted T3-class edit (OD2), see Stagger table.
 Task 4 (2026-11-14 night): GREEN with only R red. Suite `CASES 922 CHECKS 146175 FAILURES 10` (TB3, TB4, Fm1, Cs1, S1 x2, HUD1, H1, VR1 x2; all in R), exit 1, logs t4-suite.log; PB1-PB4, X2, X2r/X2m new; budget 384; queue-place criterion met, erase-and-append kept (no fallback); lint 0, warnings 0, run_checks CHECKS PASSED 5, test_sim_boundary 0; profile PROFILE COMPLETE 10; benchmark exit 0, accepted line only; team match `won tick=38786 winner=2 units_peak=268` (exit 1 on the pin line). Changed: simulation.gd, test_groups.gd, test_combat_navigation.gd, test_benchmark.gd, run_movement.gd, run_profile.gd, sim-interface.md, this file. No CASE_SECONDS entry (X2 cases under 1 s). Probe tree left at $L/probe-tree (morning item: git worktree remove).
-Next exact action: coordinator commits Task 4; then Task 5 (the one re-pin)
+Task 8 (2026-11-15): GREEN, docs and gates on b88dc0f, uncommitted docs diff (see "Task 8 gates"); morning items are in "Unverifiable at night" below (CI and Windows with the re-pinned traces, browser digests, wall-clock ceilings, X2 feel, scratch worktrees, Deck after rows if Task D7 did not finish).
+Next exact action: coordinator commits Task 8 docs; Task 9 fresh-context review
 ```
 
 Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-ticks.md) (refreshed onto `4c21d1a`). Spec: `docs/packages.md` night lane item 4 and package note "Flatter worst ticks"; `docs/reference/simulation-reference-review.md` §5.2, §5.8, "Review 2026-11-13"; `docs/reference/hordes300-combat-fire.md`. Logs: `~/projects/wargrid-overnight-work/flatter-worst-ticks/logs/` (outside the repository). Deck logs: `$L/deck/`.
@@ -30,7 +31,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 | 6 | Worst ticks after the changes: count lines, five measured runs | Sonnet | done (uncommitted) |
 | 7 | Count gates from Task 6's numbers, red by mutation | Sonnet | GREEN (uncommitted) |
 | D7 | Steam Deck rows on the branch head (start; fetch and clean up when done), report-only | Sonnet | not started |
-| 8 | Docs and package gate (ledger row) | Sonnet | not started |
+| 8 | Docs and package gate (ledger row) | Sonnet | GREEN (docs uncommitted) |
 | 9 | Fresh-context branch review, one fix round, `/ponytail-review` | Opus (high) | not started |
 
 ## Baseline (Task 0)
@@ -280,21 +281,21 @@ Never a gate (user, 2026-11-14). Deck address: night handoff only. Logs: `$L/dec
 
 | Gate | Result |
 |---|---|
-| Docs (chapters and references changed, footers) | |
-| `roadmap.py` and `--check`; `check_public.sh`; link check | |
-| `SUITE(final)`, `cmp` against `*-t5.tsv` | |
-| `run_checks.sh`; conformance; netplay four scenarios; team match; profile | |
-| `git diff --stat main -- game/scripts/presentation game/scenes relay protocol game/data .github` | |
-| Benchmark `PERF_LABEL="Flatter worst ticks"`, alone, `uptime` | |
-| Deck History rows (native, Firefox 160): written by Task 8 / by Task D7 Step 4 | |
+| Docs (chapters and references changed, footers) | Tree `b88dc0f` (docs diff uncommitted). Guide chapters 1, 4, 6, 8, 9, 12, 13 and the README glossary, footers `Checked against` `b88dc0f` (ch. 12 and 13 name it for the changed passages only); references `determinism-rules.md`, `performance.md` (watch item, mechanics, Count gates paragraph, three History rows), `simulation-reference-review.md`, `hordes300-combat-fire.md`; `STATUS.md` night 4 row |
+| `roadmap.py` and `--check`; `check_public.sh`; link check | `roadmap.py --check` exit 0; `check_public.sh` inside `run_checks.sh` (`CHECKS PASSED 5`); relative links in changed docs resolve; `rg PATH_REQUESTS_PER_TICK docs/guide docs/reference/sim-interface.md` empty |
+| `SUITE(final)`, `cmp` against `*-t5.tsv` | exit 0, CASES 922 CHECKS 146175 FAILURES 0, `TESTS PASSED 146175`; four traces `cmp` silent (tree `b88dc0f`, logs `final-suite.log`) |
+| `run_checks.sh`; conformance; netplay four scenarios; team match; profile | `CHECKS PASSED 5`; `CONFORMANCE PASSED 41`; `NETPLAY PASSED` match, perturb, relay-down, relay-term; `TEAM MATCH won tick=38786 winner=2 units_peak=268` and `TEAM PATHS PASS capped_ticks=853 max_cells=643 ceiling=804 max_queue=146 max_decisions=1`; `PROFILE COMPLETE 10`; all exit 0 on `b88dc0f` (logs `t8-*.log`) |
+| `git diff --stat main -- game/scripts/presentation game/scenes relay protocol game/data .github` | empty (also game/scripts/match, game/scripts/net, bench_runner.gd, export_presets.cfg): no rendered rerun needed |
+| Benchmark `PERF_LABEL="Flatter worst ticks"`, alone, `uptime` | exit 0; `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, `recorded 13 rows, run 1`, only the accepted `BUDGET EXCEEDED open dense hordes300` line; load 1.35 / 1.66 / 1.77 at start, 1.19 / 1.59 / 1.73 at end; no godot or generalszh process beforehand; `perf-history.csv` and the README status table updated by the tools |
+| Deck History rows (native, Firefox 160): written by Task 8 / by Task D7 Step 4 | Task 8 wrote the base ("before") halves in `performance.md`; the "after" halves are Task D7 Step 4's (cells say "not run yet") |
 
 | Worst tick (single runs; Task 6 holds the spread) | Task 0 | Task 8 |
 |---|---|---|
-| team match `step` max (profile) | | |
-| team match `opponent.decide` max | | |
-| team match `step.service_paths` max | | |
-| hordes300 `step.combat_fire` max (profile) | | |
-| combat hordes300 `WORST TICK` (benchmark) | | |
+| team match `step` max (profile) | 10.640 | 5.184 |
+| team match `opponent.decide` max | 7.749 (profile; 8.047 in a team-match run) | 2.267 |
+| team match `step.service_paths` max | 9.512 | 3.399 |
+| hordes300 `step.combat_fire` max (profile) | 5.594 | 1.527 |
+| combat hordes300 `WORST TICK` (benchmark) | 7.605 (tick 776) | 3.962 (tick 1219) |
 
 ## Unverifiable at night (for the morning)
 

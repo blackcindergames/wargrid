@@ -1,6 +1,6 @@
 # hordes300 step.combat_fire spike (5.4 ms at tick 776)
 
-Status: evidence only, measured 2026-11-13 night (Tighter gates night run, backup 2); the fix is placed in the Flatter worst ticks package (user, 2026-11-13, [packages](../packages.md#package-notes)). Diffs, drivers and logs stay outside the repository in `~/projects/wargrid-overnight-work/tighter-gates/` (below: `logs/` means that folder's `logs/`).
+Status: fix shipped on branch `flatter-worst-ticks` with the cross-check test (RS1, RS3); measured 2026-11-13 night (Tighter gates night run, backup 2), the fix is placed in the Flatter worst ticks package (user, 2026-11-13, [packages](../packages.md#package-notes)). Diffs, drivers and logs stay outside the repository in `~/projects/wargrid-overnight-work/tighter-gates/` (below: `logs/` means that folder's `logs/`).
 
 Revision: `main` 4bd8711 (scratch worktree, since removed). Host load 1.6-2.5 during the timing runs, 3.08 at the end of the suite run; one run each, so treat ms values as +-10 %.
 

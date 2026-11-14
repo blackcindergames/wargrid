@@ -11,7 +11,7 @@ A move order passes through four steps. The first and last run inside the order'
 ```mermaid
 flowchart TD
     A["Allocation.assign<br/>one goal cell per unit<br/>(order application)"] --> B
-    B["path queue<br/>8 requests per tick"] --> C
+    B["path queue<br/>384 route cells per tick"] --> C
     C["GridNavigation.route<br/>four-way A* on cells"] --> D
     D["Locomotion.step<br/>heading, speed, distance"] --> E
     E["_advance<br/>walk the waypoints"]
@@ -36,7 +36,7 @@ A one-off headless script at the commit named at the end of this chapter: an ope
 3. The allocator walks the units in id order. Each takes the nearest still-free cell to the target, nearest first, ties broken by row then column. The target cell itself is first in line, then its four neighbours, then the diagonals.  
    `Allocation.assign → _add_ring, _before`
 4. So tank 1 gets the clicked point exactly, tank 2 the cell above it, tank 3 the left, tank 4 the right, tank 5 below, tank 6 the upper left diagonal. Ids decide, not where the tank stands: tank 6 starts lowest on the map and gets an upper-left slot.
-5. Each tank gets status `path_pending` and joins the queue. Six requests fit under the cap of eight, so all six are routed in phase 6 of the same tick.  
+5. Each tank gets status `path_pending` and joins the queue. Six routes of a few dozen cells fit under the budget of 384 route cells, so all six are routed in phase 6 of the same tick.  
    `_assign_move → _path_queue; _service_paths → _assign_route`
 6. The route is a list of cell centres from the tank's cell to the goal, ending on the exact goal point. The routes here are 31, 28, 26, 30, 30 and 33 waypoints long: Manhattan distance, since diagonal moves are off.  
    `_assign_route → GridNavigation.route → AStarGrid2D.get_id_path`
@@ -81,12 +81,12 @@ Every per-second rate is divided by a literal 30, the tick rate ([chapter 4](04-
 
 **Two costs are bursty, and neither is bounded by work done.**
 
-- *Route search* is capped by request count, not by search work. In the 2026-11-08 team match the worst tick spent 6.2 to 6.3 ms of its 7.3 to 7.4 ms in the path service, a burst of at most eight searches on the Ashfall grid (times measured, the burst is the note's inference, [team-match profile](../reference/perf-spike-verification.md#t1b-team-match-zones)).
+- *Route search* is capped by route cells per tick (`PATH_CELLS_PER_TICK`), a stand-in for searched cells that the navigation does not report. Before, it was capped by request count and the team match's worst `service_paths` tick was 9.5 ms; now about 3.4 ms ([verification](../reference/flatter-worst-ticks-verification.md)). A queue built by one event drains slower than before (60 ticks against 38 in the movement benchmark).
 - *Allocation* is uncapped and runs inside order application. Since the ring rewrite it peaks at 0.15 ms in that match (measured, same profile); the 2 to 6 ms per call in the [M4 envelope](../reference/m4-scenario-envelope.md) predate the rewrite. Besides orders, a new unit leaving its factory for the rally point ([chapter 7](07-economy.md)) and a retaliating unit walking home ([chapter 8](08-combat.md)) call it once each. A halted attack-move unit resumes without it.
 
 Two smaller limits are written in the code. A `shortcut:` comment in `destination_allocation.gd` says the pool is re-sorted per ring, "fine while pools stay small", with a merge as the upgrade. Locomotion measures the remaining route every tick, but stops walking the waypoints once the braking cap can no longer bind.
 
-**Compared with Zero Hour.** Zero Hour also gives each unit of a group its own adjusted goal and queues path requests, but under a per-frame budget of searched cells, with eight-neighbour search and path optimisation; Wargrid counts whole requests, allocates canonical cells and routes four-way. The group note holds the source links; no formation or spacing parity is claimed ([group movement](../reference/group-movement.md), [movement gaps](../reference/zero-hour-movement-gaps.md)). M6 aligned the wheeled turning of the builder (`usa_builder`) with a retail parity trace ([M6 verification](../reference/m6-verification.md)); the blueprint asks for the same check on each new unit.
+**Compared with Zero Hour.** Zero Hour also gives each unit of a group its own adjusted goal and queues path requests, but under a per-frame budget of searched cells, with eight-neighbour search and path optimisation; Wargrid budgets in route cells, allocates canonical cells and routes four-way. The group note holds the source links; no formation or spacing parity is claimed ([group movement](../reference/group-movement.md), [movement gaps](../reference/zero-hour-movement-gaps.md)). M6 aligned the wheeled turning of the builder (`usa_builder`) with a retail parity trace ([M6 verification](../reference/m6-verification.md)); the blueprint asks for the same check on each new unit.
 
 **What comes next (proposed, not built).** The movement and pathing milestone is provisionally decided as: a rectangle navmesh (the finer grid stays as the reference), three size classes, body-safe straightening, individual routes first, 8 routes per tick kept and measured, a 2 by 2 pathing grid per map cell and the 256-cell cap raised ([design answers](../reference/design-answers-2026-11-08.md#movement-and-pathing-user-2026-11-10)). Priority there: units not getting stuck and good performance, both ahead of exact Zero Hour parity. Its timing spike lives on the branch `spike-pathing`. Locomotion's weight (per-kind turn rates, rolling wheel turns) is meant to stay.
 
@@ -95,7 +95,7 @@ Two smaller limits are written in the code. A `shortcut:` comment in `destinatio
 - `game/scripts/simulation/grid_navigation.gd` — `route`, `is_walkable`, `component_at`, `replace_blocked_cells`, `blocks_locally`, `_single_neighbor_label`; wraps `AStarGrid2D`.
 - `game/scripts/simulation/locomotion.gd` — `step`, `turn`, `heading_factor`, `angle_between`, `_wheel_turn`, `_route_length_until`.
 - `game/scripts/simulation/destination_allocation.gd` — `assign`, `_add_ring`, `_settled`, `_before`; `last_cells_examined`.
-- `game/scripts/simulation/simulation.gd` — `_assign_move`, `_unavailable_cells`, `_service_paths`, `_assign_route`, `_advance`, `_replace_union`; constants `PATH_REQUESTS_PER_TICK`, `START_DELAY_TICKS`.
+- `game/scripts/simulation/simulation.gd` — `_assign_move`, `_unavailable_cells`, `_service_paths`, `_assign_route`, `_advance`, `_replace_union`; constants `PATH_CELLS_PER_TICK`, `START_DELAY_TICKS`.
 - `game/tests/test_allocation.gd`, `test_groups.gd`, `test_locomotion.gd`, `test_movement.gd`, `test_navigation.gd`, `test_navigation_incremental.gd` — behaviour tests per piece.
 
 ## Further reading
@@ -107,4 +107,4 @@ Two smaller limits are written in the code. A `shortcut:` comment in `destinatio
 - Previous: [5. Presentation](05-presentation.md). Next: [7. Economy](07-economy.md).
 
 ---
-Checked against `2b108ab`. Files: `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/simulation/destination_allocation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/tests/test_allocation.gd`
+Checked against `b88dc0f`. Files: `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/simulation/destination_allocation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/tests/test_allocation.gd`
