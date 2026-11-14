@@ -21,7 +21,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 | 0 | Baseline: worktree, import, suite and traces, pins and R census, profile, benchmark, team match, netplay match | Sonnet | GREEN (uncommitted) |
 | D0 | Steam Deck rows on the base (start; fetch when done), report-only | Sonnet | STARTED 22:40 (unit wargrid-flatter-base running; fetch pending) |
 | 1 | Retaliators sent home through one reservation map (RS1-RS3), hordes300 benchmark mechanics check | Sonnet | GREEN (uncommitted) |
-| 2 | Bot state, old gate (BS1, BS2), cost probe | Sonnet | not started |
+| 2 | Bot state, old gate (BS1, BS2), cost probe | Sonnet | GREEN (uncommitted) |
 | 3 | Bot seats on their own tick (BT1), test edits T1-T4 | Sonnet | not started |
 | 4 | Path budget by route cells (PB1-PB4, X2), movement benchmark mechanics check, queue-place criterion (Question 8) | Sonnet | not started |
 | 5 | The one re-pin | Sonnet | not started |
@@ -97,13 +97,13 @@ Non-pin checks that go red and their allowed edit (review, measured on `74950e5`
 
 | Item | Value |
 |---|---|
-| Field census (fields `skirmish.gd` reads from the state) | |
-| Red on the stub | |
-| BS1 comparisons per world; contained and hole rows seen | |
-| Cost probe: µs per `snapshot()` / per `bot_state()` at team match tick 6000 (best of three rounds of 100), ratio, entities; `PROBE DONE` seen | |
-| Gate (ratio at most 0.5; review measured 0.25): met / not met | |
-| Mutations | |
-| Suite, traces `cmp` against `*-before.tsv`, team match and netplay match lines | |
+| Field census (fields `skirmish.gd` reads from the state) | As expected: `tick`, `last_sequences`, `players` id/credits/team/faction, `buildings`, `entities` id/owner/kind/position/combat mode+target_id, `hole_id`, `container_id`; nothing extra |
+| Red on the stub | 5 named failures (BS1 x4, BS2), `CASES 3 CHECKS 7 FAILURES 5` |
+| BS1 comparisons per world; contained and hole rows seen | team match 10, contained 1, rebuild hole up to 180 (every 10 ticks); both row kinds seen (green) |
+| Cost probe: µs per `snapshot()` / per `bot_state()` at team match tick 6000 (best of three rounds of 100), ratio, entities; `PROBE DONE` seen | 724.7 / 180.3, ratio 0.249, 205 entities; `PROBE DONE` seen (load average about 1.9) |
+| Gate (ratio at most 0.5; review measured 0.25): met / not met | met |
+| Mutations | drop `container_id` line: BS1 contained and row-seen checks fail; `_buildings.values()`: BS2 fails; both reverted (`cmp` against backup silent) |
+| Suite, traces `cmp` against `*-before.tsv`, team match and netplay match lines | Suite exit 0, `CASES 916 CHECKS 146281 FAILURES 0`, `TESTS PASSED`; four traces `cmp` silent; team `won tick=39497 winner=2 units_peak=271` (V10); netplay `match terminal tick 9129`, `NETPLAY PASSED` (V9); lint exit 0, warnings exit 0 (167 files); tree: Task 1 commit plus Task 2 edits |
 
 ## Stagger (Task 3)
 

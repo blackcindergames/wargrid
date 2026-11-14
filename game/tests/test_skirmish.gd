@@ -14,13 +14,14 @@ const MapData = preload("res://scripts/simulation/map_data.gd")
 const StartSpots = preload("res://scripts/simulation/start_spots.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
+const TeamMatch = preload("res://scripts/debug/team_match.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 
 const ASHFALL := "res://data/maps/ashfall.json"
 const CHOSEN: Array[int] = [5, 1]
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_four_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_wave_targets_base_unless_enemy_near, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
+	return [test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_four_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_wave_targets_base_unless_enemy_near, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
 
 func _owned(items: Array, player: int) -> Array:
 	return items.filter(func(item: Dictionary) -> bool: return item.owner == player)
@@ -706,4 +707,87 @@ func test_seeded_diagonal_on_broken_crown(runner) -> bool:
 	var a := MapData.start_cell(sim.map_data(), 1)
 	var b := MapData.start_cell(sim.map_data(), 2)
 	runner.check(absf(Vector2(a).distance_to(Vector2(b)) - 97.8) <= 0.1, "SK-S4 a seeded 1v1 on Broken Crown is diagonal: %s" % Vector2(a).distance_to(Vector2(b)))
+	return true
+
+func _bot_state_matches(sim: RefCounted, seen: Dictionary) -> bool:
+	var b: Dictionary = sim.bot_state()
+	var s: Dictionary = sim.snapshot()
+	if b.get("tick") != s.tick or b.get("last_sequences") != s.last_sequences or b.get("buildings") != s.buildings or b.get("entities", []).size() != s.entities.size() or b.get("players", []).size() != s.players.size(): return false
+	for i in range(s.players.size()):
+		var p: Dictionary = s.players[i]
+		var q: Dictionary = b.players[i]
+		if q.id != p.id or q.credits != p.credits or q.team != p.team or q.get("faction") != p.get("faction"): return false
+	for i in range(s.entities.size()):
+		var u: Dictionary = s.entities[i]
+		var r: Dictionary = b.entities[i]
+		for key: String in r.keys():
+			if not ["id", "owner", "kind", "position", "combat", "hole_id", "container_id"].has(key): return false
+		if r.id != u.id or r.owner != u.owner or r.kind != u.kind or r.position != u.position: return false
+		if (r.combat == null) != (u.combat == null) or (r.combat != null and (r.combat.mode != u.combat.mode or r.combat.target_id != u.combat.target_id)): return false
+		for key: String in ["hole_id", "container_id"]:
+			if r.has(key) != u.has(key) or (u.has(key) and r[key] != u[key]): return false
+			if u.has(key): seen[key] = true
+	return true
+
+func test_bot_state_carries_what_the_bot_reads(runner) -> bool:
+	var seen := {}
+	var team: RefCounted = TeamMatch.create()
+	var ok_a := true
+	var count_a := 0
+	for tick in range(1500):
+		if tick % 150 == 0:
+			ok_a = _bot_state_matches(team, seen) and ok_a
+			count_a += 1
+		TeamMatch.step(team)
+	runner.check(ok_a, "BS1 the bot state carries every field the bot reads, equal to the snapshot (team match, %d comparisons)" % count_a)
+	var ferry_world = _world(10000)
+	var row: Dictionary = Registry.kind("usa_light_vehicle").duplicate(true)
+	row.contains = {"slots": 5, "accepts": ["vehicle"], "passengers_fire": true, "passenger_damage_percent": 100}
+	Registry.add_test_kind("test_ferry", row)
+	var builder: int = ferry_world.spawn(1, Vector2(30.5, 20.5), "usa_builder")
+	var ferry: int = ferry_world.spawn(1, Vector2(31.5, 20.5), "test_ferry")
+	Economy.send(ferry_world, {"type": "enter", "entity_ids": [builder], "target_id": ferry})
+	for i in range(100): ferry_world.step()
+	runner.check(_bot_state_matches(ferry_world, seen), "BS1 the bot state carries every field the bot reads, equal to the snapshot (contained unit, 1 comparison)")
+	Registry.clear_test_kinds()
+	var hole_world = Skirmish.create(true, "ai", {1: "usa", 2: "frc"})
+	var barracks: int = -1
+	for tick in range(6000):
+		Skirmish.issue_opponents(hole_world, [2])
+		hole_world.step()
+		for building: Dictionary in hole_world.snapshot().buildings:
+			if building.owner == 2 and building.kind == "frc_barracks" and building.completed: barracks = building.id
+		if barracks != -1: break
+	hole_world.remove_object(barracks)
+	var count_c := 0
+	var ok_c := barracks != -1
+	for tick in range(1800):
+		Skirmish.issue_opponents(hole_world, [2])
+		hole_world.step()
+		if tick % 10 == 0:
+			ok_c = _bot_state_matches(hole_world, seen) and ok_c
+			count_c += 1
+		if seen.has("hole_id") and tick > 100: break
+	runner.check(ok_c, "BS1 the bot state carries every field the bot reads, equal to the snapshot (rebuild hole, %d comparisons)" % count_c)
+	runner.check(seen.has("container_id") and seen.has("hole_id"), "BS1 a contained row and a hole row were compared")
+	return true
+
+func test_bot_state_is_a_copy(runner) -> bool:
+	var sim = Skirmish.create(true, "ai", {1: "usa", 2: "frc"})
+	for tick in range(300):
+		Skirmish.issue_opponents(sim, [2])
+		sim.step()
+	var before: Dictionary = sim.snapshot()
+	var b: Dictionary = sim.bot_state()
+	if not b.has("entities"):
+		runner.check(false, "BS2 changing the bot state changes nothing in the simulation (no bot state)")
+		return true
+	b.entities[0].position[0] += 1.0
+	for entity: Dictionary in b.entities:
+		if entity.combat != null:
+			entity.combat.mode = "x"
+			break
+	b.buildings[0].hp -= 1
+	b.players[0].credits += 1
+	runner.check(sim.snapshot() == before, "BS2 changing the bot state changes nothing in the simulation")
 	return true

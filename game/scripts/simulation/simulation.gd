@@ -756,6 +756,31 @@ func _view_rows() -> RefCounted:
 	Profiler.end(&"view_rows", zone)
 	return rows
 
+func _sequence_rows() -> Array:
+	var sequences: Array = []
+	var players: Array = _last_sequences.keys()
+	players.sort()
+	for player: Variant in players:
+		sequences.append({"player": player, "sequence": _last_sequences[player]})
+	return sequences
+
+# Only what the bots read: a full snapshot per staggered seat would add about 0.1 ms to the mean tick (simulation review §5.8).
+func bot_state() -> Dictionary:
+	var zone: int = Profiler.begin()
+	var ids: Array = _entities.keys()
+	ids.sort()
+	var entities: Array = []
+	for id: Variant in ids:
+		var unit: Dictionary = _entities[id]
+		var row := {"id": unit.id, "owner": unit.owner, "kind": unit.kind, "position": unit.position.duplicate(), "combat": null}
+		if unit.combat != null: row.combat = {"mode": unit.combat.mode, "target_id": unit.combat.target_id}
+		if unit.has("hole_id"): row.hole_id = unit.hole_id
+		if unit.has("container_id"): row.container_id = unit.container_id
+		entities.append(row)
+	var result := {"tick": _tick, "entities": entities, "buildings": _sorted_copies(_buildings), "players": _sorted_copies(_players), "last_sequences": _sequence_rows()}
+	Profiler.end(&"bot_state", zone)
+	return result
+
 func _snapshot() -> Dictionary:
 	var entities: Array = []
 	var ids: Array = _entities.keys()
@@ -764,13 +789,8 @@ func _snapshot() -> Dictionary:
 		entities.append(_entity_copy(_entities[id]))
 	var pending: Array = _pending.duplicate(true)
 	pending.sort_custom(_command_before)
-	var sequences: Array = []
-	var players: Array = _last_sequences.keys()
-	players.sort()
-	for player: Variant in players:
-		sequences.append({"player": player, "sequence": _last_sequences[player]})
 	var result: Dictionary = {"tick": _tick, "next_entity_id": _next_entity_id, "entities": entities,
-		"pending_commands": pending, "last_sequences": sequences, "map": _navigation.snapshot(), "path_queue": _path_queue.duplicate(), "players":_player_snapshots(true),"buildings":_sorted_copies(_buildings),"sources":_sorted_copies(_sources),"terrain_cells":_terrain_snapshot(),"next_production_id":_next_production_id,"command_results":_command_results.duplicate(true),"combat_events":_combat_events.duplicate(true),"match":_match.duplicate(true) if _match != null else null,"rng":_rng}
+		"pending_commands": pending, "last_sequences": _sequence_rows(), "map": _navigation.snapshot(), "path_queue": _path_queue.duplicate(), "players":_player_snapshots(true),"buildings":_sorted_copies(_buildings),"sources":_sorted_copies(_sources),"terrain_cells":_terrain_snapshot(),"next_production_id":_next_production_id,"command_results":_command_results.duplicate(true),"combat_events":_combat_events.duplicate(true),"match":_match.duplicate(true) if _match != null else null,"rng":_rng}
 	if not _crates.is_empty(): result.crates = _crates.duplicate(true)
 	if not _chases.is_empty(): result.chases = _chase_snapshots()
 	return result

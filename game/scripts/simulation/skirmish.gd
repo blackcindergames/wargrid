@@ -67,9 +67,12 @@ static func issue_opponent(sim: RefCounted, player: int = 2, attack_tick: int = 
 static func issue_opponents(sim: RefCounted, players: Array[int], attack_tick: int = ATTACK_TICK) -> void:
 	if sim.tick() % DECISION_TICKS != 0: return
 	var zone: int = Profiler.begin()
-	var state: Dictionary = sim.snapshot()
-	for player in players: _decide(sim, player, attack_tick, state)
+	for player in players: _decide(sim, player, attack_tick, _real(sim).bot_state())
 	Profiler.end(&"opponent.decide", zone)
+
+# A seat wrapper or command recorder is rebuilt every decision; memory and state live on the simulation.
+static func _real(seat_or_sim: RefCounted) -> RefCounted:
+	return seat_or_sim.simulation() if seat_or_sim.has_method("simulation") else seat_or_sim
 
 static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dictionary) -> void:
 	var sequence: int = -1
@@ -159,7 +162,7 @@ static func _attack(ctx: Dictionary, state: Dictionary, skip: Dictionary = {}) -
 	_gather(ctx, bot, mine, enemies, skip)
 
 static func _bot(seat_or_sim: RefCounted, player: int) -> Dictionary:
-	var sim: RefCounted = seat_or_sim.simulation() if seat_or_sim.has_method("simulation") else seat_or_sim # a seat wrapper is rebuilt every decision
+	var sim: RefCounted = _real(seat_or_sim)
 	if not sim.has_meta(BOT_META): sim.set_meta(BOT_META, {})
 	return sim.get_meta(BOT_META).get_or_add(player, {"since": -1, "waves": []})
 
