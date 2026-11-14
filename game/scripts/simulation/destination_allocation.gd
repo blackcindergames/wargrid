@@ -3,6 +3,13 @@ extends RefCounted
 static var last_cells_examined: int = 0
 
 static func assign(navigation: RefCounted, units: Array[Dictionary], target: Vector2, unavailable: Array[Vector2i]) -> Dictionary:
+	var excluded: Dictionary = {}
+	for cell in unavailable:
+		excluded[cell] = true
+	return assign_excluding(navigation, units, target, excluded)
+
+# Reads `excluded` only through `has`, so a cell -> count map works while zero counts are erased.
+static func assign_excluding(navigation: RefCounted, units: Array[Dictionary], target: Vector2, excluded: Dictionary) -> Dictionary:
 	var ordered: Array[Dictionary] = units.duplicate()
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.id < b.id)
 	var goals: Dictionary = {}
@@ -17,9 +24,6 @@ static func assign(navigation: RefCounted, units: Array[Dictionary], target: Vec
 	var component: int = navigation.component_at(target)
 	if component < 0:
 		return goals
-	var excluded: Dictionary = {}
-	for cell in unavailable:
-		excluded[cell] = true
 	var target_cell := Vector2i(target.floor())
 	var max_radius: int = maxi(navigation.size().x, navigation.size().y)
 	var pool: Array[Vector2i] = []

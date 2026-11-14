@@ -11,9 +11,10 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Fixture = preload("res://tests/combat_fixture.gd")
 const EconomyFixture = preload("res://tests/economy_fixture.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
+const CombatWorkload = preload("res://scripts/debug/combat_workload.gd")
 
 func cases() -> Array[Callable]:
-	return [test_leash_square_matches_pow, test_combat_definitions, test_definitions_shared, test_health_snapshot_isolation, test_weapon_range_boundary, test_ranger_fires_at_edge_max, test_crusader_fires_at_edge_max, test_rifle_cycle_30, test_firing_cell_uses_edge, test_building_edge_range, test_damage_armor_matrix, test_weapon_cooldown, test_guard_priority, test_attack_validation_atomic, test_combat_intent_order, test_orders_preserve_reload, test_acquisition_throttle, test_mutual_lethal_fire, test_target_removed_cleanup, test_destroyed_unit_no_actions, test_destroyed_producer_accounting, test_same_tick_attack_and_cancel, test_removed_target_rescans, test_controller_and_scan_radius, test_scan_acquires_beyond_weapon_range, test_scan_radius_by_controller, test_scan_radius_boundary, test_removed_chaser_clears_chase, test_scan_keeps_target_leaving_radius, test_attack_move_resumes_after_chase, test_scan_same_tick_orders, test_scan_includes_buildings, test_human_guard_in_range_only, test_human_guard_holds_against_kiting, test_ai_guard_unchanged, test_human_attack_move_marches_in_range, test_human_attack_move_post_kill_rescan, test_human_attack_move_follows_retreat, test_rescan_same_tick_orders, test_human_attack_move_drops_target_out_of_range, test_human_attack_move_first_approach_has_no_leash, test_retarget_only_for_attack_move, test_missing_id_skipped, test_due_tick_death_skips_member, test_foreign_id_rejects, test_attack_move_mixed_selection, test_retaliate_trigger_distance, test_retaliate_joiners, test_retaliate_leash_and_return, test_retaliate_return_scan_and_rehit, test_retaliate_same_tick_cases, test_retaliate_go_home_queues_once, test_rng_sequence, test_splash_victims_boundary, test_splash_cluster, test_splash_mask, test_splash_last_builder_same_tick, test_splash_event_flag, test_rocket_splash_and_scatter, test_damage_table_new_types, test_damage_table_gattling, test_damage_table_frc_weapons, test_nearest_matches_oracle, test_radius_cache, test_splash_index_matches_oracle, test_splash_hits_passenger_unloaded_this_tick, test_splash_index_built_only_on_splash_ticks]
+	return [test_leash_square_matches_pow, test_combat_definitions, test_definitions_shared, test_health_snapshot_isolation, test_weapon_range_boundary, test_ranger_fires_at_edge_max, test_crusader_fires_at_edge_max, test_rifle_cycle_30, test_firing_cell_uses_edge, test_building_edge_range, test_damage_armor_matrix, test_weapon_cooldown, test_guard_priority, test_attack_validation_atomic, test_combat_intent_order, test_orders_preserve_reload, test_acquisition_throttle, test_mutual_lethal_fire, test_target_removed_cleanup, test_destroyed_unit_no_actions, test_destroyed_producer_accounting, test_same_tick_attack_and_cancel, test_removed_target_rescans, test_controller_and_scan_radius, test_scan_acquires_beyond_weapon_range, test_scan_radius_by_controller, test_scan_radius_boundary, test_removed_chaser_clears_chase, test_scan_keeps_target_leaving_radius, test_attack_move_resumes_after_chase, test_scan_same_tick_orders, test_scan_includes_buildings, test_human_guard_in_range_only, test_human_guard_holds_against_kiting, test_ai_guard_unchanged, test_human_attack_move_marches_in_range, test_human_attack_move_post_kill_rescan, test_human_attack_move_follows_retreat, test_rescan_same_tick_orders, test_human_attack_move_drops_target_out_of_range, test_human_attack_move_first_approach_has_no_leash, test_retarget_only_for_attack_move, test_missing_id_skipped, test_due_tick_death_skips_member, test_foreign_id_rejects, test_attack_move_mixed_selection, test_retaliate_trigger_distance, test_retaliate_joiners, test_retaliate_leash_and_return, test_retaliate_return_scan_and_rehit, test_retaliate_same_tick_cases, test_retaliate_go_home_queues_once, test_rng_sequence, test_splash_victims_boundary, test_splash_cluster, test_splash_mask, test_splash_last_builder_same_tick, test_splash_event_flag, test_rocket_splash_and_scatter, test_damage_table_new_types, test_damage_table_gattling, test_damage_table_frc_weapons, test_nearest_matches_oracle, test_radius_cache, test_splash_index_matches_oracle, test_splash_hits_passenger_unloaded_this_tick, test_splash_index_built_only_on_splash_ticks, test_retaliators_home_against_full_scan_cells, test_one_death_skips_per_order_scans, test_hordes300_home_allocations_match_full_scan]
 
 func test_combat_definitions(runner) -> bool:
 	runner.check(Definitions.profile("usa_rifle_infantry") == {"max_hp": 180000, "armor": "human", "weapon": "rifle"}, "D1 infantry")
@@ -1611,4 +1612,82 @@ func test_splash_index_built_only_on_splash_ticks(runner) -> bool:
 	Profiler.enabled = false
 	Profiler.reset()
 	runner.check(splash_ticks > 0 and most_shots >= 2 and builds == splash_ticks, "SI3 one index build per tick with splash-weapon shots, even with several shots in a tick, none otherwise (%d ticks, %d builds, at most %d shots in a tick)" % [splash_ticks, builds, most_shots])
+	return true
+
+func _home_world(with_attackers: bool) -> Array:
+	var sim = Fixture.world()
+	sim.add_player(1, 0)
+	sim.add_player(2, 0)
+	var pocket: Array[Vector2i] = []
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			if dx != 0 or dy != 0: pocket.append(Vector2i(3 + dx, 5 + dy))
+	sim.replace_blocked_cells(pocket)
+	var enemy: int = sim.spawn(2, Vector2(20.5, 10.5), "usa_tank")
+	var attackers: Array = []
+	if with_attackers: attackers.append(_attacker(sim, enemy, [18.5, 10.5]))
+	var homes: Array = [[5.5, 5.5], [5.5, 5.5], [8.5, 5.5], [3.5, 5.5]]
+	var retaliators: Array = []
+	for i in range(4):
+		var id: int = sim.spawn(1, Vector2(10.5 + i, 10.5), "usa_tank")
+		var unit: Dictionary = sim._entities[id]
+		unit.combat.mode = "retaliate"
+		unit.combat.target_id = enemy
+		unit.combat.goal = homes[i]
+		retaliators.append(id)
+		if with_attackers and i == 0: attackers.append(_attacker(sim, enemy, [18.5, 12.5]))
+	return [sim, enemy, retaliators, attackers]
+
+func _attacker(sim, enemy: int, destination: Array) -> int:
+	var id: int = sim.spawn(1, Vector2(16.5, destination[1]), "usa_tank")
+	var unit: Dictionary = sim._entities[id]
+	unit.combat.mode = "attack"
+	unit.combat.target_id = enemy
+	unit.destination = destination
+	unit.status = "moving"
+	return id
+
+func test_retaliators_home_against_full_scan_cells(runner) -> bool:
+	var world: Array = _home_world(true)
+	var sim = world[0]
+	sim._check_reservations = true
+	sim.remove_object(world[1])
+	var units: Array = world[2].map(func(id: int) -> Dictionary: return sim._entities[id])
+	runner.check(sim._reservation_checks == 4 and sim._reservation_mismatches == 0, "RS1 each retaliator sent home allocates against the full scan's cells (%d checks, %d mismatches)" % [sim._reservation_checks, sim._reservation_mismatches])
+	runner.check(sim._cell(units[0].destination) != sim._cell(units[1].destination), "RS1 the second retaliator does not get the first's new destination cell")
+	runner.check(units[3].status == "blocked", "RS1 a home without a free cell leaves the unit blocked")
+	runner.check(world[3].all(func(id: int) -> bool: return sim._entities[id].destination == null), "RS1 attack-mode units before and after the first retaliator are idle")
+	runner.check(sim._reservation_opens == 1, "RS1 one death opens the map once")
+	runner.check(not sim._reserving and sim._reserved.is_empty(), "RS1 the map is closed after the removal")
+	return true
+
+func test_one_death_skips_per_order_scans(runner) -> bool:
+	var world: Array = _home_world(false)
+	var sim = world[0]
+	Profiler.reset()
+	Profiler.enabled = true
+	sim.remove_object(world[1])
+	runner.check(Profiler.calls(&"assign_move.unavailable") == 0 and Profiler.calls(&"allocation.reserved") == 4, "RS2 retaliators sent home by one death skip the per-order full scan")
+	var timer = Fixture.world()
+	timer.add_player(1, 0)
+	timer.add_player(2, 0)
+	var enemy: int = timer.spawn(2, Vector2(28.5, 28.5), "usa_tank")
+	var id: int = timer.spawn(1, Vector2(10.5, 10.5), "usa_tank")
+	var unit: Dictionary = timer._entities[id]
+	unit.combat.mode = "retaliate"
+	unit.combat.target_id = enemy
+	unit.combat.goal = [5.5, 5.5]
+	unit.combat.until = timer.tick()
+	Profiler.reset()
+	timer.step()
+	runner.check(Profiler.calls(&"allocation.reserved") == 0 and Profiler.calls(&"assign_move.unavailable") >= 1, "RS2 a retaliator sent home by its timer keeps the full scan")
+	Profiler.enabled = false
+	Profiler.reset()
+	return true
+
+func test_hordes300_home_allocations_match_full_scan(runner) -> bool:
+	var sim = CombatWorkload.create("hordes300")
+	sim._check_reservations = true
+	for i in range(800): sim.step()
+	runner.check(sim._reservation_checks >= 20 and sim._reservation_mismatches == 0, "RS3 over 800 hordes300 ticks every batched home allocation matches the full scan (%d checks, %d mismatches)" % [sim._reservation_checks, sim._reservation_mismatches])
 	return true

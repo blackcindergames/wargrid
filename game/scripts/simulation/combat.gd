@@ -616,10 +616,13 @@ static func object_removed(sim: Simulation, id: int) -> void:
 		unit.combat.repath_tick = sim._tick
 		unit.combat.retarget = unit.combat.mode == "attack_move" and not is_ai(sim, unit.owner)
 		if unit.combat.mode == "retaliate":
+			if not sim._reserving: sim._begin_reservations()
 			_go_home(sim, unit)
 		if unit.combat.mode == "attack":
 			unit.combat.mode = "guard"
+			if sim._reserving: sim._reserve(unit, "destination", -1)
 			sim._stop_unit(unit)
+	sim._end_reservations()
 
 static func _is_idle_guard(unit: Dictionary) -> bool:
 	return unit.combat.mode == "guard" and unit.combat.target_id == null and unit.status != "moving" and unit.status != "path_pending"

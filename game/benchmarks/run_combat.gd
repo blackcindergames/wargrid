@@ -66,6 +66,7 @@ func _measure(layout: String) -> bool:
 	var horde_checks: int = 0
 	var horde_peak: int = 0
 	var ramp_shots: int = 0
+	var window_reserved: int = 0
 	var ramped: Dictionary = {}
 	var frc := {"tier_start": -1, "tier_end": -1, "occupant_gain": false, "hole_gain": false, "hp": {}}
 	for tick in range(WARMUP + SAMPLES):
@@ -114,6 +115,7 @@ func _measure(layout: String) -> bool:
 			allocations.append(sim.allocation_calls())
 			window_chases += sim.scan_chases()
 			window_retaliations += sim.retaliations()
+			window_reserved += sim.reserved_allocations()
 	var alive: int = sim.snapshot().entities.size()
 	var summary: Dictionary = Stats.summary(samples)
 	print("COMBAT ", layout, " tick_ms=", JSON.stringify(summary), " warmup_tick_ms=", JSON.stringify(Stats.summary(warmup)), " snapshot_ms=", JSON.stringify(Stats.summary(snapshots)),
@@ -154,11 +156,14 @@ func _measure(layout: String) -> bool:
 			return false
 		return true
 	if layout == "hordes300":
-		print("COMBAT ", layout.to_upper(), " checks_window=", horde_checks, " level2_peak_window=", horde_peak)
+		print("COMBAT ", layout.to_upper(), " checks_window=", horde_checks, " level2_peak_window=", horde_peak, " reserved_window=", window_reserved)
 		if not _stress_ok(layout, summary):
 			return false
 		if horde_checks == 0 or horde_peak == 0:
 			push_error("Combat benchmark: no horde checks or no horde of five inside the timed window")
+			return false
+		if window_reserved == 0:
+			push_error("Combat benchmark: no retaliator was sent home through the reservation map inside the timed window")
 			return false
 		return true
 	if layout == "docks":

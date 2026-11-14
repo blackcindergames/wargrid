@@ -1,15 +1,15 @@
 # Flatter worst ticks verification
 
 ```text
-Resume record (updated 2026-11-14 night, Task 0 done)
+Resume record (updated 2026-11-14 night, Task 1 done)
 Branch / base commit / working-tree state: flatter-worst-ticks in ~/projects/wargrid-wt-flatter / base 9c8c505 (main 4c21d1a + prep) / only this file modified
-Last green task / next incomplete task: Task 0 / Task D0
+Last green task / next incomplete task: Task 1 (uncommitted) / Task 2
 Changed paths since last commit: none on the branch (this file and the plan are new in ~/projects/wargrid, uncommitted)
 Last command / cases / checks / failures / exit / marker: none on the branch (the review's measurements ran on scratch copies of 74950e5; evidence rows below)
 Known red case or blocker: plan approval pending (external readiness review applied 2026-11-14, evidence row below). All 21 Questions decided (user, 2026-11-14). Night settings re-checked at the refresh: worktree folder and Edit rule, compare_replays.py, python3 -I for $L scripts, mkdir -p under flatter-worst-ticks, ssh/scp to the Deck present; $L exists; git status, diff, log, add, commit and archive not named (the handoff's proposed copy adds them; scp fallback in Task D0 Step 4)
 Approved decisions, pre-authorizations used, deferred gates: package note "Flatter worst ticks" (user, 2026-11-13); local commits per GREEN task only if the night handoff grants them; benchmark only if the handoff pre-approves it; no budget, ceiling or ASSUMED_SLOWDOWN touched; budget 384 route cells (user, 2026-11-14, round 1); X2 built, erase-and-append kept under the Task 4 Step 6 criterion, worst ticks measured then gated where deterministic (user, 2026-11-14, round 2); Steam Deck rows D0 and D7 report-only, a window on the Deck approved for tonight, Firefox fallback to native rows only (user, 2026-11-14 evening)
 Usage so far (python3 tools/session_usage.py <session files>): n/a
-Next exact action: Task 1 (D0 STARTED; fetch when edges.txt prints DONE)
+Next exact action: coordinator commits Task 1; then Task 2 (D0 STARTED; fetch when edges.txt prints DONE)
 ```
 
 Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-ticks.md) (refreshed onto `4c21d1a`). Spec: `docs/packages.md` night lane item 4 and package note "Flatter worst ticks"; `docs/reference/simulation-reference-review.md` §5.2, §5.8, "Review 2026-11-13"; `docs/reference/hordes300-combat-fire.md`. Logs: `~/projects/wargrid-overnight-work/flatter-worst-ticks/logs/` (outside the repository). Deck logs: `$L/deck/`.
@@ -20,7 +20,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 |---|---|---|---|
 | 0 | Baseline: worktree, import, suite and traces, pins and R census, profile, benchmark, team match, netplay match | Sonnet | GREEN (uncommitted) |
 | D0 | Steam Deck rows on the base (start; fetch when done), report-only | Sonnet | STARTED 22:40 (unit wargrid-flatter-base running; fetch pending) |
-| 1 | Retaliators sent home through one reservation map (RS1-RS3), hordes300 benchmark mechanics check | Sonnet | not started |
+| 1 | Retaliators sent home through one reservation map (RS1-RS3), hordes300 benchmark mechanics check | Sonnet | GREEN (uncommitted) |
 | 2 | Bot state, old gate (BS1, BS2), cost probe | Sonnet | not started |
 | 3 | Bot seats on their own tick (BT1), test edits T1-T4 | Sonnet | not started |
 | 4 | Path budget by route cells (PB1-PB4, X2), movement benchmark mechanics check, queue-place criterion (Question 8) | Sonnet | not started |
@@ -82,16 +82,16 @@ Non-pin checks that go red and their allowed edit (review, measured on `74950e5`
 
 | Item | Value |
 |---|---|
-| Red (stub counters) | |
-| Green: `test_combat` cases / checks / failures | |
-| RS1 checks / mismatches; RS3 checks / mismatches and seconds | |
-| Mutations (a)-(c) | |
-| Combat benchmark red with the fix reverted (`no retaliator was sent home through the reservation map inside the timed window`, exit 1) | |
-| Combat benchmark green: `COMBAT BENCHMARK PASSED 10`, hordes300 `reserved_window` | |
-| hordes300 `step.combat_fire` max before / after (probe: 5.403 → 1.067 ms) | |
-| hordes300 `allocation.reserved` max and calls; `assign_move.unavailable` max; `step` max | |
-| Digest script (`$L/t1-digest.gd`) `main` against branch | |
-| Suite and traces | |
+| Red (stub counters) | `t1-red.log`: RS1 (0 checks), RS1 opens-once, RS2 first half, RS3 (0 checks) fail by name; CASES 85, FAILURES 4 |
+| Green: `test_combat` cases / checks / failures | 85 / 2648 / 0 |
+| RS1 checks / mismatches; RS3 checks / mismatches and seconds | RS1 4 / 0; RS3 40 / 0; RS3 not timed separately (whole `test_combat` run is seconds), no CASE_SECONDS entry |
+| Mutations (a)-(c) | (a) drop attack-branch -1: RS1 3 mismatches (needed A2 spawned between retaliators; with A2 last it stayed green); (b) drop trailing +1: RS1 3 mismatches, RS3 37; (c) drop end: RS1 closed, RS3 20; (d) end inside loop: RS1 opens-once; (e) no begin: 4 red. All reverted, diff stat = Owns paths |
+| Combat benchmark red with the fix reverted (`no retaliator was sent home through the reservation map inside the timed window`, exit 1) | exit 1, error line hit, `reserved_window=0` (`t1-combat-red.log`, load 4.10 at start) |
+| Combat benchmark green: `COMBAT BENCHMARK PASSED 10`, hordes300 `reserved_window` | exit 0, PASSED 10, `reserved_window=154`; open/dense p95 over budget as on base (accepted); hordes300 p95 2.903 p99 3.314; WORST TICK hordes300 4.256 ms (t1080) vs 7.605 base; load 3.20 at start |
+| hordes300 `step.combat_fire` max before / after (probe: 5.403 → 1.067 ms) | 5.594 -> 1.059 ms |
+| hordes300 `allocation.reserved` max and calls; `assign_move.unavailable` max; `step` max | reserved max 0.435 ms, 0.09 calls/tick; unavailable max 0.739 (was 4.241); allocation.assign max 0.190 (was 0.970); step max 4.308 (was 7.868); profile exit 0, PROFILE COMPLETE 10 |
+| Digest script (`$L/t1-digest.gd`) `main` against branch | 105 DIGEST lines each, diff identical; ALLOC lines identical |
+| Suite and traces | `SUITE(t1)` exit 0, CASES 914, CHECKS 146276, FAILURES 0, TESTS PASSED 146276; four traces cmp silent against `*-before.tsv`; lint exit 0, warnings exit 0 (167 files), run_checks CHECKS PASSED 5 |
 
 ## Bot state (Task 2)
 

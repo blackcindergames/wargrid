@@ -44,6 +44,15 @@ var _chases: Dictionary = {}
 var _scan_chases: int = 0
 var _retaliations: int = 0
 var _allocation_calls: int = 0
+# Cell -> ground positions plus destinations there; open only while Combat.object_removed sends retaliators home.
+var _reserved: Dictionary = {}
+var _reserving: bool = false
+# Tests only: the check pays the full scan the map saves.
+var _check_reservations: bool = false
+var _reservation_checks: int = 0
+var _reservation_mismatches: int = 0
+var _reservation_opens: int = 0
+var _reserved_allocations: int = 0
 var _navigation_builds: int = 0
 var _units_removed: bool = false
 var _crates: Array[Dictionary] = []
@@ -335,6 +344,30 @@ func _unavailable_cells(members: Array[Dictionary]) -> Array[Vector2i]:
 	cells.assign(unavailable.keys())
 	return cells
 
+func _begin_reservations() -> void:
+	_reservation_opens += 1
+	_reserved = {}
+	for unit: Dictionary in _entities.values():
+		_reserve(unit, "position", 1)
+		_reserve(unit, "destination", 1)
+	_reserving = true
+
+func _end_reservations() -> void:
+	_reserving = false
+	_reserved = {}
+
+func _reserve(unit: Dictionary, key: String, delta: int) -> void:
+	if Registry.air_kinds.has(unit.kind) or unit.has("container_id") or unit[key] == null: return
+	var cell := _cell(unit[key])
+	var count: int = _reserved.get(cell, 0) + delta
+	if count == 0: _reserved.erase(cell)
+	else: _reserved[cell] = count
+
+func _cross_check(ground: Array[Dictionary]) -> void:
+	var cells: Array[Vector2i] = _unavailable_cells(ground)
+	_reservation_checks += 1
+	if cells.size() != _reserved.size() or not cells.all(func(cell: Vector2i) -> bool: return _reserved.has(cell)): _reservation_mismatches += 1
+
 func _apply_orders() -> void:
 	_pending.sort_custom(_command_before)
 	var future: Array[Dictionary] = []
@@ -426,12 +459,24 @@ func _assign_move(members: Array[Dictionary], target: Array) -> void:
 	for unit in members:
 		if not Registry.air_kinds.has(unit.kind): ground.append(unit)
 	_allocation_calls += 1
-	var zone: int = Profiler.begin()
-	var unavailable: Array[Vector2i] = _unavailable_cells(ground)
-	Profiler.end(&"assign_move.unavailable", zone)
-	zone = Profiler.begin()
-	var goals: Dictionary = Allocation.assign(_navigation, ground, point, unavailable)
-	Profiler.end(&"allocation.assign", zone)
+	var goals: Dictionary
+	if _reserving:
+		_reserved_allocations += 1
+		var zone: int = Profiler.begin()
+		for unit in ground: _reserve(unit, "position", -1)
+		if _check_reservations: _cross_check(ground)
+		goals = Allocation.assign_excluding(_navigation, ground, point, _reserved)
+		for unit in ground:
+			_reserve(unit, "position", 1)
+			_reserve(unit, "destination", -1)
+		Profiler.end(&"allocation.reserved", zone)
+	else:
+		var zone: int = Profiler.begin()
+		var unavailable: Array[Vector2i] = _unavailable_cells(ground)
+		Profiler.end(&"assign_move.unavailable", zone)
+		zone = Profiler.begin()
+		goals = Allocation.assign(_navigation, ground, point, unavailable)
+		Profiler.end(&"allocation.assign", zone)
 	for unit in members:
 		unit.route = []
 		if Registry.air_kinds.has(unit.kind):
@@ -449,6 +494,8 @@ func _assign_move(members: Array[Dictionary], target: Array) -> void:
 			unit.destination = [goal.x, goal.y]
 			unit.status = "path_pending"
 			_path_queue.append(unit.id)
+	if _reserving:
+		for unit in ground: _reserve(unit, "destination", 1)
 
 func _set_intent(unit: Dictionary, mode: String, target_id: Variant = null, goal: Variant = null) -> void:
 	if unit.combat == null: return
@@ -505,6 +552,9 @@ func command_results() -> Array[Dictionary]:
 func allocation_calls() -> int:
 	return _allocation_calls
 
+func reserved_allocations() -> int:
+	return _reserved_allocations
+
 func step() -> void:
 	if match_over(): return
 	var total: int = Profiler.begin()
@@ -515,6 +565,7 @@ func step() -> void:
 	_scan_chases = 0
 	_retaliations = 0
 	_allocation_calls = 0
+	_reserved_allocations = 0
 	_units_removed = false
 	var zone: int = Profiler.begin()
 	_apply_orders()
