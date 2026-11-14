@@ -1,9 +1,9 @@
 # Flatter worst ticks verification
 
 ```text
-Resume record (updated 2026-11-14 night, Task 4 done)
+Resume record (updated 2026-11-14 night, Task 5 done)
 Branch / base commit / working-tree state: flatter-worst-ticks in ~/projects/wargrid-wt-flatter / base 9c8c505 (main 4c21d1a + prep) / only this file modified
-Last green task / next incomplete task: Task 4 (uncommitted) / Task 5
+Last green task / next incomplete task: Task 5 (re-pin committed) / Task 6
 Changed paths since last commit: none on the branch (this file and the plan are new in ~/projects/wargrid, uncommitted)
 Last command / cases / checks / failures / exit / marker: none on the branch (the review's measurements ran on scratch copies of 74950e5; evidence rows below)
 Known red case or blocker: plan approval pending (external readiness review applied 2026-11-14, evidence row below). All 21 Questions decided (user, 2026-11-14). Night settings re-checked at the refresh: worktree folder and Edit rule, compare_replays.py, python3 -I for $L scripts, mkdir -p under flatter-worst-ticks, ssh/scp to the Deck present; $L exists; git status, diff, log, add, commit and archive not named (the handoff's proposed copy adds them; scp fallback in Task D0 Step 4)
@@ -73,6 +73,25 @@ Final R (Task 0 Step 4; fixed afterwards):
 | V12 | `test_skirmish_scene.gd` `HUD_TEXTS` (HUD1, `:646`) | as on the base | present (HUD_TEXTS :646, checked :676) | yes (moves with the stagger, review) | | | red: HUD1 | red: HUD1 (text moved) | | |
 | V13 | `input_script_rows.gd` `IC1_ROWS`, `IC2_ROWS` | as on the base | present (IC1_ROWS :3, IC2_ROWS :27) | yes by the census rule (expected not to move, derived) | | | | | | |
 | (census) | pins added by the Task 0 rule (`test_dock_lock.gd` `COMMAND_ROWS` is a command-name list, outside R) | | none added: regex hits are exactly V1-V7, V12, V13 and `test_dock_lock.gd:29` COMMAND_ROWS (outside R); tools: 9129 (run_netplay.sh:91) and `won tick` (run_team_match.sh:13) as V9, V10 | | | | | | | |
+
+Task 5 re-pin (2026-11-14 night, old -> new; Re-pin list only). Diagnosis evidence (coordinator Opus high, `$L/d5-*`): GO; every moved value on the Re-pin list, inside caps and windows, equal to the plan's Expected values at budget 384 (S1 8626/1, China 24757/1, FRC 37178/1, team 38786/2/268); V5/H1 moved by the budget alone; V13 did not move; V9 left to the probe below.
+
+| Pin | Old | New |
+|---|---|---|
+| V1 `FINAL_DIGEST` | `3958ceaab11986af` | `d2f386fa273a0048` |
+| V2 `TEAM_CORE_SERIES` | `8513092129969516499` | `7092199221456895974` |
+| V3 `TERMINAL_TICK` / `WINNER` | `8753` / `1` | `8626` / `1` (inside 7000-17999) |
+| V3 `S1_CORE_SERIES` | `4004499097874677431` | `1304276675012125868` (series loops over `TERMINAL_TICK + 1`, so it is not the Task 4 `got` value `8224641749915322152`; the Task 4 value was measured over the old length; two runs agree on the new one) |
+| V4 China tick / winner | `11578` / `2` | `24757` / `1` (cap 45000) |
+| V4 FRC tick / winner | `48321` / `1` | `37178` / `1` (cap 50000) |
+| V5 `PINNED` | `01e256834bdd4dfb` | `8248d9c74bdd4dfb` |
+| V6 `EXPECTED_DIGEST` | `7c7fbc8d...48a9e7` | `5dce6afe...ecb65` |
+| V9 netplay terminal tick | `9129` | `9013` (probe: seats compared `REPLAYS MATCHED 301`; rerun `same_hashes` incl. oracle passed) |
+| V10 team match | `won tick=39497 winner=2 units_peak=271` | `won tick=38786 winner=2 units_peak=268` (cap 45000) |
+| V12 `HUD_TEXTS` | `Rifleman #50`, `Rifleman #20` | `Rifleman #49`, `Rifleman #19` |
+| V13 `IC1_ROWS`, `IC2_ROWS` | | did not move, left alone |
+
+Task 5 checks: `SUITE(t5)` and `SUITE(t5b)` each `CASES 922 CHECKS 146175 FAILURES 0`, exit 0, `TESTS PASSED 146175`; four traces `cmp` silent t5 vs t5b (new reference `*-t5.tsv`); team match exit 0 `won tick=38786 winner=2 units_peak=268`; netplay match/perturb/relay-down/relay-term `NETPLAY PASSED`; `CONFORMANCE PASSED 41`; run_checks `CHECKS PASSED 5`, lint 0, warnings 0. Logs `t5-*` in `$L`.
 
 Final R = V1-V6, V9, V10, V12, V13 (as planned; no census additions). Splash index (evidence only, `PROFILE` lines in t0-profile.log): calls per tick 0.00-0.34 with mean 0.001-0.044 ms in contact, skirmish3v3, open, dense, team_match (0.18/tick, 0.034 ms); no zone line in hordes300 or large_196 at mean level; no growth with workload size beyond calls/tick.
 

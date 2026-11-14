@@ -9,5 +9,5 @@ code=$?
 cat "$log_dir/match.log"
 [ "$code" -eq 0 ] || exit 1
 if grep -E 'ERROR:|SCRIPT ERROR:' "$log_dir/match.log"; then exit 1; fi
-# Pinned outcome: won inside the 45000 cap, winner 2; c1 dock rebuild moved it off the cap (user, 2026-11-13).
-grep -Eq '^TEAM MATCH won tick=39497 winner=2 units_peak=271$' "$log_dir/match.log" || exit 1
+# Pinned outcome: won inside the 45000 cap; re-pinned for staggered bots and the route-cell path budget (Flatter worst ticks).
+grep -Eq '^TEAM MATCH won tick=38786 winner=2 units_peak=268$' "$log_dir/match.log" || exit 1
