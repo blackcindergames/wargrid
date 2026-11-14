@@ -27,6 +27,7 @@ Status labels: rules in "Rules" are **in force** (those marked *enforced* are ch
 ## Native code rules (later Rust or C++ core)
 
 - No implicit FMA. C++: `-ffp-contract=off` (or `-ffp-model=strict`) on every target, never fast-math. Rust: default is strict, never call `mul_add` (inferred from RFC 3514; not tested in codegen).
+- No library randomness inside a kernel: no C++ `<random>` distributions or `std::shuffle`, no Rust `rand` crate; only the port of `next_random()`. Standard library distributions differ between MSVC, libstdc++ and libc++; Worlds Upon The Wind replaced them with portable versions for that reason (`~/projects/wutw-public` @ `95704c1`, `wutw-gdext/src/utils.h:19-28`) (user, 2026-11-14).
 - No relaxed SIMD ("The relaxed SIMD instructions have nondeterministic results", WebAssembly `Nondeterminism.md`), never hash NaN bits, no libm trig. Quotes in sim core options §1B "Determinism, Rust against C++".
 
 ## Checks

@@ -44,6 +44,7 @@ Q7. Can a player choose "Random" as faction?
 Q8. Should the lobby allow observers who watch with the whole map revealed?
    a) Yes, observer slots that see everything — ZH default (GameLogic.cpp:1744-1748)   b) No observers   c) Later
    Recommendation: c, because the relay and lockstep would carry a non-playing seat; not needed for the 3v3 exit gate. Why it matters: an observer seat changes the relay's room size.
+   Option for c (user, 2026-11-14, FTEQW research): observers as receive-only sockets, not seats, QTV style: the relay copies every seat's frames to them through its ordered `sender` with a delay (FTE `fteqtv` default 1 s, "set high to block specing enemies", `fteqtv/qtv.h:870` @ `f09ac7ccc`); nobody waits for an observer, so lockstep and the seat count stay unchanged; join at match start only, since there is no state restore.
 
 Q9. How does a match start once everyone is in?
    a) Every human ticks "Accept"; any option change clears all accepts; then the host starts and a 5 s countdown runs — ZH default (GameInfo.h:66-68, multiplayer.ini:36)   b) The host starts whenever all slots are filled   c) It starts on its own when all slots are filled
