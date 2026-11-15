@@ -3,15 +3,15 @@
 Plan: [sim boundary SB1-SB2](../superpowers/plans/2026-11-15-sim-boundary-sb1-sb2.md). Resume record below is overwritten at each checkpoint; evidence rows are append-only.
 
 ```text
-Resume record (updated 2026-11-15 night, stop gate 1)
-Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / gate 1 fix uncommitted on top of a7cd946
-Last green task / next incomplete task: Tasks 1-8 committed; stop gate 1 (whole-branch review: Grok, then Opus second pass) done, one fix uncommitted / stop gate 2 (`/ponytail-review`, then Task 8 Steps 1-4 on the final tree)
-Changed paths since last commit: game/scripts/match/orders.gd (`answered` reopen guard), game/tests/test_online_scene.gd (RA9), docs/guide/05-presentation.md, docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb/sb4/, 980 cases, 146452 checks, 0 failures, exit 0, TESTS PASSED 146452; REPLAYS MATCHED x4 vs base; run_lint, run_warnings, check_public exit 0
+Resume record (updated 2026-11-15 night, stop gate 2 done)
+Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / clean at 5696065
+Last green task / next incomplete task: Tasks 1-8 committed; gates 1 and 2 done / gate 3 (owner playtest)
+Changed paths since last commit: docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb/final/, 980 cases, 146452 checks, 0 failures, exit 0, TESTS PASSED 146452; REPLAYS MATCHED x4 vs base; netplay match and team match exit 0; run_checks CHECKS PASSED 5
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); IC1 row 19 inspected-enemy HP/order text may change (user, 2026-11-15); S3 and OV11 fixture changes accepted (user, 2026-11-15); no rendered benchmark rerun, world_view.gd is not touched; gate 3 (owner playtest) and gate 4 wait for the owner
+Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); IC1 row 19 inspected-enemy HP/order text may change (user, 2026-11-15); S3 and OV11 fixture changes accepted (user, 2026-11-15); no rendered benchmark rerun, world_view.gd is not touched; the benchmark is not rerun after the gate fixes (input code only)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: coordinator commits the gate 1 fix (`Keep a new gesture when an online build is refused`), then stop gate 2.
+Next exact action: all gates done up to 2; gate 3 (owner playtest) and gate 4 (push/PR/merge) wait for the owner.
 ```
 
 ## Evidence
@@ -126,3 +126,16 @@ Task 7 docs (2026-11-15, tree `314f487` plus uncommitted doc edits): edited `doc
 Task 7 review merge (2026-11-15): fixed in the docs: online answers arrive after the scheduled command tick, not one tick later (01, 04, 05); rejections come from the local lockstep simulation, not the relay (11); snapshot also at the end for the playtest match record, preview at most once per step for the latest request (sim-interface); only the build click is guarded against a second click, the order voice plays at the click for every order, a repaint keeps the result buffer but the note may show a buffered refusal (05); lost trailing double space in 07. Not changed: the sim-interface Status line (e3a4b2b/d20d827) predates this task. `sh tools/check_public.sh` exit 0.
 
 Stop gate 2 over-engineering review (2026-11-15, ponytail): no cuts, so no reruns. Rulings: `Orders.show_preview` kind and placing guards - plan Task interface pins them; a drop saves 2 lines, risks a stale answer drawn after a kind switch. Duplicated preview request/answer code in both drivers - already marked `shortcut:` for SB3's run_job; a shared base class now is a new layer SB3 deletes. `closes_placement_on_click` driver hook - two-valued behaviour pinned by owner answer 18; a flag on the driver is the smallest form. `HUD._local_team` - replaces `driver.sim.team_of`, needed to keep reads off the sim.
+
+Final recheck after the gate fix rounds (2026-11-15, tree `5696065`, clean; outputs in `build/sb/final/`):
+
+| Date | Command | Result | Tree |
+|---|---|---|---|
+| 2026-11-15 | `sh tools/run_checks.sh` | exit 0, `CHECKS PASSED 5` | 5696065, clean |
+| 2026-11-15 | `sh tools/run_tests.sh` with the four replay trace variables | exit 0, CASES 980 CHECKS 146452 FAILURES 0, `TESTS PASSED 146452` | 5696065, clean |
+| 2026-11-15 | `compare_replays.py` base vs final: replay, economy, combat (1200 rows), team (`--interval 200 --rows 100`) | `REPLAYS MATCHED` x4 (1200, 1200, 1200, 100) | 5696065, clean |
+| 2026-11-15 | `NETPLAY_OUT=build/sb/final/netplay sh tools/run_netplay.sh match`; `compare_replays.py --interval 30 --rows 0` vs base `s1.tsv` | exit 0, `NETPLAY PASSED match 15.5 s`; `REPLAYS MATCHED 301` | 5696065, clean |
+| 2026-11-15 | `sh tools/run_team_match.sh` | exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS` | 5696065, clean |
+| 2026-11-15 | `git diff f838f79 --stat -- game/scripts/simulation protocol` | empty | 5696065, clean |
+
+Benchmark not rerun: the gate fixes touched input code only.
