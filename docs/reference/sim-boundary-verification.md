@@ -157,4 +157,8 @@ Fix A review (fresh Opus, 2026-11-15, diff `f3e1d52..7dbd1ec`): no P0-P1. Fixed:
 | 2026-11-15 | `sh tools/run_tests.sh` (no trace variables) | exit 0, CASES 982 CHECKS 146449 FAILURES 0 | 7dbd1ec + RL3, uncommitted |
 | 2026-11-15 | `sh tools/run_checks.sh` | exit 0, `CHECKS PASSED 5` | same |
 
-Still open: the user's listen check of fix A (offline and online), then gate 4.
+Fix A review P2 accepted unmeasured (user, 2026-11-15): the per-tick preview while placing stays; worst case unchanged from a moving cursor.
+
+Fix A listen check (user, 2026-11-15, desktop on `eab5cfc` plus this note; online two windows on the live relay): red spot offline and online passes (beep, no order voice); green spot builds.
+
+Still open: gate 4.
