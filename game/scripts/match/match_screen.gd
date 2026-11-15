@@ -174,9 +174,13 @@ func _input(event: InputEvent) -> void:
 		elif not _escape_pending(): _pause.open()
 		else: return
 	elif not _pause.visible:
-		if _result_panel.takes_enter(event): _play_again()
+		if _result_panel.takes_enter(event) and not _typing(): _play_again()
 		else: return
 	get_viewport().set_input_as_handled()
+
+func _typing() -> bool:
+	var focus := get_viewport().gui_get_focus_owner()
+	return focus is LineEdit or focus is TextEdit
 
 func _physics_process(_delta: float) -> void:
 	var started: int = Time.get_ticks_usec()

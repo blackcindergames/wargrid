@@ -22,7 +22,7 @@ const PLAY_AGAIN: String = "HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain"
 const CHANGE_SETUP: String = "HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_panel_keys, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -463,6 +463,33 @@ func test_result_panel_keys(runner) -> bool:
 	live._input(_enter(KEY_ENTER))
 	runner.check(is_same(live.driver.sim, live_sim), "R2 Enter during a running match does nothing")
 	live.free()
+	return true
+
+func test_enter_in_text_field_keeps_match(runner) -> bool:
+	var port := SubViewport.new()
+	runner.root.add_child(port)
+	var main = Scene.instantiate()
+	port.add_child(main)
+	main.set_physics_process(false)
+	main.set_process(false)
+	await runner.process_frame
+	_arena(main)
+	_victory(main)
+	var sim_before = main.driver.sim
+	var field := LineEdit.new()
+	main.get_node("HUD").add_child(field)
+	field.grab_focus()
+	runner.check(main.get_viewport().gui_get_focus_owner() == field, "R6 fixture: the text field has focus")
+	main.get_viewport().push_input(InputEventMouseMotion.new())
+	runner.check(not main.get_viewport().is_input_handled(), "R6 fixture: flag clear")
+	main._input(_enter(KEY_ENTER))
+	runner.check(is_same(main.driver.sim, sim_before) and main.get_node("HUD/ResultPanel").visible, "R6 Enter in a text field does not restart")
+	runner.check(not main.get_viewport().is_input_handled(), "R6 the Enter event is not swallowed")
+	field.release_focus()
+	field.queue_free()
+	main._input(_enter(KEY_ENTER))
+	runner.check(not is_same(main.driver.sim, sim_before), "R6 Enter without text focus restarts")
+	port.queue_free()
 	return true
 
 func test_change_setup_leaves(runner) -> bool:
