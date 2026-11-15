@@ -613,3 +613,16 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-15,0addc23,Sim boundary SB1-SB2,dev,combat_tick,ramp,1,0.648,1.2,,P1,1.27,log sha256:d7918f35729a
 2026-11-15,0addc23,Sim boundary SB1-SB2,dev,combat_tick,frc,1,0.876,1.055,,P1,1.27,log sha256:d7918f35729a
 2026-11-15,0addc23,Sim boundary SB1-SB2,dev,lockstep_overhead,contact,1,0.016,0.069,,P1,1.27,log sha256:d7918f35729a
+2026-11-15,2b8c8f7,auto eab5cfc,dev,movement_tick,open,1,0.757,0.838,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,movement_tick,dense,1,0.739,0.894,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,open,1,1.869,2.21,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,dense,1,1.83,2.135,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,contact,1,1.169,1.521,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,skirmish3v3,1,1.337,1.437,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,transports,1,1.113,1.214,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,defences,1,0.773,2.138,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,docks,1,0.585,0.601,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,hordes300,1,2.899,3.368,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,ramp,1,0.647,1.198,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,frc,1,0.878,1.069,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,2b8c8f7,auto eab5cfc,dev,lockstep_overhead,contact,1,0.016,0.067,,P1,1.81,log sha256:96b2bab5570e
