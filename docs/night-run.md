@@ -6,6 +6,8 @@
 
 Runs while the user is reachable, at the PC or on the phone.
 
+0. Before picking work, run the previous-run check below (the same as Start step 2). Open items of an earlier run are raised first, so a new run never buries them.
+
 1. Read the session notes (`~/projects/wargrid-private/docs/session-notes.md`: Next action, Deferred experiments and research) and [packages](packages.md). Offer two or three ranked candidates that suit unattended work (no playtest, no visible window, no push); the user picks.
 2. Pick one or two small independent backup tasks (research, reruns, tooling) for when the main task ends or parks.
 3. Ask in questionnaire rounds until no open choice is left: up to four short questions per round, each with a recommendation, readable on a phone; send a `PushNotification` before each round.
@@ -27,10 +29,11 @@ Runs while the user is reachable, at the PC or on the phone.
 Runs at the PC, in the session started with the handoff's start line.
 
 1. The argument is the handoff path. Missing or unreadable: say so and stop.
-2. `ps -o args= -p $PPID` must contain `--remote-control` and `night-settings.json`. If either is missing, name it, print the handoff's start line and stop. A hybrid start (attended settings first) only when the handoff says so.
-3. `pgrep -fl 'godot|generalszh'`: list processes of other sessions, never kill them. Tick-based work continues; stop only if the handoff runs benchmarks.
-4. Keep the host awake: `caffeinate -ims -w $PPID` with `run_in_background` (system awake, display may sleep; other tools' assertions are harmless). Report the `pmset -g assertions` lines that keep the display on.
-5. Post the Task / What / Status table, then coordinate under the rules below and the handoff.
+2. Previous-run check (user, 2026-11-15): every `morning-summary.md` under `~/projects/wargrid-overnight-work/*/` needs an Investigations entry in the session notes (add missing ones as open, see [kickoff](kickoff.md)), and none may be open. If any is open, list each with its morning items and stop; start only after the user has gone over them or says to start anyway, in which case record that in the ledger. Also list unresolved gates of Pending user action that name a branch, push or deploy the run could touch.
+3. `ps -o args= -p $PPID` must contain `--remote-control` and `night-settings.json`. If either is missing, name it, print the handoff's start line and stop. A hybrid start (attended settings first) only when the handoff says so.
+4. `pgrep -fl 'godot|generalszh'`: list processes of other sessions, never kill them. Tick-based work continues; stop only if the handoff runs benchmarks.
+5. Keep the host awake: `caffeinate -ims -w $PPID` with `run_in_background` (system awake, display may sleep; other tools' assertions are harmless). Report the `pmset -g assertions` lines that keep the display on.
+6. Post the Task / What / Status table, then coordinate under the rules below and the handoff.
 
 ## Coordinator rules
 
