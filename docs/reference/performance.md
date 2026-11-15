@@ -10,9 +10,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 159% | ➖ same | 2026-11-15 |
 | **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 144% | 🆕 first run | 2026-11-08 |
 | Background upkeep, armies on the move | 🟡 Close | █████████░ 98% | 🆕 first run | 2026-11-08 |
+| Drawing the screen | 🟢 OK | ███████░░░ 78% | 🔺 11% worse | 2026-11-15 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse | 2026-11-15 |
-| Drawing the screen | 🟢 OK | ███████░░░ 70% | 🔺 9% worse | 2026-11-13 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ██████░░░░ 67% | 🔻 1% better | 2026-11-13 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 72% | 🔺 8% worse | 2026-11-15 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | ➖ same | 2026-11-15 |
 | Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 1% better | 2026-11-15 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | ➖ same | 2026-11-15 |
@@ -29,8 +29,8 @@ Details:
 - combat stress p95: 159% of budget, exceeded (auto eab5cfc, 2026-11-15), unchanged vs Sim boundary SB1-SB2 (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 98% of budget (perf spike T2, 2026-11-08), no previous run; run-to-run spread not measured
 - plumbing, horde: 144% of budget, exceeded (perf spike T2, 2026-11-08), no previous run; run-to-run spread not measured
-- rendered tick-frame p95: 70% of budget (P2 gate, 2026-11-13), 9% slower than P1 gate (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 67% of budget (P2 gate, 2026-11-13), 1% faster than P1 gate (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 78% of budget (SB1-SB2 rendered, 2026-11-15), 11% slower than P2 gate (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 72% of budget (SB1-SB2 rendered, 2026-11-15), 8% slower than P2 gate (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (auto eab5cfc, 2026-11-15), 3% faster than Sim boundary SB1-SB2 (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 

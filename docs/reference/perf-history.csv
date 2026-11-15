@@ -626,3 +626,11 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,ramp,1,0.647,1.198,,P1,1.81,log sha256:96b2bab5570e
 2026-11-15,2b8c8f7,auto eab5cfc,dev,combat_tick,frc,1,0.878,1.069,,P1,1.81,log sha256:96b2bab5570e
 2026-11-15,2b8c8f7,auto eab5cfc,dev,lockstep_overhead,contact,1,0.016,0.067,,P1,1.81,log sha256:96b2bab5570e
+2026-11-15,785047b+dirty,SB1-SB2 rendered,dev,frame_interval,open,1,0.482,3.141,,P1,2.12,log sha256:b592aa99ac6a
+2026-11-15,785047b+dirty,SB1-SB2 rendered,dev,tick_frame,open,1,2.221,2.347,,tick-frame,2.12,log sha256:b592aa99ac6a
+2026-11-15,785047b+dirty,SB1-SB2 rendered,dev,frame_interval,dense,1,0.339,2.246,,P1,2.12,log sha256:b592aa99ac6a
+2026-11-15,785047b+dirty,SB1-SB2 rendered,dev,tick_frame,dense,1,2.377,2.58,,tick-frame,2.12,log sha256:b592aa99ac6a
+2026-11-15,785047b+dirty,SB1-SB2 rendered,dev,frame_interval,ashfall,1,0.41,2.307,,P1,2.12,log sha256:b592aa99ac6a
+2026-11-15,785047b+dirty,SB1-SB2 rendered,dev,tick_frame,ashfall,1,2.207,2.342,,tick-frame,2.12,log sha256:b592aa99ac6a
+2026-11-15,785047b+dirty,SB1-SB2 rendered,dev,frame_interval,horde,1,0.341,3.795,,P1,2.12,log sha256:b592aa99ac6a
+2026-11-15,785047b+dirty,SB1-SB2 rendered,dev,tick_frame,horde,1,5.13,5.502,,tick-frame,2.12,log sha256:b592aa99ac6a
