@@ -3,15 +3,15 @@
 Plan: [sim boundary SB1-SB2](../superpowers/plans/2026-11-15-sim-boundary-sb1-sb2.md). Resume record below is overwritten at each checkpoint; evidence rows are append-only.
 
 ```text
-Resume record (updated 2026-11-15 20:10)
-Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / only this file added, uncommitted
-Last green task / next incomplete task: Task 1 (base evidence) green / Task 2
-Changed paths since last commit: docs/reference/sim-boundary-verification.md (build/sb/ is untracked output)
+Resume record (updated 2026-11-15 21:00)
+Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / Task 2 uncommitted
+Last green task / next incomplete task: Task 1 (base evidence) green; Task 2 green, uncommitted / Task 3
+Changed paths since last commit: game/scripts/match/offline_driver.gd, game/tests/test_base_scene.gd, game/tests/test_skirmish_scene.gd, docs/reference/sim-boundary-verification.md (build/sb/ is untracked output)
 Last command / cases / checks / failures / exit / marker: base suite, 955 cases, 146367 checks, 0 failures, exit 0, TESTS PASSED 146367; netplay match exit 0, NETPLAY PASSED match; team match exit 0, TEAM MATCH won tick=38786 winner=2 units_peak=268
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); no rendered benchmark rerun, world_view.gd is not touched; gate 1 and gate 2 reviews pending
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 2. Plan path:line are 32748c8; use this file's Line map.
+Next exact action: Task 3 (commit Task 2 first). Plan path:line are 32748c8; use this file's Line map.
 ```
 
 ## Evidence
@@ -21,6 +21,13 @@ Next exact action: Task 2. Plan path:line are 32748c8; use this file's Line map.
 | 2026-11-15 | `sh tools/run_tests.sh` with the four `WARGRID_*_REPLAY_TRACE` variables into `build/sb/base/` | exit 0, CASES 955 CHECKS 146367 FAILURES 0, `TESTS PASSED 146367` | base f838f79, clean |
 | 2026-11-15 | `NETPLAY_OUT=build/sb/base/netplay sh tools/run_netplay.sh match` | exit 0, `NETPLAY PASSED match 10.6 s`; `s1.tsv` kept | base f838f79, clean |
 | 2026-11-15 | `sh tools/run_team_match.sh` | exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268` (pin at `tools/run_team_match.sh:13`), `TEAM PATHS PASS` | base f838f79, clean |
+| 2026-11-15 | `WARGRID_TEST_ONLY=sb1_` (red first: `RB3 ... got 3`, exit 1; then green) | exit 0, CASES 1 CHECKS 2 FAILURES 0 | Task 2, uncommitted |
+| 2026-11-15 | `WARGRID_TEST_ONLY=scene` (red first: 11 failures, "Sequence must increase") | exit 0, CASES 114 CHECKS 3536 FAILURES 0, `TESTS PASSED 3536` | Task 2, uncommitted |
+| 2026-11-15 | `=order_voice` / `=playtest` / `=announcer` | exit 0 each: 14/97, 44/930, 21/68 cases/checks | Task 2, uncommitted |
+| 2026-11-15 | `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py` | exit 0, 0, 0 | Task 2, uncommitted |
+| 2026-11-15 | Task 2 review merge rerun: `sb1_`, `scene`, `order_voice`, `playtest`, `announcer`, `run_lint.sh`, `run_warnings.sh` (Sonnet and Codex reviews: no critical or important findings) | exit 0 each; 2/3536/97/930/68 checks, 0 failures | Task 2, uncommitted |
+
+`sync_sequence(main)` added after direct sends in: `test_production_ui` (Bs3, after the builds), `test_base_scene.gd` CancelBuild case (after the foundation send), M3 case (after the factory build), `test_rally_input_and_marker` (R1), `test_hud_strings_use_display_names` (N1), `test_frc_laborer_right_click_pile` (K13). Expected values unchanged.
 
 Base traces: `build/sb/base/{replay,economy,combat,team}.tsv`, `build/sb/base/netplay/s1.tsv` (untracked). No rendered benchmark rerun: drawing code (`world_view.gd`) is not touched.
 

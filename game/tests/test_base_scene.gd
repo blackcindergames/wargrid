@@ -30,6 +30,10 @@ func setup(runner):
 	await runner.process_frame
 	return main
 
+static func sync_sequence(main) -> void:
+	for entry: Variant in main.driver.sim.snapshot().last_sequences:
+		if entry.player == main.local_player: main.driver._sequence = maxi(main.driver._sequence, entry.sequence + 1)
+
 func key(main, code: Key) -> void:
 	var event := InputEventKey.new()
 	event.physical_keycode = code
@@ -110,6 +114,7 @@ func test_production_ui(runner) -> bool:
 	main.driver.sim = Fixture.make_world(50000)
 	Fixture.build(runner,main.driver.sim,"usa_power_plant",Vector2i(5,5))
 	var depot: int = Fixture.build(runner,main.driver.sim,"usa_supply_center",Vector2i(10,4))
+	sync_sequence(main)
 	main._refresh()
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,true)
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,false)
@@ -153,6 +158,7 @@ func test_production_ui(runner) -> bool:
 	main._physics_process(0.0)
 	var foundation: int = main.driver.sim.snapshot().buildings.back().id
 	main.orders.selected_building_id = foundation
+	sync_sequence(main)
 	main._refresh()
 	var credits: int = main.driver.sim.snapshot().players[0].credits
 	main.get_node("HUD/Economy/CancelBuild").pressed.emit()
@@ -329,6 +335,7 @@ func test_build_menu_from_capabilities(runner) -> bool:
 	Fixture.build(runner,main.driver.sim,"usa_supply_center",Vector2i(10,4))
 	var factory: int = Fixture.build(runner,main.driver.sim,"usa_factory",Vector2i(14,4))
 	main.orders.selected_ids.assign([1])
+	sync_sequence(main)
 	main._refresh()
 	runner.check(_menu_texts(main) == ["1: Power Plant $800","2: Supply Depot $2000","3: Barracks $600","4: Vehicle Factory $2000","5: Missile Battery $1000"],"M1 builder menu lists its builds, got %s" % [_menu_texts(main)])
 	main.orders.selected_ids.clear()

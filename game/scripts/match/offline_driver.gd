@@ -38,12 +38,9 @@ func step_results() -> Array:
 	return sim.command_results().duplicate(true)
 
 func submit(payload: Dictionary) -> Dictionary:
-	var state: Dictionary = sim.snapshot()
 	var command: Dictionary = payload.duplicate(true)
-	command.tick = command.get("tick",state.tick)
+	command.tick = command.get("tick",sim.tick())
 	command.player = _player
-	for entry: Variant in state.last_sequences:
-		if entry.player == _player: _sequence = maxi(_sequence,entry.sequence + 1)
 	command.sequence = _sequence
 	var result: Dictionary = _recording().issue_command(command)
 	if result.ok: _sequence += 1

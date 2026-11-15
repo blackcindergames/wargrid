@@ -22,7 +22,7 @@ const PLAY_AGAIN: String = "HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain"
 const CHANGE_SETUP: String = "HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -288,6 +288,7 @@ func test_rally_input_and_marker(runner) -> bool:
 	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
 	main.driver.sim = sim
 	main.orders.selected_ids.clear()
+	helper.sync_sequence(main)
 	main._refresh()
 	var view = main.get_node("WorldView")
 	runner.check(view.rally_marker().is_empty(), "R1 no marker without a selection")
@@ -616,6 +617,7 @@ func test_hud_strings_use_display_names(runner) -> bool:
 	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
 	main.driver.sim = sim
 	main.orders.selected_building_id = barracks
+	BaseScene.sync_sequence(main)
 	main.orders._produce_selected()
 	main.orders._produce_selected()
 	main._physics_process(0.0)
@@ -770,6 +772,7 @@ func test_frc_laborer_right_click_pile(runner) -> bool:
 	runner.check(site.ok, "K13 foundation for the laborer: " + site.error)
 	Fixture.steps(sim, 40)
 	main.orders.selected_ids.assign(laborers)
+	helper.sync_sequence(main)
 	main._refresh()
 	helper.pointer(main, click, MOUSE_BUTTON_RIGHT, true)
 	var orders: Array = sim.snapshot().pending_commands.filter(func(c: Dictionary) -> bool: return c.type == "gather")
@@ -1034,6 +1037,26 @@ func test_offline_driver_bot_memory_on_simulation(runner) -> bool:
 	while driver.sim.tick() < Skirmish.next_decision(Skirmish.ATTACK_TICK, 2): driver.sim.step()
 	driver.step(func() -> void: pass)
 	runner.check(driver.sim.has_meta(Skirmish.BOT_META) and not driver.has_meta(Skirmish.BOT_META), "OD2 bot memory lives on the simulation, not the driver")
+	return true
+
+func test_sb1_submit_takes_no_snapshot(runner) -> bool:
+	var driver = OfflineDriver.new(1)
+	driver.sim = Skirmish.create(false)
+	var unit: int = driver.sim.spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry")
+	driver.sim.start_match([1, 2] as Array[int])
+	var tick: int = driver.sim.tick()
+	Profiler.reset()
+	Profiler.enabled = true
+	driver.submit({"type": "stop", "entity_ids": [unit]})
+	driver.submit({"type": "attack", "entity_ids": [unit], "target_id": 999999})
+	driver.submit({"type": "stop", "entity_ids": [unit]})
+	var snapshots: int = Profiler.calls(&"snapshot")
+	Profiler.enabled = false
+	Profiler.reset()
+	var queued: Array = driver.sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "stop")
+	var stamps: Array = queued.map(func(command: Dictionary) -> Array: return [command.tick, command.player, command.sequence])
+	runner.check(snapshots == 0, "RB3 offline submit takes no snapshot, got %d" % snapshots)
+	runner.check(stamps == [[tick, 1, 0], [tick, 1, 1]], "OD1 stamps survive the snapshot-free submit")
 	return true
 
 func _mouse(main, plane: Vector2, button: MouseButton, pressed: bool) -> InputEventMouseButton:
