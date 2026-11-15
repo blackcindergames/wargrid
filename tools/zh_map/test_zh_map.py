@@ -324,5 +324,17 @@ class RouteTest(unittest.TestCase):
         )
 
 
+class SkippedTest(unittest.TestCase):
+    def test_skipped_table_groups_roads_waypoints_and_marks_bridges(self):
+        raw = raw_map(80, 30, starts=[(10, 15), (70, 15)], sources=[(16, 15), (64, 15)])
+        extra = [("Tree", 0)] * 3 + [("Rock", 0)] + [("Road", 0x02)] * 2 + [("Bridge", 0x10)]
+        extra += [("*Waypoints/Waypoint", 0)] * 2
+        raw["objects"] += [dict(template=t, x=0.0, y=0.0, z=0.0, angle=0.0, flags=f, props={}) for t, f in extra]
+        rows, warnings = convert.skipped_objects(raw)
+        self.assertEqual(rows, [("Tree", 3), ("road pieces", 2), ("waypoints", 2), ("Bridge (bridge)", 1), ("Rock", 1)])
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("Bridge", warnings[0])
+
+
 if __name__ == "__main__":
     unittest.main()

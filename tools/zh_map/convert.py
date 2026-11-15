@@ -475,6 +475,28 @@ def write_json(out, path):
         f.write("{\n" + ",\n".join(parts) + "\n}\n")
 
 
+def skipped_objects(raw):
+    """Objects the converter drops, as (label, count) rows by count, plus a warning per dropped bridge."""
+    counts: collections.Counter[str] = collections.Counter()
+    bridges = set()
+    for o in raw["objects"]:
+        template, flags = o["template"], o["flags"]
+        if template in SOURCES or _seat_of(o):
+            continue
+        if flags & 0x30:  # MapObject.h FLAG_BRIDGE_POINT1|2 (GeneralsGameCode afc2a103f)
+            bridges.add(template)
+            label = f"{template} (bridge)"
+        elif flags & 0x06:  # FLAG_ROAD_POINT1|2
+            label = "road pieces"
+        elif template.endswith("Waypoint"):
+            label = "waypoints"
+        else:
+            label = template
+        counts[label] += 1
+    rows = sorted(counts.items(), key=lambda r: (-r[1], r[0]))
+    return rows, [f"warning: bridge dropped: {t}" for t in sorted(bridges)]
+
+
 def report(raw, out):
     grid = dict(size=out["size"], cells=out["cells"])
     placed = dict(starts=out["starts"], sources=out["sources"])
@@ -498,6 +520,12 @@ def report(raw, out):
     print("start metrics: seat, buildable cells within 12, supply Chebyshev, routes")
     for row in start_metrics(grid, placed, coarse):
         print(f"  {row['seat']}  {row['buildable']}  {row['supply']}  {row['routes']}")
+    rows, warnings = skipped_objects(raw)
+    print("skipped objects: template, count")
+    for label, n in rows:
+        print(f"  {label}  {n}")
+    for w in warnings:
+        print(w)
 
 
 def main(argv):
