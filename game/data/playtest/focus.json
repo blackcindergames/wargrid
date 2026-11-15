@@ -69,5 +69,18 @@
   "questions": [
    {"id": "readable", "text": "Units and buildings were easy to tell apart"},
    {"id": "health_bar", "text": "Health bars stayed readable during attacks"},
-   {"id": "look", "text": "The new look fits Wargrid"}]}
+   {"id": "look", "text": "The new look fits Wargrid"}]},
+ {"id": "old-checks-2026-11", "title": "Old checks",
+  "new": ["Some earlier fixes were only checked by tests, never by eye.", "Tick what you saw; leave out what you could not try."],
+  "try": [
+   {"id": "target_box", "text": "Target an enemy building and look at its health bar"},
+   {"id": "bot_dock", "text": "Play a bot match on Dry Wells and watch the bot's first workers"},
+   {"id": "sleep", "text": "In an online match, put one computer to sleep for a minute, then wake it"},
+   {"id": "hidden_tab", "text": "In a browser match, hide the tab for 3, 8 and 15 seconds"},
+   {"id": "join_amber", "text": "Press Join and read the greyed button while it connects"}],
+  "questions": [
+   {"id": "health_visible", "text": "The target box never hid a building's health bar"},
+   {"id": "bot_dock_ok", "text": "The bot's workers left their base dock"},
+   {"id": "wake_clear", "text": "After sleep or a hidden tab the game told me clearly what happened"},
+   {"id": "amber_readable", "text": "The greyed Join button was readable"}]}
 ]
