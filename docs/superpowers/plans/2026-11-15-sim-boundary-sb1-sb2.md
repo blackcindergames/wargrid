@@ -1,6 +1,6 @@
 # Sim boundary SB1 and SB2: Implementation Plan
 
-**Status:** draft for the owner's review (2026-11-15), revised after two independent reviews and eight owner answers the same day. Nothing here starts implementation; the night run starts only after P2.2 is merged to `main` and the owner starts it.
+**Status:** approved for an unattended night run (user, 2026-11-15), after two independent reviews and eight owner answers the same day; P2.2 is merged to `main`. The run starts only when the owner starts it.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Run rules: [milestone prompt](../../milestone-prompt.md): one fresh subagent per task, each starting from the resume record in `docs/reference/sim-boundary-verification.md`.
 
@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- **Base:** `main` after the P2.2 quick rematch merge (plan `~/projects/wargrid-wt-rematch/docs/superpowers/plans/2026-11-15-p2.2-quick-rematch-slice-1.md`: online `_seat`, `_phase`, `take_rematch`, `create` re-entered with its reset list, `_restart_world`, `ResultPanel` replacing the HUD's `Result` label and `Restart` button, `Lockstep.for_start`, `Lockstep.session_handler`). Every path:line below is `main` 32748c8, before P2.2; Task 1 refreshes them on the real base and records the map. Branch `sim-boundary-sb1-sb2`.
+- **Base:** `main` after the P2.2 quick rematch merge (plan `~/projects/wargrid-wt-rematch/docs/superpowers/plans/2026-11-15-p2.2-quick-rematch-slice-1.md`: online `_seat`, `_phase`, `take_rematch`, `create` re-entered with its reset list, `_restart_world`, `ResultPanel` replacing the HUD's `Result` label and `Restart` button, `Lockstep.for_start`, `Lockstep.session_handler`). Every path:line below is `main` 32748c8, before P2.2; Task 1 refreshes them on the real base and records the map. Branch `sim-boundary-sb1-sb2` in the worktree `~/projects/wargrid-wt-sb`, created at preparation from `main`; `<base>` is the commit in the run ledger's first line.
 - **Simulation untouched:** `git diff <base> -- game/scripts/simulation protocol` stays empty. No digest, replay trace, team-match pin or netplay trace changes. The only pinned rows allowed to change are the IC1 input rows, in the fields Task 5 lists (owner answer 17); IC2 stays as it is (answer 18); anything else that moves is a stop.
 - **Keep `driver.sim`:** it is removed in SB3.
 - **Exact behaviour (spec, owner answers 7, 13-20):** offline refusal text is online's `"Rejected: " + error` (`match_screen.gd:146`), the beep is `_sound.rejected(error)` one tick after submit, the order voice plays at submit; offline, after a placement click placement mode stays until that build's answer arrives and stays on after a refusal; online, the click closes placement at once and a refusal reopens it with the same building (answer 18); while a build answer is pending further placement clicks are ignored (answer 19); an accepted result no longer clears a refusal note, which stays until the next own message, offline and online (answer 20); only accepted orders tick the playtest checklist; the placement ghost moves at once in the colour of the last preview answer, refused before a placement's first answer.
@@ -25,6 +25,12 @@
 - **Subagents never commit, push, merge, deploy or open a window.** Commit steps are the coordinator's local commits (milestone prompt). Drawing code (`world_view.gd`) is not touched, so no rendered benchmark rerun (say so in the verification file); if a task must touch it, stop and ask.
 - Every suite, netplay, lint, warnings and benchmark call: `timeout: 600000`, output to a file under `build/sb/`, judged by exit code and marker (`TESTS PASSED <n>`, `CHECKS PASSED 5`, `NETPLAY PASSED match`, `REPLAYS MATCHED <n>`); on failure read only `rg -n 'FAIL|SCRIPT ERROR|ERROR:' <log>`. Full suite (about 78 s) at Tasks 4, 5, 6 and 8.
 - Per GDScript task: `sh tools/run_lint.sh > build/sb/lint.log 2>&1; echo exit=$?` and `sh tools/run_warnings.sh > build/sb/warn.log 2>&1; echo exit=$?` → both 0.
+
+## Model routing (user, 2026-11-15)
+
+- Implementers: Opus (high) for Tasks 4, 5 and 6; Sonnet for Tasks 1, 2, 3, 7 and 8.
+- Per-task review: two fresh-context reviewers on each code task's diff plus its task text, a Sonnet subagent and an independent second model family; their findings are merged, checked against the source and fixed test-first before the commit.
+- Stop gate 1: an independent model family at high effort first, then an Opus (high) pass for the user-visible timing (refusal, placement, ghost); Opus alone when the other is unavailable or thin.
 
 ## Review Focus
 
@@ -91,11 +97,11 @@ Green: every base command exits 0 with its marker
 Stop: P2.2 not merged, or a base command fails
 ```
 
-- [ ] **Step 1:** `git log --oneline -3`, `git status --short`; confirm P2.2 is on `main`; create the branch.
-- [ ] **Step 2:** Map every cited line (`rg -n "driver\.sim" game/scripts/match game/scripts/presentation`, `rg -n "_refresh\(\)" game/scripts/match/orders.gd`, the test lines this plan cites) to the base. Also record: where `_result_text` / `team_of` now live and whether `ResultPanel` reads `driver.sim` (a new reader joins Task 3's list); the online driver's seat field; P2.2's `create` reset list; the post-P2.2 form of N3's layout check (`test_online_scene.gd:73-77` loses `HUD/Restart`); the P2.2 rematch fixture name (`test_rematch_builds_new_match`).
-- [ ] **Step 3:** `mkdir -p build/sb/base && WARGRID_REPLAY_TRACE="$PWD/build/sb/base/replay.tsv" WARGRID_ECONOMY_REPLAY_TRACE="$PWD/build/sb/base/economy.tsv" WARGRID_COMBAT_REPLAY_TRACE="$PWD/build/sb/base/combat.tsv" WARGRID_TEAM_REPLAY_TRACE="$PWD/build/sb/base/team.tsv" sh tools/run_tests.sh > build/sb/base/tests.log 2>&1; echo exit=$?` → `TESTS PASSED <n>`.
-- [ ] **Step 4:** `NETPLAY_OUT="$PWD/build/sb/base/netplay" sh tools/run_netplay.sh match > build/sb/base/netplay.log 2>&1; echo exit=$?` → `NETPLAY PASSED match`. `sh tools/run_team_match.sh > build/sb/base/team_match.log 2>&1; echo exit=$?` → exit 0 (pin at `tools/run_team_match.sh:13`).
-- [ ] **Step 5:** Resume record (milestone prompt block) and a dated evidence row per command with its tree. Commit `Record the sim boundary base`.
+- [ ] **Step 1:** In `~/projects/wargrid-wt-sb`: `git log --oneline -3`, `git status --short` (clean, branch `sim-boundary-sb1-sb2`); `git log --oneline HEAD..ee2f353` → empty (P2.2 on the base); `<base>` is the commit in the run ledger's first line.
+- [ ] **Step 2:** Map every cited line (`rg -n "driver\.sim" game/scripts/match game/scripts/presentation`, `rg -n "_refresh\(\)" game/scripts/match/orders.gd`, the test lines this plan cites) to the base. Also record: where `_result_text` / `team_of` now live and whether `ResultPanel` reads `driver.sim` (a new reader joins Task 3's list); the online driver's seat field; P2.2's `create` reset list; the post-P2.2 form of N3's layout check (`test_online_scene.gd:73-77` loses `HUD/Restart`); the P2.2 rematch fixture name (`test_rematch_builds_new_match`). Map tests by check label, not line (`rg -n '"(K4|K13|IC1|IC2|OD1|DA5|Bs[256]|OV8|PO6|PO9|AN20|N3|H5|RF[28])' game/tests`), and map Task 7's doc lines and footers too. Write the result as a "Line map" section in the verification file.
+- [ ] **Step 3:** `mkdir -p build/sb/base` as its own command, then `WARGRID_REPLAY_TRACE="/Users/pdstuber/projects/wargrid-wt-sb/build/sb/base/replay.tsv" WARGRID_ECONOMY_REPLAY_TRACE="/Users/pdstuber/projects/wargrid-wt-sb/build/sb/base/economy.tsv" WARGRID_COMBAT_REPLAY_TRACE="/Users/pdstuber/projects/wargrid-wt-sb/build/sb/base/combat.tsv" WARGRID_TEAM_REPLAY_TRACE="/Users/pdstuber/projects/wargrid-wt-sb/build/sb/base/team.tsv" sh tools/run_tests.sh > build/sb/base/tests.log 2>&1; echo exit=$?` → `TESTS PASSED <n>`.
+- [ ] **Step 4:** `NETPLAY_OUT="/Users/pdstuber/projects/wargrid-wt-sb/build/sb/base/netplay" sh tools/run_netplay.sh match > build/sb/base/netplay.log 2>&1; echo exit=$?` → `NETPLAY PASSED match`. `sh tools/run_team_match.sh > build/sb/base/team_match.log 2>&1; echo exit=$?` → exit 0 (pin at `tools/run_team_match.sh:13`).
+- [ ] **Step 5:** Resume record (milestone prompt block; its "Next exact action" says: "plan path:line are 32748c8; use this file's Line map") and a dated evidence row per command with its tree. Commit `Record the sim boundary base`.
 
 ### Task 2: Offline submit without a snapshot (SB1)
 
@@ -105,7 +111,7 @@ Stop: P2.2 not merged, or a base command fails
 
 **Interfaces:**
 - Produces in `offline_driver.gd`: `submit` stamps `tick = payload.get("tick", sim.tick())`, `player`, `sequence = _sequence`, still calls `_recording().issue_command` and still adds 1 to `_sequence` only when that result is `ok`; no `snapshot()`, no `last_sequences` read.
-- Produces in `test_base_scene.gd`: `func sync_sequence(main) -> void`: `main.driver._sequence = maxi(main.driver._sequence, entry.sequence + 1)` for the local player's entry in `main.driver.sim.snapshot().last_sequences` (the sync the driver drops, kept for tests that inject commands).
+- Produces in `test_base_scene.gd`: `static func sync_sequence(main) -> void`: `main.driver._sequence = maxi(main.driver._sequence, entry.sequence + 1)` for the local player's entry in `main.driver.sim.snapshot().last_sequences` (the sync the driver drops, kept for tests that inject commands).
 
 ```text
 Task: an offline command costs no snapshot
@@ -147,7 +153,7 @@ Stop: an order payload or an IC row would change
 - [ ] **Step 1: Write the failing tests** (`test_skirmish_scene.gd`; profiler windows exclude every `_refresh()` the fixture needs):
   - `test_sb1_economy_input_reads_shown` (RB1): RF2's fixture (`Skirmish.create()` plus `Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))`, `test_skirmish_scene.gd:601-605`), `sync_sequence(main)`, builder 1 selected, `_refresh()`; then under the profiler: key 1, hover and click a free cell (build); right-click the first pile; key U; left-click the barracks (selects it through input); key E (produce); right-click ground (set_rally). Assert `snapshot` calls 0 (`"RB1 … got %d snapshots"`); afterwards pending holds one `build`, one `produce`, one `set_rally`.
   - `test_sb1_combat_input_reads_shown` (RB2): `_arena(main)`; under the profiler: right-click ground (move), right-click the enemy (attack), A then left click (attack_move), S (stop), double-click the tank. Assert `snapshot` 0; pending `move`, `attack`, `attack_move`, `stop` one each; selection `[ids.tank]`.
-  - `test_sb1_pick_of_unit_dead_since_shown` (RB4): `_arena`, `remove_object(ids.infantry)` in the live simulation without refresh, double-click the infantry's shown position → no script error, selection from the shown view (on 32748c8 this errors in `_matching_ids`). Then select `[ids.infantry]` only, key S → the simulation refuses it with its normal error in the note (fully dead actor); and selection `[ids.infantry, ids.tank]`, S → one pending stop (compatibility: the live tank keeps it valid).
+  - `test_sb1_pick_of_unit_dead_since_shown` (RB4): `_arena`, `remove_object(ids.infantry)` in the live simulation without refresh, double-click the infantry's shown position → no script error, selection from the shown view (on 32748c8 this errors in `_matching_ids`). Then select `[ids.infantry]` only, key S → the simulation refuses it with `"Missing entity or wrong owner"` (`simulation.gd:235`) in the note (fully dead actor); and selection `[ids.infantry, ids.tank]`, S → one pending stop (compatibility: the live tank keeps it valid).
   - `test_sb1_result_uses_shown_team` (RB6): two public simulations, `Simulation.new()` with `add_player(1, 0, "human", 1)` and `add_player(1, 0, "human", 7)` respectively; show the first (`driver.sim = a; _refresh()`), swap to the second without refresh → `_result_text({"status": "won", "winner": 7}) == "Defeat"`; `_refresh()` → `"Victory"`. K4's team line (`test_skirmish_scene.gd:135-136`) gains `main._refresh()` after its edit.
   - `test_sb1_setup_shown_allows_input` (RB9): `_arena`, `main._show(view)` with a copy of `main.shown_state` whose `match.status` is `"setup"` → `shown_over()` false and a box selection still selects.
 - [ ] **Step 2:** `WARGRID_TEST_ONLY=sb1_ sh tools/run_tests.sh > build/sb/t3.log 2>&1; echo exit=$?` → exit 1: RB1/RB2 snapshot counts above 0, RB4 script error, RB6 first check, RB9 (missing `shown_over`).
@@ -246,9 +252,9 @@ Stop: an IC row changes beyond Task 5's re-pin
 ```
 
 - [ ] **Step 1: Write the failing tests** (`test_base_scene.gd` unless named):
-  - RP1 `test_sb2_ghost_colour_after_step`: builder 1 selected; key 1, hover a free cell → cells set at once, `_preview_valid == false`; one physics call → `true`; hover the builder's own cell `(4.25, 4.25)` → cells moved, still `true`; one physics call → `false`.
+  - RP1 `test_sb2_ghost_colour_after_step`: builder 1 selected; key 1, hover a free cell → cells set at once, `main.get_node("WorldView")._preview_valid == false` (`world_view.gd:20`); one physics call → `true`; hover the builder's own cell `(4.25, 4.25)` → cells moved, still `true`; one physics call → `false`.
   - RP3 Bs6 rewritten as `test_sb2_preview_cost`: five hovers across one cell, then one physics call → `navigation_builds()` grows by exactly 1 and `preview_answer().ok` equals `sim.preview_build(1, 1, kind, origin).ok` on the post-step state; a new cell and a physics call → one more; hovers without a physics call → 0.
-  - RP4 `test_online_scene.gd` `test_sb2_online_preview_waits_for_step`: online seat 1, peer packets to tick 12, select the builder explicitly (`_builder(main, 1)`), key 1, hover; run until `_lockstep.status() == "waiting"` and the tick stops; one more frame → tick unchanged, `preview_answer()` from before the stall only, ghost colour unchanged; add packets, one frame → a new answer for the current origin.
+  - RP4 `test_online_scene.gd` `test_sb2_online_preview_waits_for_step`: online seat 1, peer packets to tick 12, select the builder explicitly (`_builder(main, 1)`, copied from `test_order_voice.gd:111` into this suite), key 1, hover; run until `_lockstep.status() == "waiting"` and the tick stops; one more frame → tick unchanged, `preview_answer()` from before the stall only, ghost colour unchanged; add packets, one frame → a new answer for the current origin.
   - RP5 `test_sb2_restart_drops_pending_preview`: request pending (no physics yet), `_restart()`, first physics call of the new match → `preview_answer()` empty and no ghost; online: P2.2's rematch fixture (`start` plus peer tick 4 in one poll through `_restart_world`) with a request pending → nothing applied at the first new step.
   - RP6 `test_sb2_reenter_placement_ignores_old_answer`: hover, Esc, key 1 again at the same spot before a physics call → after the physics call only the new request's answer colours the ghost (one `navigation_builds` increment).
   - RP7 `test_sb2_preview_waits_for_unpause`: hover, `_pause.open()`, physics calls → no answer; close, one physics call → answer.
@@ -262,7 +268,7 @@ Stop: an IC row changes beyond Task 5's re-pin
 
 **Files:** `docs/guide/01-big-picture.md` (:23, flows :37 and :50, :100, :114-116, footer :135), `docs/guide/04-the-tick.md` (offline submit steps :61-66: the answer one tick later; footer :180), `docs/guide/05-presentation.md` (hand-off :43-44, `shown_state` and repaint; HUD and input :157-158; playtest helper :159: only accepted orders tick the checklist; footer :229), `docs/guide/07-economy.md` (:108 preview flow), `docs/guide/11-multiplayer.md` (`online_driver.gd` line: answers and `request_preview`; footer :221), `docs/reference/sim-interface.md` (:45 who calls `snapshot()`, :57 `preview_build` caller), the verification file.
 
-- [ ] **Step 1:** Update each passage (payoff first, terms explained where they appear); set each `Checked against` footer to the branch head.
+- [ ] **Step 1:** Update each passage (payoff first, terms explained where they appear); set each `Checked against` footer to HEAD before the Task 7 commit.
 - [ ] **Step 2:** `sh tools/check_public.sh > build/sb/public.log 2>&1; echo exit=$?` → exit 0; check every link and path:line the edits cite with `rg -n`.
 - [ ] **Step 3:** A fresh docs reviewer (diff plus the code files named in the footers, no repo-wide search) checks every code claim; fix findings.
 - [ ] **Step 4:** Resume record; commit `Document reads on request and next-tick answers`.
@@ -271,15 +277,15 @@ Stop: an IC row changes beyond Task 5's re-pin
 
 - [ ] **Step 1:** `sh tools/run_checks.sh > build/sb/checks.log 2>&1; echo exit=$?` → `CHECKS PASSED 5`.
 - [ ] **Step 2:** Full suite with traces into `build/sb/sb2/` (Task 1 Step 3 command); `compare_replays.py` base against sb2 for replay, economy, combat, team → `REPLAYS MATCHED` each.
-- [ ] **Step 3:** `NETPLAY_OUT="$PWD/build/sb/sb2/netplay" sh tools/run_netplay.sh match > build/sb/sb2/netplay.log 2>&1; echo exit=$?` → `NETPLAY PASSED match`; `python3 tools/compare_replays.py --interval 30 --rows 0 build/sb/base/netplay/s1.tsv build/sb/sb2/netplay/s1.tsv` → matched; `sh tools/run_team_match.sh > build/sb/sb2/team_match.log 2>&1; echo exit=$?` → exit 0.
+- [ ] **Step 3:** `NETPLAY_OUT="/Users/pdstuber/projects/wargrid-wt-sb/build/sb/sb2/netplay" sh tools/run_netplay.sh match > build/sb/sb2/netplay.log 2>&1; echo exit=$?` → `NETPLAY PASSED match`; `python3 tools/compare_replays.py --interval 30 --rows 0 build/sb/base/netplay/s1.tsv build/sb/sb2/netplay/s1.tsv` → matched; `sh tools/run_team_match.sh > build/sb/sb2/team_match.log 2>&1; echo exit=$?` → exit 0.
 - [ ] **Step 4:** `git diff <base> --stat -- game/scripts/simulation protocol` → empty.
-- [ ] **Step 5: Benchmark**, alone, `uptime` at start and end (load above 2.5: say so and wait): `PERF_LABEL="Sim boundary SB1-SB2" sh tools/run_benchmark.sh > build/sb/bench.log 2>&1; echo exit=$?`; record the row per the [ledger](../../reference/performance.md); never loosen a budget. No rendered rerun (drawing code untouched; state it).
+- [ ] **Step 5: Benchmark**, alone, `uptime` at start and end (load above 2.5: wait at most 30 minutes, then mark it pending): `PERF_LABEL="Sim boundary SB1-SB2" sh tools/run_benchmark.sh > build/sb/bench.log 2>&1; echo exit=$?`; record the row per the [ledger](../../reference/performance.md); never loosen a budget. On exit 1 name the failing lines: a row the status table already marks exceeded on `<base>` is recorded, not a stop; any other failure is a stop. No rendered rerun (drawing code untouched; state it).
 - [ ] **Step 6:** Resume record with every result and its tree; commit `Record the SB1-SB2 gate`.
 
-## Stop gates (each waits for the owner)
+## Stop gates (3 and 4 wait for the owner; a night handoff may pre-approve 1 and 2)
 
-1. **Whole-branch review** by one fresh-context reviewer on the strongest available model: diff since the base, the design, this plan, the verification file; it names per new test the production change that makes it fail and checks the interaction table row by row. Fix critical and important findings test-first; record rulings for the rest.
-2. **`/ponytail-review`** on the diff (over-engineering only); apply cuts; rerun the touched checks and the full suite.
+1. **Whole-branch review** by the reviewers in Model routing above: diff since the base, the design, this plan, the verification file; it names per new test the production change that makes it fail and checks the interaction table row by row. Fix critical and important findings test-first; record rulings for the rest.
+2. **`/ponytail-review`** on the diff (over-engineering only); apply cuts; then rerun Task 8 Steps 1-4 on the final tree and record that tree.
 3. **Owner's playtest** offline and online: refusal one tick later, order voice before the beep, offline placement kept after a refused click, online placement closing at the click and reopening on a refusal, checklist ticks only on accepted orders, ghost colour lag.
 4. Push, PR, merge and any deploy wait for the owner.
 
