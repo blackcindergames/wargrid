@@ -141,3 +141,15 @@ Final recheck after the gate fix rounds (2026-11-15, tree `5696065`, clean; outp
 Benchmark not rerun: the gate fixes touched input code only.
 
 Night run review (2026-11-15): the gate 1 guard in `orders.answered` (reopen placement after an online refusal only when not `busy()` and not in attack-move mode) is kept (user, 2026-11-15). The unfixed reopen after the builder dies in the same step is STATUS F23 (user, 2026-11-15); the shared note for two refusals in one step is dropped, unchanged from before this branch (user, 2026-11-15).
+
+Gate 3 offline and online playtest (user, 2026-11-15, late evening): online refusal reopen, accepted build and ghost colour pass; the mid-gesture case is covered by RA9 only (too short a window by hand). Finding: a refused build still played the order voice first. Fix A (user, 2026-11-15, after a Zero Hour and OpenRA read: both refuse a known bad spot locally and never send it, GeneralsGameCode `afc2a103f` `PlaceEventTranslator.cpp:227,285,294-305`, OpenRA `b4d95a5671` `PlaceBuildingOrderGenerator.cs:194-203`): a click on a spot whose preview for the shown tick is refused is not sent; the preview answer carries `error` and `tick`, and a still cursor re-asks every tick. Tests RL1, RL2 (red first: held 1, no note); Bs6 compares fields instead of the whole answer.
+
+| Date | Command | Result | Tree |
+|---|---|---|---|
+| 2026-11-15 | `sh tools/run_tests.sh` with the four replay trace variables | exit 0, CASES 981 CHECKS 146455 FAILURES 0 | f3e1d52 + fix A, uncommitted |
+| 2026-11-15 | `compare_replays.py` base vs fixa: replay, economy, combat, team (`--interval 200 --rows 100`) | `REPLAYS MATCHED` x4 (1200, 1200, 1200, 100) | same |
+| 2026-11-15 | `sh tools/run_netplay.sh match`; compare `--interval 30 --rows 0` vs base | `NETPLAY PASSED match 15.6 s`; `REPLAYS MATCHED 301` | same |
+| 2026-11-15 | `sh tools/run_checks.sh` | exit 0, `CHECKS PASSED 5` | same |
+| 2026-11-15 | `git diff f838f79 --stat -- game/scripts/simulation protocol` | empty | same |
+
+Still open: the user's listen check of fix A (offline and online), a reviewer pass on the fix, then gate 4.

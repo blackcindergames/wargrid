@@ -9,7 +9,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 
 func cases() -> Array[Callable]:
-	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
+	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
 
 func _m3_world() -> Simulation:
 	var sim: Simulation = Fixture.make_world()
@@ -247,7 +247,7 @@ func test_sb2_preview_cost(runner) -> bool:
 	runner.check(is_same(main.driver.preview_answer(),before),"Bs6 hovers without a step evaluate no preview")
 	main._physics_process(0.0)
 	var expected: bool = main.driver.sim.preview_build(1,1,"usa_power_plant",Vector2i(8,4)).ok
-	runner.check(not is_same(main.driver.preview_answer(),before) and main.driver.preview_answer() == {"kind":"usa_power_plant","origin":Vector2i(8,4),"ok":expected},"Bs6 five hovers across one cell are answered once at the next step, got %s" % [main.driver.preview_answer()])
+	runner.check(not is_same(main.driver.preview_answer(),before) and main.driver.preview_answer().kind == "usa_power_plant" and main.driver.preview_answer().origin == Vector2i(8,4) and main.driver.preview_answer().ok == expected,"Bs6 five hovers across one cell are answered once at the next step, got %s" % [main.driver.preview_answer()])
 	before = main.driver.preview_answer()
 	hover(main,Iso.world_to_plane(Vector2(12.25,4.25)))
 	runner.check(main.get_node("WorldView")._preview_cells[0] == Vector2i(12,4) and is_same(main.driver.preview_answer(),before),"Bs6 a new cell moves the ghost at once without a preview")
@@ -270,6 +270,24 @@ func test_sb2_ghost_colour_after_step(runner) -> bool:
 	runner.check(view._preview_cells[0] == Vector2i(4,4) and view._preview_valid,"RP1 the ghost moves at once in the last answer's colour")
 	main._physics_process(0.0)
 	runner.check(not view._preview_valid,"RP1 the builder's own cell turns refused after the next step")
+	main.free()
+	return true
+
+func test_sb2_red_ghost_click_refused_locally(runner) -> bool:
+	var main = await _placing(runner)
+	var cell: Vector2 = Iso.world_to_plane(Vector2(4.25,4.25))
+	hover(main,cell)
+	main._physics_process(0.0)
+	main._physics_process(0.0)
+	pointer(main,cell,MOUSE_BUTTON_LEFT,false)
+	runner.check(main.driver._held.is_empty() and main.orders._placement_kind == "usa_power_plant" and main.hud.note.begins_with("Rejected: "),"RL1 a click on a red ghost sends nothing, says why and keeps placement, held %d note '%s'" % [main.driver._held.size(), main.hud.note])
+	main._physics_process(0.0)
+	var errors: int = main._sound.last_requests().filter(func(request: Dictionary) -> bool: return request.cue == "error").size()
+	runner.check(errors == 1,"RL1 the local refusal beeps once at the next step, got %d" % errors)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	main._physics_process(0.0)
+	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,false)
+	runner.check(main.driver._held.size() == 1,"RL2 a click on a green ghost still sends, held %d" % main.driver._held.size())
 	main.free()
 	return true
 

@@ -139,6 +139,10 @@ func _placement_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed: _clear_placement()
 		elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and _awaiting_build.is_empty():
 			_update_preview(_screen._view.make_canvas_position_local(event.position))
+			# As Zero Hour: a spot this view already knows is refused is never sent, so no order voice plays.
+			if _known_refused():
+				_screen.refuse(_answer.error)
+				return
 			_screen._submit({"type":"build","builder_id":_builder(),"building_kind":_placement_kind,"origin":[_preview_origin.x,_preview_origin.y]})
 			_awaiting_build = _placement_kind
 			if _screen.driver.closes_placement_on_click(): _clear_placement()
@@ -312,9 +316,17 @@ func _update_preview(plane: Vector2) -> void:
 	_screen.driver.request_preview({"player":_screen.local_player,"builder_id":_builder(),"kind":_placement_kind,"origin":_preview_origin})
 
 func show_preview(answer: Dictionary) -> void:
-	if _placement_kind.is_empty() or answer.get("kind") != _placement_kind: return
-	_answer = answer
-	if answer.origin == _preview_origin: _screen._view.set_build_preview(Construction.cells(_placement_kind,_preview_origin),answer.ok)
+	if _placement_kind.is_empty(): return
+	if answer.get("kind") == _placement_kind:
+		_answer = answer
+		if answer.origin == _preview_origin: _screen._view.set_build_preview(Construction.cells(_placement_kind,_preview_origin),answer.ok)
+	# A still mouse asks again each tick, so a click is judged against the shown tick.
+	if _preview_key.size() == 3 and _preview_key[2] != _screen.shown_state.tick:
+		_preview_key[2] = _screen.shown_state.tick
+		_screen.driver.request_preview({"player":_screen.local_player,"builder_id":_builder(),"kind":_placement_kind,"origin":_preview_origin})
+
+func _known_refused() -> bool:
+	return not _answer.is_empty() and not _answer.ok and _answer.origin == _preview_origin and _answer.tick == _screen.shown_state.tick
 
 func _context_order(id: int) -> bool:
 	if selected_ids.is_empty(): return false

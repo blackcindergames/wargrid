@@ -299,6 +299,12 @@ func _submit(payload: Dictionary) -> void:
 	_reshow()
 	_sound.order(payload)
 
+func refuse(error: String) -> void:
+	_ensure_sound()
+	_sound.rejected(error)
+	hud.note = "Rejected: " + error
+	_reshow()
+
 func _ensure_sound() -> void:
 	if _sound != null: return
 	_sound = SoundPlayer.new(local_player)

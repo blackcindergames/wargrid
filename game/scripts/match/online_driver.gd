@@ -127,7 +127,8 @@ func _answer_preview() -> void:
 	if _preview_request.is_empty(): return
 	var request: Dictionary = _preview_request
 	_preview_request = {}
-	_preview_answer = {"kind": request.kind, "origin": request.origin, "ok": sim.preview_build(request.player, request.builder_id, request.kind, request.origin).ok}
+	var preview: Dictionary = sim.preview_build(request.player, request.builder_id, request.kind, request.origin)
+	_preview_answer = {"kind": request.kind, "origin": request.origin, "ok": preview.ok, "error": preview.error, "tick": sim.tick()}
 
 func _new_answers() -> Array[Dictionary]:
 	var errors: Dictionary = {}
