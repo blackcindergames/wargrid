@@ -7,6 +7,7 @@ const CombatWorkload = preload("res://scripts/debug/combat_workload.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const TeamMatch = preload("res://scripts/debug/team_match.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Navigation = preload("res://scripts/simulation/grid_navigation.gd")
 const Economy = preload("res://tests/economy_fixture.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
@@ -406,6 +407,10 @@ func test_late_game_layout(runner) -> bool:
 		for suffix: String in wanted: buildings_ok = buildings_ok and completed.has([entry.seat, entry.faction + "_" + suffix])
 		runner.check(units.get(entry.seat, 0) == 35, "BM22 seat %d starts with 35 army units" % entry.seat)
 	runner.check(buildings_ok, "BM22 every seat has its completed base buildings")
+	var rally_ok: bool = true
+	for building: Dictionary in sim.snapshot().buildings:
+		rally_ok = rally_ok and (building.has("rally") or not Registry.can_rally(building.kind))
+	runner.check(rally_ok, "BM22 every rally-capable building has a rally point")
 	var shots: int = 0
 	for tick in range(60):
 		TeamMatch.step(sim)

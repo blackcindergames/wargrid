@@ -4,6 +4,8 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.gd")
 const MapData = preload("res://scripts/simulation/map_data.gd")
 const TeamMatch = preload("res://scripts/debug/team_match.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const Production = preload("res://scripts/simulation/production.gd")
 
 static func create(layout: String, per_side: int = 150) -> Simulation:
 	assert(layout == "open" or layout == "dense" or layout == "contact" or layout == "skirmish3v3" or layout == "transports" or layout == "defences" or layout == "docks" or layout == "hordes300" or layout == "horde_render" or layout == "horde_render_500" or layout == "ramp" or layout == "frc" or layout == "late_game_3v3")
@@ -231,6 +233,7 @@ static func _building(sim: Simulation, kind: String, origin: Vector2i, owner: in
 	sim._buildings[id] = {"id": id, "owner": owner, "kind": kind, "hp": hp, "max_hp": hp, "origin": [origin.x, origin.y], "completed": true, "work": 0, "paid_cost": 0, "builder_id": null, "approach": null, "queue": [], "active_collector_id": null}
 	var combat: Variant = CombatDefinitions.initial_combat(kind)
 	if combat != null: sim._buildings[id].combat = combat
+	if Registry.can_rally(kind): sim._buildings[id].rally = Production.default_rally(sim, kind, origin)
 	sim._replace_union(sim._union_cells())
 
 # Three staggered lanes, 35 units per owner per lane (12 tanks); the last 9 of each group stay idle behind.
