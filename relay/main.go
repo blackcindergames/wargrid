@@ -75,7 +75,7 @@ func (c *conn) reject(reason string) {
 	if c.rejected.Swap(true) {
 		return
 	}
-	c.send([]byte(`{"type":"error","reason":"`+reason+`"}`), 0)
+	c.sendLast([]byte(`{"type":"error","reason":"` + reason + `"}`))
 	// Godot drops frames still queued when it sees the close, so the error must land first.
 	time.AfterFunc(closeGrace, c.close)
 }

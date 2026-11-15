@@ -21,12 +21,28 @@ type sender struct {
 	lastDue time.Time
 	timer   *time.Timer
 	closing bool
+	sealed  bool     // set by sendLast: a reject error is the socket's last frame
 	batch   [][]byte // WARGRID_BATCH_MS mode: ticks waiting for the next flush
 }
 
 func (s *sender) send(frame []byte, delay time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.enqueue(frame, delay)
+}
+
+func (s *sender) sendLast(frame []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.enqueue(frame, 0)
+	s.sealed = true
+}
+
+// enqueue keeps frame order; caller holds mu.
+func (s *sender) enqueue(frame []byte, delay time.Duration) {
+	if s.sealed {
+		return
+	}
 	s.flushBatch()
 	now := time.Now()
 	due := now.Add(delay)
@@ -47,7 +63,9 @@ func (s *sender) send(frame []byte, delay time.Duration) {
 func (s *sender) addBatch(frame []byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.batch = append(s.batch, frame)
+	if !s.sealed {
+		s.batch = append(s.batch, frame)
+	}
 }
 
 func (s *sender) flushNow() {
