@@ -152,4 +152,9 @@ Gate 3 offline and online playtest (user, 2026-11-15, late evening): online refu
 | 2026-11-15 | `sh tools/run_checks.sh` | exit 0, `CHECKS PASSED 5` | same |
 | 2026-11-15 | `git diff f838f79 --stat -- game/scripts/simulation protocol` | empty | same |
 
-Still open: the user's listen check of fix A (offline and online), a reviewer pass on the fix, then gate 4.
+Fix A review (fresh Opus, 2026-11-15, diff `f3e1d52..7dbd1ec`): no P0-P1. Fixed: test gap for the origin check, RL3 added (mutation: dropping `_answer.origin == _preview_origin` turns RL3 red, held 0; restored). Left open, for the user: P2 a still cursor now asks for a preview every tick while placing, so a spot needing a full navigation grid builds it at tick rate (worst case unchanged: a moving cursor did so already; unmeasured); P3 the local refusal is skipped when the shown view is older than the simulation (the click is sent as before); P3 a refusal current for the shown tick can block a click a refund would allow one tick later (as Zero Hour and OpenRA); P3 `refuse` repeats three lines of `_step_simulation`.
+
+| 2026-11-15 | `sh tools/run_tests.sh` (no trace variables) | exit 0, CASES 982 CHECKS 146449 FAILURES 0 | 7dbd1ec + RL3, uncommitted |
+| 2026-11-15 | `sh tools/run_checks.sh` | exit 0, `CHECKS PASSED 5` | same |
+
+Still open: the user's listen check of fix A (offline and online), then gate 4.
