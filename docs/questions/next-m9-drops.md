@@ -57,3 +57,8 @@ Q11. Should a dropped player be able to rejoin the running match?
    a) No rejoin — ZH (none found)   b) Yes, by replaying the match's commands (proposed relay design)   c) Later, after M9's exit gate
    Recommendation: c, because the 3v3 exit gate does not need it and replaying a long match in the browser may be slow. Why it matters: changes what the relay must store per room.
    **Answered c (user, 2026-11-13, netplay reference review):** rejoin after a lost client process comes after M9; short connection drops are covered by M9's seat resume, where the client keeps its simulation.
+
+## Notes from the Relay guards answers (2026-11-15)
+
+- Relay guards clears pending hashes at every leave (its Q3). In a 3v3 that continues after a drop (bot takeover), that loses one comparison window for the remaining seats, right where a takeover desync is most likely; the next hash 30 ticks later still catches it. Revisit if a match continues past a leave.
+- The lead bound counts a dead seat's last tick until its leave is processed (Relay guards Q1). If M9 has the relay fill empty frames for an away seat, those fills must advance that seat's last tick, or the present seats hit `too far ahead`.
