@@ -88,20 +88,20 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 <!-- perf-table:begin -->
 Performance against the low-end budget (generated):
 
-**2 of 10 areas over budget**
+**3 of 10 areas over budget**
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 159% | ➖ same | 2026-11-15 |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 144% | 🆕 first run | 2026-11-08 |
-| Background upkeep, armies on the move | 🟡 Close | █████████░ 98% | 🆕 first run | 2026-11-08 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 236% | 🔺 64% worse (busy host) | 2026-11-15 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 161% | 🔺 1% worse (busy host) | 2026-11-15 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | 🔺 45% worse (busy host) | 2026-11-15 |
 | Drawing the screen | 🟢 OK | ███████░░░ 78% | 🔺 11% worse | 2026-11-15 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse | 2026-11-15 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse (busy host) | 2026-11-15 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 72% | 🔺 8% worse | 2026-11-15 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | ➖ same | 2026-11-15 |
-| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 1% better | 2026-11-15 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | ➖ same | 2026-11-15 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-15 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 1% worse (busy host) | 2026-11-15 |
+| Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔺 2% worse (busy host) | 2026-11-15 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔺 2% worse (busy host) | 2026-11-15 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 4% worse (busy host) | 2026-11-15 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 

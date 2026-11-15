@@ -3,35 +3,35 @@
 Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end): AFTER THE VIEW ROWS CHANGE THE HAND-OFF SUM PASSES THE 0.91 MS PLUMBING BUDGET ON skirmish3v3 ONLY; team_match, hordes300 AND THE MOVEMENT LAYOUTS STILL EXCEED IT; NO BUDGET CHANGED; THE SENTENCES BELOW ARE THE EARLIER STATUS.** **BUDGETS DERIVED FROM MEASURED F = 5.5 (2026-11-06); F RE-MEASURED 2026-11-08 (BROWSER 5.0-5.2 ON SIM ROWS), 5.5 RETAINED PENDING THE USER; ONE OF THE SIX BUDGET ROWS PARTLY EXCEEDED (PLUMBING, ON THE COMBAT LAYOUTS); COMBAT STRESS `open` AND `hordes300` EXCEED THE SIMULATION BUDGET, `dense` SITS AT IT (MEDIAN 1.811 OF 13) (ACCEPTED BY THE USER 2026-11-07 UNTIL THE POST-M7 PERFORMANCE SPIKE, NOT LOOSENED); THE TEAM MATCH PASSES SINCE THE SPIKE; EXISTING GATES UNCHANGED (T3 PROPOSALS NOT YET APPLIED); ART LAB (2026-11-10, gate 2): PLUMBING IS NOW ABOUT 1.9-2.2 MS ON EVERY LAYOUT (EXCEEDED, ASHFALL NO LONGER PASSES), THE NATIVE TICK-FRAME ROWS AND THE WEB ROW ARE EXCEEDED (RE-MEASURED AFTER THE SPEED-UPS)**. One place to track performance across milestones for a low-end target, including a browser (WebAssembly) build. Measurements on this Mac are weak evidence for that target; this note makes the assumption explicit and replaceable.
 
 <!-- perf-charts:begin -->
-**2 of 10 areas over budget**
+**3 of 10 areas over budget**
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 159% | ➖ same | 2026-11-15 |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 144% | 🆕 first run | 2026-11-08 |
-| Background upkeep, armies on the move | 🟡 Close | █████████░ 98% | 🆕 first run | 2026-11-08 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 236% | 🔺 64% worse (busy host) | 2026-11-15 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 161% | 🔺 1% worse (busy host) | 2026-11-15 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | 🔺 45% worse (busy host) | 2026-11-15 |
 | Drawing the screen | 🟢 OK | ███████░░░ 78% | 🔺 11% worse | 2026-11-15 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse | 2026-11-15 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse (busy host) | 2026-11-15 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 72% | 🔺 8% worse | 2026-11-15 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | ➖ same | 2026-11-15 |
-| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 1% better | 2026-11-15 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | ➖ same | 2026-11-15 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-15 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 1% worse (busy host) | 2026-11-15 |
+| Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔺 2% worse (busy host) | 2026-11-15 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔺 2% worse (busy host) | 2026-11-15 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 4% worse (busy host) | 2026-11-15 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 41% of budget (auto eab5cfc, 2026-11-15), 1% faster than Sim boundary SB1-SB2 (worst vs worst); run-to-run spread up to 50%
-- movement p99: 24% of budget (auto eab5cfc, 2026-11-15), unchanged vs Sim boundary SB1-SB2 (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 73% of budget (auto eab5cfc, 2026-11-15), 1% slower than Sim boundary SB1-SB2 (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (auto eab5cfc, 2026-11-15), unchanged vs Sim boundary SB1-SB2 (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 159% of budget, exceeded (auto eab5cfc, 2026-11-15), unchanged vs Sim boundary SB1-SB2 (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 98% of budget (perf spike T2, 2026-11-08), no previous run; run-to-run spread not measured
-- plumbing, horde: 144% of budget, exceeded (perf spike T2, 2026-11-08), no previous run; run-to-run spread not measured
+- movement p95: 42% of budget (auto 42a102d, 2026-11-15), 2% slower than auto eab5cfc (worst vs worst); run-to-run spread up to 50%, busy host (load 2.8)
+- movement p99: 25% of budget (auto 42a102d, 2026-11-15), 2% slower than auto eab5cfc (worst vs worst); run-to-run spread up to 50%, busy host (load 2.8)
+- combat gated p95: 73% of budget (auto 42a102d, 2026-11-15), 1% slower than auto eab5cfc (worst vs worst); run-to-run spread up to 58%, busy host (load 2.8)
+- combat gated p99: 59% of budget (auto 42a102d, 2026-11-15), 1% slower than auto eab5cfc (worst vs worst); run-to-run spread up to 58%, busy host (load 2.8)
+- combat stress p95: 161% of budget, exceeded (auto 42a102d, 2026-11-15), 1% slower than auto eab5cfc (worst vs worst); run-to-run spread up to 41%, busy host (load 2.8)
+- plumbing, movement layouts: 143% of budget, exceeded (auto 42a102d, 2026-11-15), 45% slower than perf spike T2 (worst vs worst); run-to-run spread not measured, busy host (load 2.8)
+- plumbing, horde: 236% of budget, exceeded (auto 42a102d, 2026-11-15), 64% slower than perf spike T2 (worst vs worst); run-to-run spread not measured, busy host (load 2.8)
 - rendered tick-frame p95: 78% of budget (SB1-SB2 rendered, 2026-11-15), 11% slower than P2 gate (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 72% of budget (SB1-SB2 rendered, 2026-11-15), 8% slower than P2 gate (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (auto eab5cfc, 2026-11-15), 3% faster than Sim boundary SB1-SB2 (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (auto 42a102d, 2026-11-15), 4% slower than auto eab5cfc (worst vs worst); run-to-run spread not measured, busy host (load 2.8)
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
