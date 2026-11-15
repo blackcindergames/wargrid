@@ -674,3 +674,17 @@ Questionnaire for the core movement (P5) and core avoidance (P6) design.
 - **P5 size: the plan decides** (user, 2026-11-14): if the P5 plan sizes it over 3 days, it splits into P5a (mesh, search, lab, plain moves) and P5b (supply, docks, combat and construction on the new grid).
 - **Vehicles and infantry push each other in P6** (agent's call, confirmed by the user 2026-11-14).
 - **Design approved** (user, 2026-11-14): [core movement and core avoidance design](../superpowers/specs/2026-11-14-movement-core-design.md).
+
+## Visual and UX proposal review (user, 2026-11-15)
+
+Questionnaire on an agent investigation of the look and UX (`wargrid-visual-ux-improvement.md`, private). Most of it restated decisions above; only the new points were asked. The investigation stays private; these answers are its only repository record.
+
+- **HUD colours: A/B in the P2.3a design** (user, 2026-11-15): the HUD v4 mock-up tokens (`FLAT` in the round 3b page: bg `#121c24`, panel `#1b2731`, button `#223241`, line `#2e3f4b`, text `#eef3f5`, muted `#93a5b0`, selected `#60e5ed`) against the investigation's near-identical set (bg `#111c24`, slab `#172731`, control `#223640`, text `#f1f5f7` / `#b7c4cc`, muted `#96a5ae`, divider `#40535d`, selected `#67deeb`), compared in Godot with Public Sans before dock colours are fixed.
+- **Dividers are decoration** (user, 2026-11-15): group lines need no contrast minimum (the mock-up line is 1.4:1, the proposed divider 1.9:1 on its slab); groups are told apart by spacing. Text keeps 4.5:1, focus and selected outlines 3:1.
+- **Power reads used / available** (user, 2026-11-15): "Power 8/10", forecast "8/10 → 11/10 · Low power"; today's HUD prints supply / demand, so the order flips in P2.3a with a test.
+- **No selection overflow code** (user, 2026-11-15): each faction has about 6 unit kinds and the two-column rows hold about 8; P2.3a's headless layout test asserts that the largest roster's selection fits, so a larger roster fails it instead of clipping.
+- **HUD cyan stays, Neon teal moves** (user, 2026-11-15): Neon's `#00d8e8` is 1.1 to 1.2:1 against either HUD cyan; fixed in P2.4's palette commit with the rest of F12.
+- **Cell card opens after 250 ms** (user, 2026-11-15): P2.3b's cost, shortfall and forecast card opens after 250 ms hover, switches at once between cells and closes on click; the playtest card asks whether it feels slow.
+- **Combat effect tuning later** (user, 2026-11-15): shorter muzzle and hit effects, rifle against shell differences and recoil wait for an optional combat polish package after measured headroom; none in P2.4 to P2.6.
+- **No recognition study** (user, 2026-11-15): art packages use their playtest card questions and the user's own blind look at a screenshot sheet; the proposed multi-participant protocol is dropped.
+- **Interaction experiments parked** (user, 2026-11-15): consequence preview, grouped alerts, selection lens, production workload and order intent are recorded as later ideas in [UX experiments](../questions/later-ux-experiments.md); a command wheel and formation-shaped drag are rejected for the current roadmap.
