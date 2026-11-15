@@ -45,6 +45,7 @@ func test_skirmish_ready_and_tick(runner) -> bool:
 	runner.check(main.driver.sim.snapshot() == Skirmish.create().snapshot(), "K2 exact scenario")
 	main._physics_process(0.0)
 	runner.check(main.driver.sim.snapshot().tick == 1, "K2 one physics callback is one tick")
+	runner.check(main.driver.sim.snapshot().buildings.all(func(b: Dictionary) -> bool: return b.owner != 2 or b.kind != "usa_power_plant"), "K2 the opponent has not built before its decision tick")
 	main._process(0.1)
 	main._refresh()
 	runner.check(main.driver.sim.snapshot().tick == 1, "K2 _process and _refresh never step")

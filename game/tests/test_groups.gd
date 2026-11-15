@@ -246,6 +246,7 @@ func test_failed_search_spends_the_tick(runner) -> bool:
 	for i in range(1, 20):
 		waiting = waiting and state.entities[i].status == "path_pending"
 	runner.check(nav.calls == 1 and state.entities[0].status == "blocked" and waiting, "PB3 a search that finds no route spends the whole tick's budget")
+	runner.check(sim.path_cells() == Simulation.PATH_CELLS_PER_TICK, "PB3 the failed search is charged the whole budget (%d cells)" % sim.path_cells())
 	sim.step()
 	runner.check(nav.calls >= 3, "PB3 the next tick searches again")
 	return true

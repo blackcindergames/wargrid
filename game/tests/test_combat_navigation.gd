@@ -114,13 +114,16 @@ func test_unreachable_attack(runner) -> bool:
 		@warning_ignore("integer_division")
 		ids.append(many.spawn(1, Vector2(2.5 + i % 5, 2.5 + i / 5), "usa_rifle_infantry"))
 	Fixture.send(many, {"type": "attack", "entity_ids": ids, "target_id": victim})
+	var most_searches: int = 0
 	for tick in range(30):
 		counting.sizes.clear()
 		many.step()
 		var sizes: Array[int] = counting.sizes
+		most_searches = maxi(most_searches, sizes.size())
 		var spent: int = 0
 		for size in sizes: spent += size
 		runner.check(sizes.is_empty() or spent - sizes.back() < Simulation.PATH_CELLS_PER_TICK, "A2 a tick starts no search after its route cells reach the budget")
+	runner.check(most_searches > 8, "A2 a long queue is served by route cells, not capped at 8 searches a tick (most in one tick: %d)" % most_searches)
 	var late: int = many.spawn(1, Vector2(1.5, 20.5), "usa_rifle_infantry")
 	Fixture.send(many, {"type": "attack", "entity_ids": [late], "target_id": victim})
 	many.step()
