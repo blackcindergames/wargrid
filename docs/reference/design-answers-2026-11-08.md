@@ -819,6 +819,13 @@ After the worker thread spike: the attended Mac Firefox A/B gave PARK (team gain
 
 - **Not parked: the sim boundary comes next in the night lane** (user, 2026-11-15): the inline `SimPump` seam as night packages right after P2.2, before the P2.3a plan, instead of Later 3, so later packages build on the published view. The worker thread is wanted in production (user, 2026-11-15); it follows behind an off-by-default flag once the Deck decides.
 - **Published result: a slot pool plus an event queue** (user, 2026-11-15): state in reused, tick-stamped slots (four with a previous and a current slot for interpolation; P4 decides between four slots and copying the interpolated fields), events and command results in a queue the main thread drains, since per-tick events cannot be latest-wins.
-- **First seam task: snapshot and digest only when something reads them** (user, 2026-11-15), gated by equal digests and traces.
+- **First seam task: reads on request** (user, 2026-11-15, corrected the same day): the per-input `snapshot()` reads in `orders.gd` and the one per offline command; the earlier "snapshot and digest only when read" rested on the spike's own cadence, not `main`'s. The rest of the boundary design and its answers: [Sim boundary design](../superpowers/specs/2026-11-15-sim-boundary-design.md).
 - **The go rule decides on the Steam Deck** (user, 2026-11-15): Deck Firefox with at least 3 runs per arm as the decision row; `backlog_max` at most 2 (the queue cap); `tick_rate` at least 29.7; the tick-rate floor gets a tolerance and a test (today 29.9999 against 30.0001 fails).
 - **Hosting headers are not a risk** (user, 2026-11-15): both web apps are our own; still open before the thread goes on: a mixed online match in worker mode and a fault probe in a release web build.
+
+## Cheaper step (user, 2026-11-15)
+
+After the Deck profile of the team window (native, 3 runs: step p50 6.7 ms, p95 12.5 ms with bots; movement about 37 % and combat planning about 36 % of the step) and a research pass (Grok, `~/projects/wargrid-overnight-work/step-cost/research.md`, estimates not measurements):
+
+- **A night package "Cheaper step" after the Sim boundary, before P5** (user, 2026-11-15; name proposed by the agent): four experiments, each measured on the Steam Deck (three runs, digests equal) and kept only on a measured gain: combat planning skips units whose cell, orders and targets did not change (estimate 0.5 to 1.2 ms native); an incremental target grid (lever F, 0.3 to 0.45 ms); active id lists for movers, collectors, salvagers and units due to fire (0.5 to 0.9 ms); bot decisions without the per-unit copy (1 to 3 ms off decision ticks).
+- **Fork-join (lever I) becomes a native-only option** (user, 2026-11-15): GDScript group tasks are expected to gain nothing (Godot issue #117640, the `WorkerThreadPool` small-task warning); a GDScript group task over movement stays only as a kill-test after packed movement columns exist.
