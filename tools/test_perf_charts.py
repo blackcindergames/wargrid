@@ -40,6 +40,16 @@ PROFILE rendered_ashfall zone=view.sort mean_ms=0.0525 share=4.7% p50=0.0520 p95
 RENDERED BENCHMARK PASSED 4
 """
 
+HANDOFF_PROFILE_LOG = """\
+PROFILE movement_open.warmup zone=view.batch mean_ms=5.0000 share=1.0% p50=0 p95=0 max=0 calls_per_tick=1.00
+PROFILE movement_open zone=view.batch mean_ms=0.9335 share=144.5% p50=0.9440 p95=0.9660 max=1.045 calls_per_tick=1.00
+PROFILE movement_open zone=step mean_ms=0.6461 share=100.0% p50=0.6400 p95=0.7000 max=1.000 calls_per_tick=1.00
+PROFILE movement_open zone=view_state mean_ms=0.3022 share=46.8% p50=0.3040 p95=0.3120 max=0.378 calls_per_tick=1.00
+PROFILE movement_open zone=view_rows mean_ms=0.2500 share=38.0% p50=0.2500 p95=0.2600 max=0.300 calls_per_tick=1.00
+PROFILE movement_open zone=view.sort mean_ms=0.0550 share=8.5% p50=0.0550 p95=0.0580 max=0.080 calls_per_tick=1.00
+PROFILE COMPLETE 10
+"""
+
 HEADLESS_P95_OPEN = 0.707
 LOCKSTEP_P99 = 0.07
 
@@ -323,6 +333,25 @@ class PerfRecordTest(unittest.TestCase):
         self.assertEqual(s["step", "ashfall:profile"].mean_ms, 0.4936)
         self.assertEqual(s["draw", "ashfall:profile"].mean_ms, 1.1166)  # not draw.units 1.0411
 
+    def test_headless_profile_records_handoff_sum(self) -> None:
+        s = {(x.metric, x.scenario): x for x in perf_record.parse_log(HANDOFF_PROFILE_LOG)}
+        self.assertEqual(set(s), {("plumbing", "movement_open:profile")})
+        self.assertAlmostEqual(s["plumbing", "movement_open:profile"].mean_ms or 0, 0.3022 + 0.0550 + 0.9335)
+
+    def test_rendered_profile_with_view_state_zones(self) -> None:
+        log = RENDERED_PROFILE_LOG.replace("zone=snapshot", "zone=view_state").replace(
+            "zone=view.copy", "zone=view.batch"
+        )
+        s = {(x.metric, x.scenario): x for x in perf_record.parse_log(log)}
+        self.assertAlmostEqual(s["plumbing", "ashfall:profile"].mean_ms or 0, 0.7354 + 0.0830 + 0.0525)
+
+    def test_handoff_rows_feed_the_plumbing_lines(self) -> None:
+        moving, crowds = (
+            next(x for x in perf_chart.LINES if x.title == n) for n in ("plumbing, movement layouts", "plumbing, horde")
+        )
+        self.assertTrue({"movement_open:profile", "movement_dense:profile"} <= set(moving.scenarios))
+        self.assertTrue({"combat_hordes300:profile", "large_196:profile"} <= set(crowds.scenarios))
+
     def test_unprofiled_rendered_rows_plain(self) -> None:
         lines = [x for x in RENDERED_PROFILE_LOG.splitlines() if not x.startswith("PROFILE")]
         s = {(x.metric, x.scenario) for x in perf_record.parse_log("\n".join(lines))}
@@ -538,6 +567,7 @@ case "$*" in
 *run_movement*) cat "$STUB_DIR/movement.out" ;;
 *run_combat*) cat "$STUB_DIR/combat.out" ;;
 *run_lockstep*) cat "$STUB_DIR/lockstep.out" ;;
+*run_profile*) cat "$STUB_DIR/profile.out" ;;
 esac
 exit 0
 """
@@ -553,6 +583,7 @@ def _stub_outputs() -> dict[str, str]:
         + lock
         + "LOCKSTEP BUDGET PASS y\n"
         + "WORST TICK lockstep contact ms=1.000 tick=1\n",
+        "profile": HANDOFF_PROFILE_LOG,
     }
 
 
@@ -598,7 +629,8 @@ class RunBenchmarkTest(unittest.TestCase):
         before = readme.read_bytes()
         self.assertEqual(self.run_script().returncode, 0)
         auto = [r for r in read_rows(self.csv) if r["label"].startswith("auto ")]
-        self.assertEqual(len(auto), 5)
+        self.assertEqual(len(auto), 6)
+        self.assertIn("movement_open:profile", {r["scenario"] for r in auto if r["metric"] == "plumbing"})
         self.assertNotEqual(readme.read_bytes(), before)
 
     def test_off_main_run_still_regenerates_tables(self) -> None:

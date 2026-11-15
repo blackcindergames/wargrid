@@ -26,7 +26,7 @@ The ledger's budget table holds the derived rows. The key ones, each "target ÷ 
 |---|---:|---:|---|
 | Simulation tick p95 (300 units moving) | 10 ms | 1.82 ms | `run_movement.gd`, `run_combat.gd` |
 | Simulation tick p99 | 20 ms | 3.64 ms | the same |
-| Presentation plumbing per tick | 5 ms | 0.91 ms | `run_profile.sh` zones, report only |
+| Presentation plumbing per tick | 5 ms | 0.91 ms | `run_profile.gd` zones inside `run_benchmark.sh`, recorded, not gated |
 | Rendered frame p95 | 16.7 ms | 3.04 ms | rendered benchmark, report only except one guard |
 | Lockstep overhead p99 | 3.3 ms | 0.6 ms | `run_lockstep.gd` |
 
@@ -44,7 +44,7 @@ Each benchmark builds a fixed scenario with a workload script from `game/scripts
 
 | Tool | What it runs | Gates? |
 |---|---|---|
-| `sh tools/run_benchmark.sh` | three headless scripts in a row: `run_movement.gd` (layouts open, dense; 300 units), `run_combat.gd` (ten layouts), `run_lockstep.gd` | yes: exit code, no engine errors, a completion line and the exact count of `BUDGET PASS` lines; the movement rows also fail if the path budget never bound, or the queue drain or per-tick route cells pass their ceilings, and hordes300 fails if no retaliator went home through the reservation map inside the timed window or full-scan allocations in one tick pass their ceiling |
+| `sh tools/run_benchmark.sh` | four headless scripts in a row: `run_movement.gd` (layouts open, dense; 300 units), `run_combat.gd` (ten layouts), `run_lockstep.gd`, then `run_profile.gd` for the plumbing rows (about 150 s) | yes: exit code, no engine errors, a completion line and the exact count of `BUDGET PASS` lines; the movement rows also fail if the path budget never bound, or the queue drain or per-tick route cells pass their ceilings, and hordes300 fails if no retaliator went home through the reservation map inside the timed window or full-scan allocations in one tick pass their ceiling |
 | `sh tools/run_profile.sh` | the same workloads with the zone profiler on (`profiler.gd`, zones such as `step.combat_plan`; `step.advance` splits into `advance.move`, `advance.containers`, `advance.horde` and `advance.salvage`) | no, reports only |
 | `sh tools/run_scaling.sh` | the combat open layout at 50, 100, 200, 400 and 800 units total; prints per-zone means and which zones grew by more than 2.2 times in both of the last two doublings | no, reports only (`SCALING COMPLETE 5`) |
 | `sh tools/run_team_match.sh` | a 3v3 bot match on the Ashfall map to the 45,000-tick cap | pins the outcome line and the `TEAM PATHS` counts (the budget bound, per-tick route cells, one bot decision per tick), not the time |
@@ -190,7 +190,7 @@ A horde mode (about 1,000 simple agents) is also undecided; throwaway spike bran
 
 ## Where in the code
 
-- `tools/run_benchmark.sh` — headless gate: movement, combat and lockstep scripts, exit code plus marker and PASS-line counts.
+- `tools/run_benchmark.sh` — headless gate: movement, combat and lockstep scripts, exit code plus marker and PASS-line counts; the profile script adds the plumbing rows (only its completion line is checked).
 - `game/benchmarks/run_movement.gd`, `run_combat.gd`, `run_lockstep.gd` — the three gates; `STRESS_CEILING` in `run_combat.gd`, `BUDGET_P99_MS` in `run_lockstep.gd`.
 - `game/benchmarks/run_profile.gd`, `tools/run_profile.sh` — zone profile, never gates.
 - `game/benchmarks/run_scaling.gd`, `tools/run_scaling.sh` — size sweep of the combat open layout, never gates.
@@ -212,4 +212,4 @@ A horde mode (about 1,000 simple agents) is also undecided; throwaway spike bran
 - Previous: [11. Multiplayer](11-multiplayer.md). Next: [13. Testing and tooling](13-testing-and-tooling.md).
 
 ---
-Checked against `ae09473`; the tail sentence, gate table and worst-tick figures against `b88dc0f`. Files: `tools/run_benchmark.sh`, `tools/run_profile.sh`, `tools/run_team_match.sh`, `tools/export_build.sh`, `tools/deploy_web.sh`, `game/benchmarks/run_movement.gd`, `game/benchmarks/run_combat.gd`, `game/benchmarks/run_lockstep.gd`, `game/benchmarks/bench_runner.gd`, `game/scripts/debug/timing_stats.gd`, `game/scripts/debug/profiler.gd`, `game/scripts/debug/movement_workload.gd`, `game/scripts/debug/combat_workload.gd`, `game/scripts/debug/movement_benchmark.gd`, `game/export_presets.cfg`, `web/Dockerfile`, `web/sws.toml`, `web/fly.toml`, `tools/run_scaling.sh`, `game/benchmarks/run_scaling.gd`
+Checked against `ae09473`; the plumbing row and the `run_benchmark.sh` lines against `29724db` plus the hand-off rows change; the tail sentence, gate table and worst-tick figures against `b88dc0f`. Files: `tools/run_benchmark.sh`, `tools/run_profile.sh`, `tools/run_team_match.sh`, `tools/export_build.sh`, `tools/deploy_web.sh`, `game/benchmarks/run_movement.gd`, `game/benchmarks/run_combat.gd`, `game/benchmarks/run_lockstep.gd`, `game/benchmarks/bench_runner.gd`, `game/scripts/debug/timing_stats.gd`, `game/scripts/debug/profiler.gd`, `game/scripts/debug/movement_workload.gd`, `game/scripts/debug/combat_workload.gd`, `game/scripts/debug/movement_benchmark.gd`, `game/export_presets.cfg`, `web/Dockerfile`, `web/sws.toml`, `web/fly.toml`, `tools/run_scaling.sh`, `game/benchmarks/run_scaling.gd`

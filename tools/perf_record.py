@@ -34,13 +34,16 @@ MARKERS = {
     "combat": "COMBAT BENCHMARK PASSED 10",
     "lockstep": "LOCKSTEP BENCHMARK PASSED 1",
     "rendered": "RENDERED BENCHMARK PASSED 4",
+    "profile": "PROFILE COMPLETE 10",
 }
 HEADLESS = re.compile(r"^HEADLESS (\S+) tick_ms=(\{[^}]*\})", re.M)
 COMBAT = re.compile(r"^COMBAT ([a-z0-9_]+) tick_ms=(\{[^}]*\})", re.M)
 LOCKSTEP = re.compile(r"^LOCKSTEP overhead_ms=(\{[^}]*\})", re.M)
 RENDERED = re.compile(r"^RENDERED SAMPLE (\S+) .*? tick_ms=(\{[^}]*\}).*? frame_interval_ms=(\{[^}]*\})", re.M)
 PROFILE = re.compile(r"^PROFILE rendered_(\S+) zone=(\S+) mean_ms=([\d.]+)", re.M)
-PLUMBING_ZONES = ("snapshot", "view.copy", "view.sort")
+HANDOFF = re.compile(r"^PROFILE (?!rendered_)(\S+) zone=(\S+) mean_ms=([\d.]+)", re.M)
+# view_state replaced snapshot and view.batch replaced view.copy on 2026-11-11 (performance next).
+HANDOFF_EXTRA = ("view.copy", "view.sort", "view.batch")
 TICK_FRAME = "tick_frame"
 TICK_FRAME_METHOD = "tick-frame"
 
@@ -68,9 +71,25 @@ def _profile_samples(text: str) -> tuple[list[Sample], set[str]]:
         for metric, zone in (("step", "step"), ("draw", "draw")):
             if zone in z:
                 out.append(Sample(metric, scenario, None, None, z[zone]))
-        if all(k in z for k in PLUMBING_ZONES):
-            out.append(Sample("plumbing", scenario, None, None, round(sum(z[k] for k in PLUMBING_ZONES), 4)))
+        if (total := _handoff(z)) is not None:
+            out.append(Sample("plumbing", scenario, None, None, total))
     return out, set(zones)
+
+
+def _handoff(z: dict[str, float]) -> float | None:
+    base = z.get("view_state", z.get("snapshot"))
+    if base is None or "view.sort" not in z:
+        return None
+    return round(base + sum(z.get(k, 0.0) for k in HANDOFF_EXTRA), 4)
+
+
+def _headless_handoff(text: str) -> list[Sample]:
+    zones: dict[str, dict[str, float]] = {}
+    for label, zone, mean in HANDOFF.findall(text):
+        if not label.endswith(".warmup"):
+            zones.setdefault(label, {})[zone] = float(mean)
+    totals = {label: _handoff(z) for label, z in zones.items()}
+    return [Sample("plumbing", f"{label}:profile", None, None, t) for label, t in totals.items() if t is not None]
 
 
 def parse_log(text: str) -> list[Sample]:
@@ -95,6 +114,10 @@ def parse_log(text: str) -> list[Sample]:
         samples.append(_percentiles("frame_interval", layout + suffix, frame_raw))
         samples.append(_percentiles(TICK_FRAME, layout + suffix, tick_raw))
     samples += profile
+    handoff = _headless_handoff(text)
+    if handoff:
+        found.add("profile")
+        samples += handoff
     if not found:
         raise ValueError("no benchmark samples found")
     for family in sorted(found):
