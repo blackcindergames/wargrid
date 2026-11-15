@@ -37,6 +37,7 @@ var orders: RefCounted = Orders.new(self)
 var hud: RefCounted
 var local_player: int = 1
 var stepped_results: Array = []
+var shown_state: Dictionary = {}
 var _shown_note: String = ""
 var _camera_bounds: Rect2
 @onready var _view: Node2D = $WorldView
@@ -134,7 +135,7 @@ func _create_world() -> void:
 
 func playtest_context() -> Dictionary:
 	var camera: Vector2 = Iso.plane_to_world(_camera.position)
-	return {"tick": driver.sim.tick(), "camera": [camera.x, camera.y], "selected": orders.view_selection(), "over": driver.over(), "menu": _pause.visible}
+	return {"tick": shown_state.tick, "camera": [camera.x, camera.y], "selected": orders.view_selection(), "over": driver.over(), "menu": _pause.visible}
 
 func playtest_match() -> Dictionary:
 	var played: Dictionary = driver.match_log()
@@ -145,17 +146,19 @@ func _match_record(mode: String, match_factions: Array, lines: PackedStringArray
 	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "end_tick": state.tick, "end_digest": StateHash.digest(state), "build": PlaytestSettings.build_id(), "result": hud._result_text(state.match), "commands": lines}
 
 func _step_simulation() -> void:
-	var rejected: PackedStringArray = driver.step(_collect_sound)
-	if rejected.is_empty(): return
-	_ensure_sound()
-	for error in rejected: _sound.rejected(error)
-	hud.note = "Rejected: " + rejected[-1]
+	for answer: Dictionary in driver.step(_collect_sound):
+		if answer.ok: _playtest.observe_command(answer.command)
+		else:
+			_ensure_sound()
+			_sound.rejected(answer.error)
+			hud.note = "Rejected: " + answer.error
+		orders.answered(answer)
 
 func menu_open() -> bool:
 	return _pause.visible or _playtest.holds_match()
 
 func _escape_pending() -> bool:
-	return not driver.sim.match_over() and orders.escape_pending()
+	return not shown_over() and orders.escape_pending()
 
 func _leave() -> void:
 	driver.leave()
@@ -262,31 +265,45 @@ func _note() -> String:
 	# The rematch line changes without a tick, so a finished match still redraws its panel.
 	return hud.note + driver.notice() + driver.rematch_line()
 
-func _show(state: Dictionary) -> void:
+func shown_over() -> bool:
+	return shown_state.get("match") != null and shown_state.match.status in ["won", "draw"]
+
+func _reshow() -> void:
+	_show(shown_state, false)
+	hud.place_economy()
+
+# Only a new view consumes step results and sound; a repaint on input must leave them for the next refresh.
+func _show(state: Dictionary, fresh: bool = true) -> void:
+	shown_state = state
 	_shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()
 	orders.prune(state)
+	orders.show_preview(driver.preview_answer())
 	Profiler.end(&"refresh.selection", zone)
 	_view.set_view(state, orders.view_selection())
 	zone = Profiler.begin()
-	hud._refresh_hud(state)
+	hud._refresh_hud(state, fresh)
 	Profiler.end(&"refresh.hud", zone)
-	stepped_results.clear()
+	if fresh: stepped_results.clear()
 
 func _show_hint(payload: Dictionary) -> void:
 	var point: Variant = orders._hint_point(payload)
-	if point != null: _view.add_hint(point, driver.sim.tick())
+	if point != null: _view.add_hint(point, shown_state.tick)
 
 func _submit(payload: Dictionary) -> void:
 	_show_hint(payload)
-	var result: Dictionary = driver.submit(payload)
-	hud.note = result.error
-	_refresh()
-	if not hud.note.is_empty(): _sound.rejected(hud.note)
-	else: _playtest.observe_command(payload)
-	if result.ok: _sound.order(payload)
+	driver.submit(payload)
+	hud.note = ""
+	_reshow()
+	_sound.order(payload)
+
+func refuse(error: String) -> void:
+	_ensure_sound()
+	_sound.rejected(error)
+	hud.note = "Rejected: " + error
+	_reshow()
 
 func _ensure_sound() -> void:
 	if _sound != null: return

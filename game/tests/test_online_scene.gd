@@ -16,6 +16,7 @@ const Lockstep = preload("res://scripts/net/lockstep.gd")
 const Wire = preload("res://scripts/net/wire.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const MapData = preload("res://scripts/simulation/map_data.gd")
+const Profiler = preload("res://scripts/debug/profiler.gd")
 const PEER_TICKS: int = 60
 
 class FakeTransport extends RefCounted:
@@ -38,7 +39,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -535,6 +536,23 @@ func test_two_tick_frame_keeps_earlier_results(runner) -> bool:
 	_run(online.main, 1)
 	runner.check(online.main.driver.sim.tick() == 7, "N27 fixture: the frame advanced ticks 5 and 6, got %d" % online.main.driver.sim.tick())
 	runner.check(online.main.get_node("HUD/Status").text.contains(DUE_REJECTION), "N27 a two-tick frame keeps the earlier tick's own rejection")
+	online.main.free()
+	return true
+
+func test_sb1_online_snapshot_per_hash_tick(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	_peer_packets(online.transport, 2, 4, 64)
+	Profiler.reset()
+	Profiler.enabled = true
+	var frames: int = 0
+	while online.main.driver.sim.tick() <= 60 and frames < 200:
+		_run(online.main, 1)
+		frames += 1
+	var snapshots: int = Profiler.calls(&"snapshot")
+	Profiler.enabled = false
+	Profiler.reset()
+	runner.check(online.main.driver.sim.tick() > 60, "RB8 fixture: the simulation passed tick 60, got %d" % online.main.driver.sim.tick())
+	runner.check(snapshots == 2, "RB8 online ticks take one snapshot per hash tick, got %d" % snapshots)
 	online.main.free()
 	return true
 
@@ -1305,4 +1323,144 @@ func test_launcher_reads_no_page_off_web(runner) -> bool:
 	var launcher = Launcher.instantiate()
 	runner.check(launcher.get("page") == "" and launcher.get("search") == "", "N24 a headless launcher reads no page address")
 	launcher.free()
+	return true
+
+func _run_until_answered(main, frames: int) -> void:
+	for i in frames:
+		if main.orders._awaiting_build.is_empty(): return
+		main._physics_process(0.0)
+
+func test_sb2_online_placement_closes_and_reopens(runner) -> bool:
+	var helper = BaseScene.new()
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	var transport: FakeTransport = online.transport
+	_peer_packets(transport, 2, 4, 200)
+	_run(main, 8)
+	main.orders.selected_ids.assign([3])
+	main._refresh()
+	var builds = func() -> int: return _own_commands(transport).filter(func(command: Dictionary) -> bool: return command.type == "build").size()
+	helper.key(main, KEY_1)
+	var kind: String = main.orders._placement_kind
+	helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
+	runner.check(not kind.is_empty() and main.orders._placement_kind.is_empty(), "RA8 a build click closes placement at once")
+	_run_until_answered(main, 30)
+	runner.check(main.orders._placement_kind == kind and main.hud.note.begins_with("Rejected: "), "RA8 a refusal reopens placement with the same kind, got '%s' '%s'" % [main.orders._placement_kind, main.hud.note])
+	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
+	runner.check(main.orders._placement_kind.is_empty(), "RA8 an accepted build click closes placement in the same frame")
+	helper.key(main, KEY_1)
+	helper.pointer(main, Iso.world_to_plane(Vector2(14.5, 10.5)), MOUSE_BUTTON_LEFT, false)
+	_run_until_answered(main, 30)
+	_run(main, 3)
+	runner.check(main.orders._awaiting_build.is_empty(), "RA8 the accepted build answer arrives")
+	runner.check(builds.call() == 2, "RA8 a placement click while a build answer is pending is ignored, builds %d" % builds.call())
+	main.free()
+	return true
+
+func test_sb2_online_refusal_keeps_new_gesture(runner) -> bool:
+	var helper = BaseScene.new()
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	var transport: FakeTransport = online.transport
+	_peer_packets(transport, 2, 4, 200)
+	_run(main, 8)
+	var count = func(type: String) -> int: return _own_commands(transport).filter(func(command: Dictionary) -> bool: return command.type == type).size()
+	main.orders.selected_ids.assign([3])
+	main._refresh()
+	helper.key(main, KEY_1)
+	helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
+	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, true)
+	_run_until_answered(main, 30)
+	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
+	_run(main, 3)
+	runner.check(main.hud.note.begins_with("Rejected: ") and count.call("build") == 1, "RA9 a refusal during a selection click does not turn its release into a build, builds %d" % count.call("build"))
+	main.orders.selected_ids.assign([3])
+	main._refresh()
+	helper.key(main, KEY_1)
+	helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
+	helper.key(main, KEY_A)
+	_run_until_answered(main, 30)
+	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
+	_run(main, 3)
+	runner.check(count.call("build") == 2 and count.call("attack_move") == 1, "RA9 a refusal in attack-move mode keeps the attack-move click, builds %d attack moves %d" % [count.call("build"), count.call("attack_move")])
+	main.free()
+	return true
+
+func _builder(main, owner: int) -> int:
+	var rows = main.driver.sim.view_state().units
+	for i in rows.size():
+		if rows.owner[i] == owner and rows.kinds[rows.kind[i]].ends_with("_builder"): return rows.id[i]
+	return -1
+
+func _place(main) -> void:
+	main.orders.selected_ids.assign([_builder(main, 1)])
+	main._refresh()
+	BaseScene.new().key(main, KEY_1)
+
+func test_sb2_online_preview_waits_for_step(runner) -> bool:
+	var helper = BaseScene.new()
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	var view = main.get_node("WorldView")
+	_peer_packets(online.transport, 2, 4, 12)
+	_run(main, 8)
+	_place(main)
+	helper.hover(main, Iso.world_to_plane(Vector2(10.5, 10.5)))
+	var tick: int = -1
+	for i in 30:
+		if main.driver._lockstep.status() == "waiting" and main.driver.sim.tick() == tick: break
+		tick = main.driver.sim.tick()
+		_run(main, 1)
+	runner.check(main.driver._lockstep.status() == "waiting" and main.driver.preview_answer().get("origin") == Vector2i(10, 10) and view._preview_valid, "RP4 fixture: answered before the stall, got %s %s" % [main.driver._lockstep.status(), main.driver.preview_answer()])
+	helper.hover(main, Iso.world_to_plane(Vector2(-3.5, -3.5)))
+	_run(main, 1)
+	runner.check(main.driver.sim.tick() == tick and main.driver.preview_answer().get("origin") == Vector2i(10, 10) and view._preview_valid, "RP4 a stalled frame answers no preview, got %s" % [main.driver.preview_answer()])
+	_peer_packets(online.transport, 2, 13, PEER_TICKS)
+	_run(main, 1)
+	runner.check(main.driver.preview_answer().get("origin") == main.orders._preview_origin and not view._preview_valid, "RP4 the next step answers the current origin, got %s" % [main.driver.preview_answer()])
+	main.free()
+	return true
+
+func test_sb2_preview_after_catch_up(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_peer_packets(online.transport, 2, 4, 8)
+	_run(main, 16)
+	_place(main)
+	BaseScene.new().hover(main, Iso.world_to_plane(Vector2(10.5, 10.5)))
+	var tick: int = main.driver.sim.tick()
+	runner.check(main.driver.preview_answer().is_empty() and not main.orders._placement_kind.is_empty(), "RP8 fixture: placing with a pending request, got %s" % [main.driver.preview_answer()])
+	var builder: int = _builder(main, 1)
+	var free: bool = main.driver.sim.preview_build(1, builder, main.orders._placement_kind, Vector2i(10, 10)).ok
+	var block := {"type": "build", "builder_id": _builder(main, 2), "building_kind": "usa_power_plant", "origin": [10, 10], "tick": tick + 1, "player": 2, "sequence": 1}
+	for t in range(9, PEER_TICKS + 1):
+		online.transport.frames.append(Wire.encode(Wire.tick_message(2, t, [block] if t == tick + 1 else [], null)))
+	_run(main, 1)
+	var answer: Dictionary = main.driver.preview_answer()
+	runner.check(main.driver.sim.tick() == tick + 2 and free, "RP8 fixture: two ticks in one frame, spot free before, got %d %s" % [main.driver.sim.tick() - tick, free])
+	runner.check(answer.get("origin") == Vector2i(10, 10) and not answer.ok and main.get_node("WorldView")._preview_valid == answer.ok, "RP8 the answer reflects the second tick (spot taken), got %s" % [answer])
+	main.free()
+	return true
+
+func test_sb2_rematch_drops_pending_preview(runner) -> bool:
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_end_match(online)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	main.driver.request_preview({"player": 2, "builder_id": _builder(main, 2), "kind": "usa_power_plant", "origin": Vector2i(10, 10)})
+	var old_sim = main.driver.sim
+	online.transport.frames.append(_rematch_start(99))
+	_peer_packets(online.transport, 1, 4, 4)
+	_run(main, 1)
+	runner.check(not is_same(main.driver.sim, old_sim), "RP5 fixture: the rematch built a new match")
+	_peer_packets(online.transport, 1, 5, 12)
+	_run(main, 2)
+	runner.check(main.driver.preview_answer().is_empty() and main.get_node("WorldView")._preview_cells.is_empty(), "RP5 a rematch drops the pending preview, got %s" % [main.driver.preview_answer()])
+	main.free()
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
 	return true

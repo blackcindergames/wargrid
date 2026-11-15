@@ -33,16 +33,16 @@ Offline skirmish, a unit selected, the player right-clicks open ground. The path
 
 1. **Input.** The match screen hands the click to its orders object, which tries each kind of order in turn. First it checks whether the click is a defence order or an attack on an enemy. Neither, so it looks for a supply source, another object or a rally point, finds none and falls through to the right-button branch, which issues the move after converting the screen position to a map position (chapter 2).  
    `match_screen._unhandled_input → orders.handle → _combat_input (_view.pick_target) → _building_input (_context_order, _set_rally) → _selection_input → orders._move(Iso.plane_to_world(...))`
-2. **Command.** The orders object wraps the target into a move payload and gives it to the screen, which shows a hint marker and hands it to the driver. The driver stamps it with the player, a sequence number and the current tick and passes it to the simulation. The screen redraws at once, so the click gets feedback before any tick runs. To read the tick and the last sequence the driver takes a full snapshot; that happens per input event, not per tick.  
-   `orders._move → match_screen._submit → driver.submit → Simulation.issue_command` (also `_show_hint`, `_refresh`)
+2. **Command.** The orders object wraps the target into a move payload and gives it to the screen, which shows a hint marker and hands it to the driver. The driver stamps it with the player, a sequence number and the current tick, passes it to the simulation and holds the result back. The screen repaints the view it already shows (`shown_state`, the last state it was given) at once, so the click gets a hint marker and an order voice before any tick runs; nothing is read from the simulation for that. The driver counts the sequence itself, so it needs no snapshot.  
+   `orders._move → match_screen._submit → driver.submit → Simulation.issue_command` (also `_show_hint`, `_reshow`)
 3. **Queue.** The simulation validates the command and queues it for its tick. Nothing has moved yet.  
    `Simulation.issue_command → _pending`
-4. **Tick.** On the next physics callback the offline driver lets the bot issue its commands, then steps the simulation.  
+4. **Tick.** On the next physics callback the offline driver lets the bot issue its commands, then steps the simulation. It hands the held answer for the click (accepted, or the rejection text) back to the screen only now, one step later. Online play answers when the scheduled command tick has run, a few ticks after the click.  
    `match_screen._physics_process → _step_frame → _step_simulation → driver.step → Skirmish.issue_opponent → Simulation.step`
 5. **Inside the step.** The command is due this tick. The simulation gives each unit a destination and queues a path request, answers the request with a route, and starts turning the unit; it begins to roll two ticks later. [Chapter 4](04-the-tick.md) follows these steps function by function. Then the tick counter advances.  
    `Simulation._apply_orders → _service_paths → _assign_route → _advance → Locomotion.step (START_DELAY_TICKS) → _tick += 1`
-6. **State out.** The screen notes that the tick advanced and tells the presentation clock. On the next rendered frame it asks the simulation for fresh view state and pushes it to the view and the HUD.  
-   `match_screen._step_frame → PresentationClock.stepped … _process → _present_if_due → _refresh → Simulation.view_state → _show → WorldView.set_view, hud._refresh_hud`
+6. **State out.** The screen notes that the tick advanced and tells the presentation clock. On the next rendered frame it asks the simulation for fresh view state, keeps it as `shown_state` and pushes it to the view and the HUD. Input between ticks (selection, hover) repaints from that kept copy instead of reading the simulation again.  
+   `match_screen._step_frame → PresentationClock.stepped … _process → _present_if_due → _refresh → Simulation.view_state → _show (sets shown_state) → WorldView.set_view, hud._refresh_hud`
 7. **Draw.** The view draws the new state. On this first tick the unit has only turned toward its route; it starts to move two ticks later. On each following rendered frame the view can slide it toward the newest pose (interpolation, below).  
    `WorldView.set_view → WorldView.advance_frame`
 
@@ -111,9 +111,9 @@ Proposed, not built: running the simulation on a worker thread (a probe passed; 
 - `game/project.godot` — `physics/common/physics_ticks_per_second` (the tick rate), `run/main_scene` (the launcher).
 - `game/scripts/simulation/simulation.gd` — `Simulation`: state fields at the top (`_tick`, `_entities`, `_pending`, `_path_queue`), `issue_command`, `_apply_orders`, `_assign_move`, `_service_paths`, `_assign_route`, `_advance`, `step`, `tick`, `snapshot`, `view_state`.
 - `game/scripts/simulation/locomotion.gd` — `step`: how far a unit moves this tick.
-- `game/scripts/match/match_screen.gd` — the match screen: `setup`, `_ready`, `_unhandled_input` (to `orders.handle`), `_submit`, `_physics_process` (calls `_step_frame`, then `_step_simulation`), `_process` (`_present_if_due`, camera, `advance_frame`), `_refresh`, `_show`.
-- `game/scripts/match/offline_driver.gd` — `create` via `Skirmish.create`, `step` with `Skirmish.issue_opponent`, `submit` (stamping).
-- `game/scripts/match/online_driver.gd` — `submit` and `step` with `CATCH_UP_STEPS`, `_lockstep.advance`.
+- `game/scripts/match/match_screen.gd` — the match screen: `setup`, `_ready`, `_unhandled_input` (to `orders.handle`), `_submit`, `_physics_process` (calls `_step_frame`, then `_step_simulation`), `_process` (`_present_if_due`, camera, `advance_frame`), `_refresh` (reads `view_state`), `_reshow` (repaints `shown_state`), `_show`, `_step_simulation` (turns the driver's answers into the beep, the note and the playtest checklist).
+- `game/scripts/match/offline_driver.gd` — `create` via `Skirmish.create`, `step` with `Skirmish.issue_opponent` (returns the held answers), `submit` (stamping, holds the result), `request_preview` / `preview_answer`.
+- `game/scripts/match/online_driver.gd` — `submit` and `step` with `CATCH_UP_STEPS`, `_lockstep.advance` (returns answers built from the command log and the rejections), `request_preview` / `preview_answer`.
 - `game/scripts/match/orders.gd` — input dispatch (`handle`), selection, placement, the order payloads.
 - `game/scripts/match/hud.gd` — `_refresh_hud`, build menu, queue, selected and inspected unit lines, result text.
 - `game/scripts/net/lockstep.gd` — `submit`, `advance`, `finish_tick`.
@@ -132,4 +132,4 @@ Proposed, not built: running the simulation on a worker thread (a probe passed; 
 - [Zero Hour verification](../reference/zero-hour-verification.md): where Zero Hour's logic rate was checked.
 
 ---
-Checked against `b88dc0f`. Files: `game/project.godot`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/match/match_screen.gd`, `game/scripts/match/offline_driver.gd`, `game/scripts/match/online_driver.gd`, `game/scripts/match/orders.gd`, `game/scripts/match/hud.gd`, `game/scripts/presentation/presentation_clock.gd`, `game/scripts/presentation/world_view.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/net/lockstep.gd`, `game/scripts/launcher.gd`, `game/tests/run_tests.gd`
+Checked against `314f487`. Files: `game/project.godot`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/match/match_screen.gd`, `game/scripts/match/offline_driver.gd`, `game/scripts/match/online_driver.gd`, `game/scripts/match/orders.gd`, `game/scripts/match/hud.gd`, `game/scripts/presentation/presentation_clock.gd`, `game/scripts/presentation/world_view.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/net/lockstep.gd`, `game/scripts/launcher.gd`, `game/tests/run_tests.gd`

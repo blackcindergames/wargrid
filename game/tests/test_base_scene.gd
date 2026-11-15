@@ -9,7 +9,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 
 func cases() -> Array[Callable]:
-	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_preview_hover_cost,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
+	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_red_answer_elsewhere_does_not_block,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
 
 func _m3_world() -> Simulation:
 	var sim: Simulation = Fixture.make_world()
@@ -29,6 +29,10 @@ func setup(runner):
 	main.set_process(false)
 	await runner.process_frame
 	return main
+
+static func sync_sequence(main) -> void:
+	for entry: Variant in main.driver.sim.snapshot().last_sequences:
+		if entry.player == main.local_player: main.driver._sequence = maxi(main.driver._sequence, entry.sequence + 1)
 
 func key(main, code: Key) -> void:
 	var event := InputEventKey.new()
@@ -87,13 +91,19 @@ func test_placement_input(runner) -> bool:
 	key(main,KEY_1)
 	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
-	runner.check(not main.orders._placement_kind.is_empty() and main.driver.sim.snapshot() == before and not main.hud.note.is_empty(),"Bs2 invalid remains mode reason")
+	main._physics_process(0.0)
+	var refused: Dictionary = main.driver.sim.snapshot()
+	var credits = func(state: Dictionary) -> Array: return state.players.map(func(player: Dictionary) -> int: return player.credits)
+	runner.check(not main.orders._placement_kind.is_empty() and credits.call(refused) == credits.call(before) and refused.buildings == before.buildings and refused.pending_commands == before.pending_commands and main.hud.note.begins_with("Rejected: "),"Bs2 invalid remains mode reason")
+	runner.check(refused.tick == before.tick + 1,"Bs2 the refusal arrives with one step")
 	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,true)
 	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,false)
 	var state: Dictionary = main.driver.sim.snapshot()
-	runner.check(main.orders._placement_kind.is_empty() and state.pending_commands.size() == 1,"Bs2 release exactly one build")
+	runner.check(not main.orders._placement_kind.is_empty() and state.pending_commands.size() == 1,"Bs2 release exactly one build")
 	if not state.pending_commands.is_empty(): runner.check(state.pending_commands[0].type == "build" and state.pending_commands[0].origin == [8,4] and state.pending_commands[0].builder_id == 1 and state.pending_commands[0].sequence == 0,"Bs2 envelope")
+	main._physics_process(0.0)
+	runner.check(main.orders._placement_kind.is_empty(),"Bs2 placement ends with the build's answer")
 	var queued: Dictionary = main.driver.sim.snapshot()
 	pointer(main,Iso.world_to_plane(Vector2(4.5,4.5)) + Vector2(0,-8),MOUSE_BUTTON_LEFT,true)
 	key(main,KEY_2)
@@ -110,6 +120,7 @@ func test_production_ui(runner) -> bool:
 	main.driver.sim = Fixture.make_world(50000)
 	Fixture.build(runner,main.driver.sim,"usa_power_plant",Vector2i(5,5))
 	var depot: int = Fixture.build(runner,main.driver.sim,"usa_supply_center",Vector2i(10,4))
+	sync_sequence(main)
 	main._refresh()
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,true)
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,false)
@@ -153,6 +164,7 @@ func test_production_ui(runner) -> bool:
 	main._physics_process(0.0)
 	var foundation: int = main.driver.sim.snapshot().buildings.back().id
 	main.orders.selected_building_id = foundation
+	sync_sequence(main)
 	main._refresh()
 	var credits: int = main.driver.sim.snapshot().players[0].credits
 	main.get_node("HUD/Economy/CancelBuild").pressed.emit()
@@ -205,6 +217,7 @@ func test_execution_feedback(runner) -> bool:
 	main._refresh()
 	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"Bs5 due rejection visible")
 	main._submit({"type":"stop","entity_ids":[999]})
+	main._physics_process(0.0)
 	var error: String = main.hud.note
 	main._refresh()
 	runner.check(not error.is_empty() and main.hud.note == error,"Bs5 immediate error persists refresh")
@@ -218,20 +231,109 @@ func test_execution_feedback(runner) -> bool:
 	main.free()
 	return true
 
-func test_preview_hover_cost(runner) -> bool:
+func _placing(runner) -> Variant:
 	var main = await setup(runner)
 	main.driver.sim = Fixture.make_world()
 	main.orders.selected_ids.assign([1])
 	main._refresh()
 	key(main,KEY_1)
-	var before: int = main.driver.sim.navigation_builds()
+	return main
+
+func test_sb2_preview_cost(runner) -> bool:
+	var main = await _placing(runner)
+	# navigation_builds counts only previews that need a full grid (construction.gd), so answers are counted by identity.
+	var before: Dictionary = main.driver.preview_answer()
 	for i in range(5): hover(main,Iso.world_to_plane(Vector2(8.25,4.25)) + Vector2(i * 0.1,0))
-	runner.check(main.driver.sim.navigation_builds() - before <= 1,"Bs6 hovering one cell builds at most one preview grid")
+	runner.check(is_same(main.driver.preview_answer(),before),"Bs6 hovers without a step evaluate no preview")
+	main._physics_process(0.0)
+	var expected: bool = main.driver.sim.preview_build(1,1,"usa_power_plant",Vector2i(8,4)).ok
+	runner.check(not is_same(main.driver.preview_answer(),before) and main.driver.preview_answer().kind == "usa_power_plant" and main.driver.preview_answer().origin == Vector2i(8,4) and main.driver.preview_answer().ok == expected,"Bs6 five hovers across one cell are answered once at the next step, got %s" % [main.driver.preview_answer()])
+	before = main.driver.preview_answer()
 	hover(main,Iso.world_to_plane(Vector2(12.25,4.25)))
-	runner.check(main.driver.sim.navigation_builds() - before <= 2 and main.get_node("WorldView")._preview_cells[0] == Vector2i(12,4),"Bs6 a new cell recomputes the preview")
+	runner.check(main.get_node("WorldView")._preview_cells[0] == Vector2i(12,4) and is_same(main.driver.preview_answer(),before),"Bs6 a new cell moves the ghost at once without a preview")
+	main._physics_process(0.0)
+	runner.check(main.driver.preview_answer().get("origin") == Vector2i(12,4),"Bs6 a new cell is answered at the next step")
 	key(main,KEY_ESCAPE)
 	key(main,KEY_1)
 	runner.check(not main.get_node("WorldView")._preview_cells.is_empty(),"Bs6 re-entering placement redraws the preview")
+	main.free()
+	return true
+
+func test_sb2_ghost_colour_after_step(runner) -> bool:
+	var main = await _placing(runner)
+	var view = main.get_node("WorldView")
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	runner.check(view._preview_cells[0] == Vector2i(8,4) and not view._preview_valid,"RP1 the ghost moves at once, refused before its first answer")
+	main._physics_process(0.0)
+	runner.check(view._preview_valid,"RP1 the free cell turns valid after the next step")
+	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
+	runner.check(view._preview_cells[0] == Vector2i(4,4) and view._preview_valid,"RP1 the ghost moves at once in the last answer's colour")
+	main._physics_process(0.0)
+	runner.check(not view._preview_valid,"RP1 the builder's own cell turns refused after the next step")
+	main.free()
+	return true
+
+func test_sb2_red_ghost_click_refused_locally(runner) -> bool:
+	var main = await _placing(runner)
+	var cell: Vector2 = Iso.world_to_plane(Vector2(4.25,4.25))
+	hover(main,cell)
+	main._physics_process(0.0)
+	main._physics_process(0.0)
+	pointer(main,cell,MOUSE_BUTTON_LEFT,false)
+	runner.check(main.driver._held.is_empty() and main.orders._placement_kind == "usa_power_plant" and main.hud.note.begins_with("Rejected: "),"RL1 a click on a red ghost sends nothing, says why and keeps placement, held %d note '%s'" % [main.driver._held.size(), main.hud.note])
+	main._physics_process(0.0)
+	var errors: int = main._sound.last_requests().filter(func(request: Dictionary) -> bool: return request.cue == "error").size()
+	runner.check(errors == 1,"RL1 the local refusal beeps once at the next step, got %d" % errors)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	main._physics_process(0.0)
+	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,false)
+	runner.check(main.driver._held.size() == 1,"RL2 a click on a green ghost still sends, held %d" % main.driver._held.size())
+	main.free()
+	return true
+
+func test_sb2_red_answer_elsewhere_does_not_block(runner) -> bool:
+	var main = await _placing(runner)
+	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
+	main._physics_process(0.0)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,false)
+	runner.check(main.driver._held.size() == 1,"RL3 a red answer for another cell does not block a click before the next step, held %d" % main.driver._held.size())
+	main.free()
+	return true
+
+func test_sb2_restart_drops_pending_preview(runner) -> bool:
+	var main = await _placing(runner)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	main._restart()
+	main._physics_process(0.0)
+	runner.check(main.driver.preview_answer().is_empty() and main.get_node("WorldView")._preview_cells.is_empty(),"RP5 a restart drops the pending preview, got %s" % [main.driver.preview_answer()])
+	main.free()
+	return true
+
+func test_sb2_reenter_placement_ignores_old_answer(runner) -> bool:
+	var main = await _placing(runner)
+	var view = main.get_node("WorldView")
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	main._physics_process(0.0)
+	runner.check(view._preview_valid,"RP6 fixture: the first placement got a valid answer")
+	key(main,KEY_ESCAPE)
+	key(main,KEY_1)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	runner.check(not view._preview_valid and main.driver.preview_answer().is_empty(),"RP6 the old answer does not colour the new placement")
+	main._physics_process(0.0)
+	runner.check(view._preview_valid and main.driver.preview_answer().get("origin") == Vector2i(8,4),"RP6 only the new request is answered, got %s" % [main.driver.preview_answer()])
+	main.free()
+	return true
+
+func test_sb2_preview_waits_for_unpause(runner) -> bool:
+	var main = await _placing(runner)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	main._pause.open()
+	for i in 3: main._physics_process(0.0)
+	runner.check(main.driver.preview_answer().is_empty(),"RP7 a paused match answers no preview")
+	main._pause.close()
+	main._physics_process(0.0)
+	runner.check(main.driver.preview_answer().get("origin") == Vector2i(8,4),"RP7 the preview is answered after unpause")
 	main.free()
 	return true
 
@@ -319,6 +421,30 @@ func test_rejection_survives_two_steps(runner) -> bool:
 	main.free()
 	return true
 
+func test_sb1_repaint_keeps_step_pending(runner) -> bool:
+	var main = await setup(runner)
+	main.driver.sim = Fixture.make_world(800)
+	main.set_process(true)
+	await runner.process_frame
+	Fixture.send(main.driver.sim,{"type":"build","builder_id":1,"building_kind":"usa_power_plant","origin":[8,4],"tick":0})
+	Fixture.send(main.driver.sim,{"type":"build","builder_id":1,"building_kind":"usa_power_plant","origin":[12,4],"tick":0})
+	main._physics_process(0.0)
+	main._physics_process(0.0)
+	var rows: RefCounted = main.shown_state.units
+	var at: int = rows.index_of(1)
+	hover(main,Iso.world_to_plane(Vector2(rows.x[at],rows.y[at])) + Vector2(0,-8))
+	var director = main._sound.director
+	runner.check(main._view.hovered_id() == 1,"RB5 fixture: the hover changed the hovered object")
+	runner.check(main.stepped_results.size() > 0,"RB5 a repaint keeps the step's results unconsumed")
+	runner.check(director.collected_ticks() == [1,2] and not director.consumed_ticks().has(1) and not director.consumed_ticks().has(2),"RB5 a repaint leaves the step's sound pending, got %s and %s" % [director.collected_ticks(),director.consumed_ticks()])
+	await runner.process_frame
+	await runner.process_frame
+	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"RB5 the rejection still reaches the HUD after a repaint")
+	runner.check(director.consumed_ticks().count(1) == 1 and director.consumed_ticks().count(2) == 1,"RB5 each step's sound plays once, got %s" % [director.consumed_ticks()])
+	runner.check(main._view._state.tick == main.driver.sim.tick(),"RB5 the deferred refresh shows the new tick")
+	main.free()
+	return true
+
 func _menu_texts(main) -> Array:
 	return main.get_node("HUD/Economy/BuildMenu").get_children().map(func(button: Button) -> String: return button.text)
 
@@ -329,6 +455,7 @@ func test_build_menu_from_capabilities(runner) -> bool:
 	Fixture.build(runner,main.driver.sim,"usa_supply_center",Vector2i(10,4))
 	var factory: int = Fixture.build(runner,main.driver.sim,"usa_factory",Vector2i(14,4))
 	main.orders.selected_ids.assign([1])
+	sync_sequence(main)
 	main._refresh()
 	runner.check(_menu_texts(main) == ["1: Power Plant $800","2: Supply Depot $2000","3: Barracks $600","4: Vehicle Factory $2000","5: Missile Battery $1000"],"M1 builder menu lists its builds, got %s" % [_menu_texts(main)])
 	main.orders.selected_ids.clear()
@@ -378,5 +505,27 @@ func test_build_menu_quantity_label(runner) -> bool:
 	var status_rect := Rect2(status.global_position,status.get_minimum_size())
 	for button: Button in buttons: runner.check(not button.get_global_rect().intersects(status_rect),"M6 button clear of status")
 	runner.check(not buttons[0].get_global_rect().intersects(buttons[1].get_global_rect()),"M6 buttons do not overlap")
+	main.free()
+	return true
+
+func test_sb2_placement_waits_for_build_answer(runner) -> bool:
+	var main = await setup(runner)
+	main.driver.sim = Fixture.make_world()
+	main.orders.selected_ids.assign([1])
+	main._refresh()
+	key(main,KEY_1)
+	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
+	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
+	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.note.is_empty(),"RA6 a refused click keeps placement and says nothing yet, got '%s'" % main.hud.note)
+	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
+	runner.check(main.driver._held.size() == 1,"RA6 a second click while the answer is pending is ignored, held %d" % main.driver._held.size())
+	main._physics_process(0.0)
+	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.note.begins_with("Rejected: "),"RA6 the refusal keeps placement, got '%s'" % main.hud.note)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,false)
+	var builds: int = main.driver.sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "build").size()
+	runner.check(main.orders._placement_kind == "usa_power_plant" and builds == 1,"RA6 an accepted click keeps placement until its answer, builds %d" % builds)
+	main._physics_process(0.0)
+	runner.check(main.orders._placement_kind.is_empty(),"RA6 the accepted answer ends placement")
 	main.free()
 	return true

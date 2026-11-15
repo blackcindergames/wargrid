@@ -35,18 +35,18 @@ func reset() -> void:
 func place_economy() -> void:
 	_economy.position.y = maxf(116.0,_status.position.y + _status.get_minimum_size().y + 8.0)
 
-func _refresh_hud(state: Dictionary) -> void:
+func _refresh_hud(state: Dictionary, with_sound: bool = true) -> void:
 	_screen._ensure_sound()
 	_economy_hud(state)
 	_match_hud(state)
 	var line: String = _screen.driver.notice()
 	if not line.is_empty(): _status.text += "\n" + line
-	_screen._sound.update(state)
+	if with_sound: _screen._sound.update(state)
 
 func _economy_hud(state: Dictionary) -> void:
 	for result: Dictionary in _screen.stepped_results + state.command_results:
 		if result.player == _screen.local_player and (result.tick > _last_result_tick or (result.tick == _last_result_tick and result.sequence > _last_result_sequence)):
-			note = result.error
+			if not result.ok: note = result.error
 			_last_result_tick = result.tick
 			_last_result_sequence = result.sequence
 	var player: Dictionary = _screen._local_state(state)
@@ -155,4 +155,9 @@ func _enemy_summary(state: Dictionary) -> String:
 func _result_text(match_state: Dictionary) -> String:
 	if match_state.status == "draw": return "Draw"
 	if match_state.status != "won": return ""
-	return "Victory" if match_state.winner == _screen.driver.sim.team_of(_screen.local_player) else "Defeat"
+	return "Victory" if match_state.winner == _local_team() else "Defeat"
+
+func _local_team() -> int:
+	for player: Dictionary in _screen.shown_state.players:
+		if player.id == _screen.local_player: return player.team
+	return 0

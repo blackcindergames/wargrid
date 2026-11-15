@@ -105,7 +105,8 @@ A collector's `collection` record carries a phase and a few numbers; the supply 
 A building goes from command to usable in four stages.
 
 **Preview.** `Construction.preview` is the one legality check. Three callers use it: the placement ghost, the check when a command is issued and the placement on the due tick, so the three cannot disagree.  
-`orders._update_preview → Simulation.preview_build; Simulation._validate; Construction.place`  
+`orders._update_preview → driver.request_preview → Simulation.preview_build (on the next step); Simulation._validate; Construction.place`  
+The ghost does not call the simulation itself: the screen asks its driver, which answers after the next step, so the ghost colour can trail the cursor by one tick.  
 The checks, in order:
 
 - the builder exists, belongs to the player and its row lists the kind in `builds`;
@@ -222,4 +223,4 @@ Where Wargrid differs, and what the notes say about it:
 - Previous: [6. Movement](06-movement.md) moves the collectors; next: [8. Combat](08-combat.md) ends buildings and units that leave holes and crates.
 
 ---
-Checked against `60b6674`. Files: `game/scripts/simulation/supply_collection.gd`, `game/scripts/simulation/construction.gd`, `game/scripts/simulation/production.gd`, `game/scripts/simulation/rebuild_holes.gd`, `game/scripts/simulation/salvage.gd`, `game/scripts/simulation/economy_definitions.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/combat.gd`, `game/scripts/simulation/definitions/definitions.gd`, `game/scripts/simulation/definitions/shared.gd`, `game/scripts/simulation/definitions/china.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/scripts/simulation/definitions/frc.gd`, `game/tests/test_supply_parity.gd`, `docs/reference/faction-income-parity.md`
+Checked against `60b6674`; the preview passage against `314f487`. Files: `game/scripts/match/orders.gd`, `game/scripts/match/offline_driver.gd`, `game/scripts/simulation/supply_collection.gd`, `game/scripts/simulation/construction.gd`, `game/scripts/simulation/production.gd`, `game/scripts/simulation/rebuild_holes.gd`, `game/scripts/simulation/salvage.gd`, `game/scripts/simulation/economy_definitions.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/combat.gd`, `game/scripts/simulation/definitions/definitions.gd`, `game/scripts/simulation/definitions/shared.gd`, `game/scripts/simulation/definitions/china.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/scripts/simulation/definitions/frc.gd`, `game/tests/test_supply_parity.gd`, `docs/reference/faction-income-parity.md`

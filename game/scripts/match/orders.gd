@@ -4,6 +4,7 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Construction = preload("res://scripts/simulation/construction.gd")
+const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
@@ -23,12 +24,14 @@ var _pending_placement: String = ""
 var _preview_origin: Vector2i
 var _preview_key: Array = []
 var _attack_move_mode: bool = false
+var _awaiting_build: String = ""
+var _answer: Dictionary = {}
 
 func _init(screen: Node) -> void:
 	_screen = screen
 
 func handle(event: InputEvent) -> void:
-	if _screen.driver.sim.match_over() or _screen._playtest.holds_match():
+	if _screen.shown_over() or _screen._playtest.holds_match():
 		return
 	if event.is_action_pressed("deselect"): inspected_id = -1
 	if _placement_kind.is_empty() and _combat_input(event): return
@@ -57,6 +60,8 @@ func reset() -> void:
 	_placement_kind = ""
 	_pending_placement = ""
 	_attack_move_mode = false
+	_awaiting_build = ""
+	_answer = {}
 	_selecting = false
 	_dragged = false
 
@@ -105,7 +110,7 @@ func _hover(event: InputEvent) -> void:
 		var hovered: int = _screen._view.pick_object(_screen._view.make_canvas_position_local(event.position))
 		if hovered != _screen._view.hovered_id():
 			_screen._view.set_hovered(hovered)
-			_screen._refresh()
+			_screen._reshow()
 
 func _economy_keys(event: InputEvent) -> bool:
 	if not (event is InputEventKey and event.pressed and not event.echo): return false
@@ -132,10 +137,24 @@ func _placement_input(event: InputEvent) -> void:
 		_update_preview(_screen._view.make_canvas_position_local(event.position))
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed: _clear_placement()
-		elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and _awaiting_build.is_empty():
 			_update_preview(_screen._view.make_canvas_position_local(event.position))
+			# As Zero Hour: a spot this view already knows is refused is never sent, so no order voice plays.
+			if _known_refused():
+				_screen.refuse(_answer.error)
+				return
 			_screen._submit({"type":"build","builder_id":_builder(),"building_kind":_placement_kind,"origin":[_preview_origin.x,_preview_origin.y]})
-			if _screen.hud.note.is_empty(): _clear_placement()
+			_awaiting_build = _placement_kind
+			if _screen.driver.closes_placement_on_click(): _clear_placement()
+
+func answered(answer: Dictionary) -> void:
+	if _awaiting_build.is_empty() or answer.command.get("type") != "build": return
+	var kind: String = _awaiting_build
+	_awaiting_build = ""
+	var online: bool = _screen.driver.closes_placement_on_click()
+	if answer.ok and not online: _clear_placement()
+	# A gesture begun since the click keeps its release; reopening would turn it into a build.
+	elif not answer.ok and online and not busy() and not _attack_move_mode and _builder() != -1: _enter_placement(kind)
 
 func _building_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("deselect"):
@@ -148,13 +167,13 @@ func _building_input(event: InputEvent) -> bool:
 			if _context_order(source if source != -1 else _screen._view.pick_object(plane)) or _set_rally(plane): return true
 		if event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and is_selecting():
 			_update_drag(event.position)
-			var building: Dictionary = _screen._building(_screen.driver.sim.snapshot(),_screen._view.pick_object(plane))
+			var building: Dictionary = _screen._building(_screen.shown_state,_screen._view.pick_object(plane))
 			if not _dragged and not building.is_empty() and building.owner == _screen.local_player:
 				selected_building_id = building.id
 				selected_ids.clear()
 				_selecting = false
 				_screen._selection_box.hide()
-				_screen._refresh()
+				_screen._reshow()
 				return true
 			selected_building_id = -1
 	return false
@@ -166,7 +185,7 @@ func _selection_input(event: InputEvent) -> void:
 		selected_ids.clear()
 		_selecting = false
 		_screen._selection_box.hide()
-		_screen._refresh()
+		_screen._reshow()
 	elif event is InputEventMouseMotion and _selecting:
 		_update_drag(event.position)
 	elif event is InputEventMouseButton:
@@ -221,21 +240,29 @@ func _finish_selection(point: Vector2) -> void:
 	selected_ids.sort()
 	_selecting = false
 	_screen._selection_box.hide()
-	_screen._refresh()
+	_screen._reshow()
 	inspected_id = -1
 	if not _dragged and selected_ids.is_empty(): inspected_id = _enemy_at(_screen._view.make_canvas_position_local(point))
-	_screen._refresh()
+	_screen._reshow()
 
 func _matching_ids(id: int, whole_map: bool) -> Array[int]:
 	var view_rect: Rect2 = _screen._view.get_global_transform_with_canvas().affine_inverse() * _screen.get_viewport().get_visible_rect()
-	var kinds: Dictionary = {}
-	for unit: Dictionary in _screen.driver.sim.snapshot().entities:
-		kinds[unit.id] = {"kind": unit.kind, "inside": unit.has("container_id")}
 	var picked: Array[int] = []
+	var base: Dictionary = _unit(id)
+	if base.is_empty(): return picked
 	for other: int in _screen._view.pick_entities(Rect2(-1.0e6, -1.0e6, 2.0e6, 2.0e6) if whole_map else view_rect):
-		if kinds[other].kind == kinds[id].kind and not kinds[other].inside:
+		var candidate: Dictionary = _unit(other)
+		if not candidate.is_empty() and candidate.kind == base.kind and not candidate.inside:
 			picked.append(other)
 	return picked
+
+func _unit(id: int) -> Dictionary:
+	var rows: RefCounted = _screen.shown_state.units
+	var i: int = rows.index_of(id)
+	if i == -1: return {}
+	var record: Dictionary = _screen.hud._unit_record(rows, i)
+	record["inside"] = (rows.flags[i] & ViewRows.CONTAINED) != 0
+	return record
 
 func _move(target: Vector2) -> void:
 	_screen._submit({"type":"move","entity_ids":selected_ids.duplicate(),"target":[target.x,target.y]})
@@ -244,7 +271,7 @@ func _hint_point(payload: Dictionary) -> Variant:
 	if payload.type != "resume_build":
 		if payload.type in ["move", "attack_move", "set_rally"]: return Vector2(payload.target[0], payload.target[1])
 		return null
-	var building: Dictionary = _screen._building(_screen.driver.sim.snapshot(),payload.building_id)
+	var building: Dictionary = _screen._building(_screen.shown_state,payload.building_id)
 	if building.is_empty(): return null
 	return Vector2(building.origin[0],building.origin[1]) + Vector2(Definitions.building(building.kind).footprint) / 2.0
 
@@ -256,91 +283,106 @@ func _menu_choose(index: int, from_key: bool) -> void:
 
 func _builder() -> int:
 	if selected_ids.size() != 1: return -1
-	for unit: Dictionary in _screen.driver.sim.snapshot().entities:
-		if unit.id == selected_ids[0] and Registry.is_builder(unit.kind) and unit.owner == _screen.local_player: return unit.id
-	return -1
+	var unit: Dictionary = _unit(selected_ids[0])
+	return unit.id if not unit.is_empty() and Registry.is_builder(unit.kind) and unit.owner == _screen.local_player else -1
 
 func _enter_placement(kind: String) -> void:
 	_attack_move_mode = false
 	if _builder() == -1:
 		_screen.hud.note = "Choose one builder"
-		_screen._refresh()
+		_screen._reshow()
 		return
 	_placement_kind = kind
 	selected_building_id = -1
 	_preview_key = []
+	_answer = {}
+	_screen.driver.request_preview({})
 	_update_preview(_screen._view.get_local_mouse_position())
-	_screen._refresh()
+	_screen._reshow()
 
 func _clear_placement() -> void:
 	_placement_kind = ""
+	_screen.driver.request_preview({})
 	var empty: Array[Vector2i] = []
 	_screen._view.set_build_preview(empty,false)
-	_screen._refresh()
+	_screen._reshow()
 
 func _update_preview(plane: Vector2) -> void:
 	_preview_origin = Vector2i(Iso.plane_to_world(plane).floor())
-	var key: Array = [_placement_kind,_preview_origin,_screen.driver.sim.tick()]
+	var key: Array = [_placement_kind,_preview_origin,_screen.shown_state.tick]
 	if key == _preview_key: return
 	_preview_key = key
-	var preview: Dictionary = _screen.driver.sim.preview_build(_screen.local_player,_builder(),_placement_kind,_preview_origin)
-	_screen._view.set_build_preview(Construction.cells(_placement_kind,_preview_origin),preview.ok)
+	_screen._view.set_build_preview(Construction.cells(_placement_kind,_preview_origin),_answer.get("ok",false))
+	_screen.driver.request_preview({"player":_screen.local_player,"builder_id":_builder(),"kind":_placement_kind,"origin":_preview_origin})
+
+func show_preview(answer: Dictionary) -> void:
+	if _placement_kind.is_empty(): return
+	if answer.get("kind") == _placement_kind:
+		_answer = answer
+		if answer.origin == _preview_origin: _screen._view.set_build_preview(Construction.cells(_placement_kind,_preview_origin),answer.ok)
+	# A still mouse asks again each tick, so a click is judged against the shown tick.
+	if _preview_key.size() == 3 and _preview_key[2] != _screen.shown_state.tick:
+		_preview_key[2] = _screen.shown_state.tick
+		_screen.driver.request_preview({"player":_screen.local_player,"builder_id":_builder(),"kind":_placement_kind,"origin":_preview_origin})
+
+func _known_refused() -> bool:
+	return not _answer.is_empty() and not _answer.ok and _answer.origin == _preview_origin and _answer.tick == _screen.shown_state.tick
 
 func _context_order(id: int) -> bool:
 	if selected_ids.is_empty(): return false
-	var state: Dictionary = _screen.driver.sim.snapshot()
+	var state: Dictionary = _screen.shown_state
 	for source: Dictionary in state.sources:
 		if source.id != id: continue
 		var collectors: bool = true
-		for unit: Dictionary in state.entities:
-			if selected_ids.has(unit.id) and Registry.collects(unit.kind).is_empty(): collectors = false
+		for unit_id: int in selected_ids:
+			var unit: Dictionary = _unit(unit_id)
+			if not unit.is_empty() and Registry.collects(unit.kind).is_empty(): collectors = false
 		if collectors: _screen._submit({"type":"gather","entity_ids":selected_ids.duplicate(),"source_id":id})
 		else:
 			_screen.hud.note = "Choose homogeneous collector selection"
-			_screen._refresh()
+			_screen._reshow()
 		return true
 	var building: Dictionary = _screen._building(state,id)
-	if selected_ids != [id] and _container(state,id,building):
+	if selected_ids != [id] and _container(id,building):
 		_screen._submit({"type":"enter","entity_ids":selected_ids.filter(func(unit_id: int) -> bool: return unit_id != id),"target_id":id})
 		return true
 	if not building.is_empty() and building.owner == _screen.local_player and not building.completed:
 		if _builder() != -1: _screen._submit({"type":"resume_build","builder_id":_builder(),"building_id":id})
 		else:
 			_screen.hud.note = "Choose one builder"
-			_screen._refresh()
+			_screen._reshow()
 		return true
 	return false
 
-func _container(state: Dictionary, id: int, building: Dictionary) -> bool:
+func _container(id: int, building: Dictionary) -> bool:
 	var host: Dictionary = building
 	if host.is_empty():
-		for unit: Dictionary in state.entities:
-			if unit.id == id: host = unit
+		host = _unit(id)
 	return not host.is_empty() and host.owner == _screen.local_player and host.get("completed",true) and not Registry.kind(host.kind).get("contains",{}).is_empty()
 
 func _unload_selected() -> void:
-	var state: Dictionary = _screen.driver.sim.snapshot()
+	var state: Dictionary = _screen.shown_state
 	var id: int = selected_building_id if selected_building_id != -1 else (selected_ids[0] if selected_ids.size() == 1 else -1)
 	var building: Dictionary = _screen._building(state,id)
-	if not _container(state,id,building):
+	if not _container(id,building):
 		_screen.hud.note = "Select a container"
-		_screen._refresh()
+		_screen._reshow()
 		return
 	_screen._submit({"type":"unload","target_id":id})
 
 func _set_rally(plane: Vector2) -> bool:
-	var building: Dictionary = _screen._building(_screen.driver.sim.snapshot(),selected_building_id)
+	var building: Dictionary = _screen._building(_screen.shown_state,selected_building_id)
 	if building.is_empty() or building.owner != _screen.local_player or not Registry.can_rally(building.kind): return false
 	var cell: Vector2 = Iso.plane_to_world(plane).floor() + Vector2(.5,.5)
 	_screen._submit({"type":"set_rally","building_id":building.id,"target":[cell.x,cell.y]})
 	return true
 
 func _produce_selected() -> void:
-	var state: Dictionary = _screen.driver.sim.snapshot()
+	var state: Dictionary = _screen.shown_state
 	var building: Dictionary = _screen._building(state,selected_building_id)
 	if building.is_empty():
 		_screen.hud.note = "Select a production building"
-		_screen._refresh()
+		_screen._reshow()
 		return
 	_screen._submit({"type":"produce","building_id":building.id,"unit_kind":_screen._production_kind(building, state)})
 
@@ -356,12 +398,11 @@ func _ground(event: InputEventMouseButton) -> Vector2:
 func _enemy_at(plane: Vector2) -> int:
 	var id: int = _screen._view.pick_entity(plane, true)
 	if id == -1: return _screen._view.pick_target(plane, _screen.local_player)
-	for unit: Dictionary in _screen.driver.sim.snapshot().entities:
-		if unit.id == id: return id if unit.owner != _screen.local_player else -1
-	return -1
+	var unit: Dictionary = _unit(id)
+	return id if not unit.is_empty() and unit.owner != _screen.local_player else -1
 
 func _order_defence(event: InputEventMouseButton) -> bool:
-	var building: Dictionary = _screen._building(_screen.driver.sim.snapshot(), selected_building_id)
+	var building: Dictionary = _screen._building(_screen.shown_state, selected_building_id)
 	if building.is_empty() or building.owner != _screen.local_player or not building.completed or building.get("combat") == null: return false
 	var enemy: int = _screen._view.pick_target(_screen._view.make_canvas_position_local(event.position), _screen.local_player)
 	if enemy == -1: return false

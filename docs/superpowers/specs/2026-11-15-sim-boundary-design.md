@@ -232,7 +232,7 @@ Questionnaire on the draft's nine questions plus two from the coordinator; recom
 14. **Online placement:** the same rule; a refused placement keeps you placing (replaced by answer 18).
 15. **Playtest checklist:** only accepted orders tick it; a refused gather does not (the screen waits for the answer).
 16. **Offline refused order:** the order voice plays at submit, the refusal beep one tick later, as online.
-17. **IC1/IC2 re-pin approved**, exactly in these fields: row 11's `place=` and command list; from step 11 on the command tick stamps, the `Tick:` and `Credits:` status values and row 21's `tick=`. Anything else changing stops the run.
+17. **IC1/IC2 re-pin approved**, exactly in these fields: row 11's `place=` and command list; from step 11 on the command tick stamps, the `Tick:` and `Credits:` status values, row 19's inspected-enemy HP and order text (user, 2026-11-15) and row 21's `tick=`. Anything else changing stops the run.
 18. **Online placement** (replaces answer 14): the click closes placement at once and a refusal reopens it with the same building, so no ghost lingers for the input delay. Offline keeps answer 13, so IC1 is unaffected by this answer.
 19. **While a build answer is pending, further placement clicks are ignored** (agent call, confirmed).
 20. **HUD note:** an accepted result no longer clears a refusal note; it stays until the next own message, offline and online (agent call, confirmed).
