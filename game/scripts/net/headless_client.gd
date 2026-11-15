@@ -117,15 +117,13 @@ func _start(message: Dictionary) -> void:
 	if not reason.is_empty():
 		_finish("ended_settings", reason)
 		return
-	var seats: Array[int] = []
-	seats.assign(message.seats)
 	var id: String = message.settings.map
 	_match_map = id
 	_match_seed = message.seed
 	_chosen = MatchSettings.starts(id, _match_seed)
 	print("NETCLIENT MAP ", id, " SEED ", message.seed, " STARTS ", ",".join(_chosen.map(str)) if not _chosen.is_empty() else "-")
 	_sim = _match_sim(id, _chosen)
-	_lockstep = Lockstep.new(_seat, seats, message.delay)
+	_lockstep = Lockstep.for_start(_seat, message)
 	_lockstep.session_handler = _on_session
 	_lockstep.send = _transport.send_text
 	_lockstep.submit({"type": "choose_faction", "faction": _args.get("faction", Skirmish.default_faction())})

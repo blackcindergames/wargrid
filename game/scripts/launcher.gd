@@ -36,7 +36,6 @@ var _transport: RefCounted
 var _clock: Callable = Time.get_ticks_usec
 var _connect_msec: int = 0
 var _welcome_msec: int = -1
-var _shown_second: int = -1
 var _match: String = ""
 var _seat: int = 0
 var _code: String = ""
@@ -383,9 +382,8 @@ func _show_connecting(now_msec: int) -> void:
 
 func _show_countdown(now_msec: int) -> void:
 	var left: int = maxi(0, RelayTransport.LOBBY_EXPIRY_SEC - floori(maxi(0, now_msec - _welcome_msec) / 1000.0))
-	if left == _shown_second: return
-	_shown_second = left
-	$Pages/Waiting/Footer/Status.text = "Match code [b][color=#ffffff]%s[/color][/b] · closes in %d:%02d" % [_code, floori(left / 60.0), left % 60]
+	var text := "Match code [b][color=#ffffff]%s[/color][/b] · closes in %d:%02d" % [_code, floori(left / 60.0), left % 60]
+	if $Pages/Waiting/Footer/Status.text != text: $Pages/Waiting/Footer/Status.text = text
 
 func _connect(code: String) -> void:
 	_match = code
@@ -456,7 +454,6 @@ func _handle(text: String) -> bool:
 			_code = message.match
 			_transport.patient = true
 			_welcome_msec = _now_msec()
-			_shown_second = -1
 			if _seat == 1:
 				_fill_waiting()
 				show_page("Waiting")
