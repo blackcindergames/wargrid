@@ -31,7 +31,7 @@ Plan: [Flatter worst ticks plan](../superpowers/plans/2026-11-14-flatter-worst-t
 | 5 | The one re-pin | Sonnet | not started |
 | 6 | Worst ticks after the changes: count lines, five measured runs | Sonnet | done (uncommitted) |
 | 7 | Count gates from Task 6's numbers, red by mutation | Sonnet | GREEN (uncommitted) |
-| D7 | Steam Deck rows on the branch head (start; fetch and clean up when done), report-only | Sonnet | not started |
+| D7 | Steam Deck rows on the branch head (start; fetch and clean up when done), report-only | Sonnet | GREEN 2026-11-15: FETCHED; native 3/3, Firefox 3/3; table filled; Deck folder removed and cleanup checked; tree `b88dc0f` |
 | 8 | Docs and package gate (ledger row) | Sonnet | GREEN (docs uncommitted) |
 | 9 | Fresh-context branch review, one fix round, `/ponytail-review` | Opus (high) | not started |
 
@@ -264,19 +264,19 @@ Never a gate (user, 2026-11-14). Deck address: night handoff only. Logs: `$L/dec
 
 | Item | Base (Task D0) | After (Task D7) |
 |---|---|---|
-| Tree | `4c21d1a` (git archive; scratch worktree under $L/deck) | |
-| Preflight (ACAD, Desktop Mode, Firefox version, load) | OK: ACAD 1, Desktop Mode, Firefox 160.0, load 0.07, no leftover units or folder | |
-| Godot install: SHA-256 checked (`install.log`) | installed 4.7.2 via `install_godot.py` against the CI SHA-256 (empty log, script exits on failure; no `INSTALL FAILED`) | (reused or installed) |
-| ACAD at every edge; Deck load range (`edges.txt`) | ACAD 1 at all edges; 1-min load 0.03-1.26 (22:40-23:28) | |
-| `FAILED` / `SKIPPED` edge lines | `WEB FAILED run 1` at 23:28:45, then `DONE`: the job stopped after one Firefox run. Cause: its check greps `cross_origin_isolated=true`, the bench prints `cross_origin_isolated=1`; the run itself is complete (below). Morning item: fix the grep to `=1`/`=true` for Task D7 | |
-| Native profile x3: `PROFILE COMPLETE 10` each; hand-off sum per tick per workload, median [range] | 3/3 `PROFILE COMPLETE 10`, exit=0. view_state+copy+sort+batch ms: movement open 4.731 [4.718-4.741], dense 4.667 [4.661-4.672]; team match 4.510 [4.505-4.516]; large_196 6.088 [6.078-6.090]; combat hordes300 6.366 [6.282-6.372], open 3.152 [3.140-3.184], dense 2.753 [2.749-2.760], skirmish3v3 1.848, contact 1.081, skirmish match 0.886. Team match `step` mean 5.26-5.29, max 31.6-32.0 | |
-| Native combat x3: ten `COMBAT` lines each; p95 median [range] / p99 per layout | 3/3 logs, 26 `COMBAT` lines each (more than ten layouts), exit=1 (expected). p95 [range] / p99 / max ms: open 6.760 [6.748-6.781] / 7.756 / 9.618; dense 6.674 [6.643-6.699] / 7.561 / 11.173; contact 4.075 / 5.385 / 12.322; skirmish3v3 4.684 / 5.006 / 5.549; hordes300 10.632 [10.599-10.663] / 12.357 / 26.754 (`$L/deck/base-combat.txt` has all) | |
-| Web Bench export (exit, files); `hordes300` added in the scratch copy | import 0, export 0; index.html/wasm/pck present; copied to Deck | |
-| Firefox runs: `cross_origin_isolated=true`, `BENCH DONE`, UA version | 1 of 3 runs: `cross_origin_isolated=1`, `BENCH DONE`, Firefox 160.0. Runs 2 and 3 not run (job stopped, see FAILED line); the 1-run row has no range | |
-| Firefox: team match (end tick) p50 / p95 [range] / p99 / max | won tick 39497: 7.52 / 12.92 / 43.4 / 73.9 (n=1; mean 8.245; worst tick 9540) | |
-| Firefox: combat open, dense, hordes300 p50 / p95 [range] / p99 | open 6.74 / 9.94 / 11.26; dense 5.52 / 9.88 / 11.30; hordes300 11.04 / 15.58 / 18.02 (n=1); also contact 1.40 / 6.20 / 8.18, skirmish3v3 3.12 / 7.14 / 7.58; movement open p95 4.24, dense 4.52 | |
-| After ÷ base per row | — | |
-| Deck cleaned up (folder, units, profiles, no Godot process) | — | |
+| Tree | `4c21d1a` (git archive; scratch worktree under $L/deck) | `b88dc0f` (branch head of Task 7/8; git archive) |
+| Preflight (ACAD, Desktop Mode, Firefox version, load) | OK: ACAD 1, Desktop Mode, Firefox 160.0, load 0.07, no leftover units or folder | OK (job ran 00:08-01:17, Deck folder reused from D0) |
+| Godot install: SHA-256 checked (`install.log`) | installed 4.7.2 via `install_godot.py` against the CI SHA-256 (empty log, script exits on failure; no `INSTALL FAILED`) | reused from D0 |
+| ACAD at every edge; Deck load range (`edges.txt`) | ACAD 1 at all edges; 1-min load 0.21-1.19 (00:08-01:17) |
+| `FAILED` / `SKIPPED` edge lines | `WEB FAILED run 1` at 23:28:45, then `DONE`: the job stopped after one Firefox run. Cause: its check greps `cross_origin_isolated=true`, the bench prints `cross_origin_isolated=1`; the run itself is complete (below). Morning item: fix the grep to `=1`/`=true` for Task D7 | none; the job ran to `DONE`, 3 of 3 Firefox runs |
+| Native profile x3: `PROFILE COMPLETE 10` each; hand-off sum per tick per workload, median [range] | 3/3 `PROFILE COMPLETE 10`, exit=0. view_state+copy+sort+batch ms: movement open 4.731 [4.718-4.741], dense 4.667 [4.661-4.672]; team match 4.510 [4.505-4.516]; large_196 6.088 [6.078-6.090]; combat hordes300 6.366 [6.282-6.372], open 3.152 [3.140-3.184], dense 2.753 [2.749-2.760], skirmish3v3 1.848, contact 1.081, skirmish match 0.886. Team match `step` mean 5.26-5.29, max 31.6-32.0 | 3/3 `PROFILE COMPLETE 10`. Hand-off sum ms: movement open 4.718 [4.709-4.756], dense 4.670; team match 4.525 [4.510-4.526]; large_196 6.039; combat hordes300 6.368 [6.313-7.221], open 3.225, dense 2.789, skirmish3v3 1.830, contact 1.116, skirmish match 0.873. Team match `step` mean 5.28-5.32 (median 5.296), max 18.4 (18.37-18.41) against 31.6-32.0 on the base |
+| Native combat x3: ten `COMBAT` lines each; p95 median [range] / p99 per layout | 3/3 logs, 26 `COMBAT` lines each (more than ten layouts), exit=1 (expected). p95 [range] / p99 / max ms: open 6.760 [6.748-6.781] / 7.756 / 9.618; dense 6.674 [6.643-6.699] / 7.561 / 11.173; contact 4.075 / 5.385 / 12.322; skirmish3v3 4.684 / 5.006 / 5.549; hordes300 10.632 [10.599-10.663] / 12.357 / 26.754 (`$L/deck/base-combat.txt` has all) | 3/3 logs. p95 [range] / p99 / max ms: open 6.803 [6.757-6.828] / 7.881 / 9.218; dense 6.634 / 7.642 / 10.080; contact 4.034 / 5.283 / 12.250; skirmish3v3 4.656 / 5.018 / 5.877; hordes300 10.714 [10.654-10.752] / 12.405 / 14.401 (base max 26.754) (`$L/deck/after-combat.txt`) |
+| Web Bench export (exit, files); `hordes300` added in the scratch copy | import 0, export 0; index.html/wasm/pck present; copied to Deck | same flow as D0 (`web-after`) |
+| Firefox runs: `cross_origin_isolated=true`, `BENCH DONE`, UA version | 1 of 3 runs: `cross_origin_isolated=1`, `BENCH DONE`, Firefox 160.0. Runs 2 and 3 not run (job stopped, see FAILED line); the 1-run row has no range | 3 of 3 runs: `cross_origin_isolated=1`, `BENCH DONE`, Firefox 160.0 |
+| Firefox: team match (end tick) p50 / p95 [range] / p99 / max | won tick 39497: 7.52 / 12.92 / 43.4 / 73.9 (n=1; mean 8.245; worst tick 9540) | won tick 38786 (re-pinned match, 711 ticks shorter than the base's 39497), n=3: 7.74 [7.64-7.76] / 15.20 [14.98-15.22] / 19.94 [19.58-20.00] / max 32.50 [32.12-32.66]; mean 8.036-8.169 |
+| Firefox: combat open, dense, hordes300 p50 / p95 [range] / p99 | open 6.74 / 9.94 / 11.26; dense 5.52 / 9.88 / 11.30; hordes300 11.04 / 15.58 / 18.02 (n=1); also contact 1.40 / 6.20 / 8.18, skirmish3v3 3.12 / 7.14 / 7.58; movement open p95 4.24, dense 4.52 | n=3: open 6.68 / 9.78 [9.74-9.78] / 11.30; dense 5.44 / 9.54 [9.34-9.60] / 10.98; hordes300 10.54 / 15.06 [14.88-15.26] / 17.52; contact 1.24 / 5.94 / 7.78, skirmish3v3 3.04 / 6.82 / 7.40; headless movement open p95 3.86 (run 1), dense 4.74 |
+| After ÷ base per row | — | Native hand-off: ~1.00 on every workload (team match 1.00, hordes300 1.00 median). Native combat p95: open 1.01, dense 0.99, hordes300 1.01; hordes300 max 0.54. Native team match `step` max 0.58. Firefox p95: open 0.98, dense 0.97, hordes300 0.97; team match (different match length, 38786 vs 39497 ticks) p95 1.18, p99 0.46, max 0.44 against n=1 base. Wall-clock differences within about 3% are run noise; the worst-tick cuts are the real change |
+| Deck cleaned up (folder, units, profiles, no Godot process) | — | `~/wargrid-flatter` removed; no `wargrid-flatter*` unit; no `wargrid-flatter-profile-*` under `.var/app/org.mozilla.firefox`; no Godot_v4 process; nothing else touched |
 
 ## Task 8 gates
 
