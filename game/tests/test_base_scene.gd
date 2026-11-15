@@ -9,7 +9,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 
 func cases() -> Array[Callable]:
-	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_preview_hover_cost,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
+	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_preview_hover_cost,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
 
 func _m3_world() -> Simulation:
 	var sim: Simulation = Fixture.make_world()
@@ -322,6 +322,30 @@ func test_rejection_survives_two_steps(runner) -> bool:
 	await runner.process_frame
 	await runner.process_frame
 	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"RF8 a rejection from the first of two steps reaches the HUD")
+	main.free()
+	return true
+
+func test_sb1_repaint_keeps_step_pending(runner) -> bool:
+	var main = await setup(runner)
+	main.driver.sim = Fixture.make_world(800)
+	main.set_process(true)
+	await runner.process_frame
+	Fixture.send(main.driver.sim,{"type":"build","builder_id":1,"building_kind":"usa_power_plant","origin":[8,4],"tick":0})
+	Fixture.send(main.driver.sim,{"type":"build","builder_id":1,"building_kind":"usa_power_plant","origin":[12,4],"tick":0})
+	main._physics_process(0.0)
+	main._physics_process(0.0)
+	var rows: RefCounted = main.shown_state.units
+	var at: int = rows.index_of(1)
+	hover(main,Iso.world_to_plane(Vector2(rows.x[at],rows.y[at])) + Vector2(0,-8))
+	var director = main._sound.director
+	runner.check(main._view.hovered_id() == 1,"RB5 fixture: the hover changed the hovered object")
+	runner.check(main.stepped_results.size() > 0,"RB5 a repaint keeps the step's results unconsumed")
+	runner.check(director.collected_ticks() == [1,2] and not director.consumed_ticks().has(1) and not director.consumed_ticks().has(2),"RB5 a repaint leaves the step's sound pending, got %s and %s" % [director.collected_ticks(),director.consumed_ticks()])
+	await runner.process_frame
+	await runner.process_frame
+	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"RB5 the rejection still reaches the HUD after a repaint")
+	runner.check(director.consumed_ticks().count(1) == 1 and director.consumed_ticks().count(2) == 1,"RB5 each step's sound plays once, got %s" % [director.consumed_ticks()])
+	runner.check(main._view._state.tick == main.driver.sim.tick(),"RB5 the deferred refresh shows the new tick")
 	main.free()
 	return true
 

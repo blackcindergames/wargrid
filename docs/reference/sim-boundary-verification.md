@@ -4,14 +4,14 @@ Plan: [sim boundary SB1-SB2](../superpowers/plans/2026-11-15-sim-boundary-sb1-sb
 
 ```text
 Resume record (updated 2026-11-15 night)
-Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / Task 3 uncommitted on top of the Task 2 commit 2177992
-Last green task / next incomplete task: Task 3 green, uncommitted / Task 4 (commit Task 3 first)
-Changed paths since last commit: game/scripts/match/orders.gd, game/scripts/match/match_screen.gd, game/scripts/match/hud.gd, game/tests/test_skirmish_scene.gd, docs/reference/sim-boundary-verification.md (build/sb/ is untracked output)
-Last command / cases / checks / failures / exit / marker: full suite, 961 cases, 146374 checks, 0 failures, exit 0, TESTS PASSED 146374; run_lint, run_warnings, test_sim_boundary.py exit 0
+Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / Task 4 uncommitted on top of the Task 3 commit 0c9693f
+Last green task / next incomplete task: Task 4 green, uncommitted / Task 5 (commit Task 4 first: `Repaint the shown view on input`)
+Changed paths since last commit: game/scripts/match/orders.gd, game/scripts/match/match_screen.gd, game/scripts/match/hud.gd, game/tests/test_skirmish_scene.gd, game/tests/test_base_scene.gd, game/tests/test_online_scene.gd, docs/reference/sim-boundary-verification.md (build/sb/ is untracked output)
+Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb/sb1/, 964 cases, 146395 checks, 0 failures, exit 0, TESTS PASSED 146395; compare_replays REPLAYS MATCHED x4; run_lint, run_warnings, test_sim_boundary.py exit 0
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); no rendered benchmark rerun, world_view.gd is not touched; gate 1 and gate 2 reviews pending
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 4. Plan path:line are 32748c8; use this file's Line map. Task 3 added shown_state/shown_over in match_screen.gd, Orders._unit, Hud._local_team.
+Next exact action: Task 5 (after the Task 4 review and commit). Plan path:line are 32748c8; use this file's Line map. Task 3 added shown_state/shown_over in match_screen.gd, Orders._unit, Hud._local_team; Task 4 added match_screen._reshow(), _show(state, fresh), hud._refresh_hud(state, with_sound); the twelve orders.gd repaints and _submit call _reshow().
 ```
 
 ## Evidence
@@ -31,6 +31,10 @@ Next exact action: Task 4. Plan path:line are 32748c8; use this file's Line map.
 | 2026-11-15 | full `sh tools/run_tests.sh`, `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py` | exit 0 each; CASES 961 CHECKS 146374 FAILURES 0, `TESTS PASSED 146374` | Task 3, uncommitted |
 
 | 2026-11-15 | Task 3 review merge rerun: RB4 test tightened (shown view picks the dead unit before input, `_refresh()` before the prune check); `sb1_`, `scene`, `run_lint.sh`, `run_warnings.sh` (Sonnet: none; Codex: one P2 test fix) | exit 0 each; 16 and 3550 checks, 0 failures | Task 3, uncommitted |
+| 2026-11-15 | `WARGRID_TEST_ONLY=sb1_` (red first: RB1 8 view states, RB2 6, RB5 director consumed ticks 1 and 2 during the hover; RB7 and RB8 already green as guards; then green) | exit 0, CASES 9 CHECKS 26 FAILURES 0, `TESTS PASSED 26` | Task 4, uncommitted |
+| 2026-11-15 | full `sh tools/run_tests.sh` | exit 0, CASES 964 CHECKS 146388 FAILURES 0, `TESTS PASSED 146388`; no expected value changed | Task 4, uncommitted |
+| 2026-11-15 | SB1 evidence: full suite with the four trace variables into `build/sb/sb1/`; `compare_replays.py` base vs sb1 for replay, economy, combat, team (`--interval 200 --rows 100`); `git diff f838f79 --stat -- game/scripts/simulation protocol` | exit 0, `TESTS PASSED 146395`; `REPLAYS MATCHED` 1200, 1200, 1200, 100; diff empty | Task 4, uncommitted |
+| 2026-11-15 | `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py` | exit 0, 0, 0 | Task 4, uncommitted |
 
 `sync_sequence(main)` added after direct sends in: `test_production_ui` (Bs3, after the builds), `test_base_scene.gd` CancelBuild case (after the foundation send), M3 case (after the factory build), `test_rally_input_and_marker` (R1), `test_hud_strings_use_display_names` (N1), `test_frc_laborer_right_click_pile` (K13). Task 3 added `main._refresh()` after the sim swap in N1 and before K4's team line. Expected values unchanged.
 
@@ -89,3 +93,5 @@ Test map by check label (plan line to base line):
 | `sync_sequence` | not yet present (Task 2 adds it to `test_base_scene.gd`) |
 
 Task 7 doc lines (no doc changed since 32748c8 except `11-multiplayer.md`, which P2.2 grew by 55 lines): `01-big-picture.md` :23, :37, :50, :100, :114, footer :135; `04-the-tick.md` :61, :66, footer :180; `05-presentation.md` :43, :157, :158, :159, footer :229; `07-economy.md` :108; `sim-interface.md` :45, :57 all hold the text the plan cites. `11-multiplayer.md`: the plan's "footer :221" is stale; the footer is at :248 and ":221" is now the `## Where in the code` heading. Re-locate the `online_driver.gd` line with `rg -n 'online_driver' docs/guide/11-multiplayer.md` in Task 7.
+
+Task 4 review merge (2026-11-15): Sonnet and Codex both found one test gap (P2/P3): RB5 did not guard pending-result retention. Added `main.stepped_results.size() > 0` after the hover; with `_show`'s clear made unconditional the check fails (mutation run, restored). No production change. Minor rulings: unreached `_refresh()` sites (placement, unload, context rejection) unguarded - cost if wrong: one extra snapshot per rare click; stale `hud.note` on step error - pre-existing, same as the old path; RB7/RB8 already-green guards - kept as count guards. After the fix: `sb1_` 9 cases / 27 checks exit 0; scene filter 122 cases / 3564 checks exit 0; lint 0; warnings 0.

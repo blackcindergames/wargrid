@@ -23,7 +23,7 @@ const PLAY_AGAIN: String = "HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain"
 const CHANGE_SETUP: String = "HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -1034,6 +1034,21 @@ func test_offline_driver_stamps_like_the_scene(runner) -> bool:
 	runner.check(first.ok and not refused.ok and second.ok and stamps == [[tick, 1, 0], [tick, 1, 1]] and driver.recorder.commands().size() == 2, "OD1 offline driver stamps tick, player and sequence like main._submit")
 	return true
 
+func test_sb1_idle_offline_ticks_take_no_snapshot(runner) -> bool:
+	var main = await _setup(runner)
+	main.driver.sim = Skirmish.create()
+	main._refresh()
+	Profiler.reset()
+	Profiler.enabled = true
+	for i in 300: main._physics_process(0.0)
+	var snapshots: int = Profiler.calls(&"snapshot")
+	var views: int = Profiler.calls(&"view_state")
+	Profiler.enabled = false
+	Profiler.reset()
+	runner.check(snapshots == 0 and views == 300, "RB7 300 idle offline ticks take no snapshot and one view state each, got %d and %d" % [snapshots, views])
+	main.free()
+	return true
+
 func test_offline_driver_bot_memory_on_simulation(runner) -> bool:
 	var driver = OfflineDriver.new(1)
 	driver.sim = Skirmish.create()
@@ -1137,9 +1152,11 @@ func test_sb1_economy_input_reads_shown(runner) -> bool:
 	helper.key(main, KEY_E)
 	helper.pointer(main, Iso.world_to_plane(Vector2(20.5, 14.5)), MOUSE_BUTTON_RIGHT, true)
 	var snapshots: int = Profiler.calls(&"snapshot")
+	var views: int = Profiler.calls(&"view_state")
 	Profiler.enabled = false
 	Profiler.reset()
 	runner.check(snapshots == 0, "RB1 economy input takes no snapshot, got %d snapshots" % snapshots)
+	runner.check(views == 0, "RB1 economy input builds no view state, got %d" % views)
 	runner.check(main.orders.selected_building_id == barracks and _pending(main, "build") == 1 and _pending(main, "produce") == 1 and _pending(main, "set_rally") == 1, "RB1 one build, produce and set_rally, got %s" % str(sim.snapshot().pending_commands.map(func(c: Dictionary) -> String: return c.type)))
 	main.free()
 	return true
@@ -1166,9 +1183,11 @@ func test_sb1_combat_input_reads_shown(runner) -> bool:
 	double.pressed = false
 	main._unhandled_input(double)
 	var snapshots: int = Profiler.calls(&"snapshot")
+	var views: int = Profiler.calls(&"view_state")
 	Profiler.enabled = false
 	Profiler.reset()
 	runner.check(snapshots == 0, "RB2 combat input takes no snapshot, got %d snapshots" % snapshots)
+	runner.check(views == 0, "RB2 combat input builds no view state, got %d" % views)
 	runner.check(_pending(main, "move") == 1 and _pending(main, "attack") == 1 and _pending(main, "attack_move") == 1 and _pending(main, "stop") == 1, "RB2 one move, attack, attack_move and stop")
 	runner.check(main.orders.selected_ids == [ids.tank], "RB2 double-click selects the tank, got %s" % str(main.orders.selected_ids))
 	main.free()

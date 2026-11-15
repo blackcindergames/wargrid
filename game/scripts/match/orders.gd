@@ -106,7 +106,7 @@ func _hover(event: InputEvent) -> void:
 		var hovered: int = _screen._view.pick_object(_screen._view.make_canvas_position_local(event.position))
 		if hovered != _screen._view.hovered_id():
 			_screen._view.set_hovered(hovered)
-			_screen._refresh()
+			_screen._reshow()
 
 func _economy_keys(event: InputEvent) -> bool:
 	if not (event is InputEventKey and event.pressed and not event.echo): return false
@@ -155,7 +155,7 @@ func _building_input(event: InputEvent) -> bool:
 				selected_ids.clear()
 				_selecting = false
 				_screen._selection_box.hide()
-				_screen._refresh()
+				_screen._reshow()
 				return true
 			selected_building_id = -1
 	return false
@@ -167,7 +167,7 @@ func _selection_input(event: InputEvent) -> void:
 		selected_ids.clear()
 		_selecting = false
 		_screen._selection_box.hide()
-		_screen._refresh()
+		_screen._reshow()
 	elif event is InputEventMouseMotion and _selecting:
 		_update_drag(event.position)
 	elif event is InputEventMouseButton:
@@ -222,10 +222,10 @@ func _finish_selection(point: Vector2) -> void:
 	selected_ids.sort()
 	_selecting = false
 	_screen._selection_box.hide()
-	_screen._refresh()
+	_screen._reshow()
 	inspected_id = -1
 	if not _dragged and selected_ids.is_empty(): inspected_id = _enemy_at(_screen._view.make_canvas_position_local(point))
-	_screen._refresh()
+	_screen._reshow()
 
 func _matching_ids(id: int, whole_map: bool) -> Array[int]:
 	var view_rect: Rect2 = _screen._view.get_global_transform_with_canvas().affine_inverse() * _screen.get_viewport().get_visible_rect()
@@ -272,19 +272,19 @@ func _enter_placement(kind: String) -> void:
 	_attack_move_mode = false
 	if _builder() == -1:
 		_screen.hud.note = "Choose one builder"
-		_screen._refresh()
+		_screen._reshow()
 		return
 	_placement_kind = kind
 	selected_building_id = -1
 	_preview_key = []
 	_update_preview(_screen._view.get_local_mouse_position())
-	_screen._refresh()
+	_screen._reshow()
 
 func _clear_placement() -> void:
 	_placement_kind = ""
 	var empty: Array[Vector2i] = []
 	_screen._view.set_build_preview(empty,false)
-	_screen._refresh()
+	_screen._reshow()
 
 func _update_preview(plane: Vector2) -> void:
 	_preview_origin = Vector2i(Iso.plane_to_world(plane).floor())
@@ -306,7 +306,7 @@ func _context_order(id: int) -> bool:
 		if collectors: _screen._submit({"type":"gather","entity_ids":selected_ids.duplicate(),"source_id":id})
 		else:
 			_screen.hud.note = "Choose homogeneous collector selection"
-			_screen._refresh()
+			_screen._reshow()
 		return true
 	var building: Dictionary = _screen._building(state,id)
 	if selected_ids != [id] and _container(id,building):
@@ -316,7 +316,7 @@ func _context_order(id: int) -> bool:
 		if _builder() != -1: _screen._submit({"type":"resume_build","builder_id":_builder(),"building_id":id})
 		else:
 			_screen.hud.note = "Choose one builder"
-			_screen._refresh()
+			_screen._reshow()
 		return true
 	return false
 
@@ -332,7 +332,7 @@ func _unload_selected() -> void:
 	var building: Dictionary = _screen._building(state,id)
 	if not _container(id,building):
 		_screen.hud.note = "Select a container"
-		_screen._refresh()
+		_screen._reshow()
 		return
 	_screen._submit({"type":"unload","target_id":id})
 
@@ -348,7 +348,7 @@ func _produce_selected() -> void:
 	var building: Dictionary = _screen._building(state,selected_building_id)
 	if building.is_empty():
 		_screen.hud.note = "Select a production building"
-		_screen._refresh()
+		_screen._reshow()
 		return
 	_screen._submit({"type":"produce","building_id":building.id,"unit_kind":_screen._production_kind(building, state)})
 

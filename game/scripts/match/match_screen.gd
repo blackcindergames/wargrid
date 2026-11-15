@@ -266,7 +266,12 @@ func _note() -> String:
 func shown_over() -> bool:
 	return shown_state.get("match") != null and shown_state.match.status in ["won", "draw"]
 
-func _show(state: Dictionary) -> void:
+func _reshow() -> void:
+	_show(shown_state, false)
+	hud.place_economy()
+
+# Only a new view consumes step results and sound; a repaint on input must leave them for the next refresh.
+func _show(state: Dictionary, fresh: bool = true) -> void:
 	shown_state = state
 	_shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
@@ -276,9 +281,9 @@ func _show(state: Dictionary) -> void:
 	Profiler.end(&"refresh.selection", zone)
 	_view.set_view(state, orders.view_selection())
 	zone = Profiler.begin()
-	hud._refresh_hud(state)
+	hud._refresh_hud(state, fresh)
 	Profiler.end(&"refresh.hud", zone)
-	stepped_results.clear()
+	if fresh: stepped_results.clear()
 
 func _show_hint(payload: Dictionary) -> void:
 	var point: Variant = orders._hint_point(payload)
@@ -288,7 +293,7 @@ func _submit(payload: Dictionary) -> void:
 	_show_hint(payload)
 	var result: Dictionary = driver.submit(payload)
 	hud.note = result.error
-	_refresh()
+	_reshow()
 	if not hud.note.is_empty(): _sound.rejected(hud.note)
 	else: _playtest.observe_command(payload)
 	if result.ok: _sound.order(payload)

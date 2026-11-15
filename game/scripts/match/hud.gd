@@ -35,13 +35,13 @@ func reset() -> void:
 func place_economy() -> void:
 	_economy.position.y = maxf(116.0,_status.position.y + _status.get_minimum_size().y + 8.0)
 
-func _refresh_hud(state: Dictionary) -> void:
+func _refresh_hud(state: Dictionary, with_sound: bool = true) -> void:
 	_screen._ensure_sound()
 	_economy_hud(state)
 	_match_hud(state)
 	var line: String = _screen.driver.notice()
 	if not line.is_empty(): _status.text += "\n" + line
-	_screen._sound.update(state)
+	if with_sound: _screen._sound.update(state)
 
 func _economy_hud(state: Dictionary) -> void:
 	for result: Dictionary in _screen.stepped_results + state.command_results:
