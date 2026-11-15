@@ -107,10 +107,7 @@ func (r *room) run() {
 			}
 		case <-drain:
 			drain = nil
-			r.draining = true
-			if !r.started || r.parked { // no new connections arrive while draining, so the lobby can never fill
-				r.closeAll()
-			}
+			r.markDraining()
 		case <-quit:
 			quit = nil
 			r.closeAll()
@@ -119,6 +116,13 @@ func (r *room) run() {
 		case j := <-r.joins:
 			j.reply <- r.join(j)
 		case ev := <-r.events:
+			// select picks ready cases at random, so a queued again could otherwise beat a closed drain.
+			select {
+			case <-drain:
+				drain = nil
+				r.markDraining()
+			default:
+			}
 			switch ev := ev.(type) {
 			case tickMsg:
 				r.forward(ev)
@@ -132,6 +136,13 @@ func (r *room) run() {
 				}
 			}
 		}
+	}
+}
+
+func (r *room) markDraining() {
+	r.draining = true
+	if !r.started || r.parked { // no new connections arrive while draining, so the lobby can never fill
+		r.closeAll()
 	}
 }
 

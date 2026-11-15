@@ -194,6 +194,28 @@ func TestDrainAndParking(t *testing.T) {
 			t.Fatal("again handled while draining")
 		}
 	})
+	// Drain starts on the room goroutine while seat 2's again is queued; each round the old
+	// select-only check restarted the match half the time, so 64 rounds fail it with p = 1-2^-64.
+	t.Run("again_queued_when_drain_starts", func(t *testing.T) {
+		for range 64 {
+			g := newRegistry(testConfig())
+			fa := &frames{}
+			drainOnEcho := func(f []byte) {
+				if bytes.Contains(f, []byte(`{"type":"again","seat":1}`)) {
+					g.startDrain()
+				}
+			}
+			a, b, _, _ := pair(t, g, fa.write, drainOnEcho)
+			r := a.room
+			park(a, b)
+			r.post(againMsg{a.seat})
+			r.post(againMsg{b.seat})
+			ended(t, r)
+			if fa.count(`"type":"start"`) != 1 {
+				t.Fatal("queued again restarted the match after drain started")
+			}
+		}
+	})
 }
 
 func TestPanicOnAgainEchoEndsOnlyThatRoom(t *testing.T) {
