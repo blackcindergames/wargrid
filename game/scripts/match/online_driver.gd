@@ -26,6 +26,8 @@ var _credit: int = 0
 var _rejections_seen: int = 0
 var _log_seen: int = 0
 var _step_results: Array = []
+var _preview_request: Dictionary = {}
+var _preview_answer: Dictionary = {}
 var _seat: int
 var _phase: String = "playing"
 var _friend_again: bool = false
@@ -60,6 +62,8 @@ func create(map_path: String, starts: Array[int], _factions: Dictionary, match_s
 	_rejections_seen = 0
 	_log_seen = 0
 	_credit = 0
+	_preview_request = {}
+	_preview_answer = {}
 	sim = Skirmish.create(true, "human", {}, map_path, starts)
 
 func start() -> void:
@@ -81,13 +85,16 @@ func step(after_tick: Callable) -> Array[Dictionary]:
 	if not _finished and (_transport.closed() or _transport.silent(Time.get_ticks_usec())): _lockstep.set_relay_lost()
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
 	_step_results = []
+	var stepped: bool = false
 	for i in CATCH_UP_STEPS:
 		if _credit < 1 or not _lockstep.advance(sim): break
+		stepped = true
 		_credit -= 1
 		after_tick.call()
 		_step_results.append_array(sim.command_results().duplicate(true))
 		var tick: int = sim.tick()
 		_lockstep.finish_tick(tick, sim.snapshot() if _lockstep.wants_snapshot(tick) else null)
+	if stepped: _answer_preview()
 	if _phase == "playing" and _lockstep.received_any(): _transport.patient = false
 	var answers: Array[Dictionary] = _new_answers()
 	if not _finished and (sim.match_over() or _ended()): _finish()
@@ -107,6 +114,20 @@ func _close_room() -> void:
 
 func step_results() -> Array:
 	return _step_results
+
+# shortcut: duplicated in both drivers, SB3's run_job takes it over
+func request_preview(request: Dictionary) -> void:
+	_preview_request = request
+	if request.is_empty(): _preview_answer = {}
+
+func preview_answer() -> Dictionary:
+	return _preview_answer
+
+func _answer_preview() -> void:
+	if _preview_request.is_empty(): return
+	var request: Dictionary = _preview_request
+	_preview_request = {}
+	_preview_answer = {"kind": request.kind, "origin": request.origin, "ok": sim.preview_build(request.player, request.builder_id, request.kind, request.origin).ok}
 
 func _new_answers() -> Array[Dictionary]:
 	var errors: Dictionary = {}

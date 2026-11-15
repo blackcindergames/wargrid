@@ -9,7 +9,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 
 func cases() -> Array[Callable]:
-	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_preview_hover_cost,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
+	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
 
 func _m3_world() -> Simulation:
 	var sim: Simulation = Fixture.make_world()
@@ -231,20 +231,81 @@ func test_execution_feedback(runner) -> bool:
 	main.free()
 	return true
 
-func test_preview_hover_cost(runner) -> bool:
+func _placing(runner) -> Variant:
 	var main = await setup(runner)
 	main.driver.sim = Fixture.make_world()
 	main.orders.selected_ids.assign([1])
 	main._refresh()
 	key(main,KEY_1)
-	var before: int = main.driver.sim.navigation_builds()
+	return main
+
+func test_sb2_preview_cost(runner) -> bool:
+	var main = await _placing(runner)
+	# navigation_builds counts only previews that need a full grid (construction.gd), so answers are counted by identity.
+	var before: Dictionary = main.driver.preview_answer()
 	for i in range(5): hover(main,Iso.world_to_plane(Vector2(8.25,4.25)) + Vector2(i * 0.1,0))
-	runner.check(main.driver.sim.navigation_builds() - before <= 1,"Bs6 hovering one cell builds at most one preview grid")
+	runner.check(is_same(main.driver.preview_answer(),before),"Bs6 hovers without a step evaluate no preview")
+	main._physics_process(0.0)
+	var expected: bool = main.driver.sim.preview_build(1,1,"usa_power_plant",Vector2i(8,4)).ok
+	runner.check(not is_same(main.driver.preview_answer(),before) and main.driver.preview_answer() == {"kind":"usa_power_plant","origin":Vector2i(8,4),"ok":expected},"Bs6 five hovers across one cell are answered once at the next step, got %s" % [main.driver.preview_answer()])
+	before = main.driver.preview_answer()
 	hover(main,Iso.world_to_plane(Vector2(12.25,4.25)))
-	runner.check(main.driver.sim.navigation_builds() - before <= 2 and main.get_node("WorldView")._preview_cells[0] == Vector2i(12,4),"Bs6 a new cell recomputes the preview")
+	runner.check(main.get_node("WorldView")._preview_cells[0] == Vector2i(12,4) and is_same(main.driver.preview_answer(),before),"Bs6 a new cell moves the ghost at once without a preview")
+	main._physics_process(0.0)
+	runner.check(main.driver.preview_answer().get("origin") == Vector2i(12,4),"Bs6 a new cell is answered at the next step")
 	key(main,KEY_ESCAPE)
 	key(main,KEY_1)
 	runner.check(not main.get_node("WorldView")._preview_cells.is_empty(),"Bs6 re-entering placement redraws the preview")
+	main.free()
+	return true
+
+func test_sb2_ghost_colour_after_step(runner) -> bool:
+	var main = await _placing(runner)
+	var view = main.get_node("WorldView")
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	runner.check(view._preview_cells[0] == Vector2i(8,4) and not view._preview_valid,"RP1 the ghost moves at once, refused before its first answer")
+	main._physics_process(0.0)
+	runner.check(view._preview_valid,"RP1 the free cell turns valid after the next step")
+	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
+	runner.check(view._preview_cells[0] == Vector2i(4,4) and view._preview_valid,"RP1 the ghost moves at once in the last answer's colour")
+	main._physics_process(0.0)
+	runner.check(not view._preview_valid,"RP1 the builder's own cell turns refused after the next step")
+	main.free()
+	return true
+
+func test_sb2_restart_drops_pending_preview(runner) -> bool:
+	var main = await _placing(runner)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	main._restart()
+	main._physics_process(0.0)
+	runner.check(main.driver.preview_answer().is_empty() and main.get_node("WorldView")._preview_cells.is_empty(),"RP5 a restart drops the pending preview, got %s" % [main.driver.preview_answer()])
+	main.free()
+	return true
+
+func test_sb2_reenter_placement_ignores_old_answer(runner) -> bool:
+	var main = await _placing(runner)
+	var view = main.get_node("WorldView")
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	main._physics_process(0.0)
+	runner.check(view._preview_valid,"RP6 fixture: the first placement got a valid answer")
+	key(main,KEY_ESCAPE)
+	key(main,KEY_1)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	runner.check(not view._preview_valid and main.driver.preview_answer().is_empty(),"RP6 the old answer does not colour the new placement")
+	main._physics_process(0.0)
+	runner.check(view._preview_valid and main.driver.preview_answer().get("origin") == Vector2i(8,4),"RP6 only the new request is answered, got %s" % [main.driver.preview_answer()])
+	main.free()
+	return true
+
+func test_sb2_preview_waits_for_unpause(runner) -> bool:
+	var main = await _placing(runner)
+	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
+	main._pause.open()
+	for i in 3: main._physics_process(0.0)
+	runner.check(main.driver.preview_answer().is_empty(),"RP7 a paused match answers no preview")
+	main._pause.close()
+	main._physics_process(0.0)
+	runner.check(main.driver.preview_answer().get("origin") == Vector2i(8,4),"RP7 the preview is answered after unpause")
 	main.free()
 	return true
 

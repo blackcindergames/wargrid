@@ -4,14 +4,14 @@ Plan: [sim boundary SB1-SB2](../superpowers/plans/2026-11-15-sim-boundary-sb1-sb
 
 ```text
 Resume record (updated 2026-11-15 night)
-Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / Task 5 uncommitted on top of the Task 4 commit 531b196
-Last green task / next incomplete task: Task 5 green, uncommitted / Task 6 (review and commit Task 5 first: `Answer orders one tick later`)
-Changed paths since last commit: game/scripts/match/{hud,match_screen,offline_driver,online_driver,orders}.gd, game/tests/{input_script_rows,test_announcer,test_base_scene,test_online_scene,test_order_voice,test_playtest_overlay,test_scene,test_skirmish_scene}.gd, docs/reference/sim-boundary-verification.md, docs/superpowers/specs/2026-11-15-sim-boundary-design.md (answer 17), docs/superpowers/plans/2026-11-15-sim-boundary-sb1-sb2.md (Task 5 allowed list)
-Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb/sb2/, 972 cases, 146429 checks, 0 failures, exit 0, TESTS PASSED 146429; compare_replays REPLAYS MATCHED x4; run_lint, run_warnings, test_sim_boundary.py exit 0
+Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / Task 6 uncommitted on top of the Task 5 commit 60d9a5c
+Last green task / next incomplete task: Task 6 green, uncommitted / Task 7 (review and commit Task 6 first: `Answer the placement preview one tick later`)
+Changed paths since last commit: game/scripts/match/{match_screen,offline_driver,online_driver,orders}.gd, game/tests/{test_base_scene,test_online_scene}.gd, docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: full suite, 979 cases, 146443 checks, 0 failures, exit 0, TESTS PASSED 146443; run_lint, run_warnings, test_sim_boundary.py exit 0
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); IC1 row 19 inspected-enemy HP/order text may change (user, 2026-11-15); S3 and OV11 fixture changes accepted (user, 2026-11-15); no rendered benchmark rerun, world_view.gd is not touched; gate 1 and gate 2 reviews pending
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 5 review and commit, then Task 6. Task 5 added OfflineDriver._held, OnlineDriver._log_seen/_new_answers, closes_placement_on_click() on both drivers, Orders._awaiting_build/answered(); step() returns Array[Dictionary] answers.
+Next exact action: Task 6 review and commit, then Task 7 (docs). Task 6 added request_preview/preview_answer/_answer_preview to both drivers (cleared in create), Orders._answer and show_preview (called from _show after prune); _enter_placement and _clear_placement send request_preview({}).
 ```
 
 ## Evidence
@@ -41,6 +41,11 @@ Next exact action: Task 5 review and commit, then Task 6. Task 5 added OfflineDr
 | 2026-11-15 | full `sh tools/run_tests.sh`; `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py`; `git diff f838f79 --stat -- game/scripts/simulation protocol` | exit 1, CASES 972 CHECKS 146422 FAILURES 1 (IC1); 0, 0, 0; diff empty | Task 5, uncommitted |
 | 2026-11-15 | IC1 re-pinned (row 19 allowed, user 2026-11-15), OV11 also appends its older rejection to `stepped_results`; `=input_script`, `=order_voice` | exit 0: 2/34, 14/98 cases/checks | Task 5, uncommitted |
 | 2026-11-15 | SB2 evidence: full suite with the four trace variables into `build/sb/sb2/`; `compare_replays.py` base vs sb2 for replay, economy, combat, team (`--interval 200 --rows 100`); `git diff f838f79 --stat -- game/scripts/simulation protocol`; `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py` | exit 0, CASES 972 CHECKS 146429 FAILURES 0, `TESTS PASSED 146429`; `REPLAYS MATCHED` 1200, 1200, 1200, 100; diff empty; 0, 0, 0 | Task 5, uncommitted |
+| 2026-11-15 | `WARGRID_TEST_ONLY=sb2_` (red first: RP1 first `_preview_valid` check, the rest missing `preview_answer`/`request_preview`; then green) | exit 0, CASES 16 CHECKS 52 FAILURES 0, `TESTS PASSED 52` | Task 6, uncommitted |
+| 2026-11-15 | Mutation: `create` in both drivers without the preview reset; `WARGRID_TEST_ONLY=drops_pending` | exit 1, both RP5 checks fail (offline restart, online rematch); restored | Task 6, uncommitted |
+| 2026-11-15 | `=input_script`; `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py` | exit 0, 2/34 cases/checks (Task 5's rows); 0, 0, 0 | Task 6, uncommitted |
+| 2026-11-15 | full `sh tools/run_tests.sh`; `git diff f838f79 --stat -- game/scripts/simulation protocol` | exit 0, CASES 979 CHECKS 146443 FAILURES 0, `TESTS PASSED 146443`; diff empty (baseline on 60d9a5c: 972/146423) | Task 6, uncommitted |
+| 2026-11-15 | Task 6 review merge: RP8 strengthened (peer builds on the spot in the second tick); mutation `_answer_preview()` inside the catch-up loop; then `sb2_`, `=input_script`, full suite, lint, warnings | mutation exit 1 (RP8 fails), restored; 16/52 exit 0; 2/34 exit 0; CASES 979 CHECKS 146443 FAILURES 0 exit 0; 0, 0 | Task 6, uncommitted (production code unchanged by the merge) |
 
 `sync_sequence(main)` added after direct sends in: `test_production_ui` (Bs3, after the builds), `test_base_scene.gd` CancelBuild case (after the foundation send), M3 case (after the factory build), `test_rally_input_and_marker` (R1), `test_hud_strings_use_display_names` (N1), `test_frc_laborer_right_click_pile` (K13). Task 3 added `main._refresh()` after the sim swap in N1 and before K4's team line. Expected values unchanged.
 
@@ -106,3 +111,5 @@ Task 5 IC1 re-pin (2026-11-15; applied after the owner allowed row 19, user 2026
 Row 19's HP text depends on cannon damage and delay (`shared.gd:16`, `usa.gd:11`), so a combat tuning change re-pins IC1 the same way.
 
 Task 5 tests outside the plan's named list: `test_scene.gd` S3 gains one physics call before its "HUD rejection reason" check; OV11 (`test_order_voice.gd`) feeds its older rejection through `_sound.collect_step` instead of `stepped_results`, since the beep it checked came from `_submit` re-reading the note. Assertions unchanged.
+
+Task 6 test measure: `navigation_builds()` counts only previews that need a full grid (`construction.gd:91`, skipped when `blocks_locally`), so it stays 0 on the Bs6 fixture world. RP3 (Bs6 rewritten as `test_sb2_preview_cost`) counts answers by identity of `preview_answer()` instead (unchanged object = no answer; it cannot see a discarded synchronous `preview_build`, ruled minor). RP6 and RP8 assert the answer's content and colour. RP5's online half lives in `test_online_scene.gd` as `test_sb2_rematch_drops_pending_preview`; RP8 builds its catch-up credit after tick 8: at tick 4 the faction commands have not yet created the builders (they appear in step 4 to 5), so `_place` cannot enter placement; a fixture timing, not a bug. After review RP8 also has the peer place a building on the spot in the frame's second tick, so the answer must be refused (computed after the last tick); moving `_answer_preview` into the catch-up loop fails it (mutation run, restored). `_enter_placement` also sends `request_preview({})`, so re-entering the same kind without Esc never stores an old answer.

@@ -11,6 +11,8 @@ var _player: int
 var _sequence: int = 0
 var _factions: Dictionary = {}
 var _held: Array[Dictionary] = []
+var _preview_request: Dictionary = {}
+var _preview_answer: Dictionary = {}
 
 func _init(player: int) -> void:
 	_player = player
@@ -19,6 +21,8 @@ func create(map_path: String, starts: Array[int], factions: Dictionary, _match_s
 	_factions = factions
 	_sequence = 0
 	_held = []
+	_preview_request = {}
+	_preview_answer = {}
 	recorder = null
 	sim = Skirmish.create(true, "ai", factions, map_path, starts)
 
@@ -35,12 +39,27 @@ func step(after_tick: Callable) -> Array[Dictionary]:
 	Skirmish.issue_opponent(_recording())
 	sim.step()
 	after_tick.call()
+	_answer_preview()
 	var answers: Array[Dictionary] = _held
 	_held = []
 	return answers
 
 func step_results() -> Array:
 	return sim.command_results().duplicate(true)
+
+# shortcut: duplicated in both drivers, SB3's run_job takes it over
+func request_preview(request: Dictionary) -> void:
+	_preview_request = request
+	if request.is_empty(): _preview_answer = {}
+
+func preview_answer() -> Dictionary:
+	return _preview_answer
+
+func _answer_preview() -> void:
+	if _preview_request.is_empty(): return
+	var request: Dictionary = _preview_request
+	_preview_request = {}
+	_preview_answer = {"kind": request.kind, "origin": request.origin, "ok": sim.preview_build(request.player, request.builder_id, request.kind, request.origin).ok}
 
 func submit(payload: Dictionary) -> Dictionary:
 	var command: Dictionary = payload.duplicate(true)

@@ -25,6 +25,7 @@ var _preview_origin: Vector2i
 var _preview_key: Array = []
 var _attack_move_mode: bool = false
 var _awaiting_build: String = ""
+var _answer: Dictionary = {}
 
 func _init(screen: Node) -> void:
 	_screen = screen
@@ -60,6 +61,7 @@ func reset() -> void:
 	_pending_placement = ""
 	_attack_move_mode = false
 	_awaiting_build = ""
+	_answer = {}
 	_selecting = false
 	_dragged = false
 
@@ -288,11 +290,14 @@ func _enter_placement(kind: String) -> void:
 	_placement_kind = kind
 	selected_building_id = -1
 	_preview_key = []
+	_answer = {}
+	_screen.driver.request_preview({})
 	_update_preview(_screen._view.get_local_mouse_position())
 	_screen._reshow()
 
 func _clear_placement() -> void:
 	_placement_kind = ""
+	_screen.driver.request_preview({})
 	var empty: Array[Vector2i] = []
 	_screen._view.set_build_preview(empty,false)
 	_screen._reshow()
@@ -302,8 +307,13 @@ func _update_preview(plane: Vector2) -> void:
 	var key: Array = [_placement_kind,_preview_origin,_screen.shown_state.tick]
 	if key == _preview_key: return
 	_preview_key = key
-	var preview: Dictionary = _screen.driver.sim.preview_build(_screen.local_player,_builder(),_placement_kind,_preview_origin)
-	_screen._view.set_build_preview(Construction.cells(_placement_kind,_preview_origin),preview.ok)
+	_screen._view.set_build_preview(Construction.cells(_placement_kind,_preview_origin),_answer.get("ok",false))
+	_screen.driver.request_preview({"player":_screen.local_player,"builder_id":_builder(),"kind":_placement_kind,"origin":_preview_origin})
+
+func show_preview(answer: Dictionary) -> void:
+	if _placement_kind.is_empty() or answer.get("kind") != _placement_kind: return
+	_answer = answer
+	if answer.origin == _preview_origin: _screen._view.set_build_preview(Construction.cells(_placement_kind,_preview_origin),answer.ok)
 
 func _context_order(id: int) -> bool:
 	if selected_ids.is_empty(): return false
