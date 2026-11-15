@@ -39,7 +39,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_drops_pending_markers, test_scale_legend]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_drops_pending_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_leave_with_form_and_pending_answer]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -215,8 +215,10 @@ func test_checklist_triggers(runner) -> bool:
 	var pile: Dictionary = sim.snapshot().sources[0]
 	var laborer: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), "frc_builder")
 	main._submit({"type": "gather", "entity_ids": [999999], "source_id": pile.id})
+	main._physics_process(0.0)
 	runner.check(not main.hud.note.is_empty() and not overlay.checked("collect"), "PO6 a rejected gather ticks nothing, error '%s'" % main.hud.note)
 	main._submit({"type": "gather", "entity_ids": [laborer], "source_id": pile.id})
+	main._physics_process(0.0)
 	runner.check(main.hud.note.is_empty() and overlay.checked("collect") and list.find_child("collect", true, false).button_pressed, "PO6 an accepted gather ticks collect, error '%s'" % main.hud.note)
 	overlay.observe_command({"type": "build", "building_kind": "frc_supply_center"})
 	runner.check(overlay.checked("cache") and not overlay.checked("workers"), "PO6 build:frc_supply_center ticks cache only")
@@ -696,5 +698,54 @@ func test_scale_legend(runner) -> bool:
 			if child is Label and child.text == "Match 1": match_label = child.get_index()
 		runner.check(last != null and legends[0].get_index() > last.get_parent().get_index() and legends[0].get_index() < match_label, "PO18 the legend sits after the last question and before Match 1")
 	form.free()
+	_end(saved)
+	return true
+
+func test_sb2_checklist_waits_for_answer(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	var sim = SkirmishRules.create(true, "ai", {1: "frc", 2: "usa"})
+	main.driver.sim = sim
+	main._refresh()
+	var pile: Dictionary = sim.snapshot().sources[0]
+	var laborer: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), "frc_builder")
+	main._submit({"type": "gather", "entity_ids": [999999], "source_id": pile.id})
+	main._physics_process(0.0)
+	runner.check(main.hud.note.begins_with("Rejected: ") and not overlay.checked("collect"), "RA2 a refused gather ticks nothing, note '%s'" % main.hud.note)
+	main._submit({"type": "gather", "entity_ids": [laborer], "source_id": pile.id})
+	runner.check(not overlay.checked("collect"), "RA2 an accepted gather waits for its answer")
+	main._physics_process(0.0)
+	runner.check(overlay.checked("collect"), "RA2 the accepted answer ticks collect")
+	main.free()
+	_end(saved)
+	return true
+
+func test_sb2_leave_with_form_and_pending_answer(runner) -> bool:
+	var saved: String = _begin()
+	var online: Dictionary = await _online(runner)
+	var main = online.main
+	var lockstep = main.driver._lockstep
+	main.orders._awaiting_build = "usa_power_plant"
+	lockstep._command_log.append({"type": "build", "player": 1, "sequence": 5, "tick": 9, "builder_id": 3, "building_kind": "usa_power_plant", "origin": [-4, -4]})
+	lockstep._rejections.append({"tick": 9, "sequence": 5, "error": "Outside map"})
+	lockstep._rejections.append({"tick": 9, "sequence": 6, "error": "No units left"})
+	_key(runner, KEY_ESCAPE)
+	_click(main, "Back to main menu")
+	_click(main, "Leave")
+	runner.check(_form_shown(main), "RA7 fixture: the form is open")
+	main._physics_process(0.0)
+	runner.check(main.orders._awaiting_build.is_empty() and main.hud.note == "Rejected: No units left", "RA7 online answers arrive behind the form, note '%s'" % main.hud.note)
+	main.free()
+	_end(saved)
+	saved = _begin()
+	main = await _scene(runner)
+	main._submit({"type": "move", "entity_ids": [_own_unit(main)], "target": [-5.0, -5.0]})
+	_key(runner, KEY_ESCAPE)
+	_click(main, "Back to main menu")
+	runner.check(_form_shown(main), "RA7 offline fixture: the form is open")
+	main._physics_process(0.0)
+	runner.check(main.hud.note.is_empty() and main.driver._held.size() == 1, "RA7 offline delivers nothing while the form holds the match, note '%s'" % main.hud.note)
+	main.free()
 	_end(saved)
 	return true

@@ -10,6 +10,7 @@ var recorder: CommandRecorder
 var _player: int
 var _sequence: int = 0
 var _factions: Dictionary = {}
+var _held: Array[Dictionary] = []
 
 func _init(player: int) -> void:
 	_player = player
@@ -17,6 +18,7 @@ func _init(player: int) -> void:
 func create(map_path: String, starts: Array[int], factions: Dictionary, _match_seed: int) -> void:
 	_factions = factions
 	_sequence = 0
+	_held = []
 	recorder = null
 	sim = Skirmish.create(true, "ai", factions, map_path, starts)
 
@@ -28,11 +30,14 @@ func _recording() -> CommandRecorder:
 	if recorder == null or not is_same(recorder.simulation(), sim): recorder = CommandRecorder.new(sim)
 	return recorder
 
-func step(after_tick: Callable) -> PackedStringArray:
+# Answers wait for the next step so offline shows them when online would.
+func step(after_tick: Callable) -> Array[Dictionary]:
 	Skirmish.issue_opponent(_recording())
 	sim.step()
 	after_tick.call()
-	return PackedStringArray()
+	var answers: Array[Dictionary] = _held
+	_held = []
+	return answers
 
 func step_results() -> Array:
 	return sim.command_results().duplicate(true)
@@ -44,13 +49,17 @@ func submit(payload: Dictionary) -> Dictionary:
 	command.sequence = _sequence
 	var result: Dictionary = _recording().issue_command(command)
 	if result.ok: _sequence += 1
-	return result
+	_held.append({"command": command, "ok": result.ok, "error": result.error})
+	return {"ok": true, "error": ""}
 
 func notice() -> String:
 	return ""
 
 func pauses_sim() -> bool:
 	return true
+
+func closes_placement_on_click() -> bool:
+	return false
 
 func confirm_leave() -> bool:
 	return false

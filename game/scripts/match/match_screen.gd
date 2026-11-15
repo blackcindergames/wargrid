@@ -146,11 +146,13 @@ func _match_record(mode: String, match_factions: Array, lines: PackedStringArray
 	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "end_tick": state.tick, "end_digest": StateHash.digest(state), "build": PlaytestSettings.build_id(), "result": hud._result_text(state.match), "commands": lines}
 
 func _step_simulation() -> void:
-	var rejected: PackedStringArray = driver.step(_collect_sound)
-	if rejected.is_empty(): return
-	_ensure_sound()
-	for error in rejected: _sound.rejected(error)
-	hud.note = "Rejected: " + rejected[-1]
+	for answer: Dictionary in driver.step(_collect_sound):
+		if answer.ok: _playtest.observe_command(answer.command)
+		else:
+			_ensure_sound()
+			_sound.rejected(answer.error)
+			hud.note = "Rejected: " + answer.error
+		orders.answered(answer)
 
 func menu_open() -> bool:
 	return _pause.visible or _playtest.holds_match()
@@ -291,12 +293,10 @@ func _show_hint(payload: Dictionary) -> void:
 
 func _submit(payload: Dictionary) -> void:
 	_show_hint(payload)
-	var result: Dictionary = driver.submit(payload)
-	hud.note = result.error
+	driver.submit(payload)
+	hud.note = ""
 	_reshow()
-	if not hud.note.is_empty(): _sound.rejected(hud.note)
-	else: _playtest.observe_command(payload)
-	if result.ok: _sound.order(payload)
+	_sound.order(payload)
 
 func _ensure_sound() -> void:
 	if _sound != null: return

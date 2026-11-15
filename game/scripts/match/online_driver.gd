@@ -24,6 +24,7 @@ var _report_path: String = ""
 var _finished: bool = false
 var _credit: int = 0
 var _rejections_seen: int = 0
+var _log_seen: int = 0
 var _step_results: Array = []
 var _seat: int
 var _phase: String = "playing"
@@ -57,6 +58,7 @@ func create(map_path: String, starts: Array[int], _factions: Dictionary, match_s
 	_finished = false
 	_friend_again = false
 	_rejections_seen = 0
+	_log_seen = 0
 	_credit = 0
 	sim = Skirmish.create(true, "human", {}, map_path, starts)
 
@@ -74,7 +76,7 @@ func leave() -> void:
 	_lockstep.set_relay_lost()
 	_transport.close()
 
-func step(after_tick: Callable) -> PackedStringArray:
+func step(after_tick: Callable) -> Array[Dictionary]:
 	for text: Variant in _transport.poll(): _lockstep.receive(text)
 	if not _finished and (_transport.closed() or _transport.silent(Time.get_ticks_usec())): _lockstep.set_relay_lost()
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
@@ -87,10 +89,10 @@ func step(after_tick: Callable) -> PackedStringArray:
 		var tick: int = sim.tick()
 		_lockstep.finish_tick(tick, sim.snapshot() if _lockstep.wants_snapshot(tick) else null)
 	if _phase == "playing" and _lockstep.received_any(): _transport.patient = false
-	var rejected: PackedStringArray = _new_rejections()
+	var answers: Array[Dictionary] = _new_answers()
 	if not _finished and (sim.match_over() or _ended()): _finish()
 	if (_phase == "over" or _phase == "again") and _room_gone(): _close_room()
-	return rejected
+	return answers
 
 func _ended() -> bool:
 	return _lockstep.status().begins_with("ended")
@@ -106,13 +108,22 @@ func _close_room() -> void:
 func step_results() -> Array:
 	return _step_results
 
-func _new_rejections() -> PackedStringArray:
-	var errors := PackedStringArray()
+func _new_answers() -> Array[Dictionary]:
+	var errors: Dictionary = {}
 	var rejections: Array = _lockstep.rejections()
-	if rejections.size() > _rejections_seen:
-		for i in range(_rejections_seen, rejections.size()): errors.append(rejections[i].error)
-		_rejections_seen = rejections.size()
-	return errors
+	for i in range(_rejections_seen, rejections.size()): errors[rejections[i].sequence] = rejections[i].error
+	_rejections_seen = rejections.size()
+	var answers: Array[Dictionary] = []
+	var played: Array = _lockstep.command_log()
+	for i in range(_log_seen, played.size()):
+		var command: Dictionary = played[i]
+		if command.player != _seat or command.type == "choose_faction": continue
+		answers.append({"command": command, "ok": not errors.has(command.sequence), "error": errors.get(command.sequence, "")})
+		errors.erase(command.sequence)
+	_log_seen = played.size()
+	# Injected rejections (tests, a refused faction choice) have no logged command of ours.
+	for sequence: Variant in errors: answers.append({"command": {}, "ok": false, "error": errors[sequence]})
+	return answers
 
 func submit(payload: Dictionary) -> Dictionary:
 	_lockstep.submit(payload)
@@ -120,6 +131,9 @@ func submit(payload: Dictionary) -> Dictionary:
 
 func pauses_sim() -> bool:
 	return false
+
+func closes_placement_on_click() -> bool:
+	return true
 
 func confirm_leave() -> bool:
 	return true

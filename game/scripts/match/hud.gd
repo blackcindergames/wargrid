@@ -46,7 +46,7 @@ func _refresh_hud(state: Dictionary, with_sound: bool = true) -> void:
 func _economy_hud(state: Dictionary) -> void:
 	for result: Dictionary in _screen.stepped_results + state.command_results:
 		if result.player == _screen.local_player and (result.tick > _last_result_tick or (result.tick == _last_result_tick and result.sequence > _last_result_sequence)):
-			note = result.error
+			if not result.ok: note = result.error
 			_last_result_tick = result.tick
 			_last_result_sequence = result.sequence
 	var player: Dictionary = _screen._local_state(state)

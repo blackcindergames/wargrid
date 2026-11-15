@@ -24,6 +24,7 @@ var _pending_placement: String = ""
 var _preview_origin: Vector2i
 var _preview_key: Array = []
 var _attack_move_mode: bool = false
+var _awaiting_build: String = ""
 
 func _init(screen: Node) -> void:
 	_screen = screen
@@ -58,6 +59,7 @@ func reset() -> void:
 	_placement_kind = ""
 	_pending_placement = ""
 	_attack_move_mode = false
+	_awaiting_build = ""
 	_selecting = false
 	_dragged = false
 
@@ -133,10 +135,19 @@ func _placement_input(event: InputEvent) -> void:
 		_update_preview(_screen._view.make_canvas_position_local(event.position))
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed: _clear_placement()
-		elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and _awaiting_build.is_empty():
 			_update_preview(_screen._view.make_canvas_position_local(event.position))
 			_screen._submit({"type":"build","builder_id":_builder(),"building_kind":_placement_kind,"origin":[_preview_origin.x,_preview_origin.y]})
-			if _screen.hud.note.is_empty(): _clear_placement()
+			_awaiting_build = _placement_kind
+			if _screen.driver.closes_placement_on_click(): _clear_placement()
+
+func answered(answer: Dictionary) -> void:
+	if _awaiting_build.is_empty() or answer.command.get("type") != "build": return
+	var kind: String = _awaiting_build
+	_awaiting_build = ""
+	var online: bool = _screen.driver.closes_placement_on_click()
+	if answer.ok and not online: _clear_placement()
+	elif not answer.ok and online and _placement_kind.is_empty() and _builder() != -1: _enter_placement(kind)
 
 func _building_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("deselect"):

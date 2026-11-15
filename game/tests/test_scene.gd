@@ -114,6 +114,7 @@ func test_rejection(runner) -> bool:
 	var active: Dictionary = main.driver.sim.snapshot()
 	await click(runner, view, Iso.world_to_plane(Vector2(7.5, 6.5)), MOUSE_BUTTON_RIGHT)
 	runner.check(main.driver.sim.snapshot() == active, "S3 rejected order preserves active destination and sequence")
+	main._physics_process(0.0)
 	runner.check(main.get_node("HUD/Status").text.contains("Target"), "S3 HUD rejection reason")
 	await click(runner, view, Iso.world_to_plane(Vector2(5.5, 5.5)), MOUSE_BUTTON_RIGHT)
 	var queued: Dictionary = main.driver.sim.snapshot()

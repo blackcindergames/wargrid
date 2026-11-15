@@ -149,13 +149,15 @@ func test_offline_rejected_order_only_errors(runner) -> bool:
 	var builder: int = _builder(skirmish, 1)
 	var hq: Dictionary = skirmish.driver.sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 2 and building.kind.ends_with("command_center"))[0]
 	skirmish._submit({"type": "attack", "entity_ids": [builder], "target_id": hq.id})
-	runner.check(skirmish.hud.note == "Attack requires armed units", "OV8 fixture: builder attack fails, got '%s'" % skirmish.hud.note)
-	runner.check(_unit_line(skirmish) == "", "OV8 rejected order stays silent, got '%s'" % _unit_line(skirmish))
-	skirmish._refresh()
-	runner.check(_cues(skirmish).has("error"), "OV8 rejected order beeps, got %s" % [_cues(skirmish)])
+	runner.check(_unit_line(skirmish) == "", "OV8 a worker has no attack line, got '%s'" % _unit_line(skirmish))
+	skirmish._physics_process(0.0)
+	runner.check(skirmish.hud.note == "Rejected: Attack requires armed units", "OV8 fixture: builder attack fails, got '%s'" % skirmish.hud.note)
+	runner.check(_cues(skirmish).has("error"), "OV8 rejected order beeps one step later, got %s" % [_cues(skirmish)])
 	skirmish._submit({"type": "build", "builder_id": builder, "building_kind": "usa_barracks", "origin": _own_center_origin(skirmish)})
-	runner.check(skirmish.hud.note != "", "OV8 fixture: blocked build fails, got '%s'" % skirmish.hud.note)
-	runner.check(_unit_line(skirmish) == "", "OV8 rejected build by a speaker with a line stays silent, got '%s'" % _unit_line(skirmish))
+	runner.check(_unit_line(skirmish).begins_with("worker_work_"), "OV8 a build speaks at submit, before its answer, got '%s'" % _unit_line(skirmish))
+	skirmish._physics_process(0.0)
+	runner.check(skirmish.hud.note.begins_with("Rejected: ") and _cues(skirmish).has("error"), "OV8 fixture: blocked build fails one step later, got '%s' %s" % [skirmish.hud.note, _cues(skirmish)])
+	runner.check(_unit_line(skirmish).begins_with("worker_work_"), "OV8 the build line stays after the beep, got '%s'" % _unit_line(skirmish))
 	skirmish.free()
 	return true
 
@@ -186,7 +188,10 @@ func test_headless_playback_off(runner) -> bool:
 
 func test_valid_order_speaks_despite_older_rejection(runner) -> bool:
 	var skirmish = await _scene(runner)
-	skirmish.stepped_results.append({"tick": skirmish.driver.sim.tick(), "player": 1, "sequence": 99, "ok": false, "error": "No units left"})
+	var none: Array[Dictionary] = []
+	var older: Array[Dictionary] = [{"tick": skirmish.driver.sim.tick(), "player": 1, "sequence": 99, "ok": false, "error": "No units left"}]
+	skirmish._sound.collect_step(skirmish.driver.sim.tick(), none, older)
+	skirmish.stepped_results.append_array(older)
 	skirmish._submit(_move(skirmish, _builder(skirmish, 1)))
 	runner.check(_unit_line(skirmish).begins_with("worker_move_"), "OV11 valid order speaks over an older rejection, got '%s'" % _unit_line(skirmish))
 	skirmish._refresh()
