@@ -139,3 +139,5 @@ Final recheck after the gate fix rounds (2026-11-15, tree `5696065`, clean; outp
 | 2026-11-15 | `git diff f838f79 --stat -- game/scripts/simulation protocol` | empty | 5696065, clean |
 
 Benchmark not rerun: the gate fixes touched input code only.
+
+Night run review (2026-11-15): the gate 1 guard in `orders.answered` (reopen placement after an online refusal only when not `busy()` and not in attack-move mode) is kept (user, 2026-11-15). The unfixed reopen after the builder dies in the same step is STATUS F23 (user, 2026-11-15); the shared note for two refusals in one step is dropped, unchanged from before this branch (user, 2026-11-15).

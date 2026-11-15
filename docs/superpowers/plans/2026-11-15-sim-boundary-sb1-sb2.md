@@ -276,7 +276,7 @@ Stop: an IC row changes beyond Task 5's re-pin
 ### Task 8: Gate checks
 
 - [ ] **Step 1:** `sh tools/run_checks.sh > build/sb/checks.log 2>&1; echo exit=$?` → `CHECKS PASSED 5`.
-- [ ] **Step 2:** Full suite with traces into `build/sb/sb2/` (Task 1 Step 3 command); `compare_replays.py` base against sb2 for replay, economy, combat, team → `REPLAYS MATCHED` each.
+- [ ] **Step 2:** Full suite with traces into `build/sb/sb2/` (Task 1 Step 3 command); `compare_replays.py` base against sb2 for replay, economy and combat, `--interval 200 --rows 100` for team → `REPLAYS MATCHED` each.
 - [ ] **Step 3:** `NETPLAY_OUT="<wt>/build/sb/sb2/netplay" sh tools/run_netplay.sh match > build/sb/sb2/netplay.log 2>&1; echo exit=$?` → `NETPLAY PASSED match`; `python3 tools/compare_replays.py --interval 30 --rows 0 build/sb/base/netplay/s1.tsv build/sb/sb2/netplay/s1.tsv` → matched; `sh tools/run_team_match.sh > build/sb/sb2/team_match.log 2>&1; echo exit=$?` → exit 0.
 - [ ] **Step 4:** `git diff <base> --stat -- game/scripts/simulation protocol` → empty.
 - [ ] **Step 5: Benchmark**, alone, `uptime` at start and end (load above 2.5: wait at most 30 minutes, then mark it pending): `PERF_LABEL="Sim boundary SB1-SB2" sh tools/run_benchmark.sh > build/sb/bench.log 2>&1; echo exit=$?`; record the row per the [ledger](../../reference/performance.md); never loosen a budget. On exit 1 name the failing lines: a row the status table already marks exceeded on `<base>` is recorded, not a stop; any other failure is a stop. No rendered rerun (drawing code untouched; state it).
