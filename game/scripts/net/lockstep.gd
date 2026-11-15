@@ -7,6 +7,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const MAX_QUEUED_TICKS: int = 300 # a legitimate peer queues at most about 2 * input delay + 2 ticks; raise this if the relay delay nears 150
 
 var send: Callable = func(_frame: String) -> void: pass
+var session_handler: Callable
 
 var _seat: int
 var _seats: Array[int]
@@ -31,6 +32,7 @@ var _left_after: int = 0
 var _end_reason: String = ""
 var _desync_tick: int = -1
 var _rejections: Array[Dictionary] = []
+var _received_any: bool = false
 
 func _init(seat: int, seats: Array[int], delay: int = 4, hash_interval: int = 30, clock: Callable = Time.get_ticks_usec) -> void:
 	_seat = seat
@@ -45,6 +47,14 @@ func _init(seat: int, seats: Array[int], delay: int = 4, hash_interval: int = 30
 		_last_received[s] = delay - 1
 		for tick in delay:
 			_packets[s][tick] = {"commands": []}
+
+static func for_start(seat: int, message: Dictionary) -> RefCounted:
+	var seats: Array[int] = []
+	seats.assign(message.seats)
+	return new(seat, seats, message.delay)
+
+func received_any() -> bool:
+	return _received_any
 
 func start(state: Dictionary) -> void:
 	_last_sent = _delay - 1
@@ -72,6 +82,8 @@ func receive(text: String) -> void:
 		"tick": _receive_tick(message)
 		"left": _receive_left(message)
 		"error": _end("ended_relay", message.reason)
+		"again", "start":
+			if not session_handler.is_valid() or not session_handler.call(message): _end("ended_protocol", "unexpected " + message.type)
 		_: _end("ended_protocol", "unexpected " + message.type)
 
 func can_step(sim_tick: int) -> bool:
@@ -203,6 +215,7 @@ func _receive_tick(message: Dictionary) -> void:
 		return
 	_last_received[s] = message.tick
 	_packets[s][message.tick] = message
+	_received_any = true
 
 func _receive_left(message: Dictionary) -> void:
 	if message.seat == _seat or not _seats.has(message.seat):

@@ -18,6 +18,7 @@ var sessions: String = "user://test-overlay-playtests-%d" % OS.get_process_id()
 var saved_dir: String = ""
 
 class FakeTransport extends RefCounted:
+	var patient: bool = false
 	var polls: int = 0
 	var close_calls: int = 0
 	func poll() -> PackedStringArray:

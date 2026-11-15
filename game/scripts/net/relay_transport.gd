@@ -4,6 +4,7 @@ const Wire = preload("res://scripts/net/wire.gd")
 const PING_INTERVAL_USEC: int = 1_000_000
 const BUFFER_BYTES: int = 1 << 17
 const SILENCE_USEC: int = 5_000_000
+const LOBBY_EXPIRY_SEC: int = 900 # mirrors relay WARGRID_LOBBY_MS
 
 var _peer := WebSocketPeer.new()
 var _clock: Callable
@@ -12,6 +13,7 @@ var _sent_any: bool = false
 var _last_ping: int = 0
 var _last_rx: int = 0
 var _rtt := PackedInt64Array()
+var patient: bool = false
 
 func _init(clock: Callable = Time.get_ticks_usec) -> void:
 	_clock = clock
@@ -56,7 +58,8 @@ func ping_due(now: int) -> bool:
 	return _sent_any and now - _last_ping >= PING_INTERVAL_USEC
 
 func silent(now: int) -> bool:
-	return _sent_any and now - _last_rx >= SILENCE_USEC
+	var limit: int = LOBBY_EXPIRY_SEC * 1_000_000 if patient else SILENCE_USEC
+	return _sent_any and now - _last_rx >= limit
 
 func take_ping(now: int) -> String:
 	if not is_open() or not ping_due(now): return ""

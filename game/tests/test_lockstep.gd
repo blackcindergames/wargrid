@@ -80,7 +80,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_received_any, test_session_handler, test_for_start]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -468,3 +468,43 @@ func _ring_values_in(value, digests: Array, found: Array) -> void:
 		found.append(value)
 	elif value is String and digests.any(func(d: String) -> bool: return d in value):
 		found.append(value)
+
+func test_received_any(runner) -> bool:
+	var pair = _fresh()
+	runner.check(not pair[1].received_any(), "L9 false after start")
+	pair[1].finish_tick(1, pair[0].snapshot())
+	runner.check(not pair[1].received_any(), "L9 false after own tick")
+	pair[1].receive(_tick_frame(2, 4))
+	runner.check(pair[1].received_any(), "L9 true after a peer tick")
+	return true
+
+func test_session_handler(runner) -> bool:
+	var again := '{"type":"again","seat":2}'
+	var start := '{"type":"start","seats":[1,2],"delay":4,"seed":1,"settings":{}}'
+	var seen: Array = []
+	var pair = _fresh()
+	pair[1].session_handler = func(message: Dictionary) -> bool:
+		seen.append(message)
+		return true
+	pair[1].receive(again)
+	runner.check(seen == [{"type": "again", "seat": 2}] and pair[1].status() == "running", "L10 handled again is dropped")
+	pair[1].receive(_tick_frame(2, 4))
+	runner.check(seen.size() == 1 and pair[1].received_any(), "L10 a tick never reaches the handler")
+	pair = _fresh()
+	pair[1].session_handler = func(_message: Dictionary) -> bool: return false
+	pair[1].receive(start)
+	runner.check(pair[1].status() == "ended_protocol", "L10 unhandled start ends protocol")
+	for frame in [again, start]:
+		pair = _fresh()
+		pair[1].receive(frame)
+		runner.check(pair[1].status() == "ended_protocol", "L10 no handler ends protocol")
+	return true
+
+func test_for_start(runner) -> bool:
+	var text := '{"type":"start","seats":[1,2],"delay":4,"seed":1,"settings":{}}'
+	var built = Lockstep.for_start(2, Wire.decode(text).message)
+	var seats: Array[int] = [1, 2]
+	var direct = Lockstep.new(2, seats, 4)
+	runner.check(built.waiting_for() == direct.waiting_for() and built.can_step(0) == direct.can_step(0), "L11 for_start matches new")
+	runner.check(built.can_step(3) == direct.can_step(3) and built.waiting_for_tick(4) == direct.waiting_for_tick(4), "L11 prefill window matches")
+	return true

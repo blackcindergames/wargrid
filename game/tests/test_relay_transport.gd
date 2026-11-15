@@ -5,7 +5,7 @@ const RelayTransport = preload("res://scripts/net/relay_transport.gd")
 const Wire = preload("res://scripts/net/wire.gd")
 
 func cases() -> Array[Callable]:
-	return [test_never_connected, test_ping_due, test_pong_recorded, test_buffers_fit_frame_cap, test_silence]
+	return [test_never_connected, test_ping_due, test_pong_recorded, test_buffers_fit_frame_cap, test_silence, test_patient_silence]
 
 func test_never_connected(runner) -> bool:
 	var transport = RelayTransport.new()
@@ -47,4 +47,15 @@ func test_silence(runner) -> bool:
 	runner.check(not transport.silent(5_999_999) and transport.silent(6_000_000), "T5 silent after exactly 5 s without a frame")
 	transport._last_rx = 6_000_000
 	runner.check(not transport.silent(10_999_999), "T5 a received frame restarts the window")
+	return true
+
+func test_patient_silence(runner) -> bool:
+	var transport = RelayTransport.new()
+	transport._sent_any = true
+	transport._last_rx = 0
+	transport.patient = true
+	runner.check(not transport.silent(5_000_000) and not transport.silent(899_999_999), "T6 patient waits out a quiet lobby")
+	runner.check(transport.silent(900_000_000), "T6 patient is silent at the lobby expiry")
+	transport.patient = false
+	runner.check(transport.silent(5_000_000), "T6 normal rule is 5 s again")
 	return true

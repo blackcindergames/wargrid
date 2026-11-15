@@ -6,7 +6,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const COMMAND_TYPES: Array[String] = ["move", "stop", "build", "resume_build", "cancel_build", "produce", "cancel_production", "set_rally", "gather", "attack", "attack_move", "choose_faction", "defence_attack"]
 
 func cases() -> Array[Callable]:
-	return [test_round_trip_every_command, test_decode_rejects, test_vectors, test_command_list_matches_simulation]
+	return [test_round_trip_every_command, test_decode_rejects, test_again_decodes, test_vectors, test_command_list_matches_simulation]
 
 func _command(type: String, sim: RefCounted) -> Dictionary:
 	var command := {"tick": 12, "player": 2, "sequence": 7, "type": type}
@@ -68,6 +68,7 @@ func test_decode_rejects(runner) -> bool:
 		"start settings not object": '{"type":"start","seats":[1,2],"delay":4,"seed":1,"settings":[1]}',
 		"fractional seed": '{"type":"start","seats":[1,2],"delay":4,"seed":1.5,"settings":{}}',
 		"hello settings not object": '{"type":"hello","protocol":2,"build":"a","match":"","settings":"x"}',
+		"again fractional seat": '{"type":"again","seat":1.5}',
 		"hello settings null": '{"type":"hello","protocol":2,"build":"a","match":"","settings":null}',
 	}
 	for name in bad:
@@ -75,11 +76,17 @@ func test_decode_rejects(runner) -> bool:
 		runner.check(not decoded.ok and not decoded.error.is_empty(), "W2 rejects " + name)
 	return true
 
+func test_again_decodes(runner) -> bool:
+	var seated: Dictionary = Wire.decode('{"type":"again","seat":2}')
+	runner.check(seated.ok and typeof(seated.message.seat) == TYPE_INT, "W4 again seat is int")
+	runner.check(Wire.decode('{"type":"again"}').ok and Wire.decode('{"type":"over"}').ok, "W4 bare again and over decode")
+	return true
+
 func test_vectors(runner) -> bool:
 	# Exports have no ../protocol next to res://, so CI points the exported suite at the checkout.
 	var dir: String = OS.get_environment("WARGRID_VECTORS") if OS.has_environment("WARGRID_VECTORS") else ProjectSettings.globalize_path("res://").path_join("../protocol/vectors")
 	var files: PackedStringArray = DirAccess.get_files_at(dir)
-	runner.check(files.size() == 16, "W3 vector files found, got %d" % files.size())
+	runner.check(files.size() == 19, "W3 vector files found, got %d" % files.size())
 	for file in files:
 		var vector: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join(file)))
 		runner.check(vector is Dictionary and vector.has("text"), "W3 vector parses " + file)

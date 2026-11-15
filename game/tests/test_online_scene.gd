@@ -19,6 +19,7 @@ const MapData = preload("res://scripts/simulation/map_data.gd")
 const PEER_TICKS: int = 60
 
 class FakeTransport extends RefCounted:
+	var patient: bool = false
 	var frames := PackedStringArray()
 	var sent: Array[String] = []
 	var is_closed: bool = false

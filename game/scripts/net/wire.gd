@@ -5,11 +5,12 @@ const MAX_FRAME_BYTES: int = 65536
 const MAX_SAFE_INT: float = 9007199254740992.0
 const _INT_FIELDS := {
 	"hello": ["protocol"], "welcome": ["seat"], "start": ["delay", "seed"], "tick": ["seat", "tick"],
-	"ping": ["t"], "pong": ["t"], "left": ["seat", "after_tick"], "error": [],
+	"ping": ["t"], "pong": ["t"], "left": ["seat", "after_tick"], "error": [], "over": [], "again": [],
 }
 const _REQUIRED := {
 	"hello": ["protocol", "build", "match"], "welcome": ["seat", "match"], "start": ["seats", "delay", "seed", "settings"],
 	"tick": ["seat", "tick", "commands"], "ping": ["t"], "pong": ["t"], "left": ["seat", "after_tick"], "error": ["reason"],
+	"over": [], "again": [],
 }
 const _COMMAND_INTS := ["tick", "player", "sequence", "builder_id", "building_id", "production_id", "source_id", "target_id"]
 
@@ -36,6 +37,7 @@ static func decode(text: String) -> Dictionary:
 		if not message.has(key): return _fail("missing " + key)
 	for key: Variant in _INT_FIELDS[type]:
 		if not _to_int(message, key): return _fail("non-integer " + key)
+	if type == "again" and message.has("seat") and not _to_int(message, "seat"): return _fail("non-integer seat")
 	if type == "error" and message.reason is not String: return _fail("non-string reason")
 	if type == "start" and not _ints_in(message, "seats"): return _fail("non-integer seats")
 	if (type == "start" or type == "hello") and message.has("settings") and message.settings is not Dictionary: return _fail("invalid settings")
