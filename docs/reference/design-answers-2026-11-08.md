@@ -791,3 +791,13 @@ Last points of the second pass (user, 2026-11-15; 11 questions in three rounds, 
 - **Weapon families: input to the optional combat polish package** (user, 2026-11-15): told apart by geometry and timing, not hue (owner colours take the hues): a ballistic streak already at the target (cannon thicker, the rotary gun as three streaks), a rocket that travels with a fading trail, a flame fan that persists while firing, a beam if lasers ever exist; warm white cores and orange explosive results only.
 - **No spectator or replay interface work until observers exist** (user, 2026-11-15).
 - **Enter on the result panel is Play again, in P2.2** (user, 2026-11-15).
+
+## General's powers light (user, 2026-11-15)
+
+Zero Hour's promotion screens per faction (`data\ini\commandset.ini:1251-1327`, sciences in `data\ini\science.ini`) sorted by what each pick needs. Recommendations throughout.
+
+- **A light package after ground batch A** (user, 2026-11-15; name proposed by the agent): player rank from kills, points and the promotion picks; by then every rank-1 pick exists.
+- **Its picks** (user, 2026-11-15): Emergency Repair for all three factions; China's Artillery Barrage, Cash Hack and Frenzy; the FRC's Rebel Ambush (4 rebels, `data\ini\objectcreationlist.ini:4594`) and Cash Bounty; the rank-1 unlocks (Paladin, Nuke Cannon, Scud Launcher, Marauder, gated by rank again, ending the departure in the blueprint's batch A) and the veteran-start trainings.
+- **Later, with what they need:** powers delivered by aircraft (Paradrop, A-10 strike, Daisy Cutter, MOAB, Leaflet Drop, Spectre, Carpet Bomb, EMP Pulse, Anthrax Bomb), the aircraft picks (Stealth Fighter, Spy Drone), and the batch B ones (Pathfinder, GPS Scrambler, Cluster Mines, Hijacker, Sneak Attack).
+- **USA gets only Emergency Repair at rank 3 in the light package** (user, 2026-11-15): accepted for offline and bot play; noted for the multiplayer balance revisit with M9.
+- **Bots buy and use the light powers in the same package** (user, 2026-11-15): a fixed pick order and simple rules (area powers at the largest enemy group), each with a spec-worded test.
