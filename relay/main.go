@@ -171,6 +171,10 @@ func (h *relay) OnMessage(s *gws.Conn, msg *gws.Message) {
 		c.room = res.seat.r
 	case "tick":
 		c.room.post(tickMsg{c.seat, e.seat, e.tick, bytes.Clone(msg.Bytes())})
+	case "over":
+		c.room.post(overMsg{c.seat})
+	case "again":
+		c.room.post(againMsg{c.seat})
 	case "ping":
 		c.send([]byte(`{"type":"pong","t":`+e.t+`}`), 0)
 	}

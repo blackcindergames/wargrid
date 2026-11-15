@@ -24,7 +24,7 @@ func TestVectors(t *testing.T) {
 			t.Fatal(err)
 		}
 		e := parseEnvelope([]byte(v.Text))
-		clientType := map[string]bool{"hello": true, "tick": true, "ping": true}[v.Message.Type]
+		clientType := map[string]bool{"hello": true, "tick": true, "ping": true, "over": true, "again": true}[v.Message.Type]
 		want := v.Valid == nil && clientType
 		if (e != nil) != want {
 			t.Errorf("%s: parsed=%v want=%v", filepath.Base(f), e != nil, want)
@@ -45,6 +45,8 @@ func TestParseRules(t *testing.T) {
 		`{"type":"welcome","seat":1,"match":"ABC234"}`:                                                 false,
 		`{"type":"hello","protocol":2,"build":"a","match":"","settings":{ "map" : "x" }}`:              true,
 		`{"type":"hello","protocol":2,"build":"a","match":"ABC234"}`:                                   true,
+		`{"type":"over"}`:  true,
+		`{"type":"again"}`: true,
 	}
 	for in, want := range cases {
 		if (parseEnvelope([]byte(in)) != nil) != want {

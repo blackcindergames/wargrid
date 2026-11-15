@@ -101,6 +101,8 @@ func parseEnvelope(text []byte) *envelope {
 		if ok1 && ok2 && ok3 && validHash(o) {
 			return &envelope{typ: typ, seat: s, tick: t}
 		}
+	case "over", "again":
+		return &envelope{typ: typ}
 	case "ping":
 		if n, ok := o["t"].(json.Number); ok {
 			if _, err := n.Float64(); err == nil {

@@ -38,6 +38,8 @@ type seat struct {
 	frames   int
 	bytes    int
 	dead     bool // rejected: ignore further input, still counts until the socket closes
+	over     bool
+	again    bool
 }
 
 type joinReq struct {
@@ -60,6 +62,10 @@ type tickMsg struct {
 
 type leaveMsg struct{ s *seat }
 
+type overMsg struct{ s *seat }
+
+type againMsg struct{ s *seat }
+
 // room owns all its state in run(); connections talk to it only through channels.
 type room struct {
 	code     string
@@ -77,6 +83,8 @@ type room struct {
 	expiresAt time.Time
 	expiry    *time.Timer
 	expired   bool
+	parked    bool // every seat sent over; the park limit runs on expiry
+	draining  bool
 }
 
 func (r *room) run() {
@@ -99,7 +107,8 @@ func (r *room) run() {
 			}
 		case <-drain:
 			drain = nil
-			if !r.started { // no new connections arrive while draining, so the lobby can never fill
+			r.draining = true
+			if !r.started || r.parked { // no new connections arrive while draining, so the lobby can never fill
 				r.closeAll()
 			}
 		case <-quit:
@@ -113,6 +122,10 @@ func (r *room) run() {
 			switch ev := ev.(type) {
 			case tickMsg:
 				r.forward(ev)
+			case overMsg:
+				r.onOver(ev.s)
+			case againMsg:
+				r.onAgain(ev.s)
 			case leaveMsg:
 				if r.leave(ev.s) {
 					return
@@ -149,6 +162,15 @@ func (r *room) recoverCrash() {
 }
 
 func (r *room) expire() {
+	if r.parked {
+		r.expired = true
+		slog.Info("room expired", "code", r.code)
+		for _, s := range r.seats {
+			s.dead = true
+			s.c.reject("room expired")
+		}
+		return
+	}
 	if r.started {
 		return
 	}
@@ -211,9 +233,8 @@ func (r *room) forward(t tickMsg) {
 	if s.dead {
 		return
 	}
-	if !r.started || t.seat != s.n || t.tick != max(s.lastTick, inputDelay-1)+1 {
-		s.dead = true
-		s.c.reject("invalid message")
+	if !r.started || s.over || t.seat != s.n || t.tick != max(s.lastTick, inputDelay-1)+1 {
+		r.refuse(s)
 		return
 	}
 	if s.lastTick == 0 {
@@ -229,6 +250,80 @@ func (r *room) forward(t tickMsg) {
 			}
 		}
 	}
+}
+
+func (r *room) refuse(s *seat) {
+	s.dead = true
+	s.c.reject("invalid message")
+}
+
+func (r *room) onOver(s *seat) {
+	if s.dead || r.expired {
+		return
+	}
+	if !r.started || s.over || s.lastTick == 0 {
+		r.refuse(s)
+		return
+	}
+	s.over = true
+	if r.everySeat(func(o *seat) bool { return o.over }) {
+		r.park()
+	}
+}
+
+// everySeat reports whether all cfg.seats seats are still present and match ok.
+func (r *room) everySeat(ok func(*seat) bool) bool {
+	if len(r.seats) < r.cfg.seats {
+		return false
+	}
+	for _, o := range r.seats {
+		if !ok(o) {
+			return false
+		}
+	}
+	return true
+}
+
+func (r *room) park() {
+	r.parked = true
+	r.expiresAt = time.Now().Add(r.cfg.lobby)
+	r.expiry.Reset(r.cfg.lobby)
+	for _, s := range r.seats {
+		s.c.dl.hold(r.expiresAt.Add(expiryGrace))
+	}
+	if r.draining {
+		r.closeAll()
+	}
+}
+
+func (r *room) onAgain(s *seat) {
+	if s.dead || r.expired || r.draining {
+		return
+	}
+	if !s.over || s.again {
+		r.refuse(s)
+		return
+	}
+	s.again = true
+	echo := []byte(fmt.Sprintf(`{"type":"again","seat":%d}`, s.n))
+	for _, o := range r.seats {
+		if o != s {
+			o.c.send(echo, 0)
+		}
+	}
+	if r.parked && r.everySeat(func(o *seat) bool { return o.again }) {
+		r.rematch()
+	}
+}
+
+// rematch keeps frame and byte counts so MATCH END reports the whole room.
+func (r *room) rematch() {
+	for _, s := range r.seats {
+		s.lastTick, s.over, s.again = 0, false, false
+	}
+	r.parked = false
+	slog.Info("rematch", "code", r.code)
+	r.start()
 }
 
 // leave reports whether the room is now empty and has been removed.

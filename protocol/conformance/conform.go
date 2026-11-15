@@ -94,7 +94,60 @@ func closeAll(cls []*client) {
 	}
 }
 
-const errInvalid = `{"type":"error","reason":"invalid message"}`
+const (
+	errInvalid  = `{"type":"error","reason":"invalid message"}`
+	roomExpired = `{"type":"error","reason":"room expired"}`
+	over        = `{"type":"over"}`
+	again       = `{"type":"again"}`
+)
+
+func againFrom(seat int) string { return fmt.Sprintf(`{"type":"again","seat":%d}`, seat) }
+
+// rejectAfterOver: seat 1 ticks 4 and sends over, optionally again, then text; expects error, close, and left(1, 4).
+func rejectAfterOver(url, text string, withAgain bool) {
+	cls, _ := room(url, 2, "abc")
+	defer closeAll(cls)
+	cls[0].say(tick(1, 4, ""))
+	expect(cls[1], tick(1, 4, ""))
+	cls[0].say(over)
+	if withAgain {
+		cls[0].say(again)
+		expect(cls[1], againFrom(1))
+	}
+	cls[0].say(text)
+	expect(cls[0], errInvalid)
+	expectClosed(cls[0])
+	expect(cls[1], left(1, 4))
+}
+
+// parkedRoom: both seats tick 4, hear each other and send over.
+func parkedRoom(url string) []*client {
+	cls, _ := room(url, 2, "abc")
+	cls[0].say(tick(1, 4, ""))
+	cls[1].say(tick(2, 4, ""))
+	expect(cls[1], tick(1, 4, ""))
+	expect(cls[0], tick(2, 4, ""))
+	cls[0].say(over)
+	cls[1].say(over)
+	return cls
+}
+
+// rematchStart: both seats send again, hear the other's, and get one start with a shared seed.
+func rematchStart(cls []*client, settings string) int {
+	cls[0].say(again)
+	expect(cls[1], againFrom(1))
+	cls[1].say(again)
+	expect(cls[0], againFrom(2))
+	seed := expectStart(cls[0], 2, settings)
+	check(expectStart(cls[1], 2, settings) == seed, "seats got different rematch seeds")
+	return seed
+}
+
+// quiet: nothing arrives within d.
+func quiet(cl *client, d time.Duration) {
+	got, err := cl.hear(d)
+	check(err != nil && err != errClosed, "want nothing for %v, got %q err %v", d, got, err)
+}
 
 func left(seat, after int) string {
 	return fmt.Sprintf(`{"type":"left","seat":%d,"after_tick":%d}`, seat, after)
@@ -349,6 +402,83 @@ func defaultCases() []tcase {
 			expect(over, errInvalid)
 			expectClosed(over)
 		}},
+		{"rematch_before_hello", func(url string) {
+			for _, text := range []string{over, again} {
+				cl := must(dial(url))
+				cl.say(text)
+				expect(cl, errInvalid)
+				expectClosed(cl)
+				cl.close()
+			}
+		}},
+		{"over_in_lobby", func(url string) {
+			cl := must(dial(url))
+			defer cl.close()
+			cl.say(hello("", "abc", 2))
+			must(cl.hear(wait))
+			cl.say(over)
+			expect(cl, errInvalid)
+			expectClosed(cl)
+		}},
+		{"over_before_first_tick", func(url string) { rejectAfterJoin(url, over, 3) }},
+		{"over_twice", func(url string) { rejectAfterOver(url, over, false) }},
+		{"tick_after_over", func(url string) { rejectAfterOver(url, tick(1, 5, ""), false) }},
+		{"again_before_over", func(url string) { rejectAfterJoin(url, again, 4, tick(1, 4, "")) }},
+		{"again_twice", func(url string) { rejectAfterOver(url, again, true) }},
+		{"tick_after_again", func(url string) { rejectAfterOver(url, tick(1, 5, ""), true) }},
+		{"binary_after_over", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			cls[0].say(tick(1, 4, ""))
+			cls[1].say(tick(2, 4, ""))
+			expect(cls[1], tick(1, 4, ""))
+			expect(cls[0], tick(2, 4, ""))
+			cls[0].say(over)
+			cls[0].sayBinary([]byte(again))
+			expectClosed(cls[0])
+			expect(cls[1], left(1, 4))
+		}},
+		{"rematch_round_trip", func(url string) {
+			settings := `{"map":"x"}`
+			cls, code, s1 := roomWith(url, 2, "abc", settings)
+			defer closeAll(cls)
+			cls[0].say(tick(1, 4, ""))
+			cls[1].say(tick(2, 4, ""))
+			expect(cls[1], tick(1, 4, ""))
+			expect(cls[0], tick(2, 4, ""))
+			cls[0].say(over)
+			cls[1].say(tick(2, 5, ""))
+			expect(cls[0], tick(2, 5, ""))
+			cls[1].say(over)
+			cls[0].say(`{"type":"ping","t":1}`)
+			expect(cls[0], `{"type":"pong","t":1}`)
+			cls[0].say(again)
+			expect(cls[1], againFrom(1))
+			quiet(cls[0], 200*time.Millisecond)
+			cls[1].say(again)
+			expect(cls[0], againFrom(2))
+			s2 := expectStart(cls[0], 2, settings)
+			check(expectStart(cls[1], 2, settings) == s2, "seats got different rematch seeds")
+			check(s2 != s1, "rematch kept seed %d", s1)
+			cls[0].say(tick(1, 4, ""))
+			cls[1].say(tick(2, 4, ""))
+			expect(cls[1], tick(1, 4, ""))
+			expect(cls[0], tick(2, 4, ""))
+			third := must(dial(url))
+			defer third.close()
+			third.say(hello(code, "abc", 2))
+			expect(third, `{"type":"error","reason":"match full"}`)
+		}},
+		{"rematch_needs_every_seat", func(url string) {
+			cls := parkedRoom(url)
+			defer closeAll(cls)
+			cls[1].close()
+			expect(cls[0], left(2, 4))
+			cls[0].say(again)
+			cls[0].say(`{"type":"ping","t":1}`)
+			expect(cls[0], `{"type":"pong","t":1}`)
+			quiet(cls[0], 300*time.Millisecond)
+		}},
 		{"seed_in_range_and_varies", func(url string) {
 			seeds := map[int]bool{}
 			for range 3 {
@@ -465,6 +595,41 @@ func silenceCases() []tcase {
 			defer closeAll(cls)
 			got, err := cls[1].hear(3 * silence)
 			check(err != nil && err != errClosed, "want no frame, got %q err %v", got, err)
+			cls[0].say(tick(1, 4, ""))
+			expect(cls[1], tick(1, 4, ""))
+		}},
+		{"over_keeps_silence_until_every_seat", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			cls[0].say(tick(1, 4, ""))
+			cls[1].say(tick(2, 4, ""))
+			expect(cls[1], tick(1, 4, ""))
+			cls[0].say(over)
+			got, err := pingUntil(cls[1], silence+wait)
+			check(err == nil && got == left(1, 4), "want %q, got %q err %v", left(1, 4), got, err)
+		}},
+		{"parked_room_expires", func(url string) {
+			cls := parkedRoom(url)
+			defer closeAll(cls)
+			start := time.Now()
+			got, err := pingUntil(cls[1], 3*silence)
+			check(err != nil && err != errClosed, "want only pongs for %v, got %q err %v", 3*silence, got, err)
+			cls[0].say(`{"type":"ping","t":1}`)
+			expect(cls[0], `{"type":"pong","t":1}`)
+			got, err = pingUntil(cls[1], lobbyLimit+time.Second-time.Since(start))
+			check(err == nil && got == roomExpired, "seat 2 want room expired, got %q err %v", got, err)
+			expect(cls[0], roomExpired)
+			check(time.Since(start) <= lobbyLimit+time.Second, "expired after %v", time.Since(start))
+			expectClosed(cls[0])
+			for got, err = cls[1].hear(wait); err == nil && strings.HasPrefix(got, `{"type":"pong"`); got, err = cls[1].hear(wait) {
+			}
+			check(err == errClosed, "seat 2 want close, got %q err %v", got, err)
+		}},
+		{"rematch_start_window", func(url string) {
+			cls := parkedRoom(url)
+			defer closeAll(cls)
+			rematchStart(cls, "{}")
+			quiet(cls[1], 3*silence)
 			cls[0].say(tick(1, 4, ""))
 			expect(cls[1], tick(1, 4, ""))
 		}},
