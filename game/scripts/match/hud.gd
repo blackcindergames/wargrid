@@ -155,4 +155,9 @@ func _enemy_summary(state: Dictionary) -> String:
 func _result_text(match_state: Dictionary) -> String:
 	if match_state.status == "draw": return "Draw"
 	if match_state.status != "won": return ""
-	return "Victory" if match_state.winner == _screen.driver.sim.team_of(_screen.local_player) else "Defeat"
+	return "Victory" if match_state.winner == _local_team() else "Defeat"
+
+func _local_team() -> int:
+	for player: Dictionary in _screen.shown_state.players:
+		if player.id == _screen.local_player: return player.team
+	return 0

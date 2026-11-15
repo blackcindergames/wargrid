@@ -3,15 +3,15 @@
 Plan: [sim boundary SB1-SB2](../superpowers/plans/2026-11-15-sim-boundary-sb1-sb2.md). Resume record below is overwritten at each checkpoint; evidence rows are append-only.
 
 ```text
-Resume record (updated 2026-11-15 21:00)
-Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / Task 2 uncommitted
-Last green task / next incomplete task: Task 1 (base evidence) green; Task 2 green, uncommitted / Task 3
-Changed paths since last commit: game/scripts/match/offline_driver.gd, game/tests/test_base_scene.gd, game/tests/test_skirmish_scene.gd, docs/reference/sim-boundary-verification.md (build/sb/ is untracked output)
-Last command / cases / checks / failures / exit / marker: base suite, 955 cases, 146367 checks, 0 failures, exit 0, TESTS PASSED 146367; netplay match exit 0, NETPLAY PASSED match; team match exit 0, TEAM MATCH won tick=38786 winner=2 units_peak=268
+Resume record (updated 2026-11-15 night)
+Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / Task 3 uncommitted on top of the Task 2 commit 2177992
+Last green task / next incomplete task: Task 3 green, uncommitted / Task 4 (commit Task 3 first)
+Changed paths since last commit: game/scripts/match/orders.gd, game/scripts/match/match_screen.gd, game/scripts/match/hud.gd, game/tests/test_skirmish_scene.gd, docs/reference/sim-boundary-verification.md (build/sb/ is untracked output)
+Last command / cases / checks / failures / exit / marker: full suite, 961 cases, 146374 checks, 0 failures, exit 0, TESTS PASSED 146374; run_lint, run_warnings, test_sim_boundary.py exit 0
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); no rendered benchmark rerun, world_view.gd is not touched; gate 1 and gate 2 reviews pending
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 3 (commit Task 2 first). Plan path:line are 32748c8; use this file's Line map.
+Next exact action: Task 4. Plan path:line are 32748c8; use this file's Line map. Task 3 added shown_state/shown_over in match_screen.gd, Orders._unit, Hud._local_team.
 ```
 
 ## Evidence
@@ -26,8 +26,13 @@ Next exact action: Task 3 (commit Task 2 first). Plan path:line are 32748c8; use
 | 2026-11-15 | `=order_voice` / `=playtest` / `=announcer` | exit 0 each: 14/97, 44/930, 21/68 cases/checks | Task 2, uncommitted |
 | 2026-11-15 | `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py` | exit 0, 0, 0 | Task 2, uncommitted |
 | 2026-11-15 | Task 2 review merge rerun: `sb1_`, `scene`, `order_voice`, `playtest`, `announcer`, `run_lint.sh`, `run_warnings.sh` (Sonnet and Codex reviews: no critical or important findings) | exit 0 each; 2/3536/97/930/68 checks, 0 failures | Task 2, uncommitted |
+| 2026-11-15 | `WARGRID_TEST_ONLY=sb1_` (red first: RB1 11 snapshots, RB2 6, RB4 script error, RB6, RB9 missing `shown_over`; then green) | exit 0, CASES 6 CHECKS 15 FAILURES 0 | Task 3, uncommitted |
+| 2026-11-15 | `WARGRID_TEST_ONLY=scene` (one red setup: N1 swapped the simulation without `_refresh()`; fixed with `main._refresh()`) | exit 0, CASES 119 CHECKS 3549 FAILURES 0 | Task 3, uncommitted |
+| 2026-11-15 | full `sh tools/run_tests.sh`, `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py` | exit 0 each; CASES 961 CHECKS 146374 FAILURES 0, `TESTS PASSED 146374` | Task 3, uncommitted |
 
-`sync_sequence(main)` added after direct sends in: `test_production_ui` (Bs3, after the builds), `test_base_scene.gd` CancelBuild case (after the foundation send), M3 case (after the factory build), `test_rally_input_and_marker` (R1), `test_hud_strings_use_display_names` (N1), `test_frc_laborer_right_click_pile` (K13). Expected values unchanged.
+| 2026-11-15 | Task 3 review merge rerun: RB4 test tightened (shown view picks the dead unit before input, `_refresh()` before the prune check); `sb1_`, `scene`, `run_lint.sh`, `run_warnings.sh` (Sonnet: none; Codex: one P2 test fix) | exit 0 each; 16 and 3550 checks, 0 failures | Task 3, uncommitted |
+
+`sync_sequence(main)` added after direct sends in: `test_production_ui` (Bs3, after the builds), `test_base_scene.gd` CancelBuild case (after the foundation send), M3 case (after the factory build), `test_rally_input_and_marker` (R1), `test_hud_strings_use_display_names` (N1), `test_frc_laborer_right_click_pile` (K13). Task 3 added `main._refresh()` after the sim swap in N1 and before K4's team line. Expected values unchanged.
 
 Base traces: `build/sb/base/{replay,economy,combat,team}.tsv`, `build/sb/base/netplay/s1.tsv` (untracked). No rendered benchmark rerun: drawing code (`world_view.gd`) is not touched.
 

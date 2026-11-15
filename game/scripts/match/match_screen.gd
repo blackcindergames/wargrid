@@ -37,6 +37,7 @@ var orders: RefCounted = Orders.new(self)
 var hud: RefCounted
 var local_player: int = 1
 var stepped_results: Array = []
+var shown_state: Dictionary = {}
 var _shown_note: String = ""
 var _camera_bounds: Rect2
 @onready var _view: Node2D = $WorldView
@@ -134,7 +135,7 @@ func _create_world() -> void:
 
 func playtest_context() -> Dictionary:
 	var camera: Vector2 = Iso.plane_to_world(_camera.position)
-	return {"tick": driver.sim.tick(), "camera": [camera.x, camera.y], "selected": orders.view_selection(), "over": driver.over(), "menu": _pause.visible}
+	return {"tick": shown_state.tick, "camera": [camera.x, camera.y], "selected": orders.view_selection(), "over": driver.over(), "menu": _pause.visible}
 
 func playtest_match() -> Dictionary:
 	var played: Dictionary = driver.match_log()
@@ -155,7 +156,7 @@ func menu_open() -> bool:
 	return _pause.visible or _playtest.holds_match()
 
 func _escape_pending() -> bool:
-	return not driver.sim.match_over() and orders.escape_pending()
+	return not shown_over() and orders.escape_pending()
 
 func _leave() -> void:
 	driver.leave()
@@ -262,7 +263,11 @@ func _note() -> String:
 	# The rematch line changes without a tick, so a finished match still redraws its panel.
 	return hud.note + driver.notice() + driver.rematch_line()
 
+func shown_over() -> bool:
+	return shown_state.get("match") != null and shown_state.match.status in ["won", "draw"]
+
 func _show(state: Dictionary) -> void:
+	shown_state = state
 	_shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
@@ -277,7 +282,7 @@ func _show(state: Dictionary) -> void:
 
 func _show_hint(payload: Dictionary) -> void:
 	var point: Variant = orders._hint_point(payload)
-	if point != null: _view.add_hint(point, driver.sim.tick())
+	if point != null: _view.add_hint(point, shown_state.tick)
 
 func _submit(payload: Dictionary) -> void:
 	_show_hint(payload)
