@@ -30,6 +30,7 @@ var _connect_msec: int = 0
 var _match_map: String = MatchSettings.TEST_MAP
 var _chosen: Array[int] = []
 var _match_seed: int = 0
+var _rematch_state: String = ""
 var state_rows := PackedStringArray()
 
 func _ready() -> void:
@@ -125,9 +126,19 @@ func _start(message: Dictionary) -> void:
 	print("NETCLIENT MAP ", id, " SEED ", message.seed, " STARTS ", ",".join(_chosen.map(str)) if not _chosen.is_empty() else "-")
 	_sim = _match_sim(id, _chosen)
 	_lockstep = Lockstep.new(_seat, seats, message.delay)
+	_lockstep.session_handler = _on_session
 	_lockstep.send = _transport.send_text
 	_lockstep.submit({"type": "choose_faction", "faction": _args.get("faction", Skirmish.default_faction())})
 	_lockstep.start(_sim.snapshot())
+
+func _on_session(message: Dictionary) -> bool:
+	if message.type == "again":
+		if message.get("seat", _seat) != _seat: print("NETCLIENT AGAIN SEAT ", message.seat)
+		return true
+	if _rematch_state != "waiting": return false
+	_rematch_state = "done"
+	_start(message) # swap now so the peer's tick 4 in the same poll batch reaches the new lockstep
+	return true
 
 func _match_sim(id: String, chosen: Array[int]) -> Simulation:
 	return Skirmish.create(true, "human", {}, MatchSettings.map_path(id), chosen)
@@ -144,12 +155,24 @@ func _run_steps(limit: int) -> void:
 		if _ending: return
 		if _transport.closed(): _lockstep.set_relay_lost()
 		if _sim.match_over():
+			if _rematch_step(): return
 			_finish("match_over", "")
 			return
 		if _lockstep.status().begins_with("ended"):
 			_finish(_lockstep.status(), _lockstep.end_reason())
 			return
 		if not _step_once(): break
+
+func _rematch_step() -> bool:
+	if not _args.has("rematch") or _rematch_state == "done": return false
+	if _rematch_state == "":
+		_rematch_state = "waiting"
+		print("NETCLIENT OVER TICK ", _sim.tick())
+		_transport.send_text(Wire.encode({"type": "over"}))
+		_transport.send_text(Wire.encode({"type": "again"}))
+	if _lockstep.left_seat() != 0 or _lockstep.status().begins_with("ended"):
+		_finish(_lockstep.status() if _lockstep.status().begins_with("ended") else "ended_left", _lockstep.end_reason())
+	return true
 
 func _step_once() -> bool:
 	var tick: int = _sim.tick()

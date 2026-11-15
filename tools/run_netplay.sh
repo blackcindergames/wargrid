@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: run_netplay.sh match|kill|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term
+# usage: run_netplay.sh match|rematch|kill|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term
 scenario=$1
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 out=${NETPLAY_OUT:-$(mktemp -d)}
@@ -91,6 +91,29 @@ case $scenario in
     [ "$(end_tick s1)" = 9013 ] || fail "terminal tick $(end_tick s1), pinned 9013"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     echo "match terminal tick $(end_tick s1)" ;;
+  rematch)
+    start_relay; start_pair "--rematch" "--rematch"
+    wait_exit "$pid1" $((2 * match_wait)); wait_exit "$pid2" $((2 * match_wait))
+    expect_end s1 match_over; expect_end s2 match_over
+    [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
+    [ "$(end_tick s1)" = 9013 ] || fail "second match terminal tick $(end_tick s1), pinned 9013"
+    for name in s1 s2; do
+      [ "$(grep -c '^NETCLIENT MAP' "$out/$name.log")" = 2 ] || fail "$name: expected two MAP lines"
+      [ "$(grep -c '^NETCLIENT OVER TICK 9013$' "$out/$name.log")" = 1 ] || fail "$name: expected one OVER TICK 9013"
+      grep -q '^NETCLIENT AGAIN SEAT' "$out/$name.log" || fail "$name: no AGAIN line"
+    done
+    first=$(grep '^NETCLIENT MAP' "$out/s1.log" | head -n 1); second=$(grep '^NETCLIENT MAP' "$out/s1.log" | tail -n 1)
+    [ "$first" != "$second" ] || fail "both matches share the seed: $first"
+    [ "$(grep '^NETCLIENT MAP' "$out/s2.log" | tail -n 1)" = "$second" ] || fail "second MAP lines differ across seats"
+    [ "$(grep -c 'INFO rematch' "$out/relay.log")" = 1 ] || fail "expected one rematch line in relay.log"
+    i=0
+    until grep -q 'MATCH END' "$out/relay.log"; do
+      i=$((i + 1)); [ $i -lt 25 ] || fail "no MATCH END within 5 s"
+      sleep 0.2
+    done
+    [ "$(grep -c 'MATCH END' "$out/relay.log")" = 1 ] || fail "expected one MATCH END"
+    oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
+    echo "rematch terminal tick $(end_tick s1)" ;;
   kill)
     start_relay; start_pair "" "--exit-at-tick 600"
     wait_exit "$pid1" 60

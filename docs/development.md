@@ -109,6 +109,7 @@ The relay is a Go program in `relay/` (net/http + [gws](https://github.com/lxzan
 (cd relay && go test -race ./... && golangci-lint run)   # unit tests, protocol vectors, lint (config relay/.golangci.yml)
 sh tools/run_conformance.sh                               # black-box protocol suite (protocol/conformance), prints CONFORMANCE PASSED <cases>
 sh tools/run_netplay.sh match                             # two headless Godot clients through a local relay
+sh tools/run_netplay.sh rematch                            # same pair plays twice in one room (over, again, new seed)
 ```
 
 Spike knobs, all off by default: `WARGRID_SEATS` (seats per room), `WARGRID_BATCH_MS` (one newline-joined message per recipient per interval; the current Godot client cannot read it), plus the test-only `WARGRID_TEST_DELAY_MS` and `WARGRID_SILENCE_MS`. A set but non-integer knob exits with status 2.
