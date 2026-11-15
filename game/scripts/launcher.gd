@@ -192,6 +192,13 @@ func show_page(page_name: String) -> void:
 	for each in PAGES: get_node("Pages/" + each).visible = each == page_name
 	get_node("Sidebar/Nav/" + _nav_of(page_name)).button_pressed = true
 	if page_name == "Credits": _fill_credits()
+	# Enter only reaches a focused field; a link-filled code would otherwise ignore it.
+	if page_name == "Join" and is_inside_tree(): _focus_code()
+
+func _focus_code() -> void:
+	var code: LineEdit = $Pages/Join/Body/Code
+	code.grab_focus()
+	code.caret_column = code.text.length()
 
 static func _nav_of(page_name: String) -> String:
 	return "Play" if page_name == "Waiting" else page_name

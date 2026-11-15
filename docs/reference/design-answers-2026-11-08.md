@@ -841,3 +841,11 @@ Confirmed calls in the [design](../superpowers/specs/2026-11-15-p2.2-quick-remat
 - Slice 1 has no stats on the result panel and no protocol pings; the panel shows the outcome, Play again and Change setup (user, 2026-11-15).
 - Shipped wording that the user may change at the playtest (agent): "The room closed", "Connecting… N s", "closes in M:SS".
 
+## Result panel A/B (user, 2026-11-15)
+
+After the P2.2 playtest; four variants from an art and UX review (private, `~/projects/wargrid-overnight-work/p2.2-rematch/result-panel-variants.md`) compared on a browser A/B page.
+
+- **P2.2 ships variant A** (user, 2026-11-15): the card fixed, opaque `#2a2a2a` with a 1 px `#808080` border, 24 px padding, 30 px ExtraBold outcome, 144x36 buttons 12 px apart and centred, black 60 % dim; a waiting Play again turns grey (`#666a6c`) instead of a dead amber.
+- **The status row is always reserved**, offline too, so the card keeps one height in every state (user, 2026-11-15).
+- **Labels stay "Play again" and "Back to menu"** (user, 2026-11-15); "Back to menu" replaced "Change setup", which was confusing; "Rematch" and "Leave" were compared and not taken.
+- **Target look for slice 2 and P2.3a: variant B, the match slab** (square, HUD v4 tokens, a 4 px edge in the winner's colour, stats as 2x2 rows, black 40 % dim), **with the buttons centred** instead of bottom right (user, 2026-11-15); built with the stats in slice 2 on P2.3a's shared theme variations, not as overrides in the panel.

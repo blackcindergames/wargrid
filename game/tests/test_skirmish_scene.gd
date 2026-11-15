@@ -429,11 +429,18 @@ func test_result_panel_layout(runner) -> bool:
 		runner.check(card.encloses(outcome.get_global_rect()) and card.encloses(status.get_global_rect()) and card.encloses(again) and card.encloses(setup), "R1 card holds its texts and buttons at %s" % size)
 		runner.check(outcome.get_global_rect().end.y <= status.get_global_rect().position.y and status.get_global_rect().end.y <= again.position.y, "R1 outcome above status above buttons at %s" % size)
 		runner.check(again.size.x > 0.0 and setup.size.x > 0.0 and not again.intersects(setup), "R1 the two buttons do not intersect at %s" % size)
+		runner.check(card.grow(-16.0).encloses(again) and card.grow(-16.0).encloses(setup) and card.grow(-16.0).encloses(outcome.get_global_rect()), "R1 at least 16 px between the card edge and its contents at %s, card %s" % [size, card])
+		runner.check(again.size.y <= 40.0 and setup.size.y <= 40.0 and again.position.x - card.position.x >= 16.0, "R1 compact buttons at most 40 px tall at %s, got %.0f" % [size, again.size.y])
 		var index: int = panel.get_index()
 		runner.check(index < main.get_node("HUD/PerfOverlay").get_index() and index < main.get_node("HUD/Playtest").get_index() and index < main.get_node("HUD/PauseMenu").get_index(), "R1 the panel draws below the overlays at %s" % size)
+		var tall: float = main.get_node("HUD/ResultPanel/Center/Card").size.y
 		panel.show_result("Victory", "", true)
 		await runner.process_frame
-		runner.check(not status.visible, "R1 an empty status is hidden at %s" % size)
+		runner.check(is_equal_approx(main.get_node("HUD/ResultPanel/Center/Card").size.y, tall), "R1 the card keeps its height without a status line at %s (user, 2026-11-15)" % size)
+		panel.show_result("Victory", "Waiting for your friend…", false)
+		await runner.process_frame
+		var waiting: StyleBox = main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain").get_theme_stylebox("disabled")
+		runner.check(waiting is StyleBoxFlat and (waiting as StyleBoxFlat).bg_color.is_equal_approx(Color("#666a6c")), "R1 a waiting Play again is grey, not amber, at %s" % size)
 		port.queue_free()
 	return true
 
@@ -507,7 +514,7 @@ func test_change_setup_leaves(runner) -> bool:
 	_arena(main)
 	_victory(main)
 	main.get_node(CHANGE_SETUP).pressed.emit()
-	runner.check(scenes == [main.LAUNCHER_SCENE], "R3 Change setup leaves for the launcher, got %s" % [scenes])
+	runner.check(scenes == [main.LAUNCHER_SCENE], "R3 Back to menu leaves for the launcher, got %s" % [scenes])
 	DirAccess.remove_absolute(AudioSettings.path)
 	AudioSettings.path = saved
 	main.free()
@@ -524,7 +531,7 @@ func test_result_panel_unit(runner) -> bool:
 	runner.check(panel.visible and status.text == "Your friend left" and status.visible and again.disabled, "R4 a closed room disables Play again")
 	runner.check(not panel.takes_enter(_enter(KEY_ENTER)), "R4 a disabled Play again takes no Enter")
 	panel.show_result("Draw", "", true)
-	runner.check(not again.disabled and not status.visible and panel.takes_enter(_enter(KEY_ENTER)) and panel.takes_enter(_enter(KEY_KP_ENTER)), "R4 Enter accepted when enabled")
+	runner.check(not again.disabled and status.visible and status.text.is_empty() and panel.takes_enter(_enter(KEY_ENTER)) and panel.takes_enter(_enter(KEY_KP_ENTER)), "R4 Enter accepted when enabled")
 	runner.check(not panel.takes_enter(_enter(KEY_SPACE)), "R4 other keys are ignored")
 	var echo := _enter(KEY_ENTER)
 	echo.echo = true
