@@ -31,7 +31,7 @@ func (c *slowReader) OnMessage(_ *gws.Conn, m *gws.Message) {
 }
 
 func TestSlowReaderBacklogIsCapped(t *testing.T) {
-	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: config{seats: 2}}, silence: time.Minute}
+	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: testConfig()}}
 	srv := httptest.NewServer(newServer(h).Handler)
 	defer srv.Close()
 	sr := &slowReader{welcome: make(chan string, 1)}

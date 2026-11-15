@@ -11,8 +11,12 @@ import (
 
 const wait = 3 * time.Second
 
-// silence is the relay's silence timeout (WARGRID_SILENCE_MS); set by -silence.
-var silence = 10 * time.Second
+// The relay's timeouts (WARGRID_SILENCE_MS, WARGRID_HELLO_MS, WARGRID_LOBBY_MS); set by -silence, -hello, -lobby.
+var (
+	silence    = 10 * time.Second
+	helloLimit = 5 * time.Second
+	lobbyLimit = 15 * time.Minute
+)
 
 type failure struct{ msg string }
 
@@ -357,30 +361,136 @@ func defaultCases() []tcase {
 	}
 }
 
-func silenceCases() []tcase {
-	return []tcase{{"silence_announces_left", func(url string) {
-		cls, _ := room(url, 2, "abc")
-		defer closeAll(cls)
-		// seat 2 keeps pinging past the server's silence timeout; seat 1 stays silent
-		for i := 0; time.Duration(i)*100*time.Millisecond < silence+500*time.Millisecond; i++ {
-			cls[1].say(fmt.Sprintf(`{"type":"ping","t":%d}`, i))
-			time.Sleep(100 * time.Millisecond)
-		}
-		var got []string
-		for {
-			s, err := cls[1].hear(200 * time.Millisecond)
-			if err != nil {
-				break
+// pingUntil sends a JSON ping every 100 ms and returns the first frame that is not a pong, or errClosed.
+func pingUntil(cl *client, limit time.Duration) (string, error) {
+	tk := time.NewTicker(100 * time.Millisecond)
+	defer tk.Stop()
+	end := time.After(limit)
+	for i := 0; ; i++ {
+		select {
+		case <-tk.C:
+			_ = cl.say(fmt.Sprintf(`{"type":"ping","t":%d}`, i))
+		case s, ok := <-cl.in:
+			if !ok {
+				return "", errClosed
 			}
-			got = append(got, s)
+			if !strings.HasPrefix(s, `{"type":"pong"`) {
+				return s, nil
+			}
+		case <-end:
+			return "", fmt.Errorf("nothing but pongs for %v", limit)
 		}
-		found := false
-		for _, s := range got {
-			found = found || s == left(1, 3)
-		}
-		check(found, "no left in %v", got)
-		expectClosed(cls[0])
-	}}}
+	}
+}
+
+func silenceCases() []tcase {
+	return []tcase{
+		{"silence_announces_left", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			cls[0].say(tick(1, 4, ""))
+			// seat 2 keeps pinging past the server's silence timeout; seat 1 stays silent after its tick
+			for i := 0; time.Duration(i)*100*time.Millisecond < silence+500*time.Millisecond; i++ {
+				cls[1].say(fmt.Sprintf(`{"type":"ping","t":%d}`, i))
+				time.Sleep(100 * time.Millisecond)
+			}
+			var got []string
+			for {
+				s, err := cls[1].hear(200 * time.Millisecond)
+				if err != nil {
+					break
+				}
+				got = append(got, s)
+			}
+			found := false
+			for _, s := range got {
+				found = found || s == left(1, 4)
+			}
+			check(found, "no left in %v", got)
+			expectClosed(cls[0])
+		}},
+		{"hello_deadline", func(url string) {
+			cl := must(dial(url))
+			defer cl.close()
+			start := time.Now()
+			got, err := cl.hear(helloLimit + wait)
+			el := time.Since(start)
+			check(err == errClosed, "want close, got %q err %v", got, err)
+			check(el >= helloLimit/2 && el <= helloLimit+wait, "closed after %v", el)
+		}},
+		{"hello_deadline_ignores_protocol_pings", func(url string) {
+			cl := must(dial(url))
+			defer cl.close()
+			for end := time.Now().Add(helloLimit + time.Second); time.Now().Before(end); {
+				got, err := cl.hear(100 * time.Millisecond)
+				if err == errClosed {
+					return
+				}
+				check(err != nil, "unexpected frame %q", got)
+				_ = cl.ping()
+			}
+			check(false, "still open %v after connect despite no hello", helloLimit+time.Second)
+		}},
+		{"lobby_survives_silence", func(url string) {
+			first := must(dial(url))
+			defer first.close()
+			first.say(hello("", "abc", 2))
+			code := codeOf(must(first.hear(wait)))
+			time.Sleep(max(3*silence, helloLimit+silence))
+			second := must(dial(url))
+			defer second.close()
+			second.say(hello(code, "abc", 2))
+			expect(second, fmt.Sprintf(`{"type":"welcome","seat":2,"match":"%s"}`, code))
+			seed := expectStart(first, 2, "{}")
+			check(expectStart(second, 2, "{}") == seed, "seats got different seeds")
+		}},
+		{"lobby_expires_despite_pings", func(url string) {
+			first := must(dial(url))
+			defer first.close()
+			first.say(hello("", "abc", 2))
+			code := codeOf(must(first.hear(wait)))
+			start := time.Now()
+			got, err := pingUntil(first, lobbyLimit+time.Second)
+			el := time.Since(start)
+			check(err == nil && got == `{"type":"error","reason":"lobby expired"}`, "want lobby expired, got %q err %v", got, err)
+			check(el >= lobbyLimit-200*time.Millisecond && el <= lobbyLimit+time.Second, "expired after %v", el)
+			expectClosed(first)
+			late := must(dial(url))
+			defer late.close()
+			late.say(hello(code, "abc", 2))
+			expect(late, `{"type":"error","reason":"unknown match"}`)
+		}},
+		{"start_window_outlasts_silence", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			got, err := cls[1].hear(3 * silence)
+			check(err != nil && err != errClosed, "want no frame, got %q err %v", got, err)
+			cls[0].say(tick(1, 4, ""))
+			expect(cls[1], tick(1, 4, ""))
+		}},
+		{"start_window_ends", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			start := time.Now()
+			tk := time.NewTicker(100 * time.Millisecond)
+			defer tk.Stop()
+			end := time.After(lobbyLimit + wait)
+			for t := 4; ; {
+				select {
+				case <-tk.C:
+					cls[1].say(tick(2, t, ""))
+					t++
+				case s, ok := <-cls[1].in:
+					el := time.Since(start)
+					check(ok && s == left(1, 3), "want %q, got %q (open %v)", left(1, 3), s, ok)
+					check(el >= lobbyLimit-200*time.Millisecond, "left after %v", el)
+					return
+				case <-end:
+					check(false, "no left within %v", lobbyLimit+wait)
+				}
+			}
+		}},
+	}
 }
 
 func delayCases() []tcase {

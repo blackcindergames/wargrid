@@ -65,6 +65,13 @@ func (cl *client) sayBinary(b []byte) error {
 	return cl.c.Write(ctx, websocket.MessageBinary, b)
 }
 
+// ping sends a WebSocket protocol ping, not a JSON one.
+func (cl *client) ping() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	return cl.c.Ping(ctx)
+}
+
 func (cl *client) close() { _ = cl.c.Close(websocket.StatusNormalClosure, "") }
 
 var codeRe = regexp.MustCompile(`"match":"([A-Z0-9]{6})"`)

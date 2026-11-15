@@ -12,8 +12,8 @@ trap cleanup EXIT HUP INT TERM
 (cd "$repo_root/protocol/conformance" && go build -o "$out/conformance" .) || { echo "CONFORMANCE FAILED: suite build"; exit 1; }
 
 total=0
-for p in default: delay:WARGRID_TEST_DELAY_MS=250 silence:WARGRID_SILENCE_MS=300; do
-  profile=${p%%:*}; envset=${p#*:}
+for p in default: delay:WARGRID_TEST_DELAY_MS=250 silence:WARGRID_SILENCE_MS=300,WARGRID_HELLO_MS=300,WARGRID_LOBBY_MS=1500; do
+  profile=${p%%:*}; envset=$(echo "${p#*:}" | tr , ' ')
   port=$(${PYTHON:-python3} -c 'import socket;s=socket.socket();s.bind(("",0));print(s.getsockname()[1])')
   # shellcheck disable=SC2086
   env PORT=$port $envset "$relay_bin" >"$out/relay-$profile.log" 2>&1 &
@@ -23,7 +23,7 @@ for p in default: delay:WARGRID_TEST_DELAY_MS=250 silence:WARGRID_SILENCE_MS=300
     i=$((i + 1)); [ $i -lt 100 ] || { echo "CONFORMANCE FAILED: relay did not start ($profile), logs: $out"; exit 1; }
     sleep 0.2
   done
-  "$out/conformance" -url "ws://127.0.0.1:$port/ws" -profile "$profile" -silence 300ms >"$out/$profile.txt" 2>&1
+  "$out/conformance" -url "ws://127.0.0.1:$port/ws" -profile "$profile" -silence 300ms -hello 300ms -lobby 1500ms >"$out/$profile.txt" 2>&1
   grep '^FAIL' "$out/$profile.txt"
   summary=$(grep '^CONFORM ' "$out/$profile.txt") || { echo "CONFORMANCE FAILED: no summary ($profile), logs: $out"; exit 1; }
   echo "$summary"

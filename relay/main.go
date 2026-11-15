@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -26,8 +27,44 @@ const (
 	jobOverhead    = 256 // charged per job so empty pings count too
 )
 
+// deadline is the socket's read deadline, shared by the reader goroutine (touch) and the room goroutine.
+type deadline struct {
+	mu    sync.Mutex
+	set   func(time.Time) // nil for unit-test conns
+	renew time.Duration   // 0: fixed, frames do not extend it
+}
+
+func (d *deadline) hold(until time.Time) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.renew = 0
+	d.apply(until)
+}
+
+func (d *deadline) every(window time.Duration) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.renew = window
+	d.apply(time.Now().Add(window))
+}
+
+func (d *deadline) touch() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.renew > 0 {
+		d.apply(time.Now().Add(d.renew))
+	}
+}
+
+func (d *deadline) apply(t time.Time) {
+	if d.set != nil {
+		d.set(t)
+	}
+}
+
 type conn struct {
 	sender
+	dl       deadline
 	rejected atomic.Bool
 	queued   atomic.Int64 // bytes waiting in gws's unbounded write queue
 	room     *room        // set by the reader goroutine after a successful hello
@@ -44,8 +81,7 @@ func (c *conn) reject(reason string) {
 }
 
 type relay struct {
-	reg     *registry
-	silence time.Duration
+	reg *registry
 }
 
 func envInt(name string, def int) int {
@@ -78,17 +114,18 @@ func (h *relay) writeLater(s *gws.Conn, n int, w func() error) {
 	}
 	s.Async(func() {
 		defer q.Add(-cost)
-		_ = s.SetWriteDeadline(time.Now().Add(h.silence))
+		_ = s.SetWriteDeadline(time.Now().Add(h.reg.cfg.silence))
 		_ = w()
 	})
 }
 
 func (h *relay) OnOpen(s *gws.Conn) {
-	s.Session().Store("c", &conn{sender: sender{
+	c := &conn{sender: sender{
 		write: func(f []byte) { h.writeLater(s, len(f), func() error { return s.WriteMessage(gws.OpcodeText, f) }) },
 		shut:  func() { h.writeLater(s, 0, func() error { return s.WriteClose(1000, nil) }) },
-	}})
-	_ = s.SetReadDeadline(time.Now().Add(h.silence))
+	}, dl: deadline{set: func(t time.Time) { _ = s.SetReadDeadline(t) }}}
+	c.dl.hold(time.Now().Add(h.reg.cfg.hello))
+	s.Session().Store("c", c)
 	slog.Info("connection opened")
 }
 
@@ -111,7 +148,7 @@ func (h *relay) OnMessage(s *gws.Conn, msg *gws.Message) {
 	if c.rejected.Load() {
 		return
 	}
-	_ = s.SetReadDeadline(time.Now().Add(h.silence))
+	c.dl.touch()
 	if msg.Opcode != gws.OpcodeText {
 		c.rejected.Store(true)
 		c.close()
@@ -144,8 +181,10 @@ func main() {
 		seats:     max(1, envInt("WARGRID_SEATS", 2)),
 		testDelay: time.Duration(envInt("WARGRID_TEST_DELAY_MS", 0)) * time.Millisecond,
 		batch:     time.Duration(envInt("WARGRID_BATCH_MS", 0)) * time.Millisecond,
+		hello:     time.Duration(envInt("WARGRID_HELLO_MS", 5000)) * time.Millisecond,
+		silence:   time.Duration(envInt("WARGRID_SILENCE_MS", 10000)) * time.Millisecond,
+		lobby:     time.Duration(envInt("WARGRID_LOBBY_MS", 900000)) * time.Millisecond,
 	}
-	silence := time.Duration(envInt("WARGRID_SILENCE_MS", 10000)) * time.Millisecond
 	drain := time.Duration(envInt("WARGRID_DRAIN_MS", 3500)) * time.Millisecond
 	addr := ":" + os.Getenv("PORT")
 	if addr == ":" {
@@ -157,8 +196,8 @@ func main() {
 		slog.Error("listen failed", "err", err)
 		os.Exit(1)
 	}
-	slog.Info("relay started", "addr", addr, "seats", cfg.seats, "silence", silence, "batch", cfg.batch, "drain", drain)
-	if err := serve(ln, newServer(&relay{reg: reg, silence: silence}), reg, drain); err != nil {
+	slog.Info("relay started", "addr", addr, "seats", cfg.seats, "hello", cfg.hello, "silence", cfg.silence, "lobby", cfg.lobby, "batch", cfg.batch, "drain", drain)
+	if err := serve(ln, newServer(&relay{reg: reg}), reg, drain); err != nil {
 		slog.Error("serve failed", "err", err)
 		os.Exit(1)
 	}

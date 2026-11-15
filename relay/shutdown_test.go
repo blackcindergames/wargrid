@@ -19,9 +19,19 @@ func loopConn(write func([]byte)) (*conn, *atomic.Bool) {
 	return c, &shut
 }
 
+func testConfig() config {
+	return config{seats: 2, hello: 5 * time.Second, silence: time.Minute, lobby: time.Minute}
+}
+
 func seated(t *testing.T, g *registry, match string, write func([]byte)) (*conn, *atomic.Bool) {
 	t.Helper()
+	return seatedWith(t, g, match, write, nil)
+}
+
+func seatedWith(t *testing.T, g *registry, match string, write func([]byte), set func(time.Time)) (*conn, *atomic.Bool) {
+	t.Helper()
 	c, shut := loopConn(write)
+	c.dl.set = set
 	e := &envelope{protocol: protocol, build: "b", match: match}
 	if match == "" {
 		e.settings = []byte("{}")
@@ -53,7 +63,7 @@ func eventually(t *testing.T, what string, ok func() bool) {
 func nop([]byte) {}
 
 func TestDrainClosesLobbyKeepsMatch(t *testing.T) {
-	g := newRegistry(config{seats: 2})
+	g := newRegistry(testConfig())
 	_, lobbyShut := seated(t, g, "", nop)
 	a, aShut := seated(t, g, "", nop)
 	seated(t, g, a.room.code, nop)
@@ -67,7 +77,7 @@ func TestDrainClosesLobbyKeepsMatch(t *testing.T) {
 }
 
 func TestStopClosesStartedMatch(t *testing.T) {
-	g := newRegistry(config{seats: 2})
+	g := newRegistry(testConfig())
 	a, aShut := seated(t, g, "", nop)
 	_, bShut := seated(t, g, a.room.code, nop)
 	g.startDrain()
@@ -84,7 +94,7 @@ func TestStopClosesStartedMatch(t *testing.T) {
 }
 
 func TestRoomPanicEndsOnlyThatRoom(t *testing.T) {
-	g := newRegistry(config{seats: 2})
+	g := newRegistry(testConfig())
 	boom := func(f []byte) {
 		if bytes.Contains(f, []byte(`"tick"`)) {
 			panic("boom")

@@ -72,7 +72,7 @@ func TestParseRules(t *testing.T) {
 }
 
 func TestJoinProtocolBeatsSettings(t *testing.T) {
-	g := &registry{rooms: map[string]*room{}, cfg: config{seats: 2}}
+	g := &registry{rooms: map[string]*room{}, cfg: testConfig()}
 	conn := func() *conn { return &conn{sender: sender{write: func([]byte) {}, shut: func() {}}} }
 	cases := []struct {
 		name   string

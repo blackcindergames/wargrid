@@ -46,7 +46,9 @@ func hear(t *testing.T, c *cl) string {
 }
 
 func TestBatchJoinsTicks(t *testing.T) {
-	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: config{seats: 2, batch: 200 * time.Millisecond}}, silence: 5 * time.Second}
+	cfg := testConfig()
+	cfg.batch, cfg.silence = 200*time.Millisecond, 5*time.Second
+	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: cfg}}
 	up := gws.NewUpgrader(h, &gws.ServerOption{ReadMaxPayloadSize: 1 << 20, CheckUtf8Enabled: true})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s, err := up.Upgrade(w, r); err == nil {

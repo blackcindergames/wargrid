@@ -30,7 +30,9 @@ func (c *stalled) OnMessage(_ *gws.Conn, m *gws.Message) {
 }
 
 func TestStalledPeerStillProducesLeft(t *testing.T) {
-	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: config{seats: 2}}, silence: 500 * time.Millisecond}
+	cfg := testConfig()
+	cfg.silence = 500 * time.Millisecond
+	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: cfg}}
 	up := gws.NewUpgrader(h, &gws.ServerOption{ReadMaxPayloadSize: 1 << 20, CheckUtf8Enabled: true})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s, err := up.Upgrade(w, r); err == nil {
@@ -51,6 +53,8 @@ func TestStalledPeerStillProducesLeft(t *testing.T) {
 	say(t, b, `{"type":"hello","protocol":2,"build":"x","match":"`+w[strings.Index(w, `"match":"`)+9:len(w)-2]+`"}`)
 	hear(t, bc)
 	hear(t, bc)
+	// Puts seat 1 on the silence rule; otherwise it sits in the start window.
+	say(t, a, `{"type":"tick","seat":1,"tick":4,"commands":[]}`)
 	pad := strings.Repeat("x", 60000)
 	for i := 4; i < 400; i++ {
 		say(t, b, `{"type":"tick","seat":2,"tick":`+strconv.Itoa(i)+`,"commands":["`+pad+`"]}`)

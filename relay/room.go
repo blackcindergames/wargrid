@@ -18,12 +18,16 @@ const (
 	codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	protocol     = 2
 	inputDelay   = 4
+	expiryGrace  = time.Second // the socket backstop sits after the room timer, so the error frame lands before the close
 )
 
 type config struct {
 	seats     int
 	testDelay time.Duration
 	batch     time.Duration
+	hello     time.Duration
+	silence   time.Duration
+	lobby     time.Duration // lobby expiry and start window
 }
 
 type seat struct {
@@ -69,6 +73,10 @@ type room struct {
 	started  bool
 	settings []byte
 	stats    map[int]string
+	// expiresAt is set in create; expiry and expired belong to run().
+	expiresAt time.Time
+	expiry    *time.Timer
+	expired   bool
 }
 
 func (r *room) run() {
@@ -81,6 +89,8 @@ func (r *room) run() {
 		defer t.Stop()
 		flush = t.C
 	}
+	r.expiry = time.NewTimer(time.Until(r.expiresAt))
+	defer r.expiry.Stop()
 	for {
 		select {
 		case <-flush:
@@ -95,6 +105,8 @@ func (r *room) run() {
 		case <-quit:
 			quit = nil
 			r.closeAll()
+		case <-r.expiry.C:
+			r.expire()
 		case j := <-r.joins:
 			j.reply <- r.join(j)
 		case ev := <-r.events:
@@ -136,8 +148,23 @@ func (r *room) recoverCrash() {
 	r.closeAll()
 }
 
+func (r *room) expire() {
+	if r.started {
+		return
+	}
+	r.expired = true
+	r.reg.remove(r.code, r)
+	slog.Info("lobby expired", "code", r.code)
+	for _, s := range r.seats {
+		s.c.reject("lobby expired")
+	}
+}
+
 func (r *room) join(j joinReq) joinResult {
 	h := j.hello
+	if r.expired {
+		return joinResult{reason: "unknown match"}
+	}
 	if r.build != h.build {
 		return joinResult{reason: "build mismatch"}
 	}
@@ -157,18 +184,26 @@ func (r *room) admit(c *conn) *seat {
 	slog.Info("seat joined", "code", r.code, "seat", n)
 	c.send([]byte(fmt.Sprintf(`{"type":"welcome","seat":%d,"match":%q}`, n, r.code)), 0)
 	if len(r.seats) == r.cfg.seats {
-		r.started = true
-		list := make([]string, r.cfg.seats)
-		for i := range list {
-			list[i] = fmt.Sprint(i + 1)
-		}
-		slog.Info("match start", "code", r.code, "seats", r.cfg.seats)
-		start := []byte(fmt.Sprintf(`{"type":"start","seats":[%s],"delay":%d,"seed":%d,"settings":%s}`, strings.Join(list, ","), inputDelay, randomSeed(), r.settings))
-		for _, s := range r.seats {
-			s.c.send(start, 0)
-		}
+		r.start()
+	} else {
+		c.dl.hold(r.expiresAt.Add(expiryGrace))
 	}
 	return s
+}
+
+func (r *room) start() {
+	r.started = true
+	list := make([]string, r.cfg.seats)
+	for i := range list {
+		list[i] = fmt.Sprint(i + 1)
+	}
+	slog.Info("match start", "code", r.code, "seats", r.cfg.seats)
+	start := []byte(fmt.Sprintf(`{"type":"start","seats":[%s],"delay":%d,"seed":%d,"settings":%s}`, strings.Join(list, ","), inputDelay, randomSeed(), r.settings))
+	window := time.Now().Add(r.cfg.lobby)
+	for _, s := range r.seats {
+		s.c.dl.hold(window)
+		s.c.send(start, 0)
+	}
 }
 
 func (r *room) forward(t tickMsg) {
@@ -180,6 +215,9 @@ func (r *room) forward(t tickMsg) {
 		s.dead = true
 		s.c.reject("invalid message")
 		return
+	}
+	if s.lastTick == 0 {
+		s.c.dl.every(r.cfg.silence)
 	}
 	s.lastTick, s.frames, s.bytes = t.tick, s.frames+1, s.bytes+len(t.data)
 	for _, o := range r.seats {
@@ -299,7 +337,7 @@ func (g *registry) create(h *envelope, c *conn) joinResult {
 	r := &room{
 		code: code, cfg: g.cfg, reg: g, build: h.build, settings: h.settings,
 		joins: make(chan joinReq), events: make(chan any, 64), done: make(chan struct{}),
-		seats: map[int]*seat{}, stats: map[int]string{},
+		seats: map[int]*seat{}, stats: map[int]string{}, expiresAt: time.Now().Add(g.cfg.lobby),
 	}
 	g.rooms[code] = r
 	g.mu.Unlock()
