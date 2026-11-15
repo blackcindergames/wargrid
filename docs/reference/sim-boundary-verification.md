@@ -3,15 +3,15 @@
 Plan: [sim boundary SB1-SB2](../superpowers/plans/2026-11-15-sim-boundary-sb1-sb2.md). Resume record below is overwritten at each checkpoint; evidence rows are append-only.
 
 ```text
-Resume record (updated 2026-11-15 night)
-Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / Task 6 uncommitted on top of the Task 5 commit 60d9a5c
-Last green task / next incomplete task: Task 6 green, uncommitted / Task 7 (review and commit Task 6 first: `Answer the placement preview one tick later`)
-Changed paths since last commit: game/scripts/match/{match_screen,offline_driver,online_driver,orders}.gd, game/tests/{test_base_scene,test_online_scene}.gd, docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: full suite, 979 cases, 146443 checks, 0 failures, exit 0, TESTS PASSED 146443; run_lint, run_warnings, test_sim_boundary.py exit 0
+Resume record (updated 2026-11-15 night, stop gate 1)
+Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / gate 1 fix uncommitted on top of a7cd946
+Last green task / next incomplete task: Tasks 1-8 committed; stop gate 1 (whole-branch review: Grok, then Opus second pass) done, one fix uncommitted / stop gate 2 (`/ponytail-review`, then Task 8 Steps 1-4 on the final tree)
+Changed paths since last commit: game/scripts/match/orders.gd (`answered` reopen guard), game/tests/test_online_scene.gd (RA9), docs/guide/05-presentation.md, docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb/sb4/, 980 cases, 146452 checks, 0 failures, exit 0, TESTS PASSED 146452; REPLAYS MATCHED x4 vs base; run_lint, run_warnings, check_public exit 0
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); IC1 row 19 inspected-enemy HP/order text may change (user, 2026-11-15); S3 and OV11 fixture changes accepted (user, 2026-11-15); no rendered benchmark rerun, world_view.gd is not touched; gate 1 and gate 2 reviews pending
+Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); IC1 row 19 inspected-enemy HP/order text may change (user, 2026-11-15); S3 and OV11 fixture changes accepted (user, 2026-11-15); no rendered benchmark rerun, world_view.gd is not touched; gate 3 (owner playtest) and gate 4 wait for the owner
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 6 review and commit, then Task 7 (docs). Task 6 added request_preview/preview_answer/_answer_preview to both drivers (cleared in create), Orders._answer and show_preview (called from _show after prune); _enter_placement and _clear_placement send request_preview({}).
+Next exact action: coordinator commits the gate 1 fix (`Keep a new gesture when an online build is refused`), then stop gate 2.
 ```
 
 ## Evidence
@@ -51,6 +51,8 @@ Next exact action: Task 6 review and commit, then Task 7 (docs). Task 6 added re
 | 2026-11-15 | Task 8 gate: `NETPLAY_OUT=build/sb/sb2/netplay sh tools/run_netplay.sh match`; `compare_replays.py --interval 30 --rows 0` base vs sb2 `s1.tsv`; `sh tools/run_team_match.sh` | exit 0, `NETPLAY PASSED match 14.6 s`; `REPLAYS MATCHED 301`; exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS` | 0addc23, clean |
 | 2026-11-15 | Task 8 gate: `git diff f838f79 --stat -- game/scripts/simulation protocol` | empty | 0addc23, clean |
 | 2026-11-15 | Task 8 gate: `PERF_LABEL="Sim boundary SB1-SB2" sh tools/run_benchmark.sh` alone (load 1.49 at start, 1.27 at end; no other Godot) | exit 0, `BENCHMARK PASSED 2`, `LOCKSTEP BENCHMARK PASSED 1`; movement open p95 0.765 / dense 0.743 PASS; combat `open` p95 1.875, `dense` 1.836, `hordes300` 2.899 OVER BUDGET 1.82 (already marked exceeded in the ledger on d90f41a, regression ceilings held, no budget changed); other combat rows PASS; 13 rows recorded in `perf-history.csv`, status blocks regenerated (uncommitted). No rendered rerun: drawing code untouched | 0addc23, clean before the run |
+| 2026-11-15 | Gate 1 (Opus pass): RA9 `test_sb2_online_refusal_keeps_new_gesture`, `WARGRID_TEST_ONLY=refusal_keeps_new_gesture` (red first: both checks, the selection release and the attack-move click each sent a build); then `orders.answered` reopens only when not `busy()` and not in attack-move; `=sb2_` | red exit 1, 2 failures; green exit 0, CASES 17 CHECKS 54 FAILURES 0 | a7cd946 plus gate 1 fix, uncommitted |
+| 2026-11-15 | Gate 1: full suite with traces into `build/sb/sb4/`; `compare_replays.py` base vs sb4 (replay, economy, combat; team `--interval 200 --rows 100`); `run_lint.sh`, `run_warnings.sh`, `check_public.sh`; `git diff f838f79 --stat -- game/scripts/simulation protocol` | exit 0, CASES 980 CHECKS 146452 FAILURES 0, `TESTS PASSED 146452`; `REPLAYS MATCHED` 1200, 1200, 1200, 100; 0, 0, 0; empty | a7cd946 plus gate 1 fix, uncommitted |
 
 `sync_sequence(main)` added after direct sends in: `test_production_ui` (Bs3, after the builds), `test_base_scene.gd` CancelBuild case (after the foundation send), M3 case (after the factory build), `test_rally_input_and_marker` (R1), `test_hud_strings_use_display_names` (N1), `test_frc_laborer_right_click_pile` (K13). Task 3 added `main._refresh()` after the sim swap in N1 and before K4's team line. Expected values unchanged.
 

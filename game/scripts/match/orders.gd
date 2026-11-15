@@ -149,7 +149,8 @@ func answered(answer: Dictionary) -> void:
 	_awaiting_build = ""
 	var online: bool = _screen.driver.closes_placement_on_click()
 	if answer.ok and not online: _clear_placement()
-	elif not answer.ok and online and _placement_kind.is_empty() and _builder() != -1: _enter_placement(kind)
+	# A gesture begun since the click keeps its release; reopening would turn it into a build.
+	elif not answer.ok and online and not busy() and not _attack_move_mode and _builder() != -1: _enter_placement(kind)
 
 func _building_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("deselect"):
