@@ -175,7 +175,7 @@ func _input(event: InputEvent) -> void:
 		elif not _escape_pending(): _pause.open()
 		else: return
 	elif not _pause.visible:
-		if _result_panel.takes_enter(event) and not _typing(): _play_again()
+		if _result_panel.takes_enter(event) and not _typing() and not _playtest.holds_match(): _play_again()
 		else: return
 	get_viewport().set_input_as_handled()
 
@@ -259,7 +259,8 @@ func _refresh() -> void:
 	hud.place_economy()
 
 func _note() -> String:
-	return hud.note + driver.notice()
+	# The rematch line changes without a tick, so a finished match still redraws its panel.
+	return hud.note + driver.notice() + driver.rematch_line()
 
 func _show(state: Dictionary) -> void:
 	_shown_note = _note()
@@ -313,7 +314,9 @@ func _building(state: Dictionary, id: int) -> Dictionary:
 
 func _play_again() -> void:
 	if driver.can_restart(): _restart()
-	else: driver.play_again()
+	else:
+		driver.play_again()
+		_refresh()
 
 func _restart() -> void:
 	if not driver.can_restart(): return

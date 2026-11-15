@@ -38,7 +38,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -231,6 +231,10 @@ func test_play_again_sends_once(runner) -> bool:
 	var online: Dictionary = await _online(runner, 2)
 	var main = online.main
 	_end_match(online)
+	main._playtest._form.show()
+	main._input(_key(KEY_ENTER))
+	runner.check(_sent_types(online.transport, "again") == 0, "N14 Enter under the playtest form sends nothing")
+	main._playtest._form.hide()
 	_play_again_button(main).pressed.emit()
 	_play_again_button(main).pressed.emit()
 	main._input(_key(KEY_ENTER))
@@ -261,12 +265,47 @@ func test_friend_left_after_end(runner) -> bool:
 	var online: Dictionary = await _online(runner, 2)
 	var main = online.main
 	_end_match(online)
+	main.set_process(true)
 	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
 	online.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": PEER_TICKS}))
 	_run(main, 3)
 	runner.check(_panel_line(main) == "Your friend left" and _play_again_button(main).disabled, "N16 friend left line, Play again disabled, got '%s'" % _panel_line(main))
 	runner.check(online.transport.close_calls == 1, "N16 the socket closes once, got %d" % online.transport.close_calls)
+	runner.check(main.driver.notice() == "" and not main.get_node("HUD/Status").text.contains("relay"), "N16 a friend leaving is no relay loss, got '%s'" % main.driver.notice())
 	main.free()
+	return true
+
+func test_panel_follows_again_while_processing(runner) -> bool:
+	var own: Dictionary = await _online(runner, 2)
+	_end_match(own)
+	own.main.set_process(true)
+	_run(own.main, 2)
+	var tick: int = own.main.driver.sim.tick()
+	_play_again_button(own.main).pressed.emit()
+	runner.check(_panel_line(own.main) == "Waiting for your friend…" and _play_again_button(own.main).disabled, "N26 own again redraws the panel at once, got '%s'" % _panel_line(own.main))
+	_run(own.main, 2)
+	runner.check(own.main.driver.sim.tick() == tick and _panel_line(own.main) == "Waiting for your friend…" and _play_again_button(own.main).disabled, "N26 the waiting panel holds on later frames, got '%s'" % _panel_line(own.main))
+	own.main.free()
+	var friend: Dictionary = await _online(runner, 2)
+	_end_match(friend)
+	friend.main.set_process(true)
+	_run(friend.main, 2)
+	friend.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_run(friend.main, 1)
+	runner.check(_panel_line(friend.main) == "Your friend wants to play again" and not _play_again_button(friend.main).disabled, "N26 a friend's again after the end is drawn, got '%s'" % _panel_line(friend.main))
+	_play_again_button(friend.main).pressed.emit()
+	runner.check(_panel_line(friend.main) == "Your friend wants to play again" and _play_again_button(friend.main).disabled, "N26 answering a friend's again does not flash the waiting line, got '%s'" % _panel_line(friend.main))
+	friend.main.free()
+	return true
+
+func test_leave_ends_the_phase(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	_end_match(online)
+	online.main.driver.leave()
+	runner.check(not online.main.driver.can_play_again(), "N28 Play again is off as soon as the player leaves")
+	online.main.driver.play_again()
+	runner.check(_sent_types(online.transport, "again") == 0, "N28 no again after leave, got %d" % _sent_types(online.transport, "again"))
+	online.main.free()
 	return true
 
 func test_room_closed_after_end(runner) -> bool:

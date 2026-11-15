@@ -1054,13 +1054,18 @@ func test_connecting_elapsed_and_cancel(runner) -> bool:
 	var bot: String = _picked(launcher.get_node("Pages/Play/Body/Bot"))
 	var map: String = _picked(launcher.get_node("Pages/Play/Body/Map"))
 	runner.check(cancel.visible and cancel.text == "Cancel", "L20 busy Play shows the connect Cancel button")
+	runner.check(launcher.get_viewport().gui_get_focus_owner() == cancel, "L20 busy Play moves focus to Cancel")
 	launcher._show_connecting(launcher._connect_msec + 3200)
 	runner.check(status.text == "Connecting… 3 s", "L20 Play shows whole seconds, got '%s'" % status.text)
 	cancel.pressed.emit()
 	runner.check(transport.close_calls == 1 and status.text == "Match cancelled" and _nav_disabled(launcher) == [false, false, false, false] and not cancel.visible and launcher.opponent == "friend", "L20 Cancel closes, says Match cancelled, unlocks, keeps Friend")
 	runner.check(_picked(launcher.get_node("Pages/Play/Body/Own")) == own and _picked(launcher.get_node("Pages/Play/Body/Bot")) == bot and _picked(launcher.get_node("Pages/Play/Body/Map")) == map, "L20 Own, Bot and Map are unchanged")
+	runner.check(launcher.get_viewport().gui_get_focus_owner() == launcher.get_node("Pages/Play/Footer/Create"), "L20 Cancel hands focus back to Create")
+	status.text = "Idle"
+	launcher.get_viewport().push_input(InputEventMIDI.new())
+	runner.check(not launcher.get_viewport().is_input_handled(), "L20 fixture: handled flag clear")
 	launcher._unhandled_input(_esc())
-	runner.check(transport.close_calls == 1 and status.text == "Match cancelled", "L20 Esc without a transport changes nothing")
+	runner.check(status.text == "Idle" and not launcher.get_viewport().is_input_handled(), "L20 Esc without a transport changes nothing and is not swallowed")
 	launcher.show_page("Join")
 	launcher._set_relay(LOOPBACK)
 	launcher.get_node("Pages/Join/Body/Code").text = "ABC234"
@@ -1069,6 +1074,9 @@ func test_connecting_elapsed_and_cancel(runner) -> bool:
 	var join_transport := OnlineTests.FakeTransport.new()
 	launcher._transport = join_transport
 	runner.check(launcher.get_node("Pages/Join/Footer/CancelConnect").visible, "L20 busy Join shows the connect Cancel button")
+	launcher.get_node("Pages/Join/Body/Code").text = "XYZ234"
+	launcher._join()
+	runner.check(launcher._transport == join_transport, "L20 a second Join while connecting keeps the first connection")
 	launcher._unhandled_input(_esc())
 	runner.check(join_transport.close_calls == 1 and launcher.get_node("Pages/Join/Footer/Status").text == "Match cancelled" and launcher.current_page == "Join", "L20 Esc cancels a connecting Join, reason in Join's footer")
 	var host = _host(launcher)
@@ -1088,9 +1096,16 @@ func test_connecting_footers_fit(runner) -> bool:
 	launcher._set_busy(true)
 	for page_name: String in ["Play", "Join"]:
 		launcher.show_page(page_name)
-		await runner.process_frame
-		await runner.process_frame
-		_overlap_free(runner, launcher.get_node("Pages/%s/Footer" % page_name), "%s busy footer" % page_name)
+		for shown: Array in [["Connecting… 12 s", false], ["Cannot connect to relay", true]]:
+			var status: Label = launcher.get_node("Pages/%s/Footer/Status" % page_name)
+			launcher._show_status(status, shown[0], shown[1])
+			await runner.process_frame
+			await runner.process_frame
+			runner.check(status.visible and status.text == shown[0] and status.size.x > 0.0, "L8 fixture: %s footer shows '%s'" % [page_name, shown[0]])
+			_overlap_free(runner, launcher.get_node("Pages/%s/Footer" % page_name), "%s busy footer, '%s'" % [page_name, shown[0]])
+			var footer: Control = launcher.get_node("Pages/%s/Footer" % page_name)
+			for child: Control in [status, launcher.get_node("Pages/%s/Footer/CancelConnect" % page_name)]:
+				runner.check(footer.get_global_rect().encloses(child.get_global_rect()) and launcher.get_viewport().get_visible_rect().encloses(child.get_global_rect()), "L8 %s busy footer holds %s with '%s'" % [page_name, child.name, shown[0]])
 	ported[0].free()
 	return true
 

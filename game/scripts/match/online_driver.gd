@@ -70,6 +70,7 @@ func detach() -> void:
 
 func leave() -> void:
 	_finished = true
+	_phase = "done"
 	_lockstep.set_relay_lost()
 	_transport.close()
 
@@ -98,7 +99,7 @@ func _room_gone() -> bool:
 	return _transport.closed() or _transport.silent(Time.get_ticks_usec()) or _lockstep.left_seat() != 0 or _ended()
 
 func _close_room() -> void:
-	if not _ended(): _lockstep.set_relay_lost()
+	if not _ended() and _lockstep.left_seat() == 0: _lockstep.set_relay_lost()
 	_transport.close()
 	_phase = "done"
 
@@ -129,8 +130,8 @@ func can_restart() -> bool:
 func rematch_line() -> String:
 	if _lockstep.left_seat() != 0: return "Your friend left"
 	if _phase == "done": return "The room closed"
-	if _phase == "again": return "Waiting for your friend…"
-	return "Your friend wants to play again" if _friend_again else ""
+	if _friend_again: return "Your friend wants to play again"
+	return "Waiting for your friend…" if _phase == "again" else ""
 
 func can_play_again() -> bool:
 	return _phase == "over"

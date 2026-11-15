@@ -100,10 +100,12 @@ case $scenario in
     for name in s1 s2; do
       [ "$(grep -c '^NETCLIENT MAP' "$out/$name.log")" = 2 ] || fail "$name: expected two MAP lines"
       [ "$(grep -c '^NETCLIENT OVER TICK 9013$' "$out/$name.log")" = 1 ] || fail "$name: expected one OVER TICK 9013"
-      grep -q '^NETCLIENT AGAIN SEAT' "$out/$name.log" || fail "$name: no AGAIN line"
     done
-    first=$(grep '^NETCLIENT MAP' "$out/s1.log" | head -n 1); second=$(grep '^NETCLIENT MAP' "$out/s1.log" | tail -n 1)
-    [ "$first" != "$second" ] || fail "both matches share the seed: $first"
+    grep -q '^NETCLIENT AGAIN SEAT 2$' "$out/s1.log" || fail "s1: no AGAIN line from seat 2"
+    grep -q '^NETCLIENT AGAIN SEAT 1$' "$out/s2.log" || fail "s2: no AGAIN line from seat 1"
+    seed1=$(grep '^NETCLIENT MAP' "$out/s1.log" | head -n 1 | awk '{print $5}'); seed2=$(grep '^NETCLIENT MAP' "$out/s1.log" | tail -n 1 | awk '{print $5}')
+    if [ -z "$seed1" ] || [ "$seed1" = "$seed2" ]; then fail "both matches share the seed: $seed1"; fi
+    second=$(grep '^NETCLIENT MAP' "$out/s1.log" | tail -n 1)
     [ "$(grep '^NETCLIENT MAP' "$out/s2.log" | tail -n 1)" = "$second" ] || fail "second MAP lines differ across seats"
     [ "$(grep -c 'INFO rematch' "$out/relay.log")" = 1 ] || fail "expected one rematch line in relay.log"
     i=0

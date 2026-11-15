@@ -455,6 +455,10 @@ func test_result_panel_keys(runner) -> bool:
 	main._input(_enter(KEY_ENTER))
 	runner.check(is_same(main.driver.sim, kept) and main.get_node("HUD/ResultPanel").visible, "R2 Enter with the pause menu open does nothing")
 	main._pause.close()
+	main._playtest._form.show()
+	main._input(_enter(KEY_ENTER))
+	runner.check(is_same(main.driver.sim, kept) and main._playtest._form.visible, "R2 Enter with the playtest form open keeps the match and the form")
+	main._playtest._form.hide()
 	main._input(_enter(KEY_ESCAPE))
 	runner.check(main._pause.visible and is_same(main.driver.sim, kept), "R2 Esc with the panel up opens the pause menu")
 	main.free()
@@ -553,6 +557,9 @@ class StubDriver extends OfflineDriver:
 		return restartable
 	func rematch_line() -> String:
 		return "Your friend left"
+	var started: int = 0
+	func start() -> void:
+		started += 1
 
 func test_play_again_routes_by_driver(runner) -> bool:
 	var main = await _setup(runner)
@@ -570,7 +577,7 @@ func test_play_again_routes_by_driver(runner) -> bool:
 	var offline := StubDriver.new(true)
 	main.driver = offline
 	main._play_again()
-	runner.check(offline.plays == 0 and offline.sim != null, "R5 a restartable driver restarts and never gets play_again")
+	runner.check(offline.plays == 0 and offline.sim != null and offline.started == 1, "R5 a restartable driver restarts, starts once and never gets play_again, started %d" % offline.started)
 	main.driver = real
 	main.free()
 	return true

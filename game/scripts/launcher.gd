@@ -408,6 +408,8 @@ func _set_busy(busy: bool) -> void:
 		var control: Control = get_node("Pages/" + path)
 		if control is BaseButton: _lock(control, busy)
 		else: control.editable = not busy
+	# The pressed Create or Join turns disabled, so focus would sit on a dead button.
+	get_node("Pages/%s/Footer/%s" % [_origin, "CancelConnect" if busy else ("Join" if _origin == "Join" else "Create")]).grab_focus()
 
 # Godot draws a disabled button in its disabled style even when pressed; the selected item must stay grey.
 func _lock(button: BaseButton, busy: bool) -> void:
