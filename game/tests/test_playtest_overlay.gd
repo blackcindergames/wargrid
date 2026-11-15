@@ -39,7 +39,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_drops_pending_markers, test_scale_legend]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_drops_pending_markers, test_scale_legend]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -415,6 +415,30 @@ func test_match_end_opens_review_once(runner) -> bool:
 	runner.check(scenes.is_empty() and _form_shown(main) and PlaytestSession.current.data.matches.size() == 1, "PO11 leaving after the review reopens the form without a second match, scenes %s" % [scenes])
 	runner.check(_form(main).find_child("EndSession", true, false) != null and _form(main).find_child("NextMatch", true, false) == null, "PO11 the reopened form offers EndSession and no NextMatch")
 	runner.check(_press(main, "Leave") and scenes == [LAUNCHER] and not _form_shown(main) and PlaytestSession.current.data.matches.size() == 1, "PO11 Leave changes scene once and keeps the sitting, scenes %s" % [scenes])
+	main.free()
+	_end(saved)
+	return true
+
+func test_back_to_menu_from_result_panel(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	var state: Dictionary = main.driver.sim.snapshot()
+	for object: Dictionary in state.entities + state.buildings:
+		if object.owner == 2: main.driver.sim.remove_object(object.id)
+	main._physics_process(0.0)
+	overlay._process(0.0)
+	_press(main, "NextMatch")
+	main._refresh()
+	var panel: Control = main.get_node("HUD/ResultPanel")
+	var scenes := _scenes(main)
+	runner.check(panel.visible and not _form_shown(main), "PO11b fixture: result panel up, review closed")
+	(panel.get_node("Center/Card/Box/Buttons/ChangeSetup") as Button).pressed.emit()
+	var form: Control = _form(main)
+	runner.check(_form_shown(main) and scenes.is_empty(), "PO11b Back to menu with a focus card opens the leave form, scenes %s" % [scenes])
+	runner.check(form != null and form.is_visible_in_tree() and main.get_node("HUD/Playtest").get_index() > panel.get_index(), "PO11b the leave form draws above the result panel")
+	runner.check(_press(main, "Leave") and scenes == [LAUNCHER], "PO11b its Leave button reaches the menu, scenes %s" % [scenes])
 	main.free()
 	_end(saved)
 	return true
