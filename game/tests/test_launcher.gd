@@ -8,6 +8,7 @@ const Launcher = preload("res://scenes/launcher.tscn")
 const LauncherScript = preload("res://scripts/launcher.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const RelayTransport = preload("res://scripts/net/relay_transport.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
 const LOOPBACK := "wss://127.0.0.1:9/ws"
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
@@ -28,7 +29,7 @@ const SIZES: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1920, 1080), Vecto
 const STRETCHED: Array[Array] = [[Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(2576, 1145), Vector2i(1620, 720)]]
 
 func cases() -> Array[Callable]:
-	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_type_matches_mockups, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns]
+	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_type_matches_mockups, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process]
 
 func _picked(selector: OptionButton) -> String:
 	return selector.get_item_metadata(selector.selected)
@@ -389,7 +390,7 @@ func test_waiting_view(runner) -> bool:
 	runner.check("Open" in two and "waiting for your friend…" in two, "L12a row 2 is Open, got %s" % [two])
 	var map_texts: Array[String] = _texts(waiting.get_node("Body/Right/Map"))
 	runner.check(MatchSettings.PLAY_MAPS["ashfall"] in map_texts and launcher._map_info("ashfall") in map_texts, "L12a map name and info, got %s" % [map_texts])
-	runner.check(waiting.get_node("Footer/Status").get_parsed_text() == "Match code ABC234", "L12a footer shows the match code")
+	runner.check(waiting.get_node("Footer/Status").get_parsed_text() == "Match code ABC234 · closes in 15:00", "L12a footer shows the match code")
 	await runner.process_frame
 	await runner.process_frame
 	var controls: Array[Control] = []
@@ -766,7 +767,7 @@ func test_waiting_two_columns(runner) -> bool:
 		runner.check(link.get_global_rect().end.x <= copy.get_global_rect().position.x and absf(link.get_global_rect().get_center().y - copy.get_global_rect().get_center().y) < 2.0, "L19e Copy sits beside the link field on one row")
 		runner.check(map.get_global_rect().position.x >= left.get_global_rect().end.x + 30.0, "L19e the map panel is in a second column")
 		runner.check(map.size.x >= 370.0 and map.size.x <= 390.0, "L19e the map panel is about 380 px wide, got %s" % map.size.x)
-		runner.check(launcher.get_node("Pages/Waiting/Footer/Cancel").text == "Cancel match" and launcher.get_node("Pages/Waiting/Footer/Status").get_parsed_text() == "Match code K7Q2", "L19e footer shows the match code and Cancel")
+		runner.check(launcher.get_node("Pages/Waiting/Footer/Cancel").text == "Cancel match" and launcher.get_node("Pages/Waiting/Footer/Status").get_parsed_text() == "Match code K7Q2 · closes in 15:00", "L19e footer shows the match code and Cancel")
 	built[1].free()
 	built[0].free()
 	AudioSettings.path = saved
@@ -1011,4 +1012,159 @@ func test_waiting_bold_codes_and_dashed_slots(runner) -> bool:
 	built[1].free()
 	built[0].free()
 	AudioSettings.path = saved
+	return true
+
+class FakeClock extends RefCounted:
+	var usec: int = 1_000_000
+	func now() -> int: return usec
+
+func _esc() -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = &"ui_cancel"
+	event.pressed = true
+	return event
+
+func test_enter_submits_join_code(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "enter-join", {})
+	_restore(saved)
+	launcher.show_page("Join")
+	launcher._set_relay(LOOPBACK)
+	var code: LineEdit = launcher.get_node("Pages/Join/Body/Code")
+	code.text = ""
+	code.text_submitted.emit("")
+	launcher.set_process(false)
+	runner.check(launcher._transport == null and launcher.get_node("Pages/Join/Footer/Status").text == "Enter the 6-character match code", "L19 Enter on an empty code does not connect and says what to enter")
+	code.text = "ABC234"
+	code.text_submitted.emit("ABC234")
+	launcher.set_process(false)
+	runner.check(launcher._transport != null and _nav_disabled(launcher) == [true, true, true, true], "L19 Enter on a valid code connects and locks the nav")
+	launcher._transport = null
+	launcher.free()
+	return true
+
+func test_connecting_elapsed_and_cancel(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "cancel", {"faction": "china", "map": "ashfall"})
+	_restore(saved)
+	var transport = _host(launcher)
+	var cancel: Button = launcher.get_node("Pages/Play/Footer/CancelConnect")
+	var status: Label = launcher.get_node("Pages/Play/Footer/Status")
+	var own: String = _picked(launcher.get_node("Pages/Play/Body/Own"))
+	var bot: String = _picked(launcher.get_node("Pages/Play/Body/Bot"))
+	var map: String = _picked(launcher.get_node("Pages/Play/Body/Map"))
+	runner.check(cancel.visible and cancel.text == "Cancel", "L20 busy Play shows the connect Cancel button")
+	launcher._show_connecting(launcher._connect_msec + 3200)
+	runner.check(status.text == "Connecting… 3 s", "L20 Play shows whole seconds, got '%s'" % status.text)
+	cancel.pressed.emit()
+	runner.check(transport.close_calls == 1 and status.text == "Match cancelled" and _nav_disabled(launcher) == [false, false, false, false] and not cancel.visible and launcher.opponent == "friend", "L20 Cancel closes, says Match cancelled, unlocks, keeps Friend")
+	runner.check(_picked(launcher.get_node("Pages/Play/Body/Own")) == own and _picked(launcher.get_node("Pages/Play/Body/Bot")) == bot and _picked(launcher.get_node("Pages/Play/Body/Map")) == map, "L20 Own, Bot and Map are unchanged")
+	launcher._unhandled_input(_esc())
+	runner.check(transport.close_calls == 1 and status.text == "Match cancelled", "L20 Esc without a transport changes nothing")
+	launcher.show_page("Join")
+	launcher._set_relay(LOOPBACK)
+	launcher.get_node("Pages/Join/Body/Code").text = "ABC234"
+	launcher.get_node("Pages/Join/Footer/Join").pressed.emit()
+	launcher.set_process(false)
+	var join_transport := OnlineTests.FakeTransport.new()
+	launcher._transport = join_transport
+	runner.check(launcher.get_node("Pages/Join/Footer/CancelConnect").visible, "L20 busy Join shows the connect Cancel button")
+	launcher._unhandled_input(_esc())
+	runner.check(join_transport.close_calls == 1 and launcher.get_node("Pages/Join/Footer/Status").text == "Match cancelled" and launcher.current_page == "Join", "L20 Esc cancels a connecting Join, reason in Join's footer")
+	var host = _host(launcher)
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	launcher._unhandled_input(_esc())
+	runner.check(host.close_calls == 0 and launcher.current_page == "Waiting", "L20 Esc on Waiting leaves the lobby open")
+	launcher._transport = null
+	launcher.free()
+	return true
+
+func test_connecting_footers_fit(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var ported: Array = await _port_with_launcher(runner, Vector2i(1280, 720), Vector2i(1280, 720))
+	_restore(saved)
+	var launcher = ported[1]
+	launcher.set_opponent("friend")
+	launcher._set_busy(true)
+	for page_name: String in ["Play", "Join"]:
+		launcher.show_page(page_name)
+		await runner.process_frame
+		await runner.process_frame
+		_overlap_free(runner, launcher.get_node("Pages/%s/Footer" % page_name), "%s busy footer" % page_name)
+	ported[0].free()
+	return true
+
+func _fake_clock_launcher(launcher, transport_clock: FakeClock) -> Object:
+	launcher._clock = transport_clock.now
+	launcher._set_relay(LOOPBACK)
+	launcher.set_opponent("friend")
+	launcher.get_node("Pages/Play/Footer/Create").pressed.emit()
+	var transport := RelayTransport.new(transport_clock.now)
+	transport._sent_any = true
+	transport._last_rx = transport_clock.usec
+	launcher._transport = transport
+	launcher._connect_msec = floori(transport_clock.usec / 1000.0)
+	launcher._welcome_msec = -1
+	return transport
+
+func test_lobby_countdown_and_expiry(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "countdown", {})
+	_restore(saved)
+	var transport = _host(launcher)
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	var footer: RichTextLabel = launcher.get_node("Pages/Waiting/Footer/Status")
+	runner.check(transport.patient and footer.get_parsed_text() == "Match code ABC234 · closes in 15:00", "L21 welcome makes the transport patient and starts the countdown, got '%s'" % footer.get_parsed_text())
+	for case: Array in [[61_000, "13:59"], [900_000, "0:00"], [1_000_000, "0:00"]]:
+		launcher._show_countdown(launcher._welcome_msec + case[0])
+		runner.check(footer.get_parsed_text() == "Match code ABC234 · closes in " + case[1], "L21 +%d ms shows %s, got '%s'" % [case[0], case[1], footer.get_parsed_text()])
+	launcher._handle('{"type":"error","reason":"lobby expired"}')
+	var status: Label = launcher.get_node("Pages/Play/Footer/Status")
+	runner.check(status.text == "Your friend did not join in time" and status.theme_type_variation == &"FooterError" and launcher.current_page == "Play", "L21 lobby expired fails with the friend message in the error style")
+	launcher.free()
+	return true
+
+func test_hidden_host_survives_lobby(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "hidden", {})
+	_restore(saved)
+	var clock := FakeClock.new()
+	_fake_clock_launcher(launcher, clock)
+	launcher._hello_sent = true
+	launcher.set_process(false)
+	clock.usec += 6_000_000
+	launcher._process(0.0)
+	var status: Label = launcher.get_node("Pages/Play/Footer/Status")
+	runner.check(status.text == "Connection to relay lost", "L22 before welcome 6 s of silence is a lost relay, got '%s'" % status.text)
+	var transport = _fake_clock_launcher(launcher, clock)
+	launcher._hello_sent = true
+	launcher.set_process(false)
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	clock.usec += 600_000_000
+	launcher._process(0.0)
+	runner.check(launcher.current_page == "Waiting" and transport.patient, "L22 after welcome 600 s of silence keeps the lobby")
+	clock.usec += 301_000_000
+	launcher._process(0.0)
+	runner.check(status.text == "Connection to relay lost" and launcher.current_page == "Play", "L22 at 901 s the lobby reports a lost relay")
+	launcher.free()
+	return true
+
+func test_ticking_texts_through_process(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "ticking", {})
+	_restore(saved)
+	var clock := FakeClock.new()
+	_fake_clock_launcher(launcher, clock)
+	launcher._hello_sent = true
+	launcher.set_process(false)
+	var status: Label = launcher.get_node("Pages/Play/Footer/Status")
+	clock.usec += 3_200_000
+	launcher._process(0.0)
+	runner.check(status.text == "Connecting… 3 s", "L23 _process moves the connecting text, got '%s'" % status.text)
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	clock.usec += 1_000_000
+	launcher._process(0.0)
+	var footer: RichTextLabel = launcher.get_node("Pages/Waiting/Footer/Status")
+	runner.check(footer.get_parsed_text() == "Match code ABC234 · closes in 14:59", "L23 _process moves the countdown, got '%s'" % footer.get_parsed_text())
+	launcher.free()
 	return true

@@ -31,7 +31,12 @@ const FRIEND_ONLY: Array[String] = ["Body/OpenSlot", "Body/Spacer4", "Footer/Cre
 const STATUS_WIDTH := 700.0
 const FRIEND_HINT := "You get a link to send to your friend."
 const CANCELLED := "Match cancelled"
+const DID_NOT_JOIN := "Your friend did not join in time"
 var _transport: RefCounted
+var _clock: Callable = Time.get_ticks_usec
+var _connect_msec: int = 0
+var _welcome_msec: int = -1
+var _shown_second: int = -1
 var _match: String = ""
 var _seat: int = 0
 var _code: String = ""
@@ -73,15 +78,11 @@ func _ready() -> void:
 	$Pages/Play/Footer/Create.pressed.connect(func() -> void:
 		_origin = "Play"
 		_connect(""))
-	$Pages/Join/Footer/Join.pressed.connect(func() -> void:
-		_origin = "Join"
-		var code: String = JoinLink.code($Pages/Join/Body/Code.text.strip_edges())
-		if code.is_empty(): _show_status($Pages/Join/Footer/Status, "Enter the 6-character match code", true)
-		else: _connect(code))
+	$Pages/Join/Footer/Join.pressed.connect(_join)
+	$Pages/Join/Body/Code.text_submitted.connect(func(_text: String) -> void: _join())
 	$Pages/Waiting/Body/Left/Invite/Copy.pressed.connect(func() -> void: DisplayServer.clipboard_set(_copy_text()))
-	$Pages/Waiting/Footer/Cancel.pressed.connect(func() -> void:
-		_transport.close()
-		_fail(CANCELLED))
+	for path: String in ["Waiting/Footer/Cancel", "Play/Footer/CancelConnect", "Join/Footer/CancelConnect"]:
+		get_node("Pages/" + path).pressed.connect(_cancel)
 	for page_name in NAV_PAGES:
 		get_node("Sidebar/Nav/" + page_name).toggled.connect(func(on: bool) -> void:
 			if on and _nav_of(current_page) != page_name: show_page(page_name))
@@ -355,19 +356,53 @@ func _offline_setup() -> void:
 	SkirmishMain.match_seed = randi()
 	SkirmishMain.starts = MatchSettings.starts(id, SkirmishMain.match_seed)
 
+func _join() -> void:
+	if _transport != null: return
+	_origin = "Join"
+	var code: String = JoinLink.code($Pages/Join/Body/Code.text.strip_edges())
+	if code.is_empty(): _show_status($Pages/Join/Footer/Status, "Enter the 6-character match code", true)
+	else: _connect(code)
+
+func _cancel() -> void:
+	if _transport == null: return
+	_transport.close()
+	_fail(CANCELLED)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and _transport != null and current_page != "Waiting":
+		_cancel()
+		get_viewport().set_input_as_handled()
+
+func _now_msec() -> int:
+	return floori(int(_clock.call()) / 1000.0)
+
+func _show_connecting(now_msec: int) -> void:
+	var text := "Connecting… %d s" % floori(maxi(0, now_msec - _connect_msec) / 1000.0)
+	var label: Label = _status_label()
+	if label.text != text: _show_status(label, text)
+
+func _show_countdown(now_msec: int) -> void:
+	var left: int = maxi(0, RelayTransport.LOBBY_EXPIRY_SEC - floori(maxi(0, now_msec - _welcome_msec) / 1000.0))
+	if left == _shown_second: return
+	_shown_second = left
+	$Pages/Waiting/Footer/Status.text = "Match code [b][color=#ffffff]%s[/color][/b] · closes in %d:%02d" % [_code, floori(left / 60.0), left % 60]
+
 func _connect(code: String) -> void:
 	_match = code
 	_hello_sent = false
-	_transport = RelayTransport.new()
+	_welcome_msec = -1
+	_connect_msec = _now_msec()
+	_transport = RelayTransport.new(_clock)
 	var error: Error = _transport.connect_to(_relay_url())
 	if error != OK:
 		_fail("Cannot connect to relay")
 		return
-	_show_status(_status_label(), "Connecting…")
+	_show_connecting(_connect_msec)
 	_set_busy(true)
 	set_process(true)
 
 func _set_busy(busy: bool) -> void:
+	for path: String in ["Play", "Join"]: get_node("Pages/%s/Footer/CancelConnect" % path).visible = busy
 	for page_name in NAV_PAGES: _lock(get_node("Sidebar/Nav/" + page_name), busy)
 	for path: String in ["Play/Footer/Start", "Play/Footer/Create", "Play/Body/Advanced/RelayUrl", "Join/Body/Advanced/RelayUrl", "Join/Body/Code", "Join/Footer/Join", "Play/Body/Own", "Join/Body/Own", "Play/Body/Bot", "Play/Body/Map", "Play/Body/Opponent/BotToggle", "Play/Body/Opponent/FriendToggle"]:
 		var control: Control = get_node("Pages/" + path)
@@ -399,7 +434,12 @@ func _process(_delta: float) -> void:
 	for text in frames:
 		if _lockstep != null: _lockstep.receive(text)
 		elif not _handle(text): return
-	if _transport.closed() or _transport.silent(Time.get_ticks_usec()): _fail("Connection to relay lost")
+	if _transport.closed() or _transport.silent(int(_clock.call())): _fail("Connection to relay lost")
+	elif _transport != null: _show_ticking()
+
+func _show_ticking() -> void:
+	if _welcome_msec < 0: _show_connecting(_now_msec())
+	elif current_page == "Waiting": _show_countdown(_now_msec())
 
 func _handle(text: String) -> bool:
 	var decoded: Dictionary = Wire.decode(text)
@@ -412,6 +452,9 @@ func _handle(text: String) -> bool:
 		"welcome":
 			_seat = message.seat
 			_code = message.match
+			_transport.patient = true
+			_welcome_msec = _now_msec()
+			_shown_second = -1
 			if _seat == 1:
 				_fill_waiting()
 				show_page("Waiting")
@@ -420,7 +463,7 @@ func _handle(text: String) -> bool:
 		"start": return _start(message)
 		"error":
 			_transport.close()
-			_fail(message.reason)
+			_fail(DID_NOT_JOIN if message.reason == "lobby expired" else message.reason)
 			return false
 		_:
 			_transport.close()
@@ -437,7 +480,7 @@ func _fill_waiting() -> void:
 	body.get_node("Left/One/Row/Faction").text = own.get_item_text(own.selected)
 	body.get_node("Right/Map/Box/Name").text = MatchSettings.PLAY_MAPS[id]
 	body.get_node("Right/Map/Box/Info").text = _map_info(id)
-	$Pages/Waiting/Footer/Status.text = "Match code [b][color=#ffffff]%s[/color][/b]" % _code
+	_show_countdown(_welcome_msec)
 
 func _start(message: Dictionary) -> bool:
 	var reason: String = MatchSettings.refusal(message.settings)
@@ -445,9 +488,7 @@ func _start(message: Dictionary) -> bool:
 		_transport.close()
 		_fail(reason)
 		return false
-	var seats: Array[int] = []
-	seats.assign(message.seats)
-	_lockstep = Lockstep.new(_seat, seats, message.delay)
+	_lockstep = Lockstep.for_start(_seat, message)
 	var id: String = message.settings.map
 	var picks: Dictionary = {"faction": _faction($Pages/Play/Body/Own)}
 	if _seat == 1: picks["map"] = id

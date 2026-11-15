@@ -246,6 +246,13 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.01
 
+[node name="CancelConnect" type="Button" parent="Pages/Play/Footer"]
+layout_mode = 2
+size_flags_vertical = 4
+custom_minimum_size = Vector2(140, 46)
+text = "Cancel"
+visible = false
+
 [node name="Start" type="Button" parent="Pages/Play/Footer"]
 layout_mode = 2
 size_flags_vertical = 4
@@ -363,6 +370,13 @@ max_lines_visible = 3
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.01
+
+[node name="CancelConnect" type="Button" parent="Pages/Join/Footer"]
+layout_mode = 2
+size_flags_vertical = 4
+custom_minimum_size = Vector2(140, 46)
+text = "Cancel"
+visible = false
 
 [node name="Join" type="Button" parent="Pages/Join/Footer"]
 layout_mode = 2

@@ -610,6 +610,7 @@ func test_cancel_and_copy_while_waiting(runner) -> bool:
 		enabled = enabled and not launcher.get_node("Pages/" + path).disabled
 	runner.check(transport.close_calls == 1 and not wait.visible and enabled, "N17 Cancel restores the launcher")
 	runner.check(launcher.get_node("Pages/Play/Footer/Status").text == "Match cancelled" and not launcher.is_processing(), "N17 Cancel says so and stops polling")
+	launcher._transport = FakeTransport.new()
 	launcher._handle('{"type":"welcome","seat":2,"match":"ABC234"}')
 	runner.check(not wait.visible, "N18 seat 2 never sees the wait row")
 	await runner.process_frame
