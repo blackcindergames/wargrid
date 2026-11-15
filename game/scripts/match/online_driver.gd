@@ -3,6 +3,7 @@ extends RefCounted
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
+const Wire = preload("res://scripts/net/wire.gd")
 const TimingStats = preload("res://scripts/debug/timing_stats.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const CATCH_UP_STEPS: int = 2
@@ -24,16 +25,38 @@ var _finished: bool = false
 var _credit: int = 0
 var _rejections_seen: int = 0
 var _step_results: Array = []
+var _seat: int
+var _phase: String = "playing"
+var _friend_again: bool = false
+var _rematch_seed: int = -1
 
-func _init(transport: RefCounted, lockstep: RefCounted, faction: String) -> void:
+func _init(transport: RefCounted, lockstep: RefCounted, faction: String, seat: int) -> void:
 	_transport = transport
-	_lockstep = lockstep
 	_own_faction = faction
+	_seat = seat
+	_own(lockstep)
+
+func _own(lockstep: RefCounted) -> void:
+	_lockstep = lockstep
+	_lockstep.session_handler = _on_session
+
+func _on_session(message: Dictionary) -> bool:
+	if message.type == "again" and message.get("seat", _seat) != _seat:
+		_friend_again = true
+		return true
+	if message.type != "start" or _phase != "again": return false
+	_own(Lockstep.for_start(_seat, message))
+	_rematch_seed = message.seed
+	_phase = "playing"
+	return true
 
 func create(map_path: String, starts: Array[int], _factions: Dictionary, match_seed: int) -> void:
 	_map_path = map_path
 	_starts = starts
 	_seed = match_seed
+	_finished = false
+	_friend_again = false
+	_rejections_seen = 0
 	sim = Skirmish.create(true, "human", {}, map_path, starts)
 
 func start() -> void:
@@ -61,9 +84,22 @@ func step(after_tick: Callable) -> PackedStringArray:
 		_step_results.append_array(sim.command_results().duplicate(true))
 		var tick: int = sim.tick()
 		_lockstep.finish_tick(tick, sim.snapshot() if _lockstep.wants_snapshot(tick) else null)
+	if _phase == "playing" and _lockstep.received_any(): _transport.patient = false
+	if (_phase == "over" or _phase == "again") and _room_gone(): _close_room()
 	var rejected: PackedStringArray = _new_rejections()
-	if not _finished and (sim.match_over() or _lockstep.status().begins_with("ended")): _finish()
+	if not _finished and (sim.match_over() or _ended()): _finish()
 	return rejected
+
+func _ended() -> bool:
+	return _lockstep.status().begins_with("ended")
+
+func _room_gone() -> bool:
+	return _transport.closed() or _transport.silent(Time.get_ticks_usec()) or _lockstep.left_seat() != 0 or _ended()
+
+func _close_room() -> void:
+	if not _ended(): _lockstep.set_relay_lost()
+	_transport.close()
+	_phase = "done"
 
 func step_results() -> Array:
 	return _step_results
@@ -90,16 +126,27 @@ func can_restart() -> bool:
 	return false
 
 func rematch_line() -> String:
-	return ""
+	if _lockstep.left_seat() != 0: return "Your friend left"
+	if _phase == "done": return "The room closed"
+	if _phase == "again": return "Waiting for your friend…"
+	return "Your friend wants to play again" if _friend_again else ""
 
 func can_play_again() -> bool:
-	return false
+	return _phase == "over"
 
 func play_again() -> void:
-	pass
+	if _phase != "over": return
+	_transport.send_text(Wire.encode({"type": "again"}))
+	_phase = "again"
 
 func take_rematch() -> int:
-	return -1
+	var match_seed: int = _rematch_seed
+	_rematch_seed = -1
+	if match_seed < 0: return -1
+	if _room_gone():
+		_close_room()
+		return -1
+	return match_seed
 
 func over() -> bool:
 	return _finished
@@ -112,6 +159,11 @@ func _finish() -> void:
 	_finished = true
 	if _lockstep.status() == "ended_desync": _report_path = _write_report()
 	_write_latency()
+	if not _ended():
+		_transport.patient = true
+		_transport.send_text(Wire.encode({"type": "over"}))
+		_phase = "over"
+		return
 	_transport.close()
 
 func _write_report() -> String:

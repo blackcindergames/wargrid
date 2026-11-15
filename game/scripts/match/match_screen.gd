@@ -25,6 +25,7 @@ const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const PlaytestOverlay = preload("res://scripts/playtest/playtest_overlay.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
+const MatchSettings = preload("res://scripts/match_settings.gd")
 const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
@@ -55,7 +56,7 @@ var _visuals := VisualDirector.new()
 var _playtest: PlaytestOverlay
 
 func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: String = Skirmish.default_faction()) -> void:
-	driver = OnlineDriver.new(transport, lockstep, faction)
+	driver = OnlineDriver.new(transport, lockstep, faction, seat)
 	local_player = seat
 
 func _ready() -> void:
@@ -192,6 +193,10 @@ func _step_frame() -> void:
 	var started: int = Time.get_ticks_usec()
 	var tick_before: int = driver.sim.tick()
 	_step_simulation()
+	var rematch_seed: int = driver.take_rematch()
+	if rematch_seed >= 0:
+		_rematch(rematch_seed)
+		return
 	_perf.record_step((Time.get_ticks_usec() - started) / 1000.0)
 	# A stall frame (online, waiting for the peer) is not a step frame; counting it would inflate the split share.
 	var advanced: bool = driver.sim.tick() != tick_before
@@ -312,6 +317,11 @@ func _play_again() -> void:
 
 func _restart() -> void:
 	if not driver.can_restart(): return
+	_restart_world()
+
+func _rematch(match_seed_value: int) -> void:
+	match_seed = match_seed_value
+	starts = MatchSettings.starts(map_path.get_file().get_basename(), match_seed_value)
 	_restart_world()
 
 func _restart_world() -> void:

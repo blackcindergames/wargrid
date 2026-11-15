@@ -690,7 +690,7 @@ func test_replay_oracle_uses_match_map(runner) -> bool:
 	return true
 
 func test_desync_report_names_map_seed_starts(runner) -> bool:
-	var driver = OnlineDriver.new(null, Lockstep.new(1, [1, 2] as Array[int]), "usa")
+	var driver = OnlineDriver.new(null, Lockstep.new(1, [1, 2] as Array[int]), "usa", 1)
 	driver.create(MatchSettings.map_path("ashfall"), MatchSettings.starts("ashfall", 7), {}, 7)
 	var report: Dictionary = driver._report()
 	runner.check(report.get("map") == "ashfall" and report.get("seed") == 7 and report.get("starts") == MatchSettings.starts("ashfall", 7), "SK23 the online desync report names map, seed and starts, got %s" % [[report.get("map"), report.get("seed"), report.get("starts")]])

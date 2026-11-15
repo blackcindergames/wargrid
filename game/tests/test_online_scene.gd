@@ -38,7 +38,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_reports_latency, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_room_closed_after_end, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -155,7 +155,40 @@ func test_status_lines_and_layout(runner) -> bool:
 	web_desync.main.free()
 	return true
 
-func test_match_end_reports_latency(runner) -> bool:
+func _end_match(online: Dictionary) -> void:
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(online.main, 8)
+	online.main.driver.sim.remove_object(4)
+	online.main.driver.sim.remove_object(6)
+	_run(online.main, 2)
+
+func _sent_types(transport: FakeTransport, type: String) -> int:
+	return transport.sent.filter(func(text: String) -> bool: return Wire.decode(text).message.type == type).size()
+
+func _panel_line(main) -> String:
+	var status: Label = main.get_node("HUD/ResultPanel/Center/Card/Box/Status")
+	return status.text if status.visible else ""
+
+func _play_again_button(main) -> Button:
+	return main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain")
+
+func _key(code: Key) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.pressed = true
+	return event
+
+func _rematch_start(match_seed: int) -> String:
+	return Wire.encode(_start_message(SkirmishMain.map_path.get_file().get_basename(), match_seed))
+
+func _sent_faction_choice(transport: FakeTransport, from: int) -> bool:
+	for i in range(from, transport.sent.size()):
+		var message: Dictionary = Wire.decode(transport.sent[i]).message
+		if message.type == "tick" and message.tick == 4 and message.commands.any(func(command: Dictionary) -> bool: return command.type == "choose_faction"): return true
+	return false
+
+func test_match_end_sends_over_and_keeps_socket(runner) -> bool:
 	var online: Dictionary = await _online(runner, 2)
 	var main = online.main
 	_peer_packets(online.transport, 1, 4, PEER_TICKS)
@@ -164,12 +197,215 @@ func test_match_end_reports_latency(runner) -> bool:
 	main.driver.sim.remove_object(4)
 	main.driver.sim.remove_object(6)
 	_run(main, 2)
-	runner.check(online.transport.close_calls == 1, "N4 transport closed once at match end")
+	runner.check(online.transport.close_calls == 0, "N4 the socket stays open after a sim-decided end")
 	runner.check(main.driver.latency_line().contains("RTT n=1 p95=40.0 ms"), "N4 latency line carries RTT p95, got " + main.driver.latency_line())
 	runner.check(FileAccess.file_exists("user://netplay-latency.txt"), "N4 latency file written")
-	_run(main, 2)
-	runner.check(online.lockstep.status() != "ended_relay" and main.driver.notice() == "", "N4 own close after the match is not a relay loss, got " + main.driver.notice())
+	_run(main, 4)
+	runner.check(_sent_types(online.transport, "over") == 1 and online.transport.close_calls == 0, "N4 exactly one over leaves, got %d" % _sent_types(online.transport, "over"))
+	runner.check(online.transport.patient, "N4 the result panel waits patiently")
+	runner.check(online.lockstep.status() != "ended_relay" and main.driver.notice() == "", "N4 the end is not a relay loss, got " + main.driver.notice())
+	runner.check(main.get_node("HUD/ResultPanel").visible and not _play_again_button(main).disabled and _panel_line(main) == "", "N4 panel up, Play again enabled, no status line, got '%s'" % _panel_line(main))
 	main.free()
+	return true
+
+func test_abnormal_end_closes_without_rematch(runner) -> bool:
+	var left: Dictionary = await _online(runner, 2)
+	_peer_packets(left.transport, 1, 4, PEER_TICKS)
+	_run(left.main, 8)
+	left.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": 40}))
+	_run(left.main, 40)
+	runner.check(left.lockstep.status() == "ended_left" and left.transport.close_calls == 1 and _sent_types(left.transport, "over") == 0, "N13 a friend leaving mid-match closes once and sends no over, got %s %d" % [left.lockstep.status(), left.transport.close_calls])
+	runner.check(not left.main.get_node("HUD/ResultPanel").visible and not left.main.driver.can_play_again(), "N13 no result panel after a leave")
+	left.main.free()
+	var lost: Dictionary = await _online(runner, 2)
+	_peer_packets(lost.transport, 1, 4, PEER_TICKS)
+	_run(lost.main, 8)
+	lost.transport.is_closed = true
+	_run(lost.main, 4)
+	runner.check(lost.lockstep.status() == "ended_relay" and lost.transport.close_calls == 1 and _sent_types(lost.transport, "over") == 0, "N13 a lost relay mid-match closes once and sends no over, got %s %d" % [lost.lockstep.status(), lost.transport.close_calls])
+	runner.check(not lost.main.get_node("HUD/ResultPanel").visible, "N13 no result panel after a lost relay")
+	lost.main.free()
+	return true
+
+func test_play_again_sends_once(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_end_match(online)
+	_play_again_button(main).pressed.emit()
+	_play_again_button(main).pressed.emit()
+	main._input(_key(KEY_ENTER))
+	_run(main, 1)
+	main._input(_key(KEY_ENTER))
+	_run(main, 2)
+	runner.check(_sent_types(online.transport, "again") == 1, "N14 exactly one again leaves, got %d" % _sent_types(online.transport, "again"))
+	runner.check(_panel_line(main) == "Waiting for your friend…" and _play_again_button(main).disabled, "N14 waiting line and Play again disabled, got '%s'" % _panel_line(main))
+	main.free()
+	return true
+
+func test_friend_again_before_own_end(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_run(main, 1)
+	runner.check(not online.lockstep.status().begins_with("ended") and not main.driver.sim.match_over(), "N15 the friend's early again does not end the match, got " + online.lockstep.status())
+	main.driver.sim.remove_object(4)
+	main.driver.sim.remove_object(6)
+	_run(main, 2)
+	runner.check(_panel_line(main) == "Your friend wants to play again" and not _play_again_button(main).disabled, "N15 the early again shows after the end, got '%s'" % _panel_line(main))
+	main.free()
+	return true
+
+func test_friend_left_after_end(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_end_match(online)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	online.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": PEER_TICKS}))
+	_run(main, 3)
+	runner.check(_panel_line(main) == "Your friend left" and _play_again_button(main).disabled, "N16 friend left line, Play again disabled, got '%s'" % _panel_line(main))
+	runner.check(online.transport.close_calls == 1, "N16 the socket closes once, got %d" % online.transport.close_calls)
+	main.free()
+	return true
+
+func test_room_closed_after_end(runner) -> bool:
+	var expired: Dictionary = await _online(runner, 2)
+	_end_match(expired)
+	expired.transport.frames.append(Wire.encode({"type": "error", "reason": "room expired"}))
+	_run(expired.main, 2)
+	runner.check(_panel_line(expired.main) == "The room closed" and _play_again_button(expired.main).disabled, "N17 room expired: closed line, Play again disabled, got '%s'" % _panel_line(expired.main))
+	runner.check(expired.transport.close_calls == 1, "N17 room expired closes the socket once, got %d" % expired.transport.close_calls)
+	expired.main.free()
+	var closed: Dictionary = await _online(runner, 2)
+	_end_match(closed)
+	closed.transport.is_closed = true
+	_run(closed.main, 2)
+	runner.check(_panel_line(closed.main) == "The room closed" and _play_again_button(closed.main).disabled, "N17 closed socket: closed line, Play again disabled, got '%s'" % _panel_line(closed.main))
+	runner.check(closed.main.driver.notice() == "Connection to relay lost", "N17 a lost socket after the match reads as a relay loss, got " + closed.main.driver.notice())
+	closed.main.free()
+	var silent: Dictionary = await _online(runner, 2)
+	_end_match(silent)
+	silent.transport.is_silent = true
+	_run(silent.main, 2)
+	runner.check(_panel_line(silent.main) == "The room closed" and _play_again_button(silent.main).disabled and silent.transport.close_calls == 1, "N17 silent relay: closed line, Play again disabled, got '%s'" % _panel_line(silent.main))
+	silent.main.free()
+	return true
+
+func test_rematch_builds_new_match(runner) -> bool:
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_end_match(online)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	var old_sim = main.driver.sim
+	var old_lockstep = main.driver._lockstep
+	var sent_before: int = online.transport.sent.size()
+	# A stale value proves the rematch recomputes starts (the test map's own are empty).
+	SkirmishMain.starts = [2, 1]
+	online.transport.frames.append(_rematch_start(99))
+	_peer_packets(online.transport, 1, 4, 4)
+	_run(main, 1)
+	runner.check(not is_same(main.driver.sim, old_sim) and not is_same(main.driver._lockstep, old_lockstep), "N18 the rematch builds a new simulation and lockstep")
+	runner.check(SkirmishMain.match_seed == 99 and SkirmishMain.starts == MatchSettings.starts(SkirmishMain.map_path.get_file().get_basename(), 99), "N18 the rematch takes the relay's seed and its starts, got %d %s" % [SkirmishMain.match_seed, SkirmishMain.starts])
+	runner.check(not main.get_node("HUD/ResultPanel").visible, "N18 the panel hides for the new match")
+	runner.check(not online.transport.patient, "N18 the batched peer tick clears patient in the same frame")
+	runner.check(_sent_faction_choice(online.transport, sent_before), "N18 the new match sends tick 4 with choose_faction")
+	_peer_packets(online.transport, 1, 5, 12)
+	_run(main, 6)
+	runner.check(main.driver.sim.tick() > 4 and main.driver._lockstep.status() == "running", "N18 the batched peer tick 4 reached the new lockstep, got tick %d %s" % [main.driver.sim.tick(), main.driver._lockstep.status()])
+	runner.check(not online.transport.patient and online.transport.close_calls == 0, "N18 the new match is live on the same socket")
+	main.driver.sim.remove_object(4)
+	main.driver.sim.remove_object(6)
+	_run(main, 2)
+	runner.check(_sent_types(online.transport, "over") == 2 and _panel_line(main) == "" and not _play_again_button(main).disabled, "N18 the second end sends its own over with a fresh panel, got %d '%s'" % [_sent_types(online.transport, "over"), _panel_line(main)])
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_run(main, 1)
+	runner.check(_panel_line(main) == "Your friend wants to play again", "N18 the new lockstep hands the friend's again to the driver, got '%s'" % _panel_line(main))
+	main.free()
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
+	return true
+
+func test_start_while_playing_is_protocol_error(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(online.main, 8)
+	online.transport.frames.append(_rematch_start(99))
+	_run(online.main, 1)
+	runner.check(online.lockstep.status() == "ended_protocol", "N19 a start mid-match is a protocol error, got " + online.lockstep.status())
+	online.main.free()
+	var own: Dictionary = await _online(runner, 2)
+	_peer_packets(own.transport, 1, 4, PEER_TICKS)
+	_run(own.main, 8)
+	own.transport.frames.append(Wire.encode({"type": "again", "seat": 2}))
+	_run(own.main, 1)
+	runner.check(own.lockstep.status() == "ended_protocol", "N19 an again carrying our own seat is a protocol error, got " + own.lockstep.status())
+	own.main.free()
+	return true
+
+func test_patient_holds_on_result_panel(runner) -> bool:
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_end_match(online)
+	runner.check(online.lockstep.received_any() and online.transport.patient, "N20 fixture: the old match saw peer ticks and the panel is patient")
+	_run(main, 10)
+	runner.check(online.transport.patient, "N20 the old match's peer ticks never clear patient on the panel")
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	online.transport.frames.append(_rematch_start(5))
+	_run(main, 2)
+	runner.check(online.transport.patient, "N20 still patient until the new match's first peer tick")
+	_peer_packets(online.transport, 1, 4, 4)
+	_run(main, 1)
+	runner.check(not online.transport.patient, "N20 the new match's first peer tick clears patient")
+	main.free()
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
+	return true
+
+func test_start_then_left_same_batch(runner) -> bool:
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var batches: Dictionary = {
+		"left": [_rematch_start(99), Wire.encode({"type": "left", "seat": 1, "after_tick": 3})],
+		"room expired": [_rematch_start(99), Wire.encode({"type": "error", "reason": "room expired"})],
+		"closed": [_rematch_start(99)],
+	}
+	var lines: Dictionary = {"left": "Your friend left", "room expired": "The room closed", "closed": "The room closed"}
+	for label: String in batches:
+		var online: Dictionary = await _online(runner, 2)
+		var main = online.main
+		_end_match(online)
+		_play_again_button(main).pressed.emit()
+		_run(main, 1)
+		var old_sim = main.driver.sim
+		var sent_before: int = online.transport.sent.size()
+		for frame: String in batches[label]: online.transport.frames.append(frame)
+		if label == "closed": online.transport.is_closed = true
+		_run(main, 2)
+		runner.check(is_same(main.driver.sim, old_sim) and main.driver.take_rematch() == -1 and SkirmishMain.match_seed == before[2], "N21 %s: start then end in one batch builds no match" % label)
+		runner.check(_panel_line(main) == lines[label] and _play_again_button(main).disabled, "N21 %s: panel line and Play again disabled, got '%s'" % [label, _panel_line(main)])
+		runner.check(not _sent_faction_choice(online.transport, sent_before), "N21 %s: no choose_faction sent" % label)
+		main.free()
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
+	return true
+
+func test_patient_until_first_peer_tick(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	online.transport.patient = true
+	_run(online.main, 3)
+	runner.check(online.transport.patient, "N22 patient holds before the first peer tick")
+	_peer_packets(online.transport, 1, 4, 4)
+	_run(online.main, 1)
+	runner.check(not online.transport.patient, "N22 the first peer tick clears patient")
+	online.main.free()
 	return true
 
 func test_runs_at_tick_rate(runner) -> bool:

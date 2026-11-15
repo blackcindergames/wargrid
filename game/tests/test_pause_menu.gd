@@ -11,6 +11,7 @@ const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const LAUNCHER: String = "res://scenes/launcher.tscn"
 
 class FakeTransport extends RefCounted:
+	var patient: bool = false
 	var frames := PackedStringArray()
 	var close_calls: int = 0
 	func poll() -> PackedStringArray:
