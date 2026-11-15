@@ -1,4 +1,14 @@
 [
+ {"id": "p2.2-quick-rematch", "title": "Play again",
+  "new": ["After a match, Play again starts a new one with the same friend and the same link.", "A waiting match stays open for 15 minutes, with a countdown.", "Enter joins a code; Cancel or Esc stops connecting."],
+  "try": [
+   {"id": "rematch", "text": "Finish an online match and press Play again on both sides"},
+   {"id": "hidden", "text": "Create a match, switch to another app for a minute, then let your friend join"},
+   {"id": "cancel", "text": "Press Cancel while connecting"}],
+  "questions": [
+   {"id": "rematch_fast", "text": "Starting a second match was quick"},
+   {"id": "panel_clear", "text": "The result panel told me what was going on"},
+   {"id": "wait_ok", "text": "Waiting for my friend felt safe"}]},
  {"id": "p2.1-new-launcher", "title": "The new menu",
   "new": ["The menu has a sidebar: Play, Join, Settings, Credits.", "It remembers your faction, the bot's faction and the map.", "Invite links open Join with the code filled in."],
   "try": [

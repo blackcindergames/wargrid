@@ -104,7 +104,11 @@ The protocol is JSON text, one message per WebSocket text frame, at most 64 KiB,
 | `tick` | client, relayed | seat, tick, commands, optionally a hash |
 | `ping`, `pong` | client, relay | a timestamp the relay echoes byte for byte |
 | `left` | relay | the seat that left and its last forwarded tick |
-| `error` | relay | a reason; the relay closes the socket shortly after |
+| `over` | client | this seat's match has ended; no content. Valid once, after the seat's first accepted tick |
+| `again` | client, relay | the client asks to play again, no content; the relay echoes it to the other seats with `seat` set to the asker. Valid once, after the seat's own `over` |
+| `error` | relay | a reason (`lobby expired` and `room expired` join the older ones); the relay closes the socket shortly after |
+
+Bad ordering of `over` and `again` is `invalid message`: `over` in a lobby, before the seat's first accepted tick or twice, a `tick` after the seat's own `over`, `again` before the seat's own `over` or twice. The protocol number stays 2.
 
 A tick message is one line (this is the committed vector `protocol/vectors/tick.json`):
 
@@ -126,6 +130,20 @@ The Go program in `relay/` is about 740 lines in four files ([development notes]
 
 **Seats and start.** Seats take the lowest free number. The room starts when it holds `WARGRID_SEATS` seats (default 2); at that moment every seat receives start with the delay (a constant, 4) and a random 31-bit seed. After start, nobody can join, even if a seat leaves.
 
+**Deadlines by phase.** The read deadline on a socket depends on what the room is doing, so a host can leave the tab while waiting but a dead match is still noticed fast. Each `conn` carries a small `deadline` (mutex-guarded, because the reader goroutine and the room goroutine both set it); `hold` fixes it, `every` renews it on each frame.
+
+| Phase | Deadline | Default |
+|---|---|---|
+| Connected, no hello yet | `hold`: `WARGRID_HELLO_MS` | 5 s |
+| Seat in an unstarted lobby | `hold` until the lobby expires (frames and pings do not extend it) | `WARGRID_LOBBY_MS`, 15 min |
+| Started, no tick from this seat yet (start window) | `hold`: one `WARGRID_LOBBY_MS` from the start | 15 min |
+| Running match, from the seat's first accepted tick | `every`: renewed by any frame | `WARGRID_SILENCE_MS`, 10 s |
+| Parked (between matches) | `hold` until the park limit plus a 1 s grace | 15 min |
+
+The lobby timer lives on the room, not the socket. When it fires with the room unstarted, the room removes itself from the registry, sends `lobby expired` to every seat and closes; a later join gets `unknown match`. The socket deadline sits one second behind the timer so the error frame lands before the close. The start window exists for a hidden browser tab (F11): a host whose tab is hidden when the friend joins has the whole window to come back and send its first tick, while a running match keeps the 10 s rule. The attended hidden-tab check on a real browser is still pending.
+
+**Park and rematch.** A seat sends `over` when its simulation decided the match. When every seat has sent it, the room is parked: it keeps its seats and runs the same timer again, now as the park limit, and a fire sends `room expired` and closes. A seat's `again` is echoed to the others at once; when every seat is parked and has sent `again`, the room clears each seat's tick counter, `over` and `again` flags (frame and byte counts stay, so `MATCH END` reports the whole room) and sends a second `start` with a fresh seed, logging `rematch`. An `again` that was queued when the timer won, or after a drain began, is dropped, never answered with `start`.
+
 **Forwarding.** For every tick frame the room checks the match has started, the seat in the message equals the connection's seat, and the tick is exactly the previous one plus one (the first is 4). Anything else marks the seat dead: the relay replies with an error, closes the socket after a 200 ms grace (Godot drops queued frames when it sees the close, so the error would otherwise be lost), and the others hear `left`. A valid frame is copied once and the same bytes are queued to every other seat. The sender gets no echo. The relay keeps no history: it counts frames and bytes per seat for its end-of-match log line, and nothing else.
 
 **What the relay does not look at.** It checks that `commands` is an array and that a hash, if present, has the right shape. It does not read a command and never compares hash values ([state digest research](../reference/state-digest-research.md)). Comparing is left to the clients, so the relay cannot pause a match, rule on a desync or know a seat's state.
@@ -134,18 +152,26 @@ The Go program in `relay/` is about 740 lines in four files ([development notes]
 
 **Writes.** Each socket writes through a small `sender`: with no test delay configured it is a plain asynchronous write. Two knobs exist for tests. A test delay holds every forwarded tick back while keeping frame order, and `left` waits behind the ticks. A batch interval joins ticks into one newline-separated message, which the current Godot client cannot read.
 
-**Draining.** On a shutdown signal the relay stops accepting connections, closes lobbies that have not started, lets started matches run for `WARGRID_DRAIN_MS`, then closes everything. A match longer than that does not survive a deploy ([development notes](../development.md#relay)).
+**Draining.** On a shutdown signal the relay stops accepting connections, closes lobbies that have not started, closes parked rooms too (a park that starts during the drain closes at once), lets started matches run for `WARGRID_DRAIN_MS`, then closes everything. A match longer than that does not survive a deploy ([development notes](../development.md#relay)).
 
 ## One protocol, three checkers
 
 The protocol is the one thing both a GDScript client and a Go server must agree on, so it is pinned outside both implementations.
 
-- **Vectors (`protocol/vectors`).** 16 JSON files, each holding a message as text plus its parsed form, or marked invalid. The Godot wire test and the Go test `TestVectors` read the same files, and the Godot one also checks that there are exactly 16. Each side must accept the valid ones and reject the invalid ones (a fractional tick, an unknown type, a start without a seed, ...). Go must accept only the valid client messages (hello, tick, ping) and reject the server messages and invalid vectors, since a client may send nothing else.
-- **Conformance suite (`protocol/conformance`).** A separate Go program that plays two or more clients against a live relay and checks exact bytes: that ticks are forwarded unchanged, that a bad frame gets an error, a close and a `left` with the right tick, that a full match refuses a third client, that settings are echoed byte for byte, that seeds are in range and vary. It has three profiles, because some behaviour needs a differently configured relay: default (38 cases), delay (2) and silence (1). `sh tools/run_conformance.sh` starts one relay per profile and ended `CONFORMANCE PASSED 41` when run for this chapter.
+- **Vectors (`protocol/vectors`).** 19 JSON files, each holding a message as text plus its parsed form, or marked invalid. The Godot wire test and the Go test `TestVectors` read the same files, and the Godot one also checks that there are exactly 19. Each side must accept the valid ones and reject the invalid ones (a fractional tick, an unknown type, a start without a seed, ...). Go must accept only the valid client messages (hello, tick, ping, over, again) and reject the server messages and invalid vectors, since a client may send nothing else.
+- **Conformance suite (`protocol/conformance`).** A separate Go program that plays two or more clients against a live relay and checks exact bytes: that ticks are forwarded unchanged, that a bad frame gets an error, a close and a `left` with the right tick, that a full match refuses a third client, that settings are echoed byte for byte, that seeds are in range and vary. It has three profiles, because some behaviour needs a differently configured relay: default (49 cases, including the `over` / `again` ordering rules and the rematch round trip), delay (2) and silence (10: hello deadline, lobby survives silence and expires despite pings, start window, park limit, silence in a match; the relay runs with 300 ms hello and silence and a 1.5 s lobby). `sh tools/run_conformance.sh` starts one relay per profile and ended `CONFORMANCE PASSED 61` when run for this chapter.
 - **Relay unit tests (`relay/*_test.go`).** Run with the race detector. They cover parse rules, join rules (a protocol mismatch outranks bad settings), concurrent joins never overfilling a room, a panic ending only its room, drain keeping a started match, and a stalled reader still producing `left`.
-- **Netplay scenarios (`tools/run_netplay.sh`).** Two real Godot clients, headless, through a real relay. Eleven scenarios: a full match (terminal tick pinned, hashes equal on both sides and against an offline replay of the command log), a peer killed, a 3 s stall, a 15 s silence, a relay that delays every forward by 200 ms, a deliberate desync, a version mismatch, two map scenarios, a relay killed and a relay sent SIGTERM.
+- **Netplay scenarios (`tools/run_netplay.sh`).** Two real Godot clients, headless, through a real relay. Twelve scenarios: a full match (terminal tick pinned, hashes equal on both sides and against an offline replay of the command log), a rematch (both seats finish, send `over` and `again`, play a second match with a new seed and end on the same tick and hashes as the first; the relay logs one `rematch` and one `MATCH END`), a peer killed, a 3 s stall, a 15 s silence, a relay that delays every forward by 200 ms, a deliberate desync, a version mismatch, two map scenarios, a relay killed and a relay sent SIGTERM.
 
 Together these make the protocol an interface any relay can be checked against. That was the use made of it in the relay stack spike: five ports against the same suite, with Go chosen to replace the first (Kotlin) relay ([relay stack spike](../reference/relay-stack-spike.md)).
+
+## Playing again
+
+Between matches the client keeps its socket. In `online_driver.gd` a phase string tracks it: `playing`, then on a sim-decided end (win, loss, draw) `over`, after Play again `again`, and `done` once the room is gone. `_finish` sends `over`, sets `RelayTransport.patient` (the 5 s silence rule relaxes to the 15 min lobby length, because a parked room sends nothing) and keeps the transport. `play_again` sends exactly one `again` and moves to `again`; `can_play_again` is true only in `over`, so the panel's button is disabled while waiting and a second click cannot send a second `again`. The relay's `again` for the friend is remembered (`rematch_line`: "Your friend wants to play again"); if it arrives before this client's own end, `Lockstep` hands it to the driver's `session_handler` instead of ending the match as a protocol error.
+
+The relay's second `start` also reaches `Lockstep.receive`, which gives it to the driver; the driver builds a new `Lockstep` (`Lockstep.for_start`, shared with the launcher) at once, so a peer's tick 4 in the same poll batch lands in the new one. `match_screen` then sees `take_rematch` return the new seed and rebuilds the world from it, with start spots from `MatchSettings.starts`. A `left` in the same batch, a closed or silent socket, or an expiry cancels the rematch ("Your friend left", "The room closed"). An abnormal end (desync, left, relay lost, protocol) never sends `over`: it closes the transport and shows today's notice with Play again disabled, so an end the relay never parked cannot be restarted. The result panel (`result_panel.gd`) shows the outcome, a status line from `rematch_line`, Play again (Enter) and Change setup; offline it always allows Play again.
+
+In the launcher, `RelayTransport.patient` is set at the welcome, so a host who switches tabs while waiting is not dropped by the client's own 5 s rule. The Waiting view counts down the 15 minutes (`closes in 14:59`), the relay's `lobby expired` shows "Your friend did not join in time", and while connecting the page shows "Connecting… N s" with a Cancel button; Esc cancels too, except on the Waiting page, which keeps its own Cancel. Enter in the code field joins.
 
 ## Desync detection
 
@@ -163,7 +189,7 @@ Every 30th tick (`hash_interval`), `finish_tick` attaches the state hash to the 
 |---|---|---|
 | Slow but alive (still pinging) | nobody; the others show "Waiting for player N" | others wait with no time limit: nothing in `advance` times out while the relay connection is healthy |
 | Frozen for a few seconds (the `stall` scenario, 3 s) | nobody | packets arrive late and in a burst; catch-up credit rations the replay; both finish with equal hashes |
-| Silent for over 10 s (no packets, no pings: the `silent` scenario, 15 s) | relay read deadline (`WARGRID_SILENCE_MS`, default 10 s) | relay closes that socket, others get `left`; the scenario asserts that this happens within 12 s |
+| Silent for over 10 s in a running match (no packets, no pings: the `silent` scenario, 15 s) | relay read deadline (`WARGRID_SILENCE_MS`, default 10 s, from the seat's first tick) | relay closes that socket, others get `left`; the scenario asserts that this happens within 12 s |
 | Socket closed or process killed | relay at once | others get `left` with the last tick forwarded |
 | Stops reading (full TCP buffer) | relay write deadline, same timeout | socket closed, `left`; `TestStalledPeerStillProducesLeft` |
 | Reads, but slower than the room sends | relay write-queue cap: more than 1 MiB waiting for that socket | socket closed at once, `left`; `TestSlowReaderBacklogIsCapped` |
@@ -194,15 +220,16 @@ Clients ping the relay once per second after their first send, so a healthy but 
 
 ## Where in the code
 
-- `game/scripts/net/lockstep.gd` — `Lockstep`: `submit`, `receive`, `advance`, `finish_tick`, `waiting_for`, `can_step`, `desync_report`; statuses; constants `MAX_QUEUED_TICKS`; private `_receive_tick`, `_verify_hashes`.
-- `game/scripts/net/wire.gd` — `encode`, `decode`, `tick_message`; `PROTOCOL`, `MAX_FRAME_BYTES`; required-field and integer-field tables.
-- `game/scripts/net/relay_transport.gd` — `RelayTransport`: WebSocket peer, `poll`, `send_text`, once-a-second ping, 5 s silence (`silent`), round-trip samples.
+- `game/scripts/net/lockstep.gd` — `Lockstep`: `submit`, `receive`, `advance`, `finish_tick`, `waiting_for`, `can_step`, `desync_report`, `for_start`, `session_handler`; statuses; constants `MAX_QUEUED_TICKS`; private `_receive_tick`, `_verify_hashes`.
+- `game/scripts/net/wire.gd` — `encode`, `decode` (also `over`, `again`), `tick_message`; `PROTOCOL`, `MAX_FRAME_BYTES`; required-field and integer-field tables.
+- `game/scripts/net/relay_transport.gd` — `RelayTransport`: WebSocket peer, `poll`, `send_text`, once-a-second ping, 5 s silence (`silent`, 15 min while `patient`), `LOBBY_EXPIRY_SEC`, round-trip samples.
 - `game/scripts/net/seat_sim.gd` — wrapper so bot and script code drive a networked seat through `Lockstep.submit`.
 - `game/scripts/net/headless_client.gd` — the netplay test client: seat scripts, stall, kill and perturb hooks, command-log replay.
-- `game/scripts/match/online_driver.gd` — online driver: `submit`, `step` (poll, catch-up credit, `finish_tick`), `notice`, desync report writing, latency line. `match_screen.gd` `setup` creates it.
-- `game/scripts/launcher.gd` — hello, welcome and start handling (`_connect`, `_handle`, `_start`); shows the Waiting view after a welcome and locks the sidebar and page controls while connecting or waiting (`_set_busy`; a failure or Cancel match unlocks it); builds the `Lockstep` object and starts the match scene with it.
-- `relay/main.go` — WebSocket handlers (`OnMessage`, `OnClose`), silence and write deadlines, write-queue cap (`writeLater`), `reject`, shutdown and drain.
-- `relay/room.go` — `registry` (create, join, remove), `room.run`, `admit`, `forward`, `leave`, `recoverCrash`; constants `protocol`, `inputDelay`.
+- `game/scripts/match/online_driver.gd` — online driver: `submit`, `step` (poll, catch-up credit, `finish_tick`), the phases and `play_again`, `take_rematch`, `rematch_line`, `notice`, desync report writing, latency line. `match_screen.gd` `setup` creates it.
+- `game/scripts/launcher.gd` — hello, welcome and start handling (`_connect`, `_handle`, `_start`); shows the Waiting view after a welcome and locks the sidebar and page controls while connecting or waiting (`_set_busy`; a failure or Cancel match unlocks it); countdown, Cancel, Enter and the did-not-join text; builds the `Lockstep` object (`Lockstep.for_start`) and starts the match scene with it.
+- `game/scripts/match/result_panel.gd` — `ResultPanel`: outcome, status, Play again, Change setup; `match_screen.gd` `_play_again`, `_rematch`.
+- `relay/main.go` — WebSocket handlers (`OnMessage`, `OnClose`), the `deadline` type, hello, silence and write deadlines, write-queue cap (`writeLater`), `reject`, shutdown and drain.
+- `relay/room.go` — `registry` (create, join, remove), `room.run`, `admit`, `start`, `forward`, `expire`, `onOver`, `onAgain`, `park`, `rematch`, `leave`, `recoverCrash`; constants `protocol`, `inputDelay`, `expiryGrace`.
 - `relay/envelope.go` — `parseEnvelope`: what a client may send; size caps.
 - `relay/sender.go` — per-socket write queue; test delay and batch modes.
 - `protocol/vectors/*.json` — the message vectors; `protocol/conformance/conform.go` — the case lists and profiles; `tools/run_conformance.sh`, `tools/run_netplay.sh`, `tools/desync_diff.py`, `tools/desync_bisect.py` — runners.
@@ -218,4 +245,4 @@ Clients ping the relay once per second after their first send, so a healthy but 
 - Previous: [10. Determinism and replays](10-determinism-and-replays.md). Next: [12. Performance and platforms](12-performance-and-platforms.md). The tick that lockstep gates is in [4. The tick](04-the-tick.md).
 
 ---
-Checked against `4953e9f`; relay rows re-checked against `12c9855`; the launcher row against `ff8b093`. Files: `game/scripts/net/lockstep.gd`, `game/scripts/net/wire.gd`, `game/scripts/net/relay_transport.gd`, `game/scripts/net/seat_sim.gd`, `game/scripts/net/headless_client.gd`, `game/scripts/match/online_driver.gd`, `game/scripts/launcher.gd`, `relay/main.go`, `relay/room.go`, `relay/envelope.go`, `relay/sender.go`, `relay/envelope_test.go`, `relay/stall_test.go`, `relay/queue_test.go`, `protocol/conformance/conform.go`, `protocol/vectors/tick.json`, `tools/run_conformance.sh`, `tools/run_netplay.sh`
+Checked against `b270210`. Files: `game/scripts/net/lockstep.gd`, `game/scripts/net/wire.gd`, `game/scripts/net/relay_transport.gd`, `game/scripts/net/seat_sim.gd`, `game/scripts/net/headless_client.gd`, `game/scripts/match/online_driver.gd`, `game/scripts/launcher.gd`, `game/scripts/match/result_panel.gd`, `relay/main.go`, `relay/room.go`, `relay/rematch_test.go`, `relay/deadline_test.go`, `relay/envelope.go`, `relay/sender.go`, `relay/envelope_test.go`, `relay/stall_test.go`, `relay/queue_test.go`, `protocol/conformance/conform.go`, `protocol/vectors/tick.json`, `tools/run_conformance.sh`, `tools/run_netplay.sh`

@@ -829,3 +829,15 @@ After the Deck profile of the team window (native, 3 runs: step p50 6.7 ms, p95 
 
 - **A night package "Cheaper step" after the Sim boundary, before P5** (user, 2026-11-15; name proposed by the agent): four experiments, each measured on the Steam Deck (three runs, digests equal) and kept only on a measured gain: combat planning skips units whose cell, orders and targets did not change (estimate 0.5 to 1.2 ms native); an incremental target grid (lever F, 0.3 to 0.45 ms); active id lists for movers, collectors, salvagers and units due to fire (0.5 to 0.9 ms); bot decisions without the per-unit copy (1 to 3 ms off decision ticks).
 - **Fork-join (lever I) becomes a native-only option** (user, 2026-11-15): GDScript group tasks are expected to gain nothing (Godot issue #117640, the `WorkerThreadPool` small-task warning); a GDScript group task over movement stays only as a kill-test after packed movement columns exist.
+
+## Quick rematch slice 1 questionnaires (user, 2026-11-15)
+
+Confirmed calls in the [design](../superpowers/specs/2026-11-15-p2.2-quick-rematch-design.md); the [plan](../superpowers/plans/2026-11-15-p2.2-quick-rematch-slice-1.md) carries the details.
+
+- The relay reuses the room for a rematch: two client messages, `over` and `again`, and a relay `again` with `seat`; the wire change was approved as such, protocol number stays 2 (user, 2026-11-15).
+- One `WARGRID_LOBBY_MS` (15 min) covers the lobby expiry, the start window before a seat's first tick and the park limit (user, 2026-11-15).
+- Hello deadline 5 s; the 10 s silence rule stays for running matches (user, 2026-11-15).
+- Esc cancels only while connecting; the Waiting page keeps its Cancel button (user, 2026-11-15).
+- Slice 1 has no stats on the result panel and no protocol pings; the panel shows the outcome, Play again and Change setup (user, 2026-11-15).
+- Shipped wording that the user may change at the playtest (agent): "The room closed", "Connecting… N s", "closes in M:SS".
+
