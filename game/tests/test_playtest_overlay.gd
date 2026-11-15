@@ -288,7 +288,7 @@ func test_overlay_layout(runner) -> bool:
 			var panel: Control = main.get_node(path)
 			runner.check(panel.visible and screen.encloses(panel.get_global_rect()), "PO8 %s inside %s, rect %s" % [path, size, panel.get_global_rect()])
 			panels.append(panel.get_global_rect())
-			for other in ["HUD/Status", "HUD/Economy", "HUD/Result", "HUD/Restart"]:
+			for other in ["HUD/Status", "HUD/Economy"]:
 				var control: Control = main.get_node(other)
 				runner.check(not panel.get_global_rect().intersects(Rect2(control.global_position, control.get_combined_minimum_size())), "PO8 %s clear of %s at %s" % [path, other, size])
 		runner.check(not panels[0].intersects(panels[1]), "PO8 checklist and note apart at %s" % size)
@@ -570,7 +570,7 @@ func _in_scroll(node: Node, form: Node) -> bool:
 func _check_form_layout(runner, main, form: Control, size: Vector2i, stage: String) -> void:
 	var screen := Rect2(Vector2.ZERO, Vector2(size))
 	runner.check(form.visible and screen.encloses(form.get_global_rect()), "PO15 %s form inside %s, rect %s" % [stage, size, form.get_global_rect()])
-	for other in ["HUD/Status", "HUD/Economy", "HUD/Result", "HUD/Restart"]:
+	for other in ["HUD/Status", "HUD/Economy"]:
 		var control: Control = main.get_node(other)
 		runner.check(not form.get_global_rect().intersects(Rect2(control.global_position, control.get_combined_minimum_size())), "PO15 %s form clear of %s at %s" % [stage, other, size])
 	var scroll: Control = form.find_children("*", "ScrollContainer", true, false)[0]

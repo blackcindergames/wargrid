@@ -14,9 +14,15 @@ const ViewRows = preload("res://tests/test_view_rows.gd")
 const IcRows = preload("res://tests/input_script_rows.gd")
 const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
 const Hud = preload("res://scripts/match/hud.gd")
+const ResultPanel = preload("res://scripts/match/result_panel.gd")
+const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
+const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
+const OUTCOME: String = "HUD/ResultPanel/Center/Card/Box/Outcome"
+const PLAY_AGAIN: String = "HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain"
+const CHANGE_SETUP: String = "HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_clear_of_status, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_panel_keys, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -40,7 +46,7 @@ func _arena(main) -> Dictionary:
 
 func test_skirmish_ready_and_tick(runner) -> bool:
 	var main = await _setup(runner)
-	for path in ["WorldView", "Camera2D", "HUD/Status", "HUD/Result", "HUD/Restart", "HUD/Economy/Produce"]:
+	for path in ["WorldView", "Camera2D", "HUD/Status", "HUD/ResultPanel", "HUD/Economy/Produce"]:
 		runner.check(main.has_node(path), "K2 node " + path)
 	runner.check(main.driver.sim.snapshot() == Skirmish.create().snapshot(), "K2 exact scenario")
 	main._physics_process(0.0)
@@ -127,11 +133,11 @@ func test_match_hud_and_restart(runner) -> bool:
 	var setup: Dictionary = main.driver.sim.view_state()
 	setup.match.status = "setup"
 	main.hud._refresh_hud(setup)
-	runner.check(main.get_node("HUD/Result").text.is_empty() and not main.get_node("HUD/Restart").visible, "K4 the setup phase shows no result")
+	runner.check(main.get_node(OUTCOME).text.is_empty() and not main.get_node("HUD/ResultPanel").visible, "K4 the setup phase shows no result")
 	main.driver.sim.remove_object(3)
 	main.driver.sim.remove_object(4)
 	main._physics_process(0.0)
-	runner.check(main.get_node("HUD/Result").text == "Victory" and main.get_node("HUD/Restart").visible, "K4 victory and restart button")
+	runner.check(main.get_node(OUTCOME).text == "Victory" and main.get_node(PLAY_AGAIN).visible and not main.get_node(PLAY_AGAIN).disabled, "K4 victory and restart button")
 	main.driver.sim._players[main.local_player].team = 7
 	runner.check(main.hud._result_text({"status": "won", "winner": 7}) == "Victory" and main.hud._result_text({"status": "won", "winner": main.local_player}) == "Defeat", "K4 result compares the winning team id with the local team")
 	var before: Dictionary = main.driver.sim.snapshot()
@@ -148,8 +154,8 @@ func test_match_hud_and_restart(runner) -> bool:
 	main.orders._dragged = true
 	main.get_node("Camera2D").position = Vector2(500, 500)
 	main.get_node("Camera2D").zoom = Vector2.ONE * 2.0
-	main.get_node("HUD/Restart").pressed.emit()
-	runner.check(main.driver.sim.snapshot() == Skirmish.create().snapshot() and main.orders.selected_ids.is_empty() and main.orders._placement_kind.is_empty() and not main.orders._attack_move_mode and main.driver._sequence == 0 and main.hud.note.is_empty() and main.get_node("Camera2D").zoom == Vector2.ONE and not main.get_node("HUD/Result").visible and main.hud._last_result_tick == -1 and main.hud._last_result_sequence == -1 and not main.orders._selecting and not main.orders._dragged and main.get_node("Camera2D").position != Vector2(500, 500) and main.get_node("WorldView")._preview_cells.is_empty(), "K4 restart leaves nothing from the old match")
+	main.get_node(PLAY_AGAIN).pressed.emit()
+	runner.check(main.driver.sim.snapshot() == Skirmish.create().snapshot() and main.orders.selected_ids.is_empty() and main.orders._placement_kind.is_empty() and not main.orders._attack_move_mode and main.driver._sequence == 0 and main.hud.note.is_empty() and main.get_node("Camera2D").zoom == Vector2.ONE and not main.get_node("HUD/ResultPanel").visible and main.hud._last_result_tick == -1 and main.hud._last_result_sequence == -1 and not main.orders._selecting and not main.orders._dragged and main.get_node("Camera2D").position != Vector2(500, 500) and main.get_node("WorldView")._preview_cells.is_empty(), "K4 restart leaves nothing from the old match")
 	main.orders.selected_ids.assign([1])
 	main._submit({"type": "move", "entity_ids": [1], "target": [6.5, 14.5]})
 	runner.check(main.hud.note.is_empty() and _pending(main, "move") == 1, "K4 first order after restart is valid")
@@ -162,7 +168,7 @@ func test_match_hud_and_restart(runner) -> bool:
 			other.driver.sim.remove_object(3)
 			other.driver.sim.remove_object(4)
 		other._physics_process(0.0)
-		runner.check(other.get_node("HUD/Result").text == loser[1], "K4 " + loser[1])
+		runner.check(other.get_node(OUTCOME).text == loser[1], "K4 " + loser[1])
 		other.free()
 	main.free()
 	return true
@@ -382,20 +388,163 @@ func test_health_bar_clear_of_boxes(runner) -> bool:
 	view.free()
 	return true
 
-func test_result_clear_of_status(runner) -> bool:
-	var main = await _setup(runner)
-	var ids: Dictionary = _arena(main)
-	main.orders.selected_ids.assign([ids.tank])
-	main.orders.inspected_id = ids.enemy
+func _victory(main) -> void:
 	main.driver.sim.remove_object(3)
 	main.driver.sim.remove_object(4)
 	main._physics_process(0.0)
-	await runner.process_frame
-	await runner.process_frame
-	var status: Rect2 = main.get_node("HUD/Status").get_global_rect()
-	for path in ["HUD/Result", "HUD/Restart"]:
-		var rect: Rect2 = main.get_node(path).get_global_rect()
-		runner.check(main.get_node(path).visible and rect.position.y >= status.end.y, "P3 %s sits below the status text at any width, %s vs %s" % [path, rect, status])
+
+func _enter(code: Key) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.pressed = true
+	return event
+
+func test_result_panel_layout(runner) -> bool:
+	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+		var port := SubViewport.new()
+		port.size = size
+		runner.root.add_child(port)
+		var main = Scene.instantiate()
+		port.add_child(main)
+		main.set_physics_process(false)
+		main.set_process(false)
+		await runner.process_frame
+		_arena(main)
+		_victory(main)
+		var panel = main.get_node("HUD/ResultPanel")
+		panel.show_result("Victory", "Your friend wants to play again", true)
+		await runner.process_frame
+		await runner.process_frame
+		var screen := Rect2(Vector2.ZERO, Vector2(size))
+		var card: Rect2 = main.get_node("HUD/ResultPanel/Center/Card").get_global_rect()
+		var outcome: Label = main.get_node(OUTCOME)
+		var status: Label = main.get_node("HUD/ResultPanel/Center/Card/Box/Status")
+		var again: Rect2 = main.get_node(PLAY_AGAIN).get_global_rect()
+		var setup: Rect2 = main.get_node(CHANGE_SETUP).get_global_rect()
+		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size), "R1 the viewport really is %s" % size)
+		runner.check(panel.visible and outcome.text == "Victory" and status.visible and status.text == "Your friend wants to play again", "R1 realistic texts shown at %s" % size)
+		runner.check(main.get_node("HUD/ResultPanel/Dim").get_global_rect() == screen, "R1 the dim covers %s" % size)
+		runner.check(screen.encloses(card) and card.get_center().distance_to(screen.get_center()) <= 1.0, "R1 card centred inside %s, rect %s" % [size, card])
+		runner.check(card.encloses(outcome.get_global_rect()) and card.encloses(status.get_global_rect()) and card.encloses(again) and card.encloses(setup), "R1 card holds its texts and buttons at %s" % size)
+		runner.check(outcome.get_global_rect().end.y <= status.get_global_rect().position.y and status.get_global_rect().end.y <= again.position.y, "R1 outcome above status above buttons at %s" % size)
+		runner.check(again.size.x > 0.0 and setup.size.x > 0.0 and not again.intersects(setup), "R1 the two buttons do not intersect at %s" % size)
+		var index: int = panel.get_index()
+		runner.check(index < main.get_node("HUD/PerfOverlay").get_index() and index < main.get_node("HUD/Playtest").get_index() and index < main.get_node("HUD/PauseMenu").get_index(), "R1 the panel draws below the overlays at %s" % size)
+		panel.show_result("Victory", "", true)
+		await runner.process_frame
+		runner.check(not status.visible, "R1 an empty status is hidden at %s" % size)
+		port.queue_free()
+	return true
+
+func test_result_panel_keys(runner) -> bool:
+	for code in [KEY_ENTER, KEY_KP_ENTER]:
+		var main = await _setup(runner)
+		_arena(main)
+		_victory(main)
+		runner.check(main.get_node("HUD/ResultPanel").visible, "R2 fixture: the panel is up")
+		var arena_sim = main.driver.sim
+		main._input(_enter(code))
+		runner.check(not is_same(main.driver.sim, arena_sim) and not main.get_node("HUD/ResultPanel").visible, "R2 key %s restarts" % code)
+		main.free()
+	var main = await _setup(runner)
+	_arena(main)
+	_victory(main)
+	var kept = main.driver.sim
+	main._pause.open()
+	main._input(_enter(KEY_ENTER))
+	runner.check(is_same(main.driver.sim, kept) and main.get_node("HUD/ResultPanel").visible, "R2 Enter with the pause menu open does nothing")
+	main._pause.close()
+	main._input(_enter(KEY_ESCAPE))
+	runner.check(main._pause.visible and is_same(main.driver.sim, kept), "R2 Esc with the panel up opens the pause menu")
+	main.free()
+	var live = await _setup(runner)
+	var live_sim = live.driver.sim
+	live._input(_enter(KEY_ENTER))
+	runner.check(is_same(live.driver.sim, live_sim), "R2 Enter during a running match does nothing")
+	live.free()
+	return true
+
+func test_change_setup_leaves(runner) -> bool:
+	var saved: String = AudioSettings.path
+	AudioSettings.path = "user://r3_settings.cfg"
+	DirAccess.remove_absolute(AudioSettings.path)
+	PlaytestSettings.save_enabled(false)
+	var main = await _setup(runner)
+	var scenes: Array[String] = []
+	main.change_scene = func(path: String) -> void: scenes.append(path)
+	_arena(main)
+	_victory(main)
+	main.get_node(CHANGE_SETUP).pressed.emit()
+	runner.check(scenes == [main.LAUNCHER_SCENE], "R3 Change setup leaves for the launcher, got %s" % [scenes])
+	DirAccess.remove_absolute(AudioSettings.path)
+	AudioSettings.path = saved
+	main.free()
+	return true
+
+func test_result_panel_unit(runner) -> bool:
+	var panel := ResultPanel.new()
+	runner.root.add_child(panel)
+	runner.check(not panel.visible, "R4 hidden at first")
+	runner.check(not panel.takes_enter(_enter(KEY_ENTER)), "R4 a hidden panel takes no Enter")
+	panel.show_result("Defeat", "Your friend left", false)
+	var again: Button = panel.get_node("Center/Card/Box/Buttons/PlayAgain")
+	var status: Label = panel.get_node("Center/Card/Box/Status")
+	runner.check(panel.visible and status.text == "Your friend left" and status.visible and again.disabled, "R4 a closed room disables Play again")
+	runner.check(not panel.takes_enter(_enter(KEY_ENTER)), "R4 a disabled Play again takes no Enter")
+	panel.show_result("Draw", "", true)
+	runner.check(not again.disabled and not status.visible and panel.takes_enter(_enter(KEY_ENTER)) and panel.takes_enter(_enter(KEY_KP_ENTER)), "R4 Enter accepted when enabled")
+	runner.check(not panel.takes_enter(_enter(KEY_SPACE)), "R4 other keys are ignored")
+	var echo := _enter(KEY_ENTER)
+	echo.echo = true
+	runner.check(not panel.takes_enter(echo), "R4 key echo is ignored")
+	var release := _enter(KEY_ENTER)
+	release.pressed = false
+	runner.check(not panel.takes_enter(release), "R4 key release is ignored")
+	var presses: Array[String] = []
+	panel.play_again_pressed.connect(func() -> void: presses.append("again"))
+	panel.change_setup_pressed.connect(func() -> void: presses.append("setup"))
+	again.pressed.emit()
+	panel.get_node("Center/Card/Box/Buttons/ChangeSetup").pressed.emit()
+	runner.check(presses == ["again", "setup"], "R4 buttons emit their signals, got %s" % [presses])
+	panel.show_result("", "", true)
+	runner.check(not panel.visible, "R4 an empty outcome hides the panel")
+	panel.free()
+	return true
+
+class StubDriver extends OfflineDriver:
+	var restartable: bool
+	var plays: int = 0
+	func _init(can: bool) -> void:
+		super(1)
+		restartable = can
+	func can_restart() -> bool:
+		return restartable
+	func play_again() -> void:
+		plays += 1
+	func can_play_again() -> bool:
+		return restartable
+	func rematch_line() -> String:
+		return "Your friend left"
+
+func test_play_again_routes_by_driver(runner) -> bool:
+	var main = await _setup(runner)
+	var real = main.driver
+	_arena(main)
+	_victory(main)
+	var online := StubDriver.new(false)
+	online.sim = real.sim
+	main.driver = online
+	main.hud._refresh_hud(real.sim.view_state())
+	var status: Label = main.get_node("HUD/ResultPanel/Center/Card/Box/Status")
+	runner.check(main.get_node(PLAY_AGAIN).disabled and status.text == "Your friend left", "R5 the panel shows the driver's line and can_play_again")
+	main._play_again()
+	runner.check(online.plays == 1, "R5 a driver that cannot restart gets play_again, got %d" % online.plays)
+	var offline := StubDriver.new(true)
+	main.driver = offline
+	main._play_again()
+	runner.check(offline.plays == 0 and offline.sim != null, "R5 a restartable driver restarts and never gets play_again")
+	main.driver = real
 	main.free()
 	return true
 

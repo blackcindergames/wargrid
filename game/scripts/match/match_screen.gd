@@ -9,6 +9,7 @@ const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const Orders = preload("res://scripts/match/orders.gd")
 const Hud = preload("res://scripts/match/hud.gd")
+const ResultPanel = preload("res://scripts/match/result_panel.gd")
 const LAUNCHER_SCENE: String = "res://scenes/launcher.tscn"
 const MapData = preload("res://scripts/simulation/map_data.gd")
 const ZOOMS: Array[float] = [0.5, 1.0, 2.0]
@@ -42,6 +43,7 @@ var _camera_bounds: Rect2
 var _perf: Label
 var _clock := PresentationClock.new()
 var _pause: Control
+var _result_panel: Control
 var change_scene: Callable = _change_scene
 @onready var _selection_box: ReferenceRect = $HUD/SelectionBox
 var _sound: SoundPlayer = null
@@ -65,6 +67,10 @@ func _ready() -> void:
 	menu.columns = MENU_COLUMNS
 	$HUD/Economy.add_child(menu)
 	$HUD/Economy.move_child(menu,0)
+	_result_panel = ResultPanel.new()
+	_result_panel.play_again_pressed.connect(_play_again)
+	_result_panel.change_setup_pressed.connect(_leave)
+	$HUD.add_child(_result_panel)
 	hud = Hud.new($HUD, self)
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
@@ -91,7 +97,6 @@ func _ready() -> void:
 	$HUD/Economy/CancelBuild.pressed.connect(orders._cancel_build)
 	_view.set_visuals(_visuals)
 	_start_auto_pick(GraphicsSettings.load_quality() == -1 and DisplayServer.get_name() != "headless")
-	$HUD/Restart.pressed.connect(_restart)
 	var music := MusicPlayer.new()
 	add_child(music)
 	var rng := RandomNumberGenerator.new()
@@ -168,7 +173,9 @@ func _input(event: InputEvent) -> void:
 		if _pause.visible: _pause.back()
 		elif not _escape_pending(): _pause.open()
 		else: return
-	elif not _pause.visible: return
+	elif not _pause.visible:
+		if _result_panel.takes_enter(event): _play_again()
+		else: return
 	get_viewport().set_input_as_handled()
 
 func _physics_process(_delta: float) -> void:
@@ -295,8 +302,15 @@ func _building(state: Dictionary, id: int) -> Dictionary:
 		if building.id == id: return building
 	return {}
 
+func _play_again() -> void:
+	if driver.can_restart(): _restart()
+	else: driver.play_again()
+
 func _restart() -> void:
 	if not driver.can_restart(): return
+	_restart_world()
+
+func _restart_world() -> void:
 	_playtest.begin_match()
 	_create_world()
 	_clock = PresentationClock.new()
@@ -313,3 +327,4 @@ func _restart() -> void:
 	var empty: Array[Vector2i] = []
 	_view.set_build_preview(empty, false)
 	_refresh()
+	driver.start()

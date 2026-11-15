@@ -89,6 +89,18 @@ func confirm_leave() -> bool:
 func can_restart() -> bool:
 	return false
 
+func rematch_line() -> String:
+	return ""
+
+func can_play_again() -> bool:
+	return false
+
+func play_again() -> void:
+	pass
+
+func take_rematch() -> int:
+	return -1
+
 func over() -> bool:
 	return _finished
 

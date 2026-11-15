@@ -58,6 +58,18 @@ func pauses_sim() -> bool:
 func confirm_leave() -> bool:
 	return false
 
+func rematch_line() -> String:
+	return ""
+
+func can_play_again() -> bool:
+	return true
+
+func play_again() -> void:
+	pass
+
+func take_rematch() -> int:
+	return -1
+
 func can_restart() -> bool:
 	return true
 

@@ -75,7 +75,7 @@ func _layout_ok(runner, main, label: String) -> void:
 	var status: Label = main.get_node("HUD/Status")
 	var economy: Control = main.get_node("HUD/Economy")
 	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y, "N3 buttons sit below every status line: " + label)
-	runner.check(not main.get_node("HUD/Restart").visible, "N3 Restart hidden: " + label)
+	runner.check(not main.get_node("HUD/ResultPanel").visible, "N3 result panel hidden: " + label)
 
 func test_seat_two_controls_player_two(runner) -> bool:
 	var online: Dictionary = await _online(runner, 2)

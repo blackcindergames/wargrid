@@ -15,8 +15,7 @@ var _build_menu: GridContainer
 var _queue: Control
 var _produce: Button
 var _cancel_build: Button
-var _result: Label
-var _restart_button: Button
+var _panel: Control
 
 func _init(hud_layer: CanvasLayer, screen: Node) -> void:
 	_screen = screen
@@ -26,8 +25,7 @@ func _init(hud_layer: CanvasLayer, screen: Node) -> void:
 	_queue = hud_layer.get_node("Economy/Queue")
 	_produce = hud_layer.get_node("Economy/Produce")
 	_cancel_build = hud_layer.get_node("Economy/CancelBuild")
-	_result = hud_layer.get_node("Result")
-	_restart_button = hud_layer.get_node("Restart")
+	_panel = hud_layer.get_node("ResultPanel")
 
 func reset() -> void:
 	note = ""
@@ -43,7 +41,6 @@ func _refresh_hud(state: Dictionary) -> void:
 	_match_hud(state)
 	var line: String = _screen.driver.notice()
 	if not line.is_empty(): _status.text += "\n" + line
-	if not _screen.driver.can_restart(): _restart_button.hide()
 	_screen._sound.update(state)
 
 func _economy_hud(state: Dictionary) -> void:
@@ -70,9 +67,7 @@ func _match_hud(state: Dictionary) -> void:
 	_screen._view.set_inspected(_screen.orders.inspected_id)
 	_produce.text = "Produce %s (E)" % Registry.kind(_screen._production_kind(building, state)).get("display_name", "") if not building.is_empty() else "Produce (E)"
 	_status.text += "\n" + (_selected_summary(state) + _enemy_summary(state)) + ("A: attack-move click | S: stop | You are %s (P%d)" % [("blue" if _screen.local_player == 1 else "red"), _screen.local_player] if result.is_empty() else "")
-	_result.text = result
-	_result.visible = not result.is_empty()
-	_restart_button.visible = not result.is_empty()
+	_panel.show_result(result, _screen.driver.rematch_line(), _screen.driver.can_play_again())
 
 func _menu_kinds(state: Dictionary, building: Dictionary) -> Array:
 	if not building.is_empty(): return Registry.kind(building.kind).produces if building.completed else []
