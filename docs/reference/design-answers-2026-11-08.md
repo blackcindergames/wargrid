@@ -48,7 +48,7 @@ Follow-up answers (user, 2026-11-09; [next-m76-hud.md](../questions/next-m76-hud
 
 HUD round on a click page (user, 2026-11-09 late evening; [re-check](../questions/hud-modern-recheck.md), [mock-up review](../questions/next-m76-hud.md); recommendations unless noted):
 - Minimap attack flash at most once every 10 s per area (about 250 units), so an attack elsewhere still flashes (Zero Hour as written; retail's bug makes it map-wide).
-- No health-bar setting: fixed "selected or damaged" (against the recommendation of an "Always" option); the unit under the mouse also shows its bar (Zero Hour, OpenRA).
+- No health-bar setting: fixed "selected or damaged" (against the recommendation of an "Always" option); the unit under the mouse also shows its bar (Zero Hour, OpenRA). Under review: an art lab A/B of three rules, Zero Hour's selected or hovered, this one, and damaged or hovered ([second pass](#visual-and-ux-proposal-second-pass-user-2026-11-15), user, 2026-11-15).
 - Health bars keep the green-yellow-red fill; a thin frame shows own / ally / enemy colour (compromise with look Q13).
 - Teammates' attacks also show on your minimap, in a different colour (AoE IV).
 - Idle builder button with a count only; no idle-army button (against the recommendation; the comma hotkey for idle army stays).
@@ -688,3 +688,106 @@ Questionnaire on an agent investigation of the look and UX (`wargrid-visual-ux-i
 - **Combat effect tuning later** (user, 2026-11-15): shorter muzzle and hit effects, rifle against shell differences and recoil wait for an optional combat polish package after measured headroom; none in P2.4 to P2.6.
 - **No recognition study** (user, 2026-11-15): art packages use their playtest card questions and the user's own blind look at a screenshot sheet; the proposed multi-participant protocol is dropped.
 - **Interaction experiments parked** (user, 2026-11-15): consequence preview, grouped alerts, selection lens, production workload and order intent are recorded as later ideas in [UX experiments](../questions/later-ux-experiments.md); a command wheel and formation-shaped drag are rejected for the current roadmap.
+
+## Visual and UX proposal, second pass (user, 2026-11-15)
+
+Questionnaire on a second agent investigation of the look and UX (`wargrid-visual-ux-improvement-r2.md`, private), 27 questions in seven rounds. The investigation stays private; these answers are its only repository record. Nothing here starts a package; where each answer lands is in the [package notes](../packages.md#package-notes).
+
+Health bars and selection:
+
+- **Proposed: healthy units show no health bar, selected or not** (user, 2026-11-15): only damaged units show one; still no setting. Decided in an art lab A/B first (follow-up round below), so the "selected or damaged" rule in [HUD](#hud-m76) stands until then. Zero Hour goes the other way (selected or hovered, never a damaged unselected unit; `GeneralsMD/Code/GameEngine/Source/GameClient/Drawable.cpp:3783-3784`, `~/projects/GeneralsGameCode` @ `afc2a103f`). Beyond All Reason hides bars at 99 % health and above (`~/projects/Beyond-All-Reason`, `luaui/Widgets/gui_healthbars_gl4.lua:235`, revision `a31aa1c194`). The selection panel keeps showing health.
+- **The unit under the mouse still shows its bar** (user, 2026-11-15), healthy or not.
+- **Bar size at the farthest zoom: art lab toggle first** (user, 2026-11-15): 24x3 against 16x2 px on a damaged army.
+- **Box selection that skips workers: decided later** (user, 2026-11-15): asked again once the drag shows what it will select; recorded in [UX experiments](../questions/later-ux-experiments.md).
+
+Marks on the map (white with a dark under-stroke, told apart by shape; the selection mark was already white):
+
+- **Attack target: a white X** (user, 2026-11-15), in place of the red box (`#ff3b30` is 1.13:1 on sand, and red is an owner colour).
+- **Placement cells: valid a white outline, blocked an outline with an X** (user, 2026-11-15), in place of the green and red fills.
+- **Move confirmation: a ring closing onto the point in 0.4 s** (user, 2026-11-15), in place of the ring growing for 1.3 s.
+- **Range ring while placing or hovering a defence: yes, if the range can be read without a simulation change** (user, 2026-11-15); the data check comes first. This reopens the item left out of HUD round 2.
+
+The world:
+
+- **The map gets an edge** (user, 2026-11-15): slate side faces along the camera-facing map edges and the dark canvas colour beyond, so the map reads as a slab; no lit line on its top edge.
+- **Contact mark under infantry: looked at again after P2.4** (user, 2026-11-15): an art lab comparison at the farthest zoom once the darker sides are in the game; the round 5 pick stands until then.
+- **Pale roof edges on buildings: art lab toggle with P2.6** (user, 2026-11-15): buildings only, never units.
+- **Dark ground on Ashfall: art lab toggle** (user, 2026-11-15): a look to judge, not a change.
+
+Into and out of a match:
+
+- **Intro band at every match start** (user, 2026-11-15): about 1.5 s under the top strip with the map name and each player's colour swatch, emblem and name; keys and clicks pass through to the game and dismiss it; skipped on a rematch. Drawing only, no delayed start.
+- **Result panel** (user, 2026-11-15): outcome, match length, units built, units lost, buildings lost, Play again and Change setup (back to the Play page with the picks kept). The counts are tallied by the drawing side, no simulation change.
+- **M9 lobby: a Play-page candidate on the A/B pages** (user, 2026-11-15), beside the lobby mock-up's layout: player rows in two teams on the launcher's Play page.
+- **Own web loading page** (user, 2026-11-15): canvas colour, logo and a plain progress bar in place of the engine's default loader.
+
+Playing at your own speed (bot matches only):
+
+- **Think pause** (user, 2026-11-15): a key stops the simulation while camera, selection and orders stay live; orders run on resume. Approved after a cost check from the code: the pause gate (`game/scripts/match/match_screen.gd:180`) and order submission (`game/scripts/match/offline_driver.gd:40-50`) exist, no simulation change; the effort is an audit of the same-tick test cases, because every order given during a pause lands on one tick. Not prototyped.
+- **Pause key: P** (user, 2026-11-15); Space stays the jump to the last alert.
+- **Slower speeds: 0.5x, 0.75x and 1x** (user, 2026-11-15), in one package with the think pause (name proposed by the agent: Play at your own speed).
+- **One tip on the result panel** (user, 2026-11-15): one line from what the player did not use in that match; never during play; tried as an experiment first.
+
+Interface size, pointers, groups:
+
+- **Larger interface option: 100 %, 115 %, 130 %** (user, 2026-11-15): a multiplier on the window scaling, never smaller. The HUD still scales with the window and there is still no pixel-size mode.
+- **Pointers: attack-move first, the rest later** (user, 2026-11-15): P2.3b shows its own pointer while attack-move is armed; the full set (move, attack, gather, rally, blocked) is its own later package and needs a read-only "what would this click do" function first.
+- **A factory can feed a control group** (user, 2026-11-15): a "Feeds group" control on the selected factory's panel; its units join the group when they leave the factory. Drawing-side state only; with order controls.
+
+What comes first:
+
+- **Capture script first** (user, 2026-11-15): one command renders each launcher page and a fixed match scene to image files, no visible window, no sound, so every later look change has a before and an after.
+- **Steam Deck controls spike after P2.3b** (user, 2026-11-15), moved up from after P3: findings and a proposal, no implementation.
+
+Follow-up round on the second pass (user, 2026-11-15; a fresh review of the investigation and of the answers above, 16 questions in four rounds, recommendations unless noted):
+
+- **Health bars: art lab A/B before P2.3a builds the rule** (user, 2026-11-15, against the recommendation to keep the new rule as answered): three rules on the same damaged 120-unit army: selected or hovered (Zero Hour), selected, damaged or hovered (today), damaged or hovered (the answer above).
+- **P2.3a's gate adds a damaged-army row** (user, 2026-11-15) beside the 120-unit selection, so the gate does not get cheaper when healthy units lose their bars while a fight costs the same.
+- **Riders go into the package rows** (user, 2026-11-15), as the first review's did, not only into a package note.
+- **Range ring while placing a defence, in P2.3b; the ring on hovering a defence follows later** (user, 2026-11-15): weapon ranges are static definitions data (`game/scripts/simulation/definitions/shared.gd`) that the match code already preloads (`game/scripts/match/orders.gd:5`), so the "no simulation change" condition above holds.
+- **Launcher keyboard and target fixes in P2.2** (user, 2026-11-15): Enter submits the join code, each page's primary button has default focus so Enter starts a bot match, a keyboard focus outline that differs from hover, click targets of at least 32 px, the Tag at 12 px instead of 10 px, Quit in the sidebar on desktop.
+- **While connecting: elapsed time and Cancel, in P2.2** (user, 2026-11-15): Cancel returns to the page with the picks kept and leaves no half-open relay session; the desktop invite field is labelled as a match code unless a web address is configured.
+- **One theme for launcher and match with one type scale, in P2.3a** (user, 2026-11-15): one theme file, 12 px floor everywhere (the HUD's 11 px caption becomes 12 px), one value size picked in the P2.3a A/B.
+- **Key chips print the keyboard layout's own label, in P2.3b** (user, 2026-11-15): keys stay bound by physical position; QWERTY letters where the platform cannot answer; the web behaviour joins the web hotkey check.
+- **Unit shadows drawn 2:1, with P2.4** (user, 2026-11-15): like every other ground shape; size, darkness and High-only unchanged.
+- **Completion settle and a producing roof inset: art lab toggle with P2.6** (user, 2026-11-15): buildings only, judged by looking like the roof edges.
+- **No red applies to the match only** (user, 2026-11-15): the launcher's red-brown error chip stays.
+- **Larger interface: a factor is offered only where the HUD fits** (user, 2026-11-15): at 130 % a 1280x720 window leaves about 985x554 layout pixels; layout tests decide per window size.
+- **0.75x stays, looked at first** (user, 2026-11-15): it steps on 3 of 4 frames, so the package checks the cadence on High and on Low (no interpolation) before promising it.
+- **Capture script: probe a hidden path first, then ask** (user, 2026-11-15): headless uses a dummy renderer and an off-screen `--position` was clamped back on screen ([perf chart spike](perf-chart-spike.md)); if no path stays hidden, stop and ask before any visible window. The same tool serves How Wargrid got its look.
+
+Remaining points of the second pass (user, 2026-11-15; 20 questions in five rounds, recommendations throughout):
+
+- **Five screenshot marks as the review checklist** for every art and HUD package (user, 2026-11-15), as a gate in the [art bible](../art-direction/ART_DIRECTION.md#11-acceptance-gates); the investigation's "three planes" idea is not adopted as a rule.
+- **Amber means "act here"** (user, 2026-11-15): never decoration, at most one amber button per screen, in the launcher and in the match.
+- **Two live alert causes: left to the alerts package** (user, 2026-11-15); "newest plus a count, never stacked" is input to it, not a decision.
+- **No spoken line without visible text, and a refused order sounds different from an accepted one** (user, 2026-11-15): rules for the alerts package.
+- **Four motion durations** (user, 2026-11-15): 90, 150, 250 and 400 ms as shared constants, progress always linear, nothing loops unless work is ongoing; added with the first animation, not before.
+- **Reduce motion setting with the intro band** (user, 2026-11-15): all durations to zero, progress bars stay.
+- **Turret angles blended in P4, eased zoom steps in P3** (user, 2026-11-15): 150 ms toward the cursor with the detail swap at the midpoint; eased steps, not free zoom.
+- **One look from menu to match: a new package, not ordered, after P2.3b** (user, 2026-11-15; name proposed by the agent): the fancy launcher values through the shared theme, a darker base under the one primary button, the map preview and the intro band.
+- **One map drawing, launcher first** (user, 2026-11-15): a reusable control draws the map's ground as the launcher's map preview, later the minimap's base layer; fog, pings, the view rectangle and click-to-jump stay the minimap's work.
+- **The intro band is skipped on rematch and on the offline Restart** (user, 2026-11-15).
+- **Orders given during a think pause show their confirmation on wall time** (user, 2026-11-15); combat effects stay frozen.
+- **Click selection priority in P2.3a** (user, 2026-11-15): units, then buildings, then supply piles, then ground, written down and tested.
+- **P2.3b's design holds a grid table across factions** (user, 2026-11-15): the same slot means the same kind of thing for all three where the rosters allow.
+- **Theme rules with P2.3a** (user, 2026-11-15): spacing 4, 8, 12, 16, 24, 36, snapped where a file is touched; square corners in the match, at most 2 px in the launcher; no drop shadows on panels.
+- **P3 camera limits: about a quarter screen of dark canvas past the map edge** (user, 2026-11-15).
+- **Own outline at far zoom, known threat areas, a match timeline and a Spread order are parked** (user, 2026-11-15) in [UX experiments](../questions/later-ux-experiments.md) with their prerequisites.
+- **Repeat production is a design question for the M9 balance revisit** (user, 2026-11-15), not an interface proposal: it is a new simulation command and changes Zero Hour's economy rhythm.
+- **M9 lobby: the host may change the map with friends in the room, and every ready mark resets** (user, 2026-11-15), as Zero Hour (`GeneralsMD/Code/GameEngine/Source/GameClient/GUI/GUICallbacks/Menus/WOLMapSelectMenu.cpp:453`, `~/projects/GeneralsGameCode` @ `afc2a103f`).
+- **3v3 friend or foe is a requirement of the M9 lobby and minimap designs** (user, 2026-11-15): how marks, the minimap and the intro band show teams is drawn there before six owner colours meet on one screen.
+- **The joiner seeing the host's map and faction before the start is an M9 lobby question** (user, 2026-11-15): the relay may not carry it before the start.
+- **Key rebinding: a later package of its own; the full pointer set starts with its read-only "what would this click do" function and a check of a 64 px cursor in browsers and on the Deck trackpad** (user, 2026-11-15).
+
+Last points of the second pass (user, 2026-11-15; 11 questions in three rounds, recommendations throughout):
+
+- **Hover shows four white corner ticks of the selection diamond, in P2.3a** (user, 2026-11-15); the same ticks preview what a drag box will select, which the parked box filter waits for.
+- **Rally point as a short pole with a square flag, with a line from its factory while the factory is selected, and a dashed white line for battery and defence targets, in P2.3a** (user, 2026-11-15): the last red leaves the map.
+- **An idle builder or collector gets two short white bars on the ground after 8 s, with order controls** (user, 2026-11-15), beside the idle builder button. For the factory that feeds a group, entities carry no producing-factory id (the entity record, `game/scripts/simulation/simulation.gd:101`, has none; `game/scripts/simulation/definitions/definitions.gd:90` holds the building kind only), so the drawing side infers it from a queue item finishing as a new unit appears beside that factory.
+- **Marks on a unit draw above the pieces, marks on a place under them** (user, 2026-11-15); place marks move under only when one looks wrong on top, measured; P2.3b's range ring is the first candidate.
+- **Tooltip rules from P2.3b's cell card on** (user, 2026-11-15): open after 250 ms, switch at once between neighbours, close on click or when the pointer leaves, never cover their control, never hold what the player needs to act; content is name, one line, numbers.
+- **"Something finished" events are input to the alerts package** (user, 2026-11-15): building complete, unit ready and friend joined get a short sound and the piece's own settle, no chip; chips stay for things to act on now.
+- **Weapon families: input to the optional combat polish package** (user, 2026-11-15): told apart by geometry and timing, not hue (owner colours take the hues): a ballistic streak already at the target (cannon thicker, the rotary gun as three streaks), a rocket that travels with a fading trail, a flame fan that persists while firing, a beam if lasers ever exist; warm white cores and orange explosive results only.
+- **No spectator or replay interface work until observers exist** (user, 2026-11-15).
+- **Enter on the result panel is Play again, in P2.2** (user, 2026-11-15).

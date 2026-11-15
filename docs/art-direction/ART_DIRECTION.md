@@ -133,6 +133,7 @@ README, AGENTS and the blueprint were reconciled with this direction on 2026-11-
 | Human recognition | Unlabeled role quartet; same-color faction comparison; frozen building roles; owner changes that leave faction clear |
 | Motion and combat | Recoil and machinery align with actual events; normal and signature effects; local hit feedback; legible wrecks and dense combat |
 | Integration | Correct ground anchors, picking and overlap behind/in front of buildings; intact fog and HUD behavior; no trace or gameplay change |
+| Screenshot marks (every art and HUD package; user, 2026-11-15) | A capture shows all five: the board has an edge and rests on the dark canvas; pieces have an owner-coloured top, slate sides and one light direction, ground shapes at 2:1; marks on the board are white with a dark under-stroke, no red lines, no map text; interface panels are dark, square, matte, hug their content and carry the owner colour on one edge; amber only where the player must act, at most one amber button per screen, launcher included |
 | Performance and rollout | Existing native/Web requirements and benchmark ledger; unchanged gates; failures explicitly reported; user approval for integration and Git actions |
 
 Only GPT's static artifact checks (archive: `VALIDATION.md`, `VISUAL_QA.md`) have been performed. Human recognition, animation, in-engine accessibility and performance gates remain open. No fabricated percentage recognition score or inferred benchmark pass.
