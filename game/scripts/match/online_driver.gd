@@ -57,6 +57,7 @@ func create(map_path: String, starts: Array[int], _factions: Dictionary, match_s
 	_finished = false
 	_friend_again = false
 	_rejections_seen = 0
+	_credit = 0
 	sim = Skirmish.create(true, "human", {}, map_path, starts)
 
 func start() -> void:
@@ -85,9 +86,9 @@ func step(after_tick: Callable) -> PackedStringArray:
 		var tick: int = sim.tick()
 		_lockstep.finish_tick(tick, sim.snapshot() if _lockstep.wants_snapshot(tick) else null)
 	if _phase == "playing" and _lockstep.received_any(): _transport.patient = false
-	if (_phase == "over" or _phase == "again") and _room_gone(): _close_room()
 	var rejected: PackedStringArray = _new_rejections()
 	if not _finished and (sim.match_over() or _ended()): _finish()
+	if (_phase == "over" or _phase == "again") and _room_gone(): _close_room()
 	return rejected
 
 func _ended() -> bool:
@@ -165,6 +166,7 @@ func _finish() -> void:
 		_phase = "over"
 		return
 	_transport.close()
+	_phase = "done"
 
 func _write_report() -> String:
 	var report: Dictionary = _report()

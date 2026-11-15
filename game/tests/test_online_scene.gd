@@ -38,7 +38,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_room_closed_after_end, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -290,6 +290,49 @@ func test_room_closed_after_end(runner) -> bool:
 	_run(silent.main, 2)
 	runner.check(_panel_line(silent.main) == "The room closed" and _play_again_button(silent.main).disabled and silent.transport.close_calls == 1, "N17 silent relay: closed line, Play again disabled, got '%s'" % _panel_line(silent.main))
 	silent.main.free()
+	return true
+
+func test_room_gone_on_the_ending_frame(runner) -> bool:
+	for label: String in ["left", "closed", "silent"]:
+		var online: Dictionary = await _online(runner, 2)
+		var main = online.main
+		_peer_packets(online.transport, 1, 4, PEER_TICKS)
+		_run(main, 8)
+		main.driver.sim.remove_object(4)
+		main.driver.sim.remove_object(6)
+		if label == "left": online.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": PEER_TICKS}))
+		if label == "closed": online.transport.is_closed = true
+		if label == "silent": online.transport.is_silent = true
+		_run(main, 1)
+		runner.check(not main.driver.can_play_again() and _play_again_button(main).disabled, "N23 %s on the ending frame: Play again disabled" % label)
+		main.driver.play_again()
+		runner.check(_sent_types(online.transport, "again") == 0, "N23 %s on the ending frame: play_again sends nothing, got %d" % [label, _sent_types(online.transport, "again")])
+		main.free()
+	return true
+
+func test_abnormal_end_after_friend_again(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_run(main, 1)
+	main.driver.sim.remove_object(4)
+	main.driver.sim.remove_object(6)
+	online.transport.is_closed = true
+	_run(main, 2)
+	runner.check(online.lockstep.status() == "ended_relay", "N24 setup: abnormal end, got " + online.lockstep.status())
+	runner.check(main.driver.rematch_line() == "The room closed" and not main.driver.can_play_again(), "N24 an abnormal end after the friend's again reads as a closed room, got '%s'" % main.driver.rematch_line())
+	main.free()
+	return true
+
+func test_create_resets_catch_up_credit(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var driver = online.main.driver
+	driver._credit = 4
+	driver.create(SkirmishMain.map_path, SkirmishMain.starts, {}, 1)
+	runner.check(driver._credit == 0, "N25 a new match starts without catch-up credit, got %d" % driver._credit)
+	online.main.free()
 	return true
 
 func test_rematch_builds_new_match(runner) -> bool:
