@@ -69,7 +69,7 @@ func _run(main, frames: int) -> void:
 	for i in frames: BaseScene.tick(main)
 
 func _entity(main, id: int) -> Dictionary:
-	for unit in main.driver.sim.snapshot().entities:
+	for unit in main.driver.pump.live().snapshot().entities:
 		if unit.id == id: return unit
 	return {}
 
@@ -104,7 +104,7 @@ func test_seat_two_controls_player_two(runner) -> bool:
 	var commands: Array = _own_commands(online.transport)
 	runner.check(commands.size() == 1 and commands[0].type == "move" and commands[0].player == 2, "N1 move leaves as a player 2 command, got " + str(commands))
 	runner.check(_entity(main, 5).order != null, "N1 the move order reached player 2's builder through lockstep")
-	runner.check(main.driver.sim.tick() > 4 and online.lockstep.status() == "running", "N1 ticks advance with peer packets")
+	runner.check(main.driver.pump.live().tick() > 4 and online.lockstep.status() == "running", "N1 ticks advance with peer packets")
 	main.free()
 	var seat1: Dictionary = await _online(runner, 1)
 	seat1.main.orders.selected_ids.assign([3])
@@ -166,8 +166,8 @@ func test_status_lines_and_layout(runner) -> bool:
 func _end_match(online: Dictionary) -> void:
 	_peer_packets(online.transport, 1, 4, PEER_TICKS)
 	_run(online.main, 8)
-	online.main.driver.sim.remove_object(4)
-	online.main.driver.sim.remove_object(6)
+	online.main.driver.pump.live().remove_object(4)
+	online.main.driver.pump.live().remove_object(6)
 	_run(online.main, 2)
 
 func _sent_types(transport: FakeTransport, type: String) -> int:
@@ -201,9 +201,9 @@ func test_match_end_sends_over_and_keeps_socket(runner) -> bool:
 	var main = online.main
 	_peer_packets(online.transport, 1, 4, PEER_TICKS)
 	_run(main, 8)
-	runner.check(main.driver.sim.snapshot().match.status == "ongoing", "N4 fixture: the match started")
-	main.driver.sim.remove_object(4)
-	main.driver.sim.remove_object(6)
+	runner.check(main.driver.pump.live().snapshot().match.status == "ongoing", "N4 fixture: the match started")
+	main.driver.pump.live().remove_object(4)
+	main.driver.pump.live().remove_object(6)
 	_run(main, 2)
 	runner.check(online.transport.close_calls == 0, "N4 the socket stays open after a sim-decided end")
 	runner.check(main.driver.latency_line().contains("RTT n=1 p95=40.0 ms"), "N4 latency line carries RTT p95, got " + main.driver.latency_line())
@@ -261,9 +261,9 @@ func test_friend_again_before_own_end(runner) -> bool:
 	_run(main, 8)
 	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
 	_run(main, 1)
-	runner.check(not online.lockstep.status().begins_with("ended") and not main.driver.sim.match_over(), "N15 the friend's early again does not end the match, got " + online.lockstep.status())
-	main.driver.sim.remove_object(4)
-	main.driver.sim.remove_object(6)
+	runner.check(not online.lockstep.status().begins_with("ended") and not main.driver.pump.live().match_over(), "N15 the friend's early again does not end the match, got " + online.lockstep.status())
+	main.driver.pump.live().remove_object(4)
+	main.driver.pump.live().remove_object(6)
 	_run(main, 2)
 	runner.check(_panel_line(main) == "Your friend wants a rematch" and not _play_again_button(main).disabled and _play_again_button(main).text == "Accept rematch", "N15 the early again shows after the end with Accept rematch, got '%s' '%s'" % [_panel_line(main), _play_again_button(main).text])
 	main.free()
@@ -311,11 +311,11 @@ func test_panel_follows_again_while_processing(runner) -> bool:
 	_end_match(own)
 	own.main.set_process(true)
 	_run(own.main, 2)
-	var tick: int = own.main.driver.sim.tick()
+	var tick: int = own.main.driver.pump.live().tick()
 	_play_again_button(own.main).pressed.emit()
 	runner.check(_panel_line(own.main) == "Waiting for your friend…" and _play_again_button(own.main).disabled and _play_again_button(own.main).text == "Play again", "N26 own again redraws the panel at once and keeps the label, got '%s' '%s'" % [_panel_line(own.main), _play_again_button(own.main).text])
 	_run(own.main, 2)
-	runner.check(own.main.driver.sim.tick() == tick and _panel_line(own.main) == "Waiting for your friend…" and _play_again_button(own.main).disabled, "N26 the waiting panel holds on later frames, got '%s'" % _panel_line(own.main))
+	runner.check(own.main.driver.pump.live().tick() == tick and _panel_line(own.main) == "Waiting for your friend…" and _play_again_button(own.main).disabled, "N26 the waiting panel holds on later frames, got '%s'" % _panel_line(own.main))
 	own.main.free()
 	var friend: Dictionary = await _online(runner, 2)
 	_end_match(friend)
@@ -368,8 +368,8 @@ func test_room_gone_on_the_ending_frame(runner) -> bool:
 		var main = online.main
 		_peer_packets(online.transport, 1, 4, PEER_TICKS)
 		_run(main, 8)
-		main.driver.sim.remove_object(4)
-		main.driver.sim.remove_object(6)
+		main.driver.pump.live().remove_object(4)
+		main.driver.pump.live().remove_object(6)
 		if label == "left": online.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": PEER_TICKS}))
 		if label == "closed": online.transport.is_closed = true
 		if label == "silent": online.transport.is_silent = true
@@ -387,8 +387,8 @@ func test_abnormal_end_after_friend_again(runner) -> bool:
 	_run(main, 8)
 	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
 	_run(main, 1)
-	main.driver.sim.remove_object(4)
-	main.driver.sim.remove_object(6)
+	main.driver.pump.live().remove_object(4)
+	main.driver.pump.live().remove_object(6)
 	online.transport.is_closed = true
 	_run(main, 2)
 	runner.check(online.lockstep.status() == "ended_relay", "N24 setup: abnormal end, got " + online.lockstep.status())
@@ -413,7 +413,7 @@ func test_rematch_builds_new_match(runner) -> bool:
 	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
 	_play_again_button(main).pressed.emit()
 	_run(main, 1)
-	var old_sim = main.driver.sim
+	var old_sim = main.driver.pump.live()
 	var old_lockstep = main.driver._lockstep
 	var sent_before: int = online.transport.sent.size()
 	# A stale value proves the rematch recomputes starts (the test map's own are empty).
@@ -421,17 +421,17 @@ func test_rematch_builds_new_match(runner) -> bool:
 	online.transport.frames.append(_rematch_start(99))
 	_peer_packets(online.transport, 1, 4, 4)
 	_run(main, 1)
-	runner.check(not is_same(main.driver.sim, old_sim) and not is_same(main.driver._lockstep, old_lockstep), "N18 the rematch builds a new simulation and lockstep")
+	runner.check(not is_same(main.driver.pump.live(), old_sim) and not is_same(main.driver._lockstep, old_lockstep), "N18 the rematch builds a new simulation and lockstep")
 	runner.check(SkirmishMain.match_seed == 99 and SkirmishMain.starts == MatchSettings.starts(SkirmishMain.map_path.get_file().get_basename(), 99), "N18 the rematch takes the relay's seed and its starts, got %d %s" % [SkirmishMain.match_seed, SkirmishMain.starts])
 	runner.check(not main.get_node("HUD/ResultPanel").visible, "N18 the panel hides for the new match")
 	runner.check(not online.transport.patient, "N18 the batched peer tick clears patient in the same frame")
 	runner.check(_sent_faction_choice(online.transport, sent_before), "N18 the new match sends tick 4 with choose_faction")
 	_peer_packets(online.transport, 1, 5, 12)
 	_run(main, 6)
-	runner.check(main.driver.sim.tick() > 4 and main.driver._lockstep.status() == "running", "N18 the batched peer tick 4 reached the new lockstep, got tick %d %s" % [main.driver.sim.tick(), main.driver._lockstep.status()])
+	runner.check(main.driver.pump.live().tick() > 4 and main.driver._lockstep.status() == "running", "N18 the batched peer tick 4 reached the new lockstep, got tick %d %s" % [main.driver.pump.live().tick(), main.driver._lockstep.status()])
 	runner.check(not online.transport.patient and online.transport.close_calls == 0, "N18 the new match is live on the same socket")
-	main.driver.sim.remove_object(4)
-	main.driver.sim.remove_object(6)
+	main.driver.pump.live().remove_object(4)
+	main.driver.pump.live().remove_object(6)
 	_run(main, 2)
 	runner.check(_sent_types(online.transport, "over") == 2 and _panel_line(main) == "" and not _play_again_button(main).disabled and _play_again_button(main).text == "Play again", "N18 the second end sends its own over with a fresh panel and the plain label, got %d '%s' '%s'" % [_sent_types(online.transport, "over"), _panel_line(main), _play_again_button(main).text])
 	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
@@ -496,12 +496,12 @@ func test_start_then_left_same_batch(runner) -> bool:
 		_end_match(online)
 		_play_again_button(main).pressed.emit()
 		_run(main, 1)
-		var old_sim = main.driver.sim
+		var old_sim = main.driver.pump.live()
 		var sent_before: int = online.transport.sent.size()
 		for frame: String in batches[label]: online.transport.frames.append(frame)
 		if label == "closed": online.transport.is_closed = true
 		_run(main, 2)
-		runner.check(is_same(main.driver.sim, old_sim) and main.driver.take_rematch() == -1 and SkirmishMain.match_seed == before[2], "N21 %s: start then end in one batch builds no match" % label)
+		runner.check(is_same(main.driver.pump.live(), old_sim) and main.driver.take_rematch() == -1 and SkirmishMain.match_seed == before[2], "N21 %s: start then end in one batch builds no match" % label)
 		runner.check(_panel_line(main) == lines[label] and _play_again_button(main).disabled, "N21 %s: panel line and Play again disabled, got '%s'" % [label, _panel_line(main)])
 		runner.check(not _sent_faction_choice(online.transport, sent_before), "N21 %s: no choose_faction sent" % label)
 		main.free()
@@ -525,20 +525,20 @@ func test_runs_at_tick_rate(runner) -> bool:
 	var online: Dictionary = await _online(runner, 2)
 	_peer_packets(online.transport, 1, 4, PEER_TICKS)
 	_run(online.main, 20)
-	runner.check(online.main.driver.sim.tick() <= 20, "N5 never faster than one tick per physics frame, got %d" % online.main.driver.sim.tick())
-	runner.check(online.main.driver.sim.tick() >= 19, "N5 keeps pace when packets are available, got %d" % online.main.driver.sim.tick())
+	runner.check(online.main.driver.pump.live().tick() <= 20, "N5 never faster than one tick per physics frame, got %d" % online.main.driver.pump.live().tick())
+	runner.check(online.main.driver.pump.live().tick() >= 19, "N5 keeps pace when packets are available, got %d" % online.main.driver.pump.live().tick())
 	online.main.free()
 	return true
 
 func test_catch_up_is_bounded(runner) -> bool:
 	var online: Dictionary = await _online(runner, 2)
 	_run(online.main, 10)
-	runner.check(online.main.driver.sim.tick() == 4, "N5 waits for the first peer packet, got %d" % online.main.driver.sim.tick())
+	runner.check(online.main.driver.pump.live().tick() == 4, "N5 waits for the first peer packet, got %d" % online.main.driver.pump.live().tick())
 	_peer_packets(online.transport, 1, 4, PEER_TICKS)
 	_run(online.main, 1)
-	runner.check(online.main.driver.sim.tick() == 6, "N5 catch-up is two ticks per frame, got %d" % online.main.driver.sim.tick())
+	runner.check(online.main.driver.pump.live().tick() == 6, "N5 catch-up is two ticks per frame, got %d" % online.main.driver.pump.live().tick())
 	_run(online.main, 19)
-	var tick: int = online.main.driver.sim.tick()
+	var tick: int = online.main.driver.pump.live().tick()
 	runner.check(tick > 24 and tick <= 24 + online.main.driver.MAX_CATCH_UP_CREDIT, "N5 catch-up debt is capped, got %d" % tick)
 	online.main.free()
 	return true
@@ -564,7 +564,7 @@ func test_two_tick_frame_keeps_earlier_results(runner) -> bool:
 	_run(online.main, 1)
 	_peer_packets(online.transport, 2, 5, PEER_TICKS)
 	_run(online.main, 1)
-	runner.check(online.main.driver.sim.tick() == 7, "N27 fixture: the frame advanced ticks 5 and 6, got %d" % online.main.driver.sim.tick())
+	runner.check(online.main.driver.pump.live().tick() == 7, "N27 fixture: the frame advanced ticks 5 and 6, got %d" % online.main.driver.pump.live().tick())
 	runner.check(online.main.get_node("HUD/Status").text.contains(DUE_REJECTION), "N27 a two-tick frame keeps the earlier tick's own rejection")
 	online.main.free()
 	return true
@@ -575,13 +575,13 @@ func test_sb1_online_snapshot_per_hash_tick(runner) -> bool:
 	Profiler.reset()
 	Profiler.enabled = true
 	var frames: int = 0
-	while online.main.driver.sim.tick() <= 60 and frames < 200:
+	while online.main.driver.pump.live().tick() <= 60 and frames < 200:
 		_run(online.main, 1)
 		frames += 1
 	var snapshots: int = Profiler.calls(&"snapshot")
 	Profiler.enabled = false
 	Profiler.reset()
-	runner.check(online.main.driver.sim.tick() > 60, "RB8 fixture: the simulation passed tick 60, got %d" % online.main.driver.sim.tick())
+	runner.check(online.main.driver.pump.live().tick() > 60, "RB8 fixture: the simulation passed tick 60, got %d" % online.main.driver.pump.live().tick())
 	runner.check(snapshots == 2, "RB8 online ticks take one snapshot per hash tick, got %d" % snapshots)
 	online.main.free()
 	return true
@@ -594,7 +594,7 @@ func test_stall_frames_are_not_step_frames(runner) -> bool:
 	_run(main, 3)
 	await runner.process_frame
 	await runner.process_frame
-	runner.check(main.driver.sim.tick() == 4 and main._clock.split_share() == 0.0, "N5 stall frames neither count as step frames nor refresh, got tick %d share %s" % [main.driver.sim.tick(), main._clock.split_share()])
+	runner.check(main.driver.pump.live().tick() == 4 and main._clock.split_share() == 0.0, "N5 stall frames neither count as step frames nor refresh, got tick %d share %s" % [main.driver.pump.live().tick(), main._clock.split_share()])
 	_peer_packets(online.transport, 1, 4, PEER_TICKS)
 	_run(main, 1)
 	await runner.process_frame
@@ -828,7 +828,7 @@ func test_plays_dry_wells_from_each_seat(runner) -> bool:
 		launcher._seat = seat
 		launcher._start(_start_message("dry_wells", 3))
 		var main = runner.root.get_tree().current_scene
-		var map: Dictionary = main.driver.sim.map_data()
+		var map: Dictionary = main.driver.pump.live().map_data()
 		var start: Vector2i = MapData.start_cell(map, seat)
 		runner.check(map.name == "Dry Wells" and main.get_node("Camera2D").position == Iso.world_to_plane(Vector2(start) + Vector2(0.5, 0.5)), "N7 seat %d plays the host's map with the camera on its own base" % seat)
 		main.free()
@@ -895,10 +895,10 @@ func test_restart_keeps_map_and_starts(runner) -> bool:
 	var main = load(LauncherScript.OFFLINE_SCENE).instantiate()
 	runner.root.add_child(main)
 	await runner.process_frame
-	var old_sim = main.driver.sim
+	var old_sim = main.driver.pump.live()
 	main._restart()
-	runner.check(not is_same(old_sim, main.driver.sim), "N12 Restart builds a new simulation")
-	var start: Vector2i = MapData.start_cell(main.driver.sim.map_data(), 1)
+	runner.check(not is_same(old_sim, main.driver.pump.live()), "N12 Restart builds a new simulation")
+	var start: Vector2i = MapData.start_cell(main.driver.pump.live().map_data(), 1)
 	var seat3: Vector2i = MapData.start_cell(MapData.load(SkirmishMain.map_path), 3)
 	runner.check(start == seat3, "N12 Restart keeps seat 1 on the chosen start, got %s want %s" % [start, seat3])
 	runner.check(main.get_node("Camera2D").position == Iso.world_to_plane(Vector2(start) + Vector2(0.5, 0.5)), "N12 camera on the chosen start after Restart")
@@ -1017,7 +1017,7 @@ func test_both_seats_share_map_and_starts(runner) -> bool:
 		launcher._start(_start_message("ashfall", 11))
 		runner.check(SkirmishMain.match_seed == 11, "N19 seat %d records the host's seed for reports, got %d" % [seat, SkirmishMain.match_seed])
 		var main = runner.root.get_tree().current_scene
-		var map: Dictionary = main.driver.sim.map_data()
+		var map: Dictionary = main.driver.pump.live().map_data()
 		var cells: Array = [MapData.start_cell(map, 1), MapData.start_cell(map, 2)]
 		runner.check(cells == [MapData.start_cell(raw, chosen[0]), MapData.start_cell(raw, chosen[1])], "N19 seat %d sim starts on the seeded cells, got %s" % [seat, str(cells)])
 		runner.check(main.get_node("Camera2D").position == Iso.world_to_plane(Vector2(cells[seat - 1]) + Vector2(0.5, 0.5)), "N19 seat %d camera on its own base" % seat)
@@ -1544,7 +1544,7 @@ func test_sb2_online_refusal_keeps_new_gesture(runner) -> bool:
 	return true
 
 func _builder(main, owner: int) -> int:
-	var rows = main.driver.sim.view_state().units
+	var rows = main.driver.pump.live().view_state().units
 	for i in rows.size():
 		if rows.owner[i] == owner and rows.kinds[rows.kind[i]].ends_with("_builder"): return rows.id[i]
 	return -1
@@ -1565,13 +1565,13 @@ func test_sb2_online_preview_waits_for_step(runner) -> bool:
 	helper.hover(main, Iso.world_to_plane(Vector2(10.5, 10.5)))
 	var tick: int = -1
 	for i in 30:
-		if main.driver._lockstep.status() == "waiting" and main.driver.sim.tick() == tick: break
-		tick = main.driver.sim.tick()
+		if main.driver._lockstep.status() == "waiting" and main.driver.pump.live().tick() == tick: break
+		tick = main.driver.pump.live().tick()
 		_run(main, 1)
 	runner.check(main.driver._lockstep.status() == "waiting" and main.driver.preview_answer().get("origin") == Vector2i(10, 10) and view._preview_valid, "RP4 fixture: answered before the stall, got %s %s" % [main.driver._lockstep.status(), main.driver.preview_answer()])
 	helper.hover(main, Iso.world_to_plane(Vector2(-3.5, -3.5)))
 	_run(main, 1)
-	runner.check(main.driver.sim.tick() == tick and main.driver.preview_answer().get("origin") == Vector2i(10, 10) and view._preview_valid, "RP4 a stalled frame answers no preview, got %s" % [main.driver.preview_answer()])
+	runner.check(main.driver.pump.live().tick() == tick and main.driver.preview_answer().get("origin") == Vector2i(10, 10) and view._preview_valid, "RP4 a stalled frame answers no preview, got %s" % [main.driver.preview_answer()])
 	_peer_packets(online.transport, 2, 13, PEER_TICKS)
 	_run(main, 1)
 	runner.check(main.driver.preview_answer().get("origin") == main.orders._preview_origin and not view._preview_valid, "RP4 the next step answers the current origin, got %s" % [main.driver.preview_answer()])
@@ -1585,16 +1585,16 @@ func test_sb2_preview_after_catch_up(runner) -> bool:
 	_run(main, 16)
 	_place(main)
 	BaseScene.new().hover(main, Iso.world_to_plane(Vector2(10.5, 10.5)))
-	var tick: int = main.driver.sim.tick()
+	var tick: int = main.driver.pump.live().tick()
 	runner.check(main.driver.preview_answer().is_empty() and not main.orders._placement_kind.is_empty(), "RP8 fixture: placing with a pending request, got %s" % [main.driver.preview_answer()])
 	var builder: int = _builder(main, 1)
-	var free: bool = main.driver.sim.preview_build(1, builder, main.orders._placement_kind, Vector2i(10, 10)).ok
+	var free: bool = main.driver.pump.live().preview_build(1, builder, main.orders._placement_kind, Vector2i(10, 10)).ok
 	var block := {"type": "build", "builder_id": _builder(main, 2), "building_kind": "usa_power_plant", "origin": [10, 10], "tick": tick + 1, "player": 2, "sequence": 1}
 	for t in range(9, PEER_TICKS + 1):
 		online.transport.frames.append(Wire.encode(Wire.tick_message(2, t, [block] if t == tick + 1 else [], null)))
 	_run(main, 1)
 	var answer: Dictionary = main.driver.preview_answer()
-	runner.check(main.driver.sim.tick() == tick + 2 and free, "RP8 fixture: two ticks in one frame, spot free before, got %d %s" % [main.driver.sim.tick() - tick, free])
+	runner.check(main.driver.pump.live().tick() == tick + 2 and free, "RP8 fixture: two ticks in one frame, spot free before, got %d %s" % [main.driver.pump.live().tick() - tick, free])
 	runner.check(answer.get("origin") == Vector2i(10, 10) and not answer.ok and main.get_node("WorldView")._preview_valid == answer.ok, "RP8 the answer reflects the second tick (spot taken), got %s" % [answer])
 	main.free()
 	return true
@@ -1608,11 +1608,11 @@ func test_sb2_rematch_drops_pending_preview(runner) -> bool:
 	_play_again_button(main).pressed.emit()
 	_run(main, 1)
 	main.driver.request_preview({"player": 2, "builder_id": _builder(main, 2), "kind": "usa_power_plant", "origin": Vector2i(10, 10)})
-	var old_sim = main.driver.sim
+	var old_sim = main.driver.pump.live()
 	online.transport.frames.append(_rematch_start(99))
 	_peer_packets(online.transport, 1, 4, 4)
 	_run(main, 1)
-	runner.check(not is_same(main.driver.sim, old_sim), "RP5 fixture: the rematch built a new match")
+	runner.check(not is_same(main.driver.pump.live(), old_sim), "RP5 fixture: the rematch built a new match")
 	_peer_packets(online.transport, 1, 5, 12)
 	_run(main, 2)
 	runner.check(main.driver.preview_answer().is_empty() and main.get_node("WorldView")._preview_cells.is_empty(), "RP5 a rematch drops the pending preview, got %s" % [main.driver.preview_answer()])

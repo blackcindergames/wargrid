@@ -290,8 +290,8 @@ func test_funds_line_from_results_and_rejections(runner) -> bool:
 
 func test_submit_without_funds_announces(runner) -> bool:
 	var skirmish = await _scene(runner)
-	skirmish.driver.sim._players[1].credits = 0
-	var hq: Dictionary = skirmish.driver.sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 1 and building.kind.ends_with("command_center"))[0]
+	skirmish.driver.pump.live()._players[1].credits = 0
+	var hq: Dictionary = skirmish.driver.pump.live().snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 1 and building.kind.ends_with("command_center"))[0]
 	skirmish._submit({"type": "produce", "building_id": hq.id, "unit_kind": Registry.kind(hq.kind).produces[0]})
 	BaseScene.tick(skirmish)
 	runner.check(skirmish.hud.note == "Rejected: Insufficient credits", "AN20 fixture: produce without credits fails with funds, got '%s'" % skirmish.hud.note)

@@ -67,7 +67,7 @@ func test_step_and_counts_shown(runner) -> bool:
 	var main = await _scene(runner, Skirmish)
 	_f3(main)
 	BaseScene.tick(main)
-	var snapshot: Dictionary = main.driver.sim.snapshot()
+	var snapshot: Dictionary = main.driver.pump.live().snapshot()
 	main.get_node("HUD/PerfOverlay").refresh_text()
 	var text: String = main.get_node("HUD/PerfOverlay").text
 	runner.check(text.contains("Units %d | Buildings %d | Tick %d" % [snapshot.entities.size(), snapshot.buildings.size(), snapshot.tick]), "PO4 counts and tick from the live state")
@@ -92,7 +92,7 @@ func test_split_share_shown(runner) -> bool:
 
 func test_f3_toggles_during_placement(runner) -> bool:
 	var main = await _scene(runner, Skirmish)
-	main.driver.sim = Fixture.make_world()
+	main.driver.adopt(Fixture.make_world())
 	main.orders.selected_ids.assign([1])
 	main._refresh()
 	var key := InputEventKey.new()

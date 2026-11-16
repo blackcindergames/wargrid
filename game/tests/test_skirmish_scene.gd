@@ -38,13 +38,13 @@ func _setup(runner):
 	return main
 
 func _pending(main, type: String = "") -> int:
-	return (main.driver.sim.snapshot().pending_commands + main.driver.queued()).filter(func(command: Dictionary) -> bool: return type.is_empty() or command.type == type).size()
+	return (main.driver.pump.live().snapshot().pending_commands + main.driver.queued()).filter(func(command: Dictionary) -> bool: return type.is_empty() or command.type == type).size()
 
 func _arena(main) -> Dictionary:
 	var sim = Skirmish.create(false)
 	var ids := {"infantry": sim.spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry"), "tank": sim.spawn(1, Vector2(11.5, 10.5), "usa_tank"), "enemy": sim.spawn(2, Vector2(15.5, 10.5), "usa_tank")}
 	sim.start_match([1, 2] as Array[int])
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main.orders.selected_ids.assign([ids.infantry, ids.tank])
 	main._refresh()
 	return ids
@@ -53,21 +53,21 @@ func test_skirmish_ready_and_tick(runner) -> bool:
 	var main = await _setup(runner)
 	for path in ["WorldView", "Camera2D", "HUD/Status", "HUD/ResultPanel", "HUD/Economy/Produce"]:
 		runner.check(main.has_node(path), "K2 node " + path)
-	runner.check(main.driver.sim.snapshot() == Skirmish.create().snapshot(), "K2 exact scenario")
+	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot(), "K2 exact scenario")
 	BaseScene.tick(main)
-	runner.check(main.driver.sim.snapshot().tick == 1, "K2 one physics callback is one tick")
-	runner.check(main.driver.sim.snapshot().buildings.all(func(b: Dictionary) -> bool: return b.owner != 2 or b.kind != "usa_power_plant"), "K2 the opponent has not built before its decision tick")
+	runner.check(main.driver.pump.live().snapshot().tick == 1, "K2 one physics callback is one tick")
+	runner.check(main.driver.pump.live().snapshot().buildings.all(func(b: Dictionary) -> bool: return b.owner != 2 or b.kind != "usa_power_plant"), "K2 the opponent has not built before its decision tick")
 	main._process(0.1)
 	main._refresh()
-	runner.check(main.driver.sim.snapshot().tick == 1, "K2 _process and _refresh never step")
-	while main.driver.sim.snapshot().tick <= Skirmish.next_decision(0, 2) and main.driver.sim.snapshot().tick < 40: BaseScene.tick(main)
-	var state: Dictionary = main.driver.sim.snapshot()
+	runner.check(main.driver.pump.live().snapshot().tick == 1, "K2 _process and _refresh never step")
+	while main.driver.pump.live().snapshot().tick <= Skirmish.next_decision(0, 2) and main.driver.pump.live().snapshot().tick < 40: BaseScene.tick(main)
+	var state: Dictionary = main.driver.pump.live().snapshot()
 	runner.check(state.tick == Skirmish.next_decision(0, 2) + 1 and state.buildings.size() == 3 and state.buildings[2].owner == 2 and state.buildings[2].kind == "usa_power_plant", "K2 the opponent's first command lands on its seat's decision tick")
-	for building: Dictionary in main.driver.sim.snapshot().buildings: main.driver.sim.remove_object(building.id)
+	for building: Dictionary in main.driver.pump.live().snapshot().buildings: main.driver.pump.live().remove_object(building.id)
 	BaseScene.tick(main)
-	var frozen: Dictionary = main.driver.sim.snapshot()
+	var frozen: Dictionary = main.driver.pump.live().snapshot()
 	BaseScene.tick(main)
-	runner.check(frozen.match.status == "draw" and main.driver.sim.snapshot() == frozen, "K2 terminal match stays frozen")
+	runner.check(frozen.match.status == "draw" and main.driver.pump.live().snapshot() == frozen, "K2 terminal match stays frozen")
 	main.free()
 	return true
 
@@ -135,21 +135,21 @@ func test_match_hud_and_restart(runner) -> bool:
 	main._refresh()
 	var text: String = main.get_node("HUD/Status").text
 	runner.check(text.contains("Credits") and text.contains("Battle Tank #" + str(ids.tank)) and text.contains("HP 480/480") and text.contains("guard"), "K4 credits, kind, HP and order in the HUD")
-	var setup: Dictionary = main.driver.sim.view_state()
+	var setup: Dictionary = main.driver.pump.live().view_state()
 	setup.match.status = "setup"
 	main.hud._refresh_hud(setup)
 	runner.check(main.get_node(OUTCOME).text.is_empty() and not main.get_node("HUD/ResultPanel").visible, "K4 the setup phase shows no result")
-	main.driver.sim.remove_object(3)
-	main.driver.sim.remove_object(4)
+	main.driver.pump.live().remove_object(3)
+	main.driver.pump.live().remove_object(4)
 	BaseScene.tick(main)
 	runner.check(main.get_node(OUTCOME).text == "Victory" and main.get_node(PLAY_AGAIN).visible and not main.get_node(PLAY_AGAIN).disabled, "K4 victory and restart button")
-	main.driver.sim._players[main.local_player].team = 7
+	main.driver.pump.live()._players[main.local_player].team = 7
 	BaseScene.publish(main)
 	runner.check(main.hud._result_text({"status": "won", "winner": 7}) == "Victory" and main.hud._result_text({"status": "won", "winner": main.local_player}) == "Defeat", "K4 result compares the winning team id with the local team")
-	var before: Array = main.driver.sim.snapshot().pending_commands
+	var before: Array = main.driver.pump.live().snapshot().pending_commands
 	main._submit({"type": "move", "entity_ids": [ids.tank], "target": [12.5, 12.5]})
 	main._unhandled_input(InputEventKey.new())
-	runner.check(main.driver.sim.snapshot().pending_commands == before, "K4 terminal match accepts no orders")
+	runner.check(main.driver.pump.live().snapshot().pending_commands == before, "K4 terminal match accepts no orders")
 	BaseScene.tick(main)
 	runner.check(main.hud.note == "Rejected: Match ended", "K4 terminal match accepts no orders, got '%s'" % main.hud.note)
 	main.orders._placement_kind = "usa_power_plant"
@@ -162,18 +162,18 @@ func test_match_hud_and_restart(runner) -> bool:
 	main.get_node("Camera2D").position = Vector2(500, 500)
 	main.get_node("Camera2D").zoom = Vector2.ONE * 2.0
 	main.get_node(PLAY_AGAIN).pressed.emit()
-	runner.check(main.driver.sim.snapshot() == Skirmish.create().snapshot() and main.orders.selected_ids.is_empty() and main.orders._placement_kind.is_empty() and not main.orders._attack_move_mode and main.hud.note.is_empty() and main.get_node("Camera2D").zoom == Vector2.ONE and not main.get_node("HUD/ResultPanel").visible and main.hud._last_result_tick == -1 and main.hud._last_result_sequence == -1 and not main.orders._selecting and not main.orders._dragged and main.get_node("Camera2D").position != Vector2(500, 500) and main.get_node("WorldView")._preview_cells.is_empty(), "K4 restart leaves nothing from the old match")
+	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot() and main.orders.selected_ids.is_empty() and main.orders._placement_kind.is_empty() and not main.orders._attack_move_mode and main.hud.note.is_empty() and main.get_node("Camera2D").zoom == Vector2.ONE and not main.get_node("HUD/ResultPanel").visible and main.hud._last_result_tick == -1 and main.hud._last_result_sequence == -1 and not main.orders._selecting and not main.orders._dragged and main.get_node("Camera2D").position != Vector2(500, 500) and main.get_node("WorldView")._preview_cells.is_empty(), "K4 restart leaves nothing from the old match")
 	main.orders.selected_ids.assign([1])
 	main._submit({"type": "move", "entity_ids": [1], "target": [6.5, 14.5]})
 	runner.check(main.hud.note.is_empty() and _pending(main, "move") == 1, "K4 first order after restart is valid")
 	for loser in [[1, "Defeat"], [-1, "Draw"]]:
 		var other = await _setup(runner)
 		if loser[0] == 1:
-			other.driver.sim.remove_object(2)
+			other.driver.pump.live().remove_object(2)
 		else:
-			other.driver.sim.remove_object(2)
-			other.driver.sim.remove_object(3)
-			other.driver.sim.remove_object(4)
+			other.driver.pump.live().remove_object(2)
+			other.driver.pump.live().remove_object(3)
+			other.driver.pump.live().remove_object(4)
 		BaseScene.tick(other)
 		runner.check(other.get_node(OUTCOME).text == loser[1], "K4 " + loser[1])
 		other.free()
@@ -241,7 +241,7 @@ func _pile_world(main) -> Dictionary:
 	Fixture.send(sim, {"type": "gather", "entity_ids": [first, second], "source_id": source})
 	Fixture.steps(sim, 19)
 	sim.start_match([1, 2] as Array[int])
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main.orders.selected_ids.clear()
 	main._refresh()
 	return {"source": source, "docked": first, "waiting": second}
@@ -269,20 +269,20 @@ func test_enemy_selection_read_only(runner) -> bool:
 	runner.check(main.orders.inspected_id == ids.enemy and main.orders.selected_ids.is_empty(), "E1 left-click selects the enemy read-only and replaces own selection")
 	runner.check(text.contains("Enemy (P2) Battle Tank #%d HP 480/480" % ids.enemy), "E1 enemy line, got " + text)
 	runner.check(text.contains("HP 480/480 | guard"), "E1 idle enemy shows its mode, got " + text)
-	var before: Dictionary = main.driver.sim.snapshot()
+	var before: Dictionary = main.driver.pump.live().snapshot()
 	helper.key(main, KEY_E)
 	helper.key(main, KEY_A)
 	helper.key(main, KEY_S)
 	helper.pointer(main, enemy_point, MOUSE_BUTTON_RIGHT, true)
 	helper.pointer(main, Iso.world_to_plane(Vector2(20.5, 12.5)), MOUSE_BUTTON_RIGHT, true)
-	runner.check(main.driver.sim.snapshot() == before and main.driver.queued().is_empty() and not main.orders._attack_move_mode and main.orders.inspected_id == ids.enemy, "E1 E, A, S and right-clicks send nothing")
+	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and not main.orders._attack_move_mode and main.orders.inspected_id == ids.enemy, "E1 E, A, S and right-clicks send nothing")
 	var own_point: Vector2 = Iso.world_to_plane(Vector2(10.5, 10.5)) + Vector2(0, -8)
 	helper.pointer(main, own_point, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, own_point, MOUSE_BUTTON_LEFT, false)
 	runner.check(main.orders.selected_ids == [ids.infantry] and main.orders.inspected_id == -1, "E1 own click selects own unit and clears inspection")
 	helper.pointer(main, enemy_point, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, enemy_point, MOUSE_BUTTON_LEFT, false)
-	main.driver.sim.remove_object(ids.enemy)
+	main.driver.pump.live().remove_object(ids.enemy)
 	BaseScene.publish(main)
 	runner.check(main.orders.inspected_id == -1, "E1 dead enemy clears inspection")
 	main.free()
@@ -293,7 +293,7 @@ func test_rally_input_and_marker(runner) -> bool:
 	var main = await _setup(runner)
 	var sim = Skirmish.create()
 	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main.orders.selected_ids.clear()
 	main._refresh()
 	var view = main.get_node("WorldView")
@@ -321,8 +321,8 @@ func test_supply_pile_labels(runner) -> bool:
 	var main = await _setup(runner)
 	var pile: Dictionary = _pile_world(main)
 	var view = main.get_node("WorldView")
-	var source: Dictionary = Fixture.object(main.driver.sim, pile.source)
-	runner.check(Fixture.object(main.driver.sim, pile.docked).collection.phase in ["loading"] and Fixture.object(main.driver.sim, pile.waiting).collection.phase == "waiting_source", "S1 fixture: one collector docked, one waiting")
+	var source: Dictionary = Fixture.object(main.driver.pump.live(), pile.source)
+	runner.check(Fixture.object(main.driver.pump.live(), pile.docked).collection.phase in ["loading"] and Fixture.object(main.driver.pump.live(), pile.waiting).collection.phase == "waiting_source", "S1 fixture: one collector docked, one waiting")
 	runner.check(view.pile_lines(source) == PackedStringArray(["Boxes %d" % source.boxes, "docked 1 · waiting 1"]), "S1 pile label, got " + str(view.pile_lines(source)))
 	var points: PackedVector2Array = view.pile_text_points(source)
 	runner.check(points.size() == 2 and points[1].y - points[0].y >= ThemeDB.fallback_font.get_height(UiStyle.FONT_SIZE), "S1 pile lines are a full text height apart, got " + str(points))
@@ -354,7 +354,7 @@ func test_attack_move_hint_and_rejection(runner) -> bool:
 	runner.check(view.hints().size() == 1, "H3 attack-move click leaves one hint")
 	main.orders.selected_ids.assign([ids.infantry])
 	var before: int = view.hints().size()
-	main.driver.sim.remove_object(ids.infantry)
+	main.driver.pump.live().remove_object(ids.infantry)
 	helper.pointer(main, Iso.world_to_plane(Vector2(8.5, 8.5)), MOUSE_BUTTON_RIGHT, true)
 	runner.check(view.hints().size() == before, "H3 a second command replaces the marker, still one")
 	main.orders.selected_ids.clear()
@@ -367,7 +367,7 @@ func test_attack_move_hint_and_rejection(runner) -> bool:
 func test_selection_prunes_dead(runner) -> bool:
 	var main = await _setup(runner)
 	var ids: Dictionary = _arena(main)
-	main.driver.sim.remove_object(ids.tank)
+	main.driver.pump.live().remove_object(ids.tank)
 	BaseScene.publish(main)
 	runner.check(main.orders.selected_ids == [ids.infantry], "H4 selection keeps only live ids, got " + str(main.orders.selected_ids))
 	main.free()
@@ -376,9 +376,9 @@ func test_selection_prunes_dead(runner) -> bool:
 func test_order_marks_own_only(runner) -> bool:
 	var main = await _setup(runner)
 	var ids: Dictionary = _arena(main)
-	Fixture.send(main.driver.sim, {"type": "move", "entity_ids": [ids.tank], "target": [12.5, 14.5]})
-	Fixture.send(main.driver.sim, {"type": "move", "player": 2, "entity_ids": [ids.enemy], "target": [16.5, 14.5]})
-	Fixture.steps(main.driver.sim, 2)
+	Fixture.send(main.driver.pump.live(), {"type": "move", "entity_ids": [ids.tank], "target": [12.5, 14.5]})
+	Fixture.send(main.driver.pump.live(), {"type": "move", "player": 2, "entity_ids": [ids.enemy], "target": [16.5, 14.5]})
+	Fixture.steps(main.driver.pump.live(), 2)
 	BaseScene.publish(main)
 	runner.check(main.get_node("WorldView").order_marks().is_empty(), "P1 order crosses are hidden by default")
 	main.get_node("WorldView").set_show_destinations(true)
@@ -396,8 +396,8 @@ func test_health_bar_clear_of_boxes(runner) -> bool:
 	return true
 
 func _victory(main) -> void:
-	main.driver.sim.remove_object(3)
-	main.driver.sim.remove_object(4)
+	main.driver.pump.live().remove_object(3)
+	main.driver.pump.live().remove_object(4)
 	BaseScene.tick(main)
 
 func _enter(code: Key) -> InputEventKey:
@@ -427,7 +427,7 @@ func test_result_panel_layout(runner) -> bool:
 		var real_table: GridContainer = main.get_node(TABLE)
 		var real_cells: Array = real_table.get_children().map(func(cell: Label) -> String: return cell.text)
 		runner.check(real_table.visible and real_table.columns == 4 and real_cells.size() == 12 and real_cells.slice(0, 4) == ["", "Units built", "Units lost", "Buildings lost"], "R1 the table has its headers and two player rows at %s, got %s" % [size, real_cells])
-		runner.check(main.get_node(LENGTH).visible and main.get_node(LENGTH).text == ResultPanel.length_text(main.driver.sim.tick(), 30), "R1 the length reads the match ticks at %s, got '%s'" % [size, main.get_node(LENGTH).text])
+		runner.check(main.get_node(LENGTH).visible and main.get_node(LENGTH).text == ResultPanel.length_text(main.driver.pump.live().tick(), 30), "R1 the length reads the match ticks at %s, got '%s'" % [size, main.get_node(LENGTH).text])
 		runner.check(real_card.grow(-16.0).encloses(real_table.get_global_rect()) and real_card.grow(-16.0).encloses(main.get_node(LENGTH).get_global_rect()), "R1 table and length inside the card at %s" % size)
 		var real_buttons: Rect2 = main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons").get_global_rect()
 		runner.check(absf(real_buttons.get_center().x - real_card.get_center().x) <= 1.0, "R1 the button row is centred on the card at %s" % size)
@@ -485,14 +485,14 @@ func test_result_stats_from_sim(runner) -> bool:
 	var main = await _setup(runner)
 	_arena(main)
 	for i in 900:
-		if main.driver.sim.match_stats().any(func(row: Dictionary) -> bool: return row.units_lost > 0): break
+		if main.driver.pump.live().match_stats().any(func(row: Dictionary) -> bool: return row.units_lost > 0): break
 		BaseScene.tick(main)
-	var enemy: Array = main.driver.sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 2) + main.driver.sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 2)
-	for object: Dictionary in enemy: main.driver.sim.remove_object(object.id)
+	var enemy: Array = main.driver.pump.live().snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 2) + main.driver.pump.live().snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 2)
+	for object: Dictionary in enemy: main.driver.pump.live().remove_object(object.id)
 	BaseScene.tick(main)
-	var stats: Array = main.driver.sim.match_stats()
+	var stats: Array = main.driver.pump.live().match_stats()
 	var cells: Array = main.get_node(TABLE).get_children()
-	runner.check(cells.size() == 4 + 4 * stats.size() and stats.size() == 2, "R7 fixture: a header and one row per player, got %d cells, stats %s, match %s, tick %d" % [cells.size(), stats, main.driver.sim.snapshot().match, main.driver.sim.tick()])
+	runner.check(cells.size() == 4 + 4 * stats.size() and stats.size() == 2, "R7 fixture: a header and one row per player, got %d cells, stats %s, match %s, tick %d" % [cells.size(), stats, main.driver.pump.live().snapshot().match, main.driver.pump.live().tick()])
 	runner.check(stats.any(func(row: Dictionary) -> bool: return row.units_lost > 0), "R7 fixture: the sim counted a lost unit")
 	for i in stats.size():
 		var row: Array = cells.slice(4 + 4 * i, 8 + 4 * i)
@@ -579,29 +579,29 @@ func test_result_panel_keys(runner) -> bool:
 		_arena(main)
 		_victory(main)
 		runner.check(main.get_node("HUD/ResultPanel").visible, "R2 fixture: the panel is up")
-		var arena_sim = main.driver.sim
+		var arena_sim = main.driver.pump.live()
 		main._input(_enter(code))
-		runner.check(not is_same(main.driver.sim, arena_sim) and not main.get_node("HUD/ResultPanel").visible, "R2 key %s restarts" % code)
+		runner.check(not is_same(main.driver.pump.live(), arena_sim) and not main.get_node("HUD/ResultPanel").visible, "R2 key %s restarts" % code)
 		main.free()
 	var main = await _setup(runner)
 	_arena(main)
 	_victory(main)
-	var kept = main.driver.sim
+	var kept = main.driver.pump.live()
 	main._pause.open()
 	main._input(_enter(KEY_ENTER))
-	runner.check(is_same(main.driver.sim, kept) and main.get_node("HUD/ResultPanel").visible, "R2 Enter with the pause menu open does nothing")
+	runner.check(is_same(main.driver.pump.live(), kept) and main.get_node("HUD/ResultPanel").visible, "R2 Enter with the pause menu open does nothing")
 	main._pause.close()
 	main._playtest._form.show()
 	main._input(_enter(KEY_ENTER))
-	runner.check(is_same(main.driver.sim, kept) and main._playtest._form.visible, "R2 Enter with the playtest form open keeps the match and the form")
+	runner.check(is_same(main.driver.pump.live(), kept) and main._playtest._form.visible, "R2 Enter with the playtest form open keeps the match and the form")
 	main._playtest._form.hide()
 	main._input(_enter(KEY_ESCAPE))
-	runner.check(main._pause.visible and is_same(main.driver.sim, kept), "R2 Esc with the panel up opens the pause menu")
+	runner.check(main._pause.visible and is_same(main.driver.pump.live(), kept), "R2 Esc with the panel up opens the pause menu")
 	main.free()
 	var live = await _setup(runner)
-	var live_sim = live.driver.sim
+	var live_sim = live.driver.pump.live()
 	live._input(_enter(KEY_ENTER))
-	runner.check(is_same(live.driver.sim, live_sim), "R2 Enter during a running match does nothing")
+	runner.check(is_same(live.driver.pump.live(), live_sim), "R2 Enter during a running match does nothing")
 	live.free()
 	return true
 
@@ -615,7 +615,7 @@ func test_enter_in_text_field_keeps_match(runner) -> bool:
 	await runner.process_frame
 	_arena(main)
 	_victory(main)
-	var sim_before = main.driver.sim
+	var sim_before = main.driver.pump.live()
 	var field := LineEdit.new()
 	main.get_node("HUD").add_child(field)
 	field.grab_focus()
@@ -623,12 +623,12 @@ func test_enter_in_text_field_keeps_match(runner) -> bool:
 	main.get_viewport().push_input(InputEventMouseMotion.new())
 	runner.check(not main.get_viewport().is_input_handled(), "R6 fixture: flag clear")
 	main._input(_enter(KEY_ENTER))
-	runner.check(is_same(main.driver.sim, sim_before) and main.get_node("HUD/ResultPanel").visible, "R6 Enter in a text field does not restart")
+	runner.check(is_same(main.driver.pump.live(), sim_before) and main.get_node("HUD/ResultPanel").visible, "R6 Enter in a text field does not restart")
 	runner.check(not main.get_viewport().is_input_handled(), "R6 the Enter event is not swallowed")
 	field.release_focus()
 	field.queue_free()
 	main._input(_enter(KEY_ENTER))
-	runner.check(not is_same(main.driver.sim, sim_before), "R6 Enter without text focus restarts")
+	runner.check(not is_same(main.driver.pump.live(), sim_before), "R6 Enter without text focus restarts")
 	port.queue_free()
 	return true
 
@@ -704,9 +704,9 @@ func test_play_again_routes_by_driver(runner) -> bool:
 	_arena(main)
 	_victory(main)
 	var online := StubDriver.new(false)
-	online.sim = real.sim
+	online.adopt(real.pump.live())
 	main.driver = online
-	main.hud._refresh_hud(real.sim.view_state())
+	main.hud._refresh_hud(real.pump.live().view_state())
 	var status: Label = main.get_node("HUD/ResultPanel/Center/Card/Box/Status")
 	runner.check(main.get_node(PLAY_AGAIN).disabled and status.text == "Your friend left", "R5 the panel shows the driver's line and can_play_again")
 	main._play_again()
@@ -714,7 +714,7 @@ func test_play_again_routes_by_driver(runner) -> bool:
 	var offline := StubDriver.new(true)
 	main.driver = offline
 	main._play_again()
-	runner.check(offline.plays == 0 and offline.sim != null and offline.started == 1, "R5 a restartable driver restarts, starts once and never gets play_again, started %d" % offline.started)
+	runner.check(offline.plays == 0 and offline.pump.live() != null and offline.started == 1, "R5 a restartable driver restarts, starts once and never gets play_again, started %d" % offline.started)
 	main.driver = real
 	main.free()
 	return true
@@ -724,13 +724,13 @@ func test_silent_keys_explain(runner) -> bool:
 	var main = await _setup(runner)
 	var ids: Dictionary = _arena(main)
 	main.orders.selected_ids.assign([ids.infantry])
-	var before: Dictionary = main.driver.sim.snapshot()
+	var before: Dictionary = main.driver.pump.live().snapshot()
 	helper.key(main, KEY_1)
-	runner.check(main.orders._placement_kind.is_empty() and main.driver.sim.snapshot() == before and main.driver.queued().is_empty() and main.hud.note == "Choose one builder", "P4 build key without a builder says why, got '%s'" % main.hud.note)
+	runner.check(main.orders._placement_kind.is_empty() and main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.note == "Choose one builder", "P4 build key without a builder says why, got '%s'" % main.hud.note)
 	main.hud.note = ""
 	main.orders.selected_ids.clear()
 	helper.key(main, KEY_E)
-	runner.check(main.driver.sim.snapshot() == before and main.driver.queued().is_empty() and main.hud.note == "Select a production building", "P4 E without a building says why, got '%s'" % main.hud.note)
+	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.note == "Select a production building", "P4 E without a building says why, got '%s'" % main.hud.note)
 	main.free()
 	return true
 
@@ -744,7 +744,7 @@ func test_hud_strings_use_display_names(runner) -> bool:
 	var main = await _setup(runner)
 	var sim = Skirmish.create()
 	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main.orders.selected_building_id = barracks
 	main._refresh()
 	main.orders._produce_selected()
@@ -775,7 +775,7 @@ func test_hud_strings_use_display_names(runner) -> bool:
 
 func test_hud_font_size_is_shared(runner) -> bool:
 	var main = await _setup(runner)
-	var barracks: int = Fixture.build(runner, main.driver.sim, "usa_barracks", Vector2i(12, 12))
+	var barracks: int = Fixture.build(runner, main.driver.pump.live(), "usa_barracks", Vector2i(12, 12))
 	BaseScene.publish(main)
 	main.orders.selected_building_id = barracks
 	main.orders._produce_selected()
@@ -798,7 +798,7 @@ func test_defence_attack_scene(runner) -> bool:
 	var enemy: int = sim.spawn(2, Vector2(15.5, 10.5), "usa_tank")
 	var distant: int = sim.spawn(2, Vector2(30.5, 30.5), "usa_tank")
 	sim.start_match([1, 2] as Array[int])
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main.orders.selected_ids.clear()
 	main.orders.selected_building_id = defence
 	main._refresh()
@@ -821,7 +821,7 @@ func test_enter_unload_scene(runner) -> bool:
 	var enemy_hub: int = Fixture.add_completed(sim, 2, "frc_defence", Vector2i(20, 10))
 	var rifle: int = sim.spawn(1, Vector2(14.5, 10.5), "frc_rifle_infantry")
 	sim.start_match([1, 2] as Array[int])
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main.orders.selected_ids.assign([rifle])
 	main._refresh()
 	var orders = func(type: String) -> Array: return main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == type)
@@ -860,7 +860,7 @@ func test_right_click_pile_gathers(runner) -> bool:
 		var pile: int = sim.add_supply_source(Vector2i(20, 8), 10)
 		var unit: int = sim.spawn(1, Vector2(15.5, 9.5), kind)
 		sim.start_match([1, 2] as Array[int])
-		main.driver.sim = sim
+		main.driver.adopt(sim)
 		main.orders.selected_ids.assign([unit])
 		main._refresh()
 		helper.pointer(main, Iso.world_to_plane(Vector2(21.5, 9.5)), MOUSE_BUTTON_RIGHT, true)
@@ -874,7 +874,7 @@ func test_right_click_pile_in_launcher_flow(runner) -> bool:
 	for faction in ["frc", "china", "usa"]:
 		var main = await _setup(runner)
 		var sim = Skirmish.create(true, "ai", {1: faction, 2: "usa"})
-		main.driver.sim = sim
+		main.driver.adopt(sim)
 		var pile: Dictionary = sim.snapshot().sources[0]
 		var collector: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), faction + ("_builder" if faction == "frc" else "_collector"))
 		var centre := Vector2(pile.origin[0] + 2.0, pile.origin[1] + 2.5)
@@ -894,7 +894,7 @@ func test_frc_laborer_right_click_pile(runner) -> bool:
 	var helper = BaseScene.new()
 	var main = await _setup(runner)
 	var sim = Skirmish.create(true, "ai", {1: "frc", 2: "usa"})
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	var pile: Dictionary = sim.snapshot().sources[0]
 	var click: Vector2 = Iso.world_to_plane(Vector2(pile.origin[0] + 2.0, pile.origin[1] + 2.5))
 	var laborers: Array[int] = []
@@ -927,7 +927,7 @@ func test_frc_laborer_right_click_pile(runner) -> bool:
 func test_one_snapshot_per_refresh(runner) -> bool:
 	var main = await _setup(runner)
 	var sim = Skirmish.create()
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main.orders.selected_building_id = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
 	BaseScene.publish(main)
 	Profiler.reset()
@@ -947,7 +947,7 @@ func test_refresh_waits_for_next_frame(runner) -> bool:
 	main.set_process(true)
 	await runner.process_frame
 	BaseScene.tick(main)
-	runner.check(main.driver.sim.tick() == 1 and main._view._state.tick == 0, "RF3 a step does not refresh in its own frame")
+	runner.check(main.driver.pump.live().tick() == 1 and main._view._state.tick == 0, "RF3 a step does not refresh in its own frame")
 	await runner.process_frame
 	runner.check(main._view._state.tick == 0, "RF3 still not refreshed before the frame's _process")
 	await runner.process_frame
@@ -984,7 +984,7 @@ func _ids_where(units: Array, test: Callable) -> Array[int]:
 func test_hud_summaries_are_pinned(runner) -> bool:
 	var main = await _setup(runner)
 	var sim = ViewRows.skirmish_sim()
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	var state: Dictionary = sim.snapshot()
 	var own: Array = state.entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1)
 	var waiting: Array[int] = _ids_where(own, func(unit: Dictionary) -> bool: return unit.collection != null and unit.collection.phase.begins_with("waiting_"))
@@ -1009,7 +1009,7 @@ func test_hud_summaries_are_pinned(runner) -> bool:
 
 func _ic_row(main, step: int, seen: Array, status: bool = false) -> String:
 	main.driver.flush()
-	var pending: Array = main.driver.sim.snapshot().pending_commands
+	var pending: Array = main.driver.pump.live().snapshot().pending_commands
 	var added: PackedStringArray = []
 	for command: Dictionary in pending.slice(mini(seen[0], pending.size())): added.append(JSON.stringify(command))
 	seen[0] = pending.size()
@@ -1051,7 +1051,7 @@ func _ic_world(main) -> Dictionary:
 	sim._entities[ids.occupant].position = [30.5, 22.5]
 	ids.pile = sim.add_supply_source(Vector2i(34, 8), 10)
 	sim.start_match([1, 2] as Array[int])
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main._refresh()
 	return ids
 
@@ -1148,7 +1148,7 @@ func test_input_script_offline(runner) -> bool:
 	runner.check(sim_orders.call("gather") == 1, "IC1 step 20 took effect")
 	rows.append(_ic_row(main, 20, seen))
 	BaseScene.tick(main)
-	rows.append(_ic_row(main, 21, seen) + "|tick=%d" % main.driver.sim.tick())
+	rows.append(_ic_row(main, 21, seen) + "|tick=%d" % main.driver.pump.live().tick())
 	var first: int = _ic_first_difference(rows, IcRows.IC1_ROWS)
 	runner.check(first == -1, "IC1 row %d matches the chain recorded 2026-11-14, got %s" % [first, rows[first] if first >= 0 and first < rows.size() else "no row"])
 	main.free()
@@ -1156,17 +1156,17 @@ func test_input_script_offline(runner) -> bool:
 
 func test_offline_driver_stamps_like_the_scene(runner) -> bool:
 	var driver = OfflineDriver.new(1)
-	driver.sim = Skirmish.create(false)
-	var unit: int = driver.sim.spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry")
-	driver.sim.start_match([1, 2] as Array[int])
-	var tick: int = driver.sim.snapshot().tick
+	driver.adopt(Skirmish.create(false))
+	var unit: int = driver.pump.live().spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry")
+	driver.pump.live().start_match([1, 2] as Array[int])
+	var tick: int = driver.pump.live().snapshot().tick
 	var first: Dictionary = driver.submit({"type": "stop", "entity_ids": [unit]})
 	var refused: Dictionary = driver.submit({"type": "attack", "entity_ids": [unit], "target_id": 999999})
 	var second: Dictionary = driver.submit({"type": "stop", "entity_ids": [unit]})
 	driver.flush()
-	var queued: Array = driver.sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "stop")
+	var queued: Array = driver.pump.live().snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "stop")
 	var stamps: Array = queued.map(func(command: Dictionary) -> Array: return [command.tick, command.player, command.sequence])
-	runner.check(first.ok and refused.ok and second.ok and stamps == [[tick, 1, 0], [tick, 1, 1]] and driver.recorder.commands().size() == 2, "OD1 offline driver stamps tick, player and sequence like main._submit")
+	runner.check(first.ok and refused.ok and second.ok and stamps == [[tick, 1, 0], [tick, 1, 1]] and driver.pump.recorder().commands().size() == 2, "OD1 offline driver stamps tick, player and sequence like main._submit")
 	driver.step()
 	driver.drain()
 	var answers: Array = driver.take_answers().map(func(answer: Dictionary) -> Array: return [answer.command.type, answer.command.sequence, answer.ok, not answer.error.is_empty()])
@@ -1175,7 +1175,7 @@ func test_offline_driver_stamps_like_the_scene(runner) -> bool:
 
 func test_sb1_idle_offline_ticks_take_no_snapshot(runner) -> bool:
 	var main = await _setup(runner)
-	main.driver.sim = Skirmish.create()
+	main.driver.adopt(Skirmish.create())
 	main._refresh()
 	Profiler.reset()
 	Profiler.enabled = true
@@ -1190,18 +1190,18 @@ func test_sb1_idle_offline_ticks_take_no_snapshot(runner) -> bool:
 
 func test_offline_driver_bot_memory_on_simulation(runner) -> bool:
 	var driver = OfflineDriver.new(1)
-	driver.sim = Skirmish.create()
-	while driver.sim.tick() < Skirmish.next_decision(Skirmish.ATTACK_TICK, 2): driver.sim.step()
+	driver.adopt(Skirmish.create())
+	while driver.pump.live().tick() < Skirmish.next_decision(Skirmish.ATTACK_TICK, 2): driver.pump.live().step()
 	driver.step()
-	runner.check(driver.sim.has_meta(Skirmish.BOT_META) and not driver.has_meta(Skirmish.BOT_META), "OD2 bot memory lives on the simulation, not the driver")
+	runner.check(driver.pump.live().has_meta(Skirmish.BOT_META) and not driver.has_meta(Skirmish.BOT_META), "OD2 bot memory lives on the simulation, not the driver")
 	return true
 
 func test_sb1_submit_takes_no_snapshot(runner) -> bool:
 	var driver = OfflineDriver.new(1)
-	driver.sim = Skirmish.create(false)
-	var unit: int = driver.sim.spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry")
-	driver.sim.start_match([1, 2] as Array[int])
-	var tick: int = driver.sim.tick()
+	driver.adopt(Skirmish.create(false))
+	var unit: int = driver.pump.live().spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry")
+	driver.pump.live().start_match([1, 2] as Array[int])
+	var tick: int = driver.pump.live().tick()
 	Profiler.reset()
 	Profiler.enabled = true
 	driver.submit({"type": "stop", "entity_ids": [unit]})
@@ -1211,7 +1211,7 @@ func test_sb1_submit_takes_no_snapshot(runner) -> bool:
 	Profiler.enabled = false
 	Profiler.reset()
 	driver.flush()
-	var queued: Array = driver.sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "stop")
+	var queued: Array = driver.pump.live().snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "stop")
 	var stamps: Array = queued.map(func(command: Dictionary) -> Array: return [command.tick, command.player, command.sequence])
 	runner.check(snapshots == 0, "RB3 offline submit takes no snapshot, got %d" % snapshots)
 	runner.check(stamps == [[tick, 1, 0], [tick, 1, 1]], "OD1 stamps survive the snapshot-free submit")
@@ -1236,7 +1236,7 @@ func test_orders_turn_input_into_payloads(runner) -> bool:
 	var before: int = _pending(main, "move")
 	orders.handle(_mouse(main, Iso.world_to_plane(ground), MOUSE_BUTTON_RIGHT, true))
 	main.driver.flush()
-	var moves: Array = main.driver.sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "move")
+	var moves: Array = main.driver.pump.live().snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "move")
 	var payload_ok: bool = moves.size() == before + 1 and moves[-1].entity_ids == orders.selected_ids and Vector2(moves[-1].target[0], moves[-1].target[1]).distance_to(ground) <= 1e-3
 	runner.check(orders.selected_ids == [ids.infantry, ids.tank] and payload_ok, "OR1 orders own the selection and emit the move payload")
 	main.free()
@@ -1246,7 +1246,7 @@ func test_hud_reads_only_state_and_orders(runner) -> bool:
 	var main = await _setup(runner)
 	var sim = Skirmish.create()
 	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main.orders.selected_building_id = barracks
 	var produce: Button = main.get_node("HUD/Economy/Produce")
 	produce.hide()
@@ -1271,7 +1271,7 @@ func test_sb1_economy_input_reads_shown(runner) -> bool:
 	var main = await _setup(runner)
 	var sim = Skirmish.create()
 	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	var builder: int = sim.snapshot().entities.filter(func(u: Dictionary) -> bool: return u.owner == 1)[0].id
 	var cell: Vector2i = _free_cell(sim, builder, "usa_power_plant")
 	var pile: Dictionary = sim.snapshot().sources[0]
@@ -1337,7 +1337,7 @@ func test_sb1_pick_of_unit_dead_since_shown(runner) -> bool:
 	var helper = BaseScene.new()
 	var main = await _setup(runner)
 	var ids: Dictionary = _arena(main)
-	main.driver.sim.remove_object(ids.infantry)
+	main.driver.pump.live().remove_object(ids.infantry)
 	runner.check(main.orders._matching_ids(ids.infantry, true).has(ids.infantry), "RB4 the shown view still picks the unit")
 	var double := InputEventMouseButton.new()
 	double.position = main.get_node("WorldView").get_global_transform_with_canvas() * (Iso.world_to_plane(Vector2(10.5, 10.5)) + Vector2(0, -8))
@@ -1366,9 +1366,9 @@ func test_sb1_result_uses_shown_team(runner) -> bool:
 	first.add_player(1, 0, "human", 1)
 	var second = Simulation.new()
 	second.add_player(1, 0, "human", 7)
-	main.driver.sim = first
+	main.driver.adopt(first)
 	main._refresh()
-	main.driver.sim = second
+	main.driver.adopt(second)
 	runner.check(main.hud._result_text({"status": "won", "winner": 7}) == "Defeat", "RB6 the result reads the shown team")
 	main._refresh()
 	runner.check(main.hud._result_text({"status": "won", "winner": 7}) == "Victory", "RB6 a refresh shows the new team")
@@ -1511,8 +1511,8 @@ func test_sb3_over_stops_refreshing(runner) -> bool:
 	var main = await _setup(runner)
 	_arena(main)
 	main.set_process(true)
-	main.driver.sim.remove_object(3)
-	main.driver.sim.remove_object(4)
+	main.driver.pump.live().remove_object(3)
+	main.driver.pump.live().remove_object(4)
 	BaseScene.tick(main)
 	var results: int = main.stepped_results.size()
 	Profiler.reset()

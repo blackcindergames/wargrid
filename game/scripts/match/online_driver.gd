@@ -13,10 +13,6 @@ const DESYNC_DIR: String = "user://desync"
 const LATENCY_FILE: String = "user://netplay-latency.txt"
 
 var pump: SimPump
-# shortcut: test bridge, Task 6 removes it
-var sim: Simulation:
-	get: return pump.live()
-	set(value): adopt(value)
 var first_note: SimPump.Note
 var _last: SimPump.Note
 var web: bool = OS.has_feature("web")

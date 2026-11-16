@@ -110,17 +110,17 @@ func _cues(main) -> Array:
 	return main._sound.last_requests().map(func(request: Dictionary) -> String: return request.cue)
 
 func _builder(main, owner: int) -> int:
-	var rows = main.driver.sim.view_state().units
+	var rows = main.driver.pump.live().view_state().units
 	for i in rows.size():
 		if rows.owner[i] == owner and rows.kinds[rows.kind[i]].ends_with("_builder"): return rows.id[i]
 	return -1
 
 func _own_center_origin(main) -> Array:
-	var center: Dictionary = main.driver.sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 1 and building.kind.ends_with("command_center"))[0]
+	var center: Dictionary = main.driver.pump.live().snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 1 and building.kind.ends_with("command_center"))[0]
 	return [center.origin[0], center.origin[1]]
 
 func _move(main, unit: int) -> Dictionary:
-	var at: Dictionary = main.driver.sim.snapshot().entities.filter(func(entity: Dictionary) -> bool: return entity.id == unit)[0]
+	var at: Dictionary = main.driver.pump.live().snapshot().entities.filter(func(entity: Dictionary) -> bool: return entity.id == unit)[0]
 	return {"type": "move", "entity_ids": [unit], "target": [at.position[0] + 6.0, at.position[1]]}
 
 func test_order_lines_exist(runner) -> bool:
@@ -135,20 +135,20 @@ func test_order_lines_exist(runner) -> bool:
 
 func test_offline_order_speaks(runner) -> bool:
 	var skirmish = await _scene(runner)
-	var tick: int = skirmish.driver.sim.tick()
+	var tick: int = skirmish.driver.pump.live().tick()
 	var builder: int = _builder(skirmish, 1)
 	skirmish._submit(_move(skirmish, builder))
 	runner.check(_unit_line(skirmish).begins_with("worker_move_"), "OV7 builder move says worker_move_, got '%s'" % _unit_line(skirmish))
 	var unit_voice = skirmish._sound.get("_unit_voice")
 	runner.check(unit_voice != null and unit_voice.bus == &"Voice" and unit_voice != skirmish._sound._voice, "OV7 unit voice is its own player on the Voice bus")
-	runner.check(skirmish.driver.sim.tick() == tick, "OV7 the order left the tick alone, got %d" % (skirmish.driver.sim.tick() - tick))
+	runner.check(skirmish.driver.pump.live().tick() == tick, "OV7 the order left the tick alone, got %d" % (skirmish.driver.pump.live().tick() - tick))
 	skirmish.free()
 	return true
 
 func test_offline_rejected_order_only_errors(runner) -> bool:
 	var skirmish = await _scene(runner)
 	var builder: int = _builder(skirmish, 1)
-	var hq: Dictionary = skirmish.driver.sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 2 and building.kind.ends_with("command_center"))[0]
+	var hq: Dictionary = skirmish.driver.pump.live().snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 2 and building.kind.ends_with("command_center"))[0]
 	skirmish._submit({"type": "attack", "entity_ids": [builder], "target_id": hq.id})
 	runner.check(_unit_line(skirmish) == "", "OV8 a worker has no attack line, got '%s'" % _unit_line(skirmish))
 	BaseScene.tick(skirmish)
@@ -170,7 +170,7 @@ func test_online_order_speaks_on_submit(runner) -> bool:
 	suite._run(main, 8)
 	var builder: int = _builder(main, 1)
 	runner.check(builder != -1, "OV9 fixture: seat 1 owns a builder")
-	var tick: int = main.driver.sim.tick()
+	var tick: int = main.driver.pump.live().tick()
 	main._submit(_move(main, builder))
 	runner.check(_unit_line(main).begins_with("worker_move_"), "OV9 online order speaks at once, got '%s'" % _unit_line(main))
 	online.lockstep._rejections.append({"tick": tick, "sequence": 0, "error": "No units left"})
@@ -190,8 +190,8 @@ func test_headless_playback_off(runner) -> bool:
 func test_valid_order_speaks_despite_older_rejection(runner) -> bool:
 	var skirmish = await _scene(runner)
 	var none: Array[Dictionary] = []
-	var older: Array[Dictionary] = [{"tick": skirmish.driver.sim.tick(), "player": 1, "sequence": 99, "ok": false, "error": "No units left"}]
-	skirmish._sound.collect_step(skirmish.driver.sim.tick(), none, older)
+	var older: Array[Dictionary] = [{"tick": skirmish.driver.pump.live().tick(), "player": 1, "sequence": 99, "ok": false, "error": "No units left"}]
+	skirmish._sound.collect_step(skirmish.driver.pump.live().tick(), none, older)
 	skirmish.stepped_results.append_array(older)
 	skirmish._submit(_move(skirmish, _builder(skirmish, 1)))
 	runner.check(_unit_line(skirmish).begins_with("worker_move_"), "OV11 valid order speaks over an older rejection, got '%s'" % _unit_line(skirmish))

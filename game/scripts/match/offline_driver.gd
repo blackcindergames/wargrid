@@ -2,19 +2,11 @@ extends RefCounted
 
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
-const CommandRecorder = preload("res://scripts/playtest/command_recorder.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
 const BOTS: Array[int] = [2]
 
 var pump: SimPump
-# shortcut: test bridge, Task 6 removes it
-var sim: Simulation:
-	get: return pump.live()
-	set(value): adopt(value)
-# shortcut: test bridge, Task 6 removes it
-var recorder: CommandRecorder:
-	get: return pump.recorder()
 var first_note: SimPump.Note
 var _player: int
 var _factions: Dictionary = {}
