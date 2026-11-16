@@ -80,3 +80,11 @@ Next exact action: none for R1; later releases follow [development notes > Relea
 - Live: relay and web `/health` 200.
 - After: `main` set to `0.13.0-dev` (`3c729d3`, full suite green on it).
 - Unverified: the live site opened by a player after the deploy, the desktop zips on any machine, an online match on the live build, `--probe-relay` against the live relay.
+
+## 0.13.0 release (2026-11-16, tag `v0.13.0` on `47adb22`)
+
+- P2.2 slice 2 plus the slice 1 and later `main` work since 0.12.0. Full suite at version `0.13.0` on branch `release-0.13.0`: CASES 1014, FAILURES 0, TESTS PASSED 146596. Branch CI run 43860531366 green; `main` fast-forwarded to it.
+- Release run 43861825161 on `47adb22`: version, all test jobs, Compare replays, build green; production Environment passed; Deploy relay, Deploy web and Publish GitHub release steps success; the release has the Linux, macOS and Windows zips.
+- Live: relay and web `/health` 200, `https://wargrid.pdstuber.dev/` 200. Hand-written player notes set with `gh release edit v0.13.0 --notes-file` (user, 2026-11-16).
+- After: `main` set to `0.14.0-dev`, full suite CASES 1014 CHECKS 146671 FAILURES 0, TESTS PASSED.
+- Unverified: the live site opened by a player after the deploy, the desktop zips on any machine, an online match on the live build, `--probe-relay` against the live relay.
