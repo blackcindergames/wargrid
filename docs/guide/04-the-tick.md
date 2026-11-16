@@ -19,7 +19,7 @@ flowchart TD
     I["8: Combat.fire and Combat.fire_defences<br/>units that did not move fire, damage is applied"] --> J
     J["9: _evaluate_match<br/>is at most one team left?"] --> K
     K["_tick += 1"] --> L
-    L["10: hash ring<br/>one hash of the live state<br/>into a 64-slot ring"]
+    L["10: hash ring<br/>one hash of the live state<br/>into a 64-slot ring<br/>(skipped offline)"]
     classDef sim fill:#2f5d8a,stroke:#7fb3e6,color:#ffffff
     class A,B,C,D,E,F,G,H,I,J,K,L sim
     linkStyle default stroke:#9aa4b2,stroke-width:2px
@@ -31,8 +31,8 @@ Who calls `step` is outside the simulation:
 
 ```mermaid
 flowchart TD
-    P["Godot _physics_process<br/>fixed rate, project.godot"] --> S["_step_simulation<br/>in match_screen.gd"]
-    S --> O["Skirmish:<br/>issue_opponent, step"]
+    P["Godot _physics_process<br/>fixed rate, project.godot"] --> S["_step_frame in match_screen.gd<br/>calls driver.step"]
+    S --> O["Offline: one pump job:<br/>commands, bot, step"]
     S --> N["Online: poll relay,<br/>Lockstep.advance"]
     N --> N2{"every seat's packet<br/>for this tick?"}
     N2 -- "yes" --> N3["issue its commands,<br/>then step"]
@@ -50,7 +50,7 @@ flowchart TD
     linkStyle default stroke:#9aa4b2,stroke-width:2px
 ```
 
-Offline, every physics callback runs one `step`, after the bot has issued its commands. Online, a tick runs only when every seat's packet for it has arrived (every seat sends exactly one per tick, empty or not; chapter 11), so the slowest peer paces everybody. Drawing happens separately, in the process callback, and reads the state through `snapshot` or `view_state`; chapter 5.
+Offline, every physics callback posts one job to the pump (`SimPump.run_job`): the queued commands, then the bot's, then one `step`. Online, a tick runs only when every seat's packet for it has arrived (every seat sends exactly one per tick, empty or not; chapter 11), so the slowest peer paces everybody. Drawing happens separately, in the process callback: the same job leaves a fresh `view_state` in a slot, which the screen drains and shows; chapter 5, and [chapter 1](01-big-picture.md#the-pump-the-one-holder-of-the-simulation) for the pump.
 
 ## One move order, followed through the code
 
@@ -60,10 +60,10 @@ A player selects a tank and right-clicks. Say `tick()` is N at that moment, and 
 
 1. The click builds a move command for the selected units and hands it to the submit function.  
    `orders._move → match_screen._submit`
-2. The submit function stamps the current tick, the local seat as player and the next sequence number (the driver counts it; no snapshot), then offers the command to the simulation. The screen shows the hint marker and plays the order voice at once, before the result is known.  
-   `match_screen._submit → driver.submit → Simulation.issue_command`
-3. The simulation validates it: required fields, a tick not in the past, a sequence higher than the player's last, at least one named unit that exists and none owned by another player, and a target inside the map and walkable. A rejection returns an error text, but the driver holds the answer back: the screen gets it from the next `driver.step` (offline), and only then shows the error and plays the refusal beep. Online the answer comes once the scheduled command tick has run, from the lockstep rejection list. An accepted command is copied into a normalised form and queued.  
-   `issue_command → _validate → _payload_fields → _pending`
+2. The submit function adds the local seat as player and parks the command in the driver's queue. The screen shows the hint marker and plays the order voice at once, before the result is known.  
+   `match_screen._submit → driver.submit → _queue`
+3. On the next physics callback the driver posts a job with that queue. `run_job` stamps each command with `tick()` and the player's `last_sequence + 1` (the simulation is the only counter) and offers it to the simulation, before the bot's commands and before `step`. The simulation validates it: required fields, a tick not in the past, a sequence higher than the player's last, at least one named unit that exists and none owned by another player, and a target inside the map and walkable. A rejection returns an error text, but it travels in the job's note: the screen takes it when it drains the notes (offline), and only then shows the error and plays the refusal beep. Online the answer comes once the scheduled command tick has run, from the lockstep rejection list. An accepted command is copied into a normalised form and queued.  
+   `driver.step → SimPump.post → run_job → issue_command → _validate → _payload_fields → _pending`
 
 Online, step 2 differs: the online driver hands the payload to lockstep, which stamps the tick of the next packet to be sent (one more than the **input delay** ahead of the current tick) and queues the command; chapter 11.  
 `online_driver.submit → Lockstep.submit`
@@ -99,7 +99,7 @@ Online, step 2 differs: the online driver hands the payload to lockstep, which s
     `_advance → Locomotion.step; unit.position`
 
 **Tick N, phases 8 and 9.** A tank whose position changed is recorded as moved, so combat fire skips it. The tick counter becomes N+1, and presentation's next read of the state shows the new position.  
-`step: moved → Combat.fire; _tick += 1; view_state()`
+`step: moved → Combat.fire; _tick += 1`, then in the same job `run_job → view_state()`
 
 Order a group of 150 and steps 9 to 12 stagger: unit number p in the queue (counting from 1, queue otherwise empty) gets its route about one tick per 384 cells of route queued ahead of it later: the tick starts searches from the front until 384 route cells are spent, and a search that has started finishes. So a group whose routes are about 20 cells long gets 19 to 20 routes per tick (the search that crosses 384 still completes), and longer routes mean fewer per tick. The others show `path_pending` and stand still.
 
@@ -115,7 +115,7 @@ Order a group of 150 and steps 9 to 12 stagger: unit number p in the queue (coun
 
 ## Rules the order enforces
 
-**Commands are checked twice.** The first check, when the command is issued, gives offline players instant feedback. The second, the due check when the tick arrives, protects against what changed in between: a command sorted earlier in the same tick spent the credits or took the build site, or the command was issued for a later tick. Online, both run at the stamped tick, inside `Lockstep.advance` and `step`. A rejection therefore reaches the player an input delay late, through `Lockstep.rejections`. Consequence read from the code: when two players' due commands conflict (the same build site, say), commands are applied in (tick, player, sequence) order and lockstep feeds them in seat order, so the lower seat number wins every time. Every due command except `move` appends a row to `command_results()` (accepted or rejected) that the HUD and sound read.
+**Commands are checked twice.** The first check, when the command is issued, gives offline players feedback one tick later (the answer travels in the job's note). The second, the due check when the tick arrives, protects against what changed in between: a command sorted earlier in the same tick spent the credits or took the build site, or the command was issued for a later tick. Online, both run at the stamped tick, inside `Lockstep.advance` and `step`. A rejection therefore reaches the player an input delay late, through `Lockstep.rejections`. Consequence read from the code: when two players' due commands conflict (the same build site, say), commands are applied in (tick, player, sequence) order and lockstep feeds them in seat order, so the lower seat number wins every time. Every due command except `move` appends a row to `command_results()` (accepted or rejected) that the HUD and sound read.
 
 **Immediate and unit-directed commands.** Produce, cancel, set rally, unload, choose faction and defence attack take effect inside the order-applying loop. Move, attack-move, attack, gather, stop, enter and the builder part of build and resume-build are collected per unit and applied after the loop, so the "last command wins" rule can run first (build places its foundation inside the loop).
 
@@ -125,7 +125,7 @@ Order a group of 150 and steps 9 to 12 stagger: unit number p in the queue (coun
 
 **Moving and shooting exclude each other.** Phase 8 skips every armed unit recorded as moved in phase 7 (passengers excepted). It is a rule of the pipeline, not of one weapon.
 
-**The tick hashes itself last, so a desync report can name the exact tick two machines split.** After the tick counter moves, `step` stores one hash of the live state in a 64-slot ring (zone `step.hash_ring`, about 0.05 to 0.07 ms on the team match and hordes300). It reads only; it draws no random number and is not in the snapshot. Chapter 10 explains what it is for.
+**The tick hashes itself last, so a desync report can name the exact tick two machines split.** After the tick counter moves, `step` stores one hash of the live state in a 64-slot ring (zone `step.hash_ring`, about 0.05 to 0.07 ms on the team match and hordes300). It reads only; it draws no random number and is not in the snapshot. Offline matches switch it off at creation (`set_hash_ring(false)`: nobody compares hashes there, and the ring costs a full entity walk per tick); online matches, headless replays and direct-simulation tests keep it on, and `hash_ring()` returns no rows while it is off. Chapter 10 explains what it is for.
 
 **Match end.** The match-end check runs only while the match is ongoing. When at most one team still owns a building that counts for victory, the status becomes won or draw and every later `step` returns at once.
 
@@ -153,13 +153,14 @@ The path cap covers only the route search. The destination allocation in step 8 
 
 ## Where in the code
 
-- `game/scripts/simulation/simulation.gd` — `step` (the pipeline), `issue_command`, `_validate`, `_payload_fields`, `_apply_orders`, `_command_before`, `_assign_move`, `_service_paths`, `_assign_route`, `_advance`, `_evaluate_match`, `_tick_hash`, `hash_ring`; `match_stats`, `_count_built`, `_count_death` (display-only counters called from phases 4 and 8 and from container release and bury; they add no phase and are outside the snapshot, [chapter 10](10-determinism-and-replays.md)); constants `HASH_RING_SIZE`, `PATH_CELLS_PER_TICK`, `START_DELAY_TICKS`; queues `_pending`, `_path_queue` and counter `_path_cells` (`pop_front` in `_service_paths`; `erase(id)` in `_apply_orders`, `_stop_unit`, `remove_object`); flag `_units_removed`.
+- `game/scripts/simulation/simulation.gd` — `step` (the pipeline), `issue_command`, `_validate`, `_payload_fields`, `_apply_orders`, `_command_before`, `_assign_move`, `_service_paths`, `_assign_route`, `_advance`, `_evaluate_match`, `_tick_hash`, `hash_ring`, `set_hash_ring`, `last_sequence`; `match_stats`, `_count_built`, `_count_death` (display-only counters called from phases 4 and 8 and from container release and bury; they add no phase and are outside the snapshot, [chapter 10](10-determinism-and-replays.md)); constants `HASH_RING_SIZE`, `PATH_CELLS_PER_TICK`, `START_DELAY_TICKS`; queues `_pending`, `_path_queue` and counter `_path_cells` (`pop_front` in `_service_paths`; `erase(id)` in `_apply_orders`, `_stop_unit`, `remove_object`); flag `_units_removed`.
 - `game/scripts/simulation/destination_allocation.gd` — `assign`: one destination cell per unit.
 - `game/scripts/simulation/grid_navigation.gd` — `route`: the A* behind `_assign_route`.
 - `game/scripts/simulation/locomotion.gd` — `step`: heading, speed and distance per tick; honours `move_after`.
-- `game/scripts/match/match_screen.gd` — `_submit`, `_physics_process`, `_step_frame`, `_step_simulation`, `_process`.
+- `game/scripts/match/match_screen.gd` — `_submit`, `_physics_process`, `_step_frame`, `_drain_notes`, `_take_answers`, `_process`.
 - `game/scripts/match/orders.gd` — input to payload (`_move`, `_context_order`, ...).
-- `game/scripts/match/offline_driver.gd` — `submit` (offline stamping), `step` (bot, then step).
+- `game/scripts/match/sim_pump.gd` — `run_job`: stamp and issue commands, bots, `step`, notes and the view slot.
+- `game/scripts/match/offline_driver.gd` — `submit` (queues), `step` (posts the job; bots `[2]`).
 - `game/scripts/match/online_driver.gd` — `submit` (to lockstep), `step` (catch-up loop), `CATCH_UP_STEPS`, `MAX_CATCH_UP_CREDIT`.
 - `game/scripts/net/lockstep.gd` — `submit`, `advance` (feed packet commands, then `step`), `finish_tick`, `MAX_QUEUED_TICKS`.
 - `game/scripts/net/seat_sim.gd` — wrapper whose `issue_command` goes through lockstep, so bot and script code can drive a networked seat.
@@ -177,4 +178,4 @@ The path cap covers only the route search. The destination allocation in step 8 
 - Next: [5. Presentation](05-presentation.md) reads the state this chapter produces; [6. Movement](06-movement.md) opens phases 1, 6 and 7.
 
 ---
-Checked against `314f487`; the counter hooks against `6c83492` (no pipeline change). Files: `game/scripts/simulation/simulation.gd`, `game/scripts/match/match_screen.gd`, `game/scripts/match/orders.gd`, `game/scripts/match/offline_driver.gd`, `game/scripts/match/online_driver.gd`, `game/scripts/net/lockstep.gd`, `game/scripts/net/seat_sim.gd`, `game/scripts/simulation/combat.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/simulation/destination_allocation.gd`, `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/construction.gd`, `game/scripts/simulation/production.gd`, `game/scripts/simulation/containers.gd`, `game/scripts/simulation/horde.gd`, `game/scripts/simulation/salvage.gd`, `game/scripts/simulation/rebuild_holes.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/simulation/supply_collection.gd`, `game/scripts/debug/profiler.gd`
+Checked against `f46993b`; the counter hooks against `6c83492` (no pipeline change). Files: `game/scripts/simulation/simulation.gd`, `game/scripts/match/match_screen.gd`, `game/scripts/match/orders.gd`, `game/scripts/match/sim_pump.gd`, `game/scripts/match/offline_driver.gd`, `game/scripts/match/online_driver.gd`, `game/scripts/net/lockstep.gd`, `game/scripts/net/seat_sim.gd`, `game/scripts/simulation/combat.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/simulation/destination_allocation.gd`, `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/construction.gd`, `game/scripts/simulation/production.gd`, `game/scripts/simulation/containers.gd`, `game/scripts/simulation/horde.gd`, `game/scripts/simulation/salvage.gd`, `game/scripts/simulation/rebuild_holes.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/simulation/supply_collection.gd`, `game/scripts/debug/profiler.gd`

@@ -168,15 +168,15 @@ Still open: gate 4.
 Plan: [sim boundary SB3](../superpowers/plans/2026-11-16-sim-boundary-sb3.md). Resume record below is overwritten at each checkpoint; ledger rows and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-16, Task 6 green)
-Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged), Tasks 1-5 at ac22072 / Task 6 uncommitted
-Last green task / next incomplete task: Task 6 (tests off the bridge: `driver.sim` / `driver.recorder` bridge properties deleted from both drivers, `offline_driver.gd` off the static check's allowlist) / Task 7 (docs)
-Changed paths since last commit: game/scripts/match/{online_driver,offline_driver}.gd, 11 files in game/tests/, tools/test_sim_boundary.py, docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb3/task6/, CASES 1035 CHECKS 146757 FAILURES 0, exit 0, `TESTS PASSED 146757`; traces equal; team match as base; boundary, lint, warnings, `CHECKS PASSED 5` exit 0
+Resume record (updated 2026-11-16, Task 7 reviewed and fixed)
+Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged), Tasks 1-6 at f46993b / Task 7 uncommitted
+Last green task / next incomplete task: Task 6 (committed f46993b); Task 7 docs written, fresh Opus docs review (18 findings) applied, awaiting the coordinator's commit / Task 8 (gate checks and measurements)
+Changed paths since last commit: docs/guide/{README,01,04,05,08,09,10,11,12,13}, docs/reference/{sim-interface,sim-boundary-verification}.md, docs/superpowers/specs/2026-11-15-sim-boundary-design.md, docs/STATUS.md
+Last command / cases / checks / failures / exit / marker: `sh tools/run_checks.sh` exit 0 `CHECKS PASSED 5`; `sh tools/check_public.sh` exit 0 `PUBLIC CHECK PASSED` (docs only; baseline skipped, passed on f46993b: Task 6 full suite 1035 cases, `TESTS PASSED 146757`)
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); Steam Deck row and rendered rerun at the SB3 gate (Task 8)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 7 (docs), after the coordinator commits Task 6.
+Next exact action: the coordinator commits Task 7; then Task 8.
 ```
 
 ### Evidence ledger
@@ -235,6 +235,7 @@ Base: `bad67c332820be5fb86d42a87af4a0dbcc436961` (`main`, tree `3762073acc71e04b
 | 2026-11-16 | Task 6: `WARGRID_TEST_ONLY=sb3_`; full suite with the four trace variables into `build/sb3/task6/` | exit 0, CASES 21 CHECKS 81 FAILURES 0, `TESTS PASSED 81`; exit 0, CASES 1035 CHECKS 146757 FAILURES 0, `TESTS PASSED 146757` (same as Task 5) | ac22072 + Task 6, uncommitted |
 | 2026-11-16 | Task 6: `NETPLAY_OUT=build/sb3/task6/netplay sh tools/run_netplay.sh match`; `sh tools/run_team_match.sh`; traces equal base vs task6 | exit 0, `NETPLAY PASSED match 10.5 s`; exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS capped_ticks=853 max_cells=643`; replay, economy, combat `REPLAYS MATCHED 1200`, team `100`, netplay `301` | ac22072 + Task 6, uncommitted |
 | 2026-11-16 | Task 6: `python3 tools/test_sim_boundary.py`; `sh tools/run_lint.sh`; `sh tools/run_warnings.sh`; `sh tools/run_checks.sh` | exit 0 each (`OK` 12 tests, `no problems found`, `WARNINGS CHECKED 171 FILES`, `CHECKS PASSED 5`) | ac22072 + Task 6, uncommitted |
+| 2026-11-16 | Task 7: guide chapters 1, 4, 5, 13, `sim-interface.md`, spec SB3 row, STATUS night-6 row; `sh tools/run_checks.sh`; `sh tools/check_public.sh` (logs `build/sb3/task7/`) | exit 0 `CHECKS PASSED 5`; exit 0 `PUBLIC CHECK PASSED`; docs only, baseline skipped (passed on f46993b); rerun after the 08/09 fixes and after the 18 review findings, same result | f46993b + uncommitted docs |
 
 Task 3 note: after review the ring-off skip is observable by turning the ring on after ten off ticks (the ten rows read zero), so the always-write mutation is caught. An insert into a frozen cache cannot be tested directly: the engine prints `ERROR:` / `SCRIPT ERROR`, which fails the whole suite by design (exit 1), so the late-insert guard is the warm-covers checks plus that suite-level failure.
 

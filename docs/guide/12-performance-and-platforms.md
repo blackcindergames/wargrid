@@ -147,7 +147,7 @@ flowchart TD
 
 ## Proposed, not built
 
-Three ideas below are on paper or on a branch. None is in the game on `main`. A search of `game/scripts` for thread, mutex and semaphore classes finds nothing, and there is no pump script or packed simulation storage.
+Three ideas below are on paper or on a branch. None is in the game on `main`. A search of `game/scripts` for thread, mutex and semaphore classes finds nothing, and there is no packed simulation storage. A pump script exists only on branch `sim-boundary-sb3` (not merged): inline, no thread (see stage one below).
 
 ### Simulation on a worker thread
 
@@ -155,7 +155,7 @@ Status in its design: "proposed, design only. Nothing built, no thread, no bench
 
 The idea: a `SimPump` object owns the simulation and runs one job per tick (commands in, `step`, then a finished view state out). Scenes post jobs and draw the newest result; no main-thread code reads the live simulation. The design recommends two stages: "go now" for the first, a later measurement for the second.
 
-Stage one runs the pump on the main thread in every build, which changes the scenes and lockstep code but adds no thread. Stage two switches it to a `Thread` in threaded builds, decided by a measurement in the browser.
+Stage one runs the pump on the main thread in every build, which changes the scenes and lockstep code but adds no thread. Its offline half is built on branch `sim-boundary-sb3` (SB3: inline `SimPump`, the screen reads slots); online still reads the live simulation until SB4. Stage two switches it to a `Thread` in threaded builds, decided by a measurement in the browser.
 
 What backs it:
 
@@ -212,4 +212,4 @@ A horde mode (about 1,000 simple agents) is also undecided; throwaway spike bran
 - Previous: [11. Multiplayer](11-multiplayer.md). Next: [13. Testing and tooling](13-testing-and-tooling.md).
 
 ---
-Checked against `ae09473`; the plumbing row and the `run_benchmark.sh` lines against `29724db` plus the hand-off rows change; the tail sentence, gate table and worst-tick figures against `b88dc0f`. Files: `tools/run_benchmark.sh`, `tools/run_profile.sh`, `tools/run_team_match.sh`, `tools/export_build.sh`, `tools/deploy_web.sh`, `game/benchmarks/run_movement.gd`, `game/benchmarks/run_combat.gd`, `game/benchmarks/run_lockstep.gd`, `game/benchmarks/bench_runner.gd`, `game/scripts/debug/timing_stats.gd`, `game/scripts/debug/profiler.gd`, `game/scripts/debug/movement_workload.gd`, `game/scripts/debug/combat_workload.gd`, `game/scripts/debug/movement_benchmark.gd`, `game/export_presets.cfg`, `web/Dockerfile`, `web/sws.toml`, `web/fly.toml`, `tools/run_scaling.sh`, `game/benchmarks/run_scaling.gd`
+Checked against `ae09473`; the worker-thread stage-one status against `f46993b`; the plumbing row and the `run_benchmark.sh` lines against `29724db` plus the hand-off rows change; the tail sentence, gate table and worst-tick figures against `b88dc0f`. Files: `tools/run_benchmark.sh`, `tools/run_profile.sh`, `tools/run_team_match.sh`, `tools/export_build.sh`, `tools/deploy_web.sh`, `game/benchmarks/run_movement.gd`, `game/benchmarks/run_combat.gd`, `game/benchmarks/run_lockstep.gd`, `game/benchmarks/bench_runner.gd`, `game/scripts/debug/timing_stats.gd`, `game/scripts/debug/profiler.gd`, `game/scripts/debug/movement_workload.gd`, `game/scripts/debug/combat_workload.gd`, `game/scripts/debug/movement_benchmark.gd`, `game/export_presets.cfg`, `web/Dockerfile`, `web/sws.toml`, `web/fly.toml`, `tools/run_scaling.sh`, `game/benchmarks/run_scaling.gd`
