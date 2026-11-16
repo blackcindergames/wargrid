@@ -26,7 +26,7 @@ Runs while the user is reachable, at the PC or on the phone.
 
 ## Start
 
-Runs at the PC, in the session started with the handoff's start line.
+Runs at the PC, in the session started with the handoff's start line, inside the run's own worktree. Never dispatch a writer from `claude agents` (agent view): its sessions branch from a fresh `origin/main` and are told to commit and push without asking; only background (`/bg`) a session already in its worktree and watch it there (user, 2026-11-16).
 
 1. The argument is the handoff path. Missing or unreadable: say so and stop.
 2. Previous-run check (user, 2026-11-15): every `morning-summary.md` under `~/projects/wargrid-overnight-work/*/` needs an Investigations entry in the session notes (add missing ones as open, see [kickoff](kickoff.md)), and none may be open. If any is open, list each with its morning items and stop; start only after the user has gone over them or says to start anyway, in which case record that in the ledger. Also list unresolved gates of Pending user action that name a branch, push or deploy the run could touch.
@@ -51,4 +51,4 @@ Runs at the PC, in the session started with the handoff's start line.
 
 ## Morning
 
-The run ends with a final message and a morning summary file beside its ledger: results, every ruling with its cost, and what waits for the user. `/kickoff` asks the open choices as a questionnaire.
+The run ends with a final message and a morning summary file beside its ledger: results, every ruling with its cost, what waits for the user, and the run's processed-token total from `python3 tools/session_usage.py` on the coordinator and subagent session files, so workflow changes can be compared night to night (user, 2026-11-16). `/kickoff` asks the open choices as a questionnaire.
