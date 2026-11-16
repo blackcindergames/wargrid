@@ -85,6 +85,12 @@ button_group = SubResource("nav")
 text = "Credits"
 alignment = 0
 
+[node name="Quit" type="Button" parent="Sidebar/Nav"]
+layout_mode = 2
+theme_type_variation = &"NavButton"
+text = "Quit"
+alignment = 0
+
 [node name="Version" type="Label" parent="Sidebar"]
 layout_mode = 2
 text = "v"
@@ -222,6 +228,7 @@ visible = false
 
 [node name="ThisBuild" type="Button" parent="Pages/Play"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 32)
 size_flags_horizontal = 0
 theme_type_variation = &"FooterLink"
 visible = false
@@ -347,6 +354,7 @@ layout_mode = 2
 
 [node name="ThisBuild" type="Button" parent="Pages/Join"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 32)
 size_flags_horizontal = 0
 theme_type_variation = &"FooterLink"
 visible = false
@@ -497,7 +505,7 @@ theme_override_constants/separation = 8
 [node name="InviteLabel" type="Label" parent="Pages/Waiting/Body/Left"]
 layout_mode = 2
 theme_type_variation = &"FieldLabel"
-text = "Invite link"
+text = "Match code"
 
 [node name="Invite" type="HBoxContainer" parent="Pages/Waiting/Body/Left"]
 layout_mode = 2

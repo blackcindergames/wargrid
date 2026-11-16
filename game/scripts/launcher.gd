@@ -47,6 +47,8 @@ var _origin: String = "Play"
 var _play_error: bool = false
 static var code_applied: bool = false
 var prerelease: bool = PlaytestSettings.prerelease()
+var web: bool = OS.has_feature("web")
+var quit: Callable
 var focus_cards: Array[Dictionary] = FocusCards.load_cards()
 var page: String = _page_value("location.origin + location.pathname")
 var search: String = _page_value("location.search")
@@ -70,6 +72,9 @@ func _ready() -> void:
 	_add_fullscreen()
 	_add_graphics()
 	_add_playtest()
+	if not quit.is_valid(): quit = get_tree().quit
+	$Sidebar/Nav/Quit.visible = not web
+	$Sidebar/Nav/Quit.pressed.connect(func() -> void: quit.call())
 	$Pages/Play/Footer/Start.pressed.connect(func() -> void:
 		_offline_setup()
 		get_tree().change_scene_to_file(OFFLINE_SCENE))
@@ -118,6 +123,7 @@ func _apply_page() -> void:
 	if not relay.is_empty():
 		_set_relay(relay)
 		_set_advanced(true)
+	$Pages/Waiting/Body/Left/InviteLabel.text = "Invite link" if not page.is_empty() else "Match code"
 	$Pages/Waiting/Body/Left/Invite/Copy.text = "Copy link" if not page.is_empty() else "Copy code"
 
 func _set_advanced(open: bool) -> void:
@@ -144,6 +150,7 @@ func set_opponent(kind: String) -> void:
 	$Pages/Play/Body/Advanced.visible = prerelease and not bot
 	_play_error = false
 	_refresh_play()
+	if current_page == "Play" and is_inside_tree(): _focus_primary()
 
 func _refresh_play() -> void:
 	$Pages/Play/Body/MapInfo.text = _map_info(_map_id())
@@ -164,11 +171,13 @@ func _connect_play_controls() -> void:
 		var on_play: bool = path.begins_with("Pages/Play")
 		selector.item_selected.connect(func(index: int) -> void:
 			if on_play: _play_error = false
-			_set_own(selector.get_item_metadata(index)))
+			_set_own(selector.get_item_metadata(index))
+			_focus_primary())
 	for selector: OptionButton in [$Pages/Play/Body/Bot, $Pages/Play/Body/Map]:
 		selector.item_selected.connect(func(_index: int) -> void:
 			_play_error = false
-			_refresh_play())
+			_refresh_play()
+			_focus_primary())
 	for fold in FOLDS:
 		get_node(fold + "/Toggle").toggled.connect(_set_advanced)
 		get_node(fold + "/RelayUrl").text_changed.connect(_set_relay)
@@ -192,11 +201,20 @@ func show_page(page_name: String) -> void:
 	for each in PAGES: get_node("Pages/" + each).visible = each == page_name
 	get_node("Sidebar/Nav/" + _nav_of(page_name)).button_pressed = true
 	if page_name == "Credits": _fill_credits()
-	# Enter only reaches a focused field; a link-filled code would otherwise ignore it.
-	if page_name == "Join" and is_inside_tree(): _focus_code()
+	if is_inside_tree(): _focus_primary()
 
-func _focus_code() -> void:
+# Enter only reaches a focused control, so each page focuses the one action it is for.
+func _focus_primary() -> void:
+	match current_page:
+		"Play": get_node("Pages/Play/Footer/" + ("Start" if opponent == "bot" else "Create")).grab_focus()
+		"Join": _focus_join()
+		"Waiting": $Pages/Waiting/Body/Left/Invite/Copy.grab_focus()
+
+func _focus_join() -> void:
 	var code: LineEdit = $Pages/Join/Body/Code
+	if not code.text.is_empty():
+		$Pages/Join/Footer/Join.grab_focus()
+		return
 	code.grab_focus()
 	code.caret_column = code.text.length()
 
@@ -408,7 +426,7 @@ func _connect(code: String) -> void:
 
 func _set_busy(busy: bool) -> void:
 	for path: String in ["Play", "Join"]: get_node("Pages/%s/Footer/CancelConnect" % path).visible = busy
-	for page_name in NAV_PAGES: _lock(get_node("Sidebar/Nav/" + page_name), busy)
+	for button_name: String in NAV_PAGES + ["Quit"]: _lock(get_node("Sidebar/Nav/" + button_name), busy)
 	for path: String in ["Play/Footer/Start", "Play/Footer/Create", "Play/Body/Advanced/RelayUrl", "Join/Body/Advanced/RelayUrl", "Join/Body/Code", "Join/Footer/Join", "Play/Body/Own", "Join/Body/Own", "Play/Body/Bot", "Play/Body/Map", "Play/Body/Opponent/BotToggle", "Play/Body/Opponent/FriendToggle"]:
 		var control: Control = get_node("Pages/" + path)
 		if control is BaseButton: _lock(control, busy)

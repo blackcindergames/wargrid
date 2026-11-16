@@ -29,7 +29,7 @@ const SIZES: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1920, 1080), Vecto
 const STRETCHED: Array[Array] = [[Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(2576, 1145), Vector2i(1620, 720)]]
 
 func cases() -> Array[Callable]:
-	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_type_matches_mockups, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process]
+	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_type_matches_mockups, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label]
 
 func _picked(selector: OptionButton) -> String:
 	return selector.get_item_metadata(selector.selected)
@@ -872,7 +872,8 @@ func test_type_matches_mockups(runner) -> bool:
 	var logo: Font = launcher.theme.get_font("font", "Logo")
 	runner.check(logo is FontVariation and logo.spacing_glyph >= 1, "T1 the logo has letter spacing like .wm")
 	runner.check(_font_path(launcher.theme.get_font("font", "CheckButton")) == REGULAR, "T1 switch labels stay Regular")
-	runner.check(launcher.theme.get_font_size("font_size", "Tag") == 10, "T1 the tag is the CSS 10 px")
+	runner.check(launcher.theme.get_font_size("font_size", "Tag") == 12, "L27 the tag is 12 px, got %s" % launcher.theme.get_font_size("font_size", "Tag"))
+	runner.check(launcher.get_node("Pages/Play/Body/Advanced/Toggle/Tag").get_theme_font_size("font_size") == 12, "L27 the advanced fold's tag reports 12 px")
 	var muted: Color = launcher.theme.get_color("font_color", "Subtitle")
 	runner.check(muted == MUTED, "T1 muted text is #d4d4d4 like --muted, got %s" % muted)
 	launcher.free()
@@ -1058,6 +1059,7 @@ func test_enter_joins_after_link(runner) -> bool:
 	enter.physical_keycode = KEY_ENTER
 	enter.pressed = true
 	launcher.get_viewport().push_input(enter)
+	launcher.get_viewport().push_input(_key(KEY_ENTER, false))
 	launcher.set_process(false)
 	runner.check(launcher.current_page == "Join" and launcher._transport != null, "L19b Enter joins on a Join page opened by a link, without clicking the field")
 	launcher._transport = null
@@ -1203,4 +1205,155 @@ func test_ticking_texts_through_process(runner) -> bool:
 	var footer: RichTextLabel = launcher.get_node("Pages/Waiting/Footer/Status")
 	runner.check(footer.get_parsed_text() == "Match code ABC234 · closes in 14:59", "L23 _process moves the countdown, got '%s'" % footer.get_parsed_text())
 	launcher.free()
+	return true
+
+func _key(code: Key, pressed: bool, echo: bool = false) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.pressed = pressed
+	event.echo = echo
+	return event
+
+func _focused(launcher) -> Control:
+	return launcher.get_viewport().gui_get_focus_owner()
+
+func _count_presses(button: BaseButton) -> Array[int]:
+	var count: Array[int] = [0]
+	for connection: Dictionary in button.pressed.get_connections(): button.pressed.disconnect(connection.callable)
+	button.pressed.connect(func() -> void: count[0] += 1)
+	return count
+
+func test_default_focus(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "default-focus", {})
+	_restore(saved)
+	var play: Node = launcher.get_node("Pages/Play")
+	var join: Node = launcher.get_node("Pages/Join")
+	runner.check(_focused(launcher) == play.get_node("Footer/Start"), "L24 Play with a bot focuses Start, got %s" % _focused(launcher))
+	play.get_node("Body/Opponent/FriendToggle").pressed.emit()
+	runner.check(_focused(launcher) == play.get_node("Footer/Create"), "L24 the Friend toggle moves focus to Create, got %s" % _focused(launcher))
+	play.get_node("Body/Opponent/BotToggle").pressed.emit()
+	runner.check(_focused(launcher) == play.get_node("Footer/Start"), "L24 the Bot toggle moves focus to Start, got %s" % _focused(launcher))
+	join.get_node("Body/Code").text = ""
+	launcher.show_page("Join")
+	runner.check(_focused(launcher) == join.get_node("Body/Code"), "L24 Join with an empty code focuses the code field, got %s" % _focused(launcher))
+	join.get_node("Body/Code").text = "ABC234"
+	launcher.show_page("Join")
+	runner.check(_focused(launcher) == join.get_node("Footer/Join"), "L24 Join with a code focuses the Join button, got %s" % _focused(launcher))
+	_host(launcher)
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	runner.check(launcher.current_page == "Waiting" and _focused(launcher) == launcher.get_node("Pages/Waiting/Body/Left/Invite/Copy"), "L24 Waiting focuses Copy, got %s" % _focused(launcher))
+	launcher._transport = null
+	launcher.free()
+	return true
+
+func test_stray_enter_does_nothing(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "stray-enter", {})
+	_restore(saved)
+	var started: Array[int] = _count_presses(launcher.get_node("Pages/Play/Footer/Start"))
+	var viewport: Viewport = launcher.get_viewport()
+	viewport.push_input(_key(KEY_ENTER, false))
+	viewport.push_input(_key(KEY_ENTER, true, true))
+	viewport.push_input(_key(KEY_ENTER, false))
+	runner.check(started[0] == 0 and launcher._transport == null, "L24 a release or echo from the previous screen's Enter does not start the match, pressed %d times" % started[0])
+	viewport.push_input(_key(KEY_ENTER, true))
+	viewport.push_input(_key(KEY_ENTER, false))
+	runner.check(started[0] == 1, "L24 fixture: a full Enter press does start it, pressed %d times" % started[0])
+	launcher.free()
+	return true
+
+func test_enter_after_faction_pick(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "enter-pick", {})
+	_restore(saved)
+	var started: Array[int] = _count_presses(launcher.get_node("Pages/Play/Footer/Start"))
+	for path: String in ["Pages/Play/Body/Own", "Pages/Play/Body/Bot", "Pages/Play/Body/Map"]:
+		var selector: OptionButton = launcher.get_node(path)
+		selector.select(1)
+		selector.item_selected.emit(1)
+		runner.check(_focused(launcher) == launcher.get_node("Pages/Play/Footer/Start") and started[0] == 0, "L25 picking in %s focuses Start without pressing it, got %s" % [path, _focused(launcher)])
+	launcher.show_page("Join")
+	launcher._set_relay(LOOPBACK)
+	launcher.get_node("Pages/Join/Body/Code").text = "ABC234"
+	var own: OptionButton = launcher.get_node("Pages/Join/Body/Own")
+	own.select(1)
+	own.item_selected.emit(1)
+	runner.check(_focused(launcher) == launcher.get_node("Pages/Join/Footer/Join"), "L25 picking a faction on Join focuses Join, got %s" % _focused(launcher))
+	launcher.get_viewport().push_input(_key(KEY_ENTER, true))
+	launcher.get_viewport().push_input(_key(KEY_ENTER, false))
+	runner.check(launcher._transport != null, "L25 Enter right after the pick joins")
+	launcher.set_process(false)
+	launcher._transport = null
+	launcher.free()
+	return true
+
+func _small_targets(launcher: Node) -> Array[String]:
+	var controls: Array[Control] = []
+	_visible_controls(launcher, controls)
+	var small: Array[String] = []
+	for control in controls:
+		if (control is BaseButton or control is OptionButton or control is LineEdit) and control.size.y < 32.0:
+			small.append("%s %.1f" % [launcher.get_path_to(control), control.size.y])
+	return small
+
+func test_click_targets_32(runner) -> bool:
+	var saved: String = AudioSettings.path
+	AudioSettings.path = scratch_for("targets")
+	var setup: Array = _port_with_launcher(runner, Vector2i(1280, 720), Vector2i(1280, 720))
+	_restore(saved)
+	var launcher = setup[1]
+	for view: Array in [["Play", "bot"], ["Play", "friend"], ["Join", "bot"], ["Settings", "bot"], ["Credits", "bot"], ["Waiting", "bot"]]:
+		await _settle(runner, launcher, view[0], view[1])
+		var small: Array[String] = _small_targets(launcher)
+		runner.check(small.is_empty(), "L26 every click target on %s (%s) is at least 32 px high, got %s" % [view[0], view[1], small])
+	setup[1].free()
+	setup[0].free()
+	return true
+
+func test_quit_button(runner) -> bool:
+	var saved: String = AudioSettings.path
+	AudioSettings.path = scratch_for("quit")
+	var desktop = Launcher.instantiate()
+	desktop.web = false
+	runner.root.add_child(desktop)
+	await runner.process_frame
+	_restore(saved)
+	var quit: Button = desktop.get_node("Sidebar/Nav/Quit")
+	var nav: Node = desktop.get_node("Sidebar/Nav")
+	var calls: Array[int] = [0]
+	desktop.quit = func() -> void: calls[0] += 1
+	runner.check(quit.visible and quit.get_index() > nav.get_node("Credits").get_index() and not quit.toggle_mode, "L28 Quit shows after Credits off the web and is no toggle")
+	quit.pressed.emit()
+	runner.check(calls[0] == 1, "L28 pressing Quit calls quit once, got %d" % calls[0])
+	desktop._set_relay(LOOPBACK)
+	desktop._connect("")
+	desktop.set_process(false)
+	runner.check(quit.disabled, "L28 connecting locks Quit")
+	desktop._transport = null
+	desktop._fail("x")
+	runner.check(not quit.disabled, "L28 a failure unlocks Quit")
+	desktop.free()
+	var web = Launcher.instantiate()
+	web.web = true
+	runner.root.add_child(web)
+	await runner.process_frame
+	runner.check(not web.get_node("Sidebar/Nav/Quit").visible, "L28 Quit is hidden on the web")
+	web.free()
+	return true
+
+func test_invite_label(runner) -> bool:
+	var saved: String = AudioSettings.path
+	AudioSettings.path = scratch_for("invite-label")
+	var labels: Array[String] = []
+	for page_url: String in ["", "https://wargrid-web-test.fly.dev/"]:
+		var launcher = Launcher.instantiate()
+		launcher.page = page_url
+		runner.root.add_child(launcher)
+		await runner.process_frame
+		labels.append("%s|%s" % [launcher.get_node("Pages/Waiting/Body/Left/InviteLabel").text, launcher.get_node("Pages/Waiting/Body/Left/Invite/Copy").text])
+		launcher.free()
+	_restore(saved)
+	runner.check(labels == ["Match code|Copy code", "Invite link|Copy link"], "L29 the label and Copy follow the page, got %s" % [labels])
 	return true
