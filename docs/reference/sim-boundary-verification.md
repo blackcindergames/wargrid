@@ -3,15 +3,15 @@
 Plan: [sim boundary SB1-SB2](../superpowers/plans/2026-11-15-sim-boundary-sb1-sb2.md). Resume record below is overwritten at each checkpoint; evidence rows are append-only.
 
 ```text
-Resume record (updated 2026-11-16, Task 3 done)
-Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged), Task 2 at 9049dbd / Task 3 uncommitted (Codex review test fixes applied)
-Last green task / next incomplete task: Task 3 steps 1-4 done (frozen caches, `set_hash_ring`; 3 new `test_sb3_*` cases, 11 in all, green) / Task 4 (both drivers on the pump, drain in `_process`)
-Changed paths since last commit: game/scripts/simulation/definitions/definitions.gd, combat.gd, skirmish.gd, simulation.gd, game/scripts/match/sim_pump.gd, game/tests/test_sim_pump.gd, docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: after review fixes: full suite CASES 1025 CHECKS 146732 FAILURES 0, exit 0, TESTS PASSED 146732; lint, warnings, test_sim_boundary.py exit 0; replay, economy, combat, team traces REPLAYS MATCHED (netplay and team match unchanged by test-only edits, run before)
+Resume record (updated 2026-11-15 night, stop gate 2 done)
+Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / clean at 5696065
+Last green task / next incomplete task: Tasks 1-8 committed; gates 1 and 2 done / gate 3 (owner playtest)
+Changed paths since last commit: docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb/final/, 980 cases, 146452 checks, 0 failures, exit 0, TESTS PASSED 146452; REPLAYS MATCHED x4 vs base; netplay match and team match exit 0; run_checks CHECKS PASSED 5
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); Steam Deck row and rendered rerun at the SB3 gate (Task 8)
+Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); IC1 row 19 inspected-enemy HP/order text may change (user, 2026-11-15); S3 and OV11 fixture changes accepted (user, 2026-11-15); no rendered benchmark rerun, world_view.gd is not touched; the benchmark is not rerun after the gate fixes (input code only)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 4 Step 1, after the coordinator commits Task 3. Task 4 calls `sim.set_hash_ring(false)` in the offline driver at creation.
+Next exact action: all gates done up to 2; gate 3 (owner playtest) and gate 4 (push/PR/merge) wait for the owner.
 ```
 
 ## Evidence
@@ -168,15 +168,15 @@ Still open: gate 4.
 Plan: [sim boundary SB3](../superpowers/plans/2026-11-16-sim-boundary-sb3.md). Resume record below is overwritten at each checkpoint; ledger rows and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-16, Task 8 Steps 1-2 done except benchmarks)
-Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged), Tasks 1-7 at a06d694 (tree a33a73e) / Task 8 Step 2 zones uncommitted
-Last green task / next incomplete task: Task 7 (committed a06d694); Task 8 Step 1 green on a06d694, Step 2 zones `view.rows` and `view.buildings` added (suite, traces, lint, warnings green), awaiting the coordinator's commit / Task 8 Step 2 benchmarks, then Step 3 (Steam Deck native row done 2026-11-16, see "Steam Deck (Task 8 Step 3)"; the rendered rerun still waits for the owner's window), then Step 4 gate review
-Changed paths since last commit: game/scripts/simulation/simulation.gd (two Profiler zones in view_state), docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb3/task8z/ exit 0, CASES 1035 CHECKS 146757 FAILURES 0, `TESTS PASSED 146757`; traces equal to base; lint, warnings (171 files), boundary exit 0
-Known red case or blocker: none; benchmarks not run (owner is using the machine, coordinator order)
-Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); Steam Deck row and rendered rerun at the SB3 gate (Task 8 Step 3, ask first)
+Resume record (updated 2026-11-16 evening, Task 8 Steps 1-4 done except the rendered rerun)
+Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 / gate fixes at f5640fb; benchmark row and this record uncommitted until the coordinator commits
+Last green task / next incomplete task: Tasks 1-7, Task 8 Steps 1-2 (checks, zones, benchmarks), Step 3 Steam Deck row, Step 4 gate review (Grok, Opus, player-experience: no P1/P2) and /ponytail-review cuts / Task 8 Step 3 rendered rerun (owner's window), then Step 5 stop
+Changed paths since last commit: docs/reference/sim-boundary-verification.md, docs/reference/perf-history.csv, docs/reference/performance.md, README.md
+Last command / cases / checks / failures / exit / marker: after gate fixes full suite CASES 1035 CHECKS 146750 FAILURES 0, TESTS PASSED; PERF_LABEL="Sim boundary SB3" sh tools/run_benchmark.sh exit 0 (BENCHMARK PASSED 2, COMBAT BENCHMARK PASSED 10, LOCKSTEP BENCHMARK PASSED 1)
+Known red case or blocker: none; combat open, dense and hordes300 over the 1.82 ms p95 budget on base and branch alike (regression ceilings held)
+Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); benchmarks run on the owner's go (user, 2026-11-16); rendered rerun waits for the owner's window
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: benchmarks (base re-measure in the main checkout with PERF_RECORD=0, then branch with PERF_LABEL="Sim boundary SB3") when the owner frees the machine, each alone at load <= 2.5; then Step 3 batch.
+Next exact action: rendered rerun `sh tools/run_game.sh res://scenes/movement_benchmark.tscn`, record with `python3 tools/perf_record.py <log> --label "Sim boundary SB3"`, then `python3 tools/perf_chart.py`; then the owner's playtest and merge decision.
 ```
 
 ### Evidence ledger
@@ -299,3 +299,17 @@ Plan cites are `ad89a1c`; right column is the base bad67c3. 79 cites (`file:line
 | all other cites in `game/scripts/match/` (`match_screen.gd` x14, `hud.gd` x3, `offline_driver.gd` x3 others, `online_driver.gd` x7), `game/scripts/simulation/` (`combat.gd`, `definitions.gd` :19-20, `map_data.gd`, `skirmish.gd`, `simulation.gd` :589-591), `game/scripts/net/lockstep.gd`, `game/scripts/debug/team_match.gd`, `tools/test_sim_boundary.py` :52-82 | unchanged |
 | Task 5 cites, base → b8d40ee (after Task 4) | `match_screen.gd:126-134` (`_reset_camera`) → `:127-135`; `:147-149` (`_match_record`) → `:148-150`; `:202-215` (step-frame tick reads) → `_step_frame` `:200-208` reads no tick now, the tick reads are `_drain_notes` `:211,220-221` (already `driver.current().tick` from Task 4) and `_present_if_due` `:227`; `:264-266` (`_refresh`) → `:278-281`; `hud.gd:79` → `:79`; `online_driver.gd:205` (`match_log`) → `:234`; RF1 `test_base_scene.gd:378` → `:378`; RF2 `test_skirmish_scene.gd:938` → `:937` (the `views` check; produce label `:938`) |
 | all cites in `game/tests/` (`run_tests.gd`, `economy_fixture.gd`, `test_base_scene.gd`, `test_graphics_settings.gd`, `test_online_scene.gd`, `test_playtest_overlay.gd`, `test_scene.gd`, `test_skirmish_scene.gd`) | unchanged |
+
+#### Mac benchmarks (Task 8 Step 2, 2026-11-16 evening)
+
+Base re-measured in the main checkout (`bad67c3`, `PERF_RECORD=0`, load 1.42-1.64), then the branch at `f5640fb` with `PERF_LABEL="Sim boundary SB3"` (load 1.43-1.55), each alone. Task 1's base (load 2.96) is superseded as the comparison. The headless benchmarks drive the simulation directly, not through the pump.
+
+| Row | Base p95 / p99 | Branch p95 / p99 |
+|---|---|---|
+| combat open | 1.877 / 2.227 | 1.885 / 2.244 |
+| combat dense | 1.829 / 2.155 | 1.842 / 2.170 |
+| combat hordes300 | 2.890 / 3.374 | 2.932 / 3.402 |
+| movement_open step (profile) mean / p95 | 0.6489 / 0.773 | 0.6580 / 0.782 |
+| lockstep overhead p99 | 0.067 | 0.069 |
+
+Branch within about 1.5 % of base on every row (Steam Deck: +0.9 % step mean); open, dense and hordes300 exceed the 1.82 ms p95 budget on both trees, reported, budget unchanged. New zone `view.rows` 0.305 ms mean on movement_open.
