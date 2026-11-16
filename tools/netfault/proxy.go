@@ -265,12 +265,14 @@ func (p *proxy) schedule(faults []fault) []*time.Timer {
 // run accepts one connection on ln, pipes it to target and applies faults until both sides are closed or life
 // has passed since the accept.
 func run(ln net.Listener, target string, faults []fault, log io.Writer, life time.Duration) error {
+	p := &proxy{start: time.Now(), log: log}
+	p.logf("listen", ln.Addr().String()) // the one connection is the client's, so scripts wait for this line instead of probing
 	client, err := ln.Accept()
 	_ = ln.Close()
 	if err != nil {
 		return err
 	}
-	p := &proxy{start: time.Now(), log: log}
+	p.start = time.Now()
 	p.logf("accept", target)
 	upstream, err := net.DialTimeout("tcp", target, 5*time.Second)
 	if err != nil {

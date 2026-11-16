@@ -184,6 +184,19 @@ func send(t *testing.T, c net.Conn, b []byte) {
 	}
 }
 
+func TestListenLinePrecedesAccept(t *testing.T) {
+	r := startRig(t, "", 5*time.Second)
+	r.waitLog("listen "+r.addr, time.Second)
+	if strings.Contains(r.log.String(), " accept ") {
+		t.Fatalf("accept logged before any client connected:\n%s", r.log.String())
+	}
+	c, s := r.connect()
+	r.waitLog(" accept ", time.Second)
+	_ = c.Close()
+	_ = s.Close()
+	r.waitExit()
+}
+
 func TestParseFaults(t *testing.T) {
 	got, err := parseFaults("slice:7, hold@3000:4000,reset@10,blackhole@5:6")
 	if err != nil {

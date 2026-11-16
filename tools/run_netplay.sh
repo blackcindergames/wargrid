@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: run_netplay.sh match|rematch|kill|left-mid|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term
+# usage: run_netplay.sh match|rematch|kill|left-mid|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole
 scenario=$1
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 out=${NETPLAY_OUT:-$(mktemp -d)}
@@ -9,13 +9,24 @@ relay_bin=$WARGRID_RELAY_BIN
 port=$(${PYTHON:-python3} -c 'import socket;s=socket.socket();s.bind(("",0));print(s.getsockname()[1])')
 url=${WARGRID_RELAY_URL:-ws://127.0.0.1:$port/ws}
 remote=${WARGRID_RELAY_URL:+1}
+netfault_bin=${WARGRID_NETFAULT_BIN:-}
+url1=""
+url2=""
 pids=""
 started=$(${PYTHON:-python3} -c 'import time;print(time.time())')
 
 cleanup() { for p in $pids; do kill -9 "$p" 2>/dev/null; done; }
 trap cleanup EXIT HUP INT TERM
-fail() { echo "NETPLAY FAILED $scenario: $*"; echo "logs: $out"; exit 1; }
+fail() {
+  echo "NETPLAY FAILED $scenario: $*"; echo "logs: $out"
+  if [ -n "$url1" ]; then
+    echo "repro: NETPLAY_OUT=$out-repro sh tools/run_netplay.sh $scenario"
+    grep -h 'NETFAULT' "$out"/proxy-seat*.log
+  fi
+  exit 1
+}
 ms() { ${PYTHON:-python3} -c 'import time;print(int(time.time()*1000))'; }
+free_port() { ${PYTHON:-python3} -c 'import socket;s=socket.socket();s.bind(("",0));print(s.getsockname()[1])'; }
 
 start_relay() {
   [ -z "$remote" ] || return 0
@@ -33,6 +44,45 @@ start_relay() {
   done
 }
 
+# start_proxy N FAULTS: one netfault for seat N in front of the relay; the URL it serves lands in $url1/$url2
+start_proxy() {
+  proxy_port=$(free_port)
+  : >"$out/proxy-seat$1.log"
+  "$netfault_bin" -listen "127.0.0.1:$proxy_port" -target "127.0.0.1:$port" -log "$out/proxy-seat$1.log" -faults "$2" >"$out/proxy-seat$1.out" 2>&1 &
+  pids="$pids $!"
+  i=0
+  # The proxy takes one connection only, so a connect probe would use it up: wait for its listen line.
+  until grep -q ' listen ' "$out/proxy-seat$1.log"; do
+    i=$((i + 1)); [ $i -lt 100 ] || fail "proxy $1 did not start"
+    sleep 0.2
+  done
+  if [ "$1" = 1 ]; then url1=ws://127.0.0.1:$proxy_port/ws; else url2=ws://127.0.0.1:$proxy_port/ws; fi
+}
+
+start_proxies() { # FAULTS_SEAT1 FAULTS_SEAT2
+  if [ -z "$netfault_bin" ]; then
+    netfault_bin=$out/netfault
+    (cd "$repo_root/tools/netfault" && go build -o "$netfault_bin" .) || fail "netfault build failed"
+  fi
+  start_proxy 1 "$1"
+  start_proxy 2 "$2"
+}
+
+# proxy_ms N EVENT: unix ms of the first EVENT line in seat N's proxy log
+proxy_ms() { awk -v e="$2" '$4 == e {print $2; exit}' "$out/proxy-seat$1.log"; }
+
+# between LABEL VALUE LOW HIGH
+between() { [ "$2" -ge "$3" ] && [ "$2" -le "$4" ] || fail "$1: $2 ms is outside $3 to $4"; }
+
+# same_prefix A B: the seats stop at different ticks when one leaves, so compare the rows both have
+same_prefix() {
+  n1=$(($(wc -l <"$1"))); n2=$(($(wc -l <"$2")))
+  n=$n1; [ "$n2" -ge "$n1" ] || n=$n2
+  [ "$n" -gt 0 ] || fail "no shared hash rows"
+  head -n "$n" "$1" >"$out/prefix-1.tsv"; head -n "$n" "$2" >"$out/prefix-2.tsv"
+  same_hashes "$out/prefix-1.tsv" "$out/prefix-2.tsv"
+}
+
 # start_client NAME ARGS...: logs to $out/NAME.log, pid in $pid
 start_client() {
   name=$1; shift
@@ -45,6 +95,7 @@ start_client() {
 # shellcheck disable=SC2086 # $1 and $2 are flag lists, split on purpose
 start_pair() { # EXTRA_SEAT1 ... -- EXTRA_SEAT2 ...
   rm -f "$out/code"
+  [ -z "$url1" ] || url=$url1
   start_client s1 --match new --code-file "$out/code" --seat-script human $1
   pid1=$pid
   i=0
@@ -52,6 +103,7 @@ start_pair() { # EXTRA_SEAT1 ... -- EXTRA_SEAT2 ...
     i=$((i + 1)); [ $i -lt 100 ] || fail "no match code"
     sleep 0.2
   done
+  [ -z "$url2" ] || url=$url2
   start_client s2 --match "$(cat "$out/code")" --seat-script opponent $2
   pid2=$pid
 }
@@ -83,15 +135,28 @@ oracle() {
 match_wait=${WARGRID_MATCH_WAIT:-180}
 
 case $scenario in
-  match)
-    start_relay; start_pair "" ""
+  match|proxy-clean|proxy-burst)
+    start_relay
+    case $scenario in
+      proxy-clean) start_proxies "" "" ;;
+      # Seat 1's hold spans seat 2's hold start; with seat 2 alone held, seat 1 may wait on it and send nothing down.
+      proxy-burst) start_proxies "slice:7,hold@2000:4000" "slice:7,hold@3000:4000" ;;
+    esac
+    start_pair "" ""
     wait_exit "$pid1" "$match_wait"; wait_exit "$pid2" "$match_wait"
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
     [ "$(end_tick s1)" = 9013 ] || fail "terminal tick $(end_tick s1), pinned 9013"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     [ -n "$remote" ] || ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
-    echo "match terminal tick $(end_tick s1)" ;;
+    if [ "$scenario" = proxy-burst ]; then
+      grep -q ' slice 7$' "$out/proxy-seat2.log" || fail "no slice line in seat 2's proxy log"
+      end1=$(proxy_ms 1 hold-end); start2=$(proxy_ms 2 hold-start)
+      [ -n "$end1" ] && [ -n "$start2" ] && [ "$start2" -lt "$end1" ] || fail "seat 2's hold did not begin inside seat 1's (seat 2 joined too late)"
+      grep -q ' hold-end [1-9][0-9]* [1-9][0-9]*$' "$out/proxy-seat2.log" || fail "no hold-end with held bytes both ways in seat 2's proxy log"
+      ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead after a hold"
+    fi
+    echo "$scenario terminal tick $(end_tick s1)" ;;
   rematch)
     start_relay; start_pair "--rematch" "--rematch"
     wait_exit "$pid1" $((2 * match_wait)); wait_exit "$pid2" $((2 * match_wait))
@@ -239,6 +304,26 @@ PY
       wait "$relay_pid" || fail "relay exited $? on SIGTERM"
       grep -q 'MATCH END' "$out/relay.log" || fail "relay logged no MATCH END on SIGTERM"
     fi ;;
+  proxy-reset)
+    start_relay; start_proxies "" "reset@4000"; start_pair "" ""
+    wait_exit "$pid1" 30; wait_exit "$pid2" 30
+    expect_end s2 ended_relay; expect_end s1 ended_left
+    cut=$(proxy_ms 2 reset); [ -n "$cut" ] || fail "the reset never landed (no reset line in seat 2's proxy log)"
+    gap2=$(($(log_ms s2 TIME) - cut)); gap1=$(($(log_ms s1 TIME) - cut))
+    between "seat 2 ended after the reset" "$gap2" 0 2000; between "seat 1 left after the reset" "$gap1" 0 2000
+    same_prefix "$out/s1.tsv" "$out/s2.tsv"
+    echo "reset: seat 2 ended $gap2 ms, seat 1 left $gap1 ms after it" ;;
+  proxy-blackhole)
+    start_relay; start_proxies "" "blackhole@3000:7000"; start_pair "" ""
+    wait_exit "$pid1" 40; wait_exit "$pid2" 40
+    expect_end s2 ended_relay
+    case "$(end_line s2)" in *"connection to relay lost") ;; *) fail "seat 2 reason: $(end_line s2)" ;; esac
+    expect_end s1 ended_left
+    cut=$(proxy_ms 2 blackhole-start); [ -n "$cut" ] || fail "the blackhole never landed (no blackhole-start line in seat 2's proxy log)"
+    gap2=$(($(log_ms s2 TIME) - cut)); gap1=$(($(log_ms s1 TIME) - cut))
+    between "seat 2 ended after the blackhole began" "$gap2" 4500 6500; between "seat 1 left after the blackhole began" "$gap1" 9000 12000
+    same_prefix "$out/s1.tsv" "$out/s2.tsv"
+    echo "blackhole: seat 2 ended $gap2 ms, seat 1 left $gap1 ms after it began" ;;
   *) fail "unknown scenario" ;;
 esac
 echo "NETPLAY PASSED $scenario $(${PYTHON:-python3} -c "import time;print(round(time.time()-$started,1))") s"
