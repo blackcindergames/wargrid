@@ -130,11 +130,7 @@ func current() -> SimPump.Slot:
 	return pump.current()
 
 func record() -> Dictionary:
-	var job := SimPump.Job.new()
-	job.step = false
-	job.want_digest = true
-	var note: SimPump.Note = pump.query(job)
-	return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match}
+	return pump.record()
 
 func match_stats() -> Array[Dictionary]:
 	return _last.stats

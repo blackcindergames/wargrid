@@ -242,12 +242,12 @@ func test_sb3_freeze_rejects_late_insert(runner) -> bool:
 	_pump()
 	runner.check(_frozen_count() == 5 and Registry.radius_cache.is_read_only(), "SB3 start freezes each of the five caches (%s)" % Registry.frozen_state())
 	Registry.add_test_kind("sb3_probe", _rifle_row("rifle"))
-	runner.check(_frozen_count() == 0 and Registry.cache_sizes().values().all(func(size: int) -> bool: return size == 0), "SB3 add_test_kind leaves all five caches writable and empty (%s)" % Registry.cache_sizes())
+	runner.check(_frozen_count() == 0 and Registry.cache_keys().values().all(func(keys: Array) -> bool: return keys.is_empty()), "SB3 add_test_kind leaves all five caches writable and empty (%s)" % Registry.cache_keys())
 	runner.check(is_equal_approx(Combat.reach_of("sb3_probe"), 3.9), "SB3 test kind reach comes from its weapon")
 	Registry.add_test_kind("sb3_probe", _rifle_row("rocket"))
 	runner.check(is_equal_approx(Combat.reach_of("sb3_probe"), 6.9), "SB3 re-adding a test kind with another weapon drops the cached reach")
 	Registry.clear_test_kinds()
-	runner.check(_frozen_count() == 0 and Registry.cache_sizes().values().all(func(size: int) -> bool: return size == 0), "SB3 clear_test_kinds leaves all five caches writable and empty (%s)" % Registry.cache_sizes())
+	runner.check(_frozen_count() == 0 and Registry.cache_keys().values().all(func(keys: Array) -> bool: return keys.is_empty()), "SB3 clear_test_kinds leaves all five caches writable and empty (%s)" % Registry.cache_keys())
 	_pump()
 	runner.check(_frozen_count() == 5, "SB3 start freezes again after a reset")
 	return true
@@ -287,12 +287,12 @@ func test_sb3_freeze_covers_match(runner) -> bool:
 	var warm: Dictionary = Registry.cache_keys()
 	var missing: Array = _missing_warm()
 	runner.check(missing.is_empty(), "SB3 warm-up fills every registered kind in each applicable cache (missing %s)" % [missing.slice(0, 5)])
-	var warm_sizes: Dictionary = Registry.cache_sizes()
+	var warm_keys: Dictionary = Registry.cache_keys()
 	var bots: Array = [2]
 	for i in MATCH_TICKS:
 		pump.post(_job([], bots))
 		pump.drain()
-	runner.check(Registry.cache_sizes() == warm_sizes, "SB3 no cache grows during a 900-tick bot match")
+	runner.check(Registry.cache_keys() == warm_keys, "SB3 no cache grows during a 900-tick bot match")
 	var battle: Dictionary = _battle_world()
 	var fight = SimPump.new(battle.sim)
 	fight.start()
@@ -300,7 +300,7 @@ func test_sb3_freeze_covers_match(runner) -> bool:
 	for i in 150:
 		fight.post(_job())
 		fight.drain()
-	runner.check(Registry.cache_sizes() == warm_sizes, "SB3 no cache grows during a 150-tick battle of every armed kind")
+	runner.check(Registry.cache_keys() == warm_keys, "SB3 no cache grows during a 150-tick battle of every armed kind")
 	var team = SimPump.new(TeamMatch.create())
 	team.start()
 	var seats: Array = []
@@ -308,7 +308,7 @@ func test_sb3_freeze_covers_match(runner) -> bool:
 	for i in 300:
 		team.post(_job([], seats))
 		team.drain()
-	runner.check(Registry.cache_sizes() == warm_sizes, "SB3 no cache grows during 300 team-match ticks")
+	runner.check(Registry.cache_keys() == warm_keys, "SB3 no cache grows during 300 team-match ticks")
 	runner.check(Skirmish.map_frozen(), "SB3 skirmish map is read-only")
 	Registry.clear_test_kinds()
 	var direct = _sim()

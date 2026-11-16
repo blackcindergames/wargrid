@@ -81,6 +81,13 @@ func previous() -> Slot:
 func query(job: Job) -> Note:
 	return run_job(_sim, _recorder, job, null)
 
+func record() -> Dictionary:
+	var job := Job.new()
+	job.step = false
+	job.want_digest = true
+	var note: Note = query(job)
+	return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match}
+
 func busy() -> bool:
 	return false
 

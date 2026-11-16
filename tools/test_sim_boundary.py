@@ -42,7 +42,7 @@ ALLOWLIST: frozenset[str] = frozenset(
 )
 
 
-LIVE_READ = re.compile(r"\.sim\b|\blive\s*\(\s*\)|\bget\(\s*[\"']sim[\"']\s*\)")
+LIVE_READ = re.compile(r"\.sim\b|\blive\s*\(\s*\)|\bget\(\s*[\"']sim[\"']\s*\)|\.simulation\s*\(\s*\)")
 LIVE_ALLOWLIST: frozenset[str] = frozenset(
     [
         "game/scripts/match/sim_pump.gd",
@@ -144,6 +144,7 @@ class SimBoundary(unittest.TestCase):
         self.assertEqual(live_reads(SCREEN, "var s = pump.live ( ).tick()"), ["live ( )"])
         self.assertEqual(live_reads(SCREEN, 'var s = driver.get("sim")'), ['get("sim")'])
         self.assertEqual(live_reads(SCREEN, "var s = driver.get( 'sim' )"), ["get( 'sim' )"])
+        self.assertEqual(live_reads(SCREEN, "var s = pump.recorder().simulation()"), [".simulation()"])
 
     def test_live_read_hash_in_string(self):
         self.assertEqual(live_reads(SCREEN, 'var t = "#%d" % driver.sim.tick()'), [".sim"])

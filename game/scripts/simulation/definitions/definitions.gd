@@ -117,6 +117,7 @@ static func _air_kinds() -> Dictionary:
 	return found
 
 # Frozen once a match starts so a lazy insert after the warm-up fails loudly instead of racing a worker thread.
+# shortcut: top level only, cached views stay writable and shared; freeze nested values before SB5 adds the thread.
 static func freeze_caches() -> void:
 	for cache: Dictionary in _named_caches().values(): cache.make_read_only()
 
@@ -124,11 +125,6 @@ static func frozen_state() -> Dictionary:
 	var state: Dictionary = {}
 	for name: String in _named_caches(): state[name] = _named_caches()[name].is_read_only()
 	return state
-
-static func cache_sizes() -> Dictionary:
-	var sizes: Dictionary = {}
-	for name: String in _named_caches(): sizes[name] = _named_caches()[name].size()
-	return sizes
 
 static func cache_keys() -> Dictionary:
 	var keys: Dictionary = {}
