@@ -3,6 +3,8 @@ extends RefCounted
 
 const RelayTransport = preload("res://scripts/net/relay_transport.gd")
 const Wire = preload("res://scripts/net/wire.gd")
+const FILL_CAP_BIG: int = 2000
+const FILL_CAP_PING: int = 10000
 
 func cases() -> Array[Callable]:
 	return [test_never_connected, test_ping_due, test_pong_recorded, test_buffers_fit_frame_cap, test_silence, test_patient_silence, test_refused_send_closes]
@@ -94,11 +96,13 @@ func test_refused_send_closes(runner) -> bool:
 	var transport = second[0]
 	var ping: String = Wire.encode({"type": "ping", "t": 2_000_000})
 	Engine.print_error_messages = false
-	var filled: int = 0
-	while filled < 2000 and transport._peer.send_text(big) == OK: filled += 1
-	filled = 0
-	while filled < 10000 and transport._peer.send_text(ping) == OK: filled += 1
+	var big_sent: int = 0
+	while big_sent < FILL_CAP_BIG and transport._peer.send_text(big) == OK: big_sent += 1
+	var ping_sent: int = 0
+	while ping_sent < FILL_CAP_PING and transport._peer.send_text(ping) == OK: ping_sent += 1
 	Engine.print_error_messages = true
+	runner.check(big_sent < FILL_CAP_BIG, "T7 the big-frame fill ended on a refused send, not on the cap (%d sent)" % big_sent)
+	runner.check(ping_sent < FILL_CAP_PING, "T7 the ping fill ended on a refused send, not on the cap (%d sent)" % ping_sent)
 	runner.check(not transport.closed(), "T7 raw sends alone do not close the transport")
 	transport._sent_any = true
 	transport._last_ping = 0
