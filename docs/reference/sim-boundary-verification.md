@@ -162,3 +162,61 @@ Fix A review P2 accepted unmeasured (user, 2026-11-15): the per-tick preview whi
 Fix A listen check (user, 2026-11-15, desktop on `eab5cfc` plus this note; online two windows on the live relay): red spot offline and online passes (beep, no order voice); green spot builds.
 
 Still open: gate 4.
+
+## SB3
+
+Plan: [sim boundary SB3](../superpowers/plans/2026-11-16-sim-boundary-sb3.md). Resume record below is overwritten at each checkpoint; ledger rows and the line map are append-only.
+
+```text
+Resume record (updated 2026-11-16, Task 1 done)
+Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged) / only this file changed, uncommitted
+Last green task / next incomplete task: Task 1 steps 1-4 done (base evidence green) / Task 2 (the pump)
+Changed paths since last commit: docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb3/base/, CASES 1014 CHECKS 146678 FAILURES 0, exit 0, TESTS PASSED 146678; netplay match exit 0; team match exit 0; run_checks CHECKS PASSED 5; benchmark exit 0
+Known red case or blocker: none
+Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); Steam Deck row and rendered rerun at the SB3 gate (Task 8)
+Usage so far (python3 tools/session_usage.py <session files>): not recorded
+Next exact action: Task 2 Step 1 (failing tests in game/tests/test_sim_pump.gd, SUITES entry in game/tests/run_tests.gd:6), after the coordinator commits this file.
+```
+
+### Evidence ledger
+
+Base: `bad67c332820be5fb86d42a87af4a0dbcc436961` (`main`, tree `3762073acc71e04ba32fac89838d314740d6faad`), worktree clean. `git diff ad89a1c bad67c3 -- game tools protocol` is empty: the plan's `ad89a1c` lines hold unchanged on the base.
+
+| Date | Command | Result | Tree |
+|---|---|---|---|
+| 2026-11-16 | `sh tools/run_tests.sh` with the four `WARGRID_*_REPLAY_TRACE` variables into `build/sb3/base/` | exit 0, CASES 1014 CHECKS 146678 FAILURES 0, `TESTS PASSED 146678` | base bad67c3, clean |
+| 2026-11-16 | `NETPLAY_OUT=build/sb3/base/netplay sh tools/run_netplay.sh match` | exit 0, `NETPLAY PASSED match 16.1 s`; `s1.tsv` kept | base bad67c3, clean |
+| 2026-11-16 | `sh tools/run_team_match.sh` | exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS capped_ticks=853 max_cells=643` | base bad67c3, clean |
+| 2026-11-16 | `sh tools/run_checks.sh` | exit 0, `CHECKS PASSED 5` | base bad67c3, clean |
+| 2026-11-16 | `PERF_RECORD=0 sh tools/run_benchmark.sh` alone (load average 2.96 when it started, 2.24 after: above 2.5 at the start, host also had 6 sessions) | exit 0, `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, `PROFILE COMPLETE 10`, `BUDGET EXCEEDED open dense hordes300 (regression ceilings held)` as in the ledger | base bad67c3, clean |
+
+Benchmark comparison base (ms, `build/sb3/base/bench.log`): movement open p95 0.773 p99 0.846; movement dense p95 0.744 p99 0.897; combat open p95 1.893 p99 2.230; dense p95 1.847 p99 2.148; contact p95 1.179 p99 1.55; skirmish3v3 p95 1.348 p99 1.449; transports p95 1.13 p99 1.228; defences p95 0.784 p99 2.161; docks p95 0.591 p99 0.611; hordes300 p95 2.897 p99 3.381; ramp p95 0.651 p99 1.211; frc p95 0.889 p99 1.084; lockstep overhead p99 0.072 (limit 0.6); team_match profile `step` mean 1.355 p95 2.144, `view_state` mean 0.3022 (22.3 % of step, p95 0.403). Budget 1.82/3.64: open, dense and hordes300 exceed p95, as accepted before.
+
+Base traces: `build/sb3/base/{replay,economy,combat,team}.tsv`, `build/sb3/base/netplay/s1.tsv` (untracked). "Traces equal" later: same commands into `build/sb3/<task>/`, then `python3 tools/compare_replays.py` base against branch (replay, economy, combat; team `--interval 200 --rows 100`; `netplay/s1.tsv` `--interval 30 --rows 0`) → `REPLAYS MATCHED`.
+
+### Base counts (Step 4, worktree at bad67c3)
+
+| Count | Command | Base | Plan |
+|---|---|---|---|
+| `driver.sim` uses in tests | `rg -c 'driver\.sim' game/tests` | 267 (overlay 19, base_scene 69, order_voice 9, skirmish_scene 90, online_scene 46, pause_menu 6, perf_overlay 4, scene 17, announcer 2, playtest_replay 3, sound 2) | not stated |
+| `driver.sim =` assignments | `rg -c 'driver\.sim\s*=' game/tests` | 39 (overlay 3, base_scene 14, skirmish_scene 20, perf_overlay 1, scene 1) | not stated |
+| `driver.recorder` | `rg -c 'driver\.recorder' game/tests` | 1 (skirmish_scene) | not stated |
+| `sync_sequence` / `driver._sequence` / `driver._held` | `rg -n ...` | `sync_sequence`: definition `test_base_scene.gd:33` plus 7 call sites (base_scene :123, :167, :458; skirmish_scene :297, :749, :907, :1267) as the plan's "7"; `driver._sequence`: base_scene :35 (inside the helper), skirmish_scene :155, :164 (K4); `driver._held`: playtest_overlay :730, base_scene :283, :290, :300, :521 | 7 call sites |
+| `pending_commands` | `rg -c 'pending_commands' game/tests` | 69 (defences 1, base_scene 11, skirmish_scene 18, economy 2, simulation 15, combat 1, scene 7, perf_overlay 2, skirmish 6, benchmark 3, factions 1, team_match 2) | not stated |
+| `_physics_process(` / `_step_frame(` calls | `rg -c '\._physics_process\(\|\._step_frame\(' game/tests` | 95 (113 with `set_physics_process(` lines) | 95, 113: equal |
+| `._refresh()` | `rg -c '\._refresh\(\)' game/tests` | 71 (overlay 3, base_scene 18, order_voice 1, skirmish_scene 37, online_scene 5, perf_overlay 1, scene 2, announcer 4) | 71: equal |
+
+No count differs from the plan (95, 113, 71). Tasks 4-6 compare against this table.
+
+### Line map
+
+Plan cites are `ad89a1c`; right column is the base bad67c3. 79 cites (`file:line` and ranges, one row per file below) were resolved against the base: every cited line exists and holds the described content. No game or tools file changed between `ad89a1c` and the base, so the map is the identity except the two rows marked here. No cited line is gone (no stop). The 15 bare follow-up cites (`:1163-1167,1207-1210`, `:1189`, `:1074`, `:283,290,300,521`, `:155,164`, `:180-184`, `:203-207`, `:341-351`, `:664`, `:665`, `:63`) were also read and match.
+
+| Plan cite | Base location |
+|---|---|
+| `offline_driver.gd:24` ("build sims with `Skirmish.create(...)` as") | wrong in the plan at `ad89a1c` too: the `Skirmish.create(true, "ai", factions, map_path, starts)` call is `:27` (`create` :20-27); `:24` is `_preview_request = {}` |
+| `definitions.gd:117-122` (`_reset()`) | `_reset` is `:118-123` (`:117` is blank); the plan's range is off by one |
+| `simulation.gd:664-665` | unchanged: `:664` opens the `step.hash_ring` zone, `:665` writes `_hash_ring[_tick % HASH_RING_SIZE]` |
+| all other cites in `game/scripts/match/` (`match_screen.gd` x14, `hud.gd` x3, `offline_driver.gd` x3 others, `online_driver.gd` x7), `game/scripts/simulation/` (`combat.gd`, `definitions.gd` :19-20, `map_data.gd`, `skirmish.gd`, `simulation.gd` :589-591), `game/scripts/net/lockstep.gd`, `game/scripts/debug/team_match.gd`, `tools/test_sim_boundary.py` :52-82 | unchanged |
+| all cites in `game/tests/` (`run_tests.gd`, `economy_fixture.gd`, `test_base_scene.gd`, `test_graphics_settings.gd`, `test_online_scene.gd`, `test_playtest_overlay.gd`, `test_scene.gd`, `test_skirmish_scene.gd`) | unchanged |
