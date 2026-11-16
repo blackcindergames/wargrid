@@ -19,6 +19,13 @@ const MapData = preload("res://scripts/simulation/map_data.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const PEER_TICKS: int = 60
 
+# Records the ticks the world view consumed, after the real director stored them.
+class VisualSpy extends "res://scripts/presentation/visual_director.gd":
+	var ticks: Array[int] = []
+	func _consume(step: Dictionary) -> void:
+		super(step)
+		ticks.append(step.tick)
+
 class FakeTransport extends RefCounted:
 	var patient: bool = false
 	var frames := PackedStringArray()
@@ -1624,17 +1631,19 @@ func test_sb3_online_two_notes(runner) -> bool:
 	main.set_process(true)
 	var director = main._sound.director
 	var before: int = director.collected_ticks().size()
-	var visual_ticks = func() -> Array: return main._visuals._pending.map(func(step: Dictionary) -> int: return step.tick)
-	var visuals_before: int = visual_ticks.call().size()
+	var visuals := VisualSpy.new()
+	main._visuals = visuals
+	main._view.set_visuals(visuals)
 	main._physics_process(1.0 / 30.0)
 	main._drain_notes()
 	var ticks: Array[int] = director.collected_ticks().slice(before)
 	runner.check(ticks == [5, 6] and main.driver.current().tick == 6, "SB3 one drain collects both catch-up ticks in order, got %s and tick %d" % [ticks, main.driver.current().tick])
-	runner.check(visual_ticks.call().slice(visuals_before) == [5, 6], "SB3 visuals collect both ticks in order, got %s" % [visual_ticks.call()])
 	var rows = func(results: Array) -> Array: return results.map(func(result: Dictionary) -> Array: return [result.tick, result.player, result.sequence, result.ok, result.error])
 	var faction_rows: Array = [[4, 1, 0, true, ""], [4, 2, 0, true, ""]]
 	var build_rows: Array = [[5, 1, 1, true, ""], [5, 1, 2, false, DUE_REJECTION]]
 	runner.check(rows.call(director.pending_step(before).results) == faction_rows and rows.call(director.pending_step(before + 1).results) == build_rows, "SB3 sound gets each tick's own results, got %s and %s" % [rows.call(director.pending_step(before).results), rows.call(director.pending_step(before + 1).results)])
 	runner.check(rows.call(main.stepped_results) == faction_rows + build_rows, "SB3 stepped results hold both ticks' results in order, got %s" % [rows.call(main.stepped_results)])
+	main._refresh()
+	runner.check(visuals.ticks == [5, 6], "SB3 the view consumes both ticks' visuals in order, got %s" % [visuals.ticks])
 	main.free()
 	return true

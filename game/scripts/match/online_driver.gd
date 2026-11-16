@@ -231,7 +231,7 @@ func over() -> bool:
 	return _finished
 
 func match_log() -> Dictionary:
-	var seats: Array = sim.view_state().players.map(func(player: Dictionary) -> String: return player.get("faction", ""))
+	var seats: Array = current().view.players.map(func(player: Dictionary) -> String: return player.get("faction", ""))
 	return {"mode": "online", "factions": seats, "commands": Lockstep.log_lines(_lockstep.command_log())}
 
 func _finish() -> void:

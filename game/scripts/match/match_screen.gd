@@ -11,7 +11,6 @@ const Orders = preload("res://scripts/match/orders.gd")
 const Hud = preload("res://scripts/match/hud.gd")
 const ResultPanel = preload("res://scripts/match/result_panel.gd")
 const LAUNCHER_SCENE: String = "res://scenes/launcher.tscn"
-const MapData = preload("res://scripts/simulation/map_data.gd")
 const ZOOMS: Array[float] = [0.5, 1.0, 2.0]
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -24,7 +23,6 @@ const MusicPlayer = preload("res://scripts/presentation/music_player.gd")
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const PlaytestOverlay = preload("res://scripts/playtest/playtest_overlay.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
-const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
 const AUTO_FRAMES: int = 120
@@ -125,12 +123,11 @@ func _add_playtest() -> void:
 	_playtest.set_active(PlaytestSettings.enabled())
 
 func _reset_camera() -> void:
-	var size: Array = driver.sim.snapshot().map.size
+	var size: Array = driver.current().view.map.size
 	_camera_bounds = Rect2(Vector2.ZERO, Vector2.ZERO)
 	for corner: Variant in [Vector2(size[0], 0), Vector2(0, size[1]), Vector2(size[0], size[1])]:
 		_camera_bounds = _camera_bounds.expand(Iso.world_to_plane(corner))
-	var map: Dictionary = driver.sim.map_data()
-	var start := MapData.start_cell(map, local_player) if not map.is_empty() else Vector2i(-1, -1)
+	var start: Vector2i = driver.first_note.starts.get(local_player, Vector2i(-1, -1))
 	var focus := Vector2(start) + Vector2(0.5, 0.5) if start.x >= 0 else Vector2(size[0], size[1]) / 2.0
 	_camera.position = Iso.world_to_plane(focus)
 
@@ -146,8 +143,8 @@ func playtest_match() -> Dictionary:
 	return _match_record(played.mode, played.factions, played.commands)
 
 func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
-	var state: Dictionary = driver.sim.snapshot()
-	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "end_tick": state.tick, "end_digest": StateHash.digest(state), "build": PlaytestSettings.build_id(), "result": hud._result_text(state.match), "commands": lines}
+	var record: Dictionary = driver.record()
+	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "end_tick": record.tick, "end_digest": record.digest, "build": PlaytestSettings.build_id(), "result": hud._result_text(record.match), "commands": lines}
 
 func _take_answers() -> void:
 	for answer: Dictionary in driver.take_answers():
@@ -224,7 +221,7 @@ func _drain_notes() -> bool:
 	return false
 
 func _present_if_due() -> bool:
-	if not _clock.rendered(Engine.get_process_frames(), driver.sim.tick()): return false
+	if not _clock.rendered(Engine.get_process_frames(), driver.current().tick): return false
 	_refresh()
 	return true
 
@@ -276,8 +273,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	orders.handle(event)
 
 func _refresh() -> void:
-	var state: Dictionary = driver.sim.view_state()
-	_show(state)
+	_show(driver.current().view)
 	hud.place_economy()
 
 func _note() -> String:

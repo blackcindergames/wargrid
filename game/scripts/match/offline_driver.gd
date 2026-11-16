@@ -21,7 +21,6 @@ var _factions: Dictionary = {}
 var _queue: Array[Dictionary] = []
 var _flushed: Array[Dictionary] = []
 var _answers: Array[Dictionary] = []
-var _accepted: Array[Dictionary] = []
 var _last: SimPump.Note
 var _preview_request: Dictionary = {}
 var _preview_answer: Dictionary = {}
@@ -42,7 +41,6 @@ func adopt(value: Simulation) -> void:
 	_queue = []
 	_flushed = []
 	_answers = []
-	_accepted = []
 	_preview_request = {}
 	_preview_answer = {}
 
@@ -68,7 +66,6 @@ func drain() -> Array[SimPump.Note]:
 	_flushed = []
 	for note: SimPump.Note in notes:
 		_answers.append_array(note.issued)
-		_log(note)
 		if not note.preview.is_empty(): _preview_answer = note.preview
 	_last = notes[-1]
 	return notes
@@ -89,12 +86,6 @@ func flush() -> void:
 	_queue = []
 	var note: SimPump.Note = pump.query(job)
 	_flushed.append_array(note.issued)
-	_log(note)
-
-func _log(note: SimPump.Note) -> void:
-	for answer: Dictionary in note.issued:
-		if answer.ok: _accepted.append(answer.command)
-	_accepted.append_array(note.bot_commands)
 
 func current() -> SimPump.Slot:
 	return pump.current()
@@ -167,5 +158,6 @@ func leave() -> void:
 func detach() -> void:
 	pass
 
+# shortcut: reads the pump's recorder on the caller so log and record() share one state; SB5 moves it into the record query
 func match_log() -> Dictionary:
-	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "commands": Lockstep.log_lines(_accepted)}
+	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "commands": Lockstep.log_lines(pump.recorder().commands())}

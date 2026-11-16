@@ -304,7 +304,7 @@ func _double_fixture(runner) -> Dictionary:
 	camera.position = Vector2(0, 128)
 	camera.zoom = Vector2.ONE * 2.0
 	camera.force_update_scroll()
-	main._refresh()
+	BaseScene.publish(main)
 	await runner.process_frame
 	return fixture
 

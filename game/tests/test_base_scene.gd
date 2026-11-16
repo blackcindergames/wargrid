@@ -7,6 +7,7 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 
 func cases() -> Array[Callable]:
 	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_red_answer_elsewhere_does_not_block,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
@@ -34,6 +35,14 @@ func setup(runner):
 static func tick(main) -> void:
 	main._physics_process(1.0 / 30.0)
 	main._drain_notes()
+
+# Shows a direct change to the live sim as a tick would, without stepping, sound or step results.
+static func publish(main) -> void:
+	var job := SimPump.Job.new()
+	job.step = false
+	main.driver.pump.post(job)
+	main.driver.drain()
+	main._refresh()
 
 func key(main, code: Key) -> void:
 	var event := InputEventKey.new()
@@ -122,7 +131,7 @@ func test_production_ui(runner) -> bool:
 	main.driver.sim = Fixture.make_world(50000)
 	Fixture.build(runner,main.driver.sim,"usa_power_plant",Vector2i(5,5))
 	var depot: int = Fixture.build(runner,main.driver.sim,"usa_supply_center",Vector2i(10,4))
-	main._refresh()
+	publish(main)
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,true)
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,false)
 	runner.check(main.orders.selected_building_id == depot and main.orders.selected_ids.is_empty() and main.get_node("WorldView")._selection.keys() == [depot],"Bs3 building selection outline")
@@ -158,7 +167,7 @@ func test_production_ui(runner) -> bool:
 	else: runner.check(false,"Bs3 queue populated")
 	runner.check(main.has_node("HUD/Economy/Produce") and main.get_node("HUD/Economy/Produce").mouse_filter == Control.MOUSE_FILTER_STOP,"Bs3 GUI consumes mouse")
 	main.driver.sim.remove_object(depot)
-	main._refresh()
+	publish(main)
 	runner.check(main.orders.selected_building_id == -1,"Bs3 removed selection cleared")
 	Fixture.send(main.driver.sim,{"type":"build","builder_id":1,"building_kind":"usa_power_plant","origin":[8,12]})
 	tick(main)
@@ -179,7 +188,7 @@ func test_context_orders(runner) -> bool:
 	var source: int = main.driver.sim.add_supply_source(Vector2i(24,4),8)
 	var air: int = main.driver.sim.spawn(1,Vector2(2.5,2.5),"usa_collector")
 	main.orders.selected_ids.assign([air])
-	main._refresh()
+	publish(main)
 	pointer(main,Iso.world_to_plane(Vector2(25.5,5.5)),MOUSE_BUTTON_RIGHT,true)
 	var pending: Array = main.driver.queued()
 	runner.check(pending.size() == 1 and pending[0].type == "gather" and pending[0].source_id == source,"Bs4 collector context gather")
@@ -195,7 +204,7 @@ func test_context_orders(runner) -> bool:
 	Fixture.send(main.driver.sim,{"type":"stop","entity_ids":[1]})
 	main.driver.sim.step()
 	main.orders.selected_ids.assign([1])
-	main._refresh()
+	publish(main)
 	pointer(main,Iso.world_to_plane(Vector2(8.5,4.5)),MOUSE_BUTTON_RIGHT,true)
 	var resumed: Array = main.driver.queued()
 	runner.check(resumed.size() == 1 and resumed[0].type == "resume_build" and resumed[0].builder_id == 1 and resumed[0].building_id == 2,"Bs4 builder context resumes foundation")
@@ -214,7 +223,7 @@ func test_execution_feedback(runner) -> bool:
 	main._submit({"type":"build","builder_id":1,"building_kind":"usa_power_plant","origin":[12,4],"tick":2})
 	main.driver.flush()
 	Fixture.steps(main.driver.sim,3)
-	main._refresh()
+	publish(main)
 	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"Bs5 due rejection visible")
 	main._submit({"type":"stop","entity_ids":[999]})
 	tick(main)
@@ -345,7 +354,7 @@ func test_resume_status(runner) -> bool:
 	Fixture.send(main.driver.sim,{"type":"stop","entity_ids":[1]})
 	main.driver.sim.step()
 	main.orders.selected_ids.assign([1])
-	main._refresh()
+	publish(main)
 	var status: Label = main.get_node("HUD/Status")
 	hover(main,Iso.world_to_plane(Vector2(8.5,4.5)))
 	main._refresh()
@@ -375,7 +384,7 @@ func test_one_snapshot_per_refresh(runner) -> bool:
 	var views: int = Profiler.calls(&"view_state")
 	Profiler.enabled = false
 	Profiler.reset()
-	runner.check(snapshots == 0 and views == 1, "RF1 a refresh takes no snapshot and one view state, got %d and %d" % [snapshots, views])
+	runner.check(snapshots == 0 and views == 0, "RF1 a refresh takes no snapshot and no view state, got %d and %d" % [snapshots, views])
 	main.free()
 	return true
 
@@ -455,7 +464,7 @@ func test_build_menu_from_capabilities(runner) -> bool:
 	Fixture.build(runner,main.driver.sim,"usa_supply_center",Vector2i(10,4))
 	var factory: int = Fixture.build(runner,main.driver.sim,"usa_factory",Vector2i(14,4))
 	main.orders.selected_ids.assign([1])
-	main._refresh()
+	publish(main)
 	runner.check(_menu_texts(main) == ["1: Power Plant $800","2: Supply Depot $2000","3: Barracks $600","4: Vehicle Factory $2000","5: Missile Battery $1000"],"M1 builder menu lists its builds, got %s" % [_menu_texts(main)])
 	main.orders.selected_ids.clear()
 	main.orders.selected_building_id = factory
