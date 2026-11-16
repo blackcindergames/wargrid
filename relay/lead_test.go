@@ -103,6 +103,19 @@ func TestLeadBoundFollowsOtherSeats(t *testing.T) {
 	wantTicks(t, "nothing past 8", f[1], 5)
 }
 
+func TestLeadBoundFollowsLowestOfSeveralSeats(t *testing.T) {
+	r, f := testRoom(t, 3)
+	feed(r, 1, 4, 5)
+	feed(r, 3, 4, 5)
+	feed(r, 2, 4, 10)
+	feed(r, 1, 6, 10)
+	if r.seats[1].dead || r.seats[1].lastTick != 10 {
+		t.Fatalf("seat 1 should reach tick 10 (seat 3 at 5 + 5); lastTick %d dead %v", r.seats[1].lastTick, r.seats[1].dead)
+	}
+	feed(r, 1, 11, 11)
+	wantRejected(t, "seat 1 tick 11 with seat 3 stuck at 5 and seat 2 at 10", r, 1, f[0])
+}
+
 func TestLeadBoundDeadAndSingleSeat(t *testing.T) {
 	r, f := testRoom(t, 2)
 	feed(r, 2, 4, 4)
