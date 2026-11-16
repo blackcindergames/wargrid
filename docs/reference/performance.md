@@ -7,10 +7,10 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 210% | ➖ same | 2026-11-16 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 159% | ➖ same | 2026-11-16 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | 🔺 1% worse | 2026-11-16 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | 🔺 1% worse | 2026-11-16 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-16 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | ➖ same | 2026-11-16 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse | 2026-11-16 |
 | Drawing the screen | 🟢 OK | ███████░░░ 70% | 🔻 10% better | 2026-11-16 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ██████░░░░ 69% | 🔻 5% better | 2026-11-16 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔺 2% worse | 2026-11-16 |
@@ -24,11 +24,11 @@ Details:
 
 - movement p95: 41% of budget (auto d820773, 2026-11-16), 1% slower than auto b585c6d (worst vs worst); run-to-run spread up to 50%
 - movement p99: 24% of budget (auto d820773, 2026-11-16), 1% slower than auto b585c6d (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 73% of budget (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread up to 58%
+- combat gated p95: 73% of budget (auto d820773, 2026-11-16), 1% slower than auto b585c6d (worst vs worst); run-to-run spread up to 58%
 - combat gated p99: 58% of budget (auto d820773, 2026-11-16), 2% slower than auto b585c6d (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 159% of budget, exceeded (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread up to 41%
+- combat stress p95: 160% of budget, exceeded (auto d820773, 2026-11-16), 1% slower than auto b585c6d (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 142% of budget, exceeded (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 210% of budget, exceeded (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 212% of budget, exceeded (auto d820773, 2026-11-16), 1% slower than auto b585c6d (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 70% of budget (P2.2 Quick rematch slice 2 (merge), 2026-11-16), 10% faster than SB1-SB2 rendered (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 69% of budget (P2.2 Quick rematch slice 2 (merge), 2026-11-16), 5% faster than SB1-SB2 rendered (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread not measured

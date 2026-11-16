@@ -96,10 +96,10 @@ Performance against the low-end budget (generated):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 210% | ➖ same | 2026-11-16 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 159% | ➖ same | 2026-11-16 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | 🔺 1% worse | 2026-11-16 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | 🔺 1% worse | 2026-11-16 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-16 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | ➖ same | 2026-11-16 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse | 2026-11-16 |
 | Drawing the screen | 🟢 OK | ███████░░░ 70% | 🔻 10% better | 2026-11-16 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ██████░░░░ 69% | 🔻 5% better | 2026-11-16 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔺 2% worse | 2026-11-16 |
