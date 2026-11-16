@@ -86,6 +86,7 @@ func _ready() -> void:
 	_pause.smooth_changed.connect(_view.set_smooth)
 	_pause.destinations_changed.connect(_view.set_show_destinations)
 	$HUD.add_child(_pause)
+	_result_panel.yields_to = _pause
 	_view.set_quality(GraphicsSettings.stored_quality())
 	_view.set_bright_owners(GraphicsSettings.load_neon())
 	_view.set_smooth(GraphicsSettings.load_smooth())
@@ -180,6 +181,7 @@ func _input(event: InputEvent) -> void:
 	elif not _pause.visible:
 		if _result_panel.takes_enter(event) and not _typing() and not _playtest.holds_match(): _play_again()
 		else: return
+	elif event.is_action_pressed("ui_accept"): return
 	get_viewport().set_input_as_handled()
 
 func _typing() -> bool:

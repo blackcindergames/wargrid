@@ -4,6 +4,7 @@ const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
+const ResultPanel = preload("res://scripts/match/result_panel.gd")
 
 var note: String = ""
 var _last_result_tick: int = -1
@@ -63,11 +64,25 @@ func _economy_hud(state: Dictionary) -> void:
 
 func _match_hud(state: Dictionary) -> void:
 	var result: String = "" if state.match == null else _result_text(state.match)
+	if result.is_empty() and _screen.driver.opponent_left(): result = "Victory"
 	var building: Dictionary = _screen._building(state, _screen.orders.selected_building_id)
 	_screen._view.set_inspected(_screen.orders.inspected_id)
 	_produce.text = "Produce %s (E)" % Registry.kind(_screen._production_kind(building, state)).get("display_name", "") if not building.is_empty() else "Produce (E)"
 	_status.text += "\n" + (_selected_summary(state) + _enemy_summary(state)) + ("A: attack-move click | S: stop | You are %s (P%d)" % [("blue" if _screen.local_player == 1 else "red"), _screen.local_player] if result.is_empty() else "")
-	_panel.show_result(result, _screen.driver.rematch_line(), _screen.driver.can_play_again())
+	var rows: Array[Dictionary] = []
+	if not result.is_empty(): rows = _result_rows(state)
+	var length: String = ResultPanel.length_text(state.tick, Engine.physics_ticks_per_second) if not result.is_empty() else ""
+	_panel.show_result(result, _screen.driver.rematch_line(), _screen.driver.can_play_again(), rows, length, _screen.driver.rematch_pending())
+
+func _result_rows(state: Dictionary) -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var stats: Array[Dictionary] = _screen.driver.sim.match_stats()
+	for player: Dictionary in state.players:
+		var row: Dictionary = stats.filter(func(entry: Dictionary) -> bool: return entry.player == player.id)[0]
+		var you: bool = player.id == _screen.local_player
+		var faction: String = Registry.faction(player.get("faction", Registry.Factions.DEFAULT_FACTION)).display_name
+		rows.append({"name": "P%d %s%s" % [player.id, faction, " (you)" if you else ""], "you": you, "built": row.units_built, "units_lost": row.units_lost, "buildings_lost": row.buildings_lost})
+	return rows
 
 func _menu_kinds(state: Dictionary, building: Dictionary) -> Array:
 	if not building.is_empty(): return Registry.kind(building.kind).produces if building.completed else []

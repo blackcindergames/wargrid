@@ -39,7 +39,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -72,11 +72,11 @@ func _own_commands(transport: FakeTransport) -> Array:
 		commands.append_array(Wire.decode(text).message.get("commands", []).filter(func(command: Dictionary) -> bool: return command.type != "choose_faction"))
 	return commands
 
-func _layout_ok(runner, main, label: String) -> void:
+func _layout_ok(runner, main, label: String, panel_up: bool = false) -> void:
 	var status: Label = main.get_node("HUD/Status")
 	var economy: Control = main.get_node("HUD/Economy")
 	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y, "N3 buttons sit below every status line: " + label)
-	runner.check(not main.get_node("HUD/ResultPanel").visible, "N3 result panel hidden: " + label)
+	runner.check(main.get_node("HUD/ResultPanel").visible == panel_up, "N3 result panel %s: %s" % ["up" if panel_up else "hidden", label])
 
 func test_seat_two_controls_player_two(runner) -> bool:
 	var online: Dictionary = await _online(runner, 2)
@@ -118,7 +118,7 @@ func test_status_lines_and_layout(runner) -> bool:
 	left.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": 4}))
 	_run(left.main, 12)
 	runner.check(left.main.get_node("HUD/Status").text.contains("Player 1 disconnected"), "N2 left line")
-	_layout_ok(runner, left.main, "left")
+	_layout_ok(runner, left.main, "left", true)
 	left.main.free()
 	var lost: Dictionary = await _online(runner, 2)
 	lost.transport.is_closed = true
@@ -216,7 +216,7 @@ func test_abnormal_end_closes_without_rematch(runner) -> bool:
 	left.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": 40}))
 	_run(left.main, 40)
 	runner.check(left.lockstep.status() == "ended_left" and left.transport.close_calls == 1 and _sent_types(left.transport, "over") == 0, "N13 a friend leaving mid-match closes once and sends no over, got %s %d" % [left.lockstep.status(), left.transport.close_calls])
-	runner.check(not left.main.get_node("HUD/ResultPanel").visible and not left.main.driver.can_play_again(), "N13 no result panel after a leave")
+	runner.check(_panel_line(left.main) == "Your opponent left" and not left.main.driver.can_play_again(), "N13 a leave mid-match tells the opponent left and closes the room, got '%s'" % _panel_line(left.main))
 	left.main.free()
 	var lost: Dictionary = await _online(runner, 2)
 	_peer_packets(lost.transport, 1, 4, PEER_TICKS)
@@ -1005,6 +1005,7 @@ func test_host_told_opponent_left_before_start(runner) -> bool:
 	_run(early.main, 12)
 	runner.check(early.main.get_node("HUD/Status").text.contains(notice), "N16 left before the start is explained")
 	_layout_ok(runner, early.main, "left before start")
+	runner.check(not early.main.get_node("HUD/ResultPanel").visible, "N16 left before the start shows no result panel")
 	early.main.free()
 	var late: Dictionary = await _online(runner, 1)
 	_peer_packets(late.transport, 2, 4, 40)
@@ -1013,6 +1014,24 @@ func test_host_told_opponent_left_before_start(runner) -> bool:
 	var text: String = late.main.get_node("HUD/Status").text
 	runner.check(text.contains("Player 2 disconnected") and not text.contains(notice), "N16 a later leave keeps the plain text, got " + text)
 	late.main.free()
+	return true
+
+func test_opponent_left_mid_match(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_peer_packets(online.transport, 2, 4, 40)
+	online.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
+	_run(main, 80)
+	var panel: Control = main.get_node("HUD/ResultPanel")
+	var cells: Array = main.get_node("HUD/ResultPanel/Center/Card/Box/Table").get_children()
+	runner.check(panel.visible and main.get_node("HUD/ResultPanel/Center/Card/Box/Outcome").text == "Victory", "N29 the opponent leaving mid-match is a Victory")
+	runner.check(_panel_line(main) == "Your opponent left" and _play_again_button(main).disabled, "N29 the line says the opponent left, Play again disabled, got '%s'" % _panel_line(main))
+	runner.check(main.get_viewport().gui_get_focus_owner() == main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"), "N29 Back to menu has the focus")
+	runner.check(cells.size() == 12 and cells[4].text.ends_with("(you)") and not cells[8].text.contains("(you)"), "N29 the table shows both players, got %d cells" % cells.size())
+	runner.check(main.get_node("HUD/Status").text.contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
+	var status: Label = main.get_node("HUD/Status")
+	runner.check(main.get_node("HUD/Economy").position.y >= status.position.y + status.get_minimum_size().y, "N29 buttons sit below every status line")
+	main.free()
 	return true
 
 func _credits_wired(runner, shown: String, size: Vector2i) -> void:

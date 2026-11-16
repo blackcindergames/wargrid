@@ -3,9 +3,17 @@ extends Control
 signal play_again_pressed
 signal change_setup_pressed
 
+# Set by the match screen: the pause menu keeps the focus while it is open.
+var yields_to: Control
 var _outcome: Label
 var _status: Label
+var _length: Label
+var _table: GridContainer
 var _play_again: Button
+var _change_setup: Button
+var _rows: Array[Dictionary] = []
+var _wants_focus: bool = false
+var _grab_pending: bool = false
 
 func _init() -> void:
 	name = "ResultPanel"
@@ -38,6 +46,15 @@ func _init() -> void:
 	_status.add_theme_color_override("font_color", Color("#d4d4d4"))
 	# Reserved even when empty so the card never changes height (user, 2026-11-15).
 	_status.custom_minimum_size.y = 20.0
+	_length = _label(box, "Length")
+	_length.visible = false
+	_table = GridContainer.new()
+	_table.name = "Table"
+	_table.columns = 4
+	_table.visible = false
+	_table.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_table.add_theme_constant_override("h_separation", 24)
+	box.add_child(_table)
 	var gap := Control.new()
 	gap.custom_minimum_size.y = 16.0
 	box.add_child(gap)
@@ -48,7 +65,7 @@ func _init() -> void:
 	box.add_child(buttons)
 	_play_again = _button(buttons, "PlayAgain", "Play again", play_again_pressed.emit)
 	_play_again.theme_type_variation = "PrimaryButton"
-	_button(buttons, "ChangeSetup", "Back to menu", change_setup_pressed.emit)
+	_change_setup = _button(buttons, "ChangeSetup", "Back to menu", change_setup_pressed.emit)
 
 # Variant A of the result-panel A/B (user, 2026-11-15); the match-slab look follows in slice 2.
 func _ready() -> void:
@@ -81,14 +98,50 @@ static func _pad(style: StyleBox, horizontal: float, vertical: float) -> void:
 	style.content_margin_top = vertical
 	style.content_margin_bottom = vertical
 
-func show_result(outcome: String, status: String, can_play: bool) -> void:
+func show_result(outcome: String, status: String, can_play: bool, rows: Array[Dictionary] = [], length: String = "", waiting: bool = false) -> void:
 	_outcome.text = outcome
 	_status.text = status
 	_play_again.disabled = not can_play
 	visible = not outcome.is_empty()
+	_length.text = length
+	_length.visible = not rows.is_empty()
+	_table.visible = not rows.is_empty()
+	if rows != _rows:
+		_rows.assign(rows)
+		_rebuild_table()
+	_take_focus(visible and not can_play and not waiting)
+
+# Back to menu is the only live button once Play again is gone; wait for the pause menu to close.
+func _take_focus(wanted: bool) -> void:
+	if wanted and not _wants_focus: _grab_pending = true
+	if not wanted: _grab_pending = false
+	_wants_focus = wanted
+	if _grab_pending and (yields_to == null or not yields_to.visible):
+		_change_setup.grab_focus()
+		_grab_pending = false
+
+func _rebuild_table() -> void:
+	for cell in _table.get_children(): cell.free()
+	if _rows.is_empty(): return
+	for header: String in ["", "Units built", "Units lost", "Buildings lost"]: _cell(header, false, header.is_empty())
+	for row in _rows:
+		var you: bool = row.you
+		_cell(row.name, you, true)
+		for key: String in ["built", "units_lost", "buildings_lost"]: _cell(str(row[key]), you, false)
+
+func _cell(text: String, bold: bool, left: bool) -> void:
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if left else HORIZONTAL_ALIGNMENT_RIGHT
+	if bold: label.add_theme_font_override("font", get_theme_font("font", "PrimaryButton"))
+	_table.add_child(label)
+
+static func length_text(ticks: int, rate: int) -> String:
+	var seconds: int = floori(float(ticks) / rate)
+	return "Match length %d:%02d" % [floori(seconds / 60.0), seconds % 60]
 
 func takes_enter(event: InputEvent) -> bool:
-	if not visible or _play_again.disabled: return false
+	if not visible or _play_again.disabled or _change_setup.has_focus(): return false
 	var key := event as InputEventKey
 	return key != null and key.pressed and not key.echo and (key.keycode == KEY_ENTER or key.keycode == KEY_KP_ENTER)
 

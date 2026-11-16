@@ -67,8 +67,9 @@ func _init(web: bool = OS.has_feature("web")) -> void:
 	_confirm_box = _box(center)
 	_confirm_box.visible = false
 	var question := Label.new()
-	question.text = "Leave the match?"
+	question.text = "Leave the match? Your opponent wins and the room closes."
 	question.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	question.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_confirm_box.add_child(question)
 	_button(_confirm_box, "Leave", leave_requested.emit)
 	_button(_confirm_box, "Cancel", _show_main)
@@ -113,7 +114,7 @@ func _leave_pressed() -> void:
 	_confirming = true
 	_main_box.visible = false
 	_confirm_box.visible = true
-	_confirm_box.get_child(1).grab_focus()
+	_confirm_box.get_child(2).grab_focus()
 
 func _show_main() -> void:
 	_confirming = false

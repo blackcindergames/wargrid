@@ -25,7 +25,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_quit_hidden_on_web, test_menu_layout]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_quit_hidden_on_web, test_menu_layout]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -176,6 +176,43 @@ func test_online_leave_cancel(runner) -> bool:
 	_esc(main)
 	runner.check(main.menu_open() and not main.get_node("HUD/PauseMenu").is_confirming(), "E6 Esc in the confirmation returns to the list")
 	main.free()
+	return true
+
+func test_online_leave_text_and_focus(runner) -> bool:
+	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+		var port := SubViewport.new()
+		port.size = size
+		runner.root.add_child(port)
+		var transport := FakeTransport.new()
+		var seats: Array[int] = [1, 2]
+		var lockstep = Lockstep.new(1, seats)
+		var main = Skirmish.instantiate()
+		main.setup(transport, lockstep, 1)
+		port.add_child(main)
+		main.set_process(false)
+		main.set_physics_process(false)
+		await runner.process_frame
+		var scenes: Array[String] = []
+		main.change_scene = func(path: String) -> void: scenes.append(path)
+		_esc(main)
+		_click(main, "Back to main menu")
+		await runner.process_frame
+		await runner.process_frame
+		var menu: Control = main.get_node("HUD/PauseMenu")
+		var question: Label = menu.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree())[0]
+		runner.check(question.text == "Leave the match? Your opponent wins and the room closes.", "E9 the leave question says what happens, got '%s'" % question.text)
+		runner.check(Rect2(Vector2.ZERO, Vector2(size)).encloses(question.get_global_rect()) and question.get_global_rect().size.y > 0.0, "E9 the question sits inside %s, rect %s" % [size, question.get_global_rect()])
+		var cancel: Button = menu.find_children("*", "Button", true, false).filter(func(button: Button) -> bool: return button.text == "Cancel")[0]
+		runner.check(main.get_viewport().gui_get_focus_owner() == cancel, "E9 Cancel has the focus")
+		runner.check(cancel.get_theme_stylebox("focus") != cancel.get_theme_stylebox("normal"), "E9 a focused button looks different from a resting one")
+		var enter := InputEventKey.new()
+		enter.keycode = KEY_ENTER
+		enter.physical_keycode = KEY_ENTER
+		for pressed: bool in [true, false]:
+			enter.pressed = pressed
+			main.get_viewport().push_input(enter.duplicate())
+		runner.check(transport.close_calls == 0 and scenes.is_empty() and not menu.is_confirming(), "E9 Enter on the confirmation does not leave, calls %d" % transport.close_calls)
+		port.queue_free()
 	return true
 
 func test_quit_hidden_on_web(runner) -> bool:

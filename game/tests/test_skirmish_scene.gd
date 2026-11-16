@@ -21,9 +21,11 @@ const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const OUTCOME: String = "HUD/ResultPanel/Center/Card/Box/Outcome"
 const PLAY_AGAIN: String = "HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain"
 const CHANGE_SETUP: String = "HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"
+const TABLE: String = "HUD/ResultPanel/Center/Card/Box/Table"
+const LENGTH: String = "HUD/ResultPanel/Center/Card/Box/Length"
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -418,6 +420,16 @@ func test_result_panel_layout(runner) -> bool:
 		_arena(main)
 		_victory(main)
 		var panel = main.get_node("HUD/ResultPanel")
+		await runner.process_frame
+		await runner.process_frame
+		var real_card: Rect2 = main.get_node("HUD/ResultPanel/Center/Card").get_global_rect()
+		var real_table: GridContainer = main.get_node(TABLE)
+		var real_cells: Array = real_table.get_children().map(func(cell: Label) -> String: return cell.text)
+		runner.check(real_table.visible and real_table.columns == 4 and real_cells.size() == 12 and real_cells.slice(0, 4) == ["", "Units built", "Units lost", "Buildings lost"], "R1 the table has its headers and two player rows at %s, got %s" % [size, real_cells])
+		runner.check(main.get_node(LENGTH).visible and main.get_node(LENGTH).text == ResultPanel.length_text(main.driver.sim.tick(), 30), "R1 the length reads the match ticks at %s, got '%s'" % [size, main.get_node(LENGTH).text])
+		runner.check(real_card.grow(-16.0).encloses(real_table.get_global_rect()) and real_card.grow(-16.0).encloses(main.get_node(LENGTH).get_global_rect()), "R1 table and length inside the card at %s" % size)
+		var real_buttons: Rect2 = main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons").get_global_rect()
+		runner.check(absf(real_buttons.get_center().x - real_card.get_center().x) <= 1.0, "R1 the button row is centred on the card at %s" % size)
 		panel.show_result("Victory", "Your friend wants to play again", true)
 		await runner.process_frame
 		await runner.process_frame
@@ -446,7 +458,110 @@ func test_result_panel_layout(runner) -> bool:
 		await runner.process_frame
 		var waiting: StyleBox = main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain").get_theme_stylebox("disabled")
 		runner.check(waiting is StyleBoxFlat and (waiting as StyleBoxFlat).bg_color.is_equal_approx(Color("#666a6c")), "R1 a waiting Play again is grey, not amber, at %s" % size)
+		var rows: Array[Dictionary] = []
+		for i in 8: rows.append({"name": "P%d Free Resistance Coalition%s" % [i + 1, " (you)" if i == 7 else ""], "you": i == 7, "built": 1234, "units_lost": 567, "buildings_lost": 89})
+		panel.show_result("Victory", "Your friend wants to play again", true, rows, "Match length 99:59")
+		await runner.process_frame
+		await runner.process_frame
+		var long_card: Rect2 = main.get_node("HUD/ResultPanel/Center/Card").get_global_rect()
+		var long_table: GridContainer = main.get_node(TABLE)
+		runner.check(long_table.get_child_count() == 36 and screen.encloses(long_card), "R1 eight rows: 36 cells, card inside the viewport at %s, card %s" % [size, long_card])
+		runner.check(long_card.grow(-16.0).encloses(long_table.get_global_rect()) and long_card.grow(-16.0).encloses(main.get_node(LENGTH).get_global_rect()), "R1 eight rows: table inside the card at %s, table %s" % [size, long_table.get_global_rect()])
+		runner.check(not long_table.get_global_rect().intersects(main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons").get_global_rect()), "R1 eight rows: buttons clear of the table at %s" % size)
+		runner.check(long_table.get_children().all(func(cell: Label) -> bool: return cell.get_theme_font_size("font_size") >= 12), "R1 every table label is at least 12 px at %s" % size)
 		port.queue_free()
+	return true
+
+func test_result_stats_from_sim(runner) -> bool:
+	var main = await _setup(runner)
+	_arena(main)
+	for i in 900:
+		if main.driver.sim.match_stats().any(func(row: Dictionary) -> bool: return row.units_lost > 0): break
+		main._physics_process(0.0)
+	var enemy: Array = main.driver.sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 2) + main.driver.sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 2)
+	for object: Dictionary in enemy: main.driver.sim.remove_object(object.id)
+	main._physics_process(0.0)
+	var stats: Array = main.driver.sim.match_stats()
+	var cells: Array = main.get_node(TABLE).get_children()
+	runner.check(cells.size() == 4 + 4 * stats.size() and stats.size() == 2, "R7 fixture: a header and one row per player, got %d cells, stats %s, match %s, tick %d" % [cells.size(), stats, main.driver.sim.snapshot().match, main.driver.sim.tick()])
+	runner.check(stats.any(func(row: Dictionary) -> bool: return row.units_lost > 0), "R7 fixture: the sim counted a lost unit")
+	for i in stats.size():
+		var row: Array = cells.slice(4 + 4 * i, 8 + 4 * i)
+		runner.check([row[1].text, row[2].text, row[3].text] == [str(stats[i].units_built), str(stats[i].units_lost), str(stats[i].buildings_lost)], "R7 row %d numbers equal match_stats, got %s vs %s" % [i, [row[1].text, row[2].text, row[3].text], stats[i]])
+		runner.check(row[1].horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT, "R7 row %d numbers are right-aligned" % i)
+	var mine: Label = cells[4]
+	var theirs: Label = cells[8]
+	runner.check(mine.text.begins_with("P1 ") and mine.text.ends_with(" (you)") and theirs.text.begins_with("P2 ") and not theirs.text.contains("(you)"), "R7 only the local row says (you), got '%s' and '%s'" % [mine.text, theirs.text])
+	runner.check(mine.get_theme_font("font") != theirs.get_theme_font("font") and cells[5].get_theme_font("font") != cells[9].get_theme_font("font"), "R7 the local row is in the bold font, all four cells")
+	runner.check(ResultPanel.length_text(0, 30) == "Match length 0:00" and ResultPanel.length_text(29, 30) == "Match length 0:00" and ResultPanel.length_text(22620, 30) == "Match length 12:34" and ResultPanel.length_text(108000, 30) == "Match length 60:00", "R7 the length rounds down to whole seconds")
+	main.free()
+	return true
+
+func _push_enter(main) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = KEY_ENTER
+		event.physical_keycode = KEY_ENTER
+		event.pressed = pressed
+		main.get_viewport().push_input(event)
+
+func _focus_owner(main) -> Control:
+	return main.get_viewport().gui_get_focus_owner()
+
+func test_result_panel_focus(runner) -> bool:
+	var rows: Array[Dictionary] = [{"name": "P1 United States (you)", "you": true, "built": 1, "units_lost": 0, "buildings_lost": 0}]
+	var main = await _setup(runner)
+	var panel = main.get_node("HUD/ResultPanel")
+	var setup: Button = main.get_node(CHANGE_SETUP)
+	var emitted: Array[String] = []
+	panel.change_setup_pressed.connect(func() -> void: emitted.append("setup"))
+	panel.play_again_pressed.connect(func() -> void: emitted.append("again"))
+	main.change_scene = func(_path: String) -> void: pass
+	panel.show_result("Victory", "Your friend left", false, rows)
+	runner.check(_focus_owner(main) == setup, "R8 a closed room puts the focus on Back to menu")
+	_push_enter(main)
+	runner.check(emitted.has("setup") and not emitted.has("again"), "R8 a real Enter presses Back to menu, got %s" % [emitted])
+	main.free()
+	var waiting_main = await _setup(runner)
+	var waiting_panel = waiting_main.get_node("HUD/ResultPanel")
+	var waiting_emitted: Array[String] = []
+	waiting_panel.change_setup_pressed.connect(func() -> void: waiting_emitted.append("setup"))
+	waiting_panel.show_result("Victory", "Waiting for your friend…", false, rows, "", true)
+	runner.check(_focus_owner(waiting_main) != waiting_main.get_node(CHANGE_SETUP), "R8 waiting for the friend leaves the focus alone")
+	_push_enter(waiting_main)
+	runner.check(waiting_emitted.is_empty(), "R8 a second Enter while waiting does not leave, got %s" % [waiting_emitted])
+	waiting_panel.show_result("Victory", "Your friend left", false, rows, "", false)
+	runner.check(_focus_owner(waiting_main) == waiting_main.get_node(CHANGE_SETUP), "R8 the friend leaving after the wait takes the focus")
+	waiting_main.free()
+	var enabled_main = await _setup(runner)
+	var enabled_panel = enabled_main.get_node("HUD/ResultPanel")
+	var enabled_emitted: Array[String] = []
+	enabled_panel.change_setup_pressed.connect(func() -> void: enabled_emitted.append("setup"))
+	enabled_panel.play_again_pressed.connect(func() -> void: enabled_emitted.append("again"))
+	enabled_main.change_scene = func(_path: String) -> void: pass
+	enabled_panel.show_result("Victory", "", true, rows)
+	enabled_main.get_node(CHANGE_SETUP).grab_focus()
+	runner.check(not enabled_panel.takes_enter(_enter(KEY_ENTER)), "R8 takes_enter yields while Back to menu has the focus")
+	_push_enter(enabled_main)
+	runner.check(enabled_emitted == ["setup"], "R8 Enter on a focused Back to menu leaves, not Play again, got %s" % [enabled_emitted])
+	enabled_main.free()
+	var paused = await _setup(runner)
+	var paused_panel = paused.get_node("HUD/ResultPanel")
+	paused.change_scene = func(_path: String) -> void: pass
+	paused_panel.show_result("Victory", "", true, rows)
+	paused._pause.open()
+	var menu_focus: Control = _focus_owner(paused)
+	runner.check(menu_focus != null and paused._pause.is_ancestor_of(menu_focus), "R8 fixture: the pause menu holds the focus")
+	paused_panel.show_result("Victory", "Your friend left", false, rows)
+	for i in 10: paused_panel.show_result("Victory", "Your friend left", false, rows)
+	runner.check(_focus_owner(paused) == menu_focus, "R8 refreshes keep the pause menu's focus")
+	paused._pause.close()
+	paused_panel.show_result("Victory", "Your friend left", false, rows)
+	runner.check(_focus_owner(paused) == paused.get_node(CHANGE_SETUP), "R8 the grab runs after the pause menu closes")
+	paused.get_viewport().gui_release_focus()
+	paused_panel.show_result("Victory", "Your friend left", false, rows)
+	runner.check(_focus_owner(paused) != paused.get_node(CHANGE_SETUP), "R8 the grab runs once per change, not every refresh")
+	paused.free()
 	return true
 
 func test_result_panel_keys(runner) -> bool:
@@ -536,6 +651,7 @@ func test_result_panel_unit(runner) -> bool:
 	runner.check(panel.visible and status.text == "Your friend left" and status.visible and again.disabled, "R4 a closed room disables Play again")
 	runner.check(not panel.takes_enter(_enter(KEY_ENTER)), "R4 a disabled Play again takes no Enter")
 	panel.show_result("Draw", "", true)
+	panel.get_viewport().gui_release_focus()
 	runner.check(not again.disabled and status.visible and status.text.is_empty() and panel.takes_enter(_enter(KEY_ENTER)) and panel.takes_enter(_enter(KEY_KP_ENTER)), "R4 Enter accepted when enabled")
 	runner.check(not panel.takes_enter(_enter(KEY_SPACE)), "R4 other keys are ignored")
 	var echo := _enter(KEY_ENTER)
