@@ -1,6 +1,6 @@
 # Simulation interface
 
-Status: describes the code at e3a4b2b plus the view rows change, task 2 (2026-11-11, commit 54cba1e); names re-checked at d20d827 and line numbers dropped (2026-11-12); `snapshot()` and `preview_build` callers re-checked at 0addc23 (2026-11-15, sim boundary SB1-SB2). `match_stats()` added by P2.2 slice 2 Task 1 (2026-11-16). Update in the same change as any public method. Paths relative to `game/scripts/simulation/`; `sim` is a `Simulation` (`simulation.gd`).
+Status: describes the code at e3a4b2b plus the view rows change, task 2 (2026-11-11, commit 54cba1e); names re-checked at d20d827 and line numbers dropped (2026-11-12); `snapshot()` and `preview_build` callers re-checked at 0addc23 (2026-11-15, sim boundary SB1-SB2). `match_stats()` added by P2.2 slice 2 Task 1 (2026-11-16, commit 7890ef1), re-checked at 6c83492. Update in the same change as any public method. Paths relative to `game/scripts/simulation/`; `sim` is a `Simulation` (`simulation.gd`).
 
 ## Construct and set up (before tick 0)
 - `Simulation.new(blocked_cells, size)`: empty world. `simulation.gd`

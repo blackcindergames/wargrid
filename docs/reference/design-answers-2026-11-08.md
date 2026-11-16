@@ -890,3 +890,30 @@ Questionnaire that split M9 into packages; record and gates in the [online teams
 - **Bots:** the bot attack test compares stock, gate and commit (0 A.D. Petra's commit-and-escalate) and ships a rule only if it wins both columns: every seat damages an enemy building where stock fails, and rows that end today still end; the leave night comes before it. No separate bot read function now: the fog package filters `bot_state()`. The other spikes from the 2026-11-15 notes are recorded under M8 as proposals.
 - **Loose ends (same day):** if the timed Ashfall playtest moves P3 and control groups right after P2.3b, they go before P8; the timed hidden-tab check (F11) runs in P7's friend session; P7's result panel names who left, teammate or opponent; whether a browser or Deck player may host three bots is measured and decided at P9; when bot levels exist, an allied bot uses the same level and style as the enemy bots (one setting for all bots).
 - **After the reviews (same day):** in P7 the host leaving, defeated or not, ends the match with the reason shown; after a teammate quits, Play again is hidden and Back to menu stays; the Play page's 1v1 and 2v2 choice, and whether 1v1 against a friend stays, is an A/B in P7's design; Cheaper step moves before P9, so two nights (Lighter relay frames, Cheaper step) sit between P8 and P9, an exception to the one-night rule; P8 shows three waiting texts (others, the dropped player, a relay restart), appears only after a short stall and has a Leave match button that says what leaving does; in P9 the waiting view lists missing friends, the host can turn an empty friend slot into a bot, and a joined friend can leave; renamed: P8 Reconnect after a drop, P9 You and two friends vs three bots, P11 Friends against friends.
+
+## Quick rematch slice 2 questionnaire (user, 2026-11-16)
+
+Spec: [P2.2 slice 2 design](../superpowers/specs/2026-11-16-p2.2-slice-2-design.md); plan: [slice 2 plan](../superpowers/plans/2026-11-16-p2.2-slice-2.md); evidence: [verification, slice 2](p2.2-verification.md#slice-2).
+
+- **Counters in the simulation, outside the snapshot and the hash** (user, 2026-11-16): the numbers on the result panel come from per-player counters the simulation keeps (`match_stats()`), never hashed, so no trace re-pins. This replaces the 2026-11-15 answer that the drawing side tallies them with no simulation change.
+- **One row per player** (user, 2026-11-16), with units built, units lost and buildings lost; the local row is marked "(you)".
+- **Units built** (user, 2026-11-16): a unit produced from a building's production queue; start units, rebuild-hole workers and free units from a finished building do not count.
+- **Buildings lost** (user, 2026-11-16): finished buildings only; an unfinished site and a rebuild hole do not count.
+- **Match length** (user, 2026-11-16): game time (ticks divided by the tick rate), shown as m:ss.
+- **Opponent left mid-match** (user, 2026-11-16): the player who stays sees Victory, the stats up to the leave and the status "Your opponent left", with Back to menu and no Play again.
+- **Online leave text** (user, 2026-11-16): "Leave the match? Your opponent wins and the room closes."
+- **Quit** (user, 2026-11-16): a sidebar button on desktop builds, without a confirmation.
+- **Focus outline by A/B** (user, 2026-11-16, stop gate A): variant A with the reviewer's gap tweak: a 2 px #e6e6e6 border, 4 px expansion (a 2 px gap of page colour), corner radius 9. Hover stays a background tint.
+- **Hidden capture probe failed** (user, 2026-11-16): the offscreen capture window was visible for about 0.7 s (macOS ignores `--position`); the user accepted one flash for the A/B captures. The capture run caused about three flashes in all (the probe, a minimised start whose PNGs came out blank, and the final run).
+- **Release** (user, 2026-11-16): to production after the test-app playtest.
+- **Playtest card** (user, 2026-11-16): one focus card, "Result panel"; the launcher riders are an unscored checklist.
+
+Agent's calls, not asked:
+
+- While "Waiting for your friend…" Back to menu does not take focus, so a second Enter cannot leave the room.
+- A quantity-2 order counts 2 units built; a rebuild-hole worker is never built but counts as lost when it dies; units buried with the last tunnel hub or their container count as lost.
+- The status line keeps "Player N disconnected" beside the opponent-left panel.
+- `left-mid` uses seat 2's clean close at tick 600 as the leave (the headless client has no `leave` message) and joins CI's exported netplay loop.
+- Match length uses `Engine.physics_ticks_per_second`; the row label is "P<n> <faction name>".
+- Keyboard pickers send focus to Start or Join after each selection; the playtest checks that this is acceptable.
+- The match-slab look of the 2026-11-15 result-panel A/B (square card, winner-colour edge, dimmed world) waits for P2.3a's shared theme variations.

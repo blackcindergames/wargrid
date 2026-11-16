@@ -67,8 +67,8 @@ Take two Battle Tanks. Player 1's tank A stands idle in `guard` mode and belongs
 
 **Ticks T+60, T+120, ... T+420.** A fires again every 60 ticks. Had B only driven past, it would be through A's reach in at most 367 ticks, with at most seven hits and 60 HP or more left (arithmetic: a 14.7-cell chord at 0.04 cells a tick). Here B's move ends inside the reach. On arrival `plan` flips B to guard, B scans, finds A and fires back on its own 60-tick cycle. B's first shot comes after T, because B was still moving on tick T. So at A's eighth shot, at T + 420, B has fired at most seven: B drops to 0 and A keeps at least 60 HP.
 
-10. `fire` sees that B's pending damage reaches its HP, finds the killing shot and passes its shooter to the salvage rule. It then records a death event and removes B.  
-    `Combat.fire → _killers; Salvage.on_death; Simulation.remove_object`
+10. `fire` sees that B's pending damage reaches its HP, finds the killing shot and passes its shooter to the salvage rule. It then counts B as lost for its owner, records a death event and removes B. The count comes first because the object is still in its table; `remove_object` itself never counts, since cancels and hole cleanup use it too.  
+    `Combat.fire → _killers; Salvage.on_death; Simulation._count_death; Simulation.remove_object`
 11. Removal clears the target of every unit that aimed at B and makes it scan again on its next `plan`, so A looks for a new target on tick T + 421.  
     `Simulation.remove_object → Combat.object_removed`
 
@@ -172,7 +172,7 @@ A **container** is a unit or building with a `contains` rule in its definition (
 6. `unload` puts each passenger, in id order, on the nearest free walkable cell within four cells of the host and sets it to guard.  
    `Containers.unload → _exit_all → _free_cell`
 
-When a carrier dies, each passenger first takes the rule's share of its max HP as damage (all of it for the Scout Car, which kills them; 10 percent for the pickup), and the survivors are placed around the wreck. When a player's last Tunnel Hub dies, every occupant dies with it; when another hub survives, the occupants move into it. Inside the network, occupants heal every tick.  
+When a carrier dies, each passenger first takes the rule's share of its max HP as damage (all of it for the Scout Car, which kills them; 10 percent for the pickup), and the survivors are placed around the wreck. When a player's last Tunnel Hub dies, every occupant dies with it; when another hub survives, the occupants move into it. Every one of these deaths, the carrier and the passengers the release damage kills or the bury removes, counts once in the owner's units lost (`match_stats()`, the result panel's table; a completed building counts in buildings lost, an unfinished site and a rebuild hole do not). Inside the network, occupants heal every tick.  
 `Containers.object_removed → _release; building_removed → _relocate, _bury; Containers._heal`
 
 ## Turrets: drawn, not simulated
@@ -225,4 +225,4 @@ A profile of 2026-11-11 on the Mac mini ([data layout decision](../reference/dat
 - Next: [9. AI](09-ai.md) issues the commands that drive the bot armies; [5. Presentation](05-presentation.md) draws the shots and the turret.
 
 ---
-Checked against `b88dc0f`; passenger builds against `949706f`. Files: `game/scripts/simulation/combat.gd`, `game/scripts/simulation/combat_definitions.gd`, `game/scripts/simulation/containers.gd`, `game/scripts/simulation/horde.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/shared.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/scripts/simulation/definitions/china.gd`, `game/scripts/simulation/definitions/frc.gd`, `game/scripts/presentation/visual_director.gd`, `game/scripts/match/match_screen.gd`
+Checked against `b88dc0f`, the death-counting passages against `6c83492`; passenger builds against `949706f`. Files: `game/scripts/simulation/combat.gd`, `game/scripts/simulation/combat_definitions.gd`, `game/scripts/simulation/containers.gd`, `game/scripts/simulation/horde.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/shared.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/scripts/simulation/definitions/china.gd`, `game/scripts/simulation/definitions/frc.gd`, `game/scripts/presentation/visual_director.gd`, `game/scripts/match/match_screen.gd`

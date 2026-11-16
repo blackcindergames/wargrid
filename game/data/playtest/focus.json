@@ -1,4 +1,14 @@
 [
+ {"id": "p2.2-slice-2", "title": "Result panel",
+  "new": ["After a match the panel shows the match length and, for every player, units built, units lost and buildings lost.", "If your opponent leaves mid-match you win, and the panel says so.", "Leaving an online match now says what it means."],
+  "try": [
+   {"id": "stats", "text": "Finish a match and read the numbers on the panel"},
+   {"id": "left", "text": "Online, have your friend leave in the middle of a match"},
+   {"id": "leave", "text": "Online, open the menu and choose Back to main menu"}],
+  "questions": [
+   {"id": "stats_glance", "text": "I could read the numbers at a glance"},
+   {"id": "left_clear", "text": "When my opponent left, I knew what had happened"},
+   {"id": "leave_clear", "text": "The leave question told me what would happen"}]},
  {"id": "p2.2-quick-rematch", "title": "Play again",
   "new": ["After a match, Play again starts a new one with the same friend and the same link.", "A waiting match stays open for 15 minutes, with a countdown.", "Enter joins a code; Cancel or Esc stops connecting."],
   "try": [
