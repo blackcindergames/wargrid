@@ -16,7 +16,7 @@ Two day packages deliver the core, behind one offline toggle key, so the new mov
 - P5: a big order gets every unit moving within one or two ticks (today 8 routes per tick, about 1.3 s for the last of 300 units); straight, any-angle routes; no corner clipping at vehicle width; parked units are detoured; no unit is ever stuck for good; every benchmark row stays inside its current budget with the toggle on.
 - P6: moving own and allied vehicles push and are pushed instead of overlapping, crowds settle (pressure damping), parked friends step aside; at most +0.5 ms per tick on each of the six 300-unit rows ([unit avoidance: scope](../../reference/design-answers-2026-11-08.md#unit-avoidance-scope)).
 
-## Non-goals (advanced packages, Later 2 and 4)
+## Non-goals (advanced packages, Later 3 and 4)
 
 Local mesh updates, three size classes, shared group searches or flow fields, formations and keep formation, arrival spreading and pressure tuning, crusher rules, soft spreading among infantry, the toggles becoming defaults, golden scenarios. Cut and order: [Advanced packages](#advanced-packages).
 
@@ -137,9 +137,9 @@ On top of P5, third toggle state.
 
 ## Advanced packages
 
-Cut by the user (2026-11-14), 2 to 3 days each, in Later 2 and 4 of [packages](../../packages.md), ordered after P6's playtest. Names are proposals.
+Cut by the user (2026-11-14), 2 to 3 days each, in Later 3 and 4 of [packages](../../packages.md) (Later 2 and 4 until the 2026-11-16 swap), ordered after P6's playtest. Names are proposals.
 
-Movement (Later 2, "Smoother big moves"):
+Movement (Later 3, "Smoother big moves"):
 1. Buildings that update the map: local mesh update (touched tiles plus reconnect, about 3 ms or less) with a local-against-full equality test over random placements; lands before the default flips.
 2. Infantry fits through gaps: three size classes (infantry, vehicle, large), one mesh each.
 3. Big orders in one stream: shared searches and trunks or flow fields, only if P5 measures jams or cost; dropped otherwise.

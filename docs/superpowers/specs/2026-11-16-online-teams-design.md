@@ -33,14 +33,14 @@ Planning record, not an implementation plan. It splits blueprint [§7 M9](../../
 | night 8 | Relay guards | night | between P7 and P2.3b (contents unchanged) | abuse limits; its fault proxy runs P8's scenarios |
 | night 9 | Adaptive input delay | night | between P2.3b and P8 (contents unchanged) | one agreed delay, adopted only on a measured gain |
 | P8 | Reconnect after a drop | day | after P2.3b | a dropped player or a relay restart no longer ends the match |
-| night 10 | Lighter relay frames | night | between P8 and P9 | fewer relay messages per second; fly machine sized with 1, 2 and 4 rooms |
-| night 11 | Cheaper step | night | between P8 and P9 (contents unchanged) | cheaper ticks before the 3v3 gate measures them |
+| night 10 | Lighter relay frames | night | between P8 and P9 (between P8 and P13 since the backlog review) | fewer relay messages per second; fly machine sized with 1, 2 and 4 rooms |
+| night 11 | Cheaper step | night | between P8 and P9 (contents unchanged; between P14 and P9 since the backlog review) | cheaper ticks before the 3v3 gate measures them |
 | P9 | You and two friends vs three bots | day | after P8 | 3 humans and 3 bots on Ashfall: the M9 exit gate |
 | night 12 | Bot attack test | night | between P9 and P10 | evidence only: which launch rule gets armies to buildings |
 | P10 | Keep your teammate's base | day | after P9 | a quitter's or dropped player's base goes to a teammate |
 | P11 | Friends against friends | day | after P6 | a room: join, host may change map, everyone ready, host starts; humans on both sides |
 
-Two nights sit between P8 and P9, one exception to the one-night rule (user, 2026-11-16). Earliest benefit: P7, two packages from now. Cost: P2.3b moves back one package; P5, P2.4 and P6 four; P2.5 onward five.
+Two nights sit between P8 and P9, one exception to the one-night rule (user, 2026-11-16); the backlog review the same day placed P13 More maps and P14 Desync reports there, so each night has its own gap and the exception is gone. Earliest benefit: P7, two packages from now. Cost: P2.3b moves back one package; P5, P2.4 and P6 four; P2.5 onward five.
 
 ## Dependencies
 
