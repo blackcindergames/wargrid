@@ -29,7 +29,7 @@ const SIZES: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1920, 1080), Vecto
 const STRETCHED: Array[Array] = [[Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(2576, 1145), Vector2i(1620, 720)]]
 
 func cases() -> Array[Callable]:
-	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_type_matches_mockups, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label]
+	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_type_matches_mockups, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits]
 
 func _picked(selector: OptionButton) -> String:
 	return selector.get_item_metadata(selector.selected)
@@ -932,6 +932,7 @@ func test_round4_minors(runner) -> bool:
 func test_primary_button_is_amber_with_dark_ink(runner) -> bool:
 	var theme: Theme = _launcher_theme()
 	for state: String in BUTTON_STATES:
+		if state == "focus": continue
 		var style: StyleBox = theme.get_stylebox(state, "PrimaryButton")
 		runner.check(style is StyleBoxFlat and style.bg_color.h > 0.09 and style.bg_color.h < 0.13 and style.bg_color.s > 0.3, "P1 primary %s fill is amber, got %s" % [state, style.bg_color if style is StyleBoxFlat else "no flat style"])
 	runner.check(theme.get_stylebox("normal", "PrimaryButton").bg_color == ACTION, "P1 primary normal fill is #f7c871")
@@ -1356,4 +1357,44 @@ func test_invite_label(runner) -> bool:
 		launcher.free()
 	_restore(saved)
 	runner.check(labels == ["Match code|Copy code", "Invite link|Copy link"], "L29 the label and Copy follow the page, got %s" % [labels])
+	return true
+
+const FOCUS_RING := Color("#e6e6e6")
+# hover fills as shipped before the focus ring; null means the hover style has no fill
+const HOVER_FILLS: Dictionary = {"Button": Color(0.22, 0.22, 0.22), "OptionButton": Color(0.22, 0.22, 0.22), "NavButton": Color(0.22, 0.22, 0.22), "ToggleButton": Color(0.22, 0.22, 0.22), "PrimaryButton": Color(0.98039216, 0.83137256, 0.5411765), "CheckButton": Color(0.22, 0.22, 0.22), "FooterLink": null}
+
+func test_focus_differs_from_hover(runner) -> bool:
+	var theme: Theme = _launcher_theme()
+	for type: String in HOVER_FILLS:
+		var focus: StyleBox = theme.get_stylebox("focus", type)
+		var hover: StyleBox = theme.get_stylebox("hover", type)
+		runner.check(focus is StyleBoxFlat and focus != hover, "L30 %s focus is its own style, not the hover style" % type)
+		if not focus is StyleBoxFlat: continue
+		var ring: StyleBoxFlat = focus
+		runner.check(not ring.draw_center and ring.border_color == FOCUS_RING, "L30 %s focus is an unfilled #e6e6e6 ring" % type)
+		runner.check(ring.border_width_left == 2 and ring.border_width_top == 2 and ring.border_width_right == 2 and ring.border_width_bottom == 2, "L30 %s focus ring is 2 px on every side" % type)
+		runner.check(ring.expand_margin_left == 4.0 and ring.expand_margin_top == 4.0 and ring.expand_margin_right == 4.0 and ring.expand_margin_bottom == 4.0, "L30 %s focus ring floats 4 px outside the button" % type)
+		runner.check(ring.corner_radius_top_left == 9 and ring.corner_radius_bottom_right == 9, "L30 %s focus ring radius is the button's 5 plus 4" % type)
+		var fill: Variant = HOVER_FILLS[type]
+		var unchanged: bool = not hover is StyleBoxFlat if fill == null else hover is StyleBoxFlat and hover.bg_color.is_equal_approx(fill)
+		runner.check(unchanged, "L30 %s hover style is unchanged" % type)
+	return true
+
+func test_focus_ring_fits(runner) -> bool:
+	var saved: String = AudioSettings.path
+	AudioSettings.path = scratch_for("focus-ring-fits")
+	var setup: Array = _port_with_launcher(runner, Vector2i(1280, 720), Vector2i(1280, 720))
+	_restore(saved)
+	var launcher = setup[1]
+	var view := Rect2(Vector2.ZERO, Vector2(1280, 720))
+	for page: Array in [["Play", "bot"], ["Play", "friend"], ["Join", "bot"], ["Settings", "bot"], ["Credits", "bot"], ["Waiting", "bot"]]:
+		await _settle(runner, launcher, page[0], page[1])
+		var clipped: Array[String] = []
+		for button: BaseButton in launcher.find_children("*", "BaseButton", true, false):
+			var focus: StyleBox = button.get_theme_stylebox("focus")
+			if button.is_visible_in_tree() and button.focus_mode != Control.FOCUS_NONE and focus is StyleBoxFlat and not view.encloses(button.get_global_rect().grow(focus.expand_margin_left)):
+				clipped.append(str(launcher.get_path_to(button)))
+		runner.check(clipped.is_empty(), "L30 every focus ring on %s (%s) stays inside the 1280x720 window, clipped: %s" % [page[0], page[1], clipped])
+	setup[1].free()
+	setup[0].free()
 	return true
