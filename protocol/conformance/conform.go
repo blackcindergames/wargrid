@@ -757,8 +757,151 @@ func delayCases() []tcase {
 	}}}
 }
 
+// Mirrors of the relay's limits.go constants and its default hello deadline (the limit profiles run on a default relay).
+const (
+	maxConnsPerIP = 16
+	globalBurst   = 20
+	relayHello    = 5 * time.Second
+
+	tooManyConns = `{"type":"error","reason":"too many connections"}`
+	tooManyJoins = `{"type":"error","reason":"too many joins"}`
+	relayBusy    = `{"type":"error","reason":"relay busy"}`
+	unknownMatch = `{"type":"error","reason":"unknown match"}`
+)
+
+func isWelcome(s string) bool { return strings.HasPrefix(s, `{"type":"welcome"`) }
+
+func addr(last int) string { return fmt.Sprintf("203.0.113.%d", last) }
+
+// createFrom opens a socket from ip and creates a room; it returns the socket and the first reply.
+func createFrom(url, ip string) (*client, string) {
+	cl := must(dialFrom(url, ip))
+	check(cl.say(hello("", "abc", 2)) == nil, "send")
+	return cl, must(cl.hear(wait))
+}
+
+// welcomeAfterFree retries a create from ip for up to d: the refused attempt counts until its own server-side close.
+func welcomeAfterFree(url, ip string, d time.Duration) *client {
+	end := time.Now().Add(d)
+	for {
+		cl, got := createFrom(url, ip)
+		if isWelcome(got) {
+			return cl
+		}
+		check(got == tooManyConns, "want welcome or %q, got %q", tooManyConns, got)
+		expectClosed(cl)
+		check(time.Now().Before(end), "no welcome within %v after a socket was closed", d)
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// openUntilRefused dials from ip, each probe waiting 150 ms for a refusal, and returns the open sockets.
+func openUntilRefused(url, ip string) []*client {
+	var open []*client
+	for len(open) <= maxConnsPerIP {
+		cl := must(dialFrom(url, ip))
+		got, err := cl.hear(150 * time.Millisecond)
+		if err == nil {
+			check(got == tooManyConns, "want %q, got %q", tooManyConns, got)
+			expectClosed(cl)
+			return open
+		}
+		check(err != errClosed, "probe closed without a reply")
+		open = append(open, cl)
+	}
+	return open
+}
+
+func limitsCases() []tcase {
+	return []tcase{
+		{"limits_conn_cap", func(url string) {
+			time.Sleep(time.Second)
+			const ip = "203.0.113.1"
+			var held []*client
+			defer func() { closeAll(held) }()
+			first := time.Now()
+			for range maxConnsPerIP {
+				held = append(held, must(dialFrom(url, ip)))
+			}
+			lastOpen := time.Now()
+			extra := must(dialFrom(url, ip))
+			expect(extra, tooManyConns)
+			expectClosed(extra)
+			other, got := createFrom(url, addr(2))
+			defer other.close()
+			check(isWelcome(got), "other address: want welcome, got %q", got)
+			held[0].close()
+			held = append(held, welcomeAfterFree(url, ip, time.Second))
+			check(time.Since(first) < 3*time.Second, "welcome after %v, the held sockets would already be timing out", time.Since(first))
+			time.Sleep(time.Until(lastOpen.Add(relayHello + 500*time.Millisecond)))
+			probes := openUntilRefused(url, ip)
+			defer func() { closeAll(probes) }()
+			check(len(probes) == maxConnsPerIP-1, "%d sockets open after the hello deadline, want %d", len(probes), maxConnsPerIP-1)
+		}},
+		{"limits_join_rate", func(url string) {
+			time.Sleep(time.Second)
+			for i := range 10 {
+				cl, got := createFrom(url, addr(3))
+				check(isWelcome(got), "hello %d: want welcome, got %q", i+1, got)
+				cl.close()
+			}
+			cl, got := createFrom(url, addr(3))
+			defer cl.close()
+			check(got == tooManyJoins, "hello 11: want %q, got %q", tooManyJoins, got)
+			expectClosed(cl)
+			other, got := createFrom(url, addr(4))
+			defer other.close()
+			check(isWelcome(got), "other address: want welcome, got %q", got)
+		}},
+		{"limits_unknown_match", func(url string) {
+			time.Sleep(time.Second)
+			var drawn []*client
+			defer func() { closeAll(drawn) }()
+			for i := 10; i <= 19; i++ {
+				cl := must(dialFrom(url, addr(i)))
+				drawn = append(drawn, cl)
+				check(cl.say(hello("ZZZZZZ", "abc", 2)) == nil, "send")
+				expect(cl, unknownMatch)
+			}
+			cl := must(dialFrom(url, addr(20)))
+			defer cl.close()
+			check(cl.say(hello("ZZZZZZ", "abc", 2)) == nil, "send")
+			expectClosed(cl)
+			creator, got := createFrom(url, addr(21))
+			defer creator.close()
+			code := codeOf(got)
+			check(code != "", "bad welcome %q", got)
+			friend := must(dialFrom(url, addr(22)))
+			defer friend.close()
+			check(friend.say(hello(code, "abc", 2)) == nil, "send")
+			expect(friend, fmt.Sprintf(`{"type":"welcome","seat":2,"match":"%s"}`, code))
+			expectStart(friend, 2, "{}")
+		}},
+	}
+}
+
+func globalCases() []tcase {
+	return []tcase{{"limits_global_join", func(url string) {
+		var cls []*client
+		defer func() { closeAll(cls) }()
+		welcomed, busy := 0, false
+		for ; welcomed < globalBurst+20 && !busy; welcomed++ {
+			cl, got := createFrom(url, addr(100+welcomed))
+			cls = append(cls, cl)
+			busy = got == relayBusy
+			check(busy || isWelcome(got), "hello %d: want welcome or %q, got %q", welcomed+1, relayBusy, got)
+		}
+		welcomed-- // the refused hello is not a welcome
+		check(busy && welcomed >= globalBurst, "relay busy after %d welcomes (busy seen: %v), want at least %d", welcomed, busy, globalBurst)
+		time.Sleep(200 * time.Millisecond)
+		cl, got := createFrom(url, addr(250))
+		cls = append(cls, cl)
+		check(isWelcome(got), "hello after the refill: want welcome, got %q", got)
+	}}}
+}
+
 func runConform(url, profile string) int {
-	cases := map[string][]tcase{"default": defaultCases(), "silence": silenceCases(), "delay": delayCases()}[profile]
+	cases := map[string][]tcase{"default": defaultCases(), "silence": silenceCases(), "delay": delayCases(), "limits": limitsCases(), "global": globalCases()}[profile]
 	if len(cases) == 0 {
 		fmt.Println("unknown profile", profile)
 		return 2

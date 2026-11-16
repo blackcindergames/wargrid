@@ -12,7 +12,7 @@ trap cleanup EXIT HUP INT TERM
 (cd "$repo_root/protocol/conformance" && go build -o "$out/conformance" .) || { echo "CONFORMANCE FAILED: suite build"; exit 1; }
 
 total=0
-for p in default: delay:WARGRID_TEST_DELAY_MS=250 silence:WARGRID_SILENCE_MS=300,WARGRID_HELLO_MS=300,WARGRID_LOBBY_MS=1500; do
+for p in default: delay:WARGRID_TEST_DELAY_MS=250 silence:WARGRID_SILENCE_MS=300,WARGRID_HELLO_MS=300,WARGRID_LOBBY_MS=1500 limits:WARGRID_CLIENT_IP_HEADER=X-Wargrid-Test-Ip global:WARGRID_CLIENT_IP_HEADER=X-Wargrid-Test-Ip; do
   profile=${p%%:*}; envset=$(echo "${p#*:}" | tr , ' ')
   port=$(${PYTHON:-python3} -c 'import socket;s=socket.socket();s.bind(("",0));print(s.getsockname()[1])')
   # shellcheck disable=SC2086
