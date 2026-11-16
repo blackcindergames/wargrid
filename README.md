@@ -48,7 +48,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**12 of 35 parts done**
+**12 of 36 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -64,7 +64,8 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | You clicked, we heard | Done |
 | ✅ | New launcher | Done |
 | ✅ | Quick rematch | Done |
-| ⏭ | See your selection | Next |
+| ⏭ | Notes that never block | Next |
+| 📋 | See your selection | Planned |
 | 📋 | Team up against bots | Planned |
 | 📋 | Build from the dock | Planned |
 | 📋 | Reconnect after a drop | Planned |
