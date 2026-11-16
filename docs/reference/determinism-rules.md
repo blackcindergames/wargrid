@@ -30,6 +30,9 @@ Status labels: rules in "Rules" are **in force** (those marked *enforced* are ch
 - No implicit FMA. C++: `-ffp-contract=off` (or `-ffp-model=strict`) on every target, never fast-math. Rust: default is strict, never call `mul_add` (inferred from RFC 3514; not tested in codegen).
 - No library randomness inside a kernel: no C++ `<random>` distributions or `std::shuffle`, no Rust `rand` crate; only the port of `next_random()`. Standard library distributions differ between MSVC, libstdc++ and libc++; Worlds Upon The Wind replaced them with portable versions for that reason (`~/projects/wutw-public` @ `95704c1`, `wutw-gdext/src/utils.h:19-28`) (user, 2026-11-14).
 - No relaxed SIMD ("The relaxed SIMD instructions have nondeterministic results", WebAssembly `Nondeterminism.md`), never hash NaN bits, no libm trig. Quotes in sim core options §1B "Determinism, Rust against C++".
+- Break heap ties with a total key (node index or a push sequence number): libc++ and MSVC pop equal elements differently, which split Hypersomnia's bot paths between Windows and Linux (user, 2026-11-16, Hypersomnia review (private)).
+- No epsilon comparator in a sort: "equal within eps" is not transitive, so the result depends on the algorithm (user, 2026-11-16, Hypersomnia review (private)).
+- No side effects in function arguments: compilers evaluate them in different orders (clang-cl right to left) (user, 2026-11-16, Hypersomnia review (private)).
 
 ## Checks
 

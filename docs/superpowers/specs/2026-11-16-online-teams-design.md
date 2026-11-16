@@ -106,4 +106,4 @@ Every package: suite, lint and warnings; `sh tools/run_benchmark.sh` row; traces
 - A bot taking over a dropped player's base: not chosen (no engine studied does it; private bot research note).
 - A hidden server seat that runs the bots, for a much stronger bot later: the user's idea (2026-11-16), to evaluate at M8 planning; costs a simulation per room on the server.
 - Lobby backend for P11: option B stays the direction (user, 2026-11-09); P11's design compares it with the relay-only option A.
-- Open in package designs: the P7 Play page A/B (1v1 and 2v2, friend as teammate or opponent), the version-message A/B, the 60 s grace against measured reconnect times, the P11 A/B, the review proposals above.
+- Open in package designs: the P7 Play page A/B (1v1 and 2v2, friend as teammate or opponent), the version-message A/B, the 60 s grace against measured reconnect times (and as a per-seat, per-match total with at most two drops; user, 2026-11-16, Hypersomnia review (private)), the P11 A/B, the review proposals above; for P8's spec (user, 2026-11-16, Zero-K review (private)): an inactivity "claim win" button as an alternative to the 60 s auto-end.

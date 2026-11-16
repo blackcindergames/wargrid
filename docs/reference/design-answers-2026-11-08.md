@@ -30,6 +30,13 @@ Follow-up answers (user, 2026-11-09; questions and sources in the overnight `que
 - A supply pile in the fog shows its last-seen amount (frozen picture as for fogged immobile objects, PartitionManager.cpp:1665-1684; inferred for piles).
 - Firing does not reveal a fogged shooter (no such rule found; only superweapons reveal to all, Object.cpp:5005-5014).
 
+Inputs from the OpenRA review (user, 2026-11-16, OpenRA review (private)), for the fog package's design:
+- **Edge-update scheme for the fog map** (user, 2026-11-16), later: update only the cells a viewer's circle gains or loses, not the whole map each tick.
+- **Ghosts of fogged buildings inside the fog package** (user, 2026-11-16), later: not a separate step.
+- **Open question: the trail of a moving unit** (user, 2026-11-16): what stays shown where a unit just left; the 5 s linger above is already decided.
+- **Dev commands as orders** (user, 2026-11-16), with fog: reveal-map and similar go through the command stream, not around it.
+- **Bot reaction delay** (user, 2026-11-16): a bot level lever once fog exists; see the [Hypersomnia review](#hypersomnia-review-user-2026-11-16) section below.
+
 ## HUD (M7.6)
 
 Zero Hour defaults.
@@ -917,3 +924,34 @@ Agent's calls, not asked:
 - Match length uses `Engine.physics_ticks_per_second`; the row label is "P<n> <faction name>".
 - Keyboard pickers send focus to Start or Join after each selection; the playtest checks that this is acceptable.
 - The match-slab look of the 2026-11-15 result-panel A/B (square card, winner-colour edge, dimmed world) waits for P2.3a's shared theme variations.
+
+## OpenRCT2 review (user, 2026-11-16)
+
+Source: OpenRCT2 review (private). Items that went into package rows and findings are noted there; these wait.
+
+- **One validation result with an error code, shared by preview and execute** (user, 2026-11-16), later, beside the deferred "can I, and why not" simulation query (Round 2): today `sound_director.gd` matches the string "Insufficient credits", and `construction.gd` and `simulation.gd` produce it.
+- **Deterministic per-seat command cap per tick** (user, 2026-11-16), later, M9 hardening: `lockstep.gd` applies every command; low value for friends-only, and it needs a protocol decision on what to reject.
+- **Debug commands gated by a flag in the hashed start settings** (user, 2026-11-16), later, on demand: only when a playtest card needs big armies (the 210-unit row, P6).
+
+## Zero-K review (user, 2026-11-16)
+
+Source: Zero-K review (private). Items that went into package rows, the online teams spec and the session notes (private) are noted there; these wait.
+
+- **Keyed modifier table for derived stats** (user, 2026-11-16), later, design input to ground batch A1 (veterancy and hazard fields): build it when the second multiplier source arrives, not before. The review's bot handicap idea is dropped: bots play fair and levels cut competence only.
+- **Retreat stance that keeps the order queue** (user, 2026-11-16), later, M8 bots input beside the blueprint's retreat with hysteresis: a stance flag plus the saved order, so a retreating unit resumes its queue.
+- **Per-match definition overlay** (user, 2026-11-16), later, M9 multiplayer balance revisit: it needs handshake and digest changes, so not before P7 to P9.
+
+## OpenRA review (user, 2026-11-16)
+
+Source: OpenRA review (private). Items that went into package rows, findings and the fog section above are noted there; these wait.
+
+- **Hotkey contexts for the key-rebinding package** (user, 2026-11-16), later: A and S have two meanings (attack-move and stop against the P2.3b grid), a real overlap; the package defines contexts. See the key-rebinding item in the [second pass](#visual-and-ux-proposal-second-pass-user-2026-11-15).
+- **Prerequisite list with `provides`** (user, 2026-11-16), later, design input to ground batch A1 (building prerequisites): `construction.gd:75` holds one prerequisite per building. Travelling shots (artillery flight time and minimum range) are already in A1.
+- **Balance sheet generated from the registry** (user, 2026-11-16), later: before the M9 balance revisit.
+
+## Hypersomnia review (user, 2026-11-16)
+
+Source: Hypersomnia review (private). Items that went into package rows, findings, the blueprint and the determinism rules are noted there; these wait.
+
+- **Bot reaction delay as a level lever** (user, 2026-11-16), later, M8.1 bot levels input: the delay between seeing a threat and reacting cuts competence, as the other level levers do; it only means something once fog exists, because today's bot reads the whole state.
+- **Keyed randomness dropped** (user, 2026-11-16): the draw stays one global stream. Revisit only if a "Cheaper step" experiment fails its digests because of draw order.
