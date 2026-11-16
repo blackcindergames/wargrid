@@ -26,7 +26,10 @@ func testRoom(t *testing.T, seats int) (*room, []*frames) {
 	t.Helper()
 	cfg := testConfig()
 	cfg.seats = seats
-	r := &room{code: "TEST", cfg: cfg, reg: newRegistry(cfg), seats: map[int]*seat{}, stats: map[int]string{}, started: true}
+	r := &room{
+		code: "TEST", cfg: cfg, reg: newRegistry(cfg), seats: map[int]*seat{}, stats: map[int]string{}, started: true,
+		hashes: map[int]map[int]string{}, peaks: map[int][2]int{},
+	}
 	fs := make([]*frames, seats)
 	for i := range fs {
 		fs[i] = &frames{}
@@ -41,7 +44,7 @@ func testRoom(t *testing.T, seats int) (*room, []*frames) {
 func feed(r *room, n, from, to int) {
 	s := r.seats[n]
 	for i := from; i <= to; i++ {
-		r.forward(tickMsg{s, n, i, tickData(n, i)})
+		r.forward(&tickMsg{s, n, i, tickData(n, i), hashMsg{}})
 	}
 }
 
@@ -103,7 +106,7 @@ func TestLeadBoundFollowsOtherSeats(t *testing.T) {
 func TestLeadBoundDeadAndSingleSeat(t *testing.T) {
 	r, f := testRoom(t, 2)
 	feed(r, 2, 4, 4)
-	r.forward(tickMsg{r.seats[2], 1, 5, tickData(1, 5)})
+	r.forward(&tickMsg{r.seats[2], 1, 5, tickData(1, 5), hashMsg{}})
 	if !r.seats[2].dead {
 		t.Fatal("seat 2 should be dead and still seated")
 	}
@@ -141,14 +144,14 @@ func TestLeadBoundAcrossOverAndRematch(t *testing.T) {
 	r.post(firstTick(a))
 	r.post(firstTick(b))
 	for i := 5; i <= 6; i++ {
-		r.post(tickMsg{a.seat, 1, i, tickData(1, i)})
+		r.post(tickMsg{a.seat, 1, i, tickData(1, i), hashMsg{}})
 	}
 	r.post(overMsg{a.seat})
 	for i := 5; i <= 11; i++ {
-		r.post(tickMsg{b.seat, 2, i, tickData(2, i)})
+		r.post(tickMsg{b.seat, 2, i, tickData(2, i), hashMsg{}})
 	}
 	eventually(t, "seat 2's ticks up to 6 + 4 + 1 not all forwarded", func() bool { return fa.count(`"type":"tick"`) == 8 })
-	r.post(tickMsg{b.seat, 2, 12, tickData(2, 12)})
+	r.post(tickMsg{b.seat, 2, 12, tickData(2, 12), hashMsg{}})
 	eventually(t, "tick 12 beyond seat 1's frozen tick 6 not rejected", func() bool { return fb.has(tooFar) })
 	if fa.count(`"type":"tick"`) != 8 {
 		t.Fatal("tick 12 was forwarded")
@@ -165,7 +168,7 @@ func TestLeadBoundAcrossOverAndRematch(t *testing.T) {
 	r.post(againMsg{b.seat})
 	eventually(t, "no second start", func() bool { return fa.count(`"type":"start"`) == 2 && fb.count(`"type":"start"`) == 2 })
 	for i := 4; i <= 9; i++ {
-		r.post(tickMsg{a.seat, 1, i, tickData(1, i)})
+		r.post(tickMsg{a.seat, 1, i, tickData(1, i), hashMsg{}})
 	}
 	eventually(t, "tick 9 of match 2 not rejected", func() bool { return fa.has(tooFar) })
 	wantTicks(t, "match 1 tick 4 plus match 2 ticks 4..8", fb, 1+5)

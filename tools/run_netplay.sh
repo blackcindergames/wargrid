@@ -90,6 +90,7 @@ case $scenario in
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
     [ "$(end_tick s1)" = 9013 ] || fail "terminal tick $(end_tick s1), pinned 9013"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
+    [ -n "$remote" ] || ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     echo "match terminal tick $(end_tick s1)" ;;
   rematch)
     start_relay; start_pair "--rematch" "--rematch"
@@ -114,6 +115,7 @@ case $scenario in
       sleep 0.2
     done
     [ "$(grep -c 'MATCH END' "$out/relay.log")" = 1 ] || fail "expected one MATCH END"
+    ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     echo "rematch terminal tick $(end_tick s1)" ;;
   kill)
@@ -126,6 +128,7 @@ case $scenario in
     wait_exit "$pid1" 60; wait_exit "$pid2" 60
     expect_end s1 ended_left; expect_end s2 stopped
     grep -q '^NETCLIENT VICTORY left$' "$out/s1.log" || fail "s1: no VICTORY left"
+    ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     [ "$(end_tick s1)" -ge 600 ] || fail "seat 1 ended before tick 600" ;;
   stall)
     start_relay; start_pair "" "--stall-at-tick 300 --stall-seconds 3"
@@ -163,6 +166,7 @@ PY
     case "$diff_out" in *players*) ;; *) fail "desync_diff did not name players: $diff_out" ;; esac
     case "$diff_out" in *"ring diverges at tick 41"*) ;; *) fail "desync_diff did not name ring tick 41: $diff_out" ;; esac
     echo "$diff_out"
+    grep -q ' DESYNC .*tick=60 ' "$out/relay.log" || fail "relay logged no DESYNC at tick 60"
     bisect_out=$(${PYTHON:-python3} "$repo_root/tools/desync_bisect.py" "$out/desync-seat1.json" "$out/desync-seat2.json" --out "$out/bisect")
     [ $? -eq 1 ] || fail "desync_bisect should exit 1: $bisect_out"
     for line in "RINGS DIVERGE AT TICK 41" "SEAT 1 MATCHES LOCAL REPLAY" "SEAT 2 DIVERGES FROM LOCAL REPLAY AT TICK 41"; do

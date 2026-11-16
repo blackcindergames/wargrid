@@ -170,7 +170,7 @@ func (h *relay) OnMessage(s *gws.Conn, msg *gws.Message) {
 		c.seat = res.seat
 		c.room = res.seat.r
 	case "tick":
-		c.room.post(tickMsg{c.seat, e.seat, e.tick, bytes.Clone(msg.Bytes())})
+		c.room.post(tickMsg{s: c.seat, seat: e.seat, tick: e.tick, data: bytes.Clone(msg.Bytes()), hash: e.hash})
 	case "over":
 		c.room.post(overMsg{c.seat})
 	case "again":
