@@ -55,6 +55,7 @@ var _auto_frame: int = 0
 var _auto_tick_usec: int = 0
 var _visuals := VisualDirector.new()
 var _playtest: PlaytestOverlay
+var _leaving: bool = false
 
 func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: String = Skirmish.default_faction()) -> void:
 	driver = OnlineDriver.new(transport, lockstep, faction, seat)
@@ -87,6 +88,7 @@ func _ready() -> void:
 	_pause.destinations_changed.connect(_view.set_show_destinations)
 	$HUD.add_child(_pause)
 	_result_panel.yields_to = _pause
+	_result_panel.yields_when = func() -> bool: return _playtest.holds_match() or _typing()
 	_view.set_quality(GraphicsSettings.stored_quality())
 	_view.set_bright_owners(GraphicsSettings.load_neon())
 	_view.set_smooth(GraphicsSettings.load_smooth())
@@ -162,7 +164,10 @@ func _escape_pending() -> bool:
 	return not shown_over() and orders.escape_pending()
 
 func _leave() -> void:
+	if _leaving: return
+	_leaving = true
 	driver.leave()
+	get_viewport().gui_release_focus()
 	if _playtest.end_match():
 		_pause.close()
 		await _playtest.finished

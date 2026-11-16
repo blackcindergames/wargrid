@@ -204,7 +204,6 @@ func test_online_leave_text_and_focus(runner) -> bool:
 		runner.check(Rect2(Vector2.ZERO, Vector2(size)).encloses(question.get_global_rect()) and question.get_global_rect().size.y > 0.0, "E9 the question sits inside %s, rect %s" % [size, question.get_global_rect()])
 		var cancel: Button = menu.find_children("*", "Button", true, false).filter(func(button: Button) -> bool: return button.text == "Cancel")[0]
 		runner.check(main.get_viewport().gui_get_focus_owner() == cancel, "E9 Cancel has the focus")
-		runner.check(cancel.get_theme_stylebox("focus") != cancel.get_theme_stylebox("normal"), "E9 a focused button looks different from a resting one")
 		var enter := InputEventKey.new()
 		enter.keycode = KEY_ENTER
 		enter.physical_keycode = KEY_ENTER

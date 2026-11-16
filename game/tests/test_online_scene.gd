@@ -39,7 +39,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -1031,6 +1031,72 @@ func test_opponent_left_mid_match(runner) -> bool:
 	runner.check(main.get_node("HUD/Status").text.contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
 	var status: Label = main.get_node("HUD/Status")
 	runner.check(main.get_node("HUD/Economy").position.y >= status.position.y + status.get_minimum_size().y, "N29 buttons sit below every status line")
+	main.free()
+	return true
+
+const BACK_TO_MENU: String = "HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"
+
+func _opponent_leaves(online: Dictionary) -> void:
+	_peer_packets(online.transport, 2, 4, 40)
+	online.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
+	_run(online.main, 80)
+
+func _focus_owner(main) -> Control:
+	return main.get_viewport().gui_get_focus_owner()
+
+func test_leave_panel_focus_after_pause(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	main.set_process(true)
+	main._pause.open()
+	_opponent_leaves(online)
+	var menu_focus: Control = _focus_owner(main)
+	runner.check(main.get_node("HUD/ResultPanel").visible and menu_focus != null and main._pause.is_ancestor_of(menu_focus), "N30 fixture: the panel is up and the pause menu holds the focus")
+	main._pause.close()
+	_run(main, 3)
+	runner.check(_focus_owner(main) == main.get_node(BACK_TO_MENU), "N30 closing the pause menu hands the focus to Back to menu, got %s" % _focus_owner(main))
+	main._pause.open()
+	main._pause.close()
+	_run(main, 3)
+	runner.check(_focus_owner(main) == main.get_node(BACK_TO_MENU), "N30 opening and closing the pause menu with Back to menu focused returns the focus, got %s" % _focus_owner(main))
+	main.free()
+	return true
+
+func test_leave_panel_yields_focus(runner) -> bool:
+	var form: Dictionary = await _online(runner, 1)
+	form.main.set_process(true)
+	form.main._playtest._form.show()
+	_opponent_leaves(form)
+	runner.check(form.main.get_node("HUD/ResultPanel").visible and _focus_owner(form.main) != form.main.get_node(BACK_TO_MENU), "N31 the panel leaves the focus alone while the playtest form is open, got %s" % _focus_owner(form.main))
+	form.main.free()
+	var typing: Dictionary = await _online(runner, 1)
+	typing.main.set_process(true)
+	var note := LineEdit.new()
+	typing.main.get_node("HUD").add_child(note)
+	note.grab_focus()
+	_opponent_leaves(typing)
+	runner.check(typing.main.get_node("HUD/ResultPanel").visible and _focus_owner(typing.main) == note, "N31 the panel leaves a focused text field alone, got %s" % _focus_owner(typing.main))
+	typing.main.free()
+	return true
+
+func test_back_to_menu_once(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	var scenes: Array[String] = []
+	main.change_scene = func(path: String) -> void: scenes.append(path)
+	main._playtest.set_active(false)
+	_opponent_leaves(online)
+	var closed_by_the_leave: int = online.transport.close_calls
+	runner.check(_focus_owner(main) == main.get_node(BACK_TO_MENU), "N32 fixture: Back to menu has the focus")
+	for pressed: bool in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = KEY_ENTER
+		event.physical_keycode = KEY_ENTER
+		event.pressed = pressed
+		main.get_viewport().push_input(event)
+	runner.check(scenes.size() == 1 and _focus_owner(main) != main.get_node(BACK_TO_MENU), "N32 leaving releases the focus from Back to menu, scenes %d" % scenes.size())
+	main.get_node("HUD/ResultPanel").change_setup_pressed.emit()
+	runner.check(online.transport.close_calls == closed_by_the_leave + 1 and scenes.size() == 1, "N32 a second Enter on Back to menu leaves once, closes %d after %d, scenes %d" % [online.transport.close_calls, closed_by_the_leave, scenes.size()])
 	main.free()
 	return true
 

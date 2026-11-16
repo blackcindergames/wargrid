@@ -4,7 +4,12 @@ signal play_again_pressed
 signal change_setup_pressed
 
 # Set by the match screen: the pause menu keeps the focus while it is open.
-var yields_to: Control
+var yields_to: Control:
+	set(value):
+		yields_to = value
+		value.visibility_changed.connect(_menu_toggled)
+# Set by the match screen: the playtest form and text fields keep the focus too.
+var yields_when: Callable
 var _outcome: Label
 var _status: Label
 var _length: Label
@@ -116,9 +121,17 @@ func _take_focus(wanted: bool) -> void:
 	if wanted and not _wants_focus: _grab_pending = true
 	if not wanted: _grab_pending = false
 	_wants_focus = wanted
-	if _grab_pending and (yields_to == null or not yields_to.visible):
-		_change_setup.grab_focus()
-		_grab_pending = false
+	_try_grab()
+
+# Opening the menu takes the focus and closing it hides the focused button, so grab again on close.
+func _menu_toggled() -> void:
+	if yields_to.visible and _wants_focus: _grab_pending = true
+	_try_grab()
+
+func _try_grab() -> void:
+	if not _grab_pending or (yields_to != null and yields_to.visible) or (yields_when.is_valid() and yields_when.call()): return
+	_change_setup.grab_focus()
+	_grab_pending = false
 
 func _rebuild_table() -> void:
 	for cell in _table.get_children(): cell.free()
