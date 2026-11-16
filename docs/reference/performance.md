@@ -7,31 +7,31 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 213% | 🔺 1% worse | 2026-11-16 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 164% | 🔺 2% worse | 2026-11-16 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 144% | ➖ same | 2026-11-16 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | ➖ same | 2026-11-16 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 211% | 🔻 1% better | 2026-11-17 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | 🔻 2% better | 2026-11-17 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | 🔻 2% better | 2026-11-17 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 73% | ➖ same | 2026-11-17 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 70% | 🔺 2% worse (busy host) | 2026-11-16 |
 | Drawing the screen | 🟢 OK | ██████░░░░ 67% | 🔻 5% better (busy host) | 2026-11-16 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-16 |
-| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 1% better | 2026-11-16 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 1% better | 2026-11-16 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-16 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 2% worse | 2026-11-17 |
+| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 1% better | 2026-11-17 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 1% worse | 2026-11-17 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-17 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 41% of budget (auto f5640fb, 2026-11-16), 1% faster than Sim boundary SB3 (worst vs worst); run-to-run spread up to 50%
-- movement p99: 24% of budget (auto f5640fb, 2026-11-16), 1% faster than Sim boundary SB3 (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 73% of budget (auto f5640fb, 2026-11-16), unchanged vs Sim boundary SB3 (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (auto f5640fb, 2026-11-16), 1% faster than Sim boundary SB3 (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 164% of budget, exceeded (auto f5640fb, 2026-11-16), 2% slower than Sim boundary SB3 (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 144% of budget, exceeded (auto f5640fb, 2026-11-16), unchanged vs Sim boundary SB3 (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 213% of budget, exceeded (auto f5640fb, 2026-11-16), 1% slower than Sim boundary SB3 (worst vs worst); run-to-run spread not measured
+- movement p95: 41% of budget (Relay guards, 2026-11-17), 1% faster than auto f5640fb (worst vs worst); run-to-run spread up to 50%
+- movement p99: 24% of budget (Relay guards, 2026-11-17), 1% slower than auto f5640fb (worst vs worst); run-to-run spread up to 50%
+- combat gated p95: 73% of budget (Relay guards, 2026-11-17), unchanged vs auto f5640fb (worst vs worst); run-to-run spread up to 58%
+- combat gated p99: 59% of budget (Relay guards, 2026-11-17), 2% slower than auto f5640fb (worst vs worst); run-to-run spread up to 58%
+- combat stress p95: 160% of budget, exceeded (Relay guards, 2026-11-17), 2% faster than auto f5640fb (worst vs worst); run-to-run spread up to 41%
+- plumbing, movement layouts: 142% of budget, exceeded (Relay guards, 2026-11-17), 2% faster than auto f5640fb (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 211% of budget, exceeded (Relay guards, 2026-11-17), 1% faster than auto f5640fb (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 67% of budget (Sim boundary SB3, 2026-11-16), 5% faster than P2.2 Quick rematch slice 2 (merge) (worst vs worst); run-to-run spread not measured, busy host (load 2.7)
 - Ashfall tick-frame p95: 70% of budget (Sim boundary SB3, 2026-11-16), 2% slower than P2.2 Quick rematch slice 2 (merge) (worst vs worst); run-to-run spread not measured, busy host (load 2.7)
-- lockstep p99: 11% of budget (auto f5640fb, 2026-11-16), 3% faster than Sim boundary SB3 (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (Relay guards, 2026-11-17), unchanged vs auto f5640fb (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
@@ -139,6 +139,7 @@ All rows: this Mac, Godot 4.7.2, Compatibility renderer, 64×64 map, 300 units, 
 | 2026-11-14/15 night Flatter worst ticks gate, headless (branch `flatter-worst-ticks` head `b88dc0f` plus the uncommitted docs diff; Apple M6; `PERF_LABEL="Flatter worst ticks" sh tools/run_benchmark.sh` alone, `uptime` load 1.35 / 1.66 / 1.77 at start, 1.19 / 1.59 / 1.73 at end; log `~/projects/wargrid-overnight-work/flatter-worst-ticks/logs/t8-bench.log`; **measured**) | worst ticks before (base `4c21d1a`, Task 0) -> after | exit 0: `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, `recorded 13 rows, run 1`; only the accepted `BUDGET EXCEEDED open dense hordes300 (regression ceilings held)` line. Team match (profile, single runs): `step` max 10.640 -> 5.184, `opponent.decide` max 7.749 -> 2.267, `step.service_paths` max 9.512 -> 3.399 ms. hordes300: `step.combat_fire` max 5.594 -> 1.527 ms, benchmark `WORST TICK` 7.605 -> 3.962 ms (tick 1219). Movement `WORST TICK` open 3.535 -> 3.444, dense 3.675 -> 3.482; `queue_drain_ticks` 38 / 38 -> 60 / 60 (budget 384 route cells per tick, user 2026-11-14; ceiling 76). Contact 3.625 -> 3.582. Spread over five runs and proposed ceilings: Count gates paragraph below | [Flatter worst ticks verification](flatter-worst-ticks-verification.md) |
 | 2026-11-15 Steam Deck native headless, Flatter worst ticks (before: base `4c21d1a`; Godot 4.7.2 Linux editor build checked against the CI SHA-256; `run_profile.gd` and `run_combat.gd` x3, one `systemd-run --user` unit under `systemd-inhibit`, ACAD 1, load 0.03-1.26; report-only) | hand-off sum per tick, median of 3 [range]; combat p95 / p99 per layout | before: movement open 4.731 [4.718-4.741], dense 4.667; team match 4.510; large_196 6.088; hordes300 6.366 [6.282-6.372]; combat p95 / p99 open 6.760 / 7.756, dense 6.674 / 7.561, contact 4.075 / 5.385, skirmish3v3 4.684 / 5.006, hordes300 10.632 / 12.357. after (branch head `b88dc0f`, same method, 3/3): movement open 4.718 [4.709-4.756], dense 4.670; team match 4.525; large_196 6.039; hordes300 6.368 [6.313-7.221]; combat p95 / p99 open 6.803 / 7.881, dense 6.634 / 7.642, contact 4.034 / 5.283, skirmish3v3 4.656 / 5.018, hordes300 10.714 / 12.405 (max 14.401 against 26.754); team match `step` max 18.4 against 31.6-32.0 | report-only; means equal within noise, worst ticks cut | [verification](flatter-worst-ticks-verification.md#deck-rows-tasks-d0-and-d7-report-only) |
 | 2026-11-15 Steam Deck Firefox 160 (flatpak), `Web Bench` single-threaded export, Flatter worst ticks (before: base `4c21d1a`; `hordes300` added in the scratch copy only; `crossOriginIsolated` 1; fresh profile; before 3 of 3 (rerun 2026-11-15, web only, same base export; the first job stopped after run 1 on a check that grepped `true` where the bench prints `1`), after 3 of 3; window on the Deck approved by the user; 160 replaces the 159 of the row above) | sim tick p50 / p95 / p99 (ms) against 10 / 20 ms on target | before (n=3 medians): team match (to tick 39497) 7.24 / 12.44 / 41.48, max 71.46; combat open 6.46 / 9.60 / 10.88, dense 5.24 / 9.44 / 10.86, hordes300 10.52 / 14.92 / 17.66. after (branch head `b88dc0f`, 3 of 3 runs, team match to tick 38786 after the re-pin): team match 7.74 / 15.20 / 19.94, max 32.5; combat open 6.68 / 9.78 / 11.30, dense 5.44 / 9.54 / 10.98, hordes300 10.54 / 15.06 / 17.52 | report-only; combat equal within noise, team match is a different length | [verification](flatter-worst-ticks-verification.md#deck-rows-tasks-d0-and-d7-report-only) |
+| 2026-11-17 night Relay guards gate, headless (branch `relay-guards` head `bcb7db6` plus the uncommitted docs diff; Apple M6; `PERF_LABEL="Relay guards" sh tools/run_benchmark.sh` alone after all other gates, `pgrep` for godot/generalszh empty; `uptime` load 1.93 / 2.26 / 2.14 at start (00:13), 2.41 / 2.25 / 2.15 at end (00:16), below 2.5 so not tagged; log `~/projects/wargrid-overnight-work/relay-guards/logs/t8-bench.log`; **measured**) | p95 / p99 ms | exit 0: `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, `recorded 23 rows, run 1`; only the accepted `BUDGET EXCEEDED open dense hordes300 (regression ceilings held)` line. Movement open 0.748 / 0.828, dense 0.732 / 0.886. Combat open 1.888 / 2.229, dense 1.825 / 2.171, hordes300 2.906 / 3.385 (the three over their budget, ceilings held); contact 1.197 / 1.561, skirmish3v3 1.341 / 1.449, transports 1.123 / 1.231, defences 0.775 / 2.159, docks 0.586 / 0.606, ramp 0.660 / 1.197, frc 0.887 / 1.073 (all pass). Lockstep overhead p99 0.067 ms (limit 0.6): the `submit` change adds a per-command encode for the size check and shows no cost at this resolution. No simulation, presentation, scene or data file changed, so no rendered rerun. No budget, ceiling or guard touched | the relay guards verification file (private until the branch is accepted) |
 
 **Budget misses decisions (user, 2026-11-14).** From the budget misses note of the Sim quick wins night: F stays 5.5 (the combat rows' browser F 5.2 would loosen every budget by 6 %, and the movement rows measure 6.2-6.55); hordes300 stays accepted as exceeded and guarded by its regression ceiling (it fails on the Deck itself, row above); the plumbing budget 0.91 ms stays, now with the Deck plumbing row above (movement and team rows at 91-94 % of the 5 ms target natively, horde and large rows over it); the hand-off plumbing rows go into `perf-history.csv` at the next quiet gate, so the status table shows today's definition; one Mac Firefox `Web Render Bench` row joins the next window batch (the web rendered rows are from 2026-11-10); the stress rows were judged on the Deck in Firefox once (row above), as evidence; the budget rule stays Mac ÷ F.
 
