@@ -488,7 +488,74 @@ func defaultCases() []tcase {
 			}
 			check(len(seeds) > 1, "three rooms, one seed")
 		}},
+		{"lead_bound_start_edge", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			sendTicks(cls[0], 1, 4, 8)
+			hearTicks(cls[1], 1, 4, 8)
+			cls[0].say(tick(1, 9, ""))
+			expectTooFar(cls[0])
+			expect(cls[1], left(1, 8))
+		}},
+		{"lead_bound_steady_edge", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			sendTicks(cls[0], 1, 4, 5)
+			hearTicks(cls[1], 1, 4, 5)
+			sendTicks(cls[1], 2, 4, 10)
+			hearTicks(cls[0], 2, 4, 10)
+			sendTicks(cls[0], 1, 6, 15)
+			hearTicks(cls[1], 1, 6, 15)
+			cls[0].say(tick(1, 16, ""))
+			expectTooFar(cls[0])
+			expect(cls[1], left(1, 15))
+		}},
+		{"racing_ticks_rejected", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			for t := 4; t <= 200; t++ {
+				_ = cls[0].say(tick(1, t, ""))
+			}
+			expectTooFar(cls[0])
+			hearTicks(cls[1], 1, 4, 8)
+			expect(cls[1], left(1, 8))
+			quiet(cls[1], 300*time.Millisecond)
+		}},
+		{"max_size_frames_inside_bound", func(url string) {
+			cls, _ := room(url, 2, "abc")
+			defer closeAll(cls)
+			pad := `"` + strings.Repeat("x", 65536-len(tick(1, 4, `""`))) + `"`
+			check(len(tick(1, 8, pad)) == 65536, "len %d", len(tick(1, 8, pad)))
+			for t := 4; t <= 8; t++ {
+				cls[0].say(tick(1, t, pad))
+			}
+			for t := 4; t <= 8; t++ {
+				expect(cls[1], tick(1, t, pad))
+			}
+			cls[0].close()
+			expect(cls[1], left(1, 8))
+		}},
 	}
+}
+
+const tooFar = `{"type":"error","reason":"too far ahead"}`
+
+func sendTicks(cl *client, seat, from, to int) {
+	for t := from; t <= to; t++ {
+		check(cl.say(tick(seat, t, "")) == nil, "send")
+	}
+}
+
+func hearTicks(cl *client, seat, from, to int) {
+	for t := from; t <= to; t++ {
+		expect(cl, tick(seat, t, ""))
+	}
+}
+
+// expectTooFar: the lead-bound refusal is the seat's last frame, then the close.
+func expectTooFar(cl *client) {
+	expect(cl, tooFar)
+	expectClosed(cl)
 }
 
 // pingUntil sends a JSON ping every 100 ms and returns the first frame that is not a pong, or errClosed.
@@ -643,9 +710,16 @@ func silenceCases() []tcase {
 			for t := 4; ; {
 				select {
 				case <-tk.C:
-					cls[1].say(tick(2, t, ""))
+					if t <= 8 {
+						cls[1].say(tick(2, t, ""))
+					} else {
+						cls[1].say(fmt.Sprintf(`{"type":"ping","t":%d}`, t))
+					}
 					t++
 				case s, ok := <-cls[1].in:
+					if ok && strings.HasPrefix(s, `{"type":"pong"`) {
+						continue
+					}
 					el := time.Since(start)
 					check(ok && s == left(1, 3), "want %q, got %q (open %v)", left(1, 3), s, ok)
 					check(el >= lobbyLimit-200*time.Millisecond, "left after %v", el)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"math"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -18,6 +19,7 @@ const (
 	codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	protocol     = 2
 	inputDelay   = 4
+	maxDelay     = inputDelay  // the highest delay a seat may use; the lead bound allows it, adaptive input delay raises it
 	expiryGrace  = time.Second // the socket backstop sits after the room timer, so the error frame lands before the close
 )
 
@@ -248,6 +250,12 @@ func (r *room) forward(t tickMsg) {
 		r.refuse(s)
 		return
 	}
+	if t.tick > r.leadLimit(s) {
+		s.dead = true
+		slog.Info("lead bound", "code", r.code, "seat", s.n, "tick", t.tick)
+		s.c.reject("too far ahead")
+		return
+	}
 	if s.lastTick == 0 {
 		s.c.dl.every(r.cfg.silence)
 	}
@@ -261,6 +269,22 @@ func (r *room) forward(t tickMsg) {
 			}
 		}
 	}
+}
+
+// leadLimit is the last tick an honest seat can send: it sends T+1+delay only after running T, which needed
+// every other seat's frame for T, and those passed through this room first. The preloaded ticks below the
+// delay allow 2*delay before any peer frame, which is (delay-1)+delay+1.
+func (r *room) leadLimit(s *seat) int {
+	lowest := math.MaxInt
+	for _, o := range r.seats {
+		if o != s {
+			lowest = min(lowest, max(o.lastTick, inputDelay-1))
+		}
+	}
+	if lowest == math.MaxInt { // no other seat: nothing to stay behind
+		return lowest
+	}
+	return lowest + maxDelay + 1
 }
 
 func (r *room) refuse(s *seat) {
