@@ -104,4 +104,6 @@ static func step(sim: Simulation, rates: Dictionary) -> void:
 		if entry.work != required: continue
 		if not Registry.air_kinds.has(entry.kind) and occupied == null: occupied = sim.occupied_cells()
 		var spawned: int = spawn_unit(sim,building,entry.kind,occupied)
-		if spawned != -1: building.queue.pop_front()
+		if spawned == -1: continue
+		building.queue.pop_front()
+		sim._count_built(building.owner,Registry.kind(entry.kind).get("quantity",1))

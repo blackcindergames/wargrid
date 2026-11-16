@@ -24,6 +24,8 @@ const START_DELAY_TICKS: int = 2
 var _navigation: RefCounted
 
 var _players: Dictionary = {}
+# Display only, outside the snapshot and the hash ring like bot memory.
+var _match_stats: Dictionary = {}
 var _buildings: Dictionary = {}
 var _sources: Dictionary = {}
 var _terrain_cells: Array[Vector2i] = []
@@ -86,7 +88,29 @@ func add_player(player: int, credits: int, controller: String = "human", team: i
 	if player <= 0 or credits < 0 or _players.has(player) or team < 0:
 		return {"ok": false, "error": "Invalid or duplicate player"}
 	_players[player] = {"id":player,"credits":credits,"controller":controller,"team":team if team > 0 else player}
+	_match_stats[player] = {"units_built": 0, "units_lost": 0, "buildings_lost": 0}
 	return {"ok":true,"error":""}
+
+func match_stats() -> Array[Dictionary]:
+	var ids: Array = _match_stats.keys()
+	ids.sort()
+	var rows: Array[Dictionary] = []
+	for id: int in ids:
+		var row: Dictionary = {"player": id}
+		row.merge(_match_stats[id])
+		rows.append(row)
+	return rows
+
+func _count_built(owner: int, count: int) -> void:
+	if _match_stats.has(owner): _match_stats[owner].units_built += count
+
+# Called before remove_object, while the object is still in its table.
+func _count_death(id: int) -> void:
+	if _entities.has(id):
+		if _match_stats.has(_entities[id].owner): _match_stats[_entities[id].owner].units_lost += 1
+	elif _buildings.has(id):
+		var building: Dictionary = _buildings[id]
+		if building.completed and not building.has("rebuild") and _match_stats.has(building.owner): _match_stats[building.owner].buildings_lost += 1
 
 func team_of(player: int) -> int:
 	return _players[player].team if _players.has(player) else 0

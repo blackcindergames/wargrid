@@ -80,7 +80,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_received_any, test_session_handler, test_for_start]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -507,4 +507,24 @@ func test_for_start(runner) -> bool:
 	var direct = Lockstep.new(2, seats, 4)
 	runner.check(built.waiting_for() == direct.waiting_for() and built.can_step(0) == direct.can_step(0), "L11 for_start matches new")
 	runner.check(built.can_step(3) == direct.can_step(3) and built.waiting_for_tick(4) == direct.waiting_for_tick(4), "L11 prefill window matches")
+	return true
+
+const STATS_TICK: int = 7200
+
+func test_match_stats_mirror_and_replay(runner) -> bool:
+	var net := _pair(runner)
+	_scripts(net)
+	for c in net.clients: c.target = STATS_TICK
+	net.connect_all()
+	net.run()
+	var stats: Array[Dictionary] = net.clients[0].sim.match_stats()
+	var lost: int = stats.reduce(func(sum: int, row: Dictionary) -> int: return sum + row.units_lost, 0)
+	runner.check(net.clients[1].sim.tick() == STATS_TICK and stats.all(func(row: Dictionary) -> bool: return row.units_built > 0) and lost > 0, "L18 both seats built units and some were lost by tick %d: %s" % [STATS_TICK, str(stats)])
+	runner.check(stats == net.clients[1].sim.match_stats(), "L18 both clients agree on match stats")
+	var oracle = Skirmish.create(true, "human")
+	var log_rows: Array = net.clients[1].ls.command_log().duplicate()
+	while oracle.tick() < STATS_TICK:
+		while not log_rows.is_empty() and log_rows[0].tick == oracle.tick(): oracle.issue_command(log_rows.pop_front())
+		oracle.step()
+	runner.check(oracle.match_stats() == stats, "L18 a replay of seat 2's command log gives the same stats")
 	return true

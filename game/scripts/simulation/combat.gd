@@ -381,6 +381,7 @@ static func fire(sim: Simulation, unit_ids: Array[int], moved_ids: Array[int]) -
 	for id: Variant in dead:
 		if record(sim, id).is_empty(): continue # removed with its dead rebuild site this tick
 		Salvage.on_death(sim, record(sim, id), killers[id])
+		sim._count_death(id)
 		sim._combat_events.append({"type": "death", "tick": sim._tick, "object_id": id})
 		sim.remove_object(id)
 
@@ -419,6 +420,7 @@ static func fire_defences(sim: Simulation) -> void:
 	dead.sort()
 	for target: Variant in dead:
 		if record(sim, target).is_empty(): continue
+		sim._count_death(target)
 		sim._combat_events.append({"type": "death", "tick": sim._tick, "object_id": target})
 		sim.remove_object(target)
 

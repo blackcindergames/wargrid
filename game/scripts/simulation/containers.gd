@@ -184,6 +184,7 @@ static func _release(sim: Simulation, host: Dictionary) -> void:
 		if passenger.hp > 0:
 			survivors.append(id)
 			continue
+		sim._count_death(id)
 		sim._combat_events.append({"type": "death", "tick": sim._tick, "object_id": id})
 		sim.remove_object(id)
 	_exit_all(sim, host, survivors)
@@ -209,5 +210,8 @@ static func _bury(sim: Simulation, owner: int) -> void:
 	var ids: Array = tunnel(sim, owner).duplicate()
 	sim._players[owner].erase("tunnel")
 	for id: int in ids:
-		for rider: int in sim._entities[id].get("passengers", []).duplicate(): sim.remove_object(rider)
+		for rider: int in sim._entities[id].get("passengers", []).duplicate():
+			sim._count_death(rider)
+			sim.remove_object(rider)
+		sim._count_death(id)
 		sim.remove_object(id)
