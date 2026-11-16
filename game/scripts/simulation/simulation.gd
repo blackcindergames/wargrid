@@ -65,6 +65,7 @@ var _map: Dictionary = {}
 const RNG_SEED: int = 0x2545F491
 var _rng: int = RNG_SEED
 var _hash_ring := PackedInt64Array()
+var _ring_on: bool = true
 
 func _init(blocked_cells: Array[Vector2i] = [], size: Vector2i = Navigation.SIZE) -> void:
 	_hash_ring.resize(HASH_RING_SIZE)
@@ -665,7 +666,7 @@ func step() -> void:
 	Profiler.end(&"step.evaluate_match", zone)
 	_tick += 1
 	zone = Profiler.begin()
-	_hash_ring[_tick % HASH_RING_SIZE] = _tick_hash()
+	if _ring_on: _hash_ring[_tick % HASH_RING_SIZE] = _tick_hash()
 	Profiler.end(&"step.hash_ring", zone)
 	Profiler.end(&"step", total)
 
@@ -702,8 +703,13 @@ func _tick_hash() -> int:
 		words.append(player.credits)
 	return (hash(words) << 32) | hash(floats.to_byte_array().to_int64_array())
 
+# Off in offline matches: nobody compares hashes there, and the ring costs a full entity walk per tick.
+func set_hash_ring(enabled: bool) -> void:
+	_ring_on = enabled
+
 func hash_ring() -> PackedStringArray:
 	var rows := PackedStringArray()
+	if not _ring_on: return rows
 	for t in range(maxi(1, _tick - HASH_RING_SIZE + 1), _tick + 1):
 		var h: int = _hash_ring[t % HASH_RING_SIZE]
 		rows.append("%d\t%08x%08x" % [t, (h >> 32) & StateHash.MASK, h & StateHash.MASK])

@@ -3,6 +3,9 @@ extends RefCounted
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const MapData = preload("res://scripts/simulation/map_data.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.gd")
+const Combat = preload("res://scripts/simulation/combat.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const CommandRecorder = preload("res://scripts/playtest/command_recorder.gd")
 
@@ -46,6 +49,7 @@ func _init(sim: Simulation) -> void:
 	_recorder = CommandRecorder.new(sim)
 
 func start() -> Note:
+	_warm_and_freeze()
 	var job := Job.new()
 	job.step = false
 	var note: Note = run_job(_sim, _recorder, job, _write)
@@ -88,6 +92,16 @@ func live() -> Simulation:
 
 func recorder() -> CommandRecorder:
 	return _recorder
+
+func _warm_and_freeze() -> void:
+	for id: String in Registry.units() + Registry.buildings():
+		Registry.unit_view(id)
+		Registry.building_view(id)
+		Registry.profile_view(id)
+		CombatDefinitions.radius(id)
+		if not CombatDefinitions.weapon(CombatDefinitions.profile(id).get("weapon", "")).is_empty(): Combat.reach_of(id)
+	Registry.freeze_caches()
+	Skirmish.freeze_map()
 
 func _publish() -> void:
 	var written: Slot = _write

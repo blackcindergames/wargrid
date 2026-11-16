@@ -3,15 +3,15 @@
 Plan: [sim boundary SB1-SB2](../superpowers/plans/2026-11-15-sim-boundary-sb1-sb2.md). Resume record below is overwritten at each checkpoint; evidence rows are append-only.
 
 ```text
-Resume record (updated 2026-11-15 night, stop gate 2 done)
-Branch / base commit / working-tree state: sim-boundary-sb1-sb2 / f838f793a0cfccfbbba7ce70d3a59fcaddeb3f2a (P2.2 merged, ee2f353 is an ancestor) / clean at 5696065
-Last green task / next incomplete task: Tasks 1-8 committed; gates 1 and 2 done / gate 3 (owner playtest)
-Changed paths since last commit: docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb/final/, 980 cases, 146452 checks, 0 failures, exit 0, TESTS PASSED 146452; REPLAYS MATCHED x4 vs base; netplay match and team match exit 0; run_checks CHECKS PASSED 5
+Resume record (updated 2026-11-16, Task 3 done)
+Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged), Task 2 at 9049dbd / Task 3 uncommitted (Codex review test fixes applied)
+Last green task / next incomplete task: Task 3 steps 1-4 done (frozen caches, `set_hash_ring`; 3 new `test_sb3_*` cases, 11 in all, green) / Task 4 (both drivers on the pump, drain in `_process`)
+Changed paths since last commit: game/scripts/simulation/definitions/definitions.gd, combat.gd, skirmish.gd, simulation.gd, game/scripts/match/sim_pump.gd, game/tests/test_sim_pump.gd, docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: after review fixes: full suite CASES 1025 CHECKS 146732 FAILURES 0, exit 0, TESTS PASSED 146732; lint, warnings, test_sim_boundary.py exit 0; replay, economy, combat, team traces REPLAYS MATCHED (netplay and team match unchanged by test-only edits, run before)
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: local commits per task pre-authorized (night run); IC1 row 19 inspected-enemy HP/order text may change (user, 2026-11-15); S3 and OV11 fixture changes accepted (user, 2026-11-15); no rendered benchmark rerun, world_view.gd is not touched; the benchmark is not rerun after the gate fixes (input code only)
+Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); Steam Deck row and rendered rerun at the SB3 gate (Task 8)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: all gates done up to 2; gate 3 (owner playtest) and gate 4 (push/PR/merge) wait for the owner.
+Next exact action: Task 4 Step 1, after the coordinator commits Task 3. Task 4 calls `sim.set_hash_ring(false)` in the offline driver at creation.
 ```
 
 ## Evidence
@@ -195,6 +195,18 @@ Base: `bad67c332820be5fb86d42a87af4a0dbcc436961` (`main`, tree `3762073acc71e04b
 | 2026-11-16 | Task 2: `sh tools/run_lint.sh`; `sh tools/run_warnings.sh`; `python3 tools/test_sim_boundary.py` | exit 0 each (`no problems found`, `WARNINGS CHECKED 171 FILES`, `OK`) | bef3fd1 + Task 2, uncommitted |
 | 2026-11-16 | Task 2 review (Codex): mutation proofs, each applied to `sim_pump.gd`, `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh`, reverted (file byte-equal after) | view filled once: exit 1 (slot_invariant fresh view, post leaves slots, publish view); events/results not copied: exit 1 (two_notes pairs, publish job); copy not deep: exit 1 (each note's own ticks); query clears queue: exit 1 (queued note survives); preview before step: exit 1 (preview after the step) | bef3fd1 + Task 2, uncommitted |
 | 2026-11-16 | Task 2 after review: `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh`; lint; warnings; `python3 tools/test_sim_boundary.py` | exit 0, CASES 8 CHECKS 39 FAILURES 0, `TESTS PASSED 39`; lint, warnings, boundary exit 0 | bef3fd1 + Task 2, uncommitted |
+| 2026-11-16 | Task 3 Step 2: `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh` before the freeze code | exit 1, `Static function "caches_frozen()" not found` / `"cache_sizes()" not found` parse errors (red as planned) | 9049dbd + Task 3 tests, uncommitted |
+| 2026-11-16 | Task 3 Step 4: `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh` | exit 0, CASES 11 CHECKS 49 FAILURES 0, `TESTS PASSED 49` | 9049dbd + Task 3, uncommitted |
+| 2026-11-16 | Task 3 mutation proofs on the filtered run, each reverted (files byte-equal after): no `freeze_caches` call; no `freeze_map` call; no `reach_of` warm; ring write unconditional; only `radius_cache` frozen | exit 1 (freezes check, again-after-reset check); exit 1 (map read-only check); exit 1 (script error from the refused insert, case aborted, `FAILURES 0`); exit 0 (not catchable through the public interface, see below); exit 1 (freezes check) | 9049dbd + Task 3, uncommitted |
+| 2026-11-16 | Task 3: full suite with the four trace variables into `build/sb3/task3/` | exit 0, CASES 1025 (1014 + 11) CHECKS 146727 (146678 + 49) FAILURES 0, `TESTS PASSED 146727` | 9049dbd + Task 3, uncommitted |
+| 2026-11-16 | Task 3: `NETPLAY_OUT=build/sb3/task3/netplay sh tools/run_netplay.sh match`; `sh tools/run_team_match.sh` | exit 0, `NETPLAY PASSED match 15.7 s`; exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS capped_ticks=853 max_cells=643` (as base) | 9049dbd + Task 3, uncommitted |
+| 2026-11-16 | Task 3 traces equal: `compare_replays.py` base vs task3 | replay, economy, combat `REPLAYS MATCHED 1200` each; team (`--interval 200 --rows 100`) `REPLAYS MATCHED 100`; `netplay/s1.tsv` (`--interval 30 --rows 0`) `REPLAYS MATCHED 301` | 9049dbd + Task 3, uncommitted |
+| 2026-11-16 | Task 3: `python3 tools/test_sim_boundary.py`; `sh tools/run_lint.sh`; `sh tools/run_warnings.sh` | exit 0 each (`OK`, `no problems found`, `WARNINGS CHECKED 171 FILES`) | 9049dbd + Task 3, uncommitted |
+| 2026-11-16 | Task 3 review fixes (Codex, test-only plus `Registry.frozen_state()` and `cache_keys()` helpers): `WARGRID_TEST_ONLY=sb3_` | exit 0, CASES 11 CHECKS 54 FAILURES 0, `TESTS PASSED 54` | 9049dbd + Task 3, uncommitted |
+| 2026-11-16 | Review mutation proofs (each reverted, files byte-equal): skip warming `usa_rifle_infantry`; drop the `reach_of` warm; drop `reach_cache = {}` from `_reset()`; ring write unconditional | exit 1 with failed warm-covers and unwarmed-key checks; exit 1 with the same two checks (plus refused-insert errors); exit 1 with writable-and-empty and stale-reach checks; exit 1 with `ring off wrote nothing` check | 9049dbd + Task 3, uncommitted |
+| 2026-11-16 | Task 3 after review: full suite with trace variables into `build/sb3/task3b/`; lint; warnings; boundary; `compare_replays.py` | exit 0, CASES 1025 CHECKS 146732 FAILURES 0, `TESTS PASSED 146732`; lint, warnings (171 files), boundary exit 0; replay, economy, combat `REPLAYS MATCHED 1200`, team `REPLAYS MATCHED 100` | 9049dbd + Task 3, uncommitted |
+
+Task 3 note: after review the ring-off skip is observable by turning the ring on after ten off ticks (the ten rows read zero), so the always-write mutation is caught. An insert into a frozen cache cannot be tested directly: the engine prints `ERROR:` / `SCRIPT ERROR`, which fails the whole suite by design (exit 1), so the late-insert guard is the warm-covers checks plus that suite-level failure.
 
 Benchmark comparison base (ms, `build/sb3/base/bench.log`): movement open p95 0.773 p99 0.846; movement dense p95 0.744 p99 0.897; combat open p95 1.893 p99 2.230; dense p95 1.847 p99 2.148; contact p95 1.179 p99 1.55; skirmish3v3 p95 1.348 p99 1.449; transports p95 1.13 p99 1.228; defences p95 0.784 p99 2.161; docks p95 0.591 p99 0.611; hordes300 p95 2.897 p99 3.381; ramp p95 0.651 p99 1.211; frc p95 0.889 p99 1.084; lockstep overhead p99 0.072 (limit 0.6); team_match profile `step` mean 1.355 p95 2.144, `view_state` mean 0.3022 (22.3 % of step, p95 0.403). Budget 1.82/3.64: open, dense and hordes300 exceed p95, as accepted before.
 

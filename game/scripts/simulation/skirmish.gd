@@ -36,6 +36,12 @@ static func unit_for(faction: String, producer: String, owned: Array = []) -> St
 static func origin(kind: String, player: int) -> Vector2i:
 	return MapData.slot(_default_map(), player, kind)
 
+static func freeze_map() -> void:
+	_default_map().make_read_only()
+
+static func map_frozen() -> bool:
+	return _skirmish_map.is_read_only()
+
 static func _default_map() -> Dictionary:
 	if _skirmish_map.is_empty(): _skirmish_map = MapData.load(MAP_PATH)
 	return _skirmish_map

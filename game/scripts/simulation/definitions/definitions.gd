@@ -17,6 +17,7 @@ static var _unit_cache: Dictionary = {}
 static var _building_cache: Dictionary = {}
 static var _profile_cache: Dictionary = {}
 static var radius_cache: Dictionary = {}
+static var reach_cache: Dictionary = {}
 static var air_kinds: Dictionary = _air_kinds()
 
 static func source_footprint(source: Dictionary) -> Vector2i:
@@ -115,9 +116,32 @@ static func _air_kinds() -> Dictionary:
 		if kind(id)["class"] == "air": found[id] = true
 	return found
 
+# Frozen once a match starts so a lazy insert after the warm-up fails loudly instead of racing a worker thread.
+static func freeze_caches() -> void:
+	for cache: Dictionary in _named_caches().values(): cache.make_read_only()
+
+static func frozen_state() -> Dictionary:
+	var state: Dictionary = {}
+	for name: String in _named_caches(): state[name] = _named_caches()[name].is_read_only()
+	return state
+
+static func cache_sizes() -> Dictionary:
+	var sizes: Dictionary = {}
+	for name: String in _named_caches(): sizes[name] = _named_caches()[name].size()
+	return sizes
+
+static func cache_keys() -> Dictionary:
+	var keys: Dictionary = {}
+	for name: String in _named_caches(): keys[name] = _named_caches()[name].keys()
+	return keys
+
+static func _named_caches() -> Dictionary:
+	return {"unit": _unit_cache, "building": _building_cache, "profile": _profile_cache, "radius": radius_cache, "reach": reach_cache}
+
 static func _reset() -> void:
 	_unit_cache = {}
 	_building_cache = {}
 	_profile_cache = {}
 	radius_cache = {}
+	reach_cache = {}
 	air_kinds = _air_kinds()

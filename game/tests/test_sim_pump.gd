@@ -7,12 +7,16 @@ const MapData = preload("res://scripts/simulation/map_data.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const CommandRecorder = preload("res://scripts/playtest/command_recorder.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.gd")
+const Combat = preload("res://scripts/simulation/combat.gd")
+const TeamMatch = preload("res://scripts/debug/team_match.gd")
 const FACTIONS := {1: "usa", 2: "china"}
 const MATCH_TICKS: int = 900
 const DIGEST_EVERY: int = 30
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -224,4 +228,124 @@ func test_sb3_job0_starts(runner) -> bool:
 	runner.check(fixture.start().starts == {} and fixture.current().tick == 0, "SB3 fixture world starts without start cells")
 	fixture.stop()
 	runner.check(not fixture.post(_job()), "SB3 post refused after stop")
+	return true
+
+func _frozen_count() -> int:
+	return Registry.frozen_state().values().count(true)
+
+func _rifle_row(weapon: String) -> Dictionary:
+	var row: Dictionary = Registry.kind("usa_rifle_infantry").duplicate()
+	row.weapon = weapon
+	return row
+
+func test_sb3_freeze_rejects_late_insert(runner) -> bool:
+	_pump()
+	runner.check(_frozen_count() == 5 and Registry.radius_cache.is_read_only(), "SB3 start freezes each of the five caches (%s)" % Registry.frozen_state())
+	Registry.add_test_kind("sb3_probe", _rifle_row("rifle"))
+	runner.check(_frozen_count() == 0 and Registry.cache_sizes().values().all(func(size: int) -> bool: return size == 0), "SB3 add_test_kind leaves all five caches writable and empty (%s)" % Registry.cache_sizes())
+	runner.check(is_equal_approx(Combat.reach_of("sb3_probe"), 3.9), "SB3 test kind reach comes from its weapon")
+	Registry.add_test_kind("sb3_probe", _rifle_row("rocket"))
+	runner.check(is_equal_approx(Combat.reach_of("sb3_probe"), 6.9), "SB3 re-adding a test kind with another weapon drops the cached reach")
+	Registry.clear_test_kinds()
+	runner.check(_frozen_count() == 0 and Registry.cache_sizes().values().all(func(size: int) -> bool: return size == 0), "SB3 clear_test_kinds leaves all five caches writable and empty (%s)" % Registry.cache_sizes())
+	_pump()
+	runner.check(_frozen_count() == 5, "SB3 start freezes again after a reset")
+	return true
+
+func _fighters() -> Array:
+	return Registry.units().filter(func(id: String) -> bool: return not CombatDefinitions.weapon(CombatDefinitions.profile(id).get("weapon", "")).is_empty())
+
+func _battle_world() -> Dictionary:
+	var sim = Fixture.make_world()
+	sim.add_player(2, 0)
+	var own: Array = []
+	var enemy: Array = []
+	for kind: String in _fighters():
+		own.append(sim.spawn(1, Vector2(10.5, 3.5 + own.size()), kind))
+		enemy.append(sim.spawn(2, Vector2(14.5, 3.5 + enemy.size()), kind))
+	return {"sim": sim, "commands": [_attack(1, own, enemy[0]), _attack(2, enemy, own[0])]}
+
+func _missing_warm() -> Array:
+	var keys: Dictionary = Registry.cache_keys()
+	var missing: Array = []
+	for id: String in Registry.units() + Registry.buildings():
+		var row: Dictionary = Registry.kind(id)
+		var expected: Dictionary = {"radius": true, "unit": row.has("class"), "building": row.has("footprint"), "profile": row.has("max_hp"), "reach": row.has("weapon") and not CombatDefinitions.weapon(row.weapon).is_empty()}
+		for name: String in expected:
+			if expected[name] and not keys[name].has(id): missing.append("%s/%s" % [name, id])
+	return missing
+
+func _unwarmed(used: Dictionary, warm: Dictionary) -> Array:
+	var unwarmed: Array = []
+	for name: String in used:
+		for key: String in used[name]:
+			if not warm[name].has(key): unwarmed.append("%s/%s" % [name, key])
+	return unwarmed
+
+func test_sb3_freeze_covers_match(runner) -> bool:
+	var pump = _pump()
+	var warm: Dictionary = Registry.cache_keys()
+	var missing: Array = _missing_warm()
+	runner.check(missing.is_empty(), "SB3 warm-up fills every registered kind in each applicable cache (missing %s)" % [missing.slice(0, 5)])
+	var warm_sizes: Dictionary = Registry.cache_sizes()
+	var bots: Array = [2]
+	for i in MATCH_TICKS:
+		pump.post(_job([], bots))
+		pump.drain()
+	runner.check(Registry.cache_sizes() == warm_sizes, "SB3 no cache grows during a 900-tick bot match")
+	var battle: Dictionary = _battle_world()
+	var fight = SimPump.new(battle.sim)
+	fight.start()
+	fight.post(_job(battle.commands))
+	for i in 150:
+		fight.post(_job())
+		fight.drain()
+	runner.check(Registry.cache_sizes() == warm_sizes, "SB3 no cache grows during a 150-tick battle of every armed kind")
+	var team = SimPump.new(TeamMatch.create())
+	team.start()
+	var seats: Array = []
+	for entry in TeamMatch.SEATS: seats.append(entry.seat)
+	for i in 300:
+		team.post(_job([], seats))
+		team.drain()
+	runner.check(Registry.cache_sizes() == warm_sizes, "SB3 no cache grows during 300 team-match ticks")
+	runner.check(Skirmish.map_frozen(), "SB3 skirmish map is read-only")
+	Registry.clear_test_kinds()
+	var direct = _sim()
+	for i in MATCH_TICKS:
+		Skirmish.issue_opponent(direct)
+		direct.step()
+	var control: Dictionary = _battle_world()
+	var recorder = CommandRecorder.new(control.sim)
+	for command: Dictionary in control.commands: recorder.issue_command(command)
+	for i in 150: control.sim.step()
+	var team_direct = TeamMatch.create()
+	for i in 300: TeamMatch.step(team_direct)
+	var unwarmed: Array = _unwarmed(Registry.cache_keys(), warm)
+	runner.check(unwarmed.is_empty() and _frozen_count() == 0, "SB3 every key an unfrozen match inserts was warmed (unwarmed %s)" % [unwarmed.slice(0, 5)])
+	return true
+
+func test_sb3_ring_off_same_digest(runner) -> bool:
+	var on = _sim()
+	var off = _sim()
+	off.set_hash_ring(false)
+	var equal: int = 0
+	for i in 300:
+		Skirmish.issue_opponent(on)
+		Skirmish.issue_opponent(off)
+		on.step()
+		off.step()
+		if (i + 1) % DIGEST_EVERY == 0 and StateHash.digest(on.snapshot()) == StateHash.digest(off.snapshot()): equal += 1
+	runner.check(equal == 10, "SB3 ring off keeps the digest every 30 ticks (%d)" % equal)
+	runner.check(on.hash_ring().size() == 64 and off.hash_ring().is_empty(), "SB3 ring reads are empty when off")
+	var late = _sim()
+	late.set_hash_ring(false)
+	for i in 10: late.step()
+	late.set_hash_ring(true)
+	late.step()
+	var rows: PackedStringArray = late.hash_ring()
+	var zero_rows: int = 0
+	for row: String in rows:
+		if row.ends_with("\t0000000000000000"): zero_rows += 1
+	runner.check(rows.size() == 11 and zero_rows == 10 and not rows[10].ends_with("0000000000000000"), "SB3 ring off wrote nothing: ten zero rows, then one written (%d zero of %d)" % [zero_rows, rows.size()])
 	return true

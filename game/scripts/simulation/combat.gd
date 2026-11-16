@@ -77,11 +77,12 @@ static func is_ai(sim: Simulation, owner: int) -> bool:
 static func scan_radius(sim: Simulation, unit: Dictionary) -> float:
 	return CombatDefinitions.vision(unit.kind) * (GUARD_OUTER_AI if is_ai(sim, unit.owner) else GUARD_OUTER_HUMAN)
 
-static var _reach_by_kind: Dictionary = {}
+static func reach_of(kind: String) -> float:
+	return _reach(kind)
 
 static func _reach(kind: String) -> float:
-	if not _reach_by_kind.has(kind): _reach_by_kind[kind] = CombatDefinitions.weapon(CombatDefinitions.profile(kind).weapon).range - RANGE_SLACK
-	return _reach_by_kind[kind]
+	if not Registry.reach_cache.has(kind): Registry.reach_cache[kind] = CombatDefinitions.weapon(CombatDefinitions.profile(kind).weapon).range - RANGE_SLACK
+	return Registry.reach_cache[kind]
 
 static func _in_range(sim: Simulation, unit: Dictionary, target: Dictionary) -> bool:
 	sim._combat_work += 1
