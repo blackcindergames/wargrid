@@ -9,29 +9,29 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | --- | --- | --- | --- | --- |
 | **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 210% | ➖ same | 2026-11-16 |
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 159% | ➖ same | 2026-11-16 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | 🔻 1% better | 2026-11-16 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-16 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 73% | ➖ same | 2026-11-16 |
 | Drawing the screen | 🟢 OK | ███████░░░ 70% | 🔻 10% better | 2026-11-16 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ██████░░░░ 69% | 🔻 5% better | 2026-11-16 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-16 |
-| Unit movement | 🟢 OK | ████░░░░░░ 40% | 🔺 1% worse | 2026-11-16 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 2% worse | 2026-11-16 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-16 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔺 1% worse | 2026-11-16 |
+| Unit movement | 🟢 OK | ████░░░░░░ 40% | ➖ same | 2026-11-16 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 23% | 🔻 3% better | 2026-11-16 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-16 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 40% of budget (auto b585c6d, 2026-11-16), 1% slower than P2.2 Quick rematch slice 2 (worst vs worst); run-to-run spread up to 50%
-- movement p99: 24% of budget (auto b585c6d, 2026-11-16), 2% slower than P2.2 Quick rematch slice 2 (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 73% of budget (auto b585c6d, 2026-11-16), unchanged vs P2.2 Quick rematch slice 2 (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (auto b585c6d, 2026-11-16), 1% faster than P2.2 Quick rematch slice 2 (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 159% of budget, exceeded (auto b585c6d, 2026-11-16), unchanged vs P2.2 Quick rematch slice 2 (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 142% of budget, exceeded (auto b585c6d, 2026-11-16), 1% faster than P2.2 Quick rematch slice 2 (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 210% of budget, exceeded (auto b585c6d, 2026-11-16), unchanged vs P2.2 Quick rematch slice 2 (worst vs worst); run-to-run spread not measured
+- movement p95: 40% of budget (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread up to 50%
+- movement p99: 23% of budget (auto d820773, 2026-11-16), 3% faster than auto b585c6d (worst vs worst); run-to-run spread up to 50%
+- combat gated p95: 73% of budget (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread up to 58%
+- combat gated p99: 58% of budget (auto d820773, 2026-11-16), 1% slower than auto b585c6d (worst vs worst); run-to-run spread up to 58%
+- combat stress p95: 159% of budget, exceeded (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread up to 41%
+- plumbing, movement layouts: 142% of budget, exceeded (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 210% of budget, exceeded (auto d820773, 2026-11-16), unchanged vs auto b585c6d (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 70% of budget (P2.2 Quick rematch slice 2 (merge), 2026-11-16), 10% faster than SB1-SB2 rendered (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 69% of budget (P2.2 Quick rematch slice 2 (merge), 2026-11-16), 5% faster than SB1-SB2 rendered (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (auto b585c6d, 2026-11-16), unchanged vs P2.2 Quick rematch slice 2 (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (auto d820773, 2026-11-16), 3% faster than auto b585c6d (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
