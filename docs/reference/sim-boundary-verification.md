@@ -168,15 +168,15 @@ Still open: gate 4.
 Plan: [sim boundary SB3](../superpowers/plans/2026-11-16-sim-boundary-sb3.md). Resume record below is overwritten at each checkpoint; ledger rows and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-16, Task 1 done)
-Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged) / only this file changed, uncommitted
-Last green task / next incomplete task: Task 1 steps 1-4 done (base evidence green) / Task 2 (the pump)
-Changed paths since last commit: docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb3/base/, CASES 1014 CHECKS 146678 FAILURES 0, exit 0, TESTS PASSED 146678; netplay match exit 0; team match exit 0; run_checks CHECKS PASSED 5; benchmark exit 0
+Resume record (updated 2026-11-16, Task 2 done)
+Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged), Task 1 at bef3fd1 / Task 2 uncommitted
+Last green task / next incomplete task: Task 2 steps 1-4 done (pump, 8 `test_sb3_*` cases green; review test fixes with mutation proofs) / Task 3 (frozen caches and the offline ring switch)
+Changed paths since last commit: game/scripts/match/sim_pump.gd (+ .uid), game/tests/test_sim_pump.gd (+ .uid), game/scripts/simulation/simulation.gd (`last_sequence`), game/tests/run_tests.gd (SUITES), docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh`, CASES 8 CHECKS 39 FAILURES 0, exit 0, TESTS PASSED 39; lint exit 0; warnings exit 0 (171 files)
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); Steam Deck row and rendered rerun at the SB3 gate (Task 8)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 2 Step 1 (failing tests in game/tests/test_sim_pump.gd, SUITES entry in game/tests/run_tests.gd:6), after the coordinator commits this file.
+Next exact action: Task 3 Step 1 (failing freeze tests), after the coordinator commits Task 2.
 ```
 
 ### Evidence ledger
@@ -190,6 +190,11 @@ Base: `bad67c332820be5fb86d42a87af4a0dbcc436961` (`main`, tree `3762073acc71e04b
 | 2026-11-16 | `sh tools/run_team_match.sh` | exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS capped_ticks=853 max_cells=643` | base bad67c3, clean |
 | 2026-11-16 | `sh tools/run_checks.sh` | exit 0, `CHECKS PASSED 5` | base bad67c3, clean |
 | 2026-11-16 | `PERF_RECORD=0 sh tools/run_benchmark.sh` alone (load average 2.96 when it started, 2.24 after: above 2.5 at the start, host also had 6 sessions) | exit 0, `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, `PROFILE COMPLETE 10`, `BUDGET EXCEEDED open dense hordes300 (regression ceilings held)` as in the ledger | base bad67c3, clean |
+| 2026-11-16 | Task 2 Step 2: `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh` before `sim_pump.gd` | exit 1, `Preload file "res://scripts/match/sim_pump.gd" does not exist`, suite failed to load (red as planned) | bef3fd1 + Task 2 tests, uncommitted |
+| 2026-11-16 | Task 2 Step 4: `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh` | exit 0, CASES 8 CHECKS 28 FAILURES 0, `TESTS PASSED 28` | bef3fd1 + Task 2, uncommitted |
+| 2026-11-16 | Task 2: `sh tools/run_lint.sh`; `sh tools/run_warnings.sh`; `python3 tools/test_sim_boundary.py` | exit 0 each (`no problems found`, `WARNINGS CHECKED 171 FILES`, `OK`) | bef3fd1 + Task 2, uncommitted |
+| 2026-11-16 | Task 2 review (Codex): mutation proofs, each applied to `sim_pump.gd`, `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh`, reverted (file byte-equal after) | view filled once: exit 1 (slot_invariant fresh view, post leaves slots, publish view); events/results not copied: exit 1 (two_notes pairs, publish job); copy not deep: exit 1 (each note's own ticks); query clears queue: exit 1 (queued note survives); preview before step: exit 1 (preview after the step) | bef3fd1 + Task 2, uncommitted |
+| 2026-11-16 | Task 2 after review: `WARGRID_TEST_ONLY=sb3_ sh tools/run_tests.sh`; lint; warnings; `python3 tools/test_sim_boundary.py` | exit 0, CASES 8 CHECKS 39 FAILURES 0, `TESTS PASSED 39`; lint, warnings, boundary exit 0 | bef3fd1 + Task 2, uncommitted |
 
 Benchmark comparison base (ms, `build/sb3/base/bench.log`): movement open p95 0.773 p99 0.846; movement dense p95 0.744 p99 0.897; combat open p95 1.893 p99 2.230; dense p95 1.847 p99 2.148; contact p95 1.179 p99 1.55; skirmish3v3 p95 1.348 p99 1.449; transports p95 1.13 p99 1.228; defences p95 0.784 p99 2.161; docks p95 0.591 p99 0.611; hordes300 p95 2.897 p99 3.381; ramp p95 0.651 p99 1.211; frc p95 0.889 p99 1.084; lockstep overhead p99 0.072 (limit 0.6); team_match profile `step` mean 1.355 p95 2.144, `view_state` mean 0.3022 (22.3 % of step, p95 0.403). Budget 1.82/3.64: open, dense and hordes300 exceed p95, as accepted before.
 

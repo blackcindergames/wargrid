@@ -568,6 +568,9 @@ func navigation_local_updates() -> int:
 func tick() -> int:
 	return _tick
 
+func last_sequence(player: int) -> int:
+	return _last_sequences.get(player, -1)
+
 # Read-only view; cleared in place by the next step.
 func combat_events() -> Array[Dictionary]:
 	return _combat_events
