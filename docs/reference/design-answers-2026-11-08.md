@@ -858,6 +858,7 @@ After the worker thread spike: the attended Mac Firefox A/B gave PARK (team gain
 - **First seam task: reads on request** (user, 2026-11-15, corrected the same day): the per-input `snapshot()` reads in `orders.gd` and the one per offline command; the earlier "snapshot and digest only when read" rested on the spike's own cadence, not `main`'s. The rest of the boundary design and its answers: [Sim boundary design](../superpowers/specs/2026-11-15-sim-boundary-design.md).
 - **The go rule decides on the Steam Deck** (user, 2026-11-15): Deck Firefox with at least 3 runs per arm as the decision row; `backlog_max` at most 2 (the queue cap); `tick_rate` at least 29.7; the tick-rate floor gets a tolerance and a test (today 29.9999 against 30.0001 fails).
 - **Hosting headers are not a risk** (user, 2026-11-15): both web apps are our own; still open before the thread goes on: a mixed online match in worker mode and a fault probe in a release web build.
+- **Parked with the worker thread: a background job with a fixed join tick** (user, 2026-11-16, backlog review; idea from the 2026-11-14 OpenTTD research, private): every machine starts a long computation (path burst, bot planning) at tick T on a worker on a copy of its input and joins it at a fixed T+k (OpenTTD link graph, `src/linkgraph/linkgraphschedule.cpp:33-81` @ `de9df409a7`); costs a threaded export, the job in the snapshot, and a slow device stalls everyone at the join. Revive only if the worker thread comes back.
 
 ## Cheaper step (user, 2026-11-15)
 

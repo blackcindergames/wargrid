@@ -187,7 +187,7 @@ The claims behind each fix were checked again on `main` at `b766258`; none of th
 - Finding 1: done at the review (tracked plus untracked files in all four gates).
 - Findings 2 to 17, 19 and the six "left out" points: night package Tighter gates, first in the night lane ([packages](../packages.md#package-notes)). Finding 5: one full run plus a short side-by-side pair instead of one run only. Finding 14: branches only.
 - Implemented on branch `tighter-gates` (local, not pushed): findings 2 to 17, 19 and the left-out points ([plan](../superpowers/plans/2026-11-13-tighter-gates.md), [verification](tighter-gates-verification.md)).
-- Finding 18: deferred; decided after findings 5 to 7 have landed and CI time is measured again.
+- Finding 18: decided (user, 2026-11-16, backlog review): keep the whole suite in the exported builds; after findings 5 to 7 landed, branch CI took 4 min 26 s (Tighter gates, 2026-11-13).
 
 ## Not checked
 

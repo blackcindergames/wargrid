@@ -48,7 +48,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**12 of 36 parts done**
+**12 of 38 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -69,6 +69,8 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 📋 | Team up against bots | Planned |
 | 📋 | Build from the dock | Planned |
 | 📋 | Reconnect after a drop | Planned |
+| 📋 | More maps | Planned |
+| 📋 | Desync reports that send themselves | Planned |
 | 📋 | You and two friends vs three bots | Planned |
 | 📋 | Keep your teammate's base | Planned |
 | 📋 | Units that find their way | Planned |
@@ -80,14 +82,14 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 📋 | Camera that follows you | Planned |
 | 📋 | Smooth motion | Planned |
 | 💡 | Order controls | Later |
-| 💡 | Smoother big moves | Later |
 | 💡 | Minimap and attack alerts | Later |
+| 💡 | Smoother big moves | Later |
 | 💡 | Crowds that sort themselves | Later |
 | 💡 | Fog of war | Later |
 | 💡 | Ground batch A | Later |
 | 💡 | Wrecks | Later |
 | 💡 | Ground batch B | Later |
-| 💡 | Bots | Later |
+| 💡 | Bots worth playing | Later |
 <!-- roadmap:end -->
 
 <!-- perf-table:begin -->
