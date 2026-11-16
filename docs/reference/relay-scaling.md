@@ -11,7 +11,7 @@ User-supplied proposal `game_backend_rendezvous_architecture_v2.md` ("Multiplaye
 Keep:
 
 - **Owner encoded in the match code, never re-hashed on join.** The proposal calls this "the essential design choice". Adding or removing machines never moves a live room.
-- **Owner machine admits atomically** (seats, full, build). Already true: `Rooms.join` is `@Synchronized`.
+- **Owner machine admits atomically** (seats, full, build). Already true: every join after the create goes through the room's own goroutine (`relay/room.go` `registry.join`, `room.join`); the creator is seated before the room runs and before anyone else knows the code (`registry.create`).
 - **Drain before deploy; a new process never reuses a live owner ID.**
 - **Trust boundary:** resolve only known owner IDs, never build an internal URL from client text, rate-limit joins and handshakes.
 
@@ -144,6 +144,59 @@ Assessment (Claude, not a user decision):
 - B should be tried before C: it needs no new service, and the clients already hold exactly the data Redis would store. If the protocol can carry it, Redis adds little for room state.
 - Redis earns its place for **shared directory state** (match code to owner machine, seat claims, public matchmaking) once there is more than one machine, which is option D, not for the live room.
 - For a friends-scale game, A plus fast reconnect is probably enough; B or C is for learning and robustness. Choose at M9 planning.
+
+## Availability to start a game (user, 2026-11-16)
+
+The goal changed on 2026-11-16: a server must always be there to start a game; a match surviving a crash comes second ([answers](design-answers-2026-11-08.md#relay-availability-questionnaire-user-2026-11-16)). That makes option D above the main line and options B and C optional. The mechanics below are proposed (Claude), built from those answers; nothing is placed or built.
+
+- **Two workers, one stable DNS name each**, built into the game: the name's first label is the worker's slot, and the first character of the match code names that slot, so a joiner reaches the owner without a lookup. Moving a worker is a DNS change. A relay override (prerelease field, `relay` link parameter) replaces the whole list. A shared name with two address records cannot do this: DNS keeps no room's players together.
+- **Create fails over in the client.** Pick a worker at random; on no answer, or the refusal `relay busy` or `relay restarting` (a draining worker), try the other. A worker answers `relay busy` above its own limit of players; the number comes from night 10. A deploy that changes the protocol leaves the two workers on different versions for a while, so `protocol mismatch` on create is a reason to try the other worker too. Random keeps both workers in daily use, so a broken one is noticed before it is needed.
+- **Drain before deploy.** The registry's drain flag and `room.markDraining` exist (`relay/room.go`); missing are a trigger other than the stop signal, because the platform's kill timeout is shorter than a match, and the 60 minute limit. The trigger is a signal to the process (SIGUSR1); the worker reports its remaining rooms on `/health`, and the deploy script waits for zero. Unlike today's shutdown, which stops accepting connections at once (`relay/main.go` `shutdown`), a draining worker keeps listening, so joins to its rooms and `/health` still answer. Relay deploys get their own workflow, started by hand; today every release that is not a prerelease deploys the relay (`.github/workflows/release.yml`, step "Deploy relay"). A draining worker refuses only new games: lobbies that exist may still fill and start, which today's `markDraining` closes; a lobby lives at most 15 minutes (`WARGRID_LOBBY_MS`), so a match that starts on a draining worker still has at least 45. Play again is refused with a message; at the limit the remaining matches end with a reason and no earlier warning. The reason travels in the existing `error` message, so no message type is new: one new reason, proposed `relay restarting`, for a refused new game, a refused Play again and the end at the limit. Today `closeAll` closes without a reason and the player reads "Connection to relay lost". Deploy one worker at a time.
+- **No wire change.** No `redirect` message and no `GET /workers`: the slot character and the worker names replace both, so of R2 above the worker, drain and retry bullets stay and the worker list endpoint and the redirect go.
+- **The database is never in the path** of create, join or play.
+- **Both workers always on.** No wake-up on the first connection, and the peer check below would keep a suspended worker awake anyway.
+- **The workers check each other.** Every few minutes each opens a real game connection to the other, which covers name, certificate, proxy and relay, where `/health` covers only the process. After repeated failures it posts to a configured webhook that pushes to a phone. Blind when both are down at once, which is the accepted outage case: then the names are repointed by hand to a worker deployed elsewhere.
+
+Already built or on a branch (checked on `main` `2979497`, 2026-11-16):
+
+| Part | State |
+|---|---|
+| Atomic admission, hello and lobby deadlines, rematch in the room | built (P2.2 and before) |
+| Drain on the stop signal, 3.5 s, closing lobbies that have not started | built (`relay/main.go` `shutdown`) |
+| Relay address in the invite link | built (`game/scripts/join_link.gd` `link`) |
+| Join and connection limits: `relay busy` for the global ones, `too many connections` and `too many joins` per address | branch `relay-guards`, not merged |
+| Client retry after a failed connect | not built |
+| Slot character, worker names, fail-over, long drain, player limit per worker | not built, not placed |
+
+Reference engines (read 2026-11-16; evidence, not a decision): in ioquake3 (`52088b9e`), OpenRA (`b4d95a5671`) and Recoil (`a0240a9b5c`) a match is bound to one server process and nothing routes or hands a match over; when the server dies the clients time out or lose the connection and the match ends in all three (`code/client/cl_main.c:2903` `CL_CheckTimeout`; `OpenRA.Game/Network/Connection.cs:222-226`; `rts/Game/Game.cpp:1200`). ioquake3, whose server simulates, gives a reconnecting client its old slot and a fresh game state (`code/server/sv_client.c:456-473`). Of the two lockstep engines only Recoil lets a client back into a running match: while reconnecting or joining as a spectator is allowed, its server keeps the broadcast packets and sends them all to the returning client (`rts/Net/GameServer.cpp:564`, `:3119`), which is the idea behind P8's replay buffer; OpenRA refuses a join once the game started (`OpenRA.Game/Server/Server.cs:471-476`). ioquake3 gets availability from up to five master addresses asked at once (`code/qcommon/q_shared.h:78`, the loop at `code/client/cl_main.c:4246`), with no fail-over logic, and does not try another server when one is full (`code/server/sv_client.c:525`).
+
+Where other projects keep their server address (read 2026-11-16; evidence for the built-in names): OpenTTD compiles in one DNS name (`src/network/core/config.cpp:23`, `de9df409a7`), OpenRCT2 a constant (`src/openrct2/network/Network.h:43`, `64c3fef27b`), 0 A.D. and Hypersomnia ship it as a config default (`binaries/data/config/default.cfg:561`, `136720dada`; `hypersomnia/default_config.json:16`, `fd812be10`). What Hypersomnia, fteqw and Zero Hour fetch at run time is a list of game servers, never the address of the service itself; the Zero Hour fork replaced the dead GameSpy host at build time (`cmake/gamespy.cmake:2`, `afc2a103f`).
+
+fly facts for this design (fly's own pages, read 2026-11-16 through a summarising fetch, wording not checked byte for byte): `kill_timeout` "up to a maximum of 300 seconds" (docs.fly.io/reference/configuration); the Machines API has an endpoint that sends a signal to a running machine, `flyctl` has no command for it (docs.fly.io/api/machines/openapi.json, docs.fly.io/flyctl/machine); a suspended machine resumes in "a few hundred ms" and requests during an early start "might fail" (docs.fly.io/reference/suspend-resume, docs.fly.io/reference/fly-proxy-autostop-autostart); `shared-cpu-1x` 256 MB in `fra` $2.53 a month running, `performance-1x` 2 GB $38.08 (fly.io/pricing), so two always-on workers cost about $5 a month at list price. Not stated on those pages: what happens to a machine when its host fails without warning, spend limits or billing alerts, whether the legacy allowance counts machines across apps. The status history readable on that day (about three months) had one partial `fra` network incident and one platform-wide round of host reboots.
+
+Player texts (proposed by the player-experience review, 2026-11-16; not decided, input for the package's design). Today these cases reach the player as raw relay reasons or as "Cannot connect to relay".
+
+| Case | Proposed text |
+|---|---|
+| Both workers full | "All game servers are full. Try again in a few minutes." |
+| Both unreachable | "Could not reach a game server. Check your connection and try again. If it keeps failing, the servers may be down." |
+| The code's worker is down | "Can't reach the server for this game. It may be restarting. Ask the host for a new code." |
+| Play again on a draining worker | "This server is restarting soon, so Play again is off. The host can create a new game and send a new code." Better: hide Play again with that line before anyone presses it. |
+| Drain limit reached | "Match ended: the server restarted for an update. No winner. Start a new game from Play." |
+
+When the two workers refuse for different reasons, show the more useful one: a version mismatch must reach the version message, not "servers full".
+
+Open: the player limit's number (night 10) and whether an open lobby reserves its seats against it; which service turns the webhook into a push; whether the platform can alert on its own failing health checks (not checked); the runbook for repointing the names.
+
+### Research for P8 (2026-11-16)
+
+Read on `main` `2979497`; evidence for P8's design, not a decision.
+
+- **A network drop needs almost no catch-up.** Lockstep stalls every client at the dropped seat, so peers hold at most about 2 × delay + 2 ticks more (`game/scripts/net/lockstep.gd` `MAX_QUEUED_TICKS` and its comment). A small relay buffer of recent ticks per seat is enough; the client erases its own sent frames once applied today and would have to keep the recent ones.
+- **A reloaded or crashed client needs the whole match.** Clients keep every applied command without a limit (`_command_log`); the relay keeps no log. No state restore exists, and `snapshot()` leaves out bot memory ([simulation interface](sim-interface.md)). Replay from tick 0 at 30 ticks a second, a step mean of 1.07 ms with the profiler on ([performance ledger](performance.md)) and the 5.5 slowdown: about 106 s for a match 10 minutes old on the low-end target, 212 s at 20, 424 s at 40, against a 60 s grace. Rough: nothing was measured past 25 minutes.
+- **Other engines:** 0 A.D. asks an existing client (session 0, assumed to be the host's) to serialise its state for a rejoining client and then sends the commands after that turn (`source/network/NetServer.cpp:1146-1180`, `:1456-1462`, `136720dada`); OpenTTD's server sends a savegame (`src/network/network_server.cpp:588-604`, `de9df409a7`); Warzone 2100 closes joining at match start (`src/multiint.cpp:5828`, `b904885ff`). None rebuilds a server's match from its clients.
+- **Option B above is cheaper than its row says.** Every frame has one author and the relay forwards identical bytes, so no rule for "which log wins" is needed: clients report the last tick they hold per seat and each author resends its own frames after the lowest. It still needs a token that checks after a restart, start parameters all clients resend and the relay finds equal, and frames copied from a peer when an author never returns, which the relay refuses today.
+
 
 ## Web build delivery (researched 2026-11-12; parked)
 
