@@ -142,10 +142,14 @@ func TestRejectedFrameCountsNothing(t *testing.T) {
 	feed(r, 1, 4, 8)
 	s := r.seats[1]
 	n, size, last := s.frames, s.bytes, s.lastTick
-	feed(r, 1, 9, 9)
+	maxFrame, peak, hashes := s.maxFrame, s.peak, len(r.hashes)
+	r.forward(&tickMsg{s, 1, 9, sizedTick(1, 9, 70000), honest(9, "a")})
 	wantRejected(t, "tick 9", r, 1, f[0])
 	if s.frames != n || s.bytes != size || s.lastTick != last {
 		t.Fatalf("rejected frame changed counters: frames %d->%d bytes %d->%d lastTick %d->%d", n, s.frames, size, s.bytes, last, s.lastTick)
+	}
+	if s.maxFrame != maxFrame || s.peak != peak || len(r.hashes) != hashes {
+		t.Fatalf("rejected frame was recorded: maxFrame %d->%d peak %d->%d hash entries %d->%d", maxFrame, s.maxFrame, peak, s.peak, hashes, len(r.hashes))
 	}
 }
 
