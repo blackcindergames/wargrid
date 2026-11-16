@@ -395,6 +395,7 @@ func test_match_end_opens_review_once(runner) -> bool:
 	overlay._process(0.0)
 	var comment: LineEdit = _form(main).find_child("Comment_0_0", true, false) if _form(main) != null else null
 	runner.check(_form_shown(main) and PlaytestSession.current.data.matches.size() == 1 and comment != null, "PO11 one poll shows the review with the marker's comment field")
+	runner.check(main.get_node("HUD/Playtest").get_index() > main.get_node("HUD/ResultPanel").get_index(), "PO11 the review form draws above the result panel")
 	if comment != null:
 		comment.text = "looks fine"
 		comment.text_changed.emit(comment.text) # setting text does not emit, and typing emits deferred
