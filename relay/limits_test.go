@@ -55,6 +55,31 @@ func TestBucketLeaksOnePerPeriod(t *testing.T) {
 	}
 }
 
+func TestBucketKeepsRemainderAfterFullDrain(t *testing.T) {
+	c := newFakeClock()
+	l := prodLimiter(c)
+	var b bucket
+	take := func(n int) (ok int) {
+		for range n {
+			if l.allow(&b, 10, time.Second) {
+				ok++
+			}
+		}
+		return ok
+	}
+	if got := take(10); got != 10 {
+		t.Fatalf("burst: %d of 10 allowed", got)
+	}
+	c.advance(10*time.Second + 400*time.Millisecond)
+	if got := take(11); got != 10 {
+		t.Fatalf("after 10.4 s: %d of 11 allowed, want 10", got)
+	}
+	c.advance(600 * time.Millisecond)
+	if got := take(1); got != 1 {
+		t.Fatalf("at 11.0 s: %d allowed, want 1; the 0.4 s remainder of the drained period was dropped", got)
+	}
+}
+
 func TestConnCountOpenClose(t *testing.T) {
 	l := prodLimiter(newFakeClock())
 	const key = "203.0.113.1"
@@ -139,6 +164,9 @@ func TestClientKey(t *testing.T) {
 		{header, "2001:db8:1:2:ffff::1", "2001:db8:1:2::"},
 		{header, "", ""},
 		{header, "not-an-ip", ""},
+		{header, "203.0.113.7, 198.51.100.1", ""}, // skipped by the user's Q26 answer; whether to revisit is an open morning question
+		{header, "203.0.113.7:4000", ""},
+		{header, "::ffff:203.0.113.7", "203.0.113.7"},
 	} {
 		if got := clientKey(req(c.value), c.header); got != c.want {
 			t.Errorf("header %q value %q: key %q, want %q", c.header, c.value, got, c.want)
@@ -270,5 +298,103 @@ func TestLimitsAcrossP2Phases(t *testing.T) {
 		eventually(t, "socket not counted for its address", func() bool { return l.conns(testIP) == 1 })
 		hearUntil(t, ac, "lobby expired")
 		eventually(t, "count not back to 0 after the lobby expired", func() bool { return l.conns(testIP) == 0 })
+	})
+}
+
+type closeWatcher struct{ done chan struct{} }
+
+func (c *closeWatcher) OnOpen(*gws.Conn)                  {}
+func (c *closeWatcher) OnClose(*gws.Conn, error)          { close(c.done) }
+func (c *closeWatcher) OnPing(*gws.Conn, []byte)          {}
+func (c *closeWatcher) OnPong(*gws.Conn, []byte)          {}
+func (c *closeWatcher) OnMessage(*gws.Conn, *gws.Message) {}
+
+func TestSlotsReturnAfterInMatchCloses(t *testing.T) {
+	start := func(t *testing.T) (*limiter, string) {
+		l := newLimiter(tableSize, 1000, time.Millisecond, time.Now)
+		srv := httptest.NewServer(newServer(&relay{reg: newRegistry(testConfig()), lim: l, ipHeader: testIPHeader}).Handler)
+		t.Cleanup(srv.Close)
+		return l, srv.URL
+	}
+	// pair seats two sockets of testIP in a started match and checks both are counted.
+	pair := func(t *testing.T, l *limiter, url string) (a *gws.Conn, ac *cl, b *gws.Conn, bc *cl) {
+		a, ac = dialAsTestIP(t, url)
+		say(t, a, createHello)
+		w := hear(t, ac)
+		b, bc = dialAsTestIP(t, url)
+		say(t, b, `{"type":"hello","protocol":2,"build":"x","match":"`+w[strings.Index(w, `"match":"`)+9:len(w)-2]+`"}`)
+		hearUntil(t, ac, `"type":"start"`)
+		hearUntil(t, bc, `"type":"start"`)
+		eventually(t, "two seated sockets not counted", func() bool { return l.conns(testIP) == 2 })
+		return a, ac, b, bc
+	}
+	returned := func(t *testing.T, l *limiter) {
+		t.Helper()
+		eventually(t, "count not back to 0", func() bool { return l.conns(testIP) == 0 })
+	}
+
+	t.Run("normal_leave", func(t *testing.T) {
+		l, url := start(t)
+		a, _, b, _ := pair(t, l, url)
+		_ = a.WriteClose(1000, nil)
+		_ = b.WriteClose(1000, nil)
+		returned(t, l)
+	})
+	t.Run("too_far_ahead", func(t *testing.T) {
+		l, url := start(t)
+		a, ac, b, _ := pair(t, l, url)
+		for tick := 4; tick <= 9; tick++ {
+			say(t, a, tickFrame(1, tick))
+		}
+		hearUntil(t, ac, `"reason":"too far ahead"`)
+		_ = b.WriteClose(1000, nil)
+		returned(t, l)
+	})
+	t.Run("invalid_message", func(t *testing.T) {
+		l, url := start(t)
+		a, ac, b, _ := pair(t, l, url)
+		say(t, a, createHello)
+		hearUntil(t, ac, `"reason":"invalid message"`)
+		_ = b.WriteClose(1000, nil)
+		returned(t, l)
+	})
+	t.Run("rematch_then_leave", func(t *testing.T) {
+		l, url := start(t)
+		a, ac, b, bc := pair(t, l, url)
+		for tick := 4; tick <= 6; tick++ {
+			say(t, a, tickFrame(1, tick))
+			say(t, b, tickFrame(2, tick))
+		}
+		for _, s := range []*gws.Conn{a, b} {
+			say(t, s, `{"type":"over"}`)
+			say(t, s, `{"type":"again"}`)
+		}
+		hearUntil(t, ac, `"type":"start"`)
+		hearUntil(t, bc, `"type":"start"`)
+		_ = a.WriteClose(1000, nil)
+		_ = b.WriteClose(1000, nil)
+		returned(t, l)
+	})
+	t.Run("unknown_match_silent_close", func(t *testing.T) {
+		l, url := start(t)
+		for range unknownBurst {
+			l.unknown()
+		}
+		cw := &closeWatcher{done: make(chan struct{})}
+		s, _, err := gws.NewClient(cw, &gws.ClientOption{
+			Addr:          "ws" + strings.TrimPrefix(url, "http") + "/ws",
+			RequestHeader: http.Header{testIPHeader: {testIP}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		go s.ReadLoop()
+		say(t, s, `{"type":"hello","protocol":2,"build":"x","match":"ZZZZZZ"}`)
+		select {
+		case <-cw.done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("socket not closed")
+		}
+		returned(t, l)
 	})
 }

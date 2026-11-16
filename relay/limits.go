@@ -147,9 +147,6 @@ func (l *limiter) allow(b *bucket, burst int, period time.Duration) bool {
 		b.used = max(0, b.used-n)
 		b.last = b.last.Add(time.Duration(n) * period)
 	}
-	if b.used == 0 {
-		b.last = now
-	}
 	if b.used >= burst {
 		return false
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"runtime"
 	"strconv"
@@ -31,21 +32,26 @@ func (c *slowReader) OnMessage(_ *gws.Conn, m *gws.Message) {
 }
 
 func TestSlowReaderBacklogIsCapped(t *testing.T) {
-	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: testConfig()}}
+	l := newLimiter(tableSize, 1000, time.Millisecond, time.Now)
+	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: testConfig()}, lim: l, ipHeader: testIPHeader}
 	srv := httptest.NewServer(newServer(h).Handler)
 	defer srv.Close()
 	sr := &slowReader{welcome: make(chan string, 1)}
-	a, _, err := gws.NewClient(sr, &gws.ClientOption{Addr: "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws", NewDialer: smallWindow})
+	a, _, err := gws.NewClient(sr, &gws.ClientOption{
+		Addr: "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws", NewDialer: smallWindow,
+		RequestHeader: http.Header{testIPHeader: {testIP}},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	go a.ReadLoop()
 	say(t, a, `{"type":"hello","protocol":2,"build":"x","match":"","settings":{}}`)
 	w := <-sr.welcome
-	b, bc := dial(t, srv.URL)
+	b, bc := dialAsTestIP(t, srv.URL)
 	say(t, b, `{"type":"hello","protocol":2,"build":"x","match":"`+w[strings.Index(w, `"match":"`)+9:len(w)-2]+`"}`)
 	hear(t, bc)
 	hear(t, bc)
+	eventually(t, "two seated sockets not counted", func() bool { return l.conns(testIP) == 2 })
 	logs := captureLogs(t)
 	pad := strings.Repeat("x", 60000)
 	seen := map[string]bool{}
@@ -79,6 +85,8 @@ func TestSlowReaderBacklogIsCapped(t *testing.T) {
 	if !strings.Contains(logs.String(), "write queue full") {
 		t.Fatal("seat 1 was not closed by the write-queue cap")
 	}
+	_ = b.WriteClose(1000, nil)
+	eventually(t, "count not back to 0 after the write-queue close", func() bool { return l.conns(testIP) == 0 })
 }
 
 // smallWindow pins the receive buffer so kernel autotuning cannot absorb the relay's backlog.
