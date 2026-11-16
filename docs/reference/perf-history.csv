@@ -803,3 +803,11 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,combat_dense:profile,1,,,0.7731,P1,1.43,log sha256:58baaea0a14d
 2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,combat_hordes300:profile,1,,,1.9171,P1,1.43,log sha256:58baaea0a14d
 2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,team_match:profile,1,,,1.115,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,open,2,0.321,1.495,,P1,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,open,2,2.043,2.148,,tick-frame,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,dense,2,0.327,1.878,,P1,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,dense,2,2.043,2.211,,tick-frame,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,ashfall,2,0.614,2.232,,P1,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,ashfall,2,2.136,2.253,,tick-frame,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,horde,2,0.355,3.658,,P1,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,horde,2,4.935,5.293,,tick-frame,2.74,log sha256:f0b315421dc2

@@ -11,8 +11,8 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 161% | 🔺 1% worse | 2026-11-16 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 144% | 🔺 1% worse | 2026-11-16 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 2% worse | 2026-11-16 |
-| Drawing the screen | 🟢 OK | ███████░░░ 70% | 🔻 10% better | 2026-11-16 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ██████░░░░ 69% | 🔻 5% better | 2026-11-16 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 70% | 🔺 2% worse (busy host) | 2026-11-16 |
+| Drawing the screen | 🟢 OK | ██████░░░░ 67% | 🔻 5% better (busy host) | 2026-11-16 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | ➖ same | 2026-11-16 |
 | Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔺 2% worse | 2026-11-16 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 1% better | 2026-11-16 |
@@ -29,8 +29,8 @@ Details:
 - combat stress p95: 161% of budget, exceeded (Sim boundary SB3, 2026-11-16), 1% slower than auto d820773 (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 144% of budget, exceeded (Sim boundary SB3, 2026-11-16), 1% slower than auto d820773 (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 211% of budget, exceeded (Sim boundary SB3, 2026-11-16), unchanged vs auto d820773 (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 70% of budget (P2.2 Quick rematch slice 2 (merge), 2026-11-16), 10% faster than SB1-SB2 rendered (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 69% of budget (P2.2 Quick rematch slice 2 (merge), 2026-11-16), 5% faster than SB1-SB2 rendered (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 67% of budget (Sim boundary SB3, 2026-11-16), 5% faster than P2.2 Quick rematch slice 2 (merge) (worst vs worst); run-to-run spread not measured, busy host (load 2.7)
+- Ashfall tick-frame p95: 70% of budget (Sim boundary SB3, 2026-11-16), 2% slower than P2.2 Quick rematch slice 2 (merge) (worst vs worst); run-to-run spread not measured, busy host (load 2.7)
 - lockstep p99: 11% of budget (Sim boundary SB3, 2026-11-16), 1% slower than auto d820773 (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
