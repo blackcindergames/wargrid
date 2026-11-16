@@ -786,14 +786,21 @@ def finished(path: Path) -> bool:
 Launch = Callable[[tuple[int, str], int], tuple[str, int]]
 
 
-def sweep(out: Path, jobs: list[tuple[int, str]], lanes: int, retries: int, launch: Launch) -> int:
+def sweep(
+    out: Path,
+    jobs: list[tuple[int, str]],
+    lanes: int,
+    retries: int,
+    launch: Launch,
+    stop: threading.Event | None = None,
+) -> int:
     """Run jobs on lanes (own port each); one runs.jsonl line per attempt. Returns the number of failed jobs."""
     free: queue.Queue[int] = queue.Queue()
     for lane in range(lanes):
         free.put(lane)
     log = out / "runs.jsonl"
 
-    stop = threading.Event()
+    stop = stop or threading.Event()
 
     def work(job: tuple[int, str]) -> bool:
         for attempt in range(1, retries + 2):
@@ -832,7 +839,7 @@ def sweep(out: Path, jobs: list[tuple[int, str]], lanes: int, retries: int, laun
             raise
 
 
-def child_launcher(out: Path, timeout: float) -> Launch:
+def child_launcher(out: Path, timeout: float, stop: threading.Event) -> Launch:
     script = str(Path(__file__).resolve())
 
     def launch(job: tuple[int, str], port: int) -> tuple[str, int]:
@@ -851,6 +858,8 @@ def child_launcher(out: Path, timeout: float) -> Launch:
         pidfile = Path(env["ZH_PARITY_PIDDIR"]) / str(proc.pid)
         pidfile.parent.mkdir(parents=True, exist_ok=True)
         pidfile.write_text("sweep")
+        if stop.is_set():  # the stop handler may have read the pidfiles before ours existed
+            stop_group(proc.pid)
         try:
             code = proc.wait(timeout)
             return ("ok" if code == 0 else "fail"), code
@@ -961,7 +970,8 @@ def main():
     parent.write_text("sweep-parent")
     lanes = max(1, min(args.lanes, MAX_LANES, len(jobs)))
     print(f"{len(jobs)} jobs on {lanes} lanes")
-    failed = sweep(args.out, jobs, lanes, args.retries, child_launcher(args.out, args.timeout))
+    stop = threading.Event()
+    failed = sweep(args.out, jobs, lanes, args.retries, child_launcher(args.out, args.timeout, stop), stop)
     parent.unlink(missing_ok=True)
     print(f"done, {failed} failed; see {args.out / 'runs.jsonl'}")
     raise SystemExit(1 if failed else 0)
