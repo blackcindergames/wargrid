@@ -834,3 +834,26 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,ashfall,2,2.136,2.253,,tick-frame,2.74,log sha256:f0b315421dc2
 2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,horde,2,0.355,3.658,,P1,2.74,log sha256:f0b315421dc2
 2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,horde,2,4.935,5.293,,tick-frame,2.74,log sha256:f0b315421dc2
+2026-11-16,28fae9d,auto f5640fb,dev,movement_tick,open,1,0.759,0.834,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,movement_tick,dense,1,0.732,0.879,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,open,1,1.882,2.231,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,dense,1,1.836,2.163,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,contact,1,1.194,1.551,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,skirmish3v3,1,1.346,1.444,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,transports,1,1.127,1.232,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,defences,1,0.771,2.123,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,docks,1,0.597,0.627,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,hordes300,1,2.979,3.436,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,ramp,1,0.656,1.219,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,combat_tick,frc,1,0.89,1.077,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,lockstep_overhead,contact,1,0.016,0.067,,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,movement_open:profile,1,,,1.3137,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,movement_dense:profile,1,,,1.3006,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,combat_contact:profile,1,,,0.3334,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5317,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,combat_open:profile,1,,,0.8968,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,skirmish_match:profile,1,,,0.2444,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,large_196:profile,1,,,1.7053,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,combat_dense:profile,1,,,0.7778,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,combat_hordes300:profile,1,,,1.9386,P1,2.18,log sha256:b63aeb7c0baa
+2026-11-16,28fae9d,auto f5640fb,dev,plumbing,team_match:profile,1,,,1.1186,P1,2.18,log sha256:b63aeb7c0baa
