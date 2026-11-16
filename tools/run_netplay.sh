@@ -140,7 +140,8 @@ case $scenario in
     case $scenario in
       proxy-clean) start_proxies "" "" ;;
       # Seat 1's hold spans seat 2's hold start; with seat 2 alone held, seat 1 may wait on it and send nothing down.
-      proxy-burst) start_proxies "slice:7,hold@2000:4000" "slice:7,hold@3000:4000" ;;
+      # Seat 2 is starved while seat 1 is held, so its hold stays 3 s to keep 1 s under the client's 5 s silence rule.
+      proxy-burst) start_proxies "slice:7,hold@2000:3500" "slice:7,hold@3000:3000" ;;
     esac
     start_pair "" ""
     wait_exit "$pid1" "$match_wait"; wait_exit "$pid2" "$match_wait"
