@@ -1,0 +1,960 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid HUD v5, round 1</title>
+<style>
+@font-face{font-family:"Public Sans";font-weight:400;src:url(../../../../game/fonts/PublicSans-Regular.ttf) format("truetype")}
+@font-face{font-family:"Public Sans";font-weight:600;src:url(../../../../game/fonts/PublicSans-SemiBold.ttf) format("truetype")}
+@font-face{font-family:"Public Sans";font-weight:700;src:url(../../../../game/fonts/PublicSans-Bold.ttf) format("truetype")}
+@font-face{font-family:"Public Sans";font-weight:800;src:url(../../../../game/fonts/PublicSans-ExtraBold.ttf) format("truetype")}
+body{margin:0;background:#0a0f14;color:#dfe7ec;font:15px/1.45 "Helvetica Neue",Helvetica,Arial,sans-serif}
+#err{position:fixed;left:0;right:0;top:0;z-index:99;background:#b3261e;color:#fff;font:600 14px ui-monospace,Menlo,monospace;padding:8px 14px;white-space:pre-wrap}
+#err:empty{display:none}
+#app{max-width:1360px;margin:0 auto;padding:18px 24px 60px}
+#app.final{max-width:none}
+[hidden]{display:none!important}
+.top .n{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#60e5ed;font-weight:700}
+.top h2{margin:2px 0 4px;font-size:24px}
+.top p{margin:0 0 12px;color:#93a5b0;max-width:900px}
+.top p.look{color:#f7c871}
+.top p.rec{color:#93a5b0;min-height:1em}
+.top p.rec .fail{color:#f7c871;font-weight:700}
+.hud .cur{position:absolute;width:16px;height:22px;pointer-events:none;z-index:6}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.bar button{font:inherit;font-weight:700;color:#93a5b0;background:#16212a;border:0;padding:8px 12px;cursor:pointer}
+.bar button.on{color:#08131c;background:#60e5ed}
+.bar button:disabled{opacity:.4;cursor:default}
+.bar .gap{margin-left:auto}
+.bar .v4tag{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#08131c;background:#93a5b0;padding:2px 8px}
+kbd{font:11px ui-monospace,Menlo,monospace;border:1px solid currentColor;padding:1px 5px;opacity:.7;margin:0 4px}
+.stagewrap{width:min(100%,calc((100vh - 380px)*var(--ar)));min-width:640px;margin:0 auto}
+.stagewrap.full{width:var(--w);min-width:0;margin:0}
+.under{display:grid;grid-template-columns:1fr 380px;gap:24px;margin-top:14px}
+.under p{margin:6px 0 0;color:#b9c6ce}
+.under p.agent{color:#93a5b0;font-size:13px}
+.cp{margin-left:10px;background:#f7c871;color:#1a1408;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px}
+textarea{width:100%;box-sizing:border-box;height:56px;background:#16212a;color:inherit;border:1px solid #2e3f4b;font:inherit;padding:8px}
+.act button{font:inherit;border:0;cursor:pointer;margin-top:8px;padding:12px 22px;background:#16212a;color:#93a5b0;font-weight:700}
+.act #pick{background:#f7c871;color:#1a1408;font-weight:800;font-size:16px}
+.cov,.ctr{border-collapse:collapse;margin-top:14px;font-size:13px}
+.cov caption,.ctr caption{text-align:left;color:#93a5b0;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding-bottom:4px}
+.cov th,.cov td,.ctr th,.ctr td{padding:3px 10px;text-align:right;border-top:1px solid #2e3f4b}
+.cov th,.ctr th{color:#93a5b0;font-weight:600}
+.cov th:first-child,.ctr th:first-child,.ctr td.l{text-align:left}
+.cov td.hl{background:#60e5ed;color:#08131c;font-weight:800}
+.cov td,.cov th{white-space:nowrap}
+.ctr{margin:0 0 28px}
+.ctr td.fail{color:#ffb4ab;font-weight:800}
+.sw{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:6px}
+.tables{display:flex;flex-wrap:wrap;gap:0 40px;align-items:flex-start}
+.notes{color:#b9c6ce;max-width:1000px;margin:0 0 28px;padding-left:20px}
+.notes li{margin:2px 0}
+h3.sec{margin:0 0 8px;font-size:18px}
+.pairs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start}
+.pairs figure{margin:0}
+.pairs figcaption{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#93a5b0;margin-bottom:6px}
+.state h3{margin:0 0 8px;font-size:18px}
+.state{margin-bottom:28px}
+
+.fit{position:relative;overflow:hidden;background:#000;aspect-ratio:var(--ar)}
+.stage{position:absolute;left:0;top:0;overflow:hidden;background:#a88e5c}
+.fit .stage{transform:scale(var(--s));transform-origin:0 0}
+.world{position:absolute;left:0;top:0;display:block}
+
+.hud{position:absolute;left:0;top:0;transform-origin:0 0;transform:scale(var(--k));color:var(--text);font:13px/1.2 var(--ff);user-select:none;font-variant-numeric:tabular-nums}
+.hud *{box-sizing:border-box}
+.hud>*{position:absolute}
+.hud .slabbg,.hud .strip,.hud .alert,.hud .tc,.hud .refuse{border:0 solid var(--line)}
+.hud .slabbg,.hud .strip,.hud .alert,.hud .refuse{background:var(--bg)}
+.hud .lab{font-weight:700;font-size:12px;line-height:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.hud .muted{color:var(--muted);font-size:12px;line-height:14px;font-weight:400;white-space:nowrap}
+.hud .amb{color:var(--amber)}
+.hud .num{font-size:13px;font-weight:700;line-height:16px}
+.hud .k{display:inline-block;flex:none;min-width:18px;height:18px;padding:0 4px;background:var(--well);color:var(--muted);font-weight:700;font-size:12px;line-height:18px;text-align:center;border-radius:0}
+.hud .gl{flex:none;display:block;opacity:.85;color:var(--text)}
+
+.hud .strip{display:flex;align-items:center;gap:24px;height:32px;padding:0 7px;width:max-content}
+.hud .strip.ledge{padding-left:8px}
+.hud .g{display:flex;align-items:center;gap:12px}
+.hud .g.wide{gap:24px}
+.hud .stat{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.hud .stat b{font-size:13px;font-weight:700}
+.hud .stat.cr b{font-size:16px}
+.hud .stat .arr{color:var(--muted);font-weight:400}
+.hud .sep{width:1px;height:16px;background:var(--line);flex:none}
+.hud .chip{display:flex;align-items:center;gap:8px;height:24px;padding:0 8px;background:var(--btn);border-radius:var(--r);white-space:nowrap;font-size:13px;font-weight:600}
+.hud .pb{width:40px;height:4px;background:var(--well);flex:none}
+.hud .pb i{display:block;height:100%;background:var(--you)}
+.hud .alert{display:flex;align-items:center;gap:8px;height:28px;padding:0 7px;white-space:nowrap;font-weight:600}
+.hud .sq{width:8px;height:8px;background:var(--amber);flex:none}
+.hud .tr{display:flex;gap:8px}
+.hud .tr>*{position:static}
+.hud .tc{display:flex;align-items:center;gap:8px;height:32px;padding:0 7px;font-size:13px;font-weight:600;background:var(--btn);border-radius:var(--r);white-space:nowrap}
+.hud .refuse{display:flex;align-items:center;gap:8px;height:28px;padding:0 7px;font-size:13px;font-weight:600;line-height:16px;white-space:nowrap}
+
+.hud .pn{display:flex;flex-direction:column;gap:8px}
+.hud .mini svg{display:block}
+.hud .hd{display:flex;align-items:center;gap:8px;height:18px;line-height:14px;font-weight:700;font-size:14px;white-space:nowrap}
+.hud .hd .x{color:var(--muted);font-size:13px;font-weight:600}
+.hud .hd.split{justify-content:space-between}
+.hud .id{display:flex;gap:8px;align-items:flex-start}
+.hud .id>div{flex:1;min-width:0}
+.hud .nr{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-height:14px}
+.hud .nm{font-weight:700;font-size:14px;line-height:14px;white-space:nowrap}
+.hud .hr{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--muted);white-space:nowrap}
+.hud .hp{display:block;background:var(--well);flex:none}
+.hud .hp b{display:block;height:100%}
+.hud .kv{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.hud .kv .lab{width:112px}
+.hud .foot{display:flex;align-items:center;justify-content:space-between}
+.hud .cmd{display:flex;align-items:center;gap:8px;flex:none;width:122px;height:32px;padding:0 8px;font-size:13px;font-weight:600;white-space:nowrap}
+.hud .cmd .grow{flex:1}
+.hud .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}
+.hud .krow{display:flex;align-items:center;gap:4px;height:26px;padding:0 8px 4px;overflow:hidden}
+.hud .krow .kn{flex:1;font-size:13px;font-weight:600;line-height:16px;white-space:nowrap}
+.hud .krow b{width:28px;text-align:right}
+.hud .krow .hp{position:absolute;left:0;right:0;bottom:0;width:auto!important;height:3px!important}
+.hud .qrow{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.hud .slot{width:36px;height:36px;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:13px}
+.hud .slot.empty{background:#0f1820;box-shadow:inset 0 0 0 1px #223241;border-radius:var(--r)}
+.hud .slots{display:flex;gap:4px}
+.hud .qp{position:absolute;left:0;bottom:0;height:4px;background:var(--you)}
+
+.hud .lattice{display:grid;gap:4px}
+.hud .card .qrow{margin-top:8px}
+.hud .prow{display:flex;gap:4px}
+.hud .well{display:block;background:#0f1820;border-radius:var(--r)}
+.hud .cell{display:block;padding:4px 8px}
+.hud .cell.two{width:100px;height:60px}
+.hud .cell.one{width:148px;height:40px}
+.hud .cell .r1{display:flex;align-items:center;gap:4px}
+.hud .cell .r1>.cost,.hud .cell .r1>.nm1{flex:1}
+.hud .cell.cmd .r1{flex-direction:row-reverse;justify-content:space-between}
+.hud .cell.two .r1{height:20px}
+.hud .cell.one .r1{height:18px}
+.hud .cell .nm2{display:block;margin-top:4px;font-size:12px;font-weight:600;line-height:14px}
+.hud .cell .nm1{font-size:12px;font-weight:600;line-height:18px;white-space:nowrap}
+.hud .cell .cost{display:block;line-height:14px}
+.hud .cell.fade{opacity:.45}
+.hud .cell.quiet{background:var(--quiet)}
+.hud .cell.quiet .nm2,.hud .cell.quiet .nm1,.hud .cell.quiet .cost:not(.amb),.hud .cell.quiet .gl{color:var(--muted)}
+.hud .cell .cn{font-size:13px;font-weight:600;white-space:nowrap}
+.hud .cell.two .cn{display:block;margin-top:4px;line-height:28px}
+.hud .cell.one.cmd{display:flex;align-items:center;gap:8px}
+.hud .cell.one.cmd .k{position:absolute;top:4px;right:8px}
+.hud .cell .cn .muted{font-size:13px}
+
+.hud .b{background:var(--btn);border-radius:var(--r);position:relative;cursor:pointer}
+.hud .b.on{background:var(--panel2);box-shadow:inset 0 0 0 2px var(--sel)}
+.hud .cnt{position:absolute;right:4px;bottom:4px;height:14px;padding:0 4px;background:var(--well);font-size:13px;font-weight:700;line-height:14px;border-radius:0}
+.hud .arrow{display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--bg);border:0 solid var(--line)}
+.hud .ccard{width:248px;padding:7px;background:var(--bg);border:1px solid var(--line);font-size:13px;pointer-events:none;z-index:5}
+.hud .ccard>div{height:20px;line-height:20px;white-space:nowrap}
+.hud .ccard b{font-weight:600}
+.hud .cl{color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+</style>
+<div id="err"></div>
+<div id="app"></div>
+<script src="glyphs.js"></script>
+<script src="glyphs3.js"></script>
+<script>
+addEventListener('error', e => { err.textContent += `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})\n`; });
+addEventListener('unhandledrejection', e => { err.textContent += `${e.reason}\n`; });
+
+const SIZES = {'1920x1080': {w: 1920, h: 1080, k: 1.5}, '1280x800': {w: 1280, h: 800, k: 1}, '1280x720': {w: 1280, h: 720, k: 1}};
+const SIZE_KEYS = Object.keys(SIZES);
+const SIZE_ALIAS = {1920: '1920x1080', 1280: '1280x800', 720: '1280x720'};
+const sizeKey = x => SIZES[x] ? x : SIZE_ALIAS[x] || '1920x1080';
+const sizeLabel = x => x.replace('x', ' x ');
+const STATES = ['none', 'one', 'many', 'factory', 'plant', 'full', 'builder', 'build', 'place', 'blocked', 'enemy', 'pile', 'site'];
+const STATE_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', ',', '.', '-'];
+const STATE_LABEL = {none: 'Nothing selected', one: 'One unit', many: '120 units', factory: 'Factory', plant: 'Power Plant', full: 'Queue full', builder: 'Bulldozer', build: 'Build menu',
+  place: 'Placement', blocked: 'Blocked placement', enemy: 'Enemy unit', pile: 'Supply pile', site: 'Construction'};
+const TIER_LABEL = {full: 'Full', core: 'Core (early package)'};
+const FONT = "'Public Sans', Arial, sans-serif";
+const DOCK = 168, SEL_W = 408, PIN_W = 220, GAP = 8, STRIP = 32;
+const CELL_PAD = 8;
+const CELL = {two: {w: 100, h: 60}, one: {w: 148, h: 40}};
+const ONE_NAME_W = CELL.one.w - 2 * CELL_PAD - 18 - 4;
+const TWO_NAME_W = CELL.two.w - 2 * CELL_PAD;
+const cardWidth = o => 4 + 8 + 4 * CELL[o.cell].w + 3 * 4 + 8;
+const LATTICE = ['QWER', 'ASDF', 'ZXCV'].map(r => [...r]);
+const REFUSAL = 'Cannot build here';
+
+const luminance = hex => {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4);
+  return .2126 * r + .7152 * g + .0722 * b;
+};
+const contrast = (a, b) => { const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (hi + .05) / (lo + .05); };
+const mix = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
+const BG = '#121c24';
+function lifted(hex) {
+  for (let i = 0; i <= 20; i++) { const c = mix(hex, '#ffffff', i * .05); if (contrast(c, BG) >= 3) return c; }
+  return '#ffffff';
+}
+const OWNERS = [['Blue (you)', '#44adf4'], ['Red (enemy)', '#d54f3b'], ['Green', '#4fc389'], ['Gold', '#ecdc3c'], ['Orange', '#e08522'], ['Purple', '#9249ac'], ['Teal', '#008d8d'], ['Pink', '#ffa5d4']];
+const FLAT = {bg: BG, panel: '#1b2731', btn: '#223241', panel2: '#26384a', line: '#2e3f4b', edge: '#263842', well: '#0c141a', text: '#eef3f5', muted: '#93a5b0',
+  sel: '#60e5ed', amber: '#f7c871', you: lifted(OWNERS[0][1]), enemy: lifted(OWNERS[1][1]), ally: '#69ceaa', quiet: '#16212a', r: '0'};
+const HEALTH = ['#5cc85a', '#e0d060', '#d8453a'];
+const GLYPH_KEY = {
+  'Medium Tank': 'china_light_vehicle', 'Rotary Gun Tank': 'china_tank', 'Militia': 'china_rifle_infantry',
+  'Anti-Tank Trooper': 'china_rocket_infantry', 'Supply Truck': 'china_collector', 'Bulldozer': 'china_builder',
+  'Power Plant': 'china_power_plant', 'Supply Depot': 'china_supply_center', 'Barracks': 'china_barracks',
+  'Vehicle Factory': 'china_factory', 'Rotary Gun Tower': 'china_defence', 'Headquarters': 'china_command_center'};
+const COMMAND_GLYPHS = new Set(['attack_move', 'guard', 'stop', 'sell', 'build']);
+const PAGE_GLYPH = {build: '<path d="M2 11H13V22H2Z"/><path d="M17 2H20V6H23V9H20V13H17V9H14V6H17Z"/>'};
+const BASE = {credits: 4800, power: 8, avail: 10};
+const DATA = {
+  none: {...BASE, ring: true, alert: true}, one: {...BASE}, many: {...BASE, power: 11, offline: true, alert: true},
+  factory: {...BASE, credits: 650, hover: 'Rotary Gun Tank'}, plant: {...BASE},
+  full: {...BASE, hover: 'Medium Tank', queue: ['Medium Tank', 'Medium Tank', 'Rotary Gun Tank', 'Medium Tank', 'Rotary Gun Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank', 'Rotary Gun Tank']},
+  builder: {...BASE},
+  build: {...BASE, credits: 2400, power: 0, avail: 0, early: true, hover: 'Supply Depot'},
+  place: {...BASE, armed: 'Rotary Gun Tower'}, blocked: {...BASE, armed: 'Vehicle Factory', refuse: true},
+  enemy: {...BASE}, pile: {...BASE}, site: {...BASE}};
+const MENU_OPEN = new Set(['build', 'place', 'blocked']);
+const KINDS = [['Medium Tank', 36, 82], ['Rotary Gun Tank', 24, 64], ['Militia', 24, 91], ['Anti-Tank Trooper', 12, 45], ['Supply Truck', 12, 100], ['Bulldozer', 12, 100]];
+const GROUPS = [[1, 36], [2, 24], [3, 12]];
+const PRODUCING = [['Medium Tank', 42, 'Vehicle Factory'], ['Bulldozer', 60, 'Headquarters']];
+const QUEUE = ['Medium Tank', 'Medium Tank', 'Rotary Gun Tank', 'Medium Tank'];
+const FACTORY_KEY = {'Medium Tank': 'Q', 'Rotary Gun Tank': 'W'};
+// [cost, seconds, power, prerequisite]: seconds are definition ticks / 30 (china.gd)
+const CELLS = {'Medium Tank': [800, 10], 'Rotary Gun Tank': [800, 10], 'Power Plant': [1000, 10, {avail: 10}], 'Supply Depot': [1500, 10, {used: 1}, 'Power Plant'],
+  'Barracks': [500, 10], 'Vehicle Factory': [2000, 15, {used: 1}, 'Supply Depot'], 'Rotary Gun Tower': [1200, 25, {used: 3}, 'Power Plant']};
+const INCOME = 1350, SPEND = 1600;
+
+const num = n => n.toLocaleString('en-US');
+const px = n => `${n}px`;
+const isCore = v => v.tier === 'core';
+const queueOf = v => DATA[v.state].queue || QUEUE;
+const isFull = v => queueOf(v).length >= 9;
+const queued = (v, name) => queueOf(v).filter(n => n === name).length;
+
+let glyphSet = [];
+const loadGlyphs = () => { glyphSet = [PAGE_GLYPH, ...(typeof GLYPH3 !== 'undefined' ? [GLYPH3] : []), ...(typeof GLYPH !== 'undefined' ? [GLYPH] : [])]; };
+const glyphFor = name => glyphSet.map(set => set[name]).find(Boolean);
+function glyph(name, px) {
+  const g = glyphFor(name), s = `width:${px}px;height:${px}px`;
+  if (!g) return `<span class="gl" style="${s}"></span>`;
+  const vb = COMMAND_GLYPHS.has(name) ? 24 : 48;
+  return `<svg class="gl" viewBox="0 0 ${vb} ${vb}" style="${s}" fill="currentColor">${g}</svg>`;
+}
+const unitGlyph = (name, px) => glyph(GLYPH_KEY[name], px);
+const hpColor = p => p > 66 ? HEALTH[0] : p > 33 ? HEALTH[1] : HEALTH[2];
+const bar = (pct, w, h, color) => `<i class="hp" style="width:${w}px;height:${h}px"><b style="width:${pct}%;background:${color}"></b></i>`;
+const hpBar = (pct, w, h) => bar(pct, w, h, hpColor(pct));
+const key = k => `<span class="k">${k}</span>`;
+const borders = (t, r, b, l) => `border-width:${[t, r, b, l].map(px).join(' ')}`;
+
+function slab({left, width, height, edge, border, pad}) {
+  const padding = pad.map((p, i) => px(p - border[i])).join(' ');
+  return `left:${left}px;bottom:0;width:${width}px;${height ? `height:${height}px;` : ''}border-width:${border.map(px).join(' ')};padding:${padding};${edge ? `box-shadow:inset 4px 0 0 ${edge}` : ''}`;
+}
+
+function minimap(v, size) {
+  const d = DATA[v.state], mid = size / 2;
+  if (d.offline) {
+    return `<svg width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#0c141a"/>
+      <text x="${mid}" y="${mid - 4}" text-anchor="middle" fill="#93a5b0" font-size="12" font-weight="700" letter-spacing="1.44">RADAR OFFLINE</text>
+      <text x="${mid}" y="${mid + 16}" text-anchor="middle" fill="#f7c871" font-size="12">Low power</text></svg>`;
+  }
+  // Allegiance by shape as well as hue: own square, enemy diamond, ally disc.
+  const SHAPE = {
+    own: (x, y) => `<rect x="${x}" y="${y}" width="5" height="5" fill="${FLAT.you}"/>`,
+    enemy: (x, y) => `<path d="M${x + 3} ${y - 1} ${x + 7} ${y + 3} ${x + 3} ${y + 7} ${x - 1} ${y + 3}z" fill="${OWNERS[1][1]}"/>`,
+    ally: (x, y) => `<circle cx="${x + 3}" cy="${y + 3}" r="3.5" fill="${FLAT.ally}"/>`};
+  const dots = (pts, who) => pts.map(([x, y]) => SHAPE[who](x, y)).join('');
+  return `<svg width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#2f352e"/>
+    <rect x="86" y="14" width="40" height="30" fill="#252a24"/><rect x="20" y="58" width="30" height="40" fill="#252a24"/>
+    ${dots([[18, 110], [24, 118], [32, 108], [26, 126], [38, 120], [14, 126], [36, 131]], 'own')}
+    ${dots([[110, 26], [120, 34], [104, 36], [124, 20]], 'enemy')}${dots([[76, 70]], 'ally')}
+    <rect x="9.5" y="92.5" width="56" height="42" fill="none" stroke="#fff"/>
+    ${d.ring ? '<circle cx="50" cy="118" r="4" fill="none" stroke="#f7c871" stroke-width="2"/>' : ''}</svg>`;
+}
+
+function stat(label, value, extra = '', cls = '') {
+  return `<span class="stat ${cls}"><span class="lab">${label}</span><b>${value}</b>${extra}</span>`;
+}
+const lowPower = '<span class="lab amb">Low power</span>';
+const arrow = '<span class="arr">→</span>';
+function creditsValue(d, armed) {
+  return armed ? `${num(d.credits)} ${arrow} ${num(d.credits - CELLS[armed][0])}` : num(d.credits);
+}
+function powerValue(d, armed) {
+  const used = armed && CELLS[armed][2] && CELLS[armed][2].used;
+  if (used) return [`${d.power} ${arrow} ${d.power + used} / ${d.avail}`, d.power + used > d.avail];
+  return [`${d.power} / ${d.avail}`, d.power > d.avail];
+}
+function statusGroup(v) {
+  const d = DATA[v.state], [power, low] = powerValue(d, d.armed);
+  const rates = isCore(v) ? '' : `<span class="muted num">+${num(INCOME)}</span><span class="muted num">−${num(SPEND)}</span><span class="muted">/ min</span>`;
+  return `<div class="g wide">${stat('Credits', creditsValue(d, d.armed), rates, 'cr')}${stat('Power', power, low ? lowPower : '')}</div>`;
+}
+function helpersGroup() {
+  const idle = `<span class="chip">${glyph('china_builder', 18)}<b class="num">1</b>${key('.')}</span>`;
+  return `<div class="g">${idle}${GROUPS.map(([n, count]) => `<span class="chip">${key(n)}<b class="num">${count}</b></span>`).join('')}</div>`;
+}
+function productionGroup() {
+  return `<div class="g">${PRODUCING.map(([name, pct, building]) => `<span class="chip" title="${building}">${unitGlyph(name, 18)}<i class="pb"><i style="width:${pct}%"></i></i></span>`).join('')}</div>`;
+}
+const sep = '<i class="sep"></i>';
+
+function topStrip(v) {
+  const parts = isCore(v) ? [statusGroup(v)] : [statusGroup(v), productionGroup()];
+  return `<div class="strip" data-id="top_strip" data-cov style="left:8px;top:8px;${borders(1, 1, 1, 1)}">${parts.join(sep)}</div>`;
+}
+function aboveDock(v, H) {
+  const ledge = isCore(v) ? '' : `<div class="strip ledge" data-id="ledge" data-cov style="left:0;top:${H - DOCK - GAP - STRIP}px;${borders(1, 1, 1, 0)}">${helpersGroup()}</div>`;
+  const refuse = DATA[v.state].refuse ? `<div class="refuse amb" data-id="refusal" style="left:0;top:0;${borders(1, 1, 1, 1)}"><i class="sq"></i><span>${REFUSAL}</span></div>` : '';
+  return ledge + refuse;
+}
+function alertFeed(v) {
+  if (isCore(v) || !DATA[v.state].alert) return '';
+  return `<div class="alert" data-id="alert" data-cov style="left:8px;top:${16 + STRIP}px;${borders(1, 1, 1, 1)}"><i class="sq"></i><span>Base under attack</span>${key('Space')}</div>`;
+}
+function topRight(o, v) {
+  const team = isCore(v) ? '' : `<span class="tc" data-id="team" data-cov style="${borders(1, 1, 1, 1)}">Team</span>`;
+  const esc = o.back === 'cell' && MENU_OPEN.has(v.state) ? '' : key('Esc');
+  const playtest = isCore(v) ? `<div class="tc" data-id="playtest" data-cov style="right:8px;top:${16 + STRIP}px;${borders(1, 1, 1, 1)}"><span class="lab">Playtest</span><b class="num">2 / 5</b></div>` : '';
+  return `<div class="tr" style="right:8px;top:8px">${team}<span class="tc" data-id="menu" data-cov style="${borders(1, 1, 1, 1)}">Menu${esc}</span></div>${playtest}`;
+}
+function edgeArrows(v, W, H) {
+  if (isCore(v) || !DATA[v.state].alert) return '';
+  const one = (style, edges, title, svg, id) => `<div class="arrow" data-id="${id}" data-cov title="${title}" style="${style};${edges}">${svg}</div>`;
+  const amber = '<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="0,7 14,0 14,14" style="fill:var(--amber)"/></svg>';
+  const ally = '<svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="16" r="9" fill="none" stroke-width="2" style="stroke:var(--ally)"/><polygon points="13,2 20,16 6,16" style="fill:var(--ally)"/></svg>';
+  return one(`left:0;top:${Math.round(H * .4)}px`, borders(1, 1, 1, 0), 'Base under attack: click to jump', amber, 'arrow.alert') +
+    one(`left:${Math.round(W * .62 - 14)}px;top:0`, borders(0, 1, 1, 1), 'Teammate ping: click to jump', ally, 'arrow.ally');
+}
+
+function identity(v, name, cur, max, side = '', extra = '') {
+  const g = !isCore(v) && glyphFor(GLYPH_KEY[name]) ? unitGlyph(name, 64) : '';
+  return `<div class="id">${g}<div><div class="nr"><span class="nm">${name}</span>${side}</div>${extra}
+    <div class="hr">${hpBar(cur / max * 100, 160, 6)}<span class="num">${num(cur)} / ${num(max)}</span></div></div></div>`;
+}
+function kindRow(v, [name, count, pct], on) {
+  return `<span class="b krow ${on ? 'on' : ''}" data-name="${name}" data-count="${count}" data-tg>${isCore(v) ? '' : unitGlyph(name, 22)}<span class="kn">${name}</span><b class="num">${count}</b>${hpBar(pct, 0, 3)}</span>`;
+}
+function slots(v, count) {
+  const filled = queueOf(v).slice(0, count).map((name, i) => `<span class="b slot" data-item="${name}" title="${name}: click to cancel">${isCore(v) ? FACTORY_KEY[name] : unitGlyph(name, 24)}${i ? '' : '<i class="qp" style="width:42%"></i>'}</span>`);
+  return `<span class="slots">${filled.concat(Array(count - filled.length).fill('<span class="slot empty"></span>')).join('')}</span>`;
+}
+function manyBody(o, v) {
+  const active = o.owner === 'active';
+  return `<div class="hd">120 selected · 6 kinds${active ? key('Tab') : ''}</div>
+    <div class="cards">${KINDS.map(k => kindRow(v, k, active && k[0] === 'Bulldozer')).join('')}</div>`;
+}
+const sellButton = (v, refund) => isCore(v) ? '' : `<span class="b cmd" data-id="selection.sell" data-tg>${glyph('sell', 20)}<span class="grow">Sell</span><span class="muted num">+${num(refund)}</span></span>`;
+function factoryBody(o, v) {
+  const inPanel = o.queue === 'panel', sell = sellButton(v, 1000);
+  return identity(v, 'Vehicle Factory', 2000, 2000, inPanel ? `<span class="lab">Queue ${queueOf(v).length} / 9</span>` : '') +
+    (inPanel ? `<div class="qrow">${slots(v, 9)}</div>` : '') +
+    `<div class="foot"><span class="muted">Right-click ground: rally point</span>${sell}</div>`;
+}
+function siteBody(v) {
+  const progress = `<div class="hr">${bar(62, 160, 6, 'var(--you)')}<span class="num">62 %</span></div>`;
+  return identity(v, 'Vehicle Factory', 1240, 2000, '<span class="lab">Under construction</span>', progress);
+}
+const pileBody = () => `<div class="nm">Supply Pile</div>
+  <div class="kv"><span class="lab">Boxes left</span><b class="num">142</b></div>
+  <div class="kv"><span class="lab">Collectors</span><b class="num">2 docked · 1 waiting</b></div>`;
+function selectionBody(o, v) {
+  if (v.state === 'one') return identity(v, 'Medium Tank', 180, 400);
+  if (v.state === 'many') return manyBody(o, v);
+  if (v.state === 'factory' || v.state === 'full') return factoryBody(o, v);
+  if (v.state === 'plant') return identity(v, 'Power Plant', 1500, 1500) + `<div class="foot"><div class="kv"><span class="lab">Power</span><b class="num">+10</b></div>${sellButton(v, 500)}</div>`;
+  if (v.state === 'enemy') return identity(v, 'Battle Tank', 312, 480);
+  if (v.state === 'pile') return pileBody();
+  if (v.state === 'site') return siteBody(v);
+  return identity(v, 'Bulldozer', 250, 250);
+}
+const selectionEdge = v => v.state === 'enemy' ? 'var(--enemy)' : v.state === 'pile' ? 'var(--line)' : 'var(--you)';
+
+function cardSpec(o, v) {
+  const st = v.state;
+  const army = {A: {cmd: 'Attack Move', g: 'attack_move'}, S: {cmd: 'Stop', g: 'stop'}, ...(isCore(v) ? {} : {D: {cmd: 'Guard', g: 'guard'}})};
+  const builder = {Q: {cmd: 'Build', g: 'build', more: true}, S: {cmd: 'Stop', g: 'stop'}};
+  if (st === 'one' || (st === 'many' && o.owner === 'common')) return army;
+  if (st === 'many') return {...builder, A: army.A};
+  if (st === 'builder') return builder;
+  if (st === 'plant') return {};
+  if (st === 'factory' || st === 'full') return {Q: {item: 'Medium Tank', counted: true}, W: {item: 'Rotary Gun Tank', counted: true}};
+  if (!MENU_OPEN.has(st)) return null;
+  const grid = {Q: {item: 'Power Plant'}, W: {item: 'Supply Depot'}, E: {item: 'Barracks'}, R: {item: 'Vehicle Factory'}, A: {item: 'Rotary Gun Tower'}};
+  if (o.back === 'cell') grid.V = {cmd: DATA[st].armed ? 'Cancel' : 'Back', chip: 'Esc'};
+  return grid;
+}
+function commandCell(o, v, k, c) {
+  const g = !isCore(v) && c.g ? glyph(c.g, 20) : '', chip = key(c.chip || k);
+  const name = `<span class="cn">${c.cmd}${c.more ? ' <span class="muted">›</span>' : ''}</span>`;
+  return o.cell === 'two' ? `<span class="b cell two cmd" data-tg><span class="r1">${chip}${g}</span>${name}</span>`
+    : `<span class="b cell one cmd" data-tg>${g}${name}${chip}</span>`;
+}
+function itemCell(v, k, c, shape, dim, keyed = true) {
+  const d = DATA[v.state], [cost, , , pre] = CELLS[c.item], poor = cost > d.credits, missing = d.early && pre;
+  const costHtml = `<span class="cost num ${poor ? 'amb' : ''}">${num(cost)}</span>`, chip = keyed ? key(k) : '';
+  const n = c.counted ? queued(v, c.item) : 0, full = c.counted && isFull(v);
+  const inner = shape === 'two'
+    ? `<span class="r1">${isCore(v) ? '' : unitGlyph(c.item, 22)}${costHtml}${chip}</span><span class="nm2">${c.item}</span>`
+    : `<span class="r1"><span class="nm1">${c.item}</span>${chip}</span>${costHtml}`;
+  const reason = missing ? 'prerequisite' : full ? 'queue' : poor ? 'credits' : '';
+  const cls = `b cell ${shape} ${d.armed === c.item ? 'on' : ''} ${reason ? dim : ''}`;
+  return `<span class="${cls}" data-tg ${reason ? `data-reason="${reason}"` : ''} ${keyed ? `data-cell="${c.item}"` : ''} ${n ? 'title="Shift-click: queue 5"' : ''}>${inner}${n ? `<span class="cnt num">×${n}</span>` : ''}</span>`;
+}
+function cardCell(o, v, k, c) {
+  const html = !c ? '<span class="well"></span>' : c.cmd ? commandCell(o, v, k, c) : itemCell(v, k, c, o.cell, o.dim);
+  return html.replace('<span ', `<span data-id="card.cell.${k}" `);
+}
+function cardSlab(o, v, x, W) {
+  const spec = cardSpec(o, v);
+  if (!spec) return '';
+  const from = o.hug === 'hug' ? LATTICE.findIndex(r => r.some(k => spec[k])) : 0;
+  if (from < 0) return '';
+  const cells = LATTICE.slice(from).map(r => r.map(k => cardCell(o, v, k, spec[k])).join('')).join('');
+  const queue = ['factory', 'full'].includes(v.state) && o.queue === 'card' ? `<div class="qrow">${slots(v, 9)}<span class="num">${queueOf(v).length} / 9</span></div>` : '';
+  const style = slab({left: x, width: cardWidth(o), edge: 'var(--you)', border: [1, x + cardWidth(o) >= W ? 0 : 1, 0, 0], pad: [8, 8, 8, 12]});
+  return `<div class="slabbg card" data-id="card" data-cov style="${style}"><div class="lattice" style="grid-template-columns:repeat(4,${CELL[o.cell].w}px);grid-auto-rows:${CELL[o.cell].h}px">${cells}</div>${queue}</div>`;
+}
+function pinnedSlab(o, v, x) {
+  const cells = ['Medium Tank', 'Rotary Gun Tank'].map(item => itemCell(v, '', {item, counted: true}, 'two', o.dim, false)).join('');
+  const more = QUEUE.length > 5 ? `<span class="muted">+${QUEUE.length - 5}</span>` : '';
+  const style = slab({left: x, width: PIN_W, height: o.hug === 'fixed' ? DOCK : 0, edge: 'var(--you)', border: [1, 1, 0, 0], pad: [12, 8, 12, 8]});
+  return `<div class="slabbg pinned" data-id="pinned" data-cov style="${style}"><div class="pn"><div class="hd split">Vehicle Factory<span class="x">×</span></div>
+    <div class="prow">${cells}</div><div class="qrow">${slots(v, 5)}${more}</div></div></div>`;
+}
+function selectionSlab(o, v, x) {
+  const style = slab({left: x, width: SEL_W, height: o.hug === 'fixed' ? DOCK : 0, edge: selectionEdge(v), border: [1, 1, 0, 0], pad: [12, 16, 12, 16]});
+  return `<div class="slabbg sel" data-id="selection" data-cov style="${style}"><div class="pn">${selectionBody(o, v)}</div></div>`;
+}
+const minimapSlab = v => `<div class="slabbg mini" data-id="minimap" data-cov style="${slab({left: 0, width: 168, height: DOCK, border: [1, 1, 0, 0], pad: [8, 8, 8, 8]})}">${minimap(v, 152)}</div>`;
+
+const pinnedShown = (o, v) => !isCore(v) && v.state === 'many' && o.cell === 'two';
+function layout(o, v, W) {
+  const sel = isCore(v) && o.reserve === 'pack' ? 0 : 168 + GAP;
+  const pinned = pinnedShown(o, v) ? sel + SEL_W + GAP : null;
+  const next = pinned === null ? sel + SEL_W + GAP : pinned + PIN_W + GAP;
+  return {sel, pinned, card: o.side === 'right' ? W - cardWidth(o) : next};
+}
+function dock(o, v, W, L) {
+  return (isCore(v) ? '' : minimapSlab(v)) + (v.state === 'none' ? '' : selectionSlab(o, v, L.sel)) +
+    (L.pinned === null ? '' : pinnedSlab(o, v, L.pinned)) + cardSlab(o, v, L.card, W);
+}
+
+const flatStyle = Object.entries(FLAT).map(([k, x]) => `--${k}:${x}`).join(';');
+const cursor = '<svg class="cur" viewBox="0 0 16 22" hidden><path d="M1 1v17l4.5-4 3 7 2.6-1.1-3-6.9H14z" fill="#fff" stroke="#000"/></svg>';
+function hud(o, v) {
+  const {w, h, k} = SIZES[v.size], W = w / k, H = h / k, L = layout(o, v, W);
+  loadGlyphs();
+  return `<div class="hud" data-cfg="${encodeURIComponent(JSON.stringify([o, v]))}" style="--k:${k};--ff:${FONT};width:${W}px;height:${H}px;${flatStyle}">
+    ${dock(o, v, W, L)}${topStrip(v)}${aboveDock(v, H)}${alertFeed(v)}${edgeArrows(v, W, H)}${topRight(o, v)}<div class="ccard" data-id="cell_card" hidden></div>${cursor}</div>`;
+}
+const WORLD = {full: 'factory'};
+const STAND_IN = {plant: 'factory'};
+function noWorld(img) {
+  img.remove();
+  document.querySelectorAll('.v4tag').forEach(t => { t.hidden = false; });
+}
+function fallbackWorld(img, state) {
+  if (!STAND_IN[state] || img.src.endsWith(`w-${STAND_IN[state]}.png`)) return noWorld(img);
+  img.src = `worlds/w-${STAND_IN[state]}.png`;
+}
+function stage(o, v) {
+  const {w, h} = SIZES[v.size];
+  return `<div class="stage" style="width:${w}px;height:${h}px"><img class="world" style="width:${w}px" src="worlds/w-${WORLD[v.state] || v.state}.png" onerror="fallbackWorld(this,'${v.state}')">${hud(o, v)}</div>`;
+}
+
+const probeStage = (o, v) => { probe.innerHTML = `<div class="stage" style="width:${SIZES[v.size].w}px;height:${SIZES[v.size].h}px">${hud(o, v)}</div>`; };
+const covCache = {};
+function coverage(o, v) {
+  const id = JSON.stringify([o, v]);
+  if (id in covCache) return covCache[id];
+  probeStage(o, v);
+  let sum = 0;
+  probe.querySelectorAll('[data-cov]').forEach(e => { const r = e.getBoundingClientRect(); sum += r.width * r.height; });
+  probe.innerHTML = '';
+  return covCache[id] = 100 * sum / (SIZES[v.size].w * SIZES[v.size].h);
+}
+
+function cardLines(v, name) {
+  const [cost, seconds, power, pre] = CELLS[name], d = DATA[v.state], short = cost - d.credits, blocked = short > 0;
+  const head = `<div><b>${name}</b> <span class="muted num">${num(cost)} · ${seconds} s</span></div>`;
+  if (d.early && pre) return head + `<div class="amb">Needs ${pre}</div>`;
+  if (d.queue && isFull(v) && FACTORY_KEY[name]) return head + '<div class="amb">Queue full</div>';
+  const lines = [head, ...forecastLines(d, cost, power, blocked)];
+  if (blocked) lines.push(`<div class="amb">${num(short)} credits short</div>`);
+  if (blocked && !isCore(v)) lines.push(`<div class="muted">about ${Math.ceil(short / (INCOME / 60))} s at current income</div>`);
+  return lines.join('');
+}
+function forecastLines(d, cost, power, blocked) {
+  const lines = [], label = t => `<span class="muted cl">${t}</span>`;
+  if (!blocked) lines.push(`<div>${label('Credits')} <span class="num">${num(d.credits)} → ${num(d.credits - cost)}</span></div>`);
+  if (power && power.avail) lines.push(`<div>${label('Power')} <span class="num">${d.power} / ${d.avail} → ${d.power} / ${d.avail + power.avail}</span></div>`);
+  if (power && power.used) {
+    const after = d.power + power.used;
+    lines.push(`<div>${label('Power')} <span class="num">${d.power} → ${after} / ${d.avail}</span>${after > d.avail ? ` ${lowPower}` : ''}</div>`);
+  }
+  return lines;
+}
+const hudScale = hudEl => hudEl.getBoundingClientRect().width / hudEl.offsetWidth;
+function relRect(hudEl, el) {
+  const hr = hudEl.getBoundingClientRect(), r = el.getBoundingClientRect(), sc = hudScale(hudEl);
+  return {x: (r.left - hr.left) / sc, y: (r.top - hr.top) / sc};
+}
+function updateCard(hudEl, hovered) {
+  const [, v] = JSON.parse(decodeURIComponent(hudEl.dataset.cfg)), card = hudEl.querySelector('.ccard'), cur = hudEl.querySelector('.cur');
+  const name = hovered ? hovered.dataset.cell : DATA[v.state].hover, cellEl = name && hudEl.querySelector(`[data-cell="${name}"]`);
+  card.hidden = !cellEl;
+  cur.toggleAttribute('hidden', !cellEl || !!hovered);
+  if (!cellEl) return;
+  card.innerHTML = cardLines(v, name);
+  const c = relRect(hudEl, cellEl), s = relRect(hudEl, hudEl.querySelector('.card'));
+  card.style.left = px(Math.min(Math.max(c.x, 8), hudEl.offsetWidth - 8 - card.offsetWidth));
+  card.style.top = px(s.y - GAP - card.offsetHeight);
+  cur.style.left = px(c.x + 44);
+  cur.style.top = px(c.y + 40);
+}
+function placeRefusal(hudEl) {
+  const line = hudEl.querySelector('.refuse');
+  if (!line) return;
+  const W = hudEl.offsetWidth, w = line.offsetWidth, h = line.offsetHeight, left = Math.round((W - w) / 2);
+  const solids = [...hudEl.querySelectorAll('[data-cov],.ccard')].filter(shown).map(el => ({...relRect(hudEl, el), w: el.offsetWidth, h: el.offsetHeight}));
+  let top = hudEl.offsetHeight - DOCK - GAP - h;
+  for (let hit = true; hit;) {
+    const under = solids.find(r => left < r.x + r.w && r.x < left + w && top < r.y + r.h && r.y < top + h);
+    hit = !!under;
+    if (under) top = under.y - GAP - h;
+  }
+  line.style.left = px(left);
+  line.style.top = px(top);
+}
+const placeCards = root => root.querySelectorAll('.hud').forEach(h => { updateCard(h, null); placeRefusal(h); });
+
+const CYAN = 'rgb(96, 229, 237)', AMBER = 'rgb(247, 200, 113)', REDS = ['rgb(213, 79, 59)', 'rgb(216, 69, 58)', 'rgb(238, 113, 105)'];
+const shown = el => el.getClientRects().length > 0;
+const toHex = rgb => '#' + rgb.match(/\d+/g).slice(0, 3).map(n => (+n).toString(16).padStart(2, '0')).join('');
+function textContrast(el, hudEl) {
+  let bg = null, alpha = 1;
+  for (let e = el; e && e !== hudEl; e = e.parentElement) {
+    const cs = getComputedStyle(e);
+    alpha *= +cs.opacity;
+    if (!bg && cs.backgroundColor !== 'rgba(0, 0, 0, 0)') bg = toHex(cs.backgroundColor);
+  }
+  const back = bg || BG;
+  return contrast(mix(toHex(getComputedStyle(el).color), BG, 1 - alpha), mix(back, BG, 1 - alpha));
+}
+const label = el => `${el.tagName.toLowerCase()}.${(el.getAttribute('class') || '').trim().replace(/\s+/g, '.')} "${(el.textContent || '').trim().slice(0, 24)}"`;
+function textRects(box) {
+  const walk = document.createTreeWalker(box, NodeFilter.SHOW_TEXT), out = [];
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    if (!n.textContent.trim() || n.parentElement.closest('.k,.cnt')) continue;
+    const r = document.createRange();
+    r.selectNodeContents(n);
+    out.push(...r.getClientRects());
+  }
+  return out;
+}
+const SPACE_SCALE = new Set([0, 4, 8, 12, 16, 24, 36]);
+const SIDES = ['Top', 'Right', 'Bottom', 'Left'];
+const onScale = n => SPACE_SCALE.has(Math.round(n * 100) / 100);
+const blurOf = shadow => (shadow.match(/(-?[\d.]+)px/g) || []).map(parseFloat)[2] || 0;
+// A side with no padding is a hairline, not spacing; otherwise the inset is border plus padding.
+function insetOff(cs, side) {
+  const pad = parseFloat(cs[`padding${side}`]);
+  return pad && !onScale(pad + parseFloat(cs[`border${side}Width`])) ? pad + parseFloat(cs[`border${side}Width`]) : null;
+}
+function themeProblems(el) {
+  const cs = getComputedStyle(el), out = [];
+  SIDES.forEach(side => {
+    const inset = insetOff(cs, side), m = parseFloat(cs[`margin${side}`]);
+    if (inset !== null) out.push(`padding-${side.toLowerCase()} ${inset}`);
+    if (!onScale(m)) out.push(`margin-${side.toLowerCase()} ${m}`);
+  });
+  if (/flex|grid/.test(cs.display)) ['rowGap', 'columnGap'].forEach(g => { const n = parseFloat(cs[g]); if (!isNaN(n) && !onScale(n)) out.push(`${g} ${n}`); });
+  if (['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'].some(c => parseFloat(cs[`border${c}Radius`]))) out.push('border radius');
+  if (cs.boxShadow !== 'none' && cs.boxShadow.split(/,(?![^(]*\))/).some(sh => blurOf(sh))) out.push('shadow with blur');
+  return out.map(x => `theme ${x}: ${label(el)}`);
+}
+function audit(hudEl) {
+  const out = [], tol = .6 * hudScale(hudEl), R = el => el.getBoundingClientRect();
+  const inside = (a, b) => a.left >= b.left - tol && a.right <= b.right + tol && a.top >= b.top - tol && a.bottom <= b.bottom + tol;
+  const hit = (a, b) => a.left < b.right - tol && b.left < a.right - tol && a.top < b.bottom - tol && b.top < a.bottom - tol;
+  const all = [...hudEl.querySelectorAll('*')].filter(shown), stageR = R(hudEl);
+  all.forEach(el => { if (!inside(R(el), stageR)) out.push(`leaves stage: ${label(el)}`); });
+  hudEl.querySelectorAll('.b,[data-cov],.ccard,.refuse,.well').forEach(box => {
+    if (!shown(box)) return;
+    box.querySelectorAll('*').forEach(el => { if (shown(el) && !inside(R(el), R(box))) out.push(`overflows: ${label(el)} in ${label(box)}`); });
+    textRects(box).forEach(t => { if (!inside(t, R(box))) out.push(`text cut: ${label(box)}`); });
+  });
+  hudEl.querySelectorAll('.b').forEach(b => {
+    const chips = [...b.querySelectorAll('.k,.cnt,.gl')].filter(shown).map(R);
+    textRects(b).forEach(t => chips.forEach(c => { if (hit(t, c)) out.push(`text under chip: ${label(b)}`); }));
+  });
+  hudEl.querySelectorAll('.nm2').forEach(n => { if (n.offsetHeight > 28) out.push(`third line: ${label(n)}`); });
+  hudEl.querySelectorAll('[data-cov]:not([data-id])').forEach(el => out.push(`covering rect without id: ${label(el)}`));
+  all.filter(el => !(el instanceof SVGElement) || el.tagName === 'svg').forEach(el => out.push(...themeProblems(el)));
+  const solid = [...hudEl.querySelectorAll('[data-cov],.ccard,.refuse')].filter(shown);
+  solid.forEach((a, i) => solid.slice(i + 1).forEach(b => { if (hit(R(a), R(b))) out.push(`overlap: ${label(a)} / ${label(b)}`); }));
+  const keys = [...hudEl.querySelectorAll('.k')].filter(shown).map(k => k.textContent);
+  keys.filter((k, i) => keys.indexOf(k) !== i).forEach(k => out.push(`key twice: ${k}`));
+  all.forEach(el => {
+    const cs = getComputedStyle(el), paint = [cs.color, cs.backgroundColor, cs.boxShadow, cs.fill, cs.stroke].join(' ');
+    const ownText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    if (paint.includes(CYAN) && !el.closest('.on')) out.push(`cyan off a selected control: ${label(el)}`);
+    if (paint.includes(AMBER) && !el.closest('.amb,.sq,.arrow,.mini')) out.push(`amber outside its rules: ${label(el)}`);
+    if (ownText && REDS.includes(cs.color)) out.push(`red text: ${label(el)}`);
+    if (ownText && parseFloat(cs.fontSize) < 12) out.push(`text under 12 px: ${label(el)}`);
+    if (ownText && !(el instanceof SVGElement)) { const r = textContrast(el, hudEl); if (r < 4.5) out.push(`contrast ${r.toFixed(1)} under 4.5: ${label(el)}`); }
+  });
+  return [...new Set(out)];
+}
+const fontsReady = () => Promise.all([400, 600, 700, 800].map(w => document.fonts.load(`${w} 12px 'Public Sans'`))).then(() => document.fonts.ready);
+
+const STEPS = [
+  {key: 'cell', state: 'build', pick: 'A', q: 'Cell shape', look: 'the card, bottom right.',
+    why: 'Twelve worded cells do not fit the old 168 dock. The build sub-grid opens from Build on Q (decided 2026-11-16).',
+    A: {name: 'Two lines, tall card', val: 'two', note: 'v4\'s cell, 100 x 60, names on two lines and never cut. The card stands 36 above the old dock line in its corner; glyphs fit later without moving anything. Costs height: 204 with three rows.'},
+    B: {name: 'One line, wide card', val: 'one', note: '148 x 40: lower than the old dock (144), 192 wider (624). Card cells never get a glyph, in either tier. Reopens two v4 decisions: a glyph in front of every name in cells, and the pinned factory, which does not fit beside this card at 1280.'}},
+  {key: 'side', state: 'factory', pick: 'A', q: 'Where the card sits', look: 'the card and the selection panel.',
+    why: 'The card is new; its corner decides how far the pointer travels between what you selected and what it can do.',
+    A: {name: 'Bottom right corner', val: 'right', note: 'Same place whatever is selected and whether or not the minimap exists; farther from the selection panel.'},
+    B: {name: 'Beside the selection panel', val: 'left', note: 'Short pointer travel; moves 176 right when the minimap lands (Core tier shows it), and further right behind the pinned factory.'}},
+  {key: 'hug', state: 'one', pick: 'A', q: 'Panel height', look: 'the selection panel and the card.',
+    why: 'A tank needs one line and two buttons. Guard on D (Full tier) is decided (2026-11-16).',
+    A: {name: 'As tall as the content', val: 'hug', note: 'Least covered ground; cells never move, only the slabs\' top edges do. In Full the slabs get different heights; press T.'},
+    B: {name: 'Always the same size', val: 'fixed', note: 'Calm; empty slab while little is selected. Compare the coverage table. Reopens v4\'s "slabs that hug their content". A Power Plant, which has no commands, would show an empty card.'}},
+  {key: 'queue', state: 'factory', pick: 'A', q: 'Where the queue sits', look: 'the nine queue slots: in the selection panel or under the cells.',
+    why: 'The queue lived in the old context panel, which the card replaces.',
+    A: {name: 'In the selection panel', val: 'panel', note: 'The queue never changes the card\'s height and the factory\'s panel is no longer empty; StarCraft II does it this way. The slots are far from the cells that fill them; the count on the cell confirms the click.'},
+    B: {name: 'Under the cells', val: 'card', note: 'Cause next to effect, as in the pinned factory; the card is 44 taller for factories. The player-experience review prefers this one.'}},
+  {key: 'back', state: 'build', pick: 'A', q: 'Leaving the build menu', look: 'the bottom right cell of the card, and the Menu chip top right.',
+    why: 'Esc now backs out of the menu, cancels a placement and opens the game menu.',
+    A: {name: 'A Back cell', val: 'cell', note: 'Clickable, shows Esc where it acts; the Menu chip drops its Esc while a menu is open. While a building is armed the cell reads Cancel (state Placement). Pressing V also goes back; the chip still reads Esc.'},
+    B: {name: 'Key only', val: 'none', note: 'One more free cell; nothing on screen says how to leave.'}},
+  {key: 'owner', state: 'many', pick: 'A', q: 'Whose commands a mixed selection shows', look: 'the kind rows and the card.',
+    why: 'A selection of six kinds has no single card. Guard on D and Build on Q are decided (2026-11-16).',
+    A: {name: 'Shared commands only', val: 'common', note: 'Attack Move and Stop go to every selected unit; a unit without a weapon just moves, as today. No hidden state; clicking a kind row narrows the selection to it and brings its card.'},
+    B: {name: 'One kind is active, Tab cycles', val: 'active', note: 'StarCraft II. A and S still go to everyone; Q goes to the active kind. Building without changing the selection; one more thing to learn, and Tab is the browser\'s focus key. Drawn with Bulldozer active.'}},
+  {key: 'reserve', state: 'one', tier: 'core', pick: 'A', q: 'The minimap\'s place before the minimap exists', look: 'the bottom left corner (Core tier).',
+    why: 'The early package has no minimap; Full puts it in the bottom left corner.',
+    A: {name: 'Start at the left edge', val: 'pack', note: 'Looks finished now; the panel moves once when the minimap lands.'},
+    B: {name: 'Leave the corner empty', val: 'hold', note: 'Nothing ever moves; a hole in the corner until then.'}},
+  {key: 'dim', state: 'build', pick: 'A', q: 'A cell you cannot use yet', look: 'Supply Depot and Vehicle Factory in the card; in state Factory the two tanks.',
+    why: 'v4 faded a blocked cell to 45 %, which puts its name at 3.7:1 and its amber cost at 2.9:1, under the HUD\'s own 4.5:1 rule that its text passes everywhere else (WCAG exempts inactive controls).',
+    A: {name: 'Quiet but readable', val: 'quiet', note: 'No opacity. The cell\'s fill drops to #16212a, name and cost turn muted, a cost you cannot afford stays amber at full strength, the key chip is unchanged. Every text stays above 4.5:1 (contrast table). Costs one more cell style.'},
+    B: {name: 'Faded', val: 'fade', note: 'v4: the whole cell at 45 % opacity. Reads as off at a glance; its text falls under the HUD\'s own 4.5:1 rule.'}},
+];
+const DEFAULTS = Object.fromEntries(STEPS.map(s => [s.key, s.A.val]));
+const DECIDED = [
+  'Build on Q.',
+  'Guard on D and Unload on F (replaces the U key).',
+  'No card title.',
+  'Esc backs out innermost first (armed placement, then build menu, then game menu); the Menu chip hides its Esc meanwhile.',
+  'Grey edge on a supply pile\'s panel.',
+  'No card for a selection without commands.',
+  'Queue full on the cell card.',
+  'Attack Move shows when any selected unit can attack; unarmed units just move.',
+  'The playtest checklist as a chip top right under Menu.',
+  'Empty card positions as quiet wells.',
+  'The Back cell: pressing V also goes back; its chip still reads Esc.',
+  'The pinned factory as a 220 px click-only placeholder, to be settled in its own package.'];
+const AGENT_CALLS = [
+  'Sell stays in the selection panel for now; panel or card cell is open for the Sell package (user, 2026-11-16: decide there).',
+  'The refusal line shows for about 3 s after a refused click, not while hovering.',
+  '"About 7 s at current income" counts income, not income minus spending.',
+  'Not drawn: the playtest note dialog; Barracks; a building being sold; two factories; buildings and units selected together.',
+  'On a touchscreen there is no hover, so the reasons on the cell card cannot be reached (for the Steam Deck controls spike).'];
+const DEVIATIONS = [
+  'Command cells (two lines): the 20 px glyph sits at the left of line 1 and the name is centred in the name lines, not beside the glyph: Attack Move needs 20 + 4 + 76 px, the cell has 84. Core keeps the same name position, so the glyph moves nothing.',
+  'Pinned factory is left out with the one-line card: 408 + 220 + 624 plus gaps does not fit 1280.',
+  'With the card beside the panel, it sits right of the pinned factory in state 120 units.',
+  'Sell moved from the title row to the bottom row (beside the rally hint): the title row now carries QUEUE 4 / 9.',
+  'Own-panel edges sit flush on the slab\'s left side (the card\'s 4 + 8 + 412 + 8 puts it there); v4 had it 8 in.',
+  'Refusal line is not counted in coverage (transient, like the cell card).',
+  'Headquarters cell removed (Addendum 1): no builder can build it.'];
+const NAMES = [['Bulldozer', 'USA, China'], ['Scout Car', 'USA'], ['Supply Helicopter', 'USA'], ['Rifleman', 'USA'], ['Rocket Trooper', 'USA'], ['Battle Tank', 'USA'],
+  ['Headquarters', 'USA, China, FRC'], ['Power Plant', 'USA, China'], ['Supply Depot', 'USA, China'], ['Vehicle Factory', 'USA, China'], ['Barracks', 'USA, China, FRC'],
+  ['Missile Battery', 'USA'], ['Supply Truck', 'China'], ['Militia', 'China'], ['Anti-Tank Trooper', 'China'], ['Medium Tank', 'China'], ['Rotary Gun Tank', 'China'],
+  ['Rotary Gun Tower', 'China'], ['Laborer', 'FRC'], ['Insurgent', 'FRC'], ['Rocket Fighter', 'FRC'], ['Armed Pickup', 'FRC'], ['Light Tank', 'FRC'],
+  ['Supply Cache', 'FRC'], ['Vehicle Yard', 'FRC'], ['Tunnel Hub', 'FRC']];
+const GRID_TABLE = [['Build sub-grid', 'Q', 'Power Plant', 'Power Plant', '(none)'], ['', 'W', 'Supply Depot', 'Supply Depot', 'Supply Cache'], ['', 'E', 'Barracks', 'Barracks', 'Barracks'],
+  ['', 'R', 'Vehicle Factory', 'Vehicle Factory', 'Vehicle Yard'], ['', 'A', 'Missile Battery', 'Rotary Gun Tower', 'Tunnel Hub'],
+  ['', 'V', 'Back', 'Back', 'Back'], ['Barracks', 'Q', 'Rifleman', 'Militia', 'Insurgent'], ['', 'W', 'Rocket Trooper', 'Anti-Tank Trooper', 'Rocket Fighter'],
+  ['Factory', 'Q', 'Scout Car', 'Medium Tank', 'Armed Pickup'], ['', 'W', 'Battle Tank', 'Rotary Gun Tank', 'Light Tank']];
+
+const app = document.getElementById('app'), picks = {}, notes = {};
+const H = new URLSearchParams(location.hash.slice(1));
+(H.get('picks') || '').split(',').filter(Boolean).forEach(p => { const [k, x] = p.split(':'); picks[k] = x; });
+let step = H.has('final') ? STEPS.length : +(H.get('step') || 0), show = H.get('show') || 'A', full = false;
+let state = H.get('state') || STEPS[Math.min(step, STEPS.length - 1)].state, size = sizeKey(H.get('size') || '1920x1080');
+let tier = H.get('tier') || (STEPS[step] && STEPS[step].tier) || 'full';
+const unsent = new Map();
+let recorded = false;
+function recordHtml() {
+  if (unsent.size) return `<span class="fail">Not recorded: server not reachable. Kept on this page: ${[...unsent].map(([k, x]) => `${k} ${x || 'comment'}`).join(', ')}.</span>`;
+  return recorded ? 'Recorded.' : '';
+}
+const showRecord = () => document.querySelectorAll('.rec').forEach(e => { e.innerHTML = recordHtml(); });
+function post(k, pick, note) {
+  const done = ok => { if (ok) { unsent.delete(k); recorded = true; } else unsent.set(k, pick); showRecord(); };
+  return fetch('/pick', {method: 'POST', body: JSON.stringify({key: k, pick, note})}).then(r => done(r.status === 204), () => done(false));
+}
+
+function optsWith(chosen) {
+  return {...DEFAULTS, ...Object.fromEntries(STEPS.filter(s => chosen[s.key]).map(s => [s.key, s[chosen[s.key]].val]))};
+}
+const optsFor = (i, variant) => optsWith(i < 0 ? picks : {...picks, [STEPS[i].key]: variant});
+function fit() {
+  document.querySelectorAll('.fit').forEach(el => el.style.setProperty('--s', full ? 1 : el.clientWidth / el.dataset.w));
+}
+
+function coverageTable() {
+  const head = STATES.map(st => `<th>${STATE_LABEL[st]}</th>`).join('');
+  const row = (x, sz) => `<tr><th>${x} · ${sz}</th>${STATES.map(st => {
+    const pct = coverage(optsFor(step, x), {state: st, size: sz, tier}).toFixed(1);
+    return `<td class="${x === show && sz === size && st === state ? 'hl' : ''}">${pct} %</td>`;
+  }).join('')}</tr>`;
+  return `<table class="cov"><caption>HUD coverage of the screen, ${TIER_LABEL[tier]} tier</caption><tr><th></th>${head}</tr>${['A', 'B'].map(x => SIZE_KEYS.map(sz => row(x, sz)).join('')).join('')}</table>`;
+}
+function finalCoverageTable(o) {
+  const head = STATES.map(st => `<th>${STATE_LABEL[st]}</th>`).join('');
+  const row = (t, sz) => `<tr><th>${TIER_LABEL[t]} · ${sz}</th>${STATES.map(st => `<td>${coverage(o, {state: st, size: sz, tier: t}).toFixed(1)} %</td>`).join('')}</tr>`;
+  return `<table class="cov"><caption>HUD coverage of the screen with your picks</caption><tr><th></th>${head}</tr>${['full', 'core'].map(t => SIZE_KEYS.map(sz => row(t, sz)).join('')).join('')}</table>`;
+}
+function viewBar(s) {
+  const st = STATES.map((x, i) => `<button class="${x === state ? 'on' : ''}" data-state="${x}"><kbd>${STATE_KEYS[i]}</kbd>${STATE_LABEL[x]}</button>`).join('');
+  const sz = SIZE_KEYS.map(x => `<button class="${x === size ? 'on' : ''}" data-size="${x}">${sizeLabel(x)}</button>`).join('');
+  const tr = ['core', 'full'].map(x => `<button class="${x === tier ? 'on' : ''}" data-tier="${x}" ${s.tier && x !== s.tier ? 'disabled' : ''}>${TIER_LABEL[x]}</button>`).join('');
+  return `<div class="bar">${st}</div><div class="bar"><span class="v4tag" hidden>no backdrop</span><span class="gap"></span><kbd>T</kbd>${tr}<kbd>S</kbd>${sz}<kbd>F</kbd><button data-full>${full ? 'Fit' : '100 %'}</button></div>`;
+}
+function stageNotes(o, v) {
+  const lines = [];
+  if (pinnedShown(o, v)) lines.push(`Decided 2026-11-16: ${DECIDED[10]}`);
+  if (isCore(v)) lines.push(`Decided 2026-11-16: ${DECIDED[8]}`);
+  if (v.state === 'pile') lines.push(`Decided 2026-11-16: ${DECIDED[4]}`);
+  return lines.map(l => `<p class="agent">${l}</p>`).join('');
+}
+function render() {
+  app.className = step < STEPS.length ? '' : 'final';
+  if (step >= STEPS.length) return renderFinal();
+  const s = STEPS[step], v = {state, size, tier}, o = optsFor(step, show);
+  const tab = x => `<button class="${x === show ? 'on' : ''}" data-show="${x}"><kbd>${x}</kbd> ${s[x].name}</button>`;
+  app.innerHTML = `<div class="top"><span class="n">Step ${step + 1} of ${STEPS.length}</span><h2>${s.q}</h2><p>${s.why}</p><p class="look"><b>Where to look:</b> ${s.look}</p><p class="rec">${recordHtml()}</p></div>
+    <div class="bar">${tab('A')}${tab('B')}</div>${viewBar(s)}
+    <div class="stagewrap ${full ? 'full' : ''}" style="--ar:${SIZES[size].w}/${SIZES[size].h};--w:${SIZES[size].w}px"><div class="fit" data-w="${SIZES[size].w}">${stage(o, v)}</div></div>
+    <div class="under"><div><b>${show}: ${s[show].name}</b>${s.pick === show ? '<span class="cp">Claude\'s pick</span>' : ''}<p>${s[show].note}</p>${stageNotes(o, v)}</div>
+    <div class="act"><textarea id="cm" placeholder="Optional comment for Claude">${notes[s.key] || ''}</textarea>
+    <button id="pick">Pick ${show} <kbd>Enter</kbd></button>${step ? ' <button id="back">Back</button>' : ''}</div></div>${coverageTable()}`;
+  fit();
+  placeCards(app);
+}
+
+function contrastTable() {
+  const tok = x => FLAT[x] || x, dim = x => mix(tok(x), BG, .55);
+  const pairs = [['Text on bg', 'text', 'bg', 4.5], ['Text on panel', 'text', 'panel', 4.5], ['Text on button', 'text', 'btn', 4.5], ['Muted on bg', 'muted', 'bg', 4.5],
+    ['Muted on panel', 'muted', 'panel', 4.5], ['Muted on well (key chips)', 'muted', 'well', 4.5], ['Amber on bg', 'amber', 'bg', 4.5], ['Amber on button', 'amber', 'btn', 4.5],
+    ['Quiet cell: name and cost (muted on quiet fill)', 'muted', 'quiet', 4.5], ['Quiet cell: unaffordable cost (amber on quiet fill)', 'amber', 'quiet', 4.5],
+    ['Text in a 45 % cell, step 8 B (composited; HUD rule, WCAG exempts inactive controls)', dim('text'), dim('btn'), 4.5], ['Amber cost in a 45 % cell, step 8 B (composited; HUD rule)', dim('amber'), dim('btn'), 4.5],
+    ['Sel on panel2 (non-text)', 'sel', 'panel2', 3], ['You on well (non-text)', 'you', 'well', 3],
+    ['Health green on panel (non-text)', HEALTH[0], 'panel', 3], ['Health yellow on panel (non-text)', HEALTH[1], 'panel', 3], ['Health red on panel (non-text)', HEALTH[2], 'panel', 3]];
+  const rows = pairs.map(([name, a, b, need]) => {
+    const r = contrast(tok(a), tok(b)), ok = r >= need ? '' : 'fail';
+    return `<tr><th>${name}</th><td>${need}</td><td class="${ok}">${r.toFixed(1)}</td><td class="${ok}">${ok ? 'FAIL' : 'pass'}</td></tr>`;
+  }).join('');
+  return `<table class="ctr"><caption>Contrast (WCAG formula, HUD rule 4.5:1 for all text), computed in the page</caption><tr><th>Pair</th><th>Needed</th><th>Ratio</th><th></th></tr>${rows}</table>`;
+}
+function ownerTable() {
+  const rows = OWNERS.map(([name, hex]) => {
+    const r = contrast(hex, BG), up = lifted(hex), sw = c => `<span class="sw" style="background:${c}"></span>`;
+    const lift = up === hex ? '<td class="l">not needed</td><td></td>' : `<td class="l">${sw(up)}${up}</td><td>${contrast(up, BG).toFixed(2)}</td>`;
+    return `<tr><th>${sw(hex)}${name} ${hex}</th><td>${r.toFixed(2)}</td>${lift}</tr>`;
+  }).join('');
+  return `<table class="ctr"><caption>Owner colours (lift) on --bg, edge and bar need 3:1</caption><tr><th>Colour</th><th>Ratio</th><th>Lightened</th><th>Ratio</th></tr>${rows}</table>`;
+}
+function wrapLines(ctx, text, width) {
+  const space = ctx.measureText(' ').width;
+  let lines = 1, line = 0;
+  text.split(' ').forEach(w => { const ww = ctx.measureText(w).width; if (line && line + space + ww > width) { lines++; line = ww; } else line += (line ? space : 0) + ww; });
+  return lines;
+}
+function nameFit() {
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = `600 12px ${FONT}`;
+  return NAMES.map(([name, factions]) => {
+    const w = ctx.measureText(name).width, word = Math.max(...name.split(' ').map(x => ctx.measureText(x).width)), lines = wrapLines(ctx, name, TWO_NAME_W);
+    return {name, factions, w, word, lines, two: word <= TWO_NAME_W && lines <= 2, one: w <= ONE_NAME_W};
+  });
+}
+function nameFitRows() {
+  const verdict = ok => `<td class="${ok ? '' : 'fail'}">${ok ? 'fits' : 'MISS'}</td>`;
+  return nameFit().map(f => `<tr><th>${f.name}</th><td class="l">${f.factions}</td><td>${f.w.toFixed(1)}</td><td>${f.word.toFixed(1)}</td><td>${f.lines}</td>${verdict(f.two)}${verdict(f.one)}</tr>`).join('');
+}
+function nameFitTable() {
+  return `<table class="ctr" id="namefit"><caption>Name fit at 12 / 600 Public Sans (canvas, after fonts load)</caption><tr><th>Name</th><th>Factions</th><th>Name px</th><th>Widest word px</th><th>Lines at ${TWO_NAME_W}</th><th>Cell two</th><th>Cell one (≤ ${ONE_NAME_W})</th></tr><tr><td colspan="7">measuring…</td></tr></table>`;
+}
+function gridTable() {
+  const rows = GRID_TABLE.map(([menu, k, ...names]) => `<tr><th>${menu}</th><td>${k}</td>${names.map(n => `<td class="l">${n}</td>`).join('')}</tr>`).join('');
+  return `<table class="ctr"><caption>Grid across factions (proposal)</caption><tr><th>Menu</th><th>Key</th><th>USA</th><th>China</th><th>FRC</th></tr>${rows}</table>`;
+}
+function renderFinal() {
+  const o = optsFor(-1, null);
+  const fig = (st, t) => `<figure><figcaption>${TIER_LABEL[t]} · 1280 x 800</figcaption><div class="fit" data-w="1280" style="--ar:1280/800">${stage(o, {state: st, size: '1280x800', tier: t})}</div></figure>`;
+  const group = st => `<div class="state"><h3>${STATE_LABEL[st]}</h3><div class="pairs">${fig(st, 'full')}${fig(st, 'core')}</div></div>`;
+  app.innerHTML = `<div class="top"><span class="n">Result</span><h2>Every state with your picks</h2>
+    <p>${STEPS.map(s => `${s.key} ${picks[s.key] ? s[picks[s.key]].name : '(default)'}`).join(' · ')}.</p><p class="rec">${recordHtml()}</p><p>Tell Claude you are done.</p></div>
+    <div class="act" style="max-width:700px;margin-bottom:24px"><textarea id="cm" placeholder="Anything else: what to change, what is missing"></textarea><button id="back">Back to the steps</button></div>
+    ${finalCoverageTable(o)}<div class="tables" style="margin-top:24px">${contrastTable()}${ownerTable()}${nameFitTable()}${gridTable()}</div>
+    <h3 class="sec">Decided 2026-11-16</h3><ul class="notes">${DECIDED.map(n => `<li>${n}</li>`).join('')}</ul>
+    <h3 class="sec">Agent calls</h3><ul class="notes">${AGENT_CALLS.map(n => `<li>${n}</li>`).join('')}</ul>
+    <h3 class="sec">Where the page departs from the spec</h3><ul class="notes">${DEVIATIONS.map(n => `<li>${n}</li>`).join('')}</ul>` +
+    STATES.map(group).join('');
+  fit();
+  placeCards(app);
+  fontsReady().then(() => { const t = document.getElementById('namefit'); if (t) t.tBodies[0].innerHTML = t.tBodies[0].rows[0].outerHTML + nameFitRows(); });
+}
+function enter(i) {
+  step = i; show = 'A'; tier = 'full';
+  if (STEPS[i]) { state = STEPS[i].state; tier = STEPS[i].tier || 'full'; }
+}
+function choose() {
+  const s = STEPS[step];
+  picks[s.key] = show;
+  post(s.key, show, notes[s.key] || '');
+  enter(step + 1);
+  render(); scrollTo(0, 0);
+}
+function back() { enter(Math.min(step, STEPS.length) - 1); render(); }
+
+document.addEventListener('click', e => {
+  const t = e.target, hit = x => t.closest(x);
+  if (hit('[data-tg]')) hit('[data-tg]').classList.toggle('on');
+  else if (hit('[data-show]')) { show = hit('[data-show]').dataset.show; render(); }
+  else if (hit('[data-state]')) { state = hit('[data-state]').dataset.state; render(); }
+  else if (hit('[data-size]')) { size = hit('[data-size]').dataset.size; render(); }
+  else if (hit('[data-tier]')) { tier = hit('[data-tier]').dataset.tier; render(); }
+  else if (hit('[data-full]')) { full = !full; render(); }
+  else if (t.id === 'pick') choose();
+  else if (t.id === 'back') back();
+});
+document.addEventListener('input', e => {
+  if (e.target.id !== 'cm') return;
+  const k = step < STEPS.length ? STEPS[step].key : 'overall';
+  notes[k] = e.target.value;
+  if (k === 'overall') post(k, null, e.target.value);
+});
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || step >= STEPS.length || e.metaKey || e.ctrlKey) return;
+  const k = e.key.toLowerCase(), s = STEPS[step];
+  if (k === 'a' || k === 'arrowleft') show = 'A';
+  else if (k === 'b' || k === 'arrowright') show = 'B';
+  else if (STATE_KEYS.includes(k)) state = STATES[STATE_KEYS.indexOf(k)];
+  else if (k === 'n') state = STATES[(STATES.indexOf(state) + 1) % STATES.length];
+  else if (k === 's') size = SIZE_KEYS[(SIZE_KEYS.indexOf(size) + 1) % SIZE_KEYS.length];
+  else if (k === 't' && !s.tier) tier = tier === 'full' ? 'core' : 'full';
+  else if (k === 'f') full = !full;
+  else if (k === 'enter') return choose();
+  else return;
+  render();
+});
+document.addEventListener('mouseover', e => {
+  const hudEl = e.target.closest && e.target.closest('.hud');
+  if (hudEl) updateCard(hudEl, e.target.closest('[data-cell]'));
+});
+document.addEventListener('mouseout', e => {
+  const hudEl = e.target.closest && e.target.closest('.hud');
+  if (hudEl && !(e.relatedTarget && hudEl.contains(e.relatedTarget))) updateCard(hudEl, null);
+});
+addEventListener('resize', fit);
+
+function shot() {
+  document.body.style.cssText = 'overflow:hidden;background:#000';
+  app.style.cssText = 'max-width:none;padding:0';
+  const scale = +(H.get('scale') || 1);
+  app.innerHTML = `<div style="transform:scale(${scale});transform-origin:0 0">${stage(optsFor(-1, null), {state: H.get('shot'), size, tier})}</div>`;
+  placeCards(app);
+  fontsReady().then(() => { placeCards(app); audit(app.querySelector('.hud')).forEach(p => { err.textContent += `layout: ${p}\n`; }); });
+}
+const TYPE = [{role: 'panel title', size: 14, weight: 700}, {role: 'row, button and command names', size: 13, weight: 600},
+  {role: 'cell names (two lines, line height 14)', size: 12, weight: 600}, {role: 'numbers', size: 13, weight: 700}, {role: 'credits value', size: 16, weight: 700},
+  {role: 'labels (uppercase, letter-spacing .1em)', size: 12, weight: 700}, {role: 'hints', size: 12, weight: 400}, {role: 'key chips', size: 12, weight: 700}];
+function nameChildren(hudEl) {
+  [['.sel .krow', 'selection.row'], ['.sel .slot', 'selection.queue'], ['.card .slot', 'card.queue'], ['.pinned .slot', 'pinned.queue'], ['.pinned .cell', 'pinned.cell']]
+    .forEach(([sel, id]) => hudEl.querySelectorAll(sel).forEach((el, i) => { el.dataset.id = `${id}.${i + 1}`; }));
+}
+const rectKind = el => el.matches('.cell,.well') ? 'cell' : el.matches('.krow') ? 'row' : el.matches('.slot') ? 'slot' : el.matches('.ccard') ? 'popup' : el.matches('.cmd') ? 'button' : 'slab';
+function cellInfo(el) {
+  const key = el.dataset.id.split('.').pop();
+  if (el.matches('.well')) return {key, state: 'empty'};
+  const chip = el.querySelector('.k').textContent, info = {text: el.dataset.cell || el.querySelector('.cn').firstChild.textContent.trim(), key};
+  if (chip !== key) info.chip = chip;
+  if (el.matches('.on')) return {...info, state: 'armed'};
+  return el.dataset.reason ? {...info, state: 'blocked', reason: el.dataset.reason} : {...info, state: 'ready'};
+}
+const slotInfo = el => el.matches('.empty') ? {state: 'empty'} : {state: 'filled', text: el.textContent.trim() || el.dataset.item};
+function fieldsOf(el) {
+  if (el.matches('.card .cell,.card .well')) return cellInfo(el);
+  if (el.matches('.slot')) return slotInfo(el);
+  if (el.matches('.krow')) return {text: el.dataset.name, count: +el.dataset.count};
+  return {};
+}
+const r2 = n => Math.round(n * 100) / 100;
+function layoutRect(el, hudEl) {
+  const hr = hudEl.getBoundingClientRect(), r = el.getBoundingClientRect(), sc = hudScale(hudEl);
+  const out = {id: el.dataset.id, kind: rectKind(el), x: r2((r.left - hr.left) / sc), y: r2((r.top - hr.top) / sc), w: r2(r.width / sc), h: r2(r.height / sc)};
+  if (el.hasAttribute('data-cov')) out.covers = true;
+  return {...out, ...fieldsOf(el)};
+}
+function layoutScreen(o, v) {
+  const pct = coverage(o, v), {w, h, k} = SIZES[v.size];
+  probeStage(o, v);
+  placeCards(probe);
+  const hudEl = probe.querySelector('.hud');
+  nameChildren(hudEl);
+  const rects = [...hudEl.querySelectorAll('[data-id]')].filter(shown).map(el => layoutRect(el, hudEl));
+  return {state: v.state, tier: v.tier, size: [w, h], k, coverage_pct: r2(pct), rects};
+}
+async function layoutPicks() {
+  if (H.get('picks')) return picks;
+  const saved = await fetch('picks.json').then(r => r.ok ? r.json() : {}, () => ({}));
+  return Object.fromEntries(STEPS.filter(s => saved[s.key] && s[saved[s.key].pick]).map(s => [s.key, saved[s.key].pick]));
+}
+async function exportLayout() {
+  await fontsReady();
+  const chosen = await layoutPicks(), o = optsWith(chosen), screens = [];
+  for (const st of STATES) for (const t of ['full', 'core']) for (const sz of SIZE_KEYS) screens.push(layoutScreen(o, {state: st, tier: t, size: sz}));
+  probe.innerHTML = '';
+  const doc = {meta: {picks: Object.fromEntries(STEPS.map(s => [s.key, {pick: chosen[s.key] || 'A (default)', value: o[s.key]}])), font: 'Public Sans', unit: 'HUD px, origin top left',
+    scale: 'k = min(width / 1280, height / 720)', source: 'docs/images/hud-v5/source/round1.html'},
+    tokens: Object.fromEntries(Object.entries(FLAT).filter(([k]) => k !== 'r')), type: TYPE, screens};
+  const r = await fetch('/layout', {method: 'POST', body: JSON.stringify(doc)}).catch(() => null);
+  app.textContent = r && r.status === 204 ? `Layout posted: ${screens.length} screens.` : 'Layout not posted: server not reachable.';
+}
+async function auditAll() {
+  await fontsReady();
+  const variants = [['defaults', {}], ...STEPS.map(s => [`${s.key}:B`, {[s.key]: 'B'}])], problems = [];
+  let n = 0;
+  for (const [name, chosen] of variants) {
+    for (const st of STATES) for (const t of ['full', 'core']) for (const sz of SIZE_KEYS) {
+      probeStage(optsWith(chosen), {state: st, size: sz, tier: t});
+      placeCards(probe);
+      audit(probe.querySelector('.hud')).forEach(p => problems.push(`${name} ${st} ${t} ${sz}: ${p}`));
+      n++;
+    }
+  }
+  probe.innerHTML = '';
+  const fits = nameFit().map(f => `${f.name}: ${f.w.toFixed(1)} / word ${f.word.toFixed(1)} / ${f.lines} lines / two ${f.two ? 'fits' : 'MISS'} / one ${f.one ? 'fits' : 'MISS'}`);
+  const covs = ['full', 'core'].flatMap(t => SIZE_KEYS.map(sz => `${t} ${sz}: ${STATES.map(st => `${st} ${coverage(DEFAULTS, {state: st, size: sz, tier: t}).toFixed(1)}`).join(', ')}`));
+  const expected = problems.filter(p => p.startsWith('dim:B') && p.includes(': contrast ')).length;
+  const text = `Audit done: ${n} screens, ${problems.length} problems (${expected} of them the expected contrast fails of dim:B)\n${problems.join('\n')}\n${fits.join('\n')}\n${covs.join('\n')}`;
+  app.innerHTML = `<pre style="white-space:pre-wrap;font-size:12px">${text}</pre>`;
+  // Headless screenshots fire before this finishes, so a local listener can collect the text instead.
+  if (H.get('report')) fetch(`http://127.0.0.1:${+H.get('report')}/`, {method: 'POST', mode: 'no-cors', body: text});
+}
+document.body.insertAdjacentHTML('beforeend', '<div id="probe" style="position:absolute;left:-10000px;top:0;visibility:hidden"></div>');
+if (H.has('audit')) { app.innerHTML = '<h2>Audit running…</h2>'; auditAll(); }
+else if (H.has('layout')) { app.textContent = 'Building layout…'; exportLayout(); }
+else if (H.has('shot')) shot();
+else {
+  render();
+  // Coverage depends on text widths, so measure again once Public Sans is in.
+  fontsReady().then(() => { Object.keys(covCache).forEach(k => delete covCache[k]); render(); });
+}
+</script>
