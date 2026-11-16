@@ -15,23 +15,28 @@ Sources. **ZH src** = ~/projects/CnC_Generals_Zero_Hour @ 0a05454, paths under `
 Q1. When one player's connection stalls, what should the others see?
    a) The game freezes for everyone and a "waiting for player" screen appears after 5 s — ZH default (gamedata.ini:458)   b) The game keeps running; the stalled player's units stand still   c) The game freezes with no screen
    Recommendation: a, because lockstep must freeze anyway and players need to know why. Why it matters: Wargrid's netplay already stalls; this is the screen on top.
+   **Answered a (user, 2026-11-16, [online teams](../reference/design-answers-2026-11-08.md#online-teams-refinement-user-2026-11-16)):** freeze with "Waiting for <player>" and a countdown, play resumes on return (P8).
    Note (netplay reference review, 2026-11-13): b is also deterministic if the relay fills empty frames for the away seat (Recoil keeps its server clock); fairer to those present, harsher to the one away. The same choice applies during M9's seat-resume grace period and to a hidden browser tab.
 
 Q2. How long until a silent player is dropped automatically?
    a) 60 s without any contact — ZH default (gamedata.ini:459)   b) 30 s   c) Never automatically; only by vote
    Recommendation: a, because it is ZH and long enough for a short network blip or a browser tab switch. Why it matters: a browser tab in the background stalls everyone (development.md, unverified case).
+   **Answered a (user, 2026-11-16):** 60 s grace; until P10 the match then ends, from P10 the base goes to a teammate.
 
 Q3. Can the others vote a stalled player out before the timeout?
    a) Yes, and it needs every other player's vote — ZH default (DisconnectManager.cpp:727-738)   b) Yes, a simple majority   c) No votes, only the timeout
    Recommendation: a, because it is ZH and one troll cannot kick a friend. Why it matters: votes are a relay-side or lockstep-side message to design.
+   **Not now (user, 2026-11-16):** the countdown without an early hand-off was picked; a vote is not planned.
 
 Q4. What happens to a dropped player's units and buildings?
    a) They are destroyed — ZH default (Network.cpp:659-673, GameLogicDispatch.cpp:1786-1820)   b) A bot takes them over at the match's bot level (blueprint option)   c) They go to a living teammate
    Recommendation: b, because in friends-versus-bots a 2v3 after one drop is no fun, and the blueprint already lists it. Why it matters: b needs a bot that can start mid-match from any state.
+   **Answered c (user, 2026-11-16):** to a living teammate (P10); with none, the base stays idle; until P10 the match ends.
 
 Q5. What happens when a player leaves on purpose (quits from the menu)?
    a) A living teammate gets all their units, buildings and money — ZH default (Player.cpp:2132-2172, QuitMenu.cpp:140-149)   b) Same as a drop (Q4)   c) Everything is destroyed
    Recommendation: a, because it is ZH and keeps the team at full strength. Why it matters: online "Back to main menu" must send this as a command before closing.
+   **Answered a (user, 2026-11-16), from P10;** in P7 to P9 a quitting teammate ends the match with a result panel saying so. A defeated teammate may leave without ending the match from P7.
 
 Q6. Can a player surrender during an online match?
    a) Yes, from the menu; it works like quitting (assets to a teammate) and the player stays to watch — ZH default (QuitMenu.cpp:185-197, 409-439)   b) No surrender, only quit   c) Only the whole team can surrender together

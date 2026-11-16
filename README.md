@@ -48,7 +48,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**11 of 31 parts done**
+**11 of 35 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -65,10 +65,15 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | New launcher | Done |
 | ⏭ | Quick rematch | Next |
 | 📋 | See your selection | Planned |
+| 📋 | Team up against bots | Planned |
 | 📋 | Build from the dock | Planned |
+| 📋 | Reconnect after a drop | Planned |
+| 📋 | You and two friends vs three bots | Planned |
+| 📋 | Keep your teammate's base | Planned |
 | 📋 | Units that find their way | Planned |
 | 📋 | Three armies | Planned |
 | 📋 | Units that make room | Planned |
+| 📋 | Friends against friends | Planned |
 | 📋 | Supplies you can read | Planned |
 | 📋 | Three kinds of base | Planned |
 | 📋 | Camera that follows you | Planned |
@@ -82,7 +87,6 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 💡 | Wrecks | Later |
 | 💡 | Ground batch B | Later |
 | 💡 | Bots | Later |
-| 💡 | 3v3 online | Later |
 <!-- roadmap:end -->
 
 <!-- perf-table:begin -->

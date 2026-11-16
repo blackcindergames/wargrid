@@ -16,6 +16,7 @@ Sources. **ZH src** = ~/projects/CnC_Generals_Zero_Hour @ 0a05454, paths under `
 Q1. If a player picks a start spot and a teammate's spot is random, where does the teammate start?
    a) Far away, as if the picked spot did not belong to the team — ZH default (GameLogic.cpp:957-959, 977, 1018; pinned by SS7)   b) Next to the picked spot (the closest free start)   c) Random among the free starts
    Recommendation: b, because ZH's behaviour looks like an oversight and teammates expect to start together. Why it matters: one changed line in `StartSpots.assign` and a re-pinned SS7.
+   **Answered b (user, 2026-11-16, [online teams](../reference/design-answers-2026-11-08.md#online-teams-refinement-user-2026-11-16)):** teammates start side by side, from P7.
 
 Q2. Can players pick their start spot in the lobby?
    a) Yes, by clicking a spot on the map preview, or leave it on "Random" — ZH default (multiplayer.ini:40, GameInfo.h:81-82)   b) No, always random   c) Only the host picks for everyone
@@ -24,6 +25,7 @@ Q2. Can players pick their start spot in the lobby?
 Q3. Can humans play against humans in the 3v3 lobby?
    a) Yes, any slot can be any human or bot on any team — ZH default (GameInfo.h:66-120)   b) No, always friends versus bots, as in the mockup   c) Later, after the friends-versus-bots version works
    Recommendation: c, because the mockup and the 3v3 exit gate are friends versus bots; mixed teams change the lobby layout. Why it matters: decides if the lobby has two fixed panels or free slots.
+   **Answered c (user, 2026-11-16):** friends against bots first (P7, P9); humans on both sides with the ready room (P11).
 
 Q4. Can a friend slot be filled by a bot?
    a) Yes, any open slot can take a bot — ZH default (GameInfo.h:73-75 slot states)   b) No, friend slots are humans only; empty slots stay empty   c) Empty friend slots are filled by bots automatically at start
@@ -49,6 +51,7 @@ Q8. Should the lobby allow observers who watch with the whole map revealed?
 Q9. How does a match start once everyone is in?
    a) Every human ticks "Accept"; any option change clears all accepts; then the host starts and a 5 s countdown runs — ZH default (GameInfo.h:66-68, multiplayer.ini:36)   b) The host starts whenever all slots are filled   c) It starts on its own when all slots are filled
    Recommendation: a, because it stops a host changing the map at the last second. Why it matters: adds a ready state per slot to the lobby protocol.
+   **Placed (user, 2026-11-16):** until P11 the match starts when everyone has joined (b without a host button); the ready step comes with P11.
 
 Q10. Should offline Restart keep the same start spots?
    a) Yes, the same starts as the first start — ZH (QuitMenu.cpp:200-250, GameLogic.cpp:974-1034; inferred) and what the converted-maps run built   b) No, draw new starts from a new seed
@@ -61,3 +64,4 @@ Q11. Should there be in-game chat?
 Q12. Can a teammate use a map with fewer starts than players?
    a) No: the lobby only offers maps with at least as many starts as filled slots — ZH (slot count limited by `m_numPlayers`, GameLogic.cpp:815-819; inferred for the lobby)   b) Yes, players share starts
    Recommendation: a, because Dry Wells has only 2 starts and a 3v3 needs 6. Why it matters: the mockup's "Ashfall supports this 6-player setup" line needs this rule.
+   **Answered a (user, 2026-11-16):** a 2v2 offers only maps with 4 or more starts.

@@ -6,15 +6,15 @@ Status: **PROPOSED**, research only; nothing here is decided, planned or built. 
 
 | Need | Where it comes from |
 |---|---|
-| Create match, get a code; join by code | mockup [lobby-mockup.jpg](../images/lobby-mockup.jpg); blueprint §7 M9 "Lobby look" |
-| Map choice with start positions; maps with too few starts filtered | mockup; [next-m9-lobby](../questions/next-m9-lobby.md) Q2, Q12 |
-| Seats: you + two friend slots, bot team; faction per seat; colour, team, random faction | mockup; next-m9-lobby Q3-Q7 |
-| Bots in seats: one difficulty 1-5 and one play style for all bots | mockup; blueprint §7 M9 |
+| Create match, get a code; join by code | blueprint §7 M9 "Lobby look" (its 2026-11-08 picture deleted 2026-11-16) |
+| Map choice with start positions; maps with too few starts filtered | blueprint §7 M9 "Lobby look"; [next-m9-lobby](../questions/next-m9-lobby.md) Q2, Q12 |
+| Seats: you + two friend slots, bot team; faction per seat; colour, team, random faction | blueprint §7 M9 "Lobby look"; next-m9-lobby Q3-Q7 |
+| Bots in seats: one difficulty 1-5 and one play style for all bots | blueprint §7 M9 "Lobby look" |
 | Ready / Accept, cleared on any change, 5 s countdown | next-m9-lobby Q9 (ZH: GameInfo.h:66-68, multiplayer.ini:36) |
 | Version / simulation fingerprint matching | relay `build` string (room.go:141-142); R1.1 wants a simulation hash instead of the version |
 | Start handoff to the relay with seats, seed, settings | protocol `start` vector (protocol/vectors/start.json) |
 | Drops, reconnect, bot takeover | [next-m9-drops](../questions/next-m9-drops.md); relay-stack-spike.md:107 (grace timer, log replay) |
-| Rooms list / match browser, chat | not in the mockup; M5 M9 list says "Lobby and match browser" (m5-online.md:61); ZH had both (questions below) |
+| Rooms list / match browser, chat | not in the 2026-11-08 lobby picture (deleted 2026-11-16); M5 M9 list says "Lobby and match browser" (m5-online.md:61); ZH had both (questions below) |
 
 What the relay does today (**source**): seat count is one process-wide env var, `WARGRID_SEATS` default 2 (relay/main.go:129); the room starts by itself the moment the last seat joins, numbering seats 1..n (relay/room.go:159-166); `settings` are opaque bytes from the creator's `hello` (envelope.go:60, room.go:166); codes are 6 characters from a 32-letter alphabet (room.go:18, 318). **Consequence (inferred):** a 3v3 with one to three humans plus bots needs a per-room seat count and an explicit start. "Relay unchanged" therefore cannot hold literally for any option; every option below adds at least a protocol 3 `hello`/`start` change and new vectors.
 

@@ -1,5 +1,7 @@
 # Next: bot attacks that reach the enemy (M8), and the Fm1 red test
 
+Routed (user, 2026-11-16): the launch rule is measured by the night Bot attack test ([packages](../packages.md#night-lane)), not by another questionnaire; questions below stay open until it reports.
+
 Sources. **ZH src** = ~/projects/CnC_Generals_Zero_Hour @ 0a05454, paths under `GeneralsMD/Code/GameEngine/Source/`. **INI** = retail root `INIZH.big` decoded into the session scratchpad. **Maps** = `~/projects/CnC_Modding_Support` @ 3aad8e4, read with `tools/zh_map/convert.py load()` into the scratchpad. **Research doc** = wargrid `docs/reference/m7-verification-archive-research.md` (decoded `SkirmishScripts.scb`). Already decided, not asked: start from ZH's enemy choice, target scores and wave timing, then Wargrid's own better rules; a losing bot never gives up (design-answers 2026-11-08). Still open in earlier files and not repeated here: `zh-defaults-followup.md` Q12 (fight targeting per level) and Q13 (decision rate); `upcoming-milestones.md` Q8 (order cap).
 
 ## Findings (short, cited)
