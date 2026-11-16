@@ -1,6 +1,7 @@
 @warning_ignore_start("untyped_declaration")
 extends RefCounted
 
+const BaseScene = preload("res://tests/test_base_scene.gd")
 const Scene = preload("res://scenes/skirmish.tscn")
 const CommandRecorder = preload("res://scripts/playtest/command_recorder.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
@@ -61,7 +62,7 @@ func test_log_lines_format(runner) -> bool:
 func _step_main(main, steps: int, on_step: Callable = Callable()) -> void:
 	for i in steps:
 		if on_step.is_valid(): on_step.call(i)
-		main._physics_process(1.0 / 30.0)
+		BaseScene.tick(main)
 
 func _scene(runner, factions: Dictionary, map_id: String, seed_value: int):
 	SkirmishMain.factions = factions

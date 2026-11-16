@@ -4,13 +4,25 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const CommandRecorder = preload("res://scripts/playtest/command_recorder.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
+const BOTS: Array[int] = [2]
 
-var sim: Simulation
-var recorder: CommandRecorder
+var pump: SimPump
+# shortcut: test bridge, Task 6 removes it
+var sim: Simulation:
+	get: return pump.live()
+	set(value): adopt(value)
+# shortcut: test bridge, Task 6 removes it
+var recorder: CommandRecorder:
+	get: return pump.recorder()
+var first_note: SimPump.Note
 var _player: int
-var _sequence: int = 0
 var _factions: Dictionary = {}
-var _held: Array[Dictionary] = []
+var _queue: Array[Dictionary] = []
+var _flushed: Array[Dictionary] = []
+var _answers: Array[Dictionary] = []
+var _accepted: Array[Dictionary] = []
+var _last: SimPump.Note
 var _preview_request: Dictionary = {}
 var _preview_answer: Dictionary = {}
 
@@ -19,35 +31,84 @@ func _init(player: int) -> void:
 
 func create(map_path: String, starts: Array[int], factions: Dictionary, _match_seed: int) -> void:
 	_factions = factions
-	_sequence = 0
-	_held = []
+	adopt(Skirmish.create(true, "ai", factions, map_path, starts))
+
+func adopt(value: Simulation) -> void:
+	if pump != null: pump.stop()
+	value.set_hash_ring(false)
+	pump = SimPump.new(value)
+	first_note = pump.start()
+	_last = first_note
+	_queue = []
+	_flushed = []
+	_answers = []
+	_accepted = []
 	_preview_request = {}
 	_preview_answer = {}
-	recorder = null
-	sim = Skirmish.create(true, "ai", factions, map_path, starts)
 
 func start() -> void:
 	pass
 
-# Tests swap `driver.sim` directly; a recorder left on the old one would swallow commands.
-func _recording() -> CommandRecorder:
-	if recorder == null or not is_same(recorder.simulation(), sim): recorder = CommandRecorder.new(sim)
-	return recorder
+func step() -> void:
+	# A finished match would otherwise re-copy its last results every frame.
+	if over() and _queue.is_empty() and _preview_request.is_empty(): return
+	var job := SimPump.Job.new()
+	job.commands = _queue
+	job.bots = BOTS
+	job.preview = _preview_request
+	_queue = []
+	_preview_request = {}
+	pump.post(job)
 
-# Answers wait for the next step so offline shows them when online would.
-func step(after_tick: Callable) -> Array[Dictionary]:
-	Skirmish.issue_opponent(_recording())
-	sim.step()
-	after_tick.call()
-	_answer_preview()
-	var answers: Array[Dictionary] = _held
-	_held = []
+func drain() -> Array[SimPump.Note]:
+	var notes: Array[SimPump.Note] = pump.drain()
+	if notes.is_empty(): return notes
+	# Flushed answers wait for the next job so a paused or idle drain does not hand them out early.
+	_answers.append_array(_flushed)
+	_flushed = []
+	for note: SimPump.Note in notes:
+		_answers.append_array(note.issued)
+		_log(note)
+		if not note.preview.is_empty(): _preview_answer = note.preview
+	_last = notes[-1]
+	return notes
+
+func take_answers() -> Array[Dictionary]:
+	var answers: Array[Dictionary] = _answers
+	_answers = []
 	return answers
 
-func step_results() -> Array:
-	return sim.command_results().duplicate(true)
+func queued() -> Array[Dictionary]:
+	return _queue
 
-# shortcut: duplicated in both drivers, SB3's run_job takes it over
+func flush() -> void:
+	if _queue.is_empty(): return
+	var job := SimPump.Job.new()
+	job.commands = _queue
+	job.step = false
+	_queue = []
+	var note: SimPump.Note = pump.query(job)
+	_flushed.append_array(note.issued)
+	_log(note)
+
+func _log(note: SimPump.Note) -> void:
+	for answer: Dictionary in note.issued:
+		if answer.ok: _accepted.append(answer.command)
+	_accepted.append_array(note.bot_commands)
+
+func current() -> SimPump.Slot:
+	return pump.current()
+
+func record() -> Dictionary:
+	var job := SimPump.Job.new()
+	job.step = false
+	job.want_digest = true
+	var note: SimPump.Note = pump.query(job)
+	return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match}
+
+func match_stats() -> Array[Dictionary]:
+	return _last.stats
+
 func request_preview(request: Dictionary) -> void:
 	_preview_request = request
 	if request.is_empty(): _preview_answer = {}
@@ -55,21 +116,10 @@ func request_preview(request: Dictionary) -> void:
 func preview_answer() -> Dictionary:
 	return _preview_answer
 
-func _answer_preview() -> void:
-	if _preview_request.is_empty(): return
-	var request: Dictionary = _preview_request
-	_preview_request = {}
-	var preview: Dictionary = sim.preview_build(request.player, request.builder_id, request.kind, request.origin)
-	_preview_answer = {"kind": request.kind, "origin": request.origin, "ok": preview.ok, "error": preview.error, "tick": sim.tick()}
-
 func submit(payload: Dictionary) -> Dictionary:
 	var command: Dictionary = payload.duplicate(true)
-	command.tick = command.get("tick",sim.tick())
 	command.player = _player
-	command.sequence = _sequence
-	var result: Dictionary = _recording().issue_command(command)
-	if result.ok: _sequence += 1
-	_held.append({"command": command, "ok": result.ok, "error": result.error})
+	_queue.append(command)
 	return {"ok": true, "error": ""}
 
 func notice() -> String:
@@ -109,7 +159,7 @@ func can_restart() -> bool:
 	return true
 
 func over() -> bool:
-	return sim.match_over()
+	return _last.over
 
 func leave() -> void:
 	pass
@@ -118,4 +168,4 @@ func detach() -> void:
 	pass
 
 func match_log() -> Dictionary:
-	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "commands": Lockstep.log_lines(_recording().commands())}
+	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "commands": Lockstep.log_lines(_accepted)}

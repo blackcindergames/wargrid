@@ -1,6 +1,7 @@
 @warning_ignore_start("untyped_declaration")
 extends RefCounted
 
+const BaseScene = preload("res://tests/test_base_scene.gd")
 const Director = preload("res://scripts/presentation/sound_director.gd")
 const UnitVoice = preload("res://scripts/presentation/unit_voice.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -150,12 +151,12 @@ func test_offline_rejected_order_only_errors(runner) -> bool:
 	var hq: Dictionary = skirmish.driver.sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 2 and building.kind.ends_with("command_center"))[0]
 	skirmish._submit({"type": "attack", "entity_ids": [builder], "target_id": hq.id})
 	runner.check(_unit_line(skirmish) == "", "OV8 a worker has no attack line, got '%s'" % _unit_line(skirmish))
-	skirmish._physics_process(0.0)
+	BaseScene.tick(skirmish)
 	runner.check(skirmish.hud.note == "Rejected: Attack requires armed units", "OV8 fixture: builder attack fails, got '%s'" % skirmish.hud.note)
 	runner.check(_cues(skirmish).has("error"), "OV8 rejected order beeps one step later, got %s" % [_cues(skirmish)])
 	skirmish._submit({"type": "build", "builder_id": builder, "building_kind": "usa_barracks", "origin": _own_center_origin(skirmish)})
 	runner.check(_unit_line(skirmish).begins_with("worker_work_"), "OV8 a build speaks at submit, before its answer, got '%s'" % _unit_line(skirmish))
-	skirmish._physics_process(0.0)
+	BaseScene.tick(skirmish)
 	runner.check(skirmish.hud.note.begins_with("Rejected: ") and _cues(skirmish).has("error"), "OV8 fixture: blocked build fails one step later, got '%s' %s" % [skirmish.hud.note, _cues(skirmish)])
 	runner.check(_unit_line(skirmish).begins_with("worker_work_"), "OV8 the build line stays after the beep, got '%s'" % _unit_line(skirmish))
 	skirmish.free()

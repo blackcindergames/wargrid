@@ -26,6 +26,7 @@ const PlaytestOverlay = preload("res://scripts/playtest/playtest_overlay.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
@@ -148,8 +149,8 @@ func _match_record(mode: String, match_factions: Array, lines: PackedStringArray
 	var state: Dictionary = driver.sim.snapshot()
 	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "end_tick": state.tick, "end_digest": StateHash.digest(state), "build": PlaytestSettings.build_id(), "result": hud._result_text(state.match), "commands": lines}
 
-func _step_simulation() -> void:
-	for answer: Dictionary in driver.step(_collect_sound):
+func _take_answers() -> void:
+	for answer: Dictionary in driver.take_answers():
 		if answer.ok: _playtest.observe_command(answer.command)
 		else:
 			_ensure_sound()
@@ -199,17 +200,28 @@ func _physics_process(_delta: float) -> void:
 func _step_frame() -> void:
 	if menu_open() and driver.pauses_sim(): return
 	var started: int = Time.get_ticks_usec()
-	var tick_before: int = driver.sim.tick()
-	_step_simulation()
+	driver.step()
 	var rematch_seed: int = driver.take_rematch()
 	if rematch_seed >= 0:
 		_rematch(rematch_seed)
 		return
 	_perf.record_step((Time.get_ticks_usec() - started) / 1000.0)
+
+func _drain_notes() -> bool:
+	var tick_before: int = driver.current().tick
+	var last_tick: int = tick_before
+	for note: SimPump.Note in driver.drain():
+		_collect_note(note)
+		# A finished match re-reports its last results without a new tick.
+		if note.tick > last_tick: stepped_results.append_array(note.results)
+		last_tick = note.tick
+	_take_answers()
 	# A stall frame (online, waiting for the peer) is not a step frame; counting it would inflate the split share.
-	var advanced: bool = driver.sim.tick() != tick_before
-	if advanced: stepped_results.append_array(driver.step_results())
-	if not is_processing() or (advanced and _clock.stepped(Engine.get_process_frames(), driver.sim.tick())) or (not advanced and _note() != _shown_note): _refresh()
+	var advanced: bool = driver.current().tick != tick_before
+	if not is_processing() or (advanced and _clock.stepped(Engine.get_process_frames(), driver.current().tick)) or (not advanced and _note() != _shown_note):
+		_refresh()
+		return true
+	return false
 
 func _present_if_due() -> bool:
 	if not _clock.rendered(Engine.get_process_frames(), driver.sim.tick()): return false
@@ -217,6 +229,8 @@ func _present_if_due() -> bool:
 	return true
 
 func _process(delta: float) -> void:
+	var drained_at: int = Time.get_ticks_usec()
+	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
 	var presented_at: int = Time.get_ticks_usec()
 	if _present_if_due() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - presented_at
 	pan_camera(Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down"), delta)
@@ -315,10 +329,10 @@ func _ensure_sound() -> void:
 	_sound = SoundPlayer.new(local_player)
 	add_child(_sound)
 
-func _collect_sound() -> void:
+func _collect_note(note: SimPump.Note) -> void:
 	_ensure_sound()
-	_sound.collect_step(driver.sim.tick(), driver.sim.combat_events(), driver.sim.command_results())
-	_visuals.collect_step(driver.sim.tick(), driver.sim.combat_events(), driver.sim.command_results())
+	_sound.collect_step(note.tick, note.events, note.results)
+	_visuals.collect_step(note.tick, note.events, note.results)
 
 func _production_kind(building: Dictionary, state: Dictionary) -> String:
 	var kind: String = Skirmish.unit_for(_local_state(state).get("faction", Skirmish.default_faction()), building.kind)

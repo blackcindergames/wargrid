@@ -6,12 +6,19 @@ const Lockstep = preload("res://scripts/net/lockstep.gd")
 const Wire = preload("res://scripts/net/wire.gd")
 const TimingStats = preload("res://scripts/debug/timing_stats.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 const CATCH_UP_STEPS: int = 2
 const MAX_CATCH_UP_CREDIT: int = 4
 const DESYNC_DIR: String = "user://desync"
 const LATENCY_FILE: String = "user://netplay-latency.txt"
 
-var sim: Simulation
+var pump: SimPump
+# shortcut: test bridge, Task 6 removes it
+var sim: Simulation:
+	get: return pump.live()
+	set(value): adopt(value)
+var first_note: SimPump.Note
+var _last: SimPump.Note
 var web: bool = OS.has_feature("web")
 var download: Callable = JavaScriptBridge.download_buffer
 var _transport: RefCounted
@@ -26,7 +33,7 @@ var _left: bool = false
 var _credit: int = 0
 var _rejections_seen: int = 0
 var _log_seen: int = 0
-var _step_results: Array = []
+var _answers: Array[Dictionary] = []
 var _preview_request: Dictionary = {}
 var _preview_answer: Dictionary = {}
 var _seat: int
@@ -63,14 +70,21 @@ func create(map_path: String, starts: Array[int], _factions: Dictionary, match_s
 	_rejections_seen = 0
 	_log_seen = 0
 	_credit = 0
+	adopt(Skirmish.create(true, "human", {}, map_path, starts))
+
+func adopt(value: Simulation) -> void:
+	if pump != null: pump.stop()
+	pump = SimPump.new(value)
+	first_note = pump.start()
+	_last = first_note
+	_answers = []
 	_preview_request = {}
 	_preview_answer = {}
-	sim = Skirmish.create(true, "human", {}, map_path, starts)
 
 func start() -> void:
 	_lockstep.send = _transport.send_text
 	_lockstep.submit({"type": "choose_faction", "faction": _own_faction})
-	_lockstep.start(sim.snapshot())
+	_lockstep.start(pump.live().snapshot()) # shortcut: live read, SB4 moves it into jobs
 
 func detach() -> void:
 	if _lockstep != null: _lockstep.send = Callable()
@@ -82,26 +96,52 @@ func leave() -> void:
 	_lockstep.set_relay_lost()
 	_transport.close()
 
-func step(after_tick: Callable) -> Array[Dictionary]:
+func step() -> void:
 	for text: Variant in _transport.poll(): _lockstep.receive(text)
 	if not _finished and (_transport.closed() or _transport.silent(Time.get_ticks_usec())): _lockstep.set_relay_lost()
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
-	_step_results = []
 	var stepped: bool = false
 	for i in CATCH_UP_STEPS:
-		if _credit < 1 or not _lockstep.advance(sim): break
+		if _credit < 1 or not _lockstep.advance(pump.live()): break # shortcut: live read, SB4 moves it into jobs
 		stepped = true
 		_credit -= 1
-		after_tick.call()
-		_step_results.append_array(sim.command_results().duplicate(true))
-		var tick: int = sim.tick()
-		_lockstep.finish_tick(tick, sim.snapshot() if _lockstep.wants_snapshot(tick) else null)
-	if stepped: _answer_preview()
+		var job := SimPump.Job.new()
+		job.step = false
+		job.preview = _preview_request
+		pump.post(job)
+		var tick: int = pump.live().tick() # shortcut: live read, SB4 moves it into jobs
+		_lockstep.finish_tick(tick, pump.live().snapshot() if _lockstep.wants_snapshot(tick) else null) # shortcut: live read, SB4 moves it into jobs
+	if stepped: _preview_request = {}
 	if _phase == "playing" and _lockstep.received_any(): _transport.patient = false
-	var answers: Array[Dictionary] = _new_answers()
-	if not _finished and (sim.match_over() or _ended()): _finish()
+	_answers.append_array(_new_answers())
+	if not _finished and (pump.live().match_over() or _ended()): _finish() # shortcut: live read, SB4 moves it into jobs
 	if (_phase == "over" or _phase == "again") and _room_gone(): _close_room()
+
+# The last advance's preview answer wins, as the screen shows the last tick.
+func drain() -> Array[SimPump.Note]:
+	var notes: Array[SimPump.Note] = pump.drain()
+	for note: SimPump.Note in notes:
+		if not note.preview.is_empty(): _preview_answer = note.preview
+	if not notes.is_empty(): _last = notes[-1]
+	return notes
+
+func take_answers() -> Array[Dictionary]:
+	var answers: Array[Dictionary] = _answers
+	_answers = []
 	return answers
+
+func current() -> SimPump.Slot:
+	return pump.current()
+
+func record() -> Dictionary:
+	var job := SimPump.Job.new()
+	job.step = false
+	job.want_digest = true
+	var note: SimPump.Note = pump.query(job)
+	return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match}
+
+func match_stats() -> Array[Dictionary]:
+	return _last.stats
 
 func _ended() -> bool:
 	return _lockstep.status().begins_with("ended")
@@ -114,23 +154,12 @@ func _close_room() -> void:
 	_transport.close()
 	_phase = "done"
 
-func step_results() -> Array:
-	return _step_results
-
-# shortcut: duplicated in both drivers, SB3's run_job takes it over
 func request_preview(request: Dictionary) -> void:
 	_preview_request = request
 	if request.is_empty(): _preview_answer = {}
 
 func preview_answer() -> Dictionary:
 	return _preview_answer
-
-func _answer_preview() -> void:
-	if _preview_request.is_empty(): return
-	var request: Dictionary = _preview_request
-	_preview_request = {}
-	var preview: Dictionary = sim.preview_build(request.player, request.builder_id, request.kind, request.origin)
-	_preview_answer = {"kind": request.kind, "origin": request.origin, "ok": preview.ok, "error": preview.error, "tick": sim.tick()}
 
 func _new_answers() -> Array[Dictionary]:
 	var errors: Dictionary = {}
@@ -232,7 +261,7 @@ func _write_report() -> String:
 	return ProjectSettings.globalize_path(path)
 
 func _report() -> Dictionary:
-	var report: Dictionary = _lockstep.desync_report(sim)
+	var report: Dictionary = _lockstep.desync_report(pump.live()) # shortcut: live read, SB4 moves it into jobs
 	report.merge(MatchSettings.report_fields(_map_path.get_file().get_basename(), _seed, _starts))
 	return report
 
