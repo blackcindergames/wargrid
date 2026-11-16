@@ -168,15 +168,15 @@ Still open: gate 4.
 Plan: [sim boundary SB3](../superpowers/plans/2026-11-16-sim-boundary-sb3.md). Resume record below is overwritten at each checkpoint; ledger rows and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-16, Task 7 reviewed and fixed)
-Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged), Tasks 1-6 at f46993b / Task 7 uncommitted
-Last green task / next incomplete task: Task 6 (committed f46993b); Task 7 docs written, fresh Opus docs review (18 findings) applied, awaiting the coordinator's commit / Task 8 (gate checks and measurements)
-Changed paths since last commit: docs/guide/{README,01,04,05,08,09,10,11,12,13}, docs/reference/{sim-interface,sim-boundary-verification}.md, docs/superpowers/specs/2026-11-15-sim-boundary-design.md, docs/STATUS.md
-Last command / cases / checks / failures / exit / marker: `sh tools/run_checks.sh` exit 0 `CHECKS PASSED 5`; `sh tools/check_public.sh` exit 0 `PUBLIC CHECK PASSED` (docs only; baseline skipped, passed on f46993b: Task 6 full suite 1035 cases, `TESTS PASSED 146757`)
-Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); Steam Deck row and rendered rerun at the SB3 gate (Task 8)
+Resume record (updated 2026-11-16, Task 8 Steps 1-2 done except benchmarks)
+Branch / base commit / working-tree state: sim-boundary-sb3 (worktree ~/projects/wargrid-wt-sb3) / bad67c332820be5fb86d42a87af4a0dbcc436961 (main; wrapup-2026-11-16 merged), Tasks 1-7 at a06d694 (tree a33a73e) / Task 8 Step 2 zones uncommitted
+Last green task / next incomplete task: Task 7 (committed a06d694); Task 8 Step 1 green on a06d694, Step 2 zones `view.rows` and `view.buildings` added (suite, traces, lint, warnings green), awaiting the coordinator's commit / Task 8 Step 2 benchmarks, then Step 3 (rendered rerun + Steam Deck batch, owner's window), then Step 4 gate review
+Changed paths since last commit: game/scripts/simulation/simulation.gd (two Profiler zones in view_state), docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: full suite with traces into build/sb3/task8z/ exit 0, CASES 1035 CHECKS 146757 FAILURES 0, `TESTS PASSED 146757`; traces equal to base; lint, warnings (171 files), boundary exit 0
+Known red case or blocker: none; benchmarks not run (owner is using the machine, coordinator order)
+Approved decisions, pre-authorizations used, deferred gates: attended run, coordinator commits locally per task (user, 2026-11-16); Steam Deck row and rendered rerun at the SB3 gate (Task 8 Step 3, ask first)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: the coordinator commits Task 7; then Task 8.
+Next exact action: benchmarks (base re-measure in the main checkout with PERF_RECORD=0, then branch with PERF_LABEL="Sim boundary SB3") when the owner frees the machine, each alone at load <= 2.5; then Step 3 batch.
 ```
 
 ### Evidence ledger
@@ -236,6 +236,9 @@ Base: `bad67c332820be5fb86d42a87af4a0dbcc436961` (`main`, tree `3762073acc71e04b
 | 2026-11-16 | Task 6: `NETPLAY_OUT=build/sb3/task6/netplay sh tools/run_netplay.sh match`; `sh tools/run_team_match.sh`; traces equal base vs task6 | exit 0, `NETPLAY PASSED match 10.5 s`; exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS capped_ticks=853 max_cells=643`; replay, economy, combat `REPLAYS MATCHED 1200`, team `100`, netplay `301` | ac22072 + Task 6, uncommitted |
 | 2026-11-16 | Task 6: `python3 tools/test_sim_boundary.py`; `sh tools/run_lint.sh`; `sh tools/run_warnings.sh`; `sh tools/run_checks.sh` | exit 0 each (`OK` 12 tests, `no problems found`, `WARNINGS CHECKED 171 FILES`, `CHECKS PASSED 5`) | ac22072 + Task 6, uncommitted |
 | 2026-11-16 | Task 7: guide chapters 1, 4, 5, 13, `sim-interface.md`, spec SB3 row, STATUS night-6 row; `sh tools/run_checks.sh`; `sh tools/check_public.sh` (logs `build/sb3/task7/`) | exit 0 `CHECKS PASSED 5`; exit 0 `PUBLIC CHECK PASSED`; docs only, baseline skipped (passed on f46993b); rerun after the 08/09 fixes and after the 18 review findings, same result | f46993b + uncommitted docs |
+| 2026-11-16 | Task 8 Step 1: full suite with the four trace variables into `build/sb3/task8/`; `sh tools/run_checks.sh`; `sh tools/run_team_match.sh`; `NETPLAY_OUT=build/sb3/task8/netplay sh tools/run_netplay.sh match`; `NETPLAY_OUT=build/sb3/task8/netplay-rematch ... rematch`; `sh tools/run_conformance.sh`; `compare_replays.py` base vs task8 | exit 0 each: CASES 1035 CHECKS 146757 FAILURES 0, `TESTS PASSED 146757`; `CHECKS PASSED 5`; `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS capped_ticks=853 max_cells=643`; `NETPLAY PASSED match 10.8 s`; `NETPLAY PASSED rematch 21.7 s`; `CONFORMANCE PASSED 61`; replay, economy, combat `REPLAYS MATCHED 1200`, team `100`, netplay `301` | a06d694, tree a33a73ed09d7f254f4d4201bbb1a44f601dfef3f, clean |
+| 2026-11-16 | Task 8 Step 2: `view.rows` (around `_view_rows`, id sort and `from_units`) and `view.buildings` (around `_sorted_copies(_buildings)`) in `Simulation.view_state`, both computed before the result literal (same values); full suite with traces into `build/sb3/task8z/`; `NETPLAY_OUT=build/sb3/task8z/netplay ... match`; `run_team_match.sh`; `compare_replays.py`; lint; warnings; `test_sim_boundary.py` | exit 0 each: CASES 1035 CHECKS 146757 FAILURES 0, `TESTS PASSED 146757`; `NETPLAY PASSED match 15.5 s`; `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS capped_ticks=853 max_cells=643`; replay, economy, combat `REPLAYS MATCHED 1200`, team `100`, netplay `301`; `no problems found`; `WARNINGS CHECKED 171 FILES`; `OK` | a06d694 + zones, uncommitted |
+| 2026-11-16 | Task 8 Step 2 benchmarks (base re-measure in main checkout, then branch with `PERF_LABEL`) | not run: the owner was using the machine (coordinator order); pending | - |
 
 Task 3 note: after review the ring-off skip is observable by turning the ring on after ten off ticks (the ten rows read zero), so the always-write mutation is caught. An insert into a frozen cache cannot be tested directly: the engine prints `ERROR:` / `SCRIPT ERROR`, which fails the whole suite by design (exit 1), so the late-insert guard is the warm-covers checks plus that suite-level failure.
 

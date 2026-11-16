@@ -783,7 +783,13 @@ func snapshot() -> Dictionary:
 
 func view_state() -> Dictionary:
 	var zone: int = Profiler.begin()
-	var result: Dictionary = {"tick": _tick, "map": _navigation.snapshot(), "players": _player_snapshots(true), "buildings": _sorted_copies(_buildings), "sources": _sorted_copies(_sources), "command_results": _command_results.duplicate(true), "match": _match.duplicate(true) if _match != null else null, "units": _view_rows()}
+	var part: int = Profiler.begin()
+	var units: RefCounted = _view_rows()
+	Profiler.end(&"view.rows", part)
+	part = Profiler.begin()
+	var buildings: Array = _sorted_copies(_buildings)
+	Profiler.end(&"view.buildings", part)
+	var result: Dictionary = {"tick": _tick, "map": _navigation.snapshot(), "players": _player_snapshots(true), "buildings": buildings, "sources": _sorted_copies(_sources), "command_results": _command_results.duplicate(true), "match": _match.duplicate(true) if _match != null else null, "units": units}
 	if not _crates.is_empty(): result.crates = _crates.duplicate(true)
 	Profiler.end(&"view_state", zone)
 	return result
