@@ -39,6 +39,7 @@ Current setup lives in the [development notes](docs/development.md); package and
 - Simulation code follows the [determinism rules](docs/reference/determinism-rules.md).
 - Adapt Hell's Verdict's wrappers and CI patterns without modifying that project. Keep Wargrid's planned renderer and tick rate; do not inherit FPS settings or server assumptions.
 - Follow personal code-style, Superpowers, review and model-routing instructions. Do not import another project's agent models or workflow exceptions.
+- Design specs, playtest cards and diffs touching UI, HUD, controls, art or player-facing text also get the [player-experience reviewer](.claude/agents/player-experience-reviewer.md), beside the correctness reviewer, not instead of it; not on simulation, relay or tooling-only diffs (user, 2026-11-16).
 - Milestone runs follow [milestone prompt](docs/milestone-prompt.md): run as a coordinator with one fresh subagent per task, each starting from the verification file's resume record; stop at every stop gate.
 - New tests use only the [simulation interface](docs/reference/sim-interface.md); `tools/test_sim_boundary.py` enforces it.
 - Edit files with the Edit tool or asserted replacements only; an unasserted replacement once dropped a cleanup call silently. Agent shells use BSD `sed` (`sed -i ''`). Scratch Godot scripts must `quit()` on every path, or a script error hangs until the shell timeout.

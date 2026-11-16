@@ -863,3 +863,14 @@ The plan was rebased onto `main` `ee2f353` after P2.2 (private, `~/projects/warg
 - **Batch size guard** (user, 2026-11-15, after the review): with `WARGRID_BATCH_MS` on, the relay joins the other seats' frames into one message (`sender.go`), and five full 64 KiB frames in a 3v3 exceed the client's 128 KiB receive buffer (`relay_transport.gd` `BUFFER_BYTES`); Relay guards adds a guard (cap the batch below the client buffer, or flush early) with a test.
 - **Review notes:** Q10's 16 also covers M9 seat resume and a LAN party; Q26 and Q22 follow it (the forged-header check needs 17 sockets).
 - **Proxy and CI:** faults hold, slice, reset and blackhole only (Q19); `go vet`, `go test -race` and golangci-lint for the proxy (Q20); the extra netplay scenarios join CI if the job stays under 20 minutes, else `spike` on Linux only (Q21); no `NETCLIENT WAITS` line, one proxy process per seat (Q23, Q25); a fresh proposed night-settings copy for the run (Q24).
+
+## Player-experience review (user, 2026-11-16)
+
+First full review by the [player-experience reviewer](../../.claude/agents/player-experience-reviewer.md) (docs, UI code, mock-ups, a render of `main` 36aa180):
+
+- **Command card:** StarCraft II style (fixed command cells, buildings behind one build key in a sub-grid), because the 3-row grid put the 5th build cell on A, Attack Move ([blueprint Controls](../blueprint.md#controls-small-task-after-converted-maps-user-2026-11-08-not-designed), P2.3b in [packages](../packages.md)).
+- **Order:** P2.2 slice 2 stays before P2.3a, although the shipped HUD is still a debug readout (raw ids, `Tick`, `#id`); P2.3a follows it.
+- **Pan while placing:** rider in P3.
+- **Opponent left mid-match:** [F27](../STATUS.md#findings-list), fixed in P2.2 slice 2.
+- **Missing prerequisite by name:** rider on P2.3b's card (pulls that slice of the Order controls rider earlier).
+- **P3 before the art packages?** Decided by a timed Ashfall playtest ("watch your army fight, then queue a unit at base"); if it hurts, P3 and control groups move right after P2.3b.
