@@ -76,7 +76,7 @@ func _match_hud(state: Dictionary) -> void:
 
 func _result_rows(state: Dictionary) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
-	var stats: Array[Dictionary] = _screen.driver.sim.match_stats()
+	var stats: Array[Dictionary] = _screen.driver.match_stats()
 	for player: Dictionary in state.players:
 		var row: Dictionary = stats.filter(func(entry: Dictionary) -> bool: return entry.player == player.id)[0]
 		var you: bool = player.id == _screen.local_player

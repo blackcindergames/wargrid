@@ -1,6 +1,7 @@
 @warning_ignore_start("untyped_declaration")
 extends RefCounted
 
+const BaseScene = preload("res://tests/test_base_scene.gd")
 const Skirmish = preload("res://scenes/skirmish.tscn")
 const SkirmishRules = preload("res://scripts/simulation/skirmish.gd")
 const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
@@ -103,7 +104,7 @@ func _click(main, name: String) -> void:
 	assert(false, "no visible button " + name)
 
 func _own_unit(main) -> int:
-	for unit: Dictionary in main.driver.sim.snapshot().entities:
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
 		if unit.owner == main.local_player: return unit.id
 	return -1
 
@@ -113,19 +114,19 @@ func _dialog(main) -> Control:
 func test_marker_pauses_offline(runner) -> bool:
 	var saved: String = _begin()
 	var main = await _scene(runner)
-	main._physics_process(0.0)
+	BaseScene.tick(main)
 	var unit: int = _own_unit(main)
 	main.orders.selected_ids.assign([unit])
-	var tick: int = main.driver.sim.tick()
+	var tick: int = main.driver.pump.live().tick()
 	var camera := _camera(main)
 	_key(runner, KEY_N)
 	runner.check(_dialog(main).visible and main.menu_open(), "PO1 N opens the note and the match counts it as an open menu")
-	for i in 5: main._physics_process(0.0)
-	runner.check(main.driver.sim.tick() == tick, "PO1 tick frozen while the note is open")
+	for i in 5: BaseScene.tick(main)
+	runner.check(main.driver.pump.live().tick() == tick, "PO1 tick frozen while the note is open")
 	main.get_node("HUD/Playtest").save_marker("good", "nice")
 	runner.check(not _dialog(main).visible and not main.menu_open(), "PO1 saving closes the note")
-	main._physics_process(0.0)
-	runner.check(main.driver.sim.tick() == tick + 1, "PO1 tick advances after saving")
+	BaseScene.tick(main)
+	runner.check(main.driver.pump.live().tick() == tick + 1, "PO1 tick advances after saving")
 	var markers: Array[Dictionary] = PlaytestSession.current.pending_markers()
 	runner.check(markers.size() == 1 and markers[0].kind == "good" and markers[0].text == "nice" and markers[0].tick == tick and markers[0].selected == [unit] and not markers[0].jpg.is_empty(), "PO1 marker holds kind, text, tick, selection and a screenshot, got %s" % [markers.map(func(m: Dictionary) -> Dictionary: return m.merged({"jpg": m.jpg.length()}, true))])
 	runner.check(camera.seen_dialog_visible.size() == 1, "PO1 one capture per note")
@@ -138,11 +139,11 @@ func test_marker_does_not_pause_online(runner) -> bool:
 	var online: Dictionary = await _online(runner)
 	var main = online.main
 	_camera(main)
-	main._physics_process(0.0)
+	BaseScene.tick(main)
 	_key(runner, KEY_N)
 	runner.check(_dialog(main).visible and main.menu_open(), "PO2 online N opens the note")
 	var polls: int = online.transport.polls
-	for i in 4: main._physics_process(0.0)
+	for i in 4: BaseScene.tick(main)
 	runner.check(online.transport.polls == polls + 4, "PO2 online still polls the transport while the note is open, got %d" % (online.transport.polls - polls))
 	main.free()
 	_end(saved)
@@ -178,7 +179,7 @@ func test_note_typing_is_not_a_hotkey(runner) -> bool:
 	_key(runner, KEY_1, 49)
 	_key(runner, KEY_N, 110)
 	runner.check(text.text == "as1n" and not main.orders._attack_move_mode, "PO4 letters go into the text, not attack-move, got '%s'" % text.text)
-	runner.check(main.playtest_match().commands.size() == commands and _dialog(main).visible, "PO4 typing issues no command and keeps the note open")
+	runner.check(main.playtest_match().commands.size() == commands and main.driver.queued().is_empty() and _dialog(main).visible, "PO4 typing issues no command and keeps the note open")
 	main.orders.selected_ids.clear()
 	_key(runner, KEY_ESCAPE)
 	runner.check(not _dialog(main).visible and not main.get_node("HUD/PauseMenu").visible, "PO4 Esc closes the note and leaves the pause menu closed")
@@ -195,9 +196,9 @@ func test_marker_ignored_when_menu_or_over(runner) -> bool:
 	_key(runner, KEY_N)
 	runner.check(not _dialog(main).visible, "PO5 N with the pause menu open opens nothing")
 	_key(runner, KEY_ESCAPE)
-	for building: Dictionary in main.driver.sim.snapshot().buildings: main.driver.sim.remove_object(building.id)
-	main._physics_process(0.0)
-	runner.check(main.driver.sim.match_over(), "PO5 fixture: match over")
+	for building: Dictionary in main.driver.pump.live().snapshot().buildings: main.driver.pump.live().remove_object(building.id)
+	BaseScene.tick(main)
+	runner.check(main.driver.pump.live().match_over(), "PO5 fixture: match over")
 	_key(runner, KEY_N)
 	runner.check(not _dialog(main).visible and PlaytestSession.current.pending_markers().is_empty(), "PO5 N after the match ended opens nothing")
 	main.free()
@@ -211,14 +212,14 @@ func test_checklist_triggers(runner) -> bool:
 	var list: Control = overlay.get_node("Checklist")
 	runner.check(list.visible and list.find_child("collect", true, false) is CheckBox, "PO6 checklist visible at match start with one box per item")
 	var sim = SkirmishRules.create(true, "ai", {1: "frc", 2: "usa"})
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	var pile: Dictionary = sim.snapshot().sources[0]
 	var laborer: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), "frc_builder")
 	main._submit({"type": "gather", "entity_ids": [999999], "source_id": pile.id})
-	main._physics_process(0.0)
+	BaseScene.tick(main)
 	runner.check(not main.hud.note.is_empty() and not overlay.checked("collect"), "PO6 a rejected gather ticks nothing, error '%s'" % main.hud.note)
 	main._submit({"type": "gather", "entity_ids": [laborer], "source_id": pile.id})
-	main._physics_process(0.0)
+	BaseScene.tick(main)
 	runner.check(main.hud.note.is_empty() and overlay.checked("collect") and list.find_child("collect", true, false).button_pressed, "PO6 an accepted gather ticks collect, error '%s'" % main.hud.note)
 	overlay.observe_command({"type": "build", "building_kind": "frc_supply_center"})
 	runner.check(overlay.checked("cache") and not overlay.checked("workers"), "PO6 build:frc_supply_center ticks cache only")
@@ -256,7 +257,7 @@ func test_helper_off_changes_nothing(runner) -> bool:
 	runner.check(main.menu_open(), "PO7 off: Esc still opens the pause menu")
 	_key(runner, KEY_ESCAPE)
 	var sim = SkirmishRules.create(true, "ai", {1: "frc", 2: "usa"})
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	var pile: Dictionary = sim.snapshot().sources[0]
 	var laborer: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), "frc_builder")
 	main._submit({"type": "gather", "entity_ids": [laborer], "source_id": pile.id})
@@ -324,11 +325,11 @@ func _scenes(main) -> Array[String]:
 	return scenes
 
 func _run(main, steps: int) -> void:
-	for i in steps: main._physics_process(0.0)
+	for i in steps: BaseScene.tick(main)
 
 func _move_own_unit(main) -> void:
 	main.orders.selected_ids.assign([_own_unit(main)])
-	for unit: Dictionary in main.driver.sim.snapshot().entities:
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
 		if unit.id == main.orders.selected_ids[0]:
 			main.orders._move(Vector2(unit.position[0] + 4.0, unit.position[1]))
 			return
@@ -386,12 +387,12 @@ func test_match_end_opens_review_once(runner) -> bool:
 	_camera(main)
 	_mark(overlay, "bad", "before the end")
 	var enemies: Dictionary = {}
-	var state: Dictionary = main.driver.sim.snapshot()
+	var state: Dictionary = main.driver.pump.live().snapshot()
 	for object: Dictionary in state.entities + state.buildings:
 		if object.owner == 2: enemies[object.id] = true
-	for id: int in enemies: main.driver.sim.remove_object(id)
-	main._physics_process(0.0)
-	runner.check(main.driver.sim.match_over() and not _form_shown(main), "PO11 fixture: match over, no review before the overlay polls")
+	for id: int in enemies: main.driver.pump.live().remove_object(id)
+	BaseScene.tick(main)
+	runner.check(main.driver.pump.live().match_over() and not _form_shown(main), "PO11 fixture: match over, no review before the overlay polls")
 	overlay._process(0.0)
 	var comment: LineEdit = _form(main).find_child("Comment_0_0", true, false) if _form(main) != null else null
 	runner.check(_form_shown(main) and PlaytestSession.current.data.matches.size() == 1 and comment != null, "PO11 one poll shows the review with the marker's comment field")
@@ -417,10 +418,10 @@ func test_back_to_menu_from_result_panel(runner) -> bool:
 	var main = await _scene(runner)
 	var overlay = main.get_node("HUD/Playtest")
 	_camera(main)
-	var state: Dictionary = main.driver.sim.snapshot()
+	var state: Dictionary = main.driver.pump.live().snapshot()
 	for object: Dictionary in state.entities + state.buildings:
-		if object.owner == 2: main.driver.sim.remove_object(object.id)
-	main._physics_process(0.0)
+		if object.owner == 2: main.driver.pump.live().remove_object(object.id)
+	BaseScene.tick(main)
 	overlay._process(0.0)
 	_press(main, "NextMatch")
 	main._refresh()
@@ -438,10 +439,10 @@ func test_leave_after_closed_sitting(runner) -> bool:
 		var saved: String = _begin()
 		var main = await _scene(runner)
 		var overlay = main.get_node("HUD/Playtest")
-		var state: Dictionary = main.driver.sim.snapshot()
+		var state: Dictionary = main.driver.pump.live().snapshot()
 		for object: Dictionary in state.entities + state.buildings:
-			if object.owner == 2: main.driver.sim.remove_object(object.id)
-		main._physics_process(0.0)
+			if object.owner == 2: main.driver.pump.live().remove_object(object.id)
+		BaseScene.tick(main)
 		overlay._process(0.0)
 		_press(main, "EndSession")
 		_rate_all(runner, main, 3)
@@ -463,7 +464,7 @@ func test_two_match_session_file(runner) -> bool:
 	runner.check(main.hud.note.is_empty(), "PO12 fixture: the first move is accepted, '%s'" % main.hud.note)
 	_run(main, 60)
 	_mark(overlay, "good", "match one marker")
-	var digests: Array[String] = [StateHash.digest(main.driver.sim.snapshot())]
+	var digests: Array[String] = [StateHash.digest(main.driver.pump.live().snapshot())]
 	var commands: Array = [main.playtest_match().commands]
 	overlay.end_match()
 	runner.check(_form_shown(main), "PO12 ending match 1 shows its review")
@@ -476,7 +477,7 @@ func test_two_match_session_file(runner) -> bool:
 	_mark(overlay, "bad", "match two first")
 	_run(main, 45)
 	_mark(overlay, "confusing", "match two second")
-	digests.append(StateHash.digest(main.driver.sim.snapshot()))
+	digests.append(StateHash.digest(main.driver.pump.live().snapshot()))
 	commands.append(main.playtest_match().commands)
 	var scenes := _scenes(main)
 	main.orders.selected_ids.clear()
@@ -691,16 +692,16 @@ func test_sb2_checklist_waits_for_answer(runner) -> bool:
 	var main = await _scene(runner)
 	var overlay = main.get_node("HUD/Playtest")
 	var sim = SkirmishRules.create(true, "ai", {1: "frc", 2: "usa"})
-	main.driver.sim = sim
+	main.driver.adopt(sim)
 	main._refresh()
 	var pile: Dictionary = sim.snapshot().sources[0]
 	var laborer: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), "frc_builder")
 	main._submit({"type": "gather", "entity_ids": [999999], "source_id": pile.id})
-	main._physics_process(0.0)
+	BaseScene.tick(main)
 	runner.check(main.hud.note.begins_with("Rejected: ") and not overlay.checked("collect"), "RA2 a refused gather ticks nothing, note '%s'" % main.hud.note)
 	main._submit({"type": "gather", "entity_ids": [laborer], "source_id": pile.id})
 	runner.check(not overlay.checked("collect"), "RA2 an accepted gather waits for its answer")
-	main._physics_process(0.0)
+	BaseScene.tick(main)
 	runner.check(overlay.checked("collect"), "RA2 the accepted answer ticks collect")
 	main.free()
 	_end(saved)
@@ -717,7 +718,7 @@ func test_sb2_review_form_and_pending_answer(runner) -> bool:
 	lockstep._rejections.append({"tick": 9, "sequence": 6, "error": "No units left"})
 	main._playtest.end_match()
 	runner.check(_form_shown(main), "RA7 fixture: the form is open")
-	main._physics_process(0.0)
+	BaseScene.tick(main)
 	runner.check(main.orders._awaiting_build.is_empty() and main.hud.note == "Rejected: No units left", "RA7 online answers arrive behind the form, note '%s'" % main.hud.note)
 	main.free()
 	_end(saved)
@@ -726,8 +727,8 @@ func test_sb2_review_form_and_pending_answer(runner) -> bool:
 	main._submit({"type": "move", "entity_ids": [_own_unit(main)], "target": [-5.0, -5.0]})
 	main._playtest.end_match()
 	runner.check(_form_shown(main), "RA7 offline fixture: the form is open")
-	main._physics_process(0.0)
-	runner.check(main.hud.note.is_empty() and main.driver._held.size() == 1, "RA7 offline delivers nothing while the form holds the match, note '%s'" % main.hud.note)
+	BaseScene.tick(main)
+	runner.check(main.hud.note.is_empty() and main.driver.queued().size() == 1, "RA7 offline delivers nothing while the form holds the match, note '%s'" % main.hud.note)
 	main.free()
 	_end(saved)
 	return true

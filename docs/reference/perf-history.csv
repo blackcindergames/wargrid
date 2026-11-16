@@ -803,3 +803,34 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-16,2fbdd4e,auto d820773,dev,plumbing,combat_dense:profile,3,,,0.7806,P1,1.27,log sha256:70f57c28f1f8
 2026-11-16,2fbdd4e,auto d820773,dev,plumbing,combat_hordes300:profile,3,,,1.9302,P1,1.27,log sha256:70f57c28f1f8
 2026-11-16,2fbdd4e,auto d820773,dev,plumbing,team_match:profile,3,,,1.115,P1,1.27,log sha256:70f57c28f1f8
+2026-11-16,f5640fb,Sim boundary SB3,dev,movement_tick,open,1,0.766,0.844,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,movement_tick,dense,1,0.739,0.889,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,open,1,1.885,2.244,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,dense,1,1.842,2.17,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,contact,1,1.198,1.557,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,skirmish3v3,1,1.351,1.457,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,transports,1,1.131,1.227,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,defences,1,0.777,2.146,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,docks,1,0.586,0.604,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,hordes300,1,2.932,3.402,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,ramp,1,0.659,1.225,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,combat_tick,frc,1,0.897,1.081,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,lockstep_overhead,contact,1,0.016,0.069,,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,movement_open:profile,1,,,1.3086,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,movement_dense:profile,1,,,1.2967,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,combat_contact:profile,1,,,0.3297,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,combat_skirmish3v3:profile,1,,,0.529,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,combat_open:profile,1,,,0.8891,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,skirmish_match:profile,1,,,0.2433,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,large_196:profile,1,,,1.6886,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,combat_dense:profile,1,,,0.7731,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,combat_hordes300:profile,1,,,1.9171,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,f5640fb,Sim boundary SB3,dev,plumbing,team_match:profile,1,,,1.115,P1,1.43,log sha256:58baaea0a14d
+2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,open,2,0.321,1.495,,P1,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,open,2,2.043,2.148,,tick-frame,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,dense,2,0.327,1.878,,P1,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,dense,2,2.043,2.211,,tick-frame,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,ashfall,2,0.614,2.232,,P1,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,ashfall,2,2.136,2.253,,tick-frame,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,frame_interval,horde,2,0.355,3.658,,P1,2.74,log sha256:f0b315421dc2
+2026-11-16,87da819,Sim boundary SB3,dev,tick_frame,horde,2,4.935,5.293,,tick-frame,2.74,log sha256:f0b315421dc2

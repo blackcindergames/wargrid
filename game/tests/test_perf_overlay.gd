@@ -1,6 +1,7 @@
 @warning_ignore_start("untyped_declaration")
 extends RefCounted
 
+const BaseScene = preload("res://tests/test_base_scene.gd")
 const Skirmish = preload("res://scenes/skirmish.tscn")
 const Overlay = preload("res://scripts/presentation/perf_overlay.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
@@ -65,8 +66,8 @@ func test_layout_clear_of_hud(runner) -> bool:
 func test_step_and_counts_shown(runner) -> bool:
 	var main = await _scene(runner, Skirmish)
 	_f3(main)
-	main._physics_process(0.0)
-	var snapshot: Dictionary = main.driver.sim.snapshot()
+	BaseScene.tick(main)
+	var snapshot: Dictionary = main.driver.pump.live().snapshot()
 	main.get_node("HUD/PerfOverlay").refresh_text()
 	var text: String = main.get_node("HUD/PerfOverlay").text
 	runner.check(text.contains("Units %d | Buildings %d | Tick %d" % [snapshot.entities.size(), snapshot.buildings.size(), snapshot.tick]), "PO4 counts and tick from the live state")
@@ -91,7 +92,7 @@ func test_split_share_shown(runner) -> bool:
 
 func test_f3_toggles_during_placement(runner) -> bool:
 	var main = await _scene(runner, Skirmish)
-	main.driver.sim = Fixture.make_world()
+	main.driver.adopt(Fixture.make_world())
 	main.orders.selected_ids.assign([1])
 	main._refresh()
 	var key := InputEventKey.new()
@@ -100,11 +101,11 @@ func test_f3_toggles_during_placement(runner) -> bool:
 	key.pressed = true
 	main._unhandled_input(key)
 	var kind: String = main.orders._placement_kind
-	var queued: int = main.driver.sim.snapshot().pending_commands.size()
+	var queued: int = main.driver.queued().size()
 	var overlay: Label = main.get_node("HUD/PerfOverlay")
 	runner.check(not kind.is_empty(), "PO19 placement is active")
 	_f3(main)
-	var shown: bool = overlay.visible and main.orders._placement_kind == kind and main.driver.sim.snapshot().pending_commands.size() == queued
+	var shown: bool = overlay.visible and main.orders._placement_kind == kind and main.driver.queued().size() == queued
 	runner.check(shown, "PO19 F3 toggles the overlay during placement and keeps the placement")
 	_f3(main)
 	runner.check(not overlay.visible and main.orders._placement_kind == kind, "PO19 second F3 hides it, placement still active")

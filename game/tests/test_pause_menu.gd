@@ -90,7 +90,7 @@ func test_esc_toggles_and_defers_to_cancel(runner) -> bool:
 	main = await _scene(runner, Skirmish)
 	menu = main.get_node("HUD/PauseMenu")
 	BaseScene.new().install_world(main)
-	main.orders.selected_ids.assign([main.driver.sim.snapshot().entities[0].id])
+	main.orders.selected_ids.assign([main.driver.pump.live().snapshot().entities[0].id])
 	main.orders._enter_placement("usa_barracks")
 	runner.check(not main.orders._placement_kind.is_empty(), "E1 fixture: placement entered")
 	_esc(main)
@@ -106,16 +106,16 @@ func test_esc_toggles_and_defers_to_cancel(runner) -> bool:
 
 func test_offline_pauses_sim(runner) -> bool:
 	var main = await _scene(runner, Skirmish)
-	main._physics_process(0.0)
-	var tick: int = main.driver.sim.tick()
+	BaseScene.tick(main)
+	var tick: int = main.driver.pump.live().tick()
 	runner.check(tick > 0, "E2 fixture: sim advances while closed")
 	_esc(main)
-	for i in 5: main._physics_process(0.0)
-	runner.check(main.driver.sim.tick() == tick, "E2 tick frozen while the menu is open")
+	for i in 5: BaseScene.tick(main)
+	runner.check(main.driver.pump.live().tick() == tick, "E2 tick frozen while the menu is open")
 	_click(main, "Resume")
 	runner.check(not main.menu_open(), "E2 Resume closes the menu")
-	main._physics_process(0.0)
-	runner.check(main.driver.sim.tick() == tick + 1, "E2 tick advances after Resume")
+	BaseScene.tick(main)
+	runner.check(main.driver.pump.live().tick() == tick + 1, "E2 tick advances after Resume")
 	main.free()
 	return true
 
@@ -135,12 +135,12 @@ func test_online_keeps_running(runner) -> bool:
 	var online: Dictionary = await _online(runner)
 	var main = online.main
 	for tick in range(4, 40): online.transport.frames.append(Wire.encode(Wire.tick_message(2, tick, [], null)))
-	main._physics_process(0.0)
+	BaseScene.tick(main)
 	_esc(main)
 	runner.check(main.menu_open(), "E4 online menu opens")
-	var tick: int = main.driver.sim.tick()
-	for i in 6: main._physics_process(0.0)
-	runner.check(main.driver.sim.tick() > tick, "E4 online sim keeps stepping while the menu is open")
+	var tick: int = main.driver.pump.live().tick()
+	for i in 6: BaseScene.tick(main)
+	runner.check(main.driver.pump.live().tick() > tick, "E4 online sim keeps stepping while the menu is open")
 	main.free()
 	return true
 

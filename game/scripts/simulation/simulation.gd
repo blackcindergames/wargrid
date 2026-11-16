@@ -65,6 +65,7 @@ var _map: Dictionary = {}
 const RNG_SEED: int = 0x2545F491
 var _rng: int = RNG_SEED
 var _hash_ring := PackedInt64Array()
+var _ring_on: bool = true
 
 func _init(blocked_cells: Array[Vector2i] = [], size: Vector2i = Navigation.SIZE) -> void:
 	_hash_ring.resize(HASH_RING_SIZE)
@@ -568,6 +569,9 @@ func navigation_local_updates() -> int:
 func tick() -> int:
 	return _tick
 
+func last_sequence(player: int) -> int:
+	return _last_sequences.get(player, -1)
+
 # Read-only view; cleared in place by the next step.
 func combat_events() -> Array[Dictionary]:
 	return _combat_events
@@ -662,7 +666,7 @@ func step() -> void:
 	Profiler.end(&"step.evaluate_match", zone)
 	_tick += 1
 	zone = Profiler.begin()
-	_hash_ring[_tick % HASH_RING_SIZE] = _tick_hash()
+	if _ring_on: _hash_ring[_tick % HASH_RING_SIZE] = _tick_hash()
 	Profiler.end(&"step.hash_ring", zone)
 	Profiler.end(&"step", total)
 
@@ -699,8 +703,13 @@ func _tick_hash() -> int:
 		words.append(player.credits)
 	return (hash(words) << 32) | hash(floats.to_byte_array().to_int64_array())
 
+# Off in offline matches: nobody compares hashes there, and the ring costs a full entity walk per tick.
+func set_hash_ring(enabled: bool) -> void:
+	_ring_on = enabled
+
 func hash_ring() -> PackedStringArray:
 	var rows := PackedStringArray()
+	if not _ring_on: return rows
 	for t in range(maxi(1, _tick - HASH_RING_SIZE + 1), _tick + 1):
 		var h: int = _hash_ring[t % HASH_RING_SIZE]
 		rows.append("%d\t%08x%08x" % [t, (h >> 32) & StateHash.MASK, h & StateHash.MASK])
@@ -774,7 +783,13 @@ func snapshot() -> Dictionary:
 
 func view_state() -> Dictionary:
 	var zone: int = Profiler.begin()
-	var result: Dictionary = {"tick": _tick, "map": _navigation.snapshot(), "players": _player_snapshots(true), "buildings": _sorted_copies(_buildings), "sources": _sorted_copies(_sources), "command_results": _command_results.duplicate(true), "match": _match.duplicate(true) if _match != null else null, "units": _view_rows()}
+	var part: int = Profiler.begin()
+	var units: RefCounted = _view_rows()
+	Profiler.end(&"view.rows", part)
+	part = Profiler.begin()
+	var buildings: Array = _sorted_copies(_buildings)
+	Profiler.end(&"view.buildings", part)
+	var result: Dictionary = {"tick": _tick, "map": _navigation.snapshot(), "players": _player_snapshots(true), "buildings": buildings, "sources": _sorted_copies(_sources), "command_results": _command_results.duplicate(true), "match": _match.duplicate(true) if _match != null else null, "units": units}
 	if not _crates.is_empty(): result.crates = _crates.duplicate(true)
 	Profiler.end(&"view_state", zone)
 	return result

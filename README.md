@@ -96,16 +96,16 @@ Performance against the low-end budget (generated):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | 🔺 1% worse | 2026-11-16 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | 🔺 1% worse | 2026-11-16 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-16 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse | 2026-11-16 |
-| Drawing the screen | 🟢 OK | ███████░░░ 70% | 🔻 10% better | 2026-11-16 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ██████░░░░ 69% | 🔻 5% better | 2026-11-16 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔺 2% worse | 2026-11-16 |
-| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔺 1% worse | 2026-11-16 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 1% worse | 2026-11-16 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-16 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 211% | 🔻 1% better | 2026-11-16 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 161% | 🔺 1% worse | 2026-11-16 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 144% | 🔺 1% worse | 2026-11-16 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 1% worse | 2026-11-16 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 70% | 🔺 2% worse (busy host) | 2026-11-16 |
+| Drawing the screen | 🟢 OK | ██████░░░░ 67% | 🔻 5% better (busy host) | 2026-11-16 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | ➖ same | 2026-11-16 |
+| Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔺 2% worse | 2026-11-16 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 1% better | 2026-11-16 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 1% worse | 2026-11-16 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 

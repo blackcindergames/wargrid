@@ -1,6 +1,7 @@
 @warning_ignore_start("untyped_declaration")
 extends RefCounted
 
+const BaseScene = preload("res://tests/test_base_scene.gd")
 const Announcer = preload("res://scripts/presentation/announcer.gd")
 const Director = preload("res://scripts/presentation/sound_director.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -250,11 +251,11 @@ func test_restart_starts_silent(runner) -> bool:
 
 func test_restart_resets_tick_guard(runner) -> bool:
 	var skirmish = await _scene(runner)
-	for i in 5: skirmish._physics_process(0.0)
+	for i in 5: BaseScene.tick(skirmish)
 	skirmish._refresh()
 	skirmish._restart()
 	for i in 2:
-		skirmish._physics_process(0.0)
+		BaseScene.tick(skirmish)
 		skirmish._refresh()
 	var consumed: Array = skirmish._sound.director.consumed_ticks()
 	runner.check(not consumed.is_empty() and consumed.back() == 2, "AN17 early ticks of a restarted match are consumed, got %s" % [consumed])
@@ -289,10 +290,10 @@ func test_funds_line_from_results_and_rejections(runner) -> bool:
 
 func test_submit_without_funds_announces(runner) -> bool:
 	var skirmish = await _scene(runner)
-	skirmish.driver.sim._players[1].credits = 0
-	var hq: Dictionary = skirmish.driver.sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 1 and building.kind.ends_with("command_center"))[0]
+	skirmish.driver.pump.live()._players[1].credits = 0
+	var hq: Dictionary = skirmish.driver.pump.live().snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 1 and building.kind.ends_with("command_center"))[0]
 	skirmish._submit({"type": "produce", "building_id": hq.id, "unit_kind": Registry.kind(hq.kind).produces[0]})
-	skirmish._physics_process(0.0)
+	BaseScene.tick(skirmish)
 	runner.check(skirmish.hud.note == "Rejected: Insufficient credits", "AN20 fixture: produce without credits fails with funds, got '%s'" % skirmish.hud.note)
 	skirmish._refresh()
 	runner.check(_voice_line(skirmish) == "insufficient_funds" and not _cues(skirmish).has("error"), "AN20 funds rejection says the line, voice %s cues %s" % [_voice_line(skirmish), _cues(skirmish)])

@@ -1,6 +1,7 @@
 @warning_ignore_start("untyped_declaration")
 extends RefCounted
 
+const BaseScene = preload("res://tests/test_base_scene.gd")
 const Main = preload("res://scenes/skirmish.tscn")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
@@ -21,7 +22,7 @@ func _m2_world() -> Simulation:
 	return sim
 
 func _install_world(main) -> void:
-	main.driver.sim = _m2_world()
+	main.driver.adopt(_m2_world())
 	main._reset_camera()
 	main._refresh()
 
@@ -50,7 +51,7 @@ func select(runner, main) -> void:
 
 func test_ready(runner) -> bool:
 	var main = await setup(runner)
-	var state: Dictionary = main.driver.sim.snapshot()
+	var state: Dictionary = main.driver.pump.live().snapshot()
 	runner.check(state.entities.size() == 20 and state.entities[0].owner == 1 and state.entities[0].position == [1.5, 1.5], "S1 twenty vehicles")
 	var positions: Dictionary = {}
 	for i in range(state.entities.size()):
@@ -88,7 +89,8 @@ func test_clicks(runner) -> bool:
 			await select(runner, main)
 			runner.check(main.orders.selected_ids == [1], "S2 transformed selection " + str([center, zoom]))
 			await click(runner, view, Iso.world_to_plane(Vector2(4.5, 5.5)), MOUSE_BUTTON_RIGHT)
-			var state: Dictionary = main.driver.sim.snapshot()
+			main.driver.flush()
+			var state: Dictionary = main.driver.pump.live().snapshot()
 			runner.check(state.pending_commands.size() == sequence + 1, "S2 one command per press")
 			if state.pending_commands.size() > sequence:
 				var cmd: Dictionary = state.pending_commands[sequence]
@@ -97,7 +99,8 @@ func test_clicks(runner) -> bool:
 			sequence += 1
 	var target := Vector2(4.25, 6.1)
 	await click(runner, view, Iso.world_to_plane(target), MOUSE_BUTTON_RIGHT)
-	var pending: Array = main.driver.sim.snapshot().pending_commands
+	main.driver.flush()
+	var pending: Array = main.driver.pump.live().snapshot().pending_commands
 	runner.check(pending.size() == sequence + 1, "S2 non-center command queued")
 	if pending.size() > sequence:
 		var point: Array = pending[sequence].target
@@ -110,20 +113,21 @@ func test_rejection(runner) -> bool:
 	var view = main.get_node("WorldView")
 	await select(runner, main)
 	await click(runner, view, Iso.world_to_plane(Vector2(4.5, 5.5)), MOUSE_BUTTON_RIGHT)
-	main._physics_process(0.0)
-	var active: Dictionary = main.driver.sim.snapshot()
+	BaseScene.tick(main)
+	var active: Dictionary = main.driver.pump.live().snapshot()
 	await click(runner, view, Iso.world_to_plane(Vector2(7.5, 6.5)), MOUSE_BUTTON_RIGHT)
-	runner.check(main.driver.sim.snapshot() == active, "S3 rejected order preserves active destination and sequence")
-	main._physics_process(0.0)
+	runner.check(main.driver.pump.live().snapshot() == active, "S3 rejected order preserves active destination and sequence")
+	BaseScene.tick(main)
 	runner.check(main.get_node("HUD/Status").text.contains("Target"), "S3 HUD rejection reason")
 	await click(runner, view, Iso.world_to_plane(Vector2(5.5, 5.5)), MOUSE_BUTTON_RIGHT)
-	var queued: Dictionary = main.driver.sim.snapshot()
+	main.driver.flush()
+	var queued: Dictionary = main.driver.pump.live().snapshot()
 	runner.check(queued.pending_commands.size() == 1 and queued.pending_commands[0].sequence == 1, "S3 rejection did not consume sequence")
 	runner.check(not main.get_node("HUD/Status").text.contains("Target"), "S3 accepted clears error")
 	await click(runner, view, Iso.world_to_plane(Vector2(0.5, 0.5)), MOUSE_BUTTON_LEFT)
 	runner.check(main.orders.selected_ids == [], "S3 empty clears")
 	await click(runner, view, Iso.world_to_plane(Vector2(4.5, 4.5)), MOUSE_BUTTON_RIGHT)
-	runner.check(main.driver.sim.snapshot() == queued, "S3 unselected right no order")
+	runner.check(main.driver.pump.live().snapshot() == queued and main.driver.queued().is_empty(), "S3 unselected right no order")
 	await select(runner, main)
 	var escape := InputEventKey.new()
 	escape.keycode = KEY_ESCAPE
@@ -140,7 +144,7 @@ func test_rejection(runner) -> bool:
 func test_camera(runner) -> bool:
 	var main = await setup(runner)
 	var camera: Camera2D = main.get_node("Camera2D")
-	var before: Dictionary = main.driver.sim.snapshot()
+	var before: Dictionary = main.driver.pump.live().snapshot()
 	camera.position = Vector2(0, 128)
 	main.pan_camera(Vector2.RIGHT, 0.5)
 	runner.check(camera.position == Vector2(200, 128), "S4 pan zoom one")
@@ -163,7 +167,7 @@ func test_camera(runner) -> bool:
 	runner.check(camera.position == Vector2(512, 512), "S4 positive pan bounds")
 	main.pan_camera(-Vector2.ONE, 100)
 	runner.check(camera.position == Vector2(-512, 0), "S4 negative pan bounds")
-	runner.check(main.driver.sim.snapshot() == before, "S4 camera cannot change simulation")
+	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty(), "S4 camera cannot change simulation")
 	main.free()
 	return true
 
@@ -171,15 +175,15 @@ func test_driver(runner) -> bool:
 	var main = Main.instantiate()
 	runner.root.add_child(main)
 	_install_world(main)
-	var before: int = main.driver.sim.snapshot().tick
+	var before: int = main.driver.pump.live().snapshot().tick
 	await runner.physics_frame
 	await runner.process_frame
-	runner.check(main.driver.sim.snapshot().tick > before, "S5 live driver advances")
+	runner.check(main.driver.pump.live().snapshot().tick > before, "S5 live driver advances")
 	main.set_physics_process(false)
 	main.set_process(false)
-	before = main.driver.sim.snapshot().tick
-	main._physics_process(0.0)
-	runner.check(main.driver.sim.snapshot().tick == before + 1, "S5 one callback one tick")
+	before = main.driver.pump.live().snapshot().tick
+	BaseScene.tick(main)
+	runner.check(main.driver.pump.live().snapshot().tick == before + 1, "S5 one callback one tick")
 	main.free()
 	return true
 
@@ -239,7 +243,7 @@ func test_boxes(runner) -> bool:
 	await _mouse(runner, main, empty, MOUSE_BUTTON_LEFT, false, true)
 	runner.check(main.orders.selected_ids == [1, 2, 5, 6, 7], "S6 Shift empty preserves")
 	await click(runner, main.get_node("WorldView"), Iso.world_to_plane(Vector2(12.5, 12.5)), MOUSE_BUTTON_RIGHT)
-	var pending: Array = main.driver.sim.snapshot().pending_commands
+	var pending: Array = main.driver.queued()
 	runner.check(pending.size() == 1 and pending[0].entity_ids == [1, 2, 5, 6, 7], "S6 exactly one sorted group order")
 	main.free()
 	return true
@@ -262,7 +266,7 @@ func test_drag_rules(runner) -> bool:
 	runner.check(camera.position == before and camera.zoom == zoom, "S7 camera frozen during drag")
 	await _mouse(runner, main, point, MOUSE_BUTTON_RIGHT, true)
 	await _mouse(runner, main, point, MOUSE_BUTTON_RIGHT, false)
-	runner.check(main.driver.sim.snapshot().pending_commands == [], "S7 right during drag ignored")
+	runner.check(main.driver.pump.live().snapshot().pending_commands == [] and main.driver.queued().is_empty(), "S7 right during drag ignored")
 	await _mouse(runner, main, point + Vector2(5, 0), MOUSE_BUTTON_LEFT, false)
 	runner.check(main.orders.selected_ids == [], "S7 max excursion retains drag classification")
 	await _mouse(runner, main, point, MOUSE_BUTTON_LEFT, true)
@@ -293,14 +297,14 @@ func _double_click(runner, main, plane: Vector2, shift: bool = false, ctrl: bool
 
 func _double_fixture(runner) -> Dictionary:
 	var main = await setup(runner)
-	var sim = main.driver.sim
+	var sim = main.driver.pump.live()
 	var fixture := {"main": main, "tank": sim.spawn(1, Vector2(3.5, 6.5), "usa_tank"), "far": sim.spawn(1, Vector2(14.5, 14.5)), "enemy": sim.spawn(2, Vector2(2.5, 6.5))}
 	sim._entities[20].container_id = 1
 	var camera: Camera2D = main.get_node("Camera2D")
 	camera.position = Vector2(0, 128)
 	camera.zoom = Vector2.ONE * 2.0
 	camera.force_update_scroll()
-	main._refresh()
+	BaseScene.publish(main)
 	await runner.process_frame
 	return fixture
 

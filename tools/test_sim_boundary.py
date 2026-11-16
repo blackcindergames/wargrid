@@ -42,6 +42,15 @@ ALLOWLIST: frozenset[str] = frozenset(
 )
 
 
+LIVE_READ = re.compile(r"\.sim\b|\blive\s*\(\s*\)|\bget\(\s*[\"']sim[\"']\s*\)|\.simulation\s*\(\s*\)")
+LIVE_ALLOWLIST: frozenset[str] = frozenset(
+    [
+        "game/scripts/match/sim_pump.gd",
+        "game/scripts/match/online_driver.gd",  # until SB4 moves lockstep into jobs
+    ]
+)
+
+
 def private_names(root):
     names = set()
     for path in (root / "game/scripts/simulation").rglob("*.gd"):
@@ -56,6 +65,37 @@ def hits(text, names):
 
 def test_files(root):
     return sorted((root / "game/tests").rglob("*.gd"))
+
+
+def strip_comment(line):
+    quote = ""
+    escaped = False
+    for i, char in enumerate(line):
+        if escaped:
+            escaped = False
+        elif quote and char == "\\":
+            escaped = True
+        elif quote:
+            quote = "" if char == quote else quote
+        elif char in "\"'":
+            quote = char
+        elif char == "#":
+            return line[:i]
+    return line
+
+
+def live_reads(path, text):
+    if path in LIVE_ALLOWLIST:
+        return []
+    code = "\n".join(strip_comment(line) for line in text.splitlines())
+    return LIVE_READ.findall(code)
+
+
+def screen_files(root):
+    return sorted(p for folder in ("match", "presentation") for p in (root / "game/scripts" / folder).rglob("*.gd"))
+
+
+SCREEN = "game/scripts/match/match_screen.gd"
 
 
 class SimBoundary(unittest.TestCase):
@@ -90,6 +130,34 @@ class SimBoundary(unittest.TestCase):
                 hits(by_name[name].read_text(), names),
                 f"{name} no longer reads sim internals: remove it from ALLOWLIST",
             )
+
+    def test_live_read_flagged(self):
+        self.assertEqual(live_reads(SCREEN, "var t: int = driver.sim.tick()"), [".sim"])
+        self.assertEqual(live_reads("game/scripts/match/hud.gd", "var s = pump.live().snapshot()"), ["live()"])
+
+    def test_live_read_allowlist(self):
+        self.assertEqual(live_reads("game/scripts/match/sim_pump.gd", "var t: int = driver.sim.tick()"), [])
+        self.assertEqual(live_reads(SCREEN, "var a = 1  # driver.sim.tick()"), [])
+        self.assertEqual(live_reads(SCREEN, "if driver.pauses_sim(): return"), [])
+
+    def test_live_read_spellings(self):
+        self.assertEqual(live_reads(SCREEN, "var s = pump.live ( ).tick()"), ["live ( )"])
+        self.assertEqual(live_reads(SCREEN, 'var s = driver.get("sim")'), ['get("sim")'])
+        self.assertEqual(live_reads(SCREEN, "var s = driver.get( 'sim' )"), ["get( 'sim' )"])
+        self.assertEqual(live_reads(SCREEN, "var s = pump.recorder().simulation()"), [".simulation()"])
+
+    def test_live_read_hash_in_string(self):
+        self.assertEqual(live_reads(SCREEN, 'var t = "#%d" % driver.sim.tick()'), [".sim"])
+        self.assertEqual(live_reads(SCREEN, "var t = '\\'#' + driver.sim.name  # driver.sim"), [".sim"])
+
+    def test_live_allowlist_is_exact_path(self):
+        self.assertEqual(live_reads("game/scripts/presentation/online_driver.gd", "driver.sim.tick()"), [".sim"])
+        self.assertEqual(live_reads("game/scripts/match/online_driver.gd", "driver.sim.tick()"), [])
+
+    def test_screen_reads_no_live_sim(self):
+        for path in screen_files(ROOT):
+            found = live_reads(path.relative_to(ROOT).as_posix(), path.read_text())
+            self.assertFalse(found, f"{path.name} reads the live simulation: {found}")
 
 
 if __name__ == "__main__":
