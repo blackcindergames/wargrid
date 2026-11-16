@@ -80,7 +80,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -527,4 +527,52 @@ func test_match_stats_mirror_and_replay(runner) -> bool:
 		while not log_rows.is_empty() and log_rows[0].tick == oracle.tick(): oracle.issue_command(log_rows.pop_front())
 		oracle.step()
 	runner.check(oracle.match_stats() == stats, "L18 a replay of seat 2's command log gives the same stats")
+	return true
+
+func _run_out(sim: RefCounted, ls: RefCounted) -> void:
+	ls.send = func(_text: String) -> void: pass
+	while ls.advance(sim): ls.finish_tick(sim.tick(), null)
+
+func test_opponent_left(runner) -> bool:
+	var net := _pair(runner)
+	net.clients[1].target = 16
+	net.connect_all()
+	net.clients[0].inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	var a: Client = net.clients[0]
+	runner.check(not a.ls.opponent_left(), "L15 running: no opponent left")
+	net.run()
+	runner.check(a.ls.status() == "ended_left" and a.ls.opponent_left(), "L15 left after tick 20 ends the match as opponent left")
+	var early: Array = _fresh()
+	early[1].receive('{"type":"left","seat":2,"after_tick":3}')
+	_run_out(early[0], early[1])
+	runner.check(early[1].status() == "ended_left" and not early[1].opponent_left(), "L15 left before the start is not an opponent leaving mid-match")
+	var lost: Array = _fresh()
+	lost[1].set_relay_lost()
+	runner.check(not lost[1].opponent_left(), "L15 relay lost is not an opponent leaving")
+	return true
+
+func test_opponent_left_two_seats_only(runner) -> bool:
+	var sim = Skirmish.create(true, "human")
+	var seats: Array[int] = [1, 2, 3]
+	var ls = Lockstep.new(1, seats)
+	ls.start(sim.snapshot())
+	ls.receive('{"type":"left","seat":2,"after_tick":20}')
+	_run_out(sim, ls)
+	runner.check(ls.status() == "ended_left" and not ls.opponent_left(), "L16 three seats: ended_left but no opponent_left")
+	return true
+
+func test_left_on_normal_end_tick(runner) -> bool:
+	var net := _pair(runner)
+	for c in net.clients:
+		for unit: Dictionary in c.sim.snapshot().buildings:
+			if unit.owner == 2: c.sim.remove_object(unit.id)
+		for unit: Dictionary in c.sim.snapshot().entities:
+			if unit.owner == 2: c.sim.remove_object(unit.id)
+		c.target = 10
+	net.connect_all()
+	net.run()
+	var a: Client = net.clients[0]
+	runner.check(a.sim.match_over(), "L17 seat 2 without objects ends the match")
+	a.ls.receive(Wire.encode({"type": "left", "seat": 2, "after_tick": a.sim.tick()}))
+	runner.check(not a.ls.advance(a.sim) and a.ls.status() != "ended_left" and not a.ls.opponent_left(), "L17 a leave on the tick the match ended is a normal outcome")
 	return true

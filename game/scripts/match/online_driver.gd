@@ -163,7 +163,14 @@ func confirm_leave() -> bool:
 func can_restart() -> bool:
 	return false
 
+func opponent_left() -> bool:
+	return _lockstep.opponent_left()
+
+func rematch_pending() -> bool:
+	return _phase == "again"
+
 func rematch_line() -> String:
+	if opponent_left(): return "Your opponent left"
 	if _lockstep.left_seat() != 0: return "Your friend left"
 	if _phase == "done": return "The room closed"
 	if _friend_again: return "Your friend wants to play again"

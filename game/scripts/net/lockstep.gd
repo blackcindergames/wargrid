@@ -155,6 +155,9 @@ func set_relay_lost() -> void:
 func left_before_start() -> bool:
 	return _left_seat != 0 and _left_after < _delay
 
+func opponent_left() -> bool:
+	return _status == "ended_left" and not left_before_start() and _seats.size() == 2
+
 func left_seat() -> int:
 	return _left_seat
 

@@ -212,6 +212,7 @@ func _finish(status: String, reason: String) -> void:
 	_ending = true
 	_status = status
 	_reason = reason
+	if _lockstep != null and _lockstep.opponent_left(): print("NETCLIENT VICTORY left")
 	if _lockstep != null:
 		_write_logs()
 		_lockstep.send = Callable()

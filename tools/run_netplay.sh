@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: run_netplay.sh match|rematch|kill|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term
+# usage: run_netplay.sh match|rematch|kill|left-mid|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term
 scenario=$1
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 out=${NETPLAY_OUT:-$(mktemp -d)}
@@ -120,6 +120,12 @@ case $scenario in
     start_relay; start_pair "" "--exit-at-tick 600"
     wait_exit "$pid1" 60
     expect_end s1 ended_left
+    [ "$(end_tick s1)" -ge 600 ] || fail "seat 1 ended before tick 600" ;;
+  left-mid)
+    start_relay; start_pair "" "--stop-at-tick 600"
+    wait_exit "$pid1" 60; wait_exit "$pid2" 60
+    expect_end s1 ended_left; expect_end s2 stopped
+    grep -q '^NETCLIENT VICTORY left$' "$out/s1.log" || fail "s1: no VICTORY left"
     [ "$(end_tick s1)" -ge 600 ] || fail "seat 1 ended before tick 600" ;;
   stall)
     start_relay; start_pair "" "--stall-at-tick 300 --stall-seconds 3"
