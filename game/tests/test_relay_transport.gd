@@ -5,7 +5,7 @@ const RelayTransport = preload("res://scripts/net/relay_transport.gd")
 const Wire = preload("res://scripts/net/wire.gd")
 
 func cases() -> Array[Callable]:
-	return [test_never_connected, test_ping_due, test_pong_recorded, test_buffers_fit_frame_cap, test_silence, test_patient_silence]
+	return [test_never_connected, test_ping_due, test_pong_recorded, test_buffers_fit_frame_cap, test_silence, test_patient_silence, test_refused_send_closes]
 
 func test_never_connected(runner) -> bool:
 	var transport = RelayTransport.new()
@@ -58,4 +58,56 @@ func test_patient_silence(runner) -> bool:
 	runner.check(transport.silent(900_000_000), "T6 patient is silent at the lobby expiry")
 	transport.patient = false
 	runner.check(transport.silent(5_000_000), "T6 normal rule is 5 s again")
+	return true
+
+func _stalled_pair(runner, server: TCPServer, now: Array) -> Array:
+	var transport = RelayTransport.new(func() -> int: return now[0])
+	transport.connect_to("ws://127.0.0.1:%d/ws" % server.get_local_port())
+	var peer := WebSocketPeer.new()
+	var accepted: bool = false
+	for i in 400:
+		transport.poll()
+		if not accepted and server.is_connection_available():
+			peer.accept_stream(server.take_connection())
+			accepted = true
+		if accepted: peer.poll()
+		if transport.is_open(): break
+		OS.delay_msec(5)
+	runner.check(transport.is_open(), "T7 handshake")
+	return [transport, peer]
+
+func test_refused_send_closes(runner) -> bool:
+	var server := TCPServer.new()
+	runner.check(server.listen(0, "127.0.0.1") == OK, "T7 test server listens")
+	var now := [0]
+	var big: String = "x".repeat(60000)
+	var first: Array = _stalled_pair(runner, server, now)
+	Engine.print_error_messages = false
+	for i in 2000:
+		first[0].send_text(big)
+		if first[0].closed(): break
+	Engine.print_error_messages = true
+	runner.check(first[0].closed(), "T7 a refused send marks the transport closed, so the match ends as relay lost")
+	first[0].close()
+	first[1].close()
+	var second: Array = _stalled_pair(runner, server, now)
+	var transport = second[0]
+	var ping: String = Wire.encode({"type": "ping", "t": 2_000_000})
+	Engine.print_error_messages = false
+	var filled: int = 0
+	while filled < 2000 and transport._peer.send_text(big) == OK: filled += 1
+	filled = 0
+	while filled < 10000 and transport._peer.send_text(ping) == OK: filled += 1
+	Engine.print_error_messages = true
+	runner.check(not transport.closed(), "T7 raw sends alone do not close the transport")
+	transport._sent_any = true
+	transport._last_ping = 0
+	now[0] = 2_000_000
+	Engine.print_error_messages = false
+	transport.poll()
+	Engine.print_error_messages = true
+	runner.check(transport.closed(), "T7 a refused ping closes the transport too")
+	transport.close()
+	second[1].close()
+	server.stop()
 	return true

@@ -46,7 +46,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -1645,5 +1645,18 @@ func test_sb3_online_two_notes(runner) -> bool:
 	runner.check(rows.call(main.stepped_results) == faction_rows + build_rows, "SB3 stepped results hold both ticks' results in order, got %s" % [rows.call(main.stepped_results)])
 	main._refresh()
 	runner.check(visuals.ticks == [5, 6], "SB3 the view consumes both ticks' visuals in order, got %s" % [visuals.ticks])
+	main.free()
+	return true
+
+func test_too_many_orders_note(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_run(main, 1)
+	var order := {"type": "move", "entity_ids": range(1, 301), "target": [10.5, 10.5]}
+	for i in 200: main._submit(order)
+	_run(main, 1)
+	var status: String = main.get_node("HUD/Status").text
+	runner.check(status.contains("Rejected: " + main.driver.TOO_MANY_ORDERS), "N-cap the HUD shows the refused order, got " + status)
+	_layout_ok(runner, main, "too many orders")
 	main.free()
 	return true

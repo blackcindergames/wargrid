@@ -16,8 +16,8 @@ func tick() -> int:
 	return _sim.tick()
 
 func issue_command(command: Dictionary) -> Dictionary:
-	_lockstep.submit(command)
-	return {"ok": true, "error": ""}
+	var ok: bool = _lockstep.submit(command)
+	return {"ok": ok, "error": "" if ok else "too many orders"}
 
 func map_data() -> Dictionary:
 	return _sim.map_data()
