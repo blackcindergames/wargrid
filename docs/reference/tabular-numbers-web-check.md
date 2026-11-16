@@ -2,7 +2,7 @@
 
 Result (2026-11-16, main `bf93cc3`, Godot 4.7.2 official templates): **tabular numbers work in the web build, in Firefox and Safari, exactly as in the native build.** Every measured width matches native to the pixel. The item "whether tabular numbers render in the web build" from the [design answers](design-answers-2026-11-08.md#package-review-second-pass-user-2026-11-13-night) is closed; P12 and the P2.3a design are no longer waiting on it.
 
-What the HUD code must do: Public Sans digits are proportional by default. Tabular numbers need a `FontVariation` whose `opentype_features` turns on `tnum`; the shipped fonts' imports (`opentype_features={}`) do not. No fallback (digit cells, a monospace digit font) is needed.
+What the HUD code must do: Public Sans digits are proportional by default. Tabular numbers need `tnum` turned on; the shipped fonts' imports (`opentype_features={}`) do not. This check measured a `FontVariation` whose `opentype_features` turns it on; the import option was not tried. No fallback (digit cells, a monospace digit font) is needed. Whether `tnum` goes on in the font imports (all text) or in a `FontVariation` for the number roles only is left to the P2.3a design (user, 2026-11-16).
 
 ## Facts
 
