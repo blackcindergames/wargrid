@@ -982,7 +982,7 @@ Source: OpenRA review (private). Items that went into package rows, findings and
 
 ## Relay availability questionnaire (user, 2026-11-16)
 
-Six rounds on the several-machine sketch in [relay scaling](relay-scaling.md#availability-to-start-a-game-user-2026-11-16); answered as recommended, with research asked for on the worker names and on monitoring. Nothing here is placed or built. It replaces the relay restart part of "Online teams refinement" above.
+Eight rounds on the several-machine sketch in [relay scaling](relay-scaling.md#availability-to-start-a-game-user-2026-11-16); answered as recommended, with research asked for on the worker names and on monitoring. Nothing here is placed or built. It replaces the relay restart part of "Online teams refinement" above.
 
 - **Goal:** availability means first that a server is always there to start a game. Matches are short and players can start again, so a match surviving a relay crash is secondary: worth building if it is feasible.
 - **Relay restart recovery:** not in P8. P8 builds seat resume with a message shaped so recovery can be added later without another protocol version; recovery is its own later package if still wanted.
@@ -1004,7 +1004,12 @@ Six rounds on the several-machine sketch in [relay scaling](relay-scaling.md#ava
 - **Override:** the prerelease relay field and the `relay` link parameter replace the whole list: exactly that relay, no fail-over.
 - **Full worker:** each worker has its own limit and refuses a new game above it with `relay busy`, the reason the client treats as "try the other". The limit counts players, not rooms; the number comes from night 10's measurement (3v3 rooms times 6).
 - **Lobbies on a draining worker:** they may still fill and start; the worker refuses only new games.
-- **Play again on a draining worker:** refused with a message that says to create a new game.
+- **Play again on a draining worker:** off. The result panel hides the button and says in one line that the server restarts soon and the host can create a new game; a press that still arrives is refused.
+- **Lobby seats:** an open lobby reserves all its seats against the player limit, so a game that was accepted can always fill.
+- **Protocol change:** accepted that players on the old build cannot start a new game between the first worker's upgrade and the end of the second worker's drain, until they update. Order: first worker, then the new build, then the second worker; no worker speaks two versions.
+- **Leave prompt:** in P8 the browser build asks before a reload or a close while an online match runs.
+- **Player texts:** the five wordings proposed by the player-experience review are the starting wording for the package's design, not decided.
+- **Push service and fly wording:** the service behind the webhook is chosen in the package's design; the fly facts stay labelled as not checked word for word until then.
 - **Drain limit reached:** the remaining matches end without an earlier warning, with the reason on the result panel; no new relay message type (the existing `error` message carries the reason).
 
 ## Hypersomnia review (user, 2026-11-16)
