@@ -680,3 +680,26 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-16,75af682,auto a013893,dev,plumbing,combat_dense:profile,1,,,0.7776,P1,2.25,log sha256:ed2ad934a390
 2026-11-16,75af682,auto a013893,dev,plumbing,combat_hordes300:profile,1,,,1.9282,P1,2.25,log sha256:ed2ad934a390
 2026-11-16,75af682,auto a013893,dev,plumbing,team_match:profile,1,,,1.1298,P1,2.25,log sha256:ed2ad934a390
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,movement_tick,open,1,0.74,0.841,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,movement_tick,dense,1,0.734,0.865,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,open,1,1.862,2.191,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,dense,1,1.817,2.111,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,contact,1,1.161,1.514,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,skirmish3v3,1,1.324,1.438,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,transports,1,1.117,1.212,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,defences,1,0.769,2.145,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,docks,1,0.58,0.602,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,hordes300,1,2.877,3.335,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,ramp,1,0.649,1.174,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,combat_tick,frc,1,0.881,1.074,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,lockstep_overhead,contact,1,0.016,0.068,,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,movement_open:profile,1,,,1.2994,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,movement_dense:profile,1,,,1.3057,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,combat_contact:profile,1,,,0.3285,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5264,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,combat_open:profile,1,,,0.8878,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,skirmish_match:profile,1,,,0.241,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,large_196:profile,1,,,1.7021,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,combat_dense:profile,1,,,0.7756,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,combat_hordes300:profile,1,,,1.9177,P1,1.99,log sha256:a2ab617f8eb7
+2026-11-16,b585c6d,P2.2 Quick rematch slice 2,dev,plumbing,team_match:profile,1,,,1.1174,P1,1.99,log sha256:a2ab617f8eb7
