@@ -72,7 +72,7 @@ func _match_hud(state: Dictionary) -> void:
 	var rows: Array[Dictionary] = []
 	if not result.is_empty(): rows = _result_rows(state)
 	var length: String = ResultPanel.length_text(state.tick, Engine.physics_ticks_per_second) if not result.is_empty() else ""
-	_panel.show_result(result, _screen.driver.rematch_line(), _screen.driver.can_play_again(), rows, length, _screen.driver.rematch_pending())
+	_panel.show_result(result, _screen.driver.rematch_line(), _screen.driver.can_play_again(), rows, length, _screen.driver.rematch_pending(), _screen.driver.friend_wants_rematch())
 
 func _result_rows(state: Dictionary) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []

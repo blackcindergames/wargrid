@@ -22,6 +22,7 @@ var _starts: Array[int] = []
 var _seed: int = 0
 var _report_path: String = ""
 var _finished: bool = false
+var _left: bool = false
 var _credit: int = 0
 var _rejections_seen: int = 0
 var _log_seen: int = 0
@@ -75,6 +76,7 @@ func detach() -> void:
 	if _lockstep != null: _lockstep.send = Callable()
 
 func leave() -> void:
+	_left = true
 	_finished = true
 	_phase = "done"
 	_lockstep.set_relay_lost()
@@ -169,11 +171,14 @@ func opponent_left() -> bool:
 func rematch_pending() -> bool:
 	return _phase == "again"
 
+func friend_wants_rematch() -> bool:
+	return _friend_again
+
 func rematch_line() -> String:
 	if opponent_left(): return "Your opponent left"
 	if _lockstep.left_seat() != 0: return "Your friend left"
 	if _phase == "done": return "The room closed"
-	if _friend_again: return "Your friend wants to play again"
+	if _friend_again: return "Your friend wants a rematch"
 	return "Waiting for your friend…" if _phase == "again" else ""
 
 func can_play_again() -> bool:
@@ -255,6 +260,7 @@ func _ms(microseconds: PackedInt64Array) -> PackedFloat64Array:
 	return out
 
 func notice() -> String:
+	if _left: return "" # leave() ends the lockstep through set_relay_lost, which is no relay loss
 	match _lockstep.status():
 		"waiting": return "Waiting for player %d" % _lockstep.waiting_for()[0]
 		"ended_left": return "Opponent left before the start (a different map or version, or their game tab was hidden)" if _lockstep.left_before_start() else "Player %d disconnected" % _lockstep.left_seat()

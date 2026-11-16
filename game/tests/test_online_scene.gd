@@ -39,7 +39,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_leave_mid_match_under_the_review_form, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -258,7 +258,7 @@ func test_friend_again_before_own_end(runner) -> bool:
 	main.driver.sim.remove_object(4)
 	main.driver.sim.remove_object(6)
 	_run(main, 2)
-	runner.check(_panel_line(main) == "Your friend wants to play again" and not _play_again_button(main).disabled, "N15 the early again shows after the end, got '%s'" % _panel_line(main))
+	runner.check(_panel_line(main) == "Your friend wants a rematch" and not _play_again_button(main).disabled and _play_again_button(main).text == "Accept rematch", "N15 the early again shows after the end with Accept rematch, got '%s' '%s'" % [_panel_line(main), _play_again_button(main).text])
 	main.free()
 	return true
 
@@ -276,6 +276,29 @@ func test_friend_left_after_end(runner) -> bool:
 	main.free()
 	return true
 
+func test_accept_rematch_ends_with_the_friend(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_end_match(online)
+	main.set_process(true)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_run(main, 2)
+	runner.check(_play_again_button(main).text == "Accept rematch" and not _play_again_button(main).disabled, "N34 fixture: the friend's again offers Accept rematch")
+	online.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": PEER_TICKS}))
+	_run(main, 3)
+	runner.check(_panel_line(main) == "Your friend left" and _play_again_button(main).disabled and _play_again_button(main).text == "Play again", "N34 the friend leaving after their again greys the button back to Play again, got '%s' '%s'" % [_panel_line(main), _play_again_button(main).text])
+	main.free()
+	var closed: Dictionary = await _online(runner, 2)
+	_end_match(closed)
+	closed.main.set_process(true)
+	closed.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_run(closed.main, 2)
+	closed.transport.is_closed = true
+	_run(closed.main, 2)
+	runner.check(_panel_line(closed.main) == "The room closed" and _play_again_button(closed.main).disabled and _play_again_button(closed.main).text == "Play again", "N34 a closed room after the friend's again reads Play again, got '%s' '%s'" % [_panel_line(closed.main), _play_again_button(closed.main).text])
+	closed.main.free()
+	return true
+
 func test_panel_follows_again_while_processing(runner) -> bool:
 	var own: Dictionary = await _online(runner, 2)
 	_end_match(own)
@@ -283,7 +306,7 @@ func test_panel_follows_again_while_processing(runner) -> bool:
 	_run(own.main, 2)
 	var tick: int = own.main.driver.sim.tick()
 	_play_again_button(own.main).pressed.emit()
-	runner.check(_panel_line(own.main) == "Waiting for your friend…" and _play_again_button(own.main).disabled, "N26 own again redraws the panel at once, got '%s'" % _panel_line(own.main))
+	runner.check(_panel_line(own.main) == "Waiting for your friend…" and _play_again_button(own.main).disabled and _play_again_button(own.main).text == "Play again", "N26 own again redraws the panel at once and keeps the label, got '%s' '%s'" % [_panel_line(own.main), _play_again_button(own.main).text])
 	_run(own.main, 2)
 	runner.check(own.main.driver.sim.tick() == tick and _panel_line(own.main) == "Waiting for your friend…" and _play_again_button(own.main).disabled, "N26 the waiting panel holds on later frames, got '%s'" % _panel_line(own.main))
 	own.main.free()
@@ -293,9 +316,9 @@ func test_panel_follows_again_while_processing(runner) -> bool:
 	_run(friend.main, 2)
 	friend.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
 	_run(friend.main, 1)
-	runner.check(_panel_line(friend.main) == "Your friend wants to play again" and not _play_again_button(friend.main).disabled, "N26 a friend's again after the end is drawn, got '%s'" % _panel_line(friend.main))
+	runner.check(_panel_line(friend.main) == "Your friend wants a rematch" and not _play_again_button(friend.main).disabled and _play_again_button(friend.main).text == "Accept rematch", "N26 a friend's again after the end is drawn with Accept rematch, got '%s' '%s'" % [_panel_line(friend.main), _play_again_button(friend.main).text])
 	_play_again_button(friend.main).pressed.emit()
-	runner.check(_panel_line(friend.main) == "Your friend wants to play again" and _play_again_button(friend.main).disabled, "N26 answering a friend's again does not flash the waiting line, got '%s'" % _panel_line(friend.main))
+	runner.check(_panel_line(friend.main) == "Your friend wants a rematch" and _play_again_button(friend.main).disabled and _play_again_button(friend.main).text == "Play again", "N26 answering a friend's again does not flash the waiting line and the greyed button reads Play again, got '%s' '%s'" % [_panel_line(friend.main), _play_again_button(friend.main).text])
 	friend.main.free()
 	return true
 
@@ -403,10 +426,10 @@ func test_rematch_builds_new_match(runner) -> bool:
 	main.driver.sim.remove_object(4)
 	main.driver.sim.remove_object(6)
 	_run(main, 2)
-	runner.check(_sent_types(online.transport, "over") == 2 and _panel_line(main) == "" and not _play_again_button(main).disabled, "N18 the second end sends its own over with a fresh panel, got %d '%s'" % [_sent_types(online.transport, "over"), _panel_line(main)])
+	runner.check(_sent_types(online.transport, "over") == 2 and _panel_line(main) == "" and not _play_again_button(main).disabled and _play_again_button(main).text == "Play again", "N18 the second end sends its own over with a fresh panel and the plain label, got %d '%s' '%s'" % [_sent_types(online.transport, "over"), _panel_line(main), _play_again_button(main).text])
 	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
 	_run(main, 1)
-	runner.check(_panel_line(main) == "Your friend wants to play again", "N18 the new lockstep hands the friend's again to the driver, got '%s'" % _panel_line(main))
+	runner.check(_panel_line(main) == "Your friend wants a rematch" and _play_again_button(main).text == "Accept rematch", "N18 the new lockstep hands the friend's again to the driver, got '%s'" % _panel_line(main))
 	main.free()
 	SkirmishMain.map_path = before[0]
 	SkirmishMain.starts = before[1]
@@ -1097,6 +1120,26 @@ func test_back_to_menu_once(runner) -> bool:
 	runner.check(scenes.size() == 1 and _focus_owner(main) != main.get_node(BACK_TO_MENU), "N32 leaving releases the focus from Back to menu, scenes %d" % scenes.size())
 	main.get_node("HUD/ResultPanel").change_setup_pressed.emit()
 	runner.check(online.transport.close_calls == closed_by_the_leave + 1 and scenes.size() == 1, "N32 a second Enter on Back to menu leaves once, closes %d after %d, scenes %d" % [online.transport.close_calls, closed_by_the_leave, scenes.size()])
+	main.free()
+	return true
+
+func test_leave_mid_match_under_the_review_form(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	var scenes: Array[String] = []
+	main.change_scene = func(path: String) -> void: scenes.append(path)
+	main._playtest.set_active(true)
+	main._playtest.begin_match()
+	_peer_packets(online.transport, 2, 4, 40)
+	_run(main, 20)
+	main._pause.open()
+	main._pause.leave_requested.emit()
+	_run(main, 3)
+	main._refresh()
+	var status: String = main.get_node("HUD/Status").text
+	runner.check(main._playtest._active, "N33 fixture: the playtest helper is on")
+	runner.check(scenes == ["res://scenes/launcher.tscn"], "N33 (F22) a deliberate leave reaches the launcher without waiting for the playtest form, got %s" % [scenes])
+	runner.check(not status.contains("relay") and main.driver.notice() == "", "N33 (F22) a deliberate leave shows no relay loss, got '%s'" % main.driver.notice())
 	main.free()
 	return true
 

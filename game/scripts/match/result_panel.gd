@@ -103,10 +103,11 @@ static func _pad(style: StyleBox, horizontal: float, vertical: float) -> void:
 	style.content_margin_top = vertical
 	style.content_margin_bottom = vertical
 
-func show_result(outcome: String, status: String, can_play: bool, rows: Array[Dictionary] = [], length: String = "", waiting: bool = false) -> void:
+func show_result(outcome: String, status: String, can_play: bool, rows: Array[Dictionary] = [], length: String = "", waiting: bool = false, accept: bool = false) -> void:
 	_outcome.text = outcome
 	_status.text = status
 	_play_again.disabled = not can_play
+	_play_again.text = "Accept rematch" if accept and can_play else "Play again"
 	visible = not outcome.is_empty()
 	_length.text = length
 	_length.visible = not rows.is_empty()

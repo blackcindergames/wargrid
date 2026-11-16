@@ -168,9 +168,7 @@ func _leave() -> void:
 	_leaving = true
 	driver.leave()
 	get_viewport().gui_release_focus()
-	if _playtest.end_match():
-		_pause.close()
-		await _playtest.finished
+	_playtest.keep_match()
 	change_scene.call(LAUNCHER_SCENE)
 
 func _change_scene(path: String) -> void:

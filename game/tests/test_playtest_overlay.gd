@@ -39,7 +39,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_drops_pending_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_leave_with_form_and_pending_answer]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_drops_pending_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -353,12 +353,8 @@ func test_leave_flow(runner) -> bool:
 	var scenes := _scenes(main)
 	_key(runner, KEY_ESCAPE)
 	_click(main, "Back to main menu")
-	runner.check(_form_shown(main) and scenes.is_empty(), "PO9 leaving with the helper on shows the form and does not change scene yet, scenes %s" % [scenes])
-	runner.check(not main.get_node("HUD/PauseMenu").visible, "PO9 the pause menu closes behind the form")
-	_key(runner, KEY_ESCAPE)
-	runner.check(_form_shown(main) and not main.get_node("HUD/PauseMenu").visible, "PO9 Esc while the form is open does nothing")
-	runner.check(_press(main, "NextMatch"), "PO9 the form offers NextMatch")
-	runner.check(scenes == [LAUNCHER] and not _form_shown(main), "PO9 NextMatch leaves once, got %s" % [scenes])
+	runner.check(scenes == [LAUNCHER] and not _form_shown(main), "PO9 leaving with the helper on changes scene at once and shows no form, scenes %s" % [scenes])
+	runner.check(PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1, "PO9 the left match lands in the open sitting")
 	main.free()
 	_end(saved)
 	saved = _begin(false)
@@ -377,12 +373,8 @@ func test_leave_flow(runner) -> bool:
 	_click(main, "Back to main menu")
 	runner.check(online.transport.close_calls == 0 and scenes.is_empty() and not _form_shown(main), "PO9 online: asking to leave does nothing yet")
 	_click(main, "Leave")
-	runner.check(online.transport.close_calls == 1 and _form_shown(main) and scenes.is_empty(), "PO9 online leave closes the transport once and shows the form, closed %d" % online.transport.close_calls)
-	var polls: int = online.transport.polls
-	main._physics_process(0.0)
-	runner.check(online.transport.polls == polls + 1, "PO9 online does not pause behind the form")
-	runner.check(_press(main, "NextMatch"), "PO9 online form offers NextMatch")
-	runner.check(scenes == [LAUNCHER] and online.transport.close_calls == 1, "PO9 online NextMatch leaves once and never closes the transport again, closed %d, scenes %s" % [online.transport.close_calls, scenes])
+	runner.check(online.transport.close_calls == 1 and scenes == [LAUNCHER] and not _form_shown(main), "PO9 online leave closes the transport once, changes scene at once and shows no form, closed %d, scenes %s" % [online.transport.close_calls, scenes])
+	runner.check(PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1, "PO9 online the left match lands in the open sitting")
 	main.free()
 	_end(saved)
 	return true
@@ -414,9 +406,7 @@ func test_match_end_opens_review_once(runner) -> bool:
 	_press(main, "NextMatch")
 	runner.check(not overlay.reviewing() and scenes.is_empty(), "PO11 NextMatch at match end closes the form and stays in the match")
 	main.get_node("HUD/PauseMenu").leave_requested.emit()
-	runner.check(scenes.is_empty() and _form_shown(main) and PlaytestSession.current.data.matches.size() == 1, "PO11 leaving after the review reopens the form without a second match, scenes %s" % [scenes])
-	runner.check(_form(main).find_child("EndSession", true, false) != null and _form(main).find_child("NextMatch", true, false) == null, "PO11 the reopened form offers EndSession and no NextMatch")
-	runner.check(_press(main, "Leave") and scenes == [LAUNCHER] and not _form_shown(main) and PlaytestSession.current.data.matches.size() == 1, "PO11 Leave changes scene once and keeps the sitting, scenes %s" % [scenes])
+	runner.check(scenes == [LAUNCHER] and not _form_shown(main) and PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1, "PO11 leaving after the review changes scene at once, adds no second match and keeps the sitting, scenes %s" % [scenes])
 	main.free()
 	_end(saved)
 	return true
@@ -437,10 +427,7 @@ func test_back_to_menu_from_result_panel(runner) -> bool:
 	var scenes := _scenes(main)
 	runner.check(panel.visible and not _form_shown(main), "PO11b fixture: result panel up, review closed")
 	(panel.get_node("Center/Card/Box/Buttons/ChangeSetup") as Button).pressed.emit()
-	var form: Control = _form(main)
-	runner.check(_form_shown(main) and scenes.is_empty(), "PO11b Back to menu with a focus card opens the leave form, scenes %s" % [scenes])
-	runner.check(form != null and form.is_visible_in_tree() and main.get_node("HUD/Playtest").get_index() > panel.get_index(), "PO11b the leave form draws above the result panel")
-	runner.check(_press(main, "Leave") and scenes == [LAUNCHER], "PO11b its Leave button reaches the menu, scenes %s" % [scenes])
+	runner.check(scenes == [LAUNCHER] and not _form_shown(main), "PO11b Back to menu with a focus card changes scene at once and shows no form, scenes %s" % [scenes])
 	main.free()
 	_end(saved)
 	return true
@@ -492,9 +479,8 @@ func test_two_match_session_file(runner) -> bool:
 	commands.append(main.playtest_match().commands)
 	var scenes := _scenes(main)
 	main.orders.selected_ids.clear()
-	_key(runner, KEY_ESCAPE)
-	_click(main, "Back to main menu")
-	runner.check(_form_shown(main) and scenes.is_empty(), "PO12 leaving match 2 shows its review")
+	overlay.end_match()
+	runner.check(_form_shown(main) and scenes.is_empty(), "PO12 ending match 2 shows its review")
 	runner.check(_press(main, "EndSession"), "PO12 the review offers EndSession")
 	var card: Dictionary = FocusCards.card(CARD_ECONOMY, FocusCards.load_cards())
 	_rate_all(runner, main, 4)
@@ -518,7 +504,7 @@ func test_two_match_session_file(runner) -> bool:
 	runner.check(card.questions.all(func(question: Dictionary) -> bool: return answers.has(question.id) and int(answers[question.id].score) == 4), "PO12 every question holds score 4, got %s" % [answers])
 	runner.check(answers.get(card.questions[0].id, {}).get("text", "") == "clear", "PO12 the first answer keeps its text")
 	runner.check(_form_text(main).contains("Saved to") and _form(main).find_child("ShowInFolder", true, false) != null, "PO12 the form shows the path and Show in folder")
-	runner.check(scenes.is_empty() and _press(main, "Close") and scenes == [LAUNCHER], "PO12 Close leaves once")
+	runner.check(scenes.is_empty() and _press(main, "Close") and not _form_shown(main) and scenes.is_empty(), "PO12 Close shuts the form and stays in the match")
 	var out: String = OS.get_environment("WARGRID_SESSION_OUT")
 	if not out.is_empty() and not file.is_empty():
 		for name in DirAccess.get_files_at(sessions):
@@ -535,8 +521,6 @@ func test_web_save_downloads(runner) -> bool:
 	overlay.web = true
 	var downloads: Array = []
 	overlay.download = func(buffer: PackedByteArray, file_name: String, mime: String) -> void: downloads.append([buffer.size(), file_name, mime])
-	var done: Array[int] = []
-	overlay.finished.connect(func() -> void: done.append(1))
 	_mark(overlay, "good", "web")
 	overlay.end_match()
 	_press(main, "EndSession")
@@ -546,7 +530,7 @@ func test_web_save_downloads(runner) -> bool:
 	runner.check(not FileAccess.file_exists(sessions.path_join(downloads[0][1] if not downloads.is_empty() else "x")) and _form_text(main).contains("Downloaded"), "PO13 no file is written and the form says Downloaded")
 	var shown: Control = _form(main).find_child("ShowInFolder", true, false) if _form(main) != null else null
 	runner.check(shown == null or not shown.is_visible_in_tree(), "PO13 no Show in folder on the web")
-	runner.check(done.is_empty() and _press(main, "Close") and done.size() == 1, "PO13 Close emits finished once")
+	runner.check(_form_shown(main) and _press(main, "Close") and not _form_shown(main), "PO13 Close shuts the form")
 	main.free()
 	_end(saved)
 	return true
@@ -721,7 +705,7 @@ func test_sb2_checklist_waits_for_answer(runner) -> bool:
 	_end(saved)
 	return true
 
-func test_sb2_leave_with_form_and_pending_answer(runner) -> bool:
+func test_sb2_review_form_and_pending_answer(runner) -> bool:
 	var saved: String = _begin()
 	var online: Dictionary = await _online(runner)
 	var main = online.main
@@ -730,9 +714,7 @@ func test_sb2_leave_with_form_and_pending_answer(runner) -> bool:
 	lockstep._command_log.append({"type": "build", "player": 1, "sequence": 5, "tick": 9, "builder_id": 3, "building_kind": "usa_power_plant", "origin": [-4, -4]})
 	lockstep._rejections.append({"tick": 9, "sequence": 5, "error": "Outside map"})
 	lockstep._rejections.append({"tick": 9, "sequence": 6, "error": "No units left"})
-	_key(runner, KEY_ESCAPE)
-	_click(main, "Back to main menu")
-	_click(main, "Leave")
+	main._playtest.end_match()
 	runner.check(_form_shown(main), "RA7 fixture: the form is open")
 	main._physics_process(0.0)
 	runner.check(main.orders._awaiting_build.is_empty() and main.hud.note == "Rejected: No units left", "RA7 online answers arrive behind the form, note '%s'" % main.hud.note)
@@ -741,8 +723,7 @@ func test_sb2_leave_with_form_and_pending_answer(runner) -> bool:
 	saved = _begin()
 	main = await _scene(runner)
 	main._submit({"type": "move", "entity_ids": [_own_unit(main)], "target": [-5.0, -5.0]})
-	_key(runner, KEY_ESCAPE)
-	_click(main, "Back to main menu")
+	main._playtest.end_match()
 	runner.check(_form_shown(main), "RA7 offline fixture: the form is open")
 	main._physics_process(0.0)
 	runner.check(main.hud.note.is_empty() and main.driver._held.size() == 1, "RA7 offline delivers nothing while the form holds the match, note '%s'" % main.hud.note)

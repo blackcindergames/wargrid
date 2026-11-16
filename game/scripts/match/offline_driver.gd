@@ -90,6 +90,9 @@ func opponent_left() -> bool:
 func rematch_pending() -> bool:
 	return false
 
+func friend_wants_rematch() -> bool:
+	return false
+
 func rematch_line() -> String:
 	return ""
 

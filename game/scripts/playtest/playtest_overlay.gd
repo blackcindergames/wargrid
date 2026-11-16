@@ -5,7 +5,6 @@ const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const MarkerCapture = preload("res://scripts/playtest/marker_capture.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const SessionForm = preload("res://scripts/playtest/session_form.gd")
-signal finished
 const CHECKLIST_KEY: Key = KEY_QUOTELEFT
 const MARKER_KEY: Key = KEY_N
 const CHECKLIST_WIDTH: float = 320.0
@@ -57,15 +56,18 @@ func _open_session() -> void:
 	_session = PlaytestSession.resume_or_open(str(_card.get("id", "")), PlaytestSettings.build_id())
 	for id: String in _boxes: _boxes[id].set_pressed_no_signal(checked(id))
 
-func end_match() -> bool:
-	if not _active or (_reviewed and PlaytestSession.current != _session): return false
+func end_match() -> void:
+	if not _active or _reviewed: return
 	cancel_marker()
 	_checklist.hide()
-	if _reviewed: _form.open_leave(_session)
-	else:
-		_reviewed = true
-		_form.open_review(_session, _session.finish_match(match_record.call()))
-	return true
+	_form.open_review(_session, _record_match())
+
+func keep_match() -> void:
+	if _active and not _reviewed: _record_match()
+
+func _record_match() -> int:
+	_reviewed = true
+	return _session.finish_match(match_record.call())
 
 func begin_match() -> void:
 	_reviewed = false
@@ -171,7 +173,6 @@ func _build_form() -> void:
 
 func _close_form() -> void:
 	_form.hide()
-	finished.emit()
 
 func _build_dialog() -> void:
 	_dialog = _corner_panel("MarkerDialog", DIALOG_WIDTH, 0.5)

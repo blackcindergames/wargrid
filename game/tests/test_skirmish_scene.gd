@@ -408,6 +408,7 @@ func _enter(code: Key) -> InputEventKey:
 	return event
 
 func test_result_panel_layout(runner) -> bool:
+	var no_rows: Array[Dictionary] = []
 	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
 		var port := SubViewport.new()
 		port.size = size
@@ -430,7 +431,8 @@ func test_result_panel_layout(runner) -> bool:
 		runner.check(real_card.grow(-16.0).encloses(real_table.get_global_rect()) and real_card.grow(-16.0).encloses(main.get_node(LENGTH).get_global_rect()), "R1 table and length inside the card at %s" % size)
 		var real_buttons: Rect2 = main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons").get_global_rect()
 		runner.check(absf(real_buttons.get_center().x - real_card.get_center().x) <= 1.0, "R1 the button row is centred on the card at %s" % size)
-		panel.show_result("Victory", "Your friend wants to play again", true)
+		runner.check(main.get_node(PLAY_AGAIN).text == "Play again", "R1 offline never offers Accept rematch at %s" % size)
+		panel.show_result("Victory", "Your friend wants a rematch", true, no_rows, "", false, true)
 		await runner.process_frame
 		await runner.process_frame
 		var screen := Rect2(Vector2.ZERO, Vector2(size))
@@ -440,7 +442,11 @@ func test_result_panel_layout(runner) -> bool:
 		var again: Rect2 = main.get_node(PLAY_AGAIN).get_global_rect()
 		var setup: Rect2 = main.get_node(CHANGE_SETUP).get_global_rect()
 		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size), "R1 the viewport really is %s" % size)
-		runner.check(panel.visible and outcome.text == "Victory" and status.visible and status.text == "Your friend wants to play again", "R1 realistic texts shown at %s" % size)
+		runner.check(panel.visible and outcome.text == "Victory" and status.visible and status.text == "Your friend wants a rematch", "R1 realistic texts shown at %s" % size)
+		var accept: Button = main.get_node(PLAY_AGAIN)
+		var accept_row: Rect2 = main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons").get_global_rect()
+		runner.check(accept.text == "Accept rematch" and accept.size.x == 144.0 and accept.get_minimum_size().x <= 144.0 and setup.size.x == 144.0, "R1 Accept rematch fits the 144 px minimum width at %s, button %.0f, needs %.0f" % [size, accept.size.x, accept.get_minimum_size().x])
+		runner.check(absf(accept_row.get_center().x - card.get_center().x) <= 1.0 and absf((again.position.x + setup.end.x) / 2.0 - card.get_center().x) <= 1.0, "R1 the two buttons stay centred with Accept rematch at %s" % size)
 		runner.check(main.get_node("HUD/ResultPanel/Dim").get_global_rect() == screen, "R1 the dim covers %s" % size)
 		runner.check(screen.encloses(card) and card.get_center().distance_to(screen.get_center()) <= 1.0, "R1 card centred inside %s, rect %s" % [size, card])
 		runner.check(card.encloses(outcome.get_global_rect()) and card.encloses(status.get_global_rect()) and card.encloses(again) and card.encloses(setup), "R1 card holds its texts and buttons at %s" % size)
@@ -453,14 +459,17 @@ func test_result_panel_layout(runner) -> bool:
 		var tall: float = main.get_node("HUD/ResultPanel/Center/Card").size.y
 		panel.show_result("Victory", "", true)
 		await runner.process_frame
+		runner.check(accept.text == "Play again", "R1 without the friend's again the button reads Play again at %s" % size)
 		runner.check(is_equal_approx(main.get_node("HUD/ResultPanel/Center/Card").size.y, tall), "R1 the card keeps its height without a status line at %s (user, 2026-11-15)" % size)
+		panel.show_result("Victory", "Your friend wants a rematch", false, no_rows, "", true, true)
+		runner.check(accept.text == "Play again" and accept.disabled, "R1 a disabled Play again never reads Accept rematch at %s" % size)
 		panel.show_result("Victory", "Waiting for your friend…", false)
 		await runner.process_frame
 		var waiting: StyleBox = main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain").get_theme_stylebox("disabled")
 		runner.check(waiting is StyleBoxFlat and (waiting as StyleBoxFlat).bg_color.is_equal_approx(Color("#666a6c")), "R1 a waiting Play again is grey, not amber, at %s" % size)
 		var rows: Array[Dictionary] = []
 		for i in 8: rows.append({"name": "P%d Free Resistance Coalition%s" % [i + 1, " (you)" if i == 7 else ""], "you": i == 7, "built": 1234, "units_lost": 567, "buildings_lost": 89})
-		panel.show_result("Victory", "Your friend wants to play again", true, rows, "Match length 99:59")
+		panel.show_result("Victory", "Your friend wants a rematch", true, rows, "Match length 99:59", false, true)
 		await runner.process_frame
 		await runner.process_frame
 		var long_card: Rect2 = main.get_node("HUD/ResultPanel/Center/Card").get_global_rect()
