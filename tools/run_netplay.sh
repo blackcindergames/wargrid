@@ -6,7 +6,8 @@ out=${NETPLAY_OUT:-$(mktemp -d)}
 mkdir -p "$out" || exit 1
 client=${WARGRID_CLIENT:-"godot --headless --path $repo_root/game"}
 relay_bin=$WARGRID_RELAY_BIN
-port=$(${PYTHON:-python3} -c 'import socket;s=socket.socket();s.bind(("",0));print(s.getsockname()[1])')
+free_port() { ${PYTHON:-python3} -c 'import socket;s=socket.socket();s.bind(("",0));print(s.getsockname()[1])'; }
+port=$(free_port)
 url=${WARGRID_RELAY_URL:-ws://127.0.0.1:$port/ws}
 remote=${WARGRID_RELAY_URL:+1}
 netfault_bin=${WARGRID_NETFAULT_BIN:-}
@@ -26,7 +27,6 @@ fail() {
   exit 1
 }
 ms() { ${PYTHON:-python3} -c 'import time;print(int(time.time()*1000))'; }
-free_port() { ${PYTHON:-python3} -c 'import socket;s=socket.socket();s.bind(("",0));print(s.getsockname()[1])'; }
 
 start_relay() {
   [ -z "$remote" ] || return 0

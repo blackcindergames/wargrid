@@ -30,27 +30,28 @@ func (l *limiter) conns(key string) int {
 	return 0
 }
 
+func take(l *limiter, b *bucket, n int) (ok int) {
+	for range n {
+		if l.allow(b, 10, time.Second) {
+			ok++
+		}
+	}
+	return ok
+}
+
 func TestBucketLeaksOnePerPeriod(t *testing.T) {
 	c := newFakeClock()
 	l := prodLimiter(c)
 	var b bucket
-	take := func(n int) (ok int) {
-		for range n {
-			if l.allow(&b, 10, time.Second) {
-				ok++
-			}
-		}
-		return ok
-	}
-	if got := take(11); got != 10 {
+	if got := take(l, &b, 11); got != 10 {
 		t.Fatalf("burst: %d of 11 allowed, want 10", got)
 	}
 	c.advance(time.Second)
-	if got := take(2); got != 1 {
+	if got := take(l, &b, 2); got != 1 {
 		t.Fatalf("after 1 s: %d of 2 allowed, want 1", got)
 	}
 	c.advance(10 * time.Second)
-	if got := take(12); got != 10 {
+	if got := take(l, &b, 12); got != 10 {
 		t.Fatalf("after 10 s: %d of 12 allowed, want 10", got)
 	}
 }
@@ -59,23 +60,15 @@ func TestBucketKeepsRemainderAfterFullDrain(t *testing.T) {
 	c := newFakeClock()
 	l := prodLimiter(c)
 	var b bucket
-	take := func(n int) (ok int) {
-		for range n {
-			if l.allow(&b, 10, time.Second) {
-				ok++
-			}
-		}
-		return ok
-	}
-	if got := take(10); got != 10 {
+	if got := take(l, &b, 10); got != 10 {
 		t.Fatalf("burst: %d of 10 allowed", got)
 	}
 	c.advance(10*time.Second + 400*time.Millisecond)
-	if got := take(11); got != 10 {
+	if got := take(l, &b, 11); got != 10 {
 		t.Fatalf("after 10.4 s: %d of 11 allowed, want 10", got)
 	}
 	c.advance(600 * time.Millisecond)
-	if got := take(1); got != 1 {
+	if got := take(l, &b, 1); got != 1 {
 		t.Fatalf("at 11.0 s: %d allowed, want 1; the 0.4 s remainder of the drained period was dropped", got)
 	}
 }
@@ -149,24 +142,23 @@ func TestTableFullFailsClosed(t *testing.T) {
 }
 
 func TestClientKey(t *testing.T) {
-	const header = "X-Wargrid-Test-Ip"
 	req := func(v string) *http.Request {
 		r := httptest.NewRequest(http.MethodGet, "/ws", nil)
 		if v != "" {
-			r.Header.Set(header, v)
+			r.Header.Set(testIPHeader, v)
 		}
 		return r
 	}
 	for _, c := range []struct{ header, value, want string }{
 		{"", "203.0.113.7", ""},
-		{header, "203.0.113.7", "203.0.113.7"},
-		{header, "2001:db8:1:2:3:4:5:6", "2001:db8:1:2::"},
-		{header, "2001:db8:1:2:ffff::1", "2001:db8:1:2::"},
-		{header, "", ""},
-		{header, "not-an-ip", ""},
-		{header, "203.0.113.7, 198.51.100.1", ""}, // skipped by the user's Q26 answer; whether to revisit is an open morning question
-		{header, "203.0.113.7:4000", ""},
-		{header, "::ffff:203.0.113.7", "203.0.113.7"},
+		{testIPHeader, "203.0.113.7", "203.0.113.7"},
+		{testIPHeader, "2001:db8:1:2:3:4:5:6", "2001:db8:1:2::"},
+		{testIPHeader, "2001:db8:1:2:ffff::1", "2001:db8:1:2::"},
+		{testIPHeader, "", ""},
+		{testIPHeader, "not-an-ip", ""},
+		{testIPHeader, "203.0.113.7, 198.51.100.1", ""}, // skipped by the user's Q26 answer; whether to revisit is an open morning question
+		{testIPHeader, "203.0.113.7:4000", ""},
+		{testIPHeader, "::ffff:203.0.113.7", "203.0.113.7"},
 	} {
 		if got := clientKey(req(c.value), c.header); got != c.want {
 			t.Errorf("header %q value %q: key %q, want %q", c.header, c.value, got, c.want)
@@ -230,6 +222,13 @@ const (
 	testIP       = "203.0.113.9"
 )
 
+func limitedRelay(t *testing.T, cfg config, l *limiter) string {
+	t.Helper()
+	srv := httptest.NewServer(newServer(&relay{reg: newRegistry(cfg), lim: l, ipHeader: testIPHeader}).Handler)
+	t.Cleanup(srv.Close)
+	return srv.URL
+}
+
 func dialAsTestIP(t *testing.T, base string) (*gws.Conn, *cl) {
 	t.Helper()
 	c := &cl{make(chan string, 50)}
@@ -252,16 +251,8 @@ func hearUntil(t *testing.T, c *cl, part string) {
 }
 
 func TestLimitsAcrossP2Phases(t *testing.T) {
-	createHello := `{"type":"hello","protocol":2,"build":"x","match":"","settings":{}}`
-	newRelay := func(cfg config, l *limiter) (*relay, string) {
-		h := &relay{reg: newRegistry(cfg), lim: l, ipHeader: testIPHeader}
-		srv := httptest.NewServer(newServer(h).Handler)
-		t.Cleanup(srv.Close)
-		return h, srv.URL
-	}
-
 	t.Run("over_again_rematch_draw_no_token", func(t *testing.T) {
-		_, url := newRelay(testConfig(), newLimiter(tableSize, 2, time.Hour, time.Now))
+		url := limitedRelay(t, testConfig(), newLimiter(tableSize, 2, time.Hour, time.Now))
 		a, ac := dialAsTestIP(t, url)
 		say(t, a, createHello)
 		w := hear(t, ac)
@@ -291,7 +282,7 @@ func TestLimitsAcrossP2Phases(t *testing.T) {
 		cfg := testConfig()
 		cfg.lobby = 50 * time.Millisecond
 		l := newLimiter(tableSize, 100, time.Second, time.Now)
-		_, url := newRelay(cfg, l)
+		url := limitedRelay(t, cfg, l)
 		a, ac := dialAsTestIP(t, url)
 		say(t, a, createHello)
 		hear(t, ac)
@@ -312,9 +303,7 @@ func (c *closeWatcher) OnMessage(*gws.Conn, *gws.Message) {}
 func TestSlotsReturnAfterInMatchCloses(t *testing.T) {
 	start := func(t *testing.T) (*limiter, string) {
 		l := newLimiter(tableSize, 1000, time.Millisecond, time.Now)
-		srv := httptest.NewServer(newServer(&relay{reg: newRegistry(testConfig()), lim: l, ipHeader: testIPHeader}).Handler)
-		t.Cleanup(srv.Close)
-		return l, srv.URL
+		return l, limitedRelay(t, testConfig(), l)
 	}
 	// pair seats two sockets of testIP in a started match and checks both are counted.
 	pair := func(t *testing.T, l *limiter, url string) (a *gws.Conn, ac *cl, b *gws.Conn, bc *cl) {

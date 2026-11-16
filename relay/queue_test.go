@@ -3,7 +3,6 @@ package main
 import (
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"runtime"
 	"strconv"
 	"strings"
@@ -33,12 +32,10 @@ func (c *slowReader) OnMessage(_ *gws.Conn, m *gws.Message) {
 
 func TestSlowReaderBacklogIsCapped(t *testing.T) {
 	l := newLimiter(tableSize, 1000, time.Millisecond, time.Now)
-	h := &relay{reg: &registry{rooms: map[string]*room{}, cfg: testConfig()}, lim: l, ipHeader: testIPHeader}
-	srv := httptest.NewServer(newServer(h).Handler)
-	defer srv.Close()
+	url := limitedRelay(t, testConfig(), l)
 	sr := &slowReader{welcome: make(chan string, 1)}
 	a, _, err := gws.NewClient(sr, &gws.ClientOption{
-		Addr: "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws", NewDialer: smallWindow,
+		Addr: "ws" + strings.TrimPrefix(url, "http") + "/ws", NewDialer: smallWindow,
 		RequestHeader: http.Header{testIPHeader: {testIP}},
 	})
 	if err != nil {
@@ -47,7 +44,7 @@ func TestSlowReaderBacklogIsCapped(t *testing.T) {
 	go a.ReadLoop()
 	say(t, a, `{"type":"hello","protocol":2,"build":"x","match":"","settings":{}}`)
 	w := <-sr.welcome
-	b, bc := dialAsTestIP(t, srv.URL)
+	b, bc := dialAsTestIP(t, url)
 	say(t, b, `{"type":"hello","protocol":2,"build":"x","match":"`+w[strings.Index(w, `"match":"`)+9:len(w)-2]+`"}`)
 	hear(t, bc)
 	hear(t, bc)

@@ -14,7 +14,7 @@ const (
 
 func hashData(n, tick int, h hashMsg) []byte {
 	if !h.ok {
-		return []byte(fmt.Sprintf(`{"type":"tick","seat":%d,"tick":%d,"commands":[]}`, n, tick))
+		return []byte(tickFrame(n, tick))
 	}
 	return []byte(fmt.Sprintf(`{"type":"tick","seat":%d,"tick":%d,"commands":[],"hash":{"tick":%d,"value":%q}}`, n, tick, h.tick, h.value))
 }
