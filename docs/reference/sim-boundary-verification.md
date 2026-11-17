@@ -179,6 +179,8 @@ Usage so far (python3 tools/session_usage.py <session files>): not recorded
 Next exact action: rendered rerun `sh tools/run_game.sh res://scenes/movement_benchmark.tscn`, record with `python3 tools/perf_record.py <log> --label "Sim boundary SB3"`, then `python3 tools/perf_chart.py`; then the owner's playtest and merge decision.
 ```
 
+Owner playtest (user, 2026-11-17, desktop on `main` `895d615`, Dry Wells offline against the bot, online in two windows on the live relay): all five player-experience checks pass. Placement ghost at a blocked edge (colour, refused click, accepted build); spam-queue and cancel; pause mid-placement, done through the playtest note dialog (N) because Esc cancels placement before it can open the pause menu; win then play again (results, camera on own base); online rematch from both seats. Finding: the refusal beep is too quiet beside the other sounds and the music ([F30](../STATUS.md#findings-list)).
+
 ### Evidence ledger
 
 Base: `bad67c332820be5fb86d42a87af4a0dbcc436961` (`main`, tree `3762073acc71e04ba32fac89838d314740d6faad`), worktree clean. `git diff ad89a1c bad67c3 -- game tools protocol` is empty: the plan's `ad89a1c` lines hold unchanged on the base.
