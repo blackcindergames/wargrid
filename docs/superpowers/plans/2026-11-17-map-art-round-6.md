@@ -326,6 +326,14 @@ Model: Haiku low. After Tasks 28 and 29.
 - [ ] **Step 3:** `sh tools/run_tests.sh` (`TESTS PASSED <n>`), `sh tools/run_checks.sh` (`CHECKS PASSED 5`), the Python and gdlint commands for `docs/images/map-art/source`; `git status --short game tools` empty. Record each with the tree.
 - [ ] **Step 4 (commit point D):** subagents never commit; the coordinator commits (pre-approved), shows `git status --short` and the summary, never pushes. Message: `Write the map art reference and art bible v2` / `Every picked shape, size and colour now has a place in the repository per package; F21 stays open for the art lab.` Then stop: push, merge and the P2.3a design are the user's.
 
+### Task 32: Both repositories in line (added during the run, user, 2026-11-17)
+
+Model: Opus high. After Task 31. Before Task 27, `main` is merged into `spike-art-6` locally (both sides of the design answers kept; no push).
+
+- [ ] **Step 1:** The private P2.3a groundwork notes (`p2-3a-groundwork.md`, private) get Q11 to Q19 answered from round 6 (map edge, canvas, marks, each with a pointer to `docs/reference/map-art-shapes.md`); the P2.3a and P3 rows in `docs/packages.md` and the reference doc carry the round 6 results that reach them: palette A on the HUD's owner edges and the minimap dots, the Neon removal and friend/foe mode (P2.4), the bar shade against the canvas `#08090A` (picked by the P2.3a design), owner colours checked against the new `sel` in P2.3a's token A/B, the paused map look beside the `PAUSED · NO BUILDER` label, P3's stalled-site mark in the white mark style.
+- [ ] **Step 2:** Fresh Opus high review of the changed documents in both repositories; `sh tools/check_public.sh`.
+- [ ] **Step 3 (commit point E, pre-approved, user 2026-11-17):** local commit on `spike-art-6` (`Bring the P2.3a and P3 notes in line with map art round 6`) and a local commit in the private notes repository; nothing pushed.
+
 ## Stop gates
 
 1. Task 3: first shoot differs beyond the known differences.

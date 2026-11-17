@@ -11,6 +11,8 @@
 <div id="app"></div>
 <script>
 window.MISSING = [];
+window.CAND6 = {};
+window.R6 = { surfaces: 'A', edge: 'B', power: 'A', owners: 'A', cargo: 'B', paused: 'A', wrecks: 'A' }; // the baked round 6 picks, {<step key>: <option key>}
 window.addErr = function (msg) { var e = document.getElementById('err'); if (e && e.textContent.indexOf(msg) < 0) e.textContent += msg + '\n'; };
 addEventListener('error', function (e) { addErr(e.message + ' (' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ')'); });
 addEventListener('unhandledrejection', function (e) { addErr('unhandled: ' + (e.reason && e.reason.message || e.reason)); });
@@ -23,6 +25,14 @@ addEventListener('unhandledrejection', function (e) { addErr('unhandled: ' + (e.
 <script src="../../hud-v5/source/glyphs.js" onerror="MISSING.push('glyphs.js')"></script>
 <script src="../../hud-v5/source/glyphs3.js" onerror="MISSING.push('glyphs3.js')"></script>
 <script src="../../hud-v5/source/hud.js" onerror="MISSING.push('hud.js')"></script>
+<script src="cand6-surfaces.js" onerror="MISSING.push('cand6-surfaces.js')"></script>
+<script src="cand6-edge.js" onerror="MISSING.push('cand6-edge.js')"></script>
+<script src="cand6-power.js" onerror="MISSING.push('cand6-power.js')"></script>
+<script src="cand6-owners.js" onerror="MISSING.push('cand6-owners.js')"></script>
+<script src="cand6-cargo.js" onerror="MISSING.push('cand6-cargo.js')"></script>
+<script src="cand6-paused.js" onerror="MISSING.push('cand6-paused.js')"></script>
+<script src="cand6-wrecks.js" onerror="MISSING.push('cand6-wrecks.js')"></script>
+<script src="cand6-clash.js" onerror="MISSING.push('cand6-clash.js')"></script>
 <script>
 'use strict';
 const $ = (s, r) => (r || document).querySelector(s);
@@ -80,6 +90,9 @@ let CUR = ALL_PICKED; // the selection of the picture being drawn
 let SCALE = 1;
 let LEGACY = false; // rounds 1 to 4 pictures: the round 1 to 4 ground and shadow, no palette
 let PAL = null;
+let OVR = { shapes: {}, palette: {}, paletteDark: {}, overlays: [] }; // the round 6 option being drawn
+let GKEY = 'sand'; // ground of the stage being drawn: selects paletteDark
+const eff = () => (GKEY === 'dark' ? { ...OVR.palette, ...OVR.paletteDark } : OVR.palette);
 const stepVal = (k) => CUR.steps[k];
 
 // ---------- shape resolution ----------
@@ -88,7 +101,7 @@ function mk(cacheKey, raw, base, id) {
   if (!raw || !Array.isArray(raw.parts) || !base) return null;
   if (cacheKey in candCache && candCache[cacheKey].raw === raw) return candCache[cacheKey].shape;
   const shape = { ...base, id, parts: raw.parts, damage_variants: raw.damage_variants, parts_by_detail: raw.parts_by_detail, tri_count: undefined };
-  try { ZOOMS.forEach((z) => { countTriangles(shape, +z, 0); bboxPx(shape, +z); }); } catch (e) { addErr('candidate ' + cacheKey + ' is invalid: ' + e.message); candCache[cacheKey] = { raw, shape: null }; return null; }
+  try { ZOOMS.forEach((z) => { countTriangles(shape, +z, 0); [1, 2].forEach((v) => shape.damage_variants && shape.damage_variants[v] && countTriangles(shape, +z, 0, v)); bboxPx(shape, +z); }); } catch (e) { addErr('candidate ' + cacheKey + ' is invalid: ' + e.message); candCache[cacheKey] = { raw, shape: null }; return null; }
   candCache[cacheKey] = { raw, shape };
   return shape;
 }
@@ -127,6 +140,8 @@ const c4entry = (fac, option, key) => {
 const composeMemo = {};
 function shapeIn(id) {
   if (!BASE[id]) return null;
+  const o = ovrShape(id, BASE[id]);
+  if (o) return { shape: o, state: 'cand' };
   const mkey = id + '|' + JSON.stringify([CUR.steps, CUR.fix4b, CUR.fix6]);
   return composeMemo[mkey] || (composeMemo[mkey] = compose(id, CUR.steps));
 }
@@ -166,27 +181,31 @@ function compose(id, sel) {
 const tagOf = (b) => (b >= 40 ? 40 : b >= 15 ? 15 : b >= 5 ? 5 : b >= 1 ? 1 : 0);
 const todayPile = (size, pct) => EXTRA['supply_source_' + (size === 'big' ? '4x5' : '1x1') + '_boxes' + tagOf(BOXES[size][PCTS.indexOf(pct)])];
 function pileRes(size, pct) {
-  const c = stepVal('pile'), today = todayPile(size, pct), boxes = BOXES[size][PCTS.indexOf(pct)];
+  const c = stepVal('pile'), today = todayPile(size, pct), boxes = BOXES[size][PCTS.indexOf(pct)], o = ovrShape(`pile_${size}_${pct}`, today);
+  if (o) return { shape: o, state: 'cand', boxes };
   if (c === '0') return { shape: today, state: 'current', boxes, text: true };
   const sh = cand3('piles', OPTION.pile[c], size + '_' + pct, today);
   return sh ? { shape: sh, state: 'cand', boxes } : { shape: today, state: 'missing', boxes };
 }
-function cargoHex() { const l = PK.cand3.piles.cargo; return stepVal('cargo') === 'B' && l[0] ? l[0].hex : null; }
+function cargoHex() { const l = PK.cand3.piles.cargo, e = eff(); return e.CARGO ? asHex(e.CARGO) : stepVal('cargo') === 'B' && l[0] ? l[0].hex : null; }
 function pileSlots(cfg) {
-  const a = slotsFor(0, cfg.set).slice(), hex = cargoHex();
+  const a = slotsFor(0, cfg.set).slice(), hex = cargoHex(), pad = eff().PILE_PAD;
   if (hex) { a[0] = a[6] = hex; a[1] = scaleHex(hex, 0.75); }
+  if (pad) a[5] = asHex(pad);
   return a;
 }
 const CRATE_BASE = { id: 'salvage_crate', name: 'Salvage crate', footprint: [1, 1], layer: 'ground', has_turret: false };
 function crateRes() {
-  const c = stepVal('crate'), option = OPTION.crate[c];
+  const c = stepVal('crate'), option = OPTION.crate[c], o = ovrShape('salvage_crate', CRATE_BASE);
+  if (o) return { shape: o, state: 'cand' };
   if (!option) return { today: true, state: c === '0' ? 'current' : 'today' };
   const raw3b = PK.cand3b && PK.cand3b.site && PK.cand3b.site.crate;
   const sh = (raw3b && mk('3b|crate', raw3b, CRATE_BASE, 'crate')) || cand3('site', option, 'crate', CRATE_BASE);
   return sh ? { shape: sh, state: 'cand' } : { today: true, state: 'missing' };
 }
 function siteRes(n, pct) {
-  const c = stepVal('site'), building = shapeIn(SITE_BUILD[n]).shape;
+  const c = stepVal('site'), building = shapeIn(SITE_BUILD[n]).shape, o = ovrShape(`site_frame_${n}_${pct}`, BASE[SITE_BUILD[n]]);
+  if (o) return { shape: o, rise: 1, state: 'cand', building };
   if (c === 'B') {
     const f = cand3('site', 'frame', 'site' + n + '_' + pct, BASE[SITE_BUILD[n]]);
     return f ? { shape: f, rise: 1, state: 'cand', building } : { shape: building, rise: pct / 100, state: 'missing', building };
@@ -229,7 +248,7 @@ if (CHECK_BAD.length) addErr('Count self-check FAILED: ' + CHECK_BAD.slice(0, 6)
 const hex2rgb = (h) => [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16) / 255);
 const mix = (a, b, t) => { const x = hex2rgb(a), y = hex2rgb(b); return '#' + x.map((v, i) => Math.round((v + (y[i] - v) * t) * 255).toString(16).padStart(2, '0')).join(''); };
 const scaleHex = (h, k) => '#' + hex2rgb(h).map((v) => Math.min(255, Math.round(v * 255 * k)).toString(16).padStart(2, '0')).join('');
-const GROUND = { sand: D.palette.ground.sand_biome_1.ground, dark: D.palette.ground.other_biome_0.ground };
+const GROUND = { sand: D.palette.ground.sand_biome_1.ground, get dark() { return asHex({ ...OVR.palette, ...OVR.paletteDark }.DARK_GROUND) || D.palette.ground.other_biome_0.ground; } };
 const slotsFor = (owner, set) => { const nm = set === 'neon' ? 'neon' : 'normal', a = D.palette.owner_slots[String(owner)][nm].hex.slice(); return PAL ? PAL.apply(a, owner, nm) : a; };
 
 // ---------- palette, ground, cliffs, decoration, fog ----------
@@ -246,12 +265,18 @@ function pickKey(o, names) {
   return undefined;
 }
 const C5 = (group, step, opt) => { const g = PK.cand5 && PK.cand5[group], o = g && g[step], r = o && o[opt]; return r === undefined || r === null ? null : r; };
-function bandRes(letter) {
+const BAND_NAMES = ['SIDE', 'SIDE_DARK', 'SHADOW', 'GROUND_SHADOW_RADIUS', 'SHADOW_RADIUS', 'SHADOW_FLAT', 'BUILDING_SHADOW_GROW', 'BUILDING_SHADOW_OFFSET'];
+function bandRes(letter, ov) {
   const today = { state: 'current', side: D.palette.side, sideDark: D.palette.side_dark, shadow: { alpha: 0.3, r: 6, rAir: 8, flat: false, building: null } };
-  if (!letter || letter === '0') return today;
-  const raw = C5('colour', 'band', OPT5.band[letter]);
-  if (!raw) return { ...today, state: 'missing' };
-  const out = { ...today, state: 'cand', shadow: { ...today.shadow } }, sh = out.shadow;
+  let out = today;
+  if (letter && letter !== '0') {
+    const raw = C5('colour', 'band', OPT5.band[letter]);
+    out = raw ? bandWith(today, raw) : { ...today, state: 'missing' };
+  }
+  return ov && BAND_NAMES.some((n) => ov[n] !== undefined) ? bandWith(out, ov) : out;
+}
+function bandWith(base, raw) {
+  const out = { ...base, state: 'cand', shadow: { ...base.shadow } }, sh = out.shadow;
   const side = asHex(pickKey(raw, ['SIDE', 'unit_side'])), sd = asHex(pickKey(raw, ['SIDE_DARK', 'sideDark'])), sv = pickKey(raw, ['SHADOW']);
   if (side) out.side = side;
   if (sd) out.sideDark = sd;
@@ -264,11 +289,18 @@ function bandRes(letter) {
   if (grow != null || Array.isArray(off)) sh.building = { grow: grow || 0, off: Array.isArray(off) ? [fnum(off[0]) || 0, fnum(off[1]) || 0] : [0, 0] };
   return out;
 }
-function ownersRes(letter) {
+function ownersRes(letter, ov) {
   const today = { state: 'current', hex: {}, dark: {} };
-  if (!letter || letter === '0') return today;
-  const raw = C5('colour', 'owners', OPT5.owners[letter]);
-  if (!raw) return { ...today, state: 'missing' };
+  let out = today;
+  if (letter && letter !== '0') {
+    const raw = C5('colour', 'owners', OPT5.owners[letter]);
+    out = raw ? ownersFrom(raw) : { ...today, state: 'missing' };
+  }
+  if (!ov || !ov.OWNERS) return out;
+  const o = ownersFrom(ov.OWNERS);
+  return { state: 'cand', hex: { ...out.hex, ...o.hex }, dark: { ...out.dark, ...o.dark } };
+}
+function ownersFrom(raw) {
   const src = Array.isArray(raw) ? raw : pickKey(raw, ['OWNER_BASE', 'owners', 'colours', 'colors', 'hex', 'default', 'values', 'base']) || raw;
   const out = { state: 'cand', hex: {}, dark: {} };
   const take = (v) => (typeof v === 'string' ? asHex(v) : v && typeof v === 'object' ? asHex(pickKey(v, ['hex', 'base', 'roof', 'colour', 'color'])) : null);
@@ -279,7 +311,8 @@ function ownersRes(letter) {
   if (!Object.keys(out.hex).length) out.state = 'unparsed';
   return out;
 }
-function fogRes(letter) {
+function fogRes(letter, ov) {
+  if (ov && fnum(ov.FOG) > 0 && fnum(ov.FOG) <= 1) return { state: 'cand', factor: fnum(ov.FOG) };
   if (!letter || letter === '0') return { state: 'current', factor: null };
   const raw = C5('colour', 'fog', OPT5.fog[letter]);
   const f = fnum(raw) ?? fnum(pickKey(raw, ['FOG', 'factor', 'value', 'k', 'brightness', 'f', 'multiplier']));
@@ -294,7 +327,7 @@ function cliffRes(letter) {
 }
 const decorRes = (letter) => (!letter || letter === '0' ? null : (() => { const raw = C5('terrain', 'decor', OPT5.decor[letter]); return raw ? { state: 'cand', raw } : { state: 'missing', raw: null }; })());
 function cliffColours(res, gk) {
-  const key = gk === 'dark' ? 'other_biome_0' : 'sand_biome_1', g = D.palette.ground[key], raw0 = res ? res.raw : {};
+  const key = gk === 'dark' ? 'other_biome_0' : 'sand_biome_1', g = { ...D.palette.ground[key], ground: GROUND[gk] }, raw0 = res ? res.raw : {};
   const raw = pickKey(raw0, [gk, key, gk === 'dark' ? 'dark_biome' : 'sand_biome']) || raw0;
   const col = (v, today, how) => (asHex(v) ? asHex(v) : fnum(v) != null ? (how === 'L' ? lighten(g.ground, fnum(v)) : darken(g.ground, fnum(v))) : today);
   const top = col(pickKey(raw, ['top', 'cliff_top', 'top_factor', 'top_lighten', 'lighten']), g.cliff_top, 'L'), side = col(pickKey(raw, ['side', 'cliff_side', 'side_factor', 'side_darken', 'darken']), g.cliff_side, 'D');
@@ -305,10 +338,10 @@ function cliffColours(res, gk) {
   return { top, side, sideL, h, rim: rimOn ? { w: rimW, col: rimC } : null, ground: g.ground };
 }
 const palMemo = {};
-function palFor(sel) {
-  const key = JSON.stringify(sel);
+function palFor(sel, ov) {
+  const key = JSON.stringify([sel, ov || null]);
   if (palMemo[key]) return palMemo[key];
-  const band = bandRes(sel.band), owners = ownersRes(sel.owners), fog = fogRes(sel.fog), cliff = cliffRes(sel.cliff), decor = decorRes(sel.decor);
+  const band = bandRes(sel.band, ov), owners = ownersRes(sel.owners, ov), fog = fogRes(sel.fog, ov), cliff = cliffRes(sel.cliff), decor = decorRes(sel.decor);
   return (palMemo[key] = { sel, band, owners, fog, cliff, decor,
     apply(slots, owner, nm) {
       slots[2] = band.side; slots[3] = band.sideDark;
@@ -317,6 +350,113 @@ function palFor(sel) {
     } });
 }
 const setOf = () => (!LEGACY && stepVal('neon') === 'A' ? 'neon' : 'default');
+
+// ---------- round 6 options ----------
+const STEP_KEYS = ['surfaces', 'edge', 'power', 'owners', 'cargo', 'paused', 'wrecks', 'clash'];
+const STEPS6 = STEP_KEYS.filter((k) => k !== 'clash' || window.CAND6.clash);
+const HEX_NAMES = ['DARK_GROUND', 'WRECK_TOP', 'WRECK_SIDE', 'WRECK_SIDE_DARK', 'SIDE', 'SIDE_DARK', 'PILE_PAD', 'DOOR', 'BUILDING_SIDE_DARK', 'CANVAS', 'EDGE_SIDE', 'CARGO'];
+const NUM_NAMES = ['EDGE_HEIGHT', 'FOG', 'GROUND_SHADOW_RADIUS', 'SHADOW_RADIUS', 'BUILDING_SHADOW_GROW'];
+const PLAIN_NAMES = ['SHADOW', 'SHADOW_FLAT', 'BUILDING_SHADOW_OFFSET'];
+const NEW_ID = /^(.+)_(wreck|paused)$/;
+function newBase(id) {
+  const m = NEW_ID.exec(id);
+  if (!m) return null;
+  const b = BASE[m[1]], site = /^site_frame_([23])_(10|50|90)$/.exec(m[1]);
+  if (m[2] === 'wreck') return b && !b.footprint ? b : null;
+  return b && b.footprint ? b : site ? BASE[SITE_BUILD[site[1]]] : null;
+}
+const turretOk = (t) => Number.isInteger(t) && t >= 0 && t <= 63;
+const cellOk = (c) => Array.isArray(c) && c.length === 2 && c.every(Number.isFinite);
+function knownShapeId(id) {
+  if (NEW_ID.test(id)) return !!newBase(id);
+  return !!BASE[id] || id === 'salvage_crate' || /^pile_(big|small)_(100|60|25|5|0)$/.test(id) || /^site_frame_[23]_(10|50|90)$/.test(id);
+}
+function dataProblems(data) {
+  if (!data || typeof data !== 'object') return ['data is not an object'];
+  const bad = Object.keys(data).filter((k) => !['shapes', 'palette', 'paletteDark', 'overlay'].includes(k)).map((k) => 'unknown field ' + k);
+  Object.keys(data.shapes || {}).filter((id) => !knownShapeId(id)).forEach((id) => bad.push('unknown shape id ' + id));
+  if (data.overlay !== undefined && typeof data.overlay !== 'function') bad.push('overlay is not a function');
+  Object.keys(data.shapes || {}).filter((id) => NEW_ID.test(id) && !knownShapeId(id)).forEach((id) => bad.push(id + ': _wreck needs a unit id, _paused a building id or site_frame_<n>_<pct>'));
+  ['palette', 'paletteDark'].forEach((f) => Object.entries(data[f] || {}).forEach(([n, v]) => {
+    const ok = HEX_NAMES.includes(n) ? !!asHex(v) : NUM_NAMES.includes(n) ? fnum(v) != null : n === 'OWNERS' ? Array.isArray(v) && v.length === 8 && v.every(asHex) : PLAIN_NAMES.includes(n);
+    if (!ok) bad.push(f + '.' + n + ': unknown name or bad value');
+  }));
+  return bad;
+}
+const claimsOf = (d) => [...Object.keys(d.shapes || {}).map((id) => 'shape ' + id), ...new Set([...Object.keys(d.palette || {}), ...Object.keys(d.paletteDark || {})])].map((x) => (x.startsWith('shape ') ? x : 'palette ' + x));
+function ovrOf(datas) {
+  const out = { shapes: {}, palette: {}, paletteDark: {}, overlays: [] }, seen = new Set();
+  datas.filter(Boolean).forEach((d) => {
+    dataProblems(d).forEach((b) => addErr('round 6 option: ' + b));
+    claimsOf(d).forEach((c) => { if (seen.has(c)) addErr('round 6 options: two steps set ' + c); seen.add(c); });
+    Object.assign(out.shapes, d.shapes); Object.assign(out.palette, d.palette); Object.assign(out.paletteDark, d.paletteDark);
+    if (typeof d.overlay === 'function') out.overlays.push(d.overlay);
+  });
+  return out;
+}
+function withOvr(o, fn) { const prev = OVR; OVR = o; try { return fn(); } finally { OVR = prev; } }
+const ovrShape = (id, base) => (OVR.shapes[id] ? mk('ovr|' + id, OVR.shapes[id], base, id) : null);
+const optionOf = (key, show) => { const s = window.CAND6[key]; return s && show && show !== '0' ? s[show] : null; };
+const showOf = (key) => { const s = window.CAND6[key], r = window.R6[key]; return s && r && s[r] ? r : s && s.rec === 'B' && s.B ? 'B' : 'A'; };
+const optionKeys = (s) => ['A', 'B'].filter((o) => s[o]);
+const namesOk = (n) => Array.isArray(n) && n.length === 8 && n.every((x) => typeof x === 'string' && x.trim() !== '');
+const namesOf = (opt) => (opt && namesOk(opt.names) ? opt.names : null);
+let SAVED = {};
+const usedShow = (k) => { const r = SAVED[k] && SAVED[k].pick, s = window.CAND6[k]; return s && r && s[r] ? r : showOf(k); };
+const usedOptions = (key) => ((window.CAND6[key] && window.CAND6[key].uses) || []).filter((k) => STEP_KEYS.includes(k) && k !== key).map((k) => optionOf(k, usedShow(k))).filter(Boolean);
+const mergeOvr = (a, b) => ({ shapes: { ...a.shapes, ...b.shapes }, palette: { ...a.palette, ...b.palette }, paletteDark: { ...a.paletteDark, ...b.paletteDark }, overlays: [...a.overlays, ...b.overlays] });
+function stepProblems(only) {
+  const out = [], owner = {};
+  if (!only) Object.keys(window.CAND6).filter((k) => !STEP_KEYS.includes(k)).forEach((k) => out.push(`CAND6 ${k} key unknown (valid: ${STEP_KEYS.join(', ')})`));
+  Object.entries(window.CAND6).filter(([k, s]) => STEP_KEYS.includes(k) && s && (!only || k === only)).forEach(([k, s]) => {
+    if (!optionKeys(s).includes(s.rec)) out.push(`CAND6 ${k} rec invalid (${s.rec} is not one of ${optionKeys(s).join(', ') || 'no options'})`);
+    optionKeys(s).filter((o) => s[o].names !== undefined && !namesOk(s[o].names)).forEach((o) => out.push(`CAND6 ${k} ${o} names invalid (eight non-empty strings, one per owner slot)`));
+    if (s.uses !== undefined && !(Array.isArray(s.uses) && s.uses.every((u) => STEP_KEYS.includes(u) && u !== k))) out.push(`CAND6 ${k} uses invalid (an array of other step keys)`);
+    if (s.pics && !ZOOMS.includes(String(s.pics.zoom))) out.push(`CAND6 ${k} pics invalid (zoom ${s.pics.zoom} is not 0.5, 1 or 2)`);
+    const shapeIds = new Set(optionKeys(s).flatMap((o) => Object.keys((s[o].data || {}).shapes || {})));
+    [s.view, s.pics && s.pics.today, s.pics && s.pics.picked].flatMap((v) => (v && v.place) || []).forEach((pl) => {
+      if (!cellOk(pl.cell)) out.push(`CAND6 ${k} place invalid (${pl.id} has no cell [x, y])`);
+      if (pl.turret !== undefined && !turretOk(pl.turret)) out.push(`CAND6 ${k} place invalid (${pl.id} turret must be a whole bucket 0 to 63)`);
+      if (pl.turret !== undefined && !optionKeys(s).some((o) => (((s[o].data || {}).shapes || {})[pl.id] || { parts: [] }).parts.some((pt) => pt.angle === 'turret'))) out.push(`CAND6 ${k} place invalid (${pl.id} has turret but no shape of it has a turret part)`);
+      if (!newBase(pl.id)) out.push(`CAND6 ${k} place invalid (${pl.id} is not a new _wreck or _paused id)`);
+      else if (!shapeIds.has(pl.id)) out.push(`CAND6 ${k} place invalid (${pl.id} is in no option's shapes)`);
+    });
+    if (!only) new Set(optionKeys(s).flatMap((o) => claimsOf(s[o].data || {}))).forEach((c) => { if (owner[c]) out.push(`CAND6 ${k} owns clash (${c} is also set by step ${owner[c]})`); else owner[c] = k; });
+  });
+  return out;
+}
+const SEL6 = { ...ALL_PICKED, fix6: true };
+const FLAT_SHADOW = { shapes: {}, palette: { SHADOW_FLAT: true }, paletteDark: {}, overlays: [] };
+// The decided look: every baked pick and the 2:1 unit shadow; the power bolt only where a picture asks, since it marks a no-power state.
+const r6Look = (power) => mergeOvr(ovrOf(Object.entries(window.R6).filter(([k]) => power || k !== 'power').map(([k, l]) => (optionOf(k, l) || {}).data)), FLAT_SHADOW);
+function stepStage(key, show, over, scale) {
+  CUR = SEL6; SCALE = scale || 1;
+  const opt = optionOf(key, show), s = window.CAND6[key], used = usedOptions(key);
+  const v = { ...(s && s.view), ...over, names: namesOf(opt) || namesOf(used[used.length - 1]) };
+  return withOvr(mergeOvr(ovrOf(used.map((u) => u.data)), ovrOf([opt && opt.data])), () => (v.palette ? paletteStage(v) : baseStage(v)));
+}
+function itemSlots(it, cfg, e) {
+  if (it.slots) return it.slots;
+  const s = slotsFor(it.owner, cfg.set);
+  if (it.bld || it.fp) {
+    if (e.BUILDING_SIDE_DARK) s[3] = asHex(e.BUILDING_SIDE_DARK);
+    if (e.DOOR) s[7] = asHex(e.DOOR);
+  }
+  if (it.wreck) {
+    if (e.WRECK_TOP) [0, 1, 4, 6, 7].forEach((k) => { s[k] = asHex(e.WRECK_TOP); });
+    if (e.WRECK_SIDE) s[2] = asHex(e.WRECK_SIDE);
+    if (e.WRECK_SIDE_DARK) s[3] = asHex(e.WRECK_SIDE_DARK);
+  }
+  return s;
+}
+function runOverlays(ctx, cfg, items, b) {
+  const z = +cfg.zoom, api = { project: (cx, cy) => toScreen(b.ox, b.oy, z, [cx, cy]), palette: eff(), ground: GROUND[cfg.ground], dark: cfg.ground === 'dark', zoom: z, lighten, darken, mix, fillPoly, slotsFor };
+  OVR.overlays.forEach((f) => {
+    ctx.save();
+    try { f(ctx, { zoom: z, ground: cfg.ground, items, origin: { ox: b.ox, oy: b.oy }, fogEdge: b.edge }, api); } catch (e) { addErr('overlay: ' + e.message); }
+    ctx.restore();
+  });
+}
 
 // ---------- stage ----------
 const plane = (cx, cy) => [32 * (cx - cy), 16 * (cx + cy)];
@@ -409,7 +549,7 @@ function paintShadow(ctx, it, z) {
 let FONT = '"Public Sans", Arial, sans-serif';
 // item: {shape, owner, ax, ay (stage px of the anchor), fp (footprint, buildings), tint, heading, unit, empty, label}
 function paintItems(ctx, items, cfg) {
-  const z = +cfg.zoom;
+  const z = +cfg.zoom, e = eff();
   items.filter((it) => it.fp).forEach((it) => {
     if (it.bld && !LEGACY) paintShadow(ctx, it, z);
     diamondPath(ctx, it.ax, it.ay, it.fp[0], it.fp[1], z);
@@ -425,9 +565,12 @@ function paintItems(ctx, items, cfg) {
     }
     if (it.square) { const w = 4 * z; ctx.fillStyle = '#e8c547'; ctx.fillRect(it.ax - w / 2, it.ay - w / 2, w, w); return; }
     if (it.selected && it.fp) { diamondPath(ctx, it.ax, it.ay, it.fp[0], it.fp[1], z); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); }
-    if (it.selected && it.hw) { const w = it.hw * z; ctx.beginPath(); ctx.moveTo(it.ax - w, it.ay); ctx.lineTo(it.ax, it.ay - w / 2); ctx.lineTo(it.ax + w, it.ay); ctx.lineTo(it.ax, it.ay + w / 2); ctx.closePath(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke(); }
+    const hwPath = () => { const w = it.hw * z; ctx.beginPath(); ctx.moveTo(it.ax - w, it.ay); ctx.lineTo(it.ax, it.ay - w / 2); ctx.lineTo(it.ax + w, it.ay); ctx.lineTo(it.ax, it.ay + w / 2); ctx.closePath(); };
+    if (it.selected && it.hw && !CUR.r6) { hwPath(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke(); }
     if (it.unit && !LEGACY) paintShadow(ctx, it, z);
-    drawShape(ctx, it.shape, { x: it.ax, y: it.ay, zoom: z, heading: it.heading || 0, turret: it.unit ? it.heading || 0 : null, rise: it.rise, slots: it.slots || slotsFor(it.owner, cfg.set), flat: null, shadow: LEGACY && !!it.unit, variant: it.variant });
+    drawShape(ctx, it.shape, { x: it.ax, y: it.ay, zoom: z, heading: it.heading || 0, turret: it.unit ? (it.turretAng != null ? it.turretAng : it.heading || 0) : null, rise: it.rise, slots: itemSlots(it, cfg, e), flat: null, shadow: LEGACY && !!it.unit, variant: it.variant });
+    // The decided unit mark sits above the piece (marks.js select); the old one under the hull showed only as a fragment.
+    if (it.selected && it.hw && CUR.r6) { ctx.save(); ctx.lineJoin = 'round'; hwPath(); ctx.strokeStyle = 'rgba(14,18,22,0.78)'; ctx.lineWidth = 3.25 * z; ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.25 * z; ctx.stroke(); ctx.restore(); }
   });
   ctx.font = `${12 * z}px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
   items.forEach((it) => (it.texts || []).forEach((t) => ctx.fillText(t.t, it.ax + t.dx, it.ay + t.dy)));
@@ -518,7 +661,7 @@ function baseItems(cfg) {
   sites.forEach((st) => {
     const c = SCENES.centreOf(st), p = toPx(c[0], c[1]), pct = st.rise >= 0.7 ? 90 : 50, owner = owners[st.side === 'west' ? 0 : 1], fac = st.side === 'west' ? fw : fe;
     const choice = stepVal('site'), bshape = shapeIn(st.bid).shape;
-    const frame = choice === 'B' && fac === 'frc' ? cand3('site', 'frame', 'site' + st.n + '_' + pct, BASE[st.bid]) : null;
+    const frame = ovrShape(`site_frame_${st.n}_${pct}`, BASE[st.bid]) || (choice === 'B' && fac === 'frc' ? cand3('site', 'frame', 'site' + st.n + '_' + pct, BASE[st.bid]) : null);
     if (frame) { items.push(siteItem(st.n, { shape: frame, rise: 1 }, cfg, owner, p[0], p[1], pct, { depth: c[0] + c[1], fp: st.fp, bld: true })); return; }
     const text = choice === '0' ? pct + '%' : null, post = choice === 'B' ? postShapes(bshape, st.n) : null;
     if (post) items.push({ shape: post.back, owner, ax: p[0], ay: p[1], depth: c[0] + c[1] - 0.001, bld: true });
@@ -547,6 +690,13 @@ function baseItems(cfg) {
     const cell = frcEast ? SCENES.transpose([x, y]) : [x, y], c = crateRes(), p = toPx(cell[0], cell[1]);
     items.push(c.today ? { square: true, ax: p[0], ay: p[1], depth: cell[0] + cell[1] } : { shape: c.shape, owner: 0, slots: pileSlots(cfg), ax: p[0], ay: p[1], depth: cell[0] + cell[1] });
   });
+  (cfg.place || []).forEach((pl) => {
+    const base = newBase(pl.id);
+    if (!base || !cellOk(pl.cell)) { addErr(`place: ${pl.id} needs a _wreck or _paused id and a cell [x, y]`); return; }
+    const sh = ovrShape(pl.id, base), p = sh && toPx(pl.cell[0], pl.cell[1]);
+    const tb = pl.turret !== undefined && turretOk(pl.turret) ? { turretAng: (pl.turret * Math.PI * 2) / 64 } : {};
+    if (sh) items.push({ shape: sh, owner: pl.owner || owners[0], ax: p[0], ay: p[1], depth: pl.cell[0] + pl.cell[1], ...(base.footprint ? { fp: base.footprint, bld: true, site: pl.id.endsWith('_paused') } : { unit: true, noShadow: !pl.shadow, heading: ang(pl.heading || 0), wreck: pl.id.endsWith('_wreck'), ...tb }) });
+  });
   SCENES.AIR.forEach(([x, y], i) => unitItem('usa_collector', owners[i], [x, y], a + i * Math.PI, { air: true, enemy: i === 1 }));
   if (PAL && PAL.cliff) {
     SC5.CELLS.forEach((c) => items.push({ cliff: true, cell: c, depth: c[0] + c[1] + 1 }));
@@ -569,7 +719,10 @@ function baseItems(cfg) {
     items.forEach((it) => { if (!it.cliff) { it.ax += dx; it.ay += dy; } });
     ox += dx; oy += dy;
   }
-  const edge = toPx(SC5.FOG_EDGE[0], SC5.FOG_EDGE[1])[0], shown = fog ? items.filter((it) => !(it.enemy && it.ax > edge)) : items; // enemy units in the fog are not seen; buildings stay (frozen)
+  // The decided look keeps every own unit out of the fog: the straight edge moves right past the last one.
+  const edge0 = toPx(SC5.FOG_EDGE[0], SC5.FOG_EDGE[1])[0], own = items.filter((it) => it.unit && !it.enemy);
+  const edge = CUR.r6 ? Math.max(edge0, ...own.map((it) => it.ax + bboxPx(it.shape, z).x1 + 4 * z)) : edge0;
+  const shown = fog ? items.filter((it) => !(it.enemy && it.ax > edge)) : items; // enemy units in the fog are not seen; buildings stay (frozen)
   shown.sort((p, q) => (p.air ? 1 : 0) - (q.air ? 1 : 0) || p.depth - q.depth);
   return { items: shown, ox, oy, edge };
 }
@@ -578,7 +731,8 @@ function baseItems(cfg) {
 const CFG0 = { zoom: '0.5', ground: 'sand', owner: 0, pair: 0, heading: 0, cam: null, dmg: false, mix: false };
 function startStage(cfg) {
   LEGACY = !!CUR.legacy;
-  PAL = LEGACY ? null : palFor(CUR.steps);
+  GKEY = cfg.ground;
+  PAL = LEGACY ? null : palFor(CUR.steps, eff());
   cfg.triples = LEGACY ? OWNERS_L : OWNERS_5;
   cfg.set = setOf();
   cfg.cliffCol = PAL && PAL.cliff ? cliffColours(PAL.cliff, cfg.ground) : null;
@@ -600,6 +754,32 @@ function baseStage(over) {
   if (PAL) paintDecorGround(ctx, z, b.ox, b.oy, PAL.decor, cfg.ground);
   paintItems(ctx, b.items, cfg);
   if (PAL && PAL.fog.factor && PAL.fog.factor < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - PAL.fog.factor})`; ctx.fillRect(b.edge, 0, 1280 - b.edge, 720); }
+  runOverlays(ctx, cfg, b.items, b);
+  return el;
+}
+function paletteStage(over) {
+  const cfg = { ...CFG0, ...over }, { el, ctx } = startStage(cfg), z = +cfg.zoom, names = cfg.names || OWNER_NAME, unit = (id, o, x, y) => ({ shape: shapeIn(id).shape, owner: o, ax: x, ay: y, unit: true, heading: ang(cfg.heading) });
+  [['sand', 0], ['dark', 640]].forEach(([gk, x0]) => {
+    cfg.ground = gk; GKEY = gk; PAL = palFor(CUR.steps, eff());
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, 0, 640, 720); ctx.clip();
+    paintGround(ctx, z, 0, 0, GROUND[gk]);
+    const items = [];
+    for (let i = 0; i < 8; i++) {
+      const cx = x0 + 40 + 80 * i, o = i + 1;
+      items.push({ shape: shapeIn('usa_defence').shape, owner: o, ax: cx, ay: 110, fp: BASE.usa_defence.footprint, bld: true });
+      items.push(unit('usa_tank', o, cx, 215), unit('usa_light_vehicle', o, cx, 315), unit('usa_tank', o, cx, 545));
+      [-18, 0, 18].forEach((dx, k) => { items.push(unit('usa_rifle_infantry', o, cx + dx, 405 + (k % 2) * 12), unit('usa_rifle_infantry', o, cx + dx, 630 + (k % 2) * 12)); });
+    }
+    paintItems(ctx, items, cfg);
+    if (PAL.fog.factor) { ctx.fillStyle = `rgba(0,0,0,${1 - PAL.fog.factor})`; ctx.fillRect(x0, 480, 640, 240); }
+    ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.fillStyle = '#fff';
+    for (let i = 0; i < 8; i++) {
+      const cx = x0 + 40 + 80 * i;
+      ctx.font = `600 11px ${FONT}`; ctx.strokeText(names[i], cx, 698); ctx.fillText(names[i], cx, 698);
+      ctx.font = `400 10px ${FONT}`; ctx.strokeText(slotsFor(i + 1, cfg.set)[0].toUpperCase(), cx, 711); ctx.fillText(slotsFor(i + 1, cfg.set)[0].toUpperCase(), cx, 711);
+    }
+    ctx.restore();
+  });
   return el;
 }
 function rowStage(key, over) {
@@ -640,12 +820,21 @@ const placeholdersStage = () => gridStage('1', (cfg, items) => {
   [[700, 380], [825, 320], [940, 385]].forEach(([x, y]) => { const c = crateRes(); items.push(c.today ? { square: true, ax: x, ay: y } : { shape: c.shape, owner: 0, slots: pileSlots(cfg), ax: x, ay: y }); });
   [10, 50, 90].forEach((pct, i) => items.push(siteItem(3, siteRes(3, pct), cfg, 1, [213, 640, 1067][i], 580, pct, {})));
 });
+const oldShapesCheck = () => gridStage('1', (cfg, items) => {
+  const body = (id) => ({ shape: shapeIn(id).shape, owner: 1, fp: BASE[id].footprint });
+  const today = (id) => ({ shape: BASE[id], owner: 1, ...(BASE[id].footprint ? { fp: BASE[id].footprint } : { unit: true, heading: 0 }) });
+  FACTIONS.forEach((f, r) => layoutRow([today(f + '_defence'), ...bodiesOf(f).map(body)], [130, 300, 470][r], 1, items));
+  layoutRow(['frc_builder', 'china_collector', 'frc_hole_1', 'frc_hole_2', 'frc_hole_3'].map(today), 640, 1, items);
+});
 </script>
+<script src="marks.js" onerror="MISSING.push('marks.js')"></script>
 <script src="pics.js" onerror="MISSING.push('pics.js')"></script>
 <script>
 'use strict';
 // ---------- export, round trip and audit (hashes #export, #roundtrip, #audit) ----------
-const EXPORT_SEL = { ...ALL_PICKED, fix6: true };
+const EXPORT_SEL = SEL6;
+const R6 = window.R6;
+const r6Ovr = () => ovrOf(Object.entries(R6).map(([k, l]) => (optionOf(k, l) || {}).data));
 const POSE_HEADINGS = [0, 8, 16, 24, 32, 40, 48, 56], TURRET_OFFSET = 11;
 const hasTurret = (parts) => parts.some((p) => p.angle === 'turret');
 const partsAt = (s, detail) => (detail > 0 && s.parts_by_detail && s.parts_by_detail[detail]) || s.parts;
@@ -679,16 +868,26 @@ function exportExtras() {
     out.push(plainShape(need(id, siteRes(n, pct)), { id, role: 'construction_frame', footprint: [n, n] }));
   }));
   out.push(plainShape(need('salvage_crate', crateRes()), { id: 'salvage_crate', role: 'salvage_crate', footprint: [1, 1] }));
+  Object.keys(OVR.shapes).filter((id) => NEW_ID.test(id) && knownShapeId(id)).sort().forEach((id) => {
+    const sh = ovrShape(id, newBase(id));
+    if (sh) out.push(plainShape(sh, { id, role: id.endsWith('_wreck') ? 'wreck' : 'construction_paused' }));
+  });
   return out;
 }
 function exportPalette() {
-  const pal = palFor(EXPORT_SEL.steps), out = { note: 'only the values that differ from shapes-current.json' };
+  const pal = palFor(EXPORT_SEL.steps, eff()), out = { note: 'only the values that differ from shapes-current.json' };
   if (pal.band.state === 'cand') Object.assign(out, { side: pal.band.side, side_dark: pal.band.sideDark });
   if (pal.owners.state === 'cand') out.owner_base = [1, 2, 3, 4, 5, 6, 7, 8].map((o) => pal.owners.hex[o]);
   if (pal.cliff && pal.cliff.state === 'cand') out.cliff = pal.cliff.raw;
   if (pal.fog.state === 'cand') out.fog = pal.fog.factor;
   const cargo = cargoHex();
   if (cargo) out.cargo = cargo;
+  if (GROUND.dark !== D.palette.ground.other_biome_0.ground) out.dark_ground = GROUND.dark;
+  const wreck = { top: OVR.palette.WRECK_TOP, side: OVR.palette.WRECK_SIDE, side_dark: OVR.palette.WRECK_SIDE_DARK };
+  if (Object.values(wreck).some(Boolean)) out.wreck = Object.fromEntries(Object.entries(wreck).filter(([, v]) => v).map(([k, v]) => [k, asHex(v)]));
+  const baked = namesOf(optionOf('owners', R6.owners));
+  if (baked) out.owner_names = baked;
+  if (Object.keys(OVR.palette).length || Object.keys(OVR.paletteDark).length) out.round6 = { palette: OVR.palette, paletteDark: OVR.paletteDark };
   return out;
 }
 function corrections(shapes) {
@@ -716,7 +915,7 @@ function ser(v, depth) {
 }
 
 async function runExport() {
-  CUR = EXPORT_SEL;
+  CUR = EXPORT_SEL; OVR = r6Ovr(); useGround(false);
   const shapes = D.shapes.map((s) => exportShape(s.id)), extras = exportExtras();
   const doc = {
     meta: {
@@ -724,7 +923,7 @@ async function runExport() {
       git_revision: D.meta.git_revision,
       date_utc: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
       note: 'git_revision is the game revision of shapes-current.json this export is built on. A detail level without its own list uses parts; a damage variant is used at every detail.',
-      picks: { steps: EXPORT_SEL.steps, fix4b: EXPORT_SEL.fix4b, fix6: EXPORT_SEL.fix6 },
+      picks: { steps: EXPORT_SEL.steps, fix4b: EXPORT_SEL.fix4b, fix6: EXPORT_SEL.fix6, ...(Object.keys(R6).length ? { round6: R6 } : {}) },
       provisional: {
         missing_zoom2: shapes.filter((s) => !(s.parts_by_detail && s.parts_by_detail[2])).map((s) => s.id),
         note: 'No zoom 2 version is drawn for these ids (or the drawn one sits on a hull that was replaced); they bake from parts at detail 2. Never invented here.',
@@ -881,12 +1080,16 @@ function ownerShare(shape, detail) {
   return total / POSE_HEADINGS.length;
 }
 // Findings that are accepted or owned elsewhere; each prints as a KNOWN line with its source. Nothing is added without the user.
-const DARK_TOPS = { 1: 1.86, 2: 1.09, 3: 2.07, 5: 1.65, 6: 1.21, 7: 1.13, 8: 2.53 }; // owner top on the dark ground, measured; a lower value fails
+// Owner top to ground colour-vision distance (minDistance), today's values floored to 0.01; the bar is not decided (user 2026-11-17), so a lower value fails.
+const GROUND_KINDS = ['sand', 'dark ground', 'fogged sand', 'fogged dark ground'];
+const DE_FROM = {
+  'sand': [71.74, 14.31, 15.5, 49.41, 31.88, 70.65, 34.95, 41.47],
+  'dark ground': [54.37, 20.55, 20.98, 73.71, 53.92, 47.67, 15.27, 34.08],
+  'fogged sand': [50.63, 10.18, 10.93, 35.43, 22.96, 49.75, 24.37, 29.14],
+  'fogged dark ground': [38.78, 14.04, 14.65, 52.11, 37.94, 33.99, 11.03, 24.06],
+};
 const KNOWN = [
-  { re: /^contrast owner \d \w+ default on sand:/, source: 'design-answers-2026-11-08.md:653 (round 5, lifted default set): "No owner top reaches 3:1 against sand"; the side band carries the outline' },
-  { re: /^contrast owner \d \w+ default in fog on sand:/, source: 'accepted (user, 2026-11-17): fog dims owner colour on purpose; the side band separates shapes' },
-  { re: /^contrast owner (\d) \w+ default on dark ground: ([\d.]+)/, ok: (m) => +m[2] >= DARK_TOPS[m[1]], source: 'open: round 6 pick step owners_dark (user, 2026-11-17); Task 24 removes this entry' },
-  { re: /^contrast cargo colour on sand: ([\d.]+)/, ok: (m) => +m[1] >= 2.44, source: 'open: round 6 pick step cargo (user, 2026-11-17); Task 24 removes this entry' },
+  ...GROUND_KINDS.map((g) => ({ re: new RegExp(`^colour vision owner (\\d) \\w+ default from ${g}: smallest dE ([\\d.]+)`), ok: (m) => +m[2] >= DE_FROM[g][m[1] - 1], when: () => !R6.owners, source: 'measured, bar not decided (user 2026-11-17)' })),
   { re: /^china_rifle_infantry owner colour share at detail 2: ([\d.]+) %/, ok: (m) => +m[1] >= 21.2, source: 'design-answers-2026-11-08.md:686 records about 23 % against the 30 % floor; 21.2 % is the value measured on this page, a lower value is not known' },
 ];
 
@@ -896,54 +1099,178 @@ function subjectsOf(shape) {
   Object.entries(shape.damage_variants || {}).forEach(([v, d]) => views.push(['damage ' + v, d.parts]));
   return views.map(([tag, parts]) => ({ tag, shape: { ...shape, parts, has_turret: hasTurret(parts), damage_variants: null, parts_by_detail: null } }));
 }
-function runAuditChecks() {
-  CUR = EXPORT_SEL; LEGACY = false; PAL = palFor(EXPORT_SEL.steps);
-  const found = [];
-  let checks = 0;
-  const check = (ok, line) => { checks++; if (!ok) found.push(line); };
-  const shapes = D.shapes.map((s) => exportShape(s.id)).concat(exportExtras().filter((e) => e.footprint));
+function newAudit(prefix) {
+  const a = { found: [], checks: 0, infos: [] };
+  a.check = (ok, line) => { a.checks++; if (!ok) a.found.push(prefix + line); };
+  a.count = () => { a.checks++; };
+  a.measure = (line) => { a.checks++; a.found.push(prefix + line); };
+  a.info = (line) => a.infos.push(prefix + line);
+  a.add = (line) => a.found.push(prefix + line);
+  return a;
+}
+const auditShapesNow = () => D.shapes.map((s) => exportShape(s.id)).concat(exportExtras().filter((e) => e.footprint || e.role === 'wreck'));
+function shapeFindings(a, shapes) {
   shapes.forEach((s) => subjectsOf(s).forEach(({ tag, shape }) => {
-    const a = auditAny(shape);
-    checks++;
-    a.issues.forEach((issue) => found.push(`${s.id} ${tag}: ${issue}`));
+    a.count();
+    auditAny(shape).issues.forEach((issue) => a.add(`${s.id} ${tag}: ${issue}`));
   }));
   shapes.filter((s) => SHARE_FLOOR[s.role]).forEach((s) => [0, 2].forEach((d) => {
     const share = ownerShare({ ...s, damage_variants: null }, d);
-    check(share >= SHARE_FLOOR[s.role], `${s.id} owner colour share at detail ${d}: ${(share * 100).toFixed(1)} % (floor ${SHARE_FLOOR[s.role] * 100} %)`);
+    a.check(share >= SHARE_FLOOR[s.role], `${s.id} owner colour share at detail ${d}: ${(share * 100).toFixed(1)} % (floor ${SHARE_FLOOR[s.role] * 100} %)`);
   }));
-  const grounds = [['sand', GROUND.sand], ['dark ground', GROUND.dark], ['HUD slab', SLAB]], fog = PAL.fog.factor;
-  for (let o = 1; o <= 8; o++) {
-    const top = slotsFor(o, 'default')[0];
-    grounds.forEach(([name, g]) => check(contrast(top, g) >= 3, `contrast owner ${o} ${OWNER_NAME[o - 1]} default on ${name}: ${contrast(top, g).toFixed(2)} (bar 3)`));
-    if (fog) check(contrast(scaleHex(top, fog), scaleHex(GROUND.sand, fog)) >= 3, `contrast owner ${o} ${OWNER_NAME[o - 1]} default in fog on sand: ${contrast(scaleHex(top, fog), scaleHex(GROUND.sand, fog)).toFixed(2)} (bar 3)`);
+}
+function useGround(dark) { GKEY = dark ? 'dark' : 'sand'; PAL = palFor(EXPORT_SEL.steps, eff()); }
+const ownerTops = () => [1, 2, 3, 4, 5, 6, 7, 8].map((o) => slotsFor(o, 'default')[0]);
+const HUD_AMBER = '#f7c871';
+function cargoApart(a, cargo, tag) {
+  const far = (what, hex) => a.check(minDistance(cargo, hex) >= 20, `colour vision cargo colour / ${what}${tag}: smallest dE ${minDistance(cargo, hex).toFixed(1)} (bar 20)`);
+  ownerTops().forEach((top, i) => far(`owner ${i + 1} ${OWNER_NAME[i]}`, top));
+  far('HUD amber', HUD_AMBER);
+}
+const ownerMin = (tops, g) => Math.min(...tops.map((t) => minDistance(t, g)));
+const TODAY_MIN = () => Object.fromEntries(GROUND_KINDS.map((k) => [k, Math.min(...DE_FROM[k])]));
+// The palette as a whole (owner order may change): pairs, HUD slab, the per-ground minimum owner distance against today's minimum, cargo and HUD amber, side bands.
+function paletteChecks(a, data, names) {
+  const today = TODAY_MIN();
+  const sets = [['sand', false], ['dark ground', true]].map(([name, dark]) => { useGround(dark); return { name, dark, tops: ownerTops(), g: GROUND[dark ? 'dark' : 'sand'], cargo: cargoHex(), band: PAL.band, fog: PAL.fog.factor }; });
+  sets.forEach(({ name, tops, g, cargo, band, fog }) => {
+    for (let x = 0; x < 8; x++) for (let y = x + 1; y < 8; y++) {
+      const m = minDistance(tops[x], tops[y]);
+      a.check(m >= 20, `colour vision owner ${x + 1} ${names[x]} / ${y + 1} ${names[y]} (${name} set): smallest dE ${m.toFixed(2)} (bar 20)`);
+    }
+    tops.forEach((top, i) => {
+      const n = `${i + 1} ${names[i]}`;
+      a.check(contrast(top, SLAB) >= 3, `contrast owner ${n} on HUD slab (${name} set): ${contrast(top, SLAB).toFixed(2)} (bar 3)`);
+      if (cargo) a.check(minDistance(top, cargo) >= 20, `colour vision owner ${n} / cargo colour (${name} set): smallest dE ${minDistance(top, cargo).toFixed(2)} (bar 20)`);
+      a.check(minDistance(top, HUD_AMBER) >= 20, `colour vision owner ${n} / HUD amber (${name} set): smallest dE ${minDistance(top, HUD_AMBER).toFixed(2)} (bar 20)`);
+    });
+    [['SIDE', band.side], ['SIDE_DARK', band.sideDark]].forEach(([n, hex]) => a.check(contrast(hex, g) >= 3, `contrast band ${n} on ${name}: ${contrast(hex, g).toFixed(2)} (bar 3)`));
+    const kinds = [[name, tops, g]];
+    if (fog) kinds.push([`fogged ${name}`, tops.map((t) => scaleHex(t, fog)), scaleHex(g, fog)]);
+    kinds.forEach(([kind, ts, gg]) => {
+      const m = ownerMin(ts, gg);
+      a.info(`palette minimum owner distance from ${kind}: ${m.toFixed(2)} (today's minimum ${today[kind].toFixed(2)})`);
+      a.check(m >= today[kind] - 1e-9, `colour vision owner minimum from ${kind}: ${m.toFixed(2)} (not below today's ${today[kind].toFixed(2)})`);
+    });
+  });
+}
+function usesChecks(a, data, usedDatas, names, usedKeys) {
+  OVR = mergeOvr(ovrOf(usedDatas), ovrOf([data]));
+  [['sand', false], ['dark ground', true]].forEach(([name, dark]) => {
+    useGround(dark);
+    const cargo = cargoHex();
+    if (!cargo) return;
+    const tops = ownerTops(), ds = tops.map((t) => minDistance(t, cargo)), low = ds.indexOf(Math.min(...ds));
+    a.info(`smallest owner / cargo colour distance with the ${usedKeys} option shown (${name} set): ${ds[low].toFixed(2)} (owner ${low + 1} ${names[low]}, bar 20)`);
+    tops.forEach((top, i) => a.check(ds[i] >= 20, `colour vision owner ${i + 1} ${names[i]} / cargo colour (with the ${usedKeys} option shown, ${name} set): smallest dE ${ds[i].toFixed(2)} (bar 20)`));
+  });
+}
+function wreckInfo(a, data, used, usedNames) {
+  const sets = [['today\'s owners', ovrOf([data]), OWNER_NAME], used.length && ['the used option\'s owners', mergeOvr(ovrOf(used.map((u) => u.data)), ovrOf([data])), usedNames]].filter(Boolean);
+  sets.forEach(([label, ovr, names]) => {
+    OVR = ovr;
+    [['sand', false], ['dark ground', true]].forEach(([name, dark]) => {
+      useGround(dark);
+      const top = asHex(eff().WRECK_TOP), g = GROUND[dark ? 'dark' : 'sand'], fog = PAL.fog.factor;
+      if (!top) return;
+      const line = (where, hex, bg) => a.info(`wreck top ${top} on ${where}: contrast ${contrast(hex, bg).toFixed(2)}, colour vision distance ${minDistance(hex, bg).toFixed(2)}`);
+      line(name, top, g);
+      if (fog) line(`fogged ${name}`, scaleHex(top, fog), scaleHex(g, fog));
+      const ds = ownerTops().map((t) => minDistance(t, top)), low = ds.indexOf(Math.min(...ds));
+      a.info(`wreck top ${top} smallest colour vision distance to an owner top (${label}, ${name} set): ${ds[low].toFixed(2)} (owner ${low + 1} ${names[low]})`);
+    });
+  });
+}
+function auditOption(key, opt, data, names, used) {
+  const a = newAudit(`CAND6 ${key} ${opt} `);
+  dataProblems(data).forEach((p) => a.check(false, 'data: ' + p));
+  OVR = ovrOf([data]);
+  const ids = Object.keys(OVR.shapes).filter(knownShapeId);
+  useGround(false);
+  shapeFindings(a, auditShapesNow().filter((s) => ids.includes(s.id)));
+  [['sand', false, GROUND.sand], ['dark ground', true, GROUND.dark]].forEach(([name, dark, g]) => {
+    useGround(dark);
+    const e = eff(), set = (n) => (data.palette || {})[n] !== undefined || (dark && (data.paletteDark || {})[n] !== undefined);
+    if (set('CARGO') || (dark && set('DARK_GROUND'))) {
+      const cargo = cargoHex(), slabs = set('CARGO') ? [[`pile base slab (${name} set)`, PAL.band.sideDark], [`HUD slab (${name} set)`, SLAB]] : [];
+      if (cargo) [[`${name}`, g], ...slabs].forEach(([where, bg]) => a.check(contrast(cargo, bg) >= 3, `contrast cargo colour on ${where}: ${contrast(cargo, bg).toFixed(2)} (bar 3)`));
+    }
+    if (set('CARGO') && cargoHex()) {
+      const cargo = cargoHex(), far = (what, hex) => a.check(minDistance(cargo, hex) >= 20, `colour vision cargo colour / ${what} (${name} set): smallest dE ${minDistance(cargo, hex).toFixed(2)} (bar 20)`);
+      far('HUD amber', HUD_AMBER);
+    }
+    if (set('BUILDING_SIDE_DARK')) a.check(contrast(e.BUILDING_SIDE_DARK, g) >= 3, `contrast building side dark on ${name}: ${contrast(e.BUILDING_SIDE_DARK, g).toFixed(2)} (bar 3)`);
+    [['SIDE', PAL.band.side], ['SIDE_DARK', PAL.band.sideDark]].filter(([n]) => set(n)).forEach(([n, hex]) => a.check(contrast(hex, g) >= 3, `contrast band ${n} on ${name}: ${contrast(hex, g).toFixed(2)} (bar 3)`));
+  });
+  if (['OWNERS', 'DARK_GROUND', 'CARGO'].some((n) => (data.palette || {})[n] !== undefined || (data.paletteDark || {})[n] !== undefined)) paletteChecks(a, data, names || OWNER_NAME);
+  if (['WRECK_TOP'].some((n) => (data.palette || {})[n] !== undefined || (data.paletteDark || {})[n] !== undefined)) wreckInfo(a, data, used || [], namesOf((used || [])[(used || []).length - 1]) || OWNER_NAME);
+  if (used && used.length && ['CARGO'].some((n) => (data.palette || {})[n] !== undefined || (data.paletteDark || {})[n] !== undefined)) usesChecks(a, data, used.map((u) => u.data), namesOf(used[used.length - 1]) || OWNER_NAME, ((window.CAND6[key] || {}).uses || []).join(', '));
+  return a;
+}
+function runAuditChecks(only) {
+  CUR = EXPORT_SEL; LEGACY = false; OVR = r6Ovr(); useGround(false);
+  const a = newAudit(''), darkSet = Object.keys(OVR.paletteDark).length > 0, bakedOwners = !!(OVR.palette.OWNERS || OVR.paletteDark.OWNERS);
+  shapeFindings(a, auditShapesNow());
+  const tops = ownerTops(), cargo = cargoHex();
+  useGround(true);
+  const topsDark = ownerTops(), cargoDark = cargoHex(), fogDark = PAL.fog.factor;
+  useGround(false);
+  const grounds = [['sand', GROUND.sand], ['dark ground', GROUND.dark]], fog = PAL.fog.factor;
+  if (bakedOwners) {
+    paletteChecks(a, null, namesOf(optionOf('owners', R6.owners)) || OWNER_NAME);
+    useGround(false);
+  } else {
+    for (let o = 1; o <= 8; o++) {
+      const n = `${o} ${OWNER_NAME[o - 1]}`;
+      a.check(contrast(tops[o - 1], SLAB) >= 3, `contrast owner ${n} default on HUD slab: ${contrast(tops[o - 1], SLAB).toFixed(2)} (bar 3)`);
+      const from = (name, top, g) => a.measure(`colour vision owner ${n} default from ${name}: smallest dE ${minDistance(top, g).toFixed(2)}`);
+      from('sand', tops[o - 1], GROUND.sand);
+      from('dark ground', topsDark[o - 1], GROUND.dark);
+      if (fog) from('fogged sand', scaleHex(tops[o - 1], fog), scaleHex(GROUND.sand, fog));
+      if (fogDark) from('fogged dark ground', scaleHex(topsDark[o - 1], fogDark), scaleHex(GROUND.dark, fogDark));
+    }
+    [['default', tops], darkSet && ['default (dark ground set)', topsDark]].filter(Boolean).forEach(([tag, set]) => {
+      for (let x = 0; x < 8; x++) for (let y = x + 1; y < 8; y++) {
+        const m = minDistance(set[x], set[y]);
+        a.check(m >= 20, `colour vision owner ${x + 1} ${OWNER_NAME[x]} / ${y + 1} ${OWNER_NAME[y]} ${tag}: smallest dE ${m.toFixed(1)} (bar 20)`);
+      }
+    });
+    [['SIDE', PAL.band.side], ['SIDE_DARK', PAL.band.sideDark]].forEach(([band, hex]) => grounds.forEach(([name, g]) => a.check(contrast(hex, g) >= 3, `contrast band ${band} on ${name}: ${contrast(hex, g).toFixed(2)} (bar 3)`)));
   }
-  for (let a = 1; a <= 8; a++) for (let b = a + 1; b <= 8; b++) {
-    const m = minDistance(slotsFor(a, 'default')[0], slotsFor(b, 'default')[0]);
-    check(m >= 20, `colour vision owner ${a} ${OWNER_NAME[a - 1]} / ${b} ${OWNER_NAME[b - 1]} default: smallest dE ${m.toFixed(1)} (bar 20)`);
+  if (cargo) {
+    [['sand', GROUND.sand, cargo], ['dark ground', GROUND.dark, cargoDark], ['pile base slab', PAL.band.sideDark, cargo], ['HUD slab', SLAB, cargo]].forEach(([name, g, c]) => a.check(contrast(c, g) >= 3, `contrast cargo colour on ${name}: ${contrast(c, g).toFixed(2)} (bar 3)`));
+    const amber = (c, tag) => a.check(minDistance(c, HUD_AMBER) >= 20, `colour vision cargo colour / HUD amber${tag}: smallest dE ${minDistance(c, HUD_AMBER).toFixed(2)} (bar 20)`);
+    if (bakedOwners) { amber(cargo, ' default'); if (darkSet) amber(cargoDark, ' default (dark ground set)'); } else {
+      cargoApart(a, cargo, ' default');
+      if (darkSet) { useGround(true); cargoApart(a, cargoDark, ' default (dark ground set)'); useGround(false); }
+    }
   }
-  [['SIDE', PAL.band.side], ['SIDE_DARK', PAL.band.sideDark]].forEach(([band, hex]) => grounds.slice(0, 2).forEach(([name, g]) => check(contrast(hex, g) >= 3, `contrast band ${band} on ${name}: ${contrast(hex, g).toFixed(2)} (bar 3)`)));
-  const cargo = cargoHex();
-  if (cargo) [['sand', GROUND.sand], ['dark ground', GROUND.dark], ['pile base slab', PAL.band.sideDark], ['HUD slab', SLAB]].forEach(([name, g]) => check(contrast(cargo, g) >= 3, `contrast cargo colour on ${name}: ${contrast(cargo, g).toFixed(2)} (bar 3)`));
-  // window.CAND6[step][option][id] = {parts}, added by the round 6 pick steps.
-  Object.entries(window.CAND6 || {}).forEach(([step, options]) => Object.entries(options).forEach(([option, items]) => Object.entries(items || {}).forEach(([id, raw]) => {
-    if (!raw || !Array.isArray(raw.parts)) return;
-    const base = BASE[id] || EXTRA[id] || {};
-    checks++;
-    auditAny({ ...base, id, parts: raw.parts, has_turret: hasTurret(raw.parts), damage_variants: null, parts_by_detail: null }).issues.forEach((issue) => found.push(`CAND6 ${step}/${option}/${id}: ${issue}`));
-  })));
-  return { found, checks };
+  OVR = { shapes: {}, palette: {}, paletteDark: {}, overlays: [] };
+  useGround(false);
+  Object.entries(window.CAND6).filter(([key]) => !only || key === only).forEach(([key, step]) => ['A', 'B'].filter((opt) => step && step[opt]).forEach((opt) => {
+    const o = auditOption(key, opt, step[opt].data, namesOf(step[opt]), usedOptions(key));
+    a.found.push(...o.found); a.infos.push(...o.infos); a.checks += o.checks;
+  }));
+  stepProblems(only).forEach((l) => a.add(l));
+  if (only && !window.CAND6[only]) a.add(`CAND6 ${only} missing (file not loaded or threw at load)`);
+  if (only) document.getElementById('err').textContent.split('\n').filter((l) => l.includes(`cand6-${only}.js`)).forEach((l) => a.add(`CAND6 ${only} load error: ${l}`));
+  a.checks += only ? (window.CAND6[only] ? 1 : 0) : Object.keys(window.CAND6).length;
+  return { found: a.found, checks: a.checks, infos: a.infos };
 }
 async function runAudit() {
-  const lines = [];
+  const lines = [], file = H.get('name') || 'audit', only = H.get('step');
+  if (!NAME_RE.test(file)) throw new Error('bad report name ' + file);
   try {
-    const { found, checks } = runAuditChecks();
-    const isKnown = (line) => KNOWN.find((k) => { const m = k.re.exec(line); return m && (!k.ok || k.ok(m)); });
+    if (only && !STEP_KEYS.includes(only)) throw new Error('audit step ' + only + ' is not a step key');
+    const { found, checks, infos } = runAuditChecks(only);
+    const isKnown = (line) => KNOWN.find((k) => { const m = k.re.exec(line); return m && (!k.when || k.when()) && (!k.ok || k.ok(m)); });
     const unexpected = found.filter((l) => !isKnown(l));
+    infos.forEach((l) => lines.push('INFO ' + l));
     found.filter(isKnown).forEach((l) => lines.push(`KNOWN ${l} | ${isKnown(l).source}`));
     unexpected.forEach((l) => lines.push('unexpected: ' + l));
     lines.push(unexpected.length ? `FAIL ${unexpected.length}` : `PASS ${checks} known ${found.length - unexpected.length}`);
   } catch (e) { lines.push('FAIL ' + (e && e.stack || e)); }
-  await post('audit', lines.join('\n') + '\n');
+  await post(file, lines.join('\n') + '\n');
 }
 </script>
 <script>
@@ -995,21 +1322,131 @@ function drawPic(name, o) {
   document.body.className = 'shot'; app.className = 'shot';
   app.innerHTML = '';
   const stage = p.draw({ sel: p[as], scale });
-  if (o) addHud(stage, o, H.get('hud'), scale);
+  if (o) addHud(stage, o, H.get('hud') || p.hud, scale);
   app.appendChild(stage);
   if (o) HUDV5.placeCards(stage);
 }
+// ---------- step shots and the pick page ----------
+const STEP_PIC = /^step(\d+)-([AB])(-dark)?$/;
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+function drawStepShot(n, show, ground, zoom, scale) {
+  const key = STEPS6[n - 1], s = window.CAND6[key];
+  if (!s) throw new Error('[step missing: ' + (key || n) + ']');
+  const pz = s.pics && s.pics.zoom, shown = show || showOf(key), z = zoom || (pz != null ? String(pz) : s.view && s.view.palette ? '1' : '0.5');
+  if (shown !== '0' && !optionOf(key, shown)) throw new Error(key + ' has no option ' + shown);
+  if (!ZOOMS.includes(z)) throw new Error('bad zoom ' + z);
+  document.body.className = 'shot'; app.className = 'shot';
+  app.innerHTML = '';
+  app.appendChild(stepStage(key, shown, { zoom: z, ground: ground === 'dark' ? 'dark' : 'sand' }, scale));
+}
+
+const UI = { n: Math.max(0, (+H.get('step') || 1) - 1), show: {}, ground: 'sand', zoom: '0.5', zoomSet: false, heading: 0, hud: false, notes: {}, picked: {}, status: {}, hudOpts: null };
+const isConfirm = (s) => !s.B;
+const shownZoom = (s) => (!UI.zoomSet && s && s.view && s.view.palette ? '1' : UI.zoom);
+const showFor = (key) => UI.show[key] || showOf(key);
+function listHtml(v) { return !v ? '' : '<ul>' + [].concat(v).map((x) => `<li>${esc(x)}</li>`).join('') + '</ul>'; }
+function renderPick() {
+  const key = STEPS6[UI.n], s = window.CAND6[key];
+  const chips = STEPS6.map((k, i) => `<button class="chip${i === UI.n ? ' on' : ''}" data-step="${i}">${i + 1} ${esc(k)}${UI.picked[k] ? ' · ' + esc(UI.picked[k]) : ''}</button>`).join('');
+  const nav = '<button data-act="prev"><kbd>P</kbd>Previous</button> <button data-act="next"><kbd>N</kbd>Next</button>';
+  if (!s) { app.innerHTML = `<div class="top"><div class="chips">${chips}</div><h2>[step missing: ${esc(key)}]</h2><p>cand6-${esc(key)}.js did not load.</p><p>${nav}</p></div>`; return; }
+  const show = showFor(key), opt = s[show], confirm = isConfirm(s), st = UI.status[key];
+  const flip = confirm ? '' : ['A', 'B'].map((x) => `<button data-show="${x}" class="${x === show ? 'on' : ''}"><kbd>${x}</kbd>${esc(s[x] ? s[x].name : '(missing)')}</button>`).join(' ');
+  const act = confirm
+    ? '<button id="pick"><kbd>Enter</kbd>Yes, as drawn</button> <button id="change">Change (say what in the note)</button>'
+    : `<button id="pick">Pick ${show} <kbd>Enter</kbd></button>`;
+  const pz = s.pics && +s.pics.zoom, hint = pz > +shownZoom(s) ? (key === 'surfaces' ? 'Z: zoom 1 to see doors' : `Z: zoom ${pz} for the detail`) : '';
+  const usedKeys = (s.uses || []).filter((k) => STEP_KEYS.includes(k) && k !== key && usedOptions(key).length), usedNow = usedKeys.map((k) => [k, optionOf(k, usedShow(k))]).filter(([, o]) => o);
+  const stageNote = usedNow.length ? 'Shown with ' + usedNow.map(([k, o]) => `step ${STEPS6.indexOf(k) + 1}'s ${esc(o.name)}`).join(' and ') + '.' : "Other steps' choices are not applied here.";
+  const tg = [['hud', 'H', 'HUD v5 layer', UI.hud], ['ground', 'G', 'Ground: ' + UI.ground, false], ['zoom', 'Z', 'Zoom ' + shownZoom(s), false], ['head', '[ ]', 'Heading ' + UI.heading, false]]
+    .map(([a, k, t, on]) => `<button data-act="${a}" class="${on ? 'on' : ''}"><kbd>${k}</kbd>${t}</button>`).join(' ');
+  app.innerHTML = `<div class="cols"><div class="chips">${chips}</div><div class="text"><h2>Step ${UI.n + 1} of ${STEPS6.length}: ${esc(s.q)}</h2>
+    <p>${esc(s.why)}</p><p><b>What changes:</b> ${esc(s.look)}</p>
+    <p class="rec-line">Claude's pick: <b>${esc(s.rec)}</b>${s.recWhy ? ' · ' + esc(s.recWhy) : ''}</p>${s.numbers ? '<h3 class="nums">Numbers</h3>' + listHtml(s.numbers) : ''}</div>
+    <div class="bars"><div class="bar">${flip} ${act} <span class="rec">${st && (confirm || st.pick === show) ? st.html : ''}</span></div><div class="bar">${tg}${hint ? ` <span class="hint">${esc(hint)}</span>` : ''}</div></div><div id="host"></div>
+    <div class="under"><p class="stage-note">${stageNote}</p><p><b>${esc(show)}${opt ? ': ' + esc(opt.name) : ''}</b></p><textarea id="cm" placeholder="Note (optional)">${esc(UI.notes[key])}</textarea>
+    <p>${nav}</p></div></div>`;
+  const stage = stepStage(key, show, { zoom: shownZoom(s), ground: UI.ground, heading: UI.heading }, 1);
+  $('#host').appendChild(stage);
+  if (UI.hud) {
+    if (!UI.hudOpts) addErr('HUD layer unavailable (hud.js or layout.json missing)');
+    else { addHud(stage, UI.hudOpts, 'none', 1); HUDV5.placeCards(stage); }
+  }
+}
+async function postPick(key, pick, note) {
+  const s = window.CAND6[key], what = esc(s && s[pick] ? s[pick].name : pick);
+  let html;
+  try {
+    const r = await fetch('/pick', { method: 'POST', body: JSON.stringify({ key, pick, note }) });
+    if (r.status === 204) UI.picked[key] = pick;
+    html = r.status === 204 ? `Recorded: ${what}.` : `<span class="fail">Not recorded: HTTP ${r.status}. Kept on this page: ${what}.</span>`;
+  } catch (e) { html = `<span class="fail">Not recorded: server not reachable. Kept on this page: ${what}.</span>`; }
+  UI.status[key] = { pick, html };
+  document.querySelectorAll('.rec').forEach((el) => { el.innerHTML = html; });
+  document.querySelectorAll('.chip').forEach((el, i) => { if (STEPS6[i] === key && UI.picked[key]) el.textContent = `${i + 1} ${key} · ${UI.picked[key]}`; });
+}
+const choose = (pick) => { const key = STEPS6[UI.n], s = window.CAND6[key]; if (s) postPick(key, pick || (isConfirm(s) ? 'yes' : showFor(key)), UI.notes[key] || ''); };
+const go = (n) => { UI.n = (n + STEPS6.length) % STEPS6.length; renderPick(); };
+const ACTS = {
+  prev: () => go(UI.n - 1), next: () => go(UI.n + 1),
+  hud: () => { UI.hud = !UI.hud; renderPick(); },
+  ground: () => { UI.ground = UI.ground === 'sand' ? 'dark' : 'sand'; renderPick(); },
+  zoom: () => { const s = window.CAND6[STEPS6[UI.n]]; UI.zoom = ZOOMS[(ZOOMS.indexOf(shownZoom(s)) + 1) % ZOOMS.length]; UI.zoomSet = true; renderPick(); },
+  head: () => { UI.heading = (UI.heading + 1) % 8; renderPick(); },
+};
+function startPick(saved) {
+  Object.entries(saved).forEach(([k, v]) => {
+    if (!STEPS6.includes(k) || !v) return;
+    UI.picked[k] = v.pick; UI.notes[k] = v.note || '';
+    if (['A', 'B'].includes(v.pick) && window.CAND6[k] && window.CAND6[k][v.pick]) UI.show[k] = v.pick;
+  });
+  app.addEventListener('click', (e) => {
+    const hit = (q) => e.target.closest(q);
+    if (hit('[data-step]')) go(+hit('[data-step]').dataset.step);
+    else if (hit('[data-show]')) { UI.show[STEPS6[UI.n]] = hit('[data-show]').dataset.show; renderPick(); }
+    else if (hit('[data-act]')) ACTS[hit('[data-act]').dataset.act]();
+    else if (hit('#pick')) choose();
+    else if (hit('#change')) choose('change');
+  });
+  app.addEventListener('input', (e) => { if (e.target.id === 'cm') UI.notes[STEPS6[UI.n]] = e.target.value; });
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase(), key = STEPS6[UI.n], s = window.CAND6[key];
+    if (k === 'enter' && e.target.tagName === 'BUTTON') return;
+    if ((k === 'a' || k === 'b') && s && s[k.toUpperCase()] && !isConfirm(s)) { UI.show[key] = k.toUpperCase(); renderPick(); }
+    else if (k === 'enter') choose();
+    else if (k === 'h') ACTS.hud();
+    else if (k === 'g') ACTS.ground();
+    else if (k === 'z') ACTS.zoom();
+    else if (k === '[' || k === ']') { UI.heading = (UI.heading + (k === ']' ? 1 : 7)) % 8; renderPick(); }
+    else if (k === 'n') ACTS.next();
+    else if (k === 'p') ACTS.prev();
+  });
+  renderPick();
+}
+const fetchPicks = (loud) => fetch('picks.json').then((r) => (r.ok ? r.json() : {}), () => ({})).then((j) => { if (j && typeof j === 'object' && !Array.isArray(j)) return j; throw new Error('not an object'); })  .catch(() => { if (loud) addErr('picks.json unreadable: showing the recommended options'); return {}; });
 async function start() {
-  const [, hudOpts] = await Promise.all([loadFonts(), H.get('hud') ? hudOptions() : null]);
-  const rep = H.get('report'), name = H.get('pic'), job = { export: runExport, roundtrip: runRoundtrip, audit: runAudit }[[...H.keys()].find((k) => ['export', 'roundtrip', 'audit'].includes(k))];
+  stepProblems().forEach(addErr);
+  const name = H.get('pic'), rep = H.get('report'), stepPic = name && STEP_PIC.exec(name), shot = H.has('step') && H.get('shot') === '1';
+  const job = { export: runExport, roundtrip: runRoundtrip, audit: runAudit }[[...H.keys()].find((k) => ['export', 'roundtrip', 'audit'].includes(k))];
+  const pickPage = !(name || rep || job || shot || H.has('list') || H.has('world')), scale = H.get('scale') === '2' ? 2 : 1;
+  const wantHud = H.get('hud') || (name && PICS[name] && PICS[name].hud);
+  const [, hudOpts, saved] = await Promise.all([loadFonts(), wantHud || pickPage ? hudOptions().catch((e) => { if (wantHud) throw e; return null; }) : null, fetchPicks(pickPage)]);
+  SAVED = saved;
   if (job) await job();
   else if (rep) {
     if (!reports[rep]) throw new Error('unknown report ' + rep);
     const file = H.get('name') || rep;
     if (!NAME_RE.test(file)) throw new Error('bad report name ' + file);
     await post(file, reports[rep]());
-  } else if (name && PICS[name]) drawPic(name, hudOpts);
-  else app.innerHTML = '<h2>Map art pictures</h2><ul>' + Object.keys(PICS).map((n) => `<li><a href="#pic=${n}&as=shot">${n}</a></li>`).join('') + '</ul>';
+  } else if (stepPic) drawStepShot(+stepPic[1], stepPic[2], stepPic[3] ? 'dark' : 'sand', H.get('zoom'), scale);
+  else if (shot) drawStepShot(+H.get('step'), H.get('show'), H.get('ground'), H.get('zoom'), scale);
+  else if (name && PICS[name]) drawPic(name, wantHud ? hudOpts : null);
+  else if (H.has('world')) { document.body.className = 'shot'; app.className = 'shot'; app.innerHTML = ''; app.appendChild(MARKS.worldStage(H.get('world'), scale)); }
+  else if (pickPage) {
+    UI.hudOpts = hudOpts;
+    startPick(saved);
+  } else app.innerHTML = '<h2>Map art pictures</h2><ul>' + Object.keys(PICS).map((n) => `<li><a href="#pic=${n}&as=shot">${n}</a></li>`).join('') + '</ul>';
 }
 start().catch((e) => addErr('start: ' + (e && e.stack || e)));
 </script>

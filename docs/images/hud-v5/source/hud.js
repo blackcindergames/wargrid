@@ -20,7 +20,7 @@ function lifted(hex) {
   for (let i = 0; i <= 20; i++) { const c = mix(hex, '#ffffff', i * .05); if (contrast(c, BG) >= 3) return c; }
   return '#ffffff';
 }
-const OWNERS = [['Blue (you)', '#44adf4'], ['Red (enemy)', '#d54f3b'], ['Green', '#4fc389'], ['Gold', '#ecdc3c'], ['Orange', '#e08522'], ['Purple', '#9249ac'], ['Teal', '#008d8d'], ['Pink', '#ffa5d4']];
+const OWNERS = [['Blue (you)', '#628ffa'], ['Red (enemy)', '#d6120c'], ['Green', '#4ad49b'], ['Gold', '#f8e425'], ['Teal', '#0e92a7'], ['Purple', '#7242fe'], ['Orange', '#ec8600'], ['Pink', '#f79cef']];
 const FLAT = {bg: BG, panel: '#1b2731', btn: '#223241', panel2: '#26384a', line: '#2e3f4b', edge: '#263842', well: '#0c141a', text: '#eef3f5', muted: '#93a5b0',
   sel: '#60e5ed', amber: '#f7c871', you: lifted(OWNERS[0][1]), enemy: lifted(OWNERS[1][1]), ally: '#69ceaa', quiet: '#16212a', r: '0'};
 const HEALTH = ['#5cc85a', '#e0d060', '#d8453a'];

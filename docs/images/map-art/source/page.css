@@ -7,3 +7,27 @@ body{margin:0;background:#0a0f14;color:#dfe7ec;font:14px/1.45 "Public Sans","Hel
 .stage{position:relative;overflow:hidden;background:#a88e5c}
 .stage canvas{position:absolute;left:0;top:0;display:block}
 a{color:#60e5ed}
+#app button{font:600 13px "Public Sans",Arial,sans-serif;background:#1c2a36;color:#dfe7ec;border:1px solid #3d515f;border-radius:4px;padding:5px 10px;cursor:pointer}
+#app button.on{background:#f7c871;color:#1a1408;border-color:#f7c871}
+#app button kbd{font:inherit;opacity:.65;margin-right:6px}
+#app #pick{background:#f7c871;color:#1a1408;font-weight:800;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.bar{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.under textarea{width:min(1280px,100%);height:56px;background:#101a22;color:#dfe7ec;border:1px solid #3d515f;font:14px "Public Sans",Arial,sans-serif}
+.rec{margin-left:10px;font-weight:700}
+.fail{color:#ff8a80}
+@media (min-width:1760px){
+.cols{display:grid;grid-template-columns:1280px minmax(0,1fr);grid-template-rows:auto auto auto 1fr;column-gap:24px;align-items:start}
+.cols>.chips{grid-column:1;grid-row:1}
+.cols>.bars{grid-column:1;grid-row:2}
+.cols>#host{grid-column:1;grid-row:3}
+.cols>.under{grid-column:1;grid-row:4}
+.cols>.text{grid-column:2;grid-row:1/5;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+.cols .bar{margin:6px 0}
+.cols .under p{margin:6px 0}
+.cols .text h2{margin-top:0}
+}
+.nums{margin:14px 0 4px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#8aa0ad}
+.stage-note,.hint{color:#8aa0ad;font-size:13px}
+.stage-note{margin:6px 0 0}
+.hint{align-self:center;margin-left:6px}

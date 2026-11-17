@@ -1,6 +1,6 @@
 #!/bin/sh
 # Shoots map art pictures: headless Firefox on the page's #pic hash, then lossless WebP.
-# Usage: [SCALE=1|2] [AS=shot|final] [OUT=dir] [EXTRA='&font=inter'] sh shoot.sh [name ...]   (no names = every picture; needs python3 server.py running)
+# Usage: [SCALE=1|2] [AS=shot|final] [OUT=dir] [EXTRA='&font=inter'] sh shoot.sh [name ...]   (no names = every picture; step<n>-<A|B>[-dark] review shots also accepted; needs python3 server.py running)
 set -eu
 src=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$src/../../../.." && pwd)
@@ -19,7 +19,7 @@ known=$(grep -v '^PASS' "$root/build/map-art/$listname.txt")
 rm -f "$root/build/map-art/$listname.txt"
 names=${*:-$known}
 for n in $names; do
-  printf '%s\n' "$known" | grep -qx -- "$n" || { echo "unknown picture $n" >&2; exit 1; }
+  printf '%s\n' "$known" | grep -qx -- "$n" || printf '%s\n' "$n" | grep -Eq '^step[0-9]+-[AB](-dark)?$' || { echo "unknown picture $n" >&2; exit 1; }
 done
 case $out in /*) dest=$out ;; *) dest="$root/$out" ;; esac
 mkdir -p "$dest"
