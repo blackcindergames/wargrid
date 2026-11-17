@@ -4,14 +4,14 @@ Plan: [P12 plan](../superpowers/plans/2026-11-17-p12-notes-that-never-block.md).
 
 ```text
 Resume record (updated 2026-11-17)
-Branch / base commit / working-tree state: p12-notes / 10d152c / gate-2 cuts committed, clean
-Last green task / next incomplete task: stop gate 2 / benchmark (load), then stop gate 3 owner check
-Changed paths since last commit: none
+Branch / base commit / working-tree state: p12-notes / 10d152c / HEAD a3b466d plus this file
+Last green task / next incomplete task: stop gate 2; gate 3 web passed / gate 3 desktop owner check, benchmark
+Changed paths since last commit: docs/reference/p12-verification.md
 Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1079 / 146411 / 0 / 0 / TESTS PASSED
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); gate A passed; owner answers 2026-11-17; benchmark pending (load 2.58 at Task 5); rendered rerun owed after the merge; gate 3 owner check pending (desktop match, test app on web, Chromium second-download check)
+Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); gate A passed; owner answers 2026-11-17; test deploy approved and done; gate 3 desktop parked by the user; benchmark pending (load); rendered rerun owed after the merge; push and merge wait for the user
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: benchmark when the 1-minute load is at or below 2.5; gate 3 with the user (each window and the deploy need approval)
+Next exact action: gate 3 desktop when the user is ready; benchmark at load <= 2.5
 ```
 
 ## Web download probe (Task 1)
@@ -66,3 +66,6 @@ The probe (`build/p12-probe/`, untracked) copies it from `new Blob` to `revokeOb
 | 2026-11-17 | gate 1 | full `sh tools/run_tests.sh`; `sh tools/run_checks.sh` | `b22c7f3` plus gate-1 fixes | CASES 1079 CHECKS 146411 FAILURES 0, exit 0; CHECKS PASSED 5, exit 0. Coordinator wording touch-up after ("files the session", card quit item), `WARGRID_TEST_ONLY=test_playtest` 85/567/0 |
 | 2026-11-17 | gate 2 | `/ponytail-review` (Sonnet) on `10d152c..c55e98d` | `c55e98d` | ship; applied: overlay label helper merged into `SessionForm.add_label`; dead `Signal` branch in `add_action`; `_typing()` wrapper inlined; explicit focus release in `_rebuild` removed (removing a focused row from the tree releases it and saves); redundant `(unfinished)` suffix in the tool summary (`result=unfinished` already says it). Kept: per-frame Saved footer, `_has_content`, both `_typing` checks, the `download`/`web` plumbing |
 | 2026-11-17 | gate 2 | full `sh tools/run_tests.sh`; `sh tools/run_checks.sh` | `c55e98d` plus ponytail cuts | CASES 1079 CHECKS 146411 FAILURES 0, exit 0, no SCRIPT ERROR; CHECKS PASSED 5, exit 0 |
+| 2026-11-17 | gate 3 | `sh tools/deploy_web.sh test` (approved by the user 2026-11-17) | `a3b466d` | exit 0, health 200 OK; served build `0.14.0-dev+a3b466d` (read from the downloaded sessions) |
+| 2026-11-17 | gate 3 | owner web check, Vivaldi: marker and answer text, tab closed mid-match, test app reopened in a new tab | test app `a3b466d` | the launcher downloaded `session-<started>.json` on open without a prompt; the cut-short match is `result=unfinished` with its marker and the answer text: `user://` persisted across the tab close (research note risk 5) |
+| 2026-11-17 | gate 3 | owner web check, Vivaldi: second sitting in the same tab, one match with a marker, back to the menu | test app `a3b466d` | the second automatic download saved without a prompt: the Chromium multiple-downloads limit resets after clicks in between (gate A known limit resolved for normal play). Pre-existing, not P12: a match left mid-game files `result` as an empty string (no winner; same in `10d152c`) |
