@@ -934,3 +934,26 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-17,66cbab99,Relay guards merge rendered,dev,tick_frame,ashfall,1,2.131,2.268,,tick-frame,2.03,log sha256:22ec827b68fe
 2026-11-17,66cbab99,Relay guards merge rendered,dev,frame_interval,horde,1,0.551,3.913,,P1,2.03,log sha256:22ec827b68fe
 2026-11-17,66cbab99,Relay guards merge rendered,dev,tick_frame,horde,1,4.91,5.295,,tick-frame,2.03,log sha256:22ec827b68fe
+2026-11-17,c2e07ee,P12 Notes that never block,dev,movement_tick,open,1,0.769,0.871,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,movement_tick,dense,1,0.759,0.879,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,open,1,1.895,2.269,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,dense,1,1.843,2.168,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,contact,1,1.215,1.625,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,skirmish3v3,1,1.345,1.457,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,transports,1,1.126,1.217,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,defences,1,0.764,2.14,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,docks,1,0.587,0.616,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,hordes300,1,2.913,3.372,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,ramp,1,0.658,1.189,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,combat_tick,frc,1,0.885,1.076,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,lockstep_overhead,contact,1,0.016,0.07,,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,movement_open:profile,1,,,1.2952,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,movement_dense:profile,1,,,1.2952,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,combat_contact:profile,1,,,0.3671,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5297,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,combat_open:profile,1,,,0.896,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,skirmish_match:profile,1,,,0.2464,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,large_196:profile,1,,,1.7061,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,combat_dense:profile,1,,,0.7811,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,combat_hordes300:profile,1,,,1.9415,P1,1.62,log sha256:d317afaa4386
+2026-11-17,c2e07ee,P12 Notes that never block,dev,plumbing,team_match:profile,1,,,1.1293,P1,1.62,log sha256:d317afaa4386

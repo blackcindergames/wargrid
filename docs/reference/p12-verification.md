@@ -5,13 +5,13 @@ Plan: [P12 plan](../superpowers/plans/2026-11-17-p12-notes-that-never-block.md).
 ```text
 Resume record (updated 2026-11-17)
 Branch / base commit / working-tree state: p12-notes / 10d152c / HEAD 7b17464 plus this file
-Last green task / next incomplete task: stop gate 3 (web and desktop passed) / benchmark
+Last green task / next incomplete task: benchmark recorded; all P12 tasks and gates done / push and merge (user)
 Changed paths since last commit: docs/reference/p12-verification.md
 Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1079 / 146411 / 0 / 0 / TESTS PASSED
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); gate A passed; owner answers 2026-11-17; test deploy approved and done; gate 3 desktop passed; benchmark pending (load); rendered rerun owed after the merge; push and merge wait for the user
+Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); gate A passed; owner answers 2026-11-17; test deploy approved and done; gate 3 desktop passed; rendered rerun owed after the merge; push and merge wait for the user
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: benchmark at load <= 2.5; then push and merge with the user's approval
+Next exact action: push and merge with the user's approval; then CI (Linux, Windows) and compare_local_traces, benchmark on main, rendered rerun (window, ask)
 ```
 
 ## Web download probe (Task 1)
@@ -70,3 +70,5 @@ The probe (`build/p12-probe/`, untracked) copies it from `new Blob` to `revokeOb
 | 2026-11-17 | gate 3 | owner web check, Vivaldi: marker and answer text, tab closed mid-match, test app reopened in a new tab | test app `a3b466d` | the launcher downloaded `session-<started>.json` on open without a prompt; the cut-short match is `result=unfinished` with its marker and the answer text: `user://` persisted across the tab close (research note risk 5) |
 | 2026-11-17 | gate 3 | owner web check, Vivaldi: second sitting in the same tab, one match with a marker, back to the menu | test app `a3b466d` | the second automatic download saved without a prompt: the Chromium multiple-downloads limit resets after clicks in between (gate A known limit resolved for normal play). Pre-existing, not P12: a match left mid-game files `result` as an empty string (no winner; same in `10d152c`) |
 | 2026-11-17 | gate 3 | owner desktop check, `sh tools/run_game.sh` (approved by the user 2026-11-17), helper switched on in the launcher | `7b17464` | a stored 0.13.x-style sitting (build `895d615`, card "Result panel", nothing filled) showed as open; picking "Notes that never block" ended it with no file and removed `current.json`. One offline match: answer text, two markers, a comment typed with the cursor left in the field, window closed: `session-<started>.json` written with the answer, both markers and the unsubmitted comment; `current.json` gone; no script errors. Owner: nothing else noticed |
+| 2026-11-17 | 5 | `PERF_LABEL="P12 Notes that never block" sh tools/run_benchmark.sh`, alone | `c2e07ee` | exit 0; load 2.15 at start, 1.62 at end; 23 rows recorded. Exceeded as before (accepted): combat open p95 1.895, dense 1.843, hordes300 2.913 ms (main's last auto row: dense 1.819, hordes300 2.903); regression ceilings held. The helper is not in the benchmark scene |
+| 2026-11-17 | gate 3 | other browsers | - | Safari and Chrome untested, accepted by the user ("highly confident the other browsers work"; playtesters are the owner and close friends) (user, 2026-11-17) |
