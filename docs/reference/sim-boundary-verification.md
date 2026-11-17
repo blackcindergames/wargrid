@@ -315,3 +315,106 @@ Base re-measured in the main checkout (`bad67c3`, `PERF_RECORD=0`, load 1.42-1.6
 | lockstep overhead p99 | 0.067 | 0.069 |
 
 Branch within about 1.5 % of base on every row (Steam Deck: +0.9 % step mean); open, dense and hordes300 exceed the 1.82 ms p95 budget on both trees, reported, budget unchanged. New zone `view.rows` 0.305 ms mean on movement_open.
+
+## SB4
+
+Plan: [sim boundary SB4](../superpowers/plans/2026-11-17-sim-boundary-sb4.md). Tracked file: no typed absolute path here; logs are named by tag under `~/projects/wargrid-overnight-work/sb4/logs/`. Resume record below is overwritten at each checkpoint; ledger rows, base counts, the line map and the Relay guards recheck are append-only.
+
+```text
+Resume record (updated 2026-11-17 night, Task 1 evidence done, verification file uncommitted)
+Branch / base commit / working-tree state: sim-boundary-sb4 (worktree ~/projects/wargrid-wt-sb4) / 6489cd2395f0e04c719eebc54fb8397b5d54cf98 (Relay guards merged in `d56ad58`; Task 1 Step 1 symbols: found, `TOO_MANY_ORDERS` online_driver.gd:14,177,178, `FRAME_RESERVE_BYTES` lockstep.gd:8,71) / uncommitted: docs/reference/sim-boundary-verification.md
+Last green task / next incomplete task: none (Task 1 evidence green, commit pending) / Task 2
+Changed paths since last commit: docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: sh tools/run_benchmark.sh (no label) exit 0, BENCHMARK PASSED 2, COMBAT BENCHMARK PASSED 10, LOCKSTEP BENCHMARK PASSED 1; SUITE(base) 1079 cases, 146418 checks, 0 failures, TESTS PASSED 146418
+Known red case or blocker: none
+Approved decisions, pre-authorizations used, deferred gates: questions.md answers Q1-Q17 as answered (user, 2026-11-17); local commits per green task pre-authorized by the handoff; owner's manual online check before the merge (Q11, local relay, two windows; never at night); rendered rerun owed after the merge (match/ changed), owner's window
+Usage so far (python3 tools/session_usage.py <session files>): not recorded
+Next exact action: commit this file after check_public.sh, then Task 2 (loopback test and online guards on the base)
+```
+
+### Evidence ledger
+
+Base: `6489cd2` (`main`, tree `e488b43ccabcb0c7df561e1e6129388d4db762e8`), worktree clean. Logs: `~/projects/wargrid-overnight-work/sb4/logs/` (outside the repository).
+
+| Date | Command | Result | Tree |
+|---|---|---|---|
+| 2026-11-17 | `SUITE(base)` (four trace variables into `<L>/*-base.tsv`) | exit 0, CASES 1079, CHECKS 146418, FAILURES 0, `TESTS PASSED 146418`; replay, economy, combat and team traces written | base, clean |
+| 2026-11-17 | `NET(base, match)`; `NET(base, rematch)` | exit 0 each; `NETPLAY PASSED match 15.6 s`, `NETPLAY PASSED rematch 26.5 s`; terminal tick 9013 pinned by the script; `s1.tsv`, `s1.cmd` kept in `base-np-match/` and `base-np-rematch/` | base, clean |
+| 2026-11-17 | `sh tools/run_team_match.sh` | exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`, `TEAM PATHS PASS capped_ticks=853 max_cells=643 ceiling=804 max_queue=146 max_decisions=1` | base, clean |
+| 2026-11-17 | `sh tools/run_checks.sh` | exit 0, `CHECKS PASSED 5` | base, clean |
+| 2026-11-17 | `ONLY(base-l, test_lockstep)`; `ONLY(base-o, test_online_scene)` | exit 0 each; CASES 26 (CHECKS 118) and CASES 62 (CHECKS 3088); Tasks 3 and 4 compare with these | base, clean |
+| 2026-11-17 | `sh tools/run_conformance.sh` | exit 0, `CONFORMANCE PASSED 69` | base, clean |
+| 2026-11-17 | `uptime`; `sh tools/run_benchmark.sh` (no label, records nothing on the branch) | load 2.02 before (no godot process of another run), 1.30 after; exit 0, `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, `BUDGET EXCEEDED open dense hordes300 (regression ceilings held)`; lockstep overhead p99 0.068 ms (limit 0.6); rows p95 / p99 ms: movement open 0.755 / 0.836, movement dense 0.734 / 0.889, combat open 1.883 / 2.228, combat dense 1.839 / 2.207, combat hordes300 2.911 / 3.396 | base, clean |
+| 2026-11-17 | Task 1 Step 6: frame order probe (`godot --headless`, script `<L>/frame-order-probe.gd`, outside tracked source) | exit 0, `FRAME ORDER PASSED 6`; the stalled iteration: `R phys=2 proc=4` (250 ms delay), then `P phys=3..8 proc=5` (six physics callbacks), then `R phys=8 proc=5` | base, clean |
+| 2026-11-17 | Task 1 Step 7: `sh tools/check_public.sh` | exit 0, `PUBLIC CHECK PASSED` | base + verification file, uncommitted |
+| | Task 2: `ONLY(t2, sb4_)` | exit 0, CASES 9 (green on the base by design) | base + Task 2, uncommitted |
+| | Task 2 Step 5: per-task Opus review | findings, applied / rejected | base + Task 2, uncommitted |
+| | Task 2 mutation proofs (each reverted; `git diff --exit-code -- <file>` exit 0 after each) | `_new_answers` returns `[]`: exit 1; `_finish` check without `match_over()`: exit 1 | base + Task 2, uncommitted |
+| | Task 3 Step 2: `ONLY(t3red, sb4_)` | exit 1, missing `take` / digest parameter | Task 2 + Task 3 tests |
+| | Task 3 Step 4: `ONLY(t3, sb4_)`; `ONLY(t3l, test_lockstep)`; untouched-file diff; lockstep benchmark; `SUITE(t3)`; `NET(t3, match)`, `NET(t3, rematch)`; `EQUAL(t3)`; lint; warnings | | |
+| | Task 3 mutation proofs | | |
+| | Task 3 Step 6: per-task Opus review | | |
+| | Task 4 Step 2: `run_python_tests.sh` (live-read check names `online_driver.gd`); `ONLY(t4red, sb4_ring)`; `ONLY(t4red2, sb4_foreign)`; `ONLY(t4g, sb4_no_send)` | exit 1, exit 1, exit 1, exit 0 (guard) | |
+| | Task 4 Step 4: boundary, `rg` no live read, `ONLY(t4, sb4_)` (15), `ONLY(t4o, test_online_scene)` (base + 9: 71), SK23, `SUITE(t4)`, `NET(t4, match)`, `NET(t4, rematch)`, `EQUAL(t4)`, lint, warnings, checks | | |
+| | Task 4 mutation proofs (nine, Step 5; `git diff --exit-code` after each revert) | | |
+| | Task 4 Step 6: per-task Opus review | | |
+| | Task 5: link check by hand (`rg -o` targets, Glob), `check_public.sh`, `run_checks.sh`, Opus docs review | links checked / misses; `PUBLIC CHECK PASSED`; `CHECKS PASSED 5` | |
+| | Task 6 Step 1: `SUITE(gate)`, `EQUAL(gate)`, checks, team match, 16 netplay scenarios (CI loop 15 plus `silent`), `CONFORMANCE PASSED 69`, untouched-file diff | | branch tip, clean |
+| | Task 6 Step 2: `uptime`; `PERF_LABEL="Sim boundary SB4" sh tools/run_benchmark.sh` (lockstep row from the same log); coordinator commit of the perf files; untouched-path diff again | | branch tip, clean |
+| | Task 6 Step 3: Opus whole-branch, Grok normal, `silent-failure-hunter`, `pr-test-analyzer`, player-experience reviewer (Q15 B), `/ponytail-review` (Sonnet); fix round; Step 1 rerun | | |
+| | Task 6 Step 4: footers, resume record, `check_public.sh` | | |
+
+"Traces equal" (`EQUAL(<tag>)`): `python3 tools/compare_replays.py` base against branch for replay, economy, combat (1200 rows each), team (`--interval 200 --rows 100`), `np-match/s1.tsv` and `np-rematch/s1.tsv` (`--interval 30 --rows 0`) → `REPLAYS MATCHED` each; `cmp` of both `s1.cmd` files silent.
+
+### Owner checks (morning, before the merge decision)
+
+Visible windows: never at night (Q11 A, user 2026-11-17). Commands and what to look at: plan Task 6 Step 5.
+
+| Date | Check | Result | Tree |
+|---|---|---|---|
+| | Manual online match: local relay (`PORT=18600 go run .` in `relay/`), two `sh tools/run_game.sh` windows (Create, Join with relay URL `ws://127.0.0.1:18600/ws`), one short match plus a rematch | match runs and ends normally / Play again starts a second match / no waiting line stays / no desync (no notice, no new `desync-seat<N>.json`): each pass or what was seen | branch tip |
+| | Rendered rerun (`movement_benchmark.tscn`, `perf_record.py --label "Sim boundary SB4"`) | row recorded | after the merge |
+
+### Base counts (Task 1 Step 5)
+
+| Count | Command | Base | Plan (`1be405a`) |
+|---|---|---|---|
+| live reads in the online driver | `rg -c 'pump\.live\(\)' game/scripts/match/online_driver.gd` | 6 (`start` :84, `step` :102, :109, :110, :114, `_report` :259) | 6 |
+| live-read shortcut comments | `rg -n 'shortcut: live read' game/scripts/match` | 6 | 6 |
+| online driver in the boundary check | `rg -n 'online_driver' tools/test_sim_boundary.py` | 3 (:49, :154, :155) | 3 (:49, :154, :155) |
+| `pump.live()` in online scene tests | `rg -c 'pump\.live\(\)' game/tests/test_online_scene.gd` | 46 | 46 |
+| `cases()` lengths | `test_sim_pump.gd`, `test_online_scene.gd` | 11, 62 | 11, 62 |
+| suite cases | `SUITE(base)` | 1079 | 1079 (1039 at `relay-guards-verification.md:305`, plus P12's 40; static `cases()` count on `425aa44`) |
+| filtered case counts | `ONLY(base-l, test_lockstep)`, `ONLY(base-o, test_online_scene)` | 26, 62 | not measured yet |
+| netplay scenarios / CI loop | `run_netplay.sh:2`, `ci.yml:156` | 17 / 15 | 17 / 15 |
+| conformance cases, vectors | `run_conformance.sh`, `protocol/vectors/` | 69, 19 | 69, 19 |
+
+### Relay guards recheck (Task 1 Step 3)
+
+| Item | Check | Result |
+|---|---|---|
+| (a) symbols | `rg -n '^func (submit\|finish_tick\|start\|advance\|_verify_hashes)' game/scripts/net/lockstep.gd`; `rg -n '^func (submit\|step\|drain\|adopt\|start\|_report\|_new_answers)' game/scripts/match/online_driver.gd`; Task 3 and Task 4 "before" descriptions | all present: lockstep `start` :61, `submit` :65, `advance` :107, `finish_tick` :130, `_verify_hashes` :241; driver `adopt` :72, `start` :81, `step` :96, `drain` :118, `_new_answers` :157, `submit` :174, `_report` :258. The "before" descriptions match: `advance` still issues, logs, steps in one function; the driver still reads `pump.live()` in `start`, `step`, `_report` |
+| (b) `finish_tick` hash block | the `var value: String = StateHash.digest(state)` line (`:133` on `1be405a`) still at the top, before the own-frame early return (`:146-148`) | holds: value line :133 inside the hash block at the top; own-frame `if not own.ok` :146-148 comes after it |
+| (c) L19, L20 | L19 calls `finish_tick(9_999_990, pair[0].snapshot())` (`test_lockstep.gd:607`), L20 `finish_tick(1, null)` (`:619`); both fit the default `digest` | holds: :607 and :619 |
+| (d) counts | scenarios, CI loop, conformance, vectors (table above) | 17, 15, 69, 19 |
+| (e) Relay guards tests | N-cap, L19, L20 green in `SUITE(base)` | green: `SUITE(base)` 1079 cases, 0 failures; `test_lockstep` 26 cases and `test_online_scene` 62 cases (N-cap included) green |
+| (f) lockstep benchmark | base p99 after Relay guards' submit encode | overhead p99 0.068 ms (p50 0.009, p95 0.016, max 0.16) |
+
+### Line map (Task 1 Step 2)
+
+Plan cites are `main` `1be405a`; right column is the base. A function name is the stable anchor.
+
+| Plan cite | Base location |
+|---|---|
+| `lockstep.gd` `start` :61-63, `submit` :65-76 (stamp :68), `advance` :107-128, `finish_tick` :130-151 (value line :133, own-frame return :146-148), `desync_report` :202-205, `_receive_tick` :215-232 (stamp check :224), `_verify_hashes` :241-250 | `start` :61-63, `submit` :65 (stamp :67), `advance` :107-128, `finish_tick` :130-151 (value line :133, own-frame return :146-148), `desync_report` :202, `_receive_tick` :215 (stamp check :225), `_verify_hashes` :241 |
+| `online_driver.gd` `_on_session` :55, `create` :70, `adopt` :72-79, `start` :81-84, `step` :96-115, `drain` :117-123, `_new_answers` :157-172, `submit` :174-178, `_finish` :232-242, `_write_report` :244-256, `_report` :258-261, `notice` :286-294 (waiting :289) | `_on_session` :51, `create` :61, `adopt` :72, `start` :81, `step` :96, `drain` :118, `_new_answers` :157, `submit` :174, `_finish` :232, `_write_report` :244, `_report` :258, `notice` :286 (waiting :289) |
+| `sim_pump.gd` `Job` :12-17, `Note` :19-31, `query` :81-82, `run_job` :126-153 (digest :144-146) | `Job` :12, `Note` :19, `query` :81, `run_job` :126 (digest :144-146), unchanged |
+| `match_screen.gd` `_step_frame` :197-205, `_drain_notes` :207-221, `_take_answers` :149-156 | `_take_answers` :160, `_step_frame` :208, `_drain_notes` :218 (P12 moved them) |
+| `simulation.gd` `issue_command` :195-196, `_command_before` :350-354, `step` :592-593, `hash_ring` :710-716 | `issue_command` :195, `_command_before` :350, `step` :592, `hash_ring` :710, unchanged |
+| `tools/test_sim_boundary.py` `LIVE_ALLOWLIST` :46-51, `test_live_allowlist_is_exact_path` :153-155 | `LIVE_ALLOWLIST` :46 (`online_driver.gd` :49), `test_live_allowlist_is_exact_path` :153 (:154, :155), unchanged |
+| `test_online_scene.gd` `cases()` :48-49, helpers :51-80, :166-193, N2 :118-153, N2w :155-163, N-cap :1651, N4 :199-217, N13 :219-236, N23 :365-381, N18 :408-444, N21 :485-511, N5 :524-544, N27 :553-569, RB8 :572-587, IC2 :1413, RP8 :1581, SB3 two notes :1625-1649 | `cases()` :48, `_run` :68, N2 `test_status_lines_and_layout` :118, N4 :199, N13 :219, N23 :365, N18 :408, N21 :485, N5 `test_catch_up_is_bounded` :533, RB8 :572, IC2 `test_input_script_online` :1413, RP8 :1581, SB3 two notes :1625, N-cap `test_too_many_orders_note` :1651 (N5 moved by 9; the rest as cited) |
+| `test_lockstep.gd` L6 :251-255, L17 :564-577, L19 finish_tick :607, L20 :613-622; `test_skirmish.gd` SK23 :692-697 | L17 `test_left_on_normal_end_tick` :564, L19 `finish_tick` :607, L20 `finish_tick` :619; SK23 check :696 (all as cited) |
+| `run_netplay.sh` usage :2, `--netclient` :101, pins :161, :179; `ci.yml` loop :156; `run_benchmark.sh` lockstep :25, record :38-39 | as cited: usage :2, `--netclient` :101, pins :161 and :179, `ci.yml` loop :156, `run_benchmark.sh` lockstep :25, record :36-39 |
+| docs: guide 01 :92, :105, :128, :131, :148; 04 :36, :118, :148, :165, :181; 05 :161, :231; 10 :82, :84, :144-145, :168; 11 :13, :39-54, :79-93, :178, :184, :196, :235, :240, :262; 12 :158, :215; 13 :100, :255; `sim-interface.md` :42, :62; spec :196; `STATUS.md` :36 | footers re-found: 01 :148, 04 :181, 05 :244 (was :231), 10 :168, 11 :262, 12 :215, 13 :255; `sim-interface.md` :62 (live-read sentence), spec :196 (SB4 row), `STATUS.md` :36 (night 6 row); the other guide spots are found by their text in Task 5 (guide 05 moved by P12) |
+
+Findings that change later tasks: none. Every cited symbol exists; only `match_screen.gd`, guide 05 and a few `online_driver.gd` and `test_online_scene.gd` lines moved, as the plan expected.
