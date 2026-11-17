@@ -74,6 +74,16 @@ func end_match() -> void:
 func keep_match() -> void:
 	if _active and not _reviewed: _record_match()
 
+func close_out() -> void:
+	if not _active: return
+	get_viewport().gui_release_focus() # focus_exited saves the field being typed in
+	if _dialog.visible and not _text.text.is_empty(): save_marker(_kind, _text.text)
+	keep_match()
+	PlaytestSession.close_sitting(web, download)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and not web: close_out() # web files at the next launcher open instead
+
 func _record_match() -> int:
 	_reviewed = true
 	return _session.finish_match(match_record.call())
@@ -211,8 +221,8 @@ func _key_label(key: Key) -> String:
 	return char(label) if label > KEY_SPACE and label < 128 else OS.get_keycode_string(label)
 
 func _show_saved() -> void:
-	_saved.visible = _session != null and not _session.saved_at.is_empty()
-	if _saved.visible: _saved.text = "Saved %s" % _session.saved_at
+	_saved.visible = _session != null and (_session.save_failed or not _session.saved_at.is_empty())
+	if _saved.visible: _saved.text = "Not saved" if _session.save_failed else "Saved %s" % _session.saved_at
 
 # A ScrollContainer reports no minimum height, so the panel would collapse without this.
 func _fit() -> void:

@@ -6,6 +6,8 @@ const MarkerCapture = preload("res://scripts/playtest/marker_capture.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const Launcher = preload("res://scenes/launcher.tscn")
+const SessionForm = preload("res://scripts/playtest/session_form.gd")
+const FocusCardView = preload("res://scripts/playtest/focus_card_view.gd")
 const HEADER := {"mode": "offline", "map": "dry_wells", "seed": 1, "factions": ["frc", "china"], "seat": 0, "build": "0.11.0-dev+abc"}
 const SHIPPED := ["p2.2-slice-2", "p2.2-quick-rematch", "p2.1-new-launcher", "p2-you-clicked", "p1-frc-economy", "p1-frc-tunnels-online", "p1-look-and-m6-fixes", "old-checks-2026-11"]
 var scratch: String = "user://test-playtest-settings-%d.cfg" % OS.get_process_id()
@@ -14,7 +16,7 @@ var sessions: String = "user://test-playtests-%d" % OS.get_process_id()
 var saved_dir: String = ""
 
 func cases() -> Array[Callable]:
-	return [test_shipped_focus_file_valid, test_focus_validation, test_trigger_matching, test_switch_defaults_and_override, test_build_id, test_launcher_focus_card, test_switch_saves_without_cards, test_launcher_shows_open_sitting_card, test_capture_bounds, test_marker_fields, test_session_schema, test_session_web_download, test_session_web_backup_fails, test_session_desktop_write, test_session_resumes_after_restart, test_marker_written_mid_match, test_finish_replaces_unfinished, test_restart_keeps_cut_short_entry, test_filled_rules, test_close_sitting_unfilled_leaves_nothing, test_legacy_current_is_filed, test_settle_rules, test_web_copies_never_overwritten, test_suite_playtest_dir_redirected]
+	return [test_shipped_focus_file_valid, test_focus_validation, test_trigger_matching, test_switch_defaults_and_override, test_build_id, test_launcher_focus_card, test_switch_saves_without_cards, test_launcher_shows_open_sitting_card, test_capture_bounds, test_marker_fields, test_session_schema, test_session_web_download, test_session_web_backup_fails, test_session_desktop_write, test_session_resumes_after_restart, test_marker_written_mid_match, test_finish_replaces_unfinished, test_restart_keeps_cut_short_entry, test_filled_rules, test_close_sitting_unfilled_leaves_nothing, test_legacy_current_is_filed, test_settle_rules, test_web_copies_never_overwritten, test_suite_playtest_dir_redirected, test_web_launcher_downloads_once, test_card_pick_ends_sitting, test_failed_card_pick_keeps_card, test_marker_row_shows_match_time]
 
 func _begin() -> String:
 	var saved: String = AudioSettings.path
@@ -187,7 +189,8 @@ func _check_this_build(runner, port: SubViewport, view: Rect2, label: String, pa
 			runner.check(view.encloses(panel.get_global_rect()), "PT6 FocusPanel inside the viewport at %s" % label)
 			_labels_inside(runner, panel, view, label)
 			var picker: OptionButton = panel.find_child("Picker", true, false)
-			runner.check(picker.item_count == SHIPPED.size(), "PT6 Picker lists every card, got %d" % picker.item_count)
+			runner.check(picker.item_count == SHIPPED.size() and not picker.disabled, "PT6 Picker lists every card and is enabled, got %d" % picker.item_count)
+			runner.check(_filed_shown(launcher) and _filed_label(launcher) == "Notes folder:" and _last_filed(launcher).text == ProjectSettings.globalize_path(PlaytestSession.dir), "PT6 with nothing filed the desktop panel shows the notes folder at %s" % label)
 			picker.select(4)
 			picker.item_selected.emit(4)
 			runner.check(FocusCards.chosen == "p1-frc-economy", "PT6 choosing item 5 sets the chosen card, got %s" % FocusCards.chosen)
@@ -268,7 +271,7 @@ func test_launcher_shows_open_sitting_card(runner) -> bool:
 	var picker: OptionButton = launcher.get_node("FocusPanel").find_child("Picker", true, false)
 	runner.check(not picker.disabled, "PT6b with no sitting the picker is enabled")
 	launcher.free()
-	var stored := PlaytestSession.resume_or_open(SHIPPED[2], "0.11.0-dev+abc")
+	var stored := PlaytestSession.resume_or_open(SHIPPED[2], PlaytestSettings.build_id())
 	stored.finish_match({"mode": "offline", "end_tick": 10})
 	PlaytestSession.current = null
 	FocusCards.chosen = ""
@@ -276,7 +279,7 @@ func test_launcher_shows_open_sitting_card(runner) -> bool:
 	var title: String = FocusCards.card(SHIPPED[2], FocusCards.load_cards()).title
 	var panel: Control = launcher.get_node("FocusPanel")
 	runner.check(launcher.get_node("Pages/Play/ThisBuild").text == "This build: " + title, "PT6b ThisBuild names the open sitting's card, got %s" % launcher.get_node("Pages/Play/ThisBuild").text)
-	runner.check(panel.find_child("Picker", true, false).disabled, "PT6b the picker is disabled while a sitting is open")
+	runner.check(not panel.find_child("Picker", true, false).disabled and panel.find_child("OpenSession", true, false).visible and panel.find_child("OpenSession", true, false).text == "Session open: 1 match", "PT6b the picker stays enabled while Session open shows")
 	var shown := PackedStringArray()
 	for label: Label in panel.find_children("*", "Label", true, false): shown.append(label.text)
 	runner.check(title in shown, "PT6b the panel shows the open sitting's card, got %s" % [shown])
@@ -576,4 +579,115 @@ func test_web_copies_never_overwritten(runner) -> bool:
 
 func test_suite_playtest_dir_redirected(runner) -> bool:
 	runner.check(PlaytestSession.dir != "user://playtests", "PT13 the suite never writes the player's real playtests folder, got %s" % PlaytestSession.dir)
+	return true
+
+func _store_filled(focus: String) -> void:
+	PlaytestSession.current = null
+	PlaytestSession.resume_or_open(focus, PlaytestSettings.build_id()).set_answer("q1", 4, "")
+	PlaytestSession.current = null
+
+func _last_filed(launcher) -> LineEdit:
+	return launcher.get_node("FocusPanel").find_child("LastFiled", true, false)
+
+func _filed_shown(launcher) -> bool:
+	return _last_filed(launcher).get_parent().visible
+
+func _filed_label(launcher) -> String:
+	var label: Label = launcher.get_node("FocusPanel").find_child("LastFiledLabel", true, false)
+	return label.text if label != null and _filed_shown(launcher) else ""
+
+func test_web_launcher_downloads_once(runner) -> bool:
+	var saved := _begin()
+	PlaytestSettings.save_enabled(true)
+	_store_filled(SHIPPED[2])
+	var downloads: Array = []
+	var view = FocusCardView.new(FocusCards.load_cards(), func() -> int: return -1, func() -> void: pass, true)
+	runner.check(not view.find_child("LastFiled", true, false).get_parent().visible, "NB12 web with nothing filed shows no notes line")
+	view.free()
+	var port := SubViewport.new()
+	port.size = Vector2i(1280, 720)
+	runner.root.add_child(port)
+	for visit in 2:
+		var launcher = Launcher.instantiate()
+		launcher.web = true
+		launcher.download = _recorder(downloads)
+		port.add_child(launcher)
+		await runner.process_frame
+		var name: String = downloads[0][1] if not downloads.is_empty() else ""
+		runner.check(downloads.size() == 1 and name.begins_with("session-") and name.ends_with(".json"), "NB12 visit %d: one download in all, got %s" % [visit, downloads.map(func(entry: Array) -> String: return entry[1])])
+		runner.check(FileAccess.file_exists(sessions.path_join("last-" + name)) and not FileAccess.file_exists(sessions.path_join("current.json")), "NB12 visit %d: the last- copy is stored and the sitting closed" % visit)
+		var line: LineEdit = _last_filed(launcher)
+		runner.check(line != null and _filed_shown(launcher) and not line.editable and _filed_label(launcher) == "Notes downloaded:" and line.text == name, "NB12 visit %d: LastFiled holds the download name, got '%s'" % [visit, line.text if line != null else ""])
+		launcher.free()
+	port.free()
+	_end(saved)
+	return true
+
+func test_card_pick_ends_sitting(runner) -> bool:
+	var saved := _begin()
+	PlaytestSettings.save_enabled(true)
+	var first: String = SHIPPED[2]
+	var other: String = SHIPPED[4]
+	_store_filled(first)
+	var port := SubViewport.new()
+	port.size = Vector2i(1280, 720)
+	runner.root.add_child(port)
+	var launcher = await _launcher(runner, port, "Play")
+	var panel: Control = launcher.get_node("FocusPanel")
+	var picker: OptionButton = panel.find_child("Picker", true, false)
+	runner.check(_session_files().is_empty() and _filed_label(launcher) == "Notes folder:", "NB13 fixture: nothing filed before the pick")
+	picker.select(SHIPPED.find(first))
+	picker.item_selected.emit(SHIPPED.find(first))
+	runner.check(_session_files().is_empty() and FileAccess.file_exists(sessions.path_join("current.json")), "NB13 picking the open sitting's own card keeps it open")
+	picker.select(SHIPPED.find(other))
+	picker.item_selected.emit(SHIPPED.find(other))
+	runner.check(not picker.disabled and _session_files().size() == 1 and FocusCards.shown() == other, "NB13 picking another card files the sitting, got %s, shown %s" % [_session_files(), FocusCards.shown()])
+	runner.check(_filed_shown(launcher) and _filed_label(launcher) == "Previous session saved to" and _last_filed(launcher).text == PlaytestSession.last_filed and PlaytestSession.last_filed.ends_with(".json"), "NB13 LastFiled holds the saved path, got '%s'" % _last_filed(launcher).text)
+	picker.select(SHIPPED.find(first))
+	picker.item_selected.emit(SHIPPED.find(first))
+	runner.check(_session_files().size() == 1 and FocusCards.shown() == first, "NB13 picking with no sitting open writes nothing")
+	launcher.free()
+	port.free()
+	_end(saved)
+	return true
+
+func test_failed_card_pick_keeps_card(runner) -> bool:
+	var saved := _begin()
+	PlaytestSettings.save_enabled(true)
+	var first: String = SHIPPED[2]
+	_store_filled(first)
+	var blocker: String = sessions.path_join(PlaytestSession.file_name(_on_disk().started))
+	DirAccess.make_dir_recursive_absolute(blocker) # a directory in the file's place makes the write fail
+	var port := SubViewport.new()
+	port.size = Vector2i(1280, 720)
+	runner.root.add_child(port)
+	var launcher = await _launcher(runner, port, "Play")
+	var picker: OptionButton = launcher.get_node("FocusPanel").find_child("Picker", true, false)
+	picker.select(SHIPPED.find(SHIPPED[4]))
+	picker.item_selected.emit(SHIPPED.find(SHIPPED[4]))
+	runner.check(FocusCards.shown() == first and picker.selected == SHIPPED.find(first) and _session_files().is_empty() and FileAccess.file_exists(sessions.path_join("current.json")), "NB15 a failed filing on a pick keeps the open sitting's card, shown %s, selected %d" % [FocusCards.shown(), picker.selected])
+	DirAccess.remove_absolute(blocker)
+	launcher.free()
+	port.free()
+	_end(saved)
+	return true
+
+func test_marker_row_shows_match_time(runner) -> bool:
+	var saved := _begin()
+	var session := _fresh()
+	session.add_marker(_marker(62 * Engine.physics_ticks_per_second), HEADER)
+	var box := VBoxContainer.new()
+	SessionForm.add_markers(box, session, 0)
+	var row: String = box.get_child(0).text
+	runner.check(row == "Good, 1:02: ok", "PT14 a marker row shows the match time as m:ss, got '%s'" % row)
+	var draft := _marker(0)
+	draft.kind = ""
+	session.add_marker(draft, HEADER)
+	box.free()
+	box = VBoxContainer.new()
+	SessionForm.add_markers(box, session, 0)
+	var draft_row: String = box.get_child(box.get_child_count() - 2).text
+	runner.check(draft_row == "0:00: ok", "PT14 a draft saved without a kind shows no empty kind, got '%s'" % draft_row)
+	box.free()
+	_end(saved)
 	return true

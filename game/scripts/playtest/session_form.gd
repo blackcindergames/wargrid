@@ -16,7 +16,9 @@ static func add_markers(parent: VBoxContainer, session: PlaytestSession, match_i
 	var markers: Array = session.data.matches[match_index].markers
 	for k: int in markers.size():
 		var marker: Dictionary = markers[k]
-		var text: String = "%s, tick %d" % [str(marker.kind).capitalize(), int(marker.tick)]
+		var seconds: int = floori(float(marker.tick) / Engine.physics_ticks_per_second)
+		var text: String = "%d:%02d" % [floori(seconds / 60.0), seconds % 60]
+		if not str(marker.kind).is_empty(): text = "%s, %s" % [str(marker.kind).capitalize(), text]
 		if not str(marker.text).is_empty(): text += ": " + str(marker.text)
 		_add_label(parent, text)
 		var comment := LineEdit.new()

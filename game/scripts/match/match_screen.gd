@@ -46,6 +46,7 @@ var _clock := PresentationClock.new()
 var _pause: Control
 var _result_panel: Control
 var change_scene: Callable = _change_scene
+var quit: Callable
 @onready var _selection_box: ReferenceRect = $HUD/SelectionBox
 var _sound: SoundPlayer = null
 var _auto_samples := PackedFloat32Array()
@@ -80,7 +81,10 @@ func _ready() -> void:
 	_pause.confirm_leave = driver.confirm_leave()
 	_pause.resume_requested.connect(_pause.close)
 	_pause.leave_requested.connect(_leave)
-	_pause.quit_requested.connect(func() -> void: get_tree().quit())
+	if not quit.is_valid(): quit = get_tree().quit
+	_pause.quit_requested.connect(func() -> void:
+		_playtest.close_out()
+		quit.call())
 	_pause.quality_changed.connect(_view.set_quality)
 	_pause.neon_changed.connect(_view.set_bright_owners)
 	_pause.smooth_changed.connect(_view.set_smooth)

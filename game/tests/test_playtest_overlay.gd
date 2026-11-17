@@ -42,7 +42,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_only, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -274,6 +274,22 @@ func test_helper_off_changes_nothing(runner) -> bool:
 	_click(main, "Playtest helper: On")
 	runner.check(not overlay.is_active() and not overlay.get_node("Checklist").visible and not PlaytestSettings.enabled(), "PO7 and off again")
 	main.free()
+	_store_sitting("0.0.1-dev+old", true)
+	var before: String = _current_text()
+	var downloads: Array = []
+	main = await _scene(runner)
+	main.quit = func() -> void: pass
+	main.get_node("HUD/Playtest").web = true
+	main.get_node("HUD/Playtest").download = func(_buffer: PackedByteArray, file_name: String, _mime: String) -> void: downloads.append(file_name)
+	main.get_node("HUD/PauseMenu").quit_requested.emit()
+	_close_window(main)
+	main.free()
+	for web: bool in [false, true]:
+		var launcher = await _open_launcher(runner, web, downloads)
+		launcher.get_node("Sidebar/Nav/Quit").pressed.emit()
+		_close_window(launcher)
+		launcher.free()
+	runner.check(_current_text() == before and Array(DirAccess.get_files_at(sessions)) == ["current.json"] and downloads.is_empty() and PlaytestSession.last_filed.is_empty(), "PO7 off: pause Quit, window close, launcher open and launcher Quit leave a stored sitting alone, got %s, %s" % [DirAccess.get_files_at(sessions), downloads])
 	_end(saved)
 	return true
 
@@ -541,6 +557,28 @@ func test_two_match_session_file(runner) -> bool:
 	_end(saved)
 	return true
 
+func _close_window(node) -> void:
+	node.propagate_notification(Node.NOTIFICATION_WM_CLOSE_REQUEST)
+
+func _session_files() -> Array:
+	return Array(DirAccess.get_files_at(sessions)).filter(func(file: String) -> bool: return file.begins_with("session-"))
+
+func _store_sitting(build: String, filled: bool) -> void:
+	PlaytestSession.current = null
+	var session := PlaytestSession.resume_or_open(CARD_ECONOMY, build)
+	if filled: session.set_answer(_questions()[0].id, 3, "stored")
+	else: session.set_checked("collect", true, false)
+	PlaytestSession.current = null
+
+func _open_launcher(runner, web: bool = false, downloads: Array = []):
+	var launcher = load(LAUNCHER).instantiate()
+	launcher.web = web
+	launcher.download = func(buffer: PackedByteArray, file_name: String, mime: String) -> void: downloads.append([buffer.size(), file_name, mime])
+	launcher.quit = func() -> void: pass
+	runner.root.add_child(launcher)
+	await runner.process_frame
+	return launcher
+
 func test_web_save_downloads(runner) -> bool:
 	var saved: String = _begin()
 	var main = await _scene(runner)
@@ -550,16 +588,20 @@ func test_web_save_downloads(runner) -> bool:
 	var downloads: Array = []
 	overlay.download = func(buffer: PackedByteArray, file_name: String, mime: String) -> void: downloads.append([buffer.size(), file_name, mime])
 	_mark(overlay, "good", "web")
-	overlay.end_match()
-	_press(main, "EndSession")
-	_rate_all(runner, main, 3)
-	_press(main, "SaveSession")
-	runner.check(downloads.size() == 1 and downloads[0][0] > 0 and downloads[0][1].begins_with("session-") and downloads[0][2] == "application/json", "PO13 one download of the session JSON, got %s" % [downloads])
-	runner.check(not FileAccess.file_exists(sessions.path_join(downloads[0][1] if not downloads.is_empty() else "x")) and _form_text(main).contains("Downloaded"), "PO13 no file is written and the form says Downloaded")
-	var shown: Control = _form(main).find_child("ShowInFolder", true, false) if _form(main) != null else null
-	runner.check(shown == null or not shown.is_visible_in_tree(), "PO13 no Show in folder on the web")
-	runner.check(_form_shown(main) and _press(main, "Close") and not _form_shown(main), "PO13 Close shuts the form")
+	var before: String = _current_text()
+	_close_window(main)
+	runner.check(downloads.is_empty() and _current_text() == before and Array(DirAccess.get_files_at(sessions)) == ["current.json"], "PO13 a web window close in a match leaves current.json alone, got %s, %s" % [DirAccess.get_files_at(sessions), downloads])
 	main.free()
+	PlaytestSession.current = null
+	var launcher = await _open_launcher(runner, true, downloads)
+	runner.check(downloads.size() == 1 and str(downloads[0][1]).begins_with("session-") and _current_text().is_empty(), "PO13 the next web launcher open downloads it, got %s" % [downloads])
+	launcher.free()
+	_store_sitting(PlaytestSettings.build_id(), false)
+	before = _current_text()
+	launcher = await _open_launcher(runner, true, downloads)
+	_close_window(launcher)
+	runner.check(downloads.size() == 1 and _current_text() == before, "PO13 a web launcher window close leaves an open sitting alone")
+	launcher.free()
 	_end(saved)
 	return true
 
@@ -570,21 +612,91 @@ func test_desktop_write_error_keeps_session(runner) -> bool:
 	_camera(main)
 	overlay.web = false
 	_mark(overlay, "good", "keep me")
-	overlay.end_match()
-	_press(main, "EndSession")
 	_rate_all(runner, main, 5)
 	var blocker: String = sessions.path_join(PlaytestSession.file_name(PlaytestSession.current.data.started))
 	DirAccess.make_dir_recursive_absolute(blocker) # a directory in the file's place makes the open fail without an engine error
-	_press(main, "SaveSession")
-	runner.check(_form_text(main).contains("Could not save"), "PO14 a failed write says Could not save, got '%s'" % _form_text(main))
-	runner.check(PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1 and PlaytestSession.current.data.answers.size() > 0, "PO14 the session stays in memory with its match and answers")
-	var again: Button = _form(main).find_child("SaveSession", true, false) if _form(main) != null else null
-	runner.check(again != null and again.is_visible_in_tree(), "PO14 SaveSession is offered again")
+	_close_window(main)
+	var stored: Variant = JSON.parse_string(_current_text())
+	runner.check(stored is Dictionary and stored.matches.size() == 1 and stored.answers.size() > 0 and PlaytestSession.last_filed.is_empty(), "PO14 a failed write at window close keeps current.json with its match and answers")
 	DirAccess.remove_absolute(blocker)
-	_press(main, "SaveSession")
-	runner.check(_form_text(main).contains("Saved to") and _saved_session().get("matches", []).size() == 1, "PO14 the retry writes the file")
+	_close_window(main)
+	var filed: Array = _saved_session().get("matches", [])
+	runner.check(filed.size() == 1 and not filed[0].has("unfinished") and _current_text().is_empty() and PlaytestSession.last_filed.ends_with(".json"), "PO14 the next close writes the finished match, last_filed %s" % PlaytestSession.last_filed)
 	main.free()
 	_end(saved)
+	return true
+
+func test_window_close_files_typed_text(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var id: String = _questions()[0].id
+	var field: LineEdit = _field(main, "Answer_" + id)
+	field.grab_focus()
+	field.text = "typed only"
+	runner.check(not PlaytestSession.current.filled() and _focus_in_panel(main), "NB9 fixture: the field has focus and nothing is filled yet")
+	_close_window(main)
+	var file: Dictionary = _saved_session()
+	runner.check(str(file.get("answers", {}).get(id, {}).get("text", "")) == "typed only" and file.get("matches", []).size() == 1 and _current_text().is_empty(), "NB9 a window close files the focused field's text and the match, got %s" % [file.get("answers", {})])
+	main.free()
+	WargridTestRunner.remove_dir(sessions)
+	_store_sitting(PlaytestSettings.build_id(), true)
+	var launcher = await _open_launcher(runner)
+	runner.check(_session_files().is_empty(), "NB9 fixture: opening the launcher files nothing")
+	_close_window(launcher)
+	runner.check(_session_files().size() == 1 and _current_text().is_empty(), "NB9 a launcher window close files the stored sitting, got %s" % [_session_files()])
+	launcher.free()
+	_end(saved)
+	return true
+
+func test_quit_with_write_error_still_quits(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	var quits: Array[int] = [0]
+	var finished_first: Array[bool] = [false]
+	main.quit = func() -> void:
+		quits[0] += 1
+		var on_disk: Variant = JSON.parse_string(_current_text())
+		finished_first[0] = on_disk is Dictionary and on_disk.matches.size() == 1 and not on_disk.matches[0].has("unfinished") and on_disk.matches[0].has("end_digest")
+	_mark(overlay, "good", "keep me")
+	var blocker: String = sessions.path_join(PlaytestSession.file_name(PlaytestSession.current.data.started))
+	DirAccess.make_dir_recursive_absolute(blocker)
+	main.get_node("HUD/PauseMenu").quit_requested.emit()
+	runner.check(quits[0] == 1, "NB10 pause Quit still quits after a failed write, got %d" % quits[0])
+	runner.check(finished_first[0], "NB10 the match is stored as finished before quit runs")
+	var stored: Variant = JSON.parse_string(_current_text())
+	runner.check(stored is Dictionary and stored.matches.size() == 1 and stored.matches[0].markers.size() == 1 and _session_files().is_empty(), "NB10 current.json keeps the match and its marker")
+	PlaytestSession.current = null
+	var resumed := PlaytestSession.resume_or_open(CARD_ECONOMY, PlaytestSettings.build_id())
+	runner.check(resumed.data.matches.size() == 1 and resumed.data.matches[0].markers[0].text == "keep me", "NB10 the next start resumes it")
+	DirAccess.remove_absolute(blocker)
+	main.free()
+	_end(saved)
+	return true
+
+func test_each_exit_files_filled_only(runner) -> bool:
+	for exit_name: String in ["pause quit", "launcher quit", "window close"]:
+		for filled: bool in [true, false]:
+			var saved: String = _begin()
+			var label: String = "%s, filled %s" % [exit_name, filled]
+			if exit_name == "launcher quit":
+				_store_sitting(PlaytestSettings.build_id(), filled)
+				var launcher = await _open_launcher(runner)
+				runner.check(not _current_text().is_empty(), "NB11 %s: fixture stored" % label)
+				launcher.get_node("Sidebar/Nav/Quit").pressed.emit()
+				launcher.free()
+			else:
+				var main = await _scene(runner)
+				main.quit = func() -> void: pass
+				if filled: runner.check(_press(main, "%s_3" % _questions()[0].id), "NB11 %s: rating shown" % label)
+				else: PlaytestSession.current.set_checked("collect", true, false)
+				runner.check(not _current_text().is_empty(), "NB11 %s: fixture stored" % label)
+				if exit_name == "pause quit": main.get_node("HUD/PauseMenu").quit_requested.emit()
+				else: _close_window(main)
+				main.free()
+			runner.check(_session_files().size() == (1 if filled else 0) and _current_text().is_empty(), "NB11 %s: files %s and removes current.json" % [label, _session_files()])
+			_end(saved)
 	return true
 
 func test_form_layout(runner) -> bool:
@@ -1073,6 +1185,41 @@ func test_empty_marker_states(runner) -> bool:
 	runner.check(_markers_title(main) == "This match" and _no_markers_line(main) == "No markers yet (N adds one)", "PO35 after a match without markers there is no Last match, '%s'" % _markers_title(main))
 	_mark(overlay, "good", "one")
 	runner.check(_no_markers_line(main).is_empty() and _panel(main).find_children("*", "Label", true, false).all(func(label: Label) -> bool: return label.text != "No markers."), "PO35 a marker replaces the empty state")
+	main.free()
+	_end(saved)
+	return true
+
+func test_failed_save_says_not_saved(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	_mark(overlay, "good", "one")
+	var footer: Label = _panel(main).find_child("Saved", true, false)
+	runner.check(footer.visible and footer.text.begins_with("Saved "), "PO36 fixture: a good write says Saved, got '%s'" % footer.text)
+	var current: String = sessions.path_join(PlaytestSession.CURRENT)
+	DirAccess.remove_absolute(current)
+	DirAccess.make_dir_recursive_absolute(current) # a directory in the file's place makes the write fail
+	_mark(overlay, "bad", "two")
+	runner.check(footer.visible and footer.text == "Not saved", "PO36 a failed write says Not saved, got '%s'" % footer.text)
+	DirAccess.remove_absolute(current)
+	_mark(overlay, "good", "three")
+	runner.check(footer.visible and footer.text == "Saved %s" % PlaytestSession.current.saved_at and not PlaytestSession.current.saved_at.is_empty(), "PO36 the next good write says Saved again, got '%s'" % footer.text)
+	main.free()
+	_end(saved)
+	return true
+
+func test_window_close_keeps_marker_draft(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	overlay.open_marker()
+	_dialog(main).find_child("Text", true, false).text = "draft"
+	_close_window(main)
+	var matches: Array = _saved_session().get("matches", [])
+	var markers: Array = matches[0].markers if matches.size() == 1 else []
+	runner.check(markers.size() == 1 and markers[0].text == "draft", "NB14 a window close files the open marker draft, got %s" % [markers])
 	main.free()
 	_end(saved)
 	return true

@@ -8,6 +8,7 @@ static var current: PlaytestSession = null
 static var last_filed: String = ""
 var data: Dictionary = {}
 var saved_at: String = ""
+var save_failed: bool = false
 var last_match: int = -1
 var _live: int = -1
 
@@ -130,7 +131,8 @@ func discard() -> void:
 	if current == self: current = null
 
 func _mirror() -> void:
-	if _store(CURRENT, JSON.stringify(data)): saved_at = Time.get_time_string_from_system().left(5)
+	save_failed = not _store(CURRENT, JSON.stringify(data))
+	if not save_failed: saved_at = Time.get_time_string_from_system().left(5)
 
 func _store(file: String, text: String) -> bool:
 	DirAccess.make_dir_recursive_absolute(dir)

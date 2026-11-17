@@ -4,14 +4,14 @@ Plan: [P12 plan](../superpowers/plans/2026-11-17-p12-notes-that-never-block.md).
 
 ```text
 Resume record (updated 2026-11-17)
-Branch / base commit / working-tree state: p12-notes / 10d152c / Task 3 committed, clean
-Last green task / next incomplete task: Task 3 (PO13, PO14 red by plan) / Task 4
+Branch / base commit / working-tree state: p12-notes / 10d152c / Task 4 committed, clean
+Last green task / next incomplete task: Task 4 / Task 5
 Changed paths since last commit: none
-Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1063 / 146353 / 6 (PO13, PO14) / 1 / -
-Known red case or blocker: PO13 test_web_save_downloads, PO14 test_desktop_write_error_keeps_session, rewritten as exit tests in Task 4
-Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); stop gate A passed (Firefox, Vivaldi); Chromium second-download prompt checked at gate 3; owner questions open: Saved footer after a failed write, tick vs mm:ss
+Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1072 / 146396 / 0 / 0 / TESTS PASSED
+Known red case or blocker: none
+Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); stop gate A passed (Firefox, Vivaldi); owner answers 2026-11-17 (desktop-only window close, "Not saved", m:ss, Chromium second download checked at gate 3)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 4 (Opus subagent)
+Next exact action: Task 5 (Sonnet subagent)
 ```
 
 ## Web download probe (Task 1)
@@ -48,3 +48,10 @@ The probe (`build/p12-probe/`, untracked) copies it from `new Blob` to `revokeOb
 | 2026-11-17 | 3 | red review tests before the fixes | `eb39843` plus Task 3 plus review tests | overlay CASES 38 FAILURES 13: PO13 x3, PO14 x3, PO29 x2, PO30, PO31, PO35 x3 |
 | 2026-11-17 | 3 | `WARGRID_TEST_ONLY` online_scene, playtest.gd, skirmish_scene; lint, warnings, boundary | `eb39843` plus Task 3 and review fixes | exit 0 each (62/3088/0, 24/287/0, 58/328/0); lint, warnings, boundary exit 0; simulation/net/relay/protocol diff empty |
 | 2026-11-17 | 3 | full `sh tools/run_tests.sh` (coordinator rerun) | `eb39843` plus Task 3 and review fixes | CASES 1063 CHECKS 146353 FAILURES 6, exit 1: only PO13 x3 and PO14 x3 (moved to the exits in Task 4); no SCRIPT ERROR |
+| 2026-11-17 | 4 | red `WARGRID_TEST_ONLY` test_playtest_overlay and test_playtest.gd, Task 4 tests on the old code | `1e2b4b8` plus Task 4 tests | exit 1 each; overlay CASES 40 FAILURES 11 (PO7, PO13 x3, PO14, NB9 x2, NB10, NB11; PO23 as a side effect of leaked scenes); playtest CASES 26 FAILURES 3 (PT6b, NB12, NB13; PT6 script error on the missing `LastFiled`); captured before implementing |
+| 2026-11-17 | 4 | spec risk 3, Godot 4.7 class reference (`doc/classes/Node.xml`, `SceneTree.xml` at 4.7-stable; the installed 4.7.2 `--doctool` dump has no descriptions) | - | `NOTIFICATION_WM_CLOSE_REQUEST`: "Notification received from the OS when a close request is sent (e.g. closing the window with a "Close" button or Alt + F4). Implemented on desktop platforms." `auto_accept_quit`: "If true, the application automatically accepts quitting requests." Tutorial "Handling quit requests": "On desktop and web platforms, Node receives a special NOTIFICATION_WM_CLOSE_REQUEST notification when quitting is requested from the window manager". Nothing says nodes miss it with `auto_accept_quit` on: proceeded |
+| 2026-11-17 | 4 | mutations: `gui_release_focus()` removed from `close_out`; pause Quit quits only after a successful filing; helper check dropped from the launcher close | `1e2b4b8` plus Task 4 | NB9 red, NB10 red (quit called 0 times), PO7 red (a `session-*.json` written); restored |
+| 2026-11-17 | 4 | Codex review (gpt-6-astra high) and player-experience review of the Task 4 diff; owner answers (user, 2026-11-17) | `1e2b4b8` plus Task 4 | owner: window close files only on desktop (web keeps `current.json` for the launcher); a failed write shows "Not saved"; marker rows show m:ss; the Chromium second-download prompt is checked at gate 3. Fixed test-first: a failed filing on a card pick switched the card and mixed two cards' notes (NB15); NB10 now checks the match is stored finished before quit runs; NB13 picks the open sitting's own card; PO14 checks the filed match has no `unfinished`; the desktop launcher shows "Notes folder:" until something is filed and "Previous session saved to" after, label and copyable path split; an open marker draft with text is saved at close (NB14); an empty kind is left out of the row. Ruled, not fixed: web "Notes downloaded" may name a blocked download (gate 3), a stale LastFiled after an unfilled sitting is dropped |
+| 2026-11-17 | 4 | red review-round tests before the fixes | `1e2b4b8` plus Task 4 plus review tests | overlay CASES 42 FAILURES 4 (PO13 x2, PO36, NB14); playtest CASES 28 FAILURES 11 (PT6 x4, NB12 x3, NB13 x2, NB15, PT14); empty-kind row red (", 0:00: ok"); mutations for guards green before: close_out removed from pause Quit -> NB10 red; the same-card guard removed -> NB13 red; keep_match removed -> PO14 red; restored |
+| 2026-11-17 | 4 | `WARGRID_TEST_ONLY` overlay, playtest.gd, launcher, online_scene, skirmish_scene; lint, warnings, boundary | `1e2b4b8` plus Task 4 and review fixes | exit 0 each (42/208/0, 28/309/0, 64/5727/0, 62/3088/0, 58/328/0); lint, warnings, boundary exit 0; simulation/net/relay/protocol diff empty |
+| 2026-11-17 | 4 | full `sh tools/run_tests.sh` (coordinator) | `1e2b4b8` plus Task 4 and review fixes | CASES 1072 CHECKS 146396 FAILURES 0, exit 0, no SCRIPT ERROR |
