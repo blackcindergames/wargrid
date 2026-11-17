@@ -103,6 +103,8 @@ The zoom 2 versions of the unit ids in `meta.provisional.missing_zoom2` are draw
 **Riders** (user, 2026-11-17):
 - **Neon removed.** The opt-in Neon set goes with its menu toggle; F12 closes as "Neon removed". Code: `palette.gd:11-14, 28-30`, `graphics_settings.gd:38-43`, `pause_menu.gd:11, 54-56, 134-141`, `launcher.gd:301`, `match/match_screen.gd:89, 96`, `world_batch.gd:42`, `world_view.gd:122`, `lab/ab_variants.gd:15`.
 - **Friend/foe colour mode and colour-blind presets,** opt-in and off by default (in 3v3 it hides which enemy is which), presentation only; the HUD edge colour follows it.
+- **China tank barrels further apart** (user, 2026-11-17, after the round 6 pictures): the two barrels of `china_tank` sit too close together; wider spacing is picked on a small A/B when P2.4 is planned.
+- **Tracks and wheels** (user, 2026-11-17): one A/B in P2.4: a track band (darker strip with cross lines) along each tank side and dark wheel blocks on wheeled vehicles at zoom 1, road wheels and round wheels at zoom 2; if picked it replaces the art bible's proposal "no tread wheels". The benchmark row checks the extra triangles.
 
 Tests the palette and riders touch (`game/tests/`):
 - Neon: `test_graphics_settings.gd:156-193` (W8), `:207` (S1), `:244-245` (D1); `test_view.gd:968-978` (W8); `test_shapes.gd:249-257` (AB8, which also holds the only `NEUTRAL` distance check); `test_launcher.gd:537-547` (G1, G2); `test_playtest.gd:206` (PT6); `test_online_scene.gd:622` (Settings node list).

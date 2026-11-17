@@ -58,7 +58,7 @@ Shapes are data, not drawings: boxes and cylinders in cells and height units, ea
 - **Supply Helicopter:** a tandem-rotor transport with a cargo pod (user, 2026-11-13); both rotors follow their end of the hull.
 - **Turrets** turn toward their target at a fixed rate, drawing only (user, 2026-11-09).
 - **A small dark shadow under every unit,** on High quality only (user, 2026-11-09).
-- Proposal: a role needs a different primary feature, not a tiny accessory on the same box; no tread wheels, panel lines, rivets or vents.
+- Proposal: a role needs a different primary feature, not a tiny accessory on the same box; no panel lines, rivets or vents. Tracks and wheels go to a P2.4 A/B (user, 2026-11-17, [P2.4 riders](../reference/map-art-shapes.md#p24-three-armies-unit-shapes-and-the-palette)).
 
 Heights, hull lengths and the tests they touch: [P2.4](../reference/map-art-shapes.md#p24-three-armies-unit-shapes-and-the-palette). More: [tanks at eight headings](../images/map-art/tanks-picked-z2.webp), [unit fixes](../images/map-art/fix-units-picked-z2.webp), [zoom 2 finish](../images/map-art/zoom2-picked-z2.webp).
 

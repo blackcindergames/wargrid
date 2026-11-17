@@ -726,7 +726,7 @@ Decisions during the run (user, 2026-11-17):
 
 **Questionnaire after round 6** (user, 2026-11-17; three rounds):
 - **P2.3a:** map edge B and canvas `#08090A` (fogged dark ground against the canvas 2.33, noted).
-- **P2.4:** palette A, the Neon removal and the friend/foe mode; pink sits 7.1 from the HUD cyan under simulated deuteranopia, accepted and checked in P2.4 with the colour-blind presets; the label "gold" stays (Zero Hour's `ColorGold`).
+- **P2.4:** palette A, the Neon removal and the friend/foe mode; the China tank's two barrels further apart (the user, checking the final pictures: too close together; a small A/B when P2.4 is planned); tracks on tanks and wheels on wheeled vehicles in the same A/B (track band and wheel blocks at zoom 1, road and round wheels at zoom 2); pink sits 7.1 from the HUD cyan under simulated deuteranopia, accepted and checked in P2.4 with the colour-blind presets; the label "gold" stays (Zero Hour's `ColorGold`).
 - **P2.5:** cargo white, the earth pile pad, and hiding the fixed footprint fill `#9f8045` the game paints under every supply source (`game/scripts/presentation/world_view.gd:473`), which showed as a gold rim on the dark ground.
 - **P2.6:** building doors A; the paused construction look; the no-power look once the art lab confirms it.
 - **Wrecks are their own small item after P2.4.** Their lifetime stays 20 s for tanks and 8 s for light vehicles, the inverse of Zero Hour's hulks ([verification](map-art-round-6-verification.md#b-vehicle-wrecks-hulks)), with the rule that a salvage crate draws above or beside a wreck: a crate drops at the wreck's cell and outlives it.
