@@ -8,6 +8,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 import urllib.error
 from pathlib import Path
@@ -497,13 +498,40 @@ class Sweep(unittest.TestCase):
             parity.write(Path(t), "s", [], {})
             self.assertEqual(analyze.load(Path(t) / "s.tsv")[0]["code"], parity.CODE)
 
+    def test_stop_between_check_and_launch_stops_the_child(self) -> None:
+        real_popen = subprocess.Popen
+        started: list[subprocess.Popen[bytes]] = []
+        stop = threading.Event()
+
+        def popen(*args: Any, **kwargs: Any) -> subprocess.Popen[bytes]:
+            stop.set()  # the sweep's stop handler ran before our pidfile existed
+            started.append(real_popen(*args, **kwargs))
+            return started[-1]
+
+        with tempfile.TemporaryDirectory() as t:
+            out = Path(t)
+            script = out / "child.py"
+            script.write_text("import time\ntime.sleep(60)\n")
+            with mock.patch.object(parity, "__file__", str(script)):
+                launch = parity.child_launcher(out, 3, stop)
+            try:
+                with mock.patch.object(parity.subprocess, "Popen", popen):
+                    status, _ = launch((1, "x"), 9000)
+            finally:
+                for proc in started:
+                    if proc.poll() is None:
+                        proc.kill()
+                        proc.wait()
+        self.assertNotEqual(status, "timeout")
+        self.assertIsNotNone(started[0].poll())
+
     def test_failed_job_keeps_its_output(self) -> None:
         with tempfile.TemporaryDirectory() as t:
             out = Path(t)
             script = out / "child.py"
             script.write_text("import sys\nprint('boom')\nsys.exit(1)\n")
             with mock.patch.object(parity, "__file__", str(script)):
-                launch = parity.child_launcher(out, 30)
+                launch = parity.child_launcher(out, 30, threading.Event())
             status, code = launch((1, "x"), 9000)
             self.assertEqual((status, code), ("fail", 1))
             self.assertIn("boom", (out / "rep1" / "x.out").read_text())
