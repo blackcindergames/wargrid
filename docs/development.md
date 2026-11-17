@@ -16,6 +16,7 @@ Developed with AI coding agents (Claude Code). [AGENTS.md](../AGENTS.md), the [b
 - Session notes and handoff prompts: working files, kept in a private notes repository. Documents here mention them by file name, marked "private".
 - [Blueprint](blueprint.md): scope, architecture and milestone gates; the M0 task plan (old §7.1) is archived in [blueprint archive](reference/blueprint-archive.md).
 - [Design questions](questions/README.md): researched wizard questions; answers go to the blueprint and the [design answers](reference/design-answers-2026-11-08.md).
+- [Map art reference](reference/map-art-shapes.md) and [map art round 6 verification](reference/map-art-round-6-verification.md): picked shapes, colours and marks per package P2.3a to P2.6, with the checks behind them.
 - [Agent instructions](../AGENTS.md): development and verification rules.
 - [Installation reference](reference/installation.md): available game data, archive hashes and unresolved version questions.
 - [Performance ledger](reference/performance.md): low-end and browser target, derived budgets, measurement history; every milestone adds a row.

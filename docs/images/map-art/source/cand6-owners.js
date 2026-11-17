@@ -1,0 +1,26 @@
+// Values from the page's own colour maths (contrast, simulate, minDistance), hard-coded; a distance is the smallest of normal vision, deuteranopia and protanopia.
+window.CAND6.owners = {
+  q: 'Which eight player colours should the game use?',
+  why: 'Today\'s set was lifted for sand in round 5. Under colour-vision simulation its red and green sit 14.3 and 15.5 from sand (10.2 and 10.9 in fog), teal 15.3 from the dark ground, pink 10.9 from the pale steel cargo, and a 3v3 puts red, gold and orange side by side (22.2, the weakest pair). Zero Hour has the same eight names (gold, red, blue, green, orange, sky blue, purple, pink; data\\ini\\multiplayer.ini:44-90) as fully saturated colours: 25.4 from sand, but sky blue and pink are 8.9 apart and green and orange 10.1 (bar 20), so its values are no default to copy.',
+  look: 'Both: slots 1 to 6, the 3v3 colours, become blue, red, green, gold, teal, purple; orange moves to slot 7 beside the eighth colour. Red is a pure signal red #D6120C, green a lighter mint #4AD49B, gold a clearer yellow #F8E425, purple a vivid violet-purple #7242FE, orange #EC8600; teal becomes a brighter blue-teal. A Pink eighth: a cornflower blue #628FFA, teal #0E92A7 and a light orchid pink #F79CEF, close to today\'s pink. Every colour keeps today\'s name. B Magenta eighth: an azure blue #5D9FFF, teal #2494A0 and a magenta #B128B6 in place of pink. The eighth colour is darker and nearer to purple. In fog blue and purple both darken toward indigo and are the closest 3v3 pair in A and in B, and B\'s magenta darkens toward purple too; they stay further apart than today\'s closest pair, but no blue or purple found lifts them without a lower number elsewhere.',
+  rec: 'A',
+  recWhy: 'A keeps every one-word name and has the wider margins on the dark ground (25.4 against 22.4; in fog 17.7 against 16.0). A\'s price: its weakest 3v3 pair, blue/purple, is 31.4 against B\'s 36.3 (in fog 22.0 against 25.3), and under simulated deuteranopia its pink is 7.1 from the HUD\'s cyan (today 12.3, B 27.7).',
+  numbers: [
+    'Weakest pair in slots 1 to 6, the 3v3 colours (bar 20): today 22.2 (red/orange), A 31.4, B 36.3 (both blue/purple); in fog 15.8, 22.0, 25.3. With orange left in slot 5 the same colours reach 23.6.',
+    'Weakest pair of all eight: today 22.2, A 23.6 (red/orange, gold/orange), B 23.3 (blue/magenta); in fog 15.7, 16.4, 16.5.',
+    'Weakest owner from each ground: sand today 14.3 red, A and B 21.5 green; dark ground 15.3 teal, A 25.4 green, B 22.4 teal; fogged sand 10.2, then 15.2; fogged dark ground 11.0, A 17.7, B 16.0.',
+    'Red from sand 14.3 to 26.9 (fog 10.2 to 19.1); green 15.5 to 21.5; teal from the dark ground 15.3 to 26.8 (A) and 22.4 (B).',
+    'Lowest contrast on the HUD slab (bar 3): today 3.10 purple, A 3.23 purple, B 3.16 magenta.',
+    'Nearest owner to the cargo colour (bar 20): pale steel today 10.9 pink, A and B 22.0 green; ivory 27.5, then 21.6 green; white 21.1, then 28.9. HUD amber 22.4, then 25.2 (orange).',
+    'Not audited: nearest owner to the HUD cyan #60E5ED today 12.3 (pink), A 7.1 (pink, under deuteranopia only; 81 in normal vision), B 27.7 (teal). Top against its own side band, lowest: today 2.52 purple; A 2.62 purple, 2.64 red (teal 3.79, pink 7.31); B 2.57 magenta, 2.62 purple, 2.64 red (teal 3.88).',
+    'In fog, where the eye finds them closest: blue/purple today 15.8, A 22.0, B 25.3; B\'s magenta/purple 23.1; green/teal A 30.3, B 26.8. Fogged teal top against the fogged side band (contrast): today 2.17, A 2.32, B 2.35. Orange against the HUD amber: 25.2 audited, 38.2 in normal vision (today 31.8). Tried for blue/purple in fog: a darker teal lifts A to 22.6 but takes the teal top from 3.79 to 2.95 against its side band; a redder purple #8A2EFF drops the 3v3 pair to 30.0 (A) and 34.9 (B).',
+    'Tritanopia (not in the project\'s maths), weakest pair: today 12.5 (blue/green), A 12.1, B 13.8 (both blue/teal).',
+    'Search: free hue names gain nothing. The ceiling is the same with any names: green is held at about 21.5 between sand and the cargo colours, and an eighth colour at about 23 to 24 between blue, teal and purple. A pink further from the HUD cyan needs a darker teal: hot pink #F850B6 reaches 18.3 with a deep teal #107380 whose top is 2.53 against its side band. A calmer set near today\'s saturation also passes, but its weakest pair is 21.6 and its teal sits 18.2 from the dark ground.',
+  ],
+  view: { palette: true },
+  pics: { zoom: 1, today: { palette: true }, picked: { palette: true } },
+  A: { name: 'Pink eighth', names: ['blue', 'red', 'green', 'gold', 'teal', 'purple', 'orange', 'pink'],
+    data: { palette: { OWNERS: ['#628ffa', '#d6120c', '#4ad49b', '#f8e425', '#0e92a7', '#7242fe', '#ec8600', '#f79cef'] } } },
+  B: { name: 'Magenta eighth', names: ['blue', 'red', 'green', 'gold', 'teal', 'purple', 'orange', 'magenta'],
+    data: { palette: { OWNERS: ['#5d9fff', '#d6120c', '#4ad49b', '#f8e425', '#2494a0', '#7242fe', '#ec8600', '#b128b6'] } } },
+};

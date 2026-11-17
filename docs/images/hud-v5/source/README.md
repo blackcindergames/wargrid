@@ -17,8 +17,9 @@ Hashes (steps count from 0):
 | File | What |
 |---|---|
 | `round1.html` | The page |
+| `hud.js`, `hud.css` | The shared HUD drawing (the map art page loads them too) |
 | `glyphs.js`, `glyphs3.js` | Unit, building and command glyphs |
-| `worlds/` | Backdrops `w-<state>.png` at 2560 x 1600 (`full` uses `w-factory.png`); a missing one shows plain sand |
+| `worlds/` | Backdrops `w-<state>.png` at 2560 x 1600 (`full` uses `w-factory.png`); a missing one shows plain sand. Re-made by `../../map-art/source/shoot_worlds.sh` |
 | `server.py` | Static server for the repository root; `POST /pick` writes `picks.json`, `POST /layout` writes `../layout.json` |
 | `shoot_final.sh` | `sh shoot_final.sh [picks]`: the 26 pictures, 2560 x 1600 lossless WebP, into `docs/images/hud-v5/`; needs the server, Firefox and `cwebp` |
 | `export_layout.sh` | `sh export_layout.sh [picks]`: `../layout.json` for the Godot layout tests; fails when the file was not rewritten or a screen's covering rects do not sum to its coverage figure |

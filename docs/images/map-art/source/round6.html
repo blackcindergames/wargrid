@@ -1,0 +1,1451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wargrid map art, round 6</title>
+<link rel="stylesheet" href="../../hud-v5/source/hud.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div id="err"></div>
+<div id="app"></div>
+<script>
+window.CAND6 = {};
+window.R6 = { surfaces: 'A', edge: 'B', power: 'A', owners: 'A', cargo: 'B', paused: 'A', wrecks: 'A' }; // the baked round 6 picks, {<step key>: <option key>}
+window.addErr = function (msg) { var e = document.getElementById('err'); if (e && e.textContent.indexOf(msg) < 0) e.textContent += msg + '\n'; };
+addEventListener('error', function (e) { addErr(e.message + ' (' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ')'); });
+addEventListener('unhandledrejection', function (e) { addErr('unhandled: ' + (e.reason && e.reason.message || e.reason)); });
+</script>
+<script src="shapes-current.js"></script>
+<script src="draw.js"></script>
+<script src="picked.js"></script>
+<script src="scenes.js"></script>
+<script src="scenes5.js"></script>
+<script src="../../hud-v5/source/glyphs.js"></script>
+<script src="../../hud-v5/source/glyphs3.js"></script>
+<script src="../../hud-v5/source/hud.js"></script>
+<script src="cand6-surfaces.js"></script>
+<script src="cand6-edge.js"></script>
+<script src="cand6-power.js"></script>
+<script src="cand6-owners.js"></script>
+<script src="cand6-cargo.js"></script>
+<script src="cand6-paused.js"></script>
+<script src="cand6-wrecks.js"></script>
+<script>
+'use strict';
+const $ = (s, r) => (r || document).querySelector(s);
+const D = window.SHAPES, PK = window.PICKED;
+if (!D || !window.projectShape || !window.SCENES || !PK) throw new Error('core file missing: nothing can be drawn');
+const SC5 = window.SCENES5;
+const app = $('#app');
+
+// ---------- data ----------
+const BASE = {};
+D.shapes.forEach((s) => { BASE[s.id] = s; });
+const EXTRA = {};
+D.extras.forEach((s) => { EXTRA[s.id] = s; });
+const ZOOMS = ['0.5', '1', '2'];
+const FACTIONS = ['usa', 'china', 'frc'], FNAME = { usa: 'USA', china: 'China', frc: 'FRC' };
+const OWNER_NAME = ['blue', 'red', 'green', 'gold', 'orange', 'purple', 'teal', 'pink'];
+const OWNER_PAIRS = [[1, 2], [3, 4], [5, 6], [7, 8]];
+const OWNERS_5 = OWNER_PAIRS.map((p, i) => [p[0], p[1], OWNER_PAIRS[(i + 1) % 4][0]]);
+const OWNERS_L = [[1, 2, 4], [4, 1, 2], [3, 5, 6], [7, 8, 1]]; // rounds 1 to 4 (legacy pictures)
+const PAIRS = [['usa', 'china'], ['china', 'frc'], ['frc', 'usa']];
+const SUFFIX = { barracks: 'barracks', factory: 'factory', hq: 'command_center', depot: 'supply_center', power: 'power_plant' };
+const UNIT_SUFFIX = { rifle: 'rifle_infantry', rocket: 'rocket_infantry', dozer: 'builder', light: 'light_vehicle', tank: 'tank' };
+const PCTS = [100, 60, 25, 5, 0], BOXES = { big: [400, 240, 100, 20, 0], small: [50, 30, 12, 2, 0] };
+const SITE_BUILD = { 3: 'frc_factory', 2: 'frc_barracks' };
+const ORDER = ['barracks', 'factory', 'command_center', 'supply_center', 'power_plant'];
+const bodiesOf = (f) => ORDER.map((r) => f + '_' + r).filter((id) => BASE[id]);
+const BODIES = FACTIONS.flatMap(bodiesOf);
+const TANKS = ['usa_tank', 'china_light_vehicle', 'china_tank', 'frc_tank'], LIGHTS = ['usa_light_vehicle', 'frc_light_vehicle'];
+const ZSET = {
+  usa: ['usa_barracks', 'usa_factory', 'usa_command_center', 'usa_tank', 'usa_light_vehicle', 'usa_rifle_infantry'],
+  china: ['china_barracks', 'china_factory', 'china_command_center', 'china_light_vehicle', 'china_tank', 'china_collector', 'china_rifle_infantry'],
+  frc: ['frc_barracks', 'frc_factory', 'frc_command_center', 'frc_tank', 'frc_light_vehicle', 'frc_rifle_infantry'],
+};
+const ZALL = FACTIONS.flatMap((f) => ZSET[f]);
+const FIXB = ['china_power_plant', 'china_barracks', 'frc_barracks'], FIXU = ['usa_rifle_infantry', 'usa_rocket_infantry', 'usa_light_vehicle', 'frc_light_vehicle'];
+const OPT = { damage: { A: 'front' }, tanks: { A: 'boxes' }, zoom_low: {}, zoom_high: { A: 'added' }, fix_bldg: { A: 'fixed' }, fix_unit: { A: 'fixed' } };
+const OPT1 = { barracks: { B: 'bold' }, factory: { B: 'bold' }, hq: { B: 'bold' }, depot: { B: 'bold' }, power: { B: 'bold' }, rifle: { A: 'restrained' }, rocket: { A: 'restrained' }, dozer: { B: 'bold' }, light: { B: 'bold' } };
+const STEP_OF_SUFFIX = { barracks: 'barracks', factory: 'factory', command_center: 'hq', supply_center: 'depot', power_plant: 'power', rifle_infantry: 'rifle', rocket_infantry: 'rocket', builder: 'dozer', light_vehicle: 'light' };
+const OPT5 = { band: { A: 'deeper' }, owners: { A: 'lift' }, cliff: { A: 'firm' }, decor: { B: 'flat' }, fog: { B: 'lighter' } };
+const CLIFF_H = 8; // terrain_view.gd CLIFF_HEIGHT
+const OPTION = { pile: { B: 'rows' }, crate: { B: 'marked' }, heli: { A: 'one' } };
+
+// ---------- selection: one option per step, rounds 1 to 6 ----------
+// '0' = today, absent = the step does not apply (the earlier rounds' look stays); the picked options are the values of ALL_PICKED.
+// legacy: draw the rounds 1 to 4 way (old ground and shadow, no palette); the re-shoot selections leave it off.
+const R1 = { barracks: 'B', factory: 'B', hq: 'B', depot: 'B', power: 'B', wedge: 'A', rifle: 'A', rocket: 'A', dozer: 'B', light: 'B' };
+const R3 = { pile: 'B', cargo: 'B', crate: 'B', site: 'B', heli: 'A' };
+const R4 = { damage: 'A', tanks: 'A', zoom_low: '0', zoom_high: 'A', fix_bldg: 'A', fix_unit: 'A' };
+const R5 = { band: 'A', owners: 'A', neon: '0', cliff: 'A', decor: 'B', fog: 'B' };
+const todayOf = (o) => Object.fromEntries(Object.keys(o).map((k) => [k, '0']));
+const mkSel = (steps, over) => ({ steps, fix4b: false, fix6: false, legacy: false, ...over });
+const ALL_PICKED = mkSel({ ...R1, ...R3, ...R4, ...R5 }, { fix4b: true });
+const ALL_TODAY = mkSel({ ...todayOf(R1), ...todayOf(R3), ...todayOf(R4), ...todayOf(R5) });
+let CUR = ALL_PICKED; // the selection of the picture being drawn
+let SCALE = 1;
+let LEGACY = false; // rounds 1 to 4 pictures: the round 1 to 4 ground and shadow, no palette
+let PAL = null;
+let OVR = { shapes: {}, palette: {}, paletteDark: {}, overlays: [] }; // the round 6 option being drawn
+let GKEY = 'sand'; // ground of the stage being drawn: selects paletteDark
+const eff = () => (GKEY === 'dark' ? { ...OVR.palette, ...OVR.paletteDark } : OVR.palette);
+const stepVal = (k) => CUR.steps[k];
+
+// ---------- shape resolution ----------
+const candCache = {};
+function mk(cacheKey, raw, base, id) {
+  if (!raw || !Array.isArray(raw.parts) || !base) return null;
+  if (cacheKey in candCache && candCache[cacheKey].raw === raw) return candCache[cacheKey].shape;
+  const shape = { ...base, id, parts: raw.parts, damage_variants: raw.damage_variants, parts_by_detail: raw.parts_by_detail, tri_count: undefined };
+  try { ZOOMS.forEach((z) => { countTriangles(shape, +z, 0); [1, 2].forEach((v) => shape.damage_variants && shape.damage_variants[v] && countTriangles(shape, +z, 0, v)); bboxPx(shape, +z); }); } catch (e) { addErr('candidate ' + cacheKey + ' is invalid: ' + e.message); candCache[cacheKey] = { raw, shape: null }; return null; }
+  candCache[cacheKey] = { raw, shape };
+  return shape;
+}
+function candShape(option, id) {
+  const src = BASE[id] && BASE[id].class === 'building' ? PK.cand : PK.cand2, fac = id.split('_')[0];
+  return mk(option + '|' + id, src && src[fac] && src[fac][option] && src[fac][option][id], BASE[id], id);
+}
+const cand3 = (group, option, key, base) => mk('3|' + group + '|' + option + '|' + key, PK.cand3 && PK.cand3[group] && PK.cand3[group][option] && PK.cand3[group][option][key], base, key);
+function resolve(id, option) {
+  if (!BASE[id]) return null;
+  if (!option) return { shape: BASE[id], state: 'current' };
+  const c = candShape(option, id);
+  return c ? { shape: c, state: 'cand' } : { shape: BASE[id], state: 'missing' };
+}
+function bakedOption(id) {
+  const k = STEP_OF_SUFFIX[id.replace(/^[a-z]+_/, '')];
+  return (k && OPT1[k][stepVal(k)]) || null;
+}
+function heliRes() {
+  const option = OPTION.heli[stepVal('heli')];
+  if (!option) return { shape: BASE.usa_collector, state: 'current' };
+  const sh = cand3('heli', option, 'usa_collector', BASE.usa_collector);
+  return sh ? { shape: sh, state: 'cand' } : { shape: BASE.usa_collector, state: 'missing' };
+}
+function pickedRes(id) {
+  if (id === 'usa_collector') return heliRes();
+  const r = resolve(id, bakedOption(id));
+  if (r.state === 'missing') r.state = 'current';
+  return r;
+}
+
+const c4entry = (fac, option, key) => {
+  const c = PK.cand4 && PK.cand4[fac], o = c && c[option], r = o && o[key];
+  return r && Array.isArray(r.parts) ? r : null;
+};
+const composeMemo = {};
+function shapeIn(id) {
+  if (!BASE[id]) return null;
+  const o = ovrShape(id, BASE[id]);
+  if (o) return { shape: o, state: 'cand' };
+  const mkey = id + '|' + JSON.stringify([CUR.steps, CUR.fix4b, CUR.fix6]);
+  return composeMemo[mkey] || (composeMemo[mkey] = compose(id, CUR.steps));
+}
+// shape.parts = detail 0, parts_by_detail[1] and [2] when a zoom option applies, damage_variants[1] and [2] when a damage option applies.
+function compose(id, sel) {
+  const fac = id.split('_')[0], p = pickedRes(id), base = p.shape, isBody = BODIES.includes(id);
+  if (isBody && sel.damage === '0') return { shape: BASE[id], state: 'current' };
+  const miss = [];
+  let parts = base.parts, dmg = base.damage_variants, applied = false;
+  const need = (step, key) => {
+    const opt = OPT[step][sel[step]];
+    if (!opt) return null;
+    const r = c4entry(fac, opt, key);
+    if (r) applied = true; else miss.push(key);
+    return r;
+  };
+  if (TANKS.includes(id)) { const r = need('tanks', id); if (r) parts = r.parts; }
+  const fixStep = FIXB.includes(id) ? 'fix_bldg' : FIXU.includes(id) ? 'fix_unit' : null;
+  if (fixStep) { const r = need(fixStep, id); if (r) parts = r.parts; }
+  const b4 = CUR.fix4b && PK.cand4b && PK.cand4b[fac] && PK.cand4b[fac][id], b6 = CUR.fix6 && PK.fix6 && PK.fix6[fac] && PK.fix6[fac][id];
+  const over = [b6, b4].find((b) => b && Array.isArray(b.parts)) || null; // a replaced hull has no zoom 2 version: the drawn ones sit on today's hulls
+  if (over) { parts = over.parts; applied = true; }
+  if (isBody && OPT.damage[sel.damage]) {
+    dmg = {};
+    [1, 2].forEach((v) => { const r = need('damage', id + '@' + v); if (r) dmg[v] = { parts: r.parts }; });
+  }
+  let d0 = parts, pbd = base.parts_by_detail;
+  if (ZALL.includes(id) && !over) {
+    const a = need('zoom_low', id + '@d0'), b = need('zoom_high', id + '@d2');
+    if (a || b) { if (a) d0 = a.parts; pbd = { 1: parts, 2: b ? b.parts : parts }; }
+  }
+  if (!applied) return miss.length ? { shape: base, state: 'missing', miss } : p;
+  const shape = { ...base, parts: d0, damage_variants: dmg, parts_by_detail: pbd, tri_count: undefined };
+  try { ZOOMS.forEach((z) => { countTriangles(shape, +z, 0); [1, 2].forEach((v) => dmg && dmg[v] && countTriangles(shape, +z, 0, v)); bboxPx(shape, +z); }); } catch (e) { addErr('candidate ' + id + ' is invalid: ' + e.message); return { shape: base, state: 'missing', miss: ['invalid'] }; }
+  return { shape, state: miss.length ? 'missing' : 'cand', miss };
+}
+const tagOf = (b) => (b >= 40 ? 40 : b >= 15 ? 15 : b >= 5 ? 5 : b >= 1 ? 1 : 0);
+const todayPile = (size, pct) => EXTRA['supply_source_' + (size === 'big' ? '4x5' : '1x1') + '_boxes' + tagOf(BOXES[size][PCTS.indexOf(pct)])];
+function pileRes(size, pct) {
+  const c = stepVal('pile'), today = todayPile(size, pct), boxes = BOXES[size][PCTS.indexOf(pct)], o = ovrShape(`pile_${size}_${pct}`, today);
+  if (o) return { shape: o, state: 'cand', boxes };
+  if (c === '0') return { shape: today, state: 'current', boxes, text: true };
+  const sh = cand3('piles', OPTION.pile[c], size + '_' + pct, today);
+  return sh ? { shape: sh, state: 'cand', boxes } : { shape: today, state: 'missing', boxes };
+}
+function cargoHex() { const l = PK.cand3.piles.cargo, e = eff(); return e.CARGO ? asHex(e.CARGO) : stepVal('cargo') === 'B' && l[0] ? l[0].hex : null; }
+function pileSlots(cfg) {
+  const a = slotsFor(0, cfg.set).slice(), hex = cargoHex(), pad = eff().PILE_PAD;
+  if (hex) { a[0] = a[6] = hex; a[1] = scaleHex(hex, 0.75); }
+  if (pad) a[5] = asHex(pad);
+  return a;
+}
+const CRATE_BASE = { id: 'salvage_crate', name: 'Salvage crate', footprint: [1, 1], layer: 'ground', has_turret: false };
+function crateRes() {
+  const c = stepVal('crate'), option = OPTION.crate[c], o = ovrShape('salvage_crate', CRATE_BASE);
+  if (o) return { shape: o, state: 'cand' };
+  if (!option) return { today: true, state: c === '0' ? 'current' : 'today' };
+  const raw3b = PK.cand3b && PK.cand3b.site && PK.cand3b.site.crate;
+  const sh = (raw3b && mk('3b|crate', raw3b, CRATE_BASE, 'crate')) || cand3('site', option, 'crate', CRATE_BASE);
+  return sh ? { shape: sh, state: 'cand' } : { today: true, state: 'missing' };
+}
+function siteRes(n, pct) {
+  const c = stepVal('site'), building = shapeIn(SITE_BUILD[n]).shape, o = ovrShape(`site_frame_${n}_${pct}`, BASE[SITE_BUILD[n]]);
+  if (o) return { shape: o, rise: 1, state: 'cand', building };
+  if (c === 'B') {
+    const f = cand3('site', 'frame', 'site' + n + '_' + pct, BASE[SITE_BUILD[n]]);
+    return f ? { shape: f, rise: 1, state: 'cand', building } : { shape: building, rise: pct / 100, state: 'missing', building };
+  }
+  return { shape: building, rise: pct / 100, state: 'current', building, text: c === '0' ? pct + '%' : null };
+}
+// Option B in a base whose building has no frame stage: the game's rise plus four corner posts built like the frame parts.
+function postShapes(building, n) {
+  let top = 0;
+  building.parts.forEach((p) => p.prims.forEach((q) => { top = Math.max(top, q.offset[2] + q.size[2]); }));
+  const c = n / 2 - 0.08, post = (x, y) => ({ offset: [x, y, 0], size: [0.09, 0.09, top + 1], slot: 4, type: 'box' });
+  const mk = (name, prims) => ({ ...building, parts: [{ name, angle: 'fixed', pivot: [0, 0], prims }], damage_variants: undefined, parts_by_detail: undefined, tri_count: undefined });
+  return { back: mk('post_back', [post(-c, -c)]), front: mk('posts', [post(c, -c), post(-c, c), post(c, c)]) };
+}
+
+// ---------- counts ----------
+const bboxCache = new WeakMap();
+function bboxPx(shape, zoom, variant) {
+  let m = bboxCache.get(shape);
+  if (!m) bboxCache.set(shape, (m = {}));
+  const mkey = zoom + '|' + (variant || 0);
+  if (m[mkey]) return m[mkey];
+  const tris = projectShape(shape, { heading: 0, detail: detailFor(zoom), variant });
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  tris.forEach((t) => t.pts.forEach((p) => { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }));
+  return (m[mkey] = { x0: x0 * zoom, y0: y0 * zoom, x1: x1 * zoom, y1: y1 * zoom, w: (x1 - x0) * zoom, h: (y1 - y0) * zoom });
+}
+function selfCheck() {
+  const bad = [];
+  D.shapes.forEach((s) => {
+    if (countPrims(s) !== s.prim_count) bad.push(s.id + ' prims ' + countPrims(s) + ' vs ' + s.prim_count);
+    ZOOMS.forEach((z) => { const n = countTriangles(s, +z, 0); if (n !== s.tri_count[z].heading0) bad.push(s.id + ' z' + z + ' ' + n + ' vs ' + s.tri_count[z].heading0); });
+  });
+  return bad;
+}
+const CHECK_BAD = selfCheck();
+if (CHECK_BAD.length) addErr('Count self-check FAILED: ' + CHECK_BAD.slice(0, 6).join('; '));
+
+// ---------- colour maths ----------
+const hex2rgb = (h) => [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16) / 255);
+const mix = (a, b, t) => { const x = hex2rgb(a), y = hex2rgb(b); return '#' + x.map((v, i) => Math.round((v + (y[i] - v) * t) * 255).toString(16).padStart(2, '0')).join(''); };
+const scaleHex = (h, k) => '#' + hex2rgb(h).map((v) => Math.min(255, Math.round(v * 255 * k)).toString(16).padStart(2, '0')).join('');
+const GROUND = { sand: D.palette.ground.sand_biome_1.ground, get dark() { return asHex({ ...OVR.palette, ...OVR.paletteDark }.DARK_GROUND) || D.palette.ground.other_biome_0.ground; } };
+const slotsFor = (owner, set) => { const nm = set === 'neon' ? 'neon' : 'normal', a = D.palette.owner_slots[String(owner)][nm].hex.slice(); return PAL ? PAL.apply(a, owner, nm) : a; };
+
+// ---------- palette, ground, cliffs, decoration, fog ----------
+const to2 = (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0');
+const lighten = (h, a) => '#' + hex2rgb(h).map((v) => to2(v + (1 - v) * a)).join(''); // Godot Color.lightened
+const darken = (h, a) => '#' + hex2rgb(h).map((v) => to2(v * (1 - a))).join(''); // Godot Color.darkened
+const asHex = (v) => (typeof v === 'string' && /^#?[0-9a-f]{6}$/i.test(v.trim()) ? '#' + v.trim().replace('#', '').toLowerCase() : null);
+const fnum = (v) => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(+v) ? +v : null);
+function pickKey(o, names) {
+  if (!o || typeof o !== 'object') return undefined;
+  for (const n of names) if (o[n] !== undefined) return o[n];
+  const keys = Object.keys(o);
+  for (const n of names) { const k = keys.find((x) => x.toLowerCase() === n.toLowerCase()); if (k !== undefined) return o[k]; }
+  return undefined;
+}
+const C5 = (group, step, opt) => { const g = PK.cand5 && PK.cand5[group], o = g && g[step], r = o && o[opt]; return r === undefined || r === null ? null : r; };
+const BAND_NAMES = ['SIDE', 'SIDE_DARK', 'SHADOW', 'GROUND_SHADOW_RADIUS', 'SHADOW_RADIUS', 'SHADOW_FLAT', 'BUILDING_SHADOW_GROW', 'BUILDING_SHADOW_OFFSET'];
+function bandRes(letter, ov) {
+  const today = { state: 'current', side: D.palette.side, sideDark: D.palette.side_dark, shadow: { alpha: 0.3, r: 6, rAir: 8, flat: false, building: null } };
+  let out = today;
+  if (letter && letter !== '0') {
+    const raw = C5('colour', 'band', OPT5.band[letter]);
+    out = raw ? bandWith(today, raw) : { ...today, state: 'missing' };
+  }
+  return ov && BAND_NAMES.some((n) => ov[n] !== undefined) ? bandWith(out, ov) : out;
+}
+function bandWith(base, raw) {
+  const out = { ...base, state: 'cand', shadow: { ...base.shadow } }, sh = out.shadow;
+  const side = asHex(pickKey(raw, ['SIDE', 'unit_side'])), sd = asHex(pickKey(raw, ['SIDE_DARK', 'sideDark'])), sv = pickKey(raw, ['SHADOW']);
+  if (side) out.side = side;
+  if (sd) out.sideDark = sd;
+  const a = Array.isArray(sv) ? fnum(sv[3]) : fnum(pickKey(sv, ['alpha', 'a'])) ?? fnum(sv), r = fnum(pickKey(raw, ['GROUND_SHADOW_RADIUS'])), ra = fnum(pickKey(raw, ['SHADOW_RADIUS']));
+  const flat = pickKey(raw, ['SHADOW_FLAT']), grow = fnum(pickKey(raw, ['BUILDING_SHADOW_GROW'])), off = pickKey(raw, ['BUILDING_SHADOW_OFFSET']);
+  if (a != null) sh.alpha = a;
+  if (r != null) sh.r = r;
+  if (ra != null) sh.rAir = ra;
+  if (flat !== undefined) sh.flat = !!flat;
+  if (grow != null || Array.isArray(off)) sh.building = { grow: grow || 0, off: Array.isArray(off) ? [fnum(off[0]) || 0, fnum(off[1]) || 0] : [0, 0] };
+  return out;
+}
+function ownersRes(letter, ov) {
+  const today = { state: 'current', hex: {}, dark: {} };
+  let out = today;
+  if (letter && letter !== '0') {
+    const raw = C5('colour', 'owners', OPT5.owners[letter]);
+    out = raw ? ownersFrom(raw) : { ...today, state: 'missing' };
+  }
+  if (!ov || !ov.OWNERS) return out;
+  const o = ownersFrom(ov.OWNERS);
+  return { state: 'cand', hex: { ...out.hex, ...o.hex }, dark: { ...out.dark, ...o.dark } };
+}
+function ownersFrom(raw) {
+  const src = Array.isArray(raw) ? raw : pickKey(raw, ['OWNER_BASE', 'owners', 'colours', 'colors', 'hex', 'default', 'values', 'base']) || raw;
+  const out = { state: 'cand', hex: {}, dark: {} };
+  const take = (v) => (typeof v === 'string' ? asHex(v) : v && typeof v === 'object' ? asHex(pickKey(v, ['hex', 'base', 'roof', 'colour', 'color'])) : null);
+  for (let o = 1; o <= 8; o++) {
+    const v = Array.isArray(src) ? src[o - 1] : src && typeof src === 'object' ? (src[o] !== undefined ? src[o] : src[OWNER_NAME[o - 1]]) : undefined, h = take(v);
+    if (h) { out.hex[o] = h; const d = v && typeof v === 'object' ? asHex(pickKey(v, ['roof_dark', 'dark', 'darkened'])) : null; if (d) out.dark[o] = d; }
+  }
+  if (!Object.keys(out.hex).length) out.state = 'unparsed';
+  return out;
+}
+function fogRes(letter, ov) {
+  if (ov && fnum(ov.FOG) > 0 && fnum(ov.FOG) <= 1) return { state: 'cand', factor: fnum(ov.FOG) };
+  if (!letter || letter === '0') return { state: 'current', factor: null };
+  const raw = C5('colour', 'fog', OPT5.fog[letter]);
+  const f = fnum(raw) ?? fnum(pickKey(raw, ['FOG', 'factor', 'value', 'k', 'brightness', 'f', 'multiplier']));
+  if (f != null && f > 0 && f <= 1) return { state: 'cand', factor: f };
+  return { state: raw ? 'unparsed' : 'missing', factor: 0.5 };
+}
+function cliffRes(letter) {
+  if (!letter) return null;
+  if (letter === '0') return { state: 'current', raw: {} };
+  const raw = C5('terrain', 'cliff', OPT5.cliff[letter]);
+  return raw ? { state: 'cand', raw } : { state: 'missing', raw: {} };
+}
+const decorRes = (letter) => (!letter || letter === '0' ? null : (() => { const raw = C5('terrain', 'decor', OPT5.decor[letter]); return raw ? { state: 'cand', raw } : { state: 'missing', raw: null }; })());
+function cliffColours(res, gk) {
+  const key = gk === 'dark' ? 'other_biome_0' : 'sand_biome_1', g = { ...D.palette.ground[key], ground: GROUND[gk] }, raw0 = res ? res.raw : {};
+  const raw = pickKey(raw0, [gk, key, gk === 'dark' ? 'dark_biome' : 'sand_biome']) || raw0;
+  const col = (v, today, how) => (asHex(v) ? asHex(v) : fnum(v) != null ? (how === 'L' ? lighten(g.ground, fnum(v)) : darken(g.ground, fnum(v))) : today);
+  const top = col(pickKey(raw, ['top', 'cliff_top', 'top_factor', 'top_lighten', 'lighten']), g.cliff_top, 'L'), side = col(pickKey(raw, ['side', 'cliff_side', 'side_factor', 'side_darken', 'darken']), g.cliff_side, 'D');
+  const sl = pickKey(raw, ['cliff_side_lit', 'side_light', 'side_lighten', 'front_light', 'lit_side', 'front']), sideL = asHex(sl) || lighten(side, fnum(sl) ?? 0.08);
+  const rr = pickKey(raw, ['rim']) !== undefined ? pickKey(raw, ['rim']) : pickKey(raw0, ['rim']), ro = rr && typeof rr === 'object' ? rr : {}, rimOn = rr !== undefined && rr !== null && rr !== false;
+  const rimW = fnum(pickKey(ro, ['width_px', 'width', 'w', 'px'])) ?? fnum(rr) ?? 1.5, rimC = asHex(pickKey(ro, [gk, key, 'colour', 'color', 'hex'])) || lighten(top, fnum(pickKey(ro, ['top_lightened', 'lighten', 'factor'])) ?? 0.35);
+  const h = Math.min(CLIFF_H, fnum(pickKey(raw0, ['height_px', 'height', 'h'])) ?? fnum(pickKey(raw, ['height_px', 'height', 'h'])) ?? CLIFF_H);
+  return { top, side, sideL, h, rim: rimOn ? { w: rimW, col: rimC } : null, ground: g.ground };
+}
+const palMemo = {};
+function palFor(sel, ov) {
+  const key = JSON.stringify([sel, ov || null]);
+  if (palMemo[key]) return palMemo[key];
+  const band = bandRes(sel.band, ov), owners = ownersRes(sel.owners, ov), fog = fogRes(sel.fog, ov), cliff = cliffRes(sel.cliff), decor = decorRes(sel.decor);
+  return (palMemo[key] = { sel, band, owners, fog, cliff, decor,
+    apply(slots, owner, nm) {
+      slots[2] = band.side; slots[3] = band.sideDark;
+      if (owner >= 1 && nm === 'normal' && owners.hex[owner]) { const h = owners.hex[owner]; slots[0] = slots[6] = h; slots[1] = owners.dark[owner] || darken(h, 0.25); }
+      return slots;
+    } });
+}
+const setOf = () => (!LEGACY && stepVal('neon') === 'A' ? 'neon' : 'default');
+
+// ---------- round 6 options ----------
+const STEP_KEYS = ['surfaces', 'edge', 'power', 'owners', 'cargo', 'paused', 'wrecks'];
+const STEPS6 = STEP_KEYS;
+const HEX_NAMES = ['DARK_GROUND', 'WRECK_TOP', 'WRECK_SIDE', 'WRECK_SIDE_DARK', 'SIDE', 'SIDE_DARK', 'PILE_PAD', 'DOOR', 'BUILDING_SIDE_DARK', 'CANVAS', 'EDGE_SIDE', 'CARGO'];
+const NUM_NAMES = ['EDGE_HEIGHT', 'FOG', 'GROUND_SHADOW_RADIUS', 'SHADOW_RADIUS', 'BUILDING_SHADOW_GROW'];
+const PLAIN_NAMES = ['SHADOW', 'SHADOW_FLAT', 'BUILDING_SHADOW_OFFSET'];
+const NEW_ID = /^(.+)_(wreck|paused)$/;
+function newBase(id) {
+  const m = NEW_ID.exec(id);
+  if (!m) return null;
+  const b = BASE[m[1]], site = /^site_frame_([23])_(10|50|90)$/.exec(m[1]);
+  if (m[2] === 'wreck') return b && !b.footprint ? b : null;
+  return b && b.footprint ? b : site ? BASE[SITE_BUILD[site[1]]] : null;
+}
+const turretOk = (t) => Number.isInteger(t) && t >= 0 && t <= 63;
+const cellOk = (c) => Array.isArray(c) && c.length === 2 && c.every(Number.isFinite);
+function knownShapeId(id) {
+  if (NEW_ID.test(id)) return !!newBase(id);
+  return !!BASE[id] || id === 'salvage_crate' || /^pile_(big|small)_(100|60|25|5|0)$/.test(id) || /^site_frame_[23]_(10|50|90)$/.test(id);
+}
+function dataProblems(data) {
+  if (!data || typeof data !== 'object') return ['data is not an object'];
+  const bad = Object.keys(data).filter((k) => !['shapes', 'palette', 'paletteDark', 'overlay'].includes(k)).map((k) => 'unknown field ' + k);
+  Object.keys(data.shapes || {}).filter((id) => !knownShapeId(id)).forEach((id) => bad.push('unknown shape id ' + id));
+  if (data.overlay !== undefined && typeof data.overlay !== 'function') bad.push('overlay is not a function');
+  Object.keys(data.shapes || {}).filter((id) => NEW_ID.test(id) && !knownShapeId(id)).forEach((id) => bad.push(id + ': _wreck needs a unit id, _paused a building id or site_frame_<n>_<pct>'));
+  ['palette', 'paletteDark'].forEach((f) => Object.entries(data[f] || {}).forEach(([n, v]) => {
+    const ok = HEX_NAMES.includes(n) ? !!asHex(v) : NUM_NAMES.includes(n) ? fnum(v) != null : n === 'OWNERS' ? Array.isArray(v) && v.length === 8 && v.every(asHex) : PLAIN_NAMES.includes(n);
+    if (!ok) bad.push(f + '.' + n + ': unknown name or bad value');
+  }));
+  return bad;
+}
+const claimsOf = (d) => [...Object.keys(d.shapes || {}).map((id) => 'shape ' + id), ...new Set([...Object.keys(d.palette || {}), ...Object.keys(d.paletteDark || {})])].map((x) => (x.startsWith('shape ') ? x : 'palette ' + x));
+function ovrOf(datas) {
+  const out = { shapes: {}, palette: {}, paletteDark: {}, overlays: [] }, seen = new Set();
+  datas.filter(Boolean).forEach((d) => {
+    dataProblems(d).forEach((b) => addErr('round 6 option: ' + b));
+    claimsOf(d).forEach((c) => { if (seen.has(c)) addErr('round 6 options: two steps set ' + c); seen.add(c); });
+    Object.assign(out.shapes, d.shapes); Object.assign(out.palette, d.palette); Object.assign(out.paletteDark, d.paletteDark);
+    if (typeof d.overlay === 'function') out.overlays.push(d.overlay);
+  });
+  return out;
+}
+function withOvr(o, fn) { const prev = OVR; OVR = o; try { return fn(); } finally { OVR = prev; } }
+const ovrShape = (id, base) => (OVR.shapes[id] ? mk('ovr|' + id, OVR.shapes[id], base, id) : null);
+const optionOf = (key, show) => { const s = window.CAND6[key]; return s && show && show !== '0' ? s[show] : null; };
+const showOf = (key) => { const s = window.CAND6[key], r = window.R6[key]; return s && r && s[r] ? r : s && s.rec === 'B' && s.B ? 'B' : 'A'; };
+const optionKeys = (s) => ['A', 'B'].filter((o) => s[o]);
+const namesOk = (n) => Array.isArray(n) && n.length === 8 && n.every((x) => typeof x === 'string' && x.trim() !== '');
+const namesOf = (opt) => (opt && namesOk(opt.names) ? opt.names : null);
+let SAVED = {};
+const usedShow = (k) => { const r = SAVED[k] && SAVED[k].pick, s = window.CAND6[k]; return s && r && s[r] ? r : showOf(k); };
+const usedOptions = (key) => ((window.CAND6[key] && window.CAND6[key].uses) || []).filter((k) => STEP_KEYS.includes(k) && k !== key).map((k) => optionOf(k, usedShow(k))).filter(Boolean);
+const mergeOvr = (a, b) => ({ shapes: { ...a.shapes, ...b.shapes }, palette: { ...a.palette, ...b.palette }, paletteDark: { ...a.paletteDark, ...b.paletteDark }, overlays: [...a.overlays, ...b.overlays] });
+function stepProblems(only) {
+  const out = [], owner = {};
+  if (!only) Object.keys(window.CAND6).filter((k) => !STEP_KEYS.includes(k)).forEach((k) => out.push(`CAND6 ${k} key unknown (valid: ${STEP_KEYS.join(', ')})`));
+  Object.entries(window.CAND6).filter(([k, s]) => STEP_KEYS.includes(k) && s && (!only || k === only)).forEach(([k, s]) => {
+    if (!optionKeys(s).includes(s.rec)) out.push(`CAND6 ${k} rec invalid (${s.rec} is not one of ${optionKeys(s).join(', ') || 'no options'})`);
+    optionKeys(s).filter((o) => s[o].names !== undefined && !namesOk(s[o].names)).forEach((o) => out.push(`CAND6 ${k} ${o} names invalid (eight non-empty strings, one per owner slot)`));
+    if (s.uses !== undefined && !(Array.isArray(s.uses) && s.uses.every((u) => STEP_KEYS.includes(u) && u !== k))) out.push(`CAND6 ${k} uses invalid (an array of other step keys)`);
+    if (s.pics && !ZOOMS.includes(String(s.pics.zoom))) out.push(`CAND6 ${k} pics invalid (zoom ${s.pics.zoom} is not 0.5, 1 or 2)`);
+    const shapeIds = new Set(optionKeys(s).flatMap((o) => Object.keys((s[o].data || {}).shapes || {})));
+    [s.view, s.pics && s.pics.today, s.pics && s.pics.picked].flatMap((v) => (v && v.place) || []).forEach((pl) => {
+      if (!cellOk(pl.cell)) out.push(`CAND6 ${k} place invalid (${pl.id} has no cell [x, y])`);
+      if (pl.turret !== undefined && !turretOk(pl.turret)) out.push(`CAND6 ${k} place invalid (${pl.id} turret must be a whole bucket 0 to 63)`);
+      if (pl.turret !== undefined && !optionKeys(s).some((o) => (((s[o].data || {}).shapes || {})[pl.id] || { parts: [] }).parts.some((pt) => pt.angle === 'turret'))) out.push(`CAND6 ${k} place invalid (${pl.id} has turret but no shape of it has a turret part)`);
+      if (!newBase(pl.id)) out.push(`CAND6 ${k} place invalid (${pl.id} is not a new _wreck or _paused id)`);
+      else if (!shapeIds.has(pl.id)) out.push(`CAND6 ${k} place invalid (${pl.id} is in no option's shapes)`);
+    });
+    if (!only) new Set(optionKeys(s).flatMap((o) => claimsOf(s[o].data || {}))).forEach((c) => { if (owner[c]) out.push(`CAND6 ${k} owns clash (${c} is also set by step ${owner[c]})`); else owner[c] = k; });
+  });
+  return out;
+}
+const SEL6 = { ...ALL_PICKED, fix6: true };
+const FLAT_SHADOW = { shapes: {}, palette: { SHADOW_FLAT: true }, paletteDark: {}, overlays: [] };
+// The decided look: every baked pick and the 2:1 unit shadow; the power bolt only where a picture asks, since it marks a no-power state.
+const r6Look = (power) => mergeOvr(ovrOf(Object.entries(window.R6).filter(([k]) => power || k !== 'power').map(([k, l]) => (optionOf(k, l) || {}).data)), FLAT_SHADOW);
+function stepStage(key, show, over, scale) {
+  CUR = SEL6; SCALE = scale || 1;
+  const opt = optionOf(key, show), s = window.CAND6[key], used = usedOptions(key);
+  const v = { ...(s && s.view), ...over, names: namesOf(opt) || namesOf(used[used.length - 1]) };
+  return withOvr(mergeOvr(ovrOf(used.map((u) => u.data)), ovrOf([opt && opt.data])), () => (v.palette ? paletteStage(v) : baseStage(v)));
+}
+function itemSlots(it, cfg, e) {
+  if (it.slots) return it.slots;
+  const s = slotsFor(it.owner, cfg.set);
+  if (it.bld || it.fp) {
+    if (e.BUILDING_SIDE_DARK) s[3] = asHex(e.BUILDING_SIDE_DARK);
+    if (e.DOOR) s[7] = asHex(e.DOOR);
+  }
+  if (it.wreck) {
+    if (e.WRECK_TOP) [0, 1, 4, 6, 7].forEach((k) => { s[k] = asHex(e.WRECK_TOP); });
+    if (e.WRECK_SIDE) s[2] = asHex(e.WRECK_SIDE);
+    if (e.WRECK_SIDE_DARK) s[3] = asHex(e.WRECK_SIDE_DARK);
+  }
+  return s;
+}
+function runOverlays(ctx, cfg, items, b) {
+  const z = +cfg.zoom, api = { project: (cx, cy) => toScreen(b.ox, b.oy, z, [cx, cy]), palette: eff(), ground: GROUND[cfg.ground], dark: cfg.ground === 'dark', zoom: z, lighten, darken, mix, fillPoly, slotsFor };
+  OVR.overlays.forEach((f) => {
+    ctx.save();
+    try { f(ctx, { zoom: z, ground: cfg.ground, items, origin: { ox: b.ox, oy: b.oy }, fogEdge: b.edge }, api); } catch (e) { addErr('overlay: ' + e.message); }
+    ctx.restore();
+  });
+}
+
+// ---------- stage ----------
+const plane = (cx, cy) => [32 * (cx - cy), 16 * (cx + cy)];
+// terrain_view.gd _build_ground: shade = ((x * 73856093) ^ (y * 19349663)) & 15) / 15 - 0.5; lightened(shade * 0.08) above 0, else darkened(-shade * 0.08).
+const groundCell = (hex, cx, cy) => { const sh = ((Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) & 15) / 15 - 0.5; return sh > 0 ? lighten(hex, sh * 0.08) : darken(hex, -sh * 0.08); };
+const toScreen = (ox, oy, z, c) => { const q = plane(c[0], c[1]); return [ox + q[0] * z, oy + q[1] * z]; };
+function fillPoly(ctx, pts, colour, stroke) {
+  ctx.fillStyle = colour; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach((q) => ctx.lineTo(q[0], q[1])); ctx.closePath(); ctx.fill();
+  if (stroke) { ctx.strokeStyle = colour; ctx.lineWidth = stroke; ctx.lineJoin = 'round'; ctx.stroke(); }
+}
+function groundRange(z, ox, oy) {
+  const inv = (X, Y) => { const px = (X - ox) / z, py = (Y - oy) / z; return [(px / 32 + py / 16) / 2, (py / 16 - px / 32) / 2]; };
+  const cs = [inv(0, 0), inv(1280, 0), inv(0, 720), inv(1280, 720)];
+  return [Math.floor(Math.min(...cs.map((c) => c[0]))) - 1, Math.ceil(Math.max(...cs.map((c) => c[0]))) + 1, Math.floor(Math.min(...cs.map((c) => c[1]))) - 1, Math.ceil(Math.max(...cs.map((c) => c[1]))) + 1];
+}
+function paintGround(ctx, z, ox, oy, colour) {
+  ctx.fillStyle = colour; ctx.fillRect(0, 0, 1280, 720);
+  const [c0, c1, r0, r1] = groundRange(z, ox, oy);
+  for (let cx = c0; cx <= c1; cx++) for (let cy = r0; cy <= r1; cy++) {
+    const quad = [[cx, cy], [cx + 1, cy], [cx + 1, cy + 1], [cx, cy + 1]].map((c) => toScreen(ox, oy, z, c));
+    if (LEGACY) {
+      const h = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0, shade = 1 + 0.04 * (((h % 2001) / 1000) - 1);
+      fillPoly(ctx, quad, scaleHex(colour, shade), 0);
+    } else fillPoly(ctx, quad, groundCell(colour, cx, cy), 0.6);
+  }
+}
+// Decoration from the picked decor option (patch frame: cells from the patch's top-left corner, placed at SC5.DECOR_ORIGIN in the world).
+const decorMemo = new Map();
+function decorData(res, gk) {
+  if (!res || !res.raw) return null;
+  if (decorMemo.has(res.raw) && decorMemo.get(res.raw)[gk]) return decorMemo.get(res.raw)[gk];
+  const raw = res.raw, cols = pickKey(raw, ['colours', 'colors']) || {};
+  const colour = (v, d, cm) => { const m = cm || cols; if (asHex(v)) return asHex(v); const e = m[v]; return asHex(e) || (e && typeof e === 'object' ? asHex(e[gk]) : null) || d; };
+  const off = SC5.DECOR_ORIGIN || [0, 0], at = (c) => [c[0] + off[0], c[1] + off[1]];
+  const polys = (list, d, cm) => (Array.isArray(list) ? list : []).flatMap((g) => {
+    const many = pickKey(g, ['polys', 'polygons']), one = pickKey(g, ['poly', 'polygon', 'cells', 'points']), fill = colour(pickKey(g, ['colour', 'color', 'fill', 'hex', 'c']), d, cm);
+    return (Array.isArray(many) ? many : Array.isArray(one) ? [one] : Array.isArray(g) ? [g] : []).filter((q) => Array.isArray(q) && q.length >= 3).map((q) => ({ poly: q.map(at), fill, alpha: fnum(pickKey(g, ['alpha', 'a'])) ?? 1, name: pickKey(g, ['kind', 'name']) }));
+  });
+  const out = { ground: polys(pickKey(raw, ['ground', 'patches']), '#7f6f4a'), shapes: [], water: [], bad: [] };
+  const wr = pickKey(raw, ['water']) || (PK.cand5 && PK.cand5.terrain && pickKey(PK.cand5.terrain, ['water']));
+  if (wr) out.water = polys([wr], '#6f8794', pickKey(wr, ['colours', 'colors']) || cols).map((g) => ({ ...g, fill: colour('water', g.fill, pickKey(wr, ['colours', 'colors']) || cols) }));
+  (pickKey(raw, ['shapes', 'objects', 'items']) || []).forEach((o, i) => {
+    const cell = pickKey(o, ['at', 'cell', 'pos', 'position', 'xy']), sh = pickKey(o, ['shape']), parts = pickKey(o, ['parts']) || (sh && sh.parts), h = fnum(pickKey(o, ['heading', 'angle', 'rot'])) || 0, pal = pickKey(o, ['palette', 'slots']);
+    if (!Array.isArray(cell) || !Array.isArray(parts)) { out.bad.push('shape ' + i); return; }
+    const shape = { id: 'decor' + i, parts, layer: 'ground', has_turret: false, class: 'unit' };
+    try { countTriangles(shape, 1, 0); } catch (e) { out.bad.push('shape ' + i + ': ' + e.message); return; }
+    const slots = ['#8098a5', darken('#8098a5', 0.25), '#3d515f', '#263842', '#8098a5', '#2a2c2e', '#8098a5', '#d8c8ae'];
+    if (Array.isArray(pal)) pal.forEach((v, k) => { const c = colour(v, null); if (c && k < 8) slots[k] = c; });
+    out.shapes.push({ cell: at(cell), shape, slots, heading: Math.abs(h) > 6.3 ? (h * Math.PI) / 180 : h });
+  });
+  const m = decorMemo.get(res.raw) || {};
+  m[gk] = out; decorMemo.set(res.raw, m);
+  return out;
+}
+function paintDecorGround(ctx, z, ox, oy, res, gk) {
+  const d = decorData(res, gk);
+  if (!d) return;
+  d.water.concat(d.ground).forEach((g) => { ctx.globalAlpha = g.alpha; fillPoly(ctx, g.poly.map((c) => toScreen(ox, oy, z, c)), g.fill, 0.6); ctx.globalAlpha = 1; });
+}
+// terrain_view.gd _draw_blocked: three quads per cell (front-left side, front-right side, lifted top); rim = a thin lit strip along the two front edges of the top.
+function paintCliffCell(ctx, it, cfg) {
+  const { ox, oy } = cfg.origin, z = +cfg.zoom, k = cfg.cliffCol, [x, y] = it.cell, lift = [0, -k.h * z];
+  const c = [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]].map((p) => toScreen(ox, oy, z, p)), up = (p) => [p[0] + lift[0], p[1] + lift[1]];
+  fillPoly(ctx, [c[3], c[2], up(c[2]), up(c[3])], k.sideL, 0.5);
+  fillPoly(ctx, [c[2], c[1], up(c[1]), up(c[2])], k.side, 0.5);
+  fillPoly(ctx, [up(c[0]), up(c[1]), up(c[2]), up(c[3])], k.top, 0.5);
+  if (k.rim) {
+    const w = k.rim.w * z, dn = (p) => [p[0], p[1] - w], raised = cfg.cliffSet;
+    if (!raised.has(x + ',' + (y + 1))) fillPoly(ctx, [up(c[3]), up(c[2]), dn(up(c[2])), dn(up(c[3]))], k.rim.col, 0);
+    if (!raised.has((x + 1) + ',' + y)) fillPoly(ctx, [up(c[2]), up(c[1]), dn(up(c[1])), dn(up(c[2]))], k.rim.col, 0);
+  }
+}
+function diamondPath(ctx, ax, ay, fx, fy, z) {
+  const c = [[-fx / 2, -fy / 2], [fx / 2, -fy / 2], [fx / 2, fy / 2], [-fx / 2, fy / 2]].map((q) => [ax + z * 32 * (q[0] - q[1]), ay + z * 16 * (q[0] + q[1])]);
+  ctx.beginPath(); ctx.moveTo(c[0][0], c[0][1]); c.slice(1).forEach((q) => ctx.lineTo(q[0], q[1])); ctx.closePath();
+}
+// Today: units only, a diamond of radius 6 (air 8) at alpha 0.3; the band option may flatten it and add a building shadow.
+function paintShadow(ctx, it, z) {
+  const sh = PAL.band.shadow;
+  if (it.unit && !it.noShadow) {
+    const r = it.shape.layer === 'air' ? sh.rAir : sh.r, ry = sh.flat ? r / 2 : r;
+    ctx.save(); ctx.translate(it.ax, it.ay); ctx.scale(z, z); ctx.fillStyle = `rgba(0,0,0,${sh.alpha})`;
+    ctx.beginPath(); ctx.moveTo(0, -ry); ctx.lineTo(r, 0); ctx.lineTo(0, ry); ctx.lineTo(-r, 0); ctx.closePath(); ctx.fill(); ctx.restore();
+  } else if (it.bld && it.fp && sh.building) {
+    const b = sh.building, q = plane(b.off[0], b.off[1]);
+    diamondPath(ctx, it.ax + z * q[0], it.ay + z * q[1], it.fp[0] + 2 * b.grow, it.fp[1] + 2 * b.grow, z);
+    ctx.fillStyle = `rgba(0,0,0,${sh.alpha})`; ctx.fill();
+  }
+}
+let FONT = '"Public Sans", Arial, sans-serif';
+// item: {shape, owner, ax, ay (stage px of the anchor), fp (footprint, buildings), tint, heading, unit, empty, label}
+function paintItems(ctx, items, cfg) {
+  const z = +cfg.zoom, e = eff();
+  items.filter((it) => it.fp).forEach((it) => {
+    if (it.bld && !LEGACY) paintShadow(ctx, it, z);
+    diamondPath(ctx, it.ax, it.ay, it.fp[0], it.fp[1], z);
+    if (it.empty) { ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]); return; }
+    ctx.fillStyle = it.tint || mix(slotsFor(it.owner, cfg.set)[0], it.site ? '#887966' : '#687b8c', it.site ? 0.6 : 0.4); ctx.fill();
+  });
+  items.forEach((it) => {
+    if (it.cliff) { paintCliffCell(ctx, it, cfg); return; }
+    if (it.caption) { ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(30,18,0,.72)'; ctx.fillText(it.caption, it.ax, it.ay); ctx.textAlign = 'start'; return; }
+    if (it.empty) {
+      if (it.label) { ctx.font = `600 13px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillText(it.label, it.ax, it.ay + 4); }
+      return;
+    }
+    if (it.square) { const w = 4 * z; ctx.fillStyle = '#e8c547'; ctx.fillRect(it.ax - w / 2, it.ay - w / 2, w, w); return; }
+    if (it.selected && it.fp) { diamondPath(ctx, it.ax, it.ay, it.fp[0], it.fp[1], z); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    const hwPath = () => { const w = it.hw * z; ctx.beginPath(); ctx.moveTo(it.ax - w, it.ay); ctx.lineTo(it.ax, it.ay - w / 2); ctx.lineTo(it.ax + w, it.ay); ctx.lineTo(it.ax, it.ay + w / 2); ctx.closePath(); };
+    if (it.selected && it.hw && !CUR.r6) { hwPath(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (it.unit && !LEGACY) paintShadow(ctx, it, z);
+    drawShape(ctx, it.shape, { x: it.ax, y: it.ay, zoom: z, heading: it.heading || 0, turret: it.unit ? (it.turretAng != null ? it.turretAng : it.heading || 0) : null, rise: it.rise, slots: itemSlots(it, cfg, e), flat: null, shadow: LEGACY && !!it.unit, variant: it.variant });
+    // The decided unit mark sits above the piece (marks.js select); the old one under the hull showed only as a fragment.
+    if (it.selected && it.hw && CUR.r6) { ctx.save(); ctx.lineJoin = 'round'; hwPath(); ctx.strokeStyle = 'rgba(14,18,22,0.78)'; ctx.lineWidth = 3.25 * z; ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.25 * z; ctx.stroke(); ctx.restore(); }
+  });
+  ctx.font = `${12 * z}px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+  items.forEach((it) => (it.texts || []).forEach((t) => ctx.fillText(t.t, it.ax + t.dx, it.ay + t.dy)));
+  ctx.textAlign = 'start';
+}
+
+const ang = (k) => (k * Math.PI) / 4;
+const TEXT_H = 15; // approximate height of Godot's fallback font at size 12
+function pileTexts(size, boxes, z) { // world_view.gd:pile_text_points: back corner of the footprint, 8 px up, two lines
+  const [fx, fy] = size === 'big' ? [4, 5] : [1, 1], x = z * 16 * (fy - fx), y = z * (-8 * (fx + fy) - 8);
+  return [{ t: 'Boxes ' + boxes, dx: x, dy: y - z * TEXT_H }, { t: 'docked 0 · waiting 0', dx: x, dy: y }];
+}
+const pileItem = (size, pct, res, cfg, ax, ay, extra) => ({ shape: res.shape, owner: 0, slots: pileSlots(cfg), ax, ay, fp: size === 'big' ? [4, 5] : [1, 1], tint: '#9f8045',
+  texts: res.text ? pileTexts(size, res.boxes, +cfg.zoom) : null, ...extra });
+const siteItem = (n, res, cfg, owner, ax, ay, pct, extra) => ({ shape: res.shape, owner, ax, ay, fp: [n, n], site: true, rise: res.rise, texts: res.text ? [{ t: res.text, dx: 0, dy: 0 }] : null, ...extra });
+
+// ---------- rows (round 4 views) ----------
+const ownOf = (cfg, id) => cfg.triples[cfg.owner][FACTIONS.indexOf(id.split('_')[0])];
+const spec = (cfg, id, extra) => ({ shape: shapeIn(id).shape, owner: ownOf(cfg, id), ...(BASE[id].footprint ? { fp: BASE[id].footprint } : { unit: true, heading: ang(cfg.heading) }), ...extra });
+const slotW = (s, z) => Math.max(bboxPx(s.shape, z, 0).w, s.fp ? 32 * (s.fp[0] + s.fp[1]) * z : 0) + 12;
+function layoutRow(specs, ay, z, out, lo = 16, hi = 1264) {
+  const ws = specs.map((s) => slotW(s, z)), tot = ws.reduce((a, b) => a + b, 0), gap = Math.max(0, (hi - lo - tot) / specs.length);
+  let x = lo + gap / 2;
+  specs.forEach((s, i) => { out.push({ ...s, ax: x + ws[i] / 2, ay }); x += ws[i] + gap; });
+}
+function headingGrid(cfg, out, ids, y0, dy) {
+  ids.forEach((id, k) => { for (let i = 0; i < 8; i++) out.push(spec(cfg, id, { ax: 90 + 150 * i, ay: y0 + dy * k, heading: ang(cfg.heading + i), selected: k === 0 && i === 0, hw: 16 })); });
+}
+const ROLE_LABEL = { barracks: 'Barracks', factory: 'Factory', command_center: 'HQ', supply_center: 'Depot', power_plant: 'Power plant' };
+function damageRows(cfg, out) {
+  const z = +cfg.zoom, facs = z < 1 ? FACTIONS : [PAIRS[cfg.pair][0]], room = 1248, rowH = 80 + 80 * z, top = 24 + 80 * z, rows = [];
+  facs.forEach((f) => bodiesOf(f).forEach((id) => {
+    const members = [0, 1, 2].map((v) => spec(cfg, id, { variant: v })), w = members.reduce((a, m) => a + slotW(m, z), 0);
+    let r = rows[rows.length - 1];
+    if (!r || r.f !== f || r.w + w > room) rows.push((r = { f, gs: [], w: 0 }));
+    r.gs.push({ id, f, members }); r.w += w;
+  }));
+  rows.forEach((r, k) => {
+    const ay = top + k * rowH, gap = Math.max(0, Math.min(60, (room - r.w) / r.gs.length));
+    if (ay + 30 > 720) return;
+    let x = 16 + Math.max(0, room - r.w - gap * r.gs.length) / 2 + gap / 2;
+    r.gs.forEach((g) => {
+      const x0 = x, fp = BASE[g.id].footprint;
+      g.members.forEach((m) => { const w = slotW(m, z); out.push({ ...m, ax: x + w / 2, ay }); x += w; });
+      out.push({ caption: FNAME[g.f] + ' ' + ROLE_LABEL[g.id.replace(/^[a-z]+_/, '')] + ' · 100 / 70 / 35 %', ax: (x0 + x) / 2, ay: ay + 8 * z * (fp[0] + fp[1]) + 14 });
+      x += gap;
+    });
+  });
+}
+const sampleSpecs = (cfg, f, kind) => ZSET[f].filter((id) => !kind || (kind === 'b') === !!BASE[id].footprint)
+  .flatMap((id) => (/rifle_infantry$/.test(id) ? [0, 2, 5].map((i) => spec(cfg, id, { heading: ang(cfg.heading + i) })) : [spec(cfg, id)]));
+const ROWS4 = {
+  damage: damageRows,
+  tanks: (cfg, out) => headingGrid(cfg, out, TANKS.concat(LIGHTS), 80, 106),
+  fix_unit: (cfg, out) => headingGrid(cfg, out, FIXU, 100, 150),
+  fix_bldg: (cfg, out) => { const z = +cfg.zoom, ays = z >= 2 ? [270, 610] : [230, 500]; ['china', 'frc'].forEach((f, k) => layoutRow(bodiesOf(f).map((id) => spec(cfg, id)), ays[k], z, out)); },
+  zoom_high: (cfg, out) => { const f = PAIRS[cfg.pair][0]; layoutRow(sampleSpecs(cfg, f, 'b'), 250, +cfg.zoom, out); layoutRow(sampleSpecs(cfg, f, 'u'), 580, +cfg.zoom, out); },
+};
+
+// ---------- the base scene ----------
+const roleId = (fac, role) => fac + '_' + (role === 'rifle' || role === 'rocket' ? UNIT_SUFFIX[role] : role === 'light' ? 'light_vehicle' : role === 'dozer' ? 'builder' : 'tank');
+// cfg.focusKey: the round 5 step whose camera the picture uses (zoomed in); cfg.dmg: three damage levels spread over each base; cfg.mix: China's tank crowd mixes both tanks.
+const FOCUS_OF = { band: [19, 20], owners: [19, 20], neon: [19, 20], cliff: SC5.PATCH_FOCUS, decor: SC5.DECOR_FOCUS, fog: SC5.FOG_FOCUS };
+function baseItems(cfg) {
+  const z = +cfg.zoom, [fw, fe] = PAIRS[cfg.pair], ow = cfg.triples[cfg.owner], owners = [ow[0], ow[1]];
+  const blds = SCENES.buildings((id) => BASE[id] && BASE[id].footprint, fw, fe);
+  const sites = SCENES.SITES.map((st) => {
+    const fac = st.side === 'west' ? fw : fe, id = fac + '_' + st.role, fp = BASE[id].footprint, o = SCENES.ORIGINS[st.side], n = fp[0];
+    const west = st.side === 'west';
+    return { id: 'site_' + id, bid: id, n, side: st.side, rise: st.rise, cell: west ? [o[0] + st.local[0], o[1] + st.local[1]] : [o[0] + st.local[1], o[1] + st.local[0]], fp: west ? fp : [fp[1], fp[0]] };
+  });
+  const pileBoxes = SCENES.PILES.map((p) => ({ id: 'pile', cell: p.cell, fp: p.size === 'big' ? [4, 5] : [1, 1] }));
+  const bad = SCENES.overlaps(blds.concat(sites, pileBoxes));
+  if (bad.length) addErr('scenes.js: footprints overlap: ' + bad.join(', '));
+  const frcEast = fw !== 'frc';
+  const cam = cfg.cam != null ? cfg.cam : z < 1 ? 2 : 0, free = z >= 1 && cfg.cam == null;
+  const f = cfg.focus || (free && FOCUS_OF[cfg.focusKey]) || SCENES.FOCUS[cam], fp0 = plane(f[0], f[1]), anc = cfg.anchor || SCENES.ANCHOR;
+  let ox = anc[0] - z * fp0[0], oy = anc[1] - z * fp0[1];
+  const toPx = (cx, cy) => { const q = plane(cx, cy); return [ox + z * q[0], oy + z * q[1]]; };
+  const items = [];
+  const dim = (it) => { const b = bboxPx(it.shape, z); return { x0: it.ax + b.x0, x1: it.ax + b.x1, bottom: it.ay + Math.max(b.y1, it.fp ? z * 16 * (it.fp[0] + it.fp[1]) / 2 : 0) }; };
+  const seen = { west: 0, east: 0 };
+  blds.forEach((b) => {
+    const r = shapeIn(b.id), c = SCENES.centreOf(b), p = toPx(c[0], c[1]);
+    const variant = cfg.dmg && BODIES.includes(b.id) ? (seen[b.side]++ + (b.side === 'east' ? 1 : 0)) % 3 : 0;
+    items.push({ shape: r.shape, owner: owners[b.side === 'west' ? 0 : 1], ax: p[0], ay: p[1], depth: c[0] + c[1], fp: b.fp, bld: true, variant, selected: b.side === 'west' && b.suffix === 'command_center' });
+  });
+  sites.forEach((st) => {
+    const c = SCENES.centreOf(st), p = toPx(c[0], c[1]), pct = st.rise >= 0.7 ? 90 : 50, owner = owners[st.side === 'west' ? 0 : 1], fac = st.side === 'west' ? fw : fe;
+    const choice = stepVal('site'), bshape = shapeIn(st.bid).shape;
+    const frame = ovrShape(`site_frame_${st.n}_${pct}`, BASE[st.bid]) || (choice === 'B' && fac === 'frc' ? cand3('site', 'frame', 'site' + st.n + '_' + pct, BASE[st.bid]) : null);
+    if (frame) { items.push(siteItem(st.n, { shape: frame, rise: 1 }, cfg, owner, p[0], p[1], pct, { depth: c[0] + c[1], fp: st.fp, bld: true })); return; }
+    const text = choice === '0' ? pct + '%' : null, post = choice === 'B' ? postShapes(bshape, st.n) : null;
+    if (post) items.push({ shape: post.back, owner, ax: p[0], ay: p[1], depth: c[0] + c[1] - 0.001, bld: true });
+    items.push(siteItem(st.n, { shape: bshape, rise: st.rise, text }, cfg, owner, p[0], p[1], pct, { depth: c[0] + c[1], fp: st.fp, bld: true }));
+    if (post) items.push({ shape: post.front, owner, ax: p[0], ay: p[1], depth: c[0] + c[1] + 0.001, bld: true });
+  });
+  SCENES.PILES.forEach((pl) => {
+    const fp = pl.size === 'big' ? [4, 5] : [1, 1], c = [pl.cell[0] + fp[0] / 2, pl.cell[1] + fp[1] / 2], p = toPx(c[0], c[1]);
+    items.push(pileItem(pl.size, pl.pct, pileRes(pl.size, pl.pct), cfg, p[0], p[1], { depth: c[0] + c[1] }));
+  });
+  const a = (-Math.PI / 4) + (cfg.heading * Math.PI) / 4, unitItem = (id, owner, cell, heading, extra) => {
+    const r = shapeIn(id), p = toPx(cell[0], cell[1]);
+    items.push({ shape: r.shape, owner, ax: p[0], ay: p[1], depth: cell[0] + cell[1], unit: true, heading, ...extra });
+  };
+  [['west', fw, owners[0], 0], ['east', fe, owners[1], 1]].forEach(([side, fac, owner, k]) => {
+    let ti = 0;
+    SCENES.ARMY.forEach(([role, x, y]) => {
+      let id = roleId(fac, role);
+      if (cfg.mix && role === 'tank' && fac === 'china' && ti++ % 2) id = 'china_light_vehicle';
+      unitItem(id, owner, k ? SCENES.transpose([x, y]) : [x, y], k ? a + Math.PI : a, { enemy: k === 1 });
+    });
+  });
+  SCENES.TRUCKS.forEach(([x, y, k]) => unitItem('china_collector', owners[k], [x, y], a, { enemy: k === 1 }));
+  // Salvage crates exist only for an FRC player: near the FRC army, else near the east army.
+  (cfg.noCrates ? [] : SCENES.CRATES).forEach(([x, y]) => {
+    const cell = frcEast ? SCENES.transpose([x, y]) : [x, y], c = crateRes(), p = toPx(cell[0], cell[1]);
+    items.push(c.today ? { square: true, ax: p[0], ay: p[1], depth: cell[0] + cell[1] } : { shape: c.shape, owner: 0, slots: pileSlots(cfg), ax: p[0], ay: p[1], depth: cell[0] + cell[1] });
+  });
+  (cfg.place || []).forEach((pl) => {
+    const base = newBase(pl.id);
+    if (!base || !cellOk(pl.cell)) { addErr(`place: ${pl.id} needs a _wreck or _paused id and a cell [x, y]`); return; }
+    const sh = ovrShape(pl.id, base), p = sh && toPx(pl.cell[0], pl.cell[1]);
+    const tb = pl.turret !== undefined && turretOk(pl.turret) ? { turretAng: (pl.turret * Math.PI * 2) / 64 } : {};
+    if (sh) items.push({ shape: sh, owner: pl.owner || owners[0], ax: p[0], ay: p[1], depth: pl.cell[0] + pl.cell[1], ...(base.footprint ? { fp: base.footprint, bld: true, site: pl.id.endsWith('_paused') } : { unit: true, noShadow: !pl.shadow, heading: ang(pl.heading || 0), wreck: pl.id.endsWith('_wreck'), ...tb }) });
+  });
+  SCENES.AIR.forEach(([x, y], i) => unitItem('usa_collector', owners[i], [x, y], a + i * Math.PI, { air: true, enemy: i === 1 }));
+  if (PAL && PAL.cliff) {
+    SC5.CELLS.forEach((c) => items.push({ cliff: true, cell: c, depth: c[0] + c[1] + 1 }));
+    SC5.DOWN.forEach(([role, x, y]) => unitItem(roleId(fw, role), owners[0], [x, y], a));
+  }
+  const dd = PAL && decorData(PAL.decor, cfg.ground);
+  if (dd) dd.shapes.forEach((sh) => { const p = toPx(sh.cell[0], sh.cell[1]); items.push({ shape: sh.shape, slots: sh.slots, ax: p[0], ay: p[1], depth: sh.cell[0] + sh.cell[1], heading: sh.heading, deco: true }); });
+  const fog = PAL && PAL.fog.factor;
+  if (fog) SC5.FOG_UNITS.forEach(([role, x, y]) => unitItem(roleId(fe, role), owners[1], [x, y], a + Math.PI, { enemy: true }));
+  if (cam === 2 && z < 1) { // fit: buildings end 35 px above the dock slabs, everything else 7 px, scene centred
+    let x0 = 1e9, x1 = -1e9, bBottom = -1e9, oBottom = -1e9;
+    items.forEach((it) => {
+      if (it.cliff || it.deco) return;
+      if (it.square) { oBottom = Math.max(oBottom, it.ay + 4); return; }
+      const d = dim(it);
+      if (it.bld) { x0 = Math.min(x0, d.x0); x1 = Math.max(x1, d.x1); bBottom = Math.max(bBottom, d.bottom); } else oBottom = Math.max(oBottom, it.fp ? d.bottom : it.ay + 8);
+    });
+    const dx = 640 - (x0 + x1) / 2, dy = Math.min(720 - 168 - 35 - bBottom, 720 - 168 - 7 - oBottom);
+    items.forEach((it) => { if (!it.cliff) { it.ax += dx; it.ay += dy; } });
+    ox += dx; oy += dy;
+  }
+  // The decided look keeps every own unit out of the fog: the straight edge moves right past the last one.
+  const edge0 = toPx(SC5.FOG_EDGE[0], SC5.FOG_EDGE[1])[0], own = items.filter((it) => it.unit && !it.enemy);
+  const edge = CUR.r6 ? Math.max(edge0, ...own.map((it) => it.ax + bboxPx(it.shape, z).x1 + 4 * z)) : edge0;
+  const shown = fog ? items.filter((it) => !(it.enemy && it.ax > edge)) : items; // enemy units in the fog are not seen; buildings stay (frozen)
+  shown.sort((p, q) => (p.air ? 1 : 0) - (q.air ? 1 : 0) || p.depth - q.depth);
+  return { items: shown, ox, oy, edge };
+}
+
+// ---------- stages ----------
+const CFG0 = { zoom: '0.5', ground: 'sand', owner: 0, pair: 0, heading: 0, cam: null, dmg: false, mix: false };
+function startStage(cfg) {
+  LEGACY = !!CUR.legacy;
+  GKEY = cfg.ground;
+  PAL = LEGACY ? null : palFor(CUR.steps, eff());
+  cfg.triples = LEGACY ? OWNERS_L : OWNERS_5;
+  cfg.set = setOf();
+  cfg.cliffCol = PAL && PAL.cliff ? cliffColours(PAL.cliff, cfg.ground) : null;
+  cfg.cliffSet = new Set(SC5.CELLS.map((c) => c[0] + ',' + c[1]));
+  const el = document.createElement('div');
+  el.className = 'stage';
+  el.style.width = 1280 * SCALE + 'px'; el.style.height = 720 * SCALE + 'px';
+  const cv = document.createElement('canvas');
+  cv.width = 1280 * SCALE; cv.height = 720 * SCALE; cv.style.width = cv.width + 'px'; cv.style.height = cv.height + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  el.appendChild(cv);
+  return { el, ctx };
+}
+function baseStage(over) {
+  const cfg = { ...CFG0, ...over }, { el, ctx } = startStage(cfg), z = +cfg.zoom, b = baseItems(cfg);
+  cfg.origin = { ox: b.ox, oy: b.oy };
+  paintGround(ctx, z, b.ox, b.oy, GROUND[cfg.ground]);
+  if (PAL) paintDecorGround(ctx, z, b.ox, b.oy, PAL.decor, cfg.ground);
+  paintItems(ctx, b.items, cfg);
+  if (PAL && PAL.fog.factor && PAL.fog.factor < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - PAL.fog.factor})`; ctx.fillRect(b.edge, 0, 1280 - b.edge, 720); }
+  runOverlays(ctx, cfg, b.items, b);
+  return el;
+}
+function paletteStage(over) {
+  const cfg = { ...CFG0, ...over }, { el, ctx } = startStage(cfg), z = +cfg.zoom, names = cfg.names || OWNER_NAME, unit = (id, o, x, y) => ({ shape: shapeIn(id).shape, owner: o, ax: x, ay: y, unit: true, heading: ang(cfg.heading) });
+  [['sand', 0], ['dark', 640]].forEach(([gk, x0]) => {
+    cfg.ground = gk; GKEY = gk; PAL = palFor(CUR.steps, eff());
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, 0, 640, 720); ctx.clip();
+    paintGround(ctx, z, 0, 0, GROUND[gk]);
+    const items = [];
+    for (let i = 0; i < 8; i++) {
+      const cx = x0 + 40 + 80 * i, o = i + 1;
+      items.push({ shape: shapeIn('usa_defence').shape, owner: o, ax: cx, ay: 110, fp: BASE.usa_defence.footprint, bld: true });
+      items.push(unit('usa_tank', o, cx, 215), unit('usa_light_vehicle', o, cx, 315), unit('usa_tank', o, cx, 545));
+      [-18, 0, 18].forEach((dx, k) => { items.push(unit('usa_rifle_infantry', o, cx + dx, 405 + (k % 2) * 12), unit('usa_rifle_infantry', o, cx + dx, 630 + (k % 2) * 12)); });
+    }
+    paintItems(ctx, items, cfg);
+    if (PAL.fog.factor) { ctx.fillStyle = `rgba(0,0,0,${1 - PAL.fog.factor})`; ctx.fillRect(x0, 480, 640, 240); }
+    ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.fillStyle = '#fff';
+    for (let i = 0; i < 8; i++) {
+      const cx = x0 + 40 + 80 * i;
+      ctx.font = `600 11px ${FONT}`; ctx.strokeText(names[i], cx, 698); ctx.fillText(names[i], cx, 698);
+      ctx.font = `400 10px ${FONT}`; ctx.strokeText(slotsFor(i + 1, cfg.set)[0].toUpperCase(), cx, 711); ctx.fillText(slotsFor(i + 1, cfg.set)[0].toUpperCase(), cx, 711);
+    }
+    ctx.restore();
+  });
+  return el;
+}
+function rowStage(key, over) {
+  const cfg = { ...CFG0, ...over }, { el, ctx } = startStage(cfg), items = [];
+  ROWS4[key](cfg, items);
+  paintGround(ctx, +cfg.zoom, 0, 0, GROUND.sand);
+  paintItems(ctx, items, cfg);
+  return el;
+}
+function gridStage(zoom, build) {
+  const cfg = { ...CFG0, zoom }, { el, ctx } = startStage(cfg), items = [];
+  build(cfg, items);
+  paintGround(ctx, +zoom, 0, 0, GROUND.sand);
+  paintItems(ctx, items, cfg);
+  return el;
+}
+const COLS = (n) => Array.from({ length: n }, (_, i) => 128 + (1024 / (n - 1)) * i);
+const GRID_ROWS = [150, 365, 580];
+const buildingsGrid = () => gridStage('1', (cfg, items) => {
+  const xs = COLS(5);
+  FACTIONS.forEach((f, r) => ['barracks', 'factory', 'hq', 'depot', 'power'].forEach((role, c) => {
+    const id = f + '_' + SUFFIX[role], res = BASE[id] && shapeIn(id);
+    if (res) items.push({ shape: res.shape, owner: 1, ax: xs[c], ay: GRID_ROWS[r], fp: BASE[id].footprint });
+  }));
+});
+const unitsGrid = () => gridStage('2', (cfg, items) => {
+  const xs = COLS(5);
+  const ids = (f) => [f + '_rifle_infantry', f + '_rocket_infantry', f + '_builder', f === 'china' ? null : f + '_light_vehicle', f === 'usa' ? 'usa_collector' : null];
+  FACTIONS.forEach((f, r) => ids(f).forEach((id, c) => {
+    const res = id && shapeIn(id);
+    if (res) items.push({ shape: res.shape, owner: 1, ax: xs[c], ay: GRID_ROWS[r] + 60, unit: true, heading: 0 });
+  }));
+});
+const placeholdersStage = () => gridStage('1', (cfg, items) => {
+  PCTS.forEach((pct, i) => items.push(pileItem('big', pct, pileRes('big', pct), cfg, 144 + 248 * i, 150, {})));
+  PCTS.forEach((pct, i) => items.push(pileItem('small', pct, pileRes('small', pct), cfg, 70 + 105 * i, 350, {})));
+  [['frc_rifle_infantry', 770, 350], ['frc_rocket_infantry', 880, 350]].forEach(([id, x, y]) => items.push({ shape: shapeIn(id).shape, owner: 1, ax: x, ay: y, unit: true, heading: 0 }));
+  [[700, 380], [825, 320], [940, 385]].forEach(([x, y]) => { const c = crateRes(); items.push(c.today ? { square: true, ax: x, ay: y } : { shape: c.shape, owner: 0, slots: pileSlots(cfg), ax: x, ay: y }); });
+  [10, 50, 90].forEach((pct, i) => items.push(siteItem(3, siteRes(3, pct), cfg, 1, [213, 640, 1067][i], 580, pct, {})));
+});
+const oldShapesCheck = () => gridStage('1', (cfg, items) => {
+  const body = (id) => ({ shape: shapeIn(id).shape, owner: 1, fp: BASE[id].footprint });
+  const today = (id) => ({ shape: BASE[id], owner: 1, ...(BASE[id].footprint ? { fp: BASE[id].footprint } : { unit: true, heading: 0 }) });
+  FACTIONS.forEach((f, r) => layoutRow([today(f + '_defence'), ...bodiesOf(f).map(body)], [130, 300, 470][r], 1, items));
+  layoutRow(['frc_builder', 'china_collector', 'frc_hole_1', 'frc_hole_2', 'frc_hole_3'].map(today), 640, 1, items);
+});
+</script>
+<script src="marks.js"></script>
+<script src="pics.js"></script>
+<script>
+'use strict';
+// ---------- export, round trip and audit (hashes #export, #roundtrip, #audit) ----------
+const EXPORT_SEL = SEL6;
+const R6 = window.R6;
+const r6Ovr = () => ovrOf(Object.entries(R6).map(([k, l]) => (optionOf(k, l) || {}).data));
+const POSE_HEADINGS = [0, 8, 16, 24, 32, 40, 48, 56], TURRET_OFFSET = 11;
+const hasTurret = (parts) => parts.some((p) => p.angle === 'turret');
+const partsAt = (s, detail) => (detail > 0 && s.parts_by_detail && s.parts_by_detail[detail]) || s.parts;
+const allLists = (s) => [s.parts, ...Object.values(s.parts_by_detail || {}), ...Object.values(s.damage_variants || {}).map((v) => v.parts)];
+const topOf = (s) => Math.max(...allLists(s).flatMap((l) => l.flatMap((p) => p.prims.map((q) => q.offset[2] + q.size[2]))));
+const round6 = (v) => Math.round(v * 1e6) / 1e6;
+
+function plainShape(s, over) {
+  const out = {};
+  ['id', 'name', 'faction', 'class', 'role', 'layer', 'footprint'].forEach((k) => { if (s[k] !== undefined) out[k] = s[k]; });
+  out.has_turret = hasTurret(s.parts);
+  out.parts = s.parts;
+  if (s.parts_by_detail && (s.parts_by_detail[1] || s.parts_by_detail[2])) out.parts_by_detail = s.parts_by_detail;
+  if (s.damage_variants) out.damage_variants = Object.fromEntries(Object.entries(s.damage_variants).map(([k, v]) => [k, { parts: v.parts }]));
+  return Object.assign(out, over);
+}
+function exportShape(id) {
+  const r = shapeIn(id);
+  if (r.state === 'missing') throw new Error(id + ' has no picked version for ' + (r.miss || []).join(', '));
+  return plainShape(r.shape);
+}
+function exportExtras() {
+  const need = (id, res) => { if (!res.shape || res.state !== 'cand') throw new Error('extra ' + id + ' is ' + res.state); return res.shape; };
+  const out = ['default_building', 'default_vehicle', 'supply_source_default'].map((id) => plainShape(EXTRA[id], { role: EXTRA[id].role }));
+  ['big', 'small'].forEach((size) => PCTS.forEach((pct) => {
+    const id = 'pile_' + size + '_' + pct;
+    out.push(plainShape(need(id, pileRes(size, pct)), { id, role: 'supply_source', footprint: size === 'big' ? [4, 5] : [1, 1] }));
+  }));
+  [3, 2].forEach((n) => [10, 50, 90].forEach((pct) => {
+    const id = 'site_frame_' + n + '_' + pct;
+    out.push(plainShape(need(id, siteRes(n, pct)), { id, role: 'construction_frame', footprint: [n, n] }));
+  }));
+  out.push(plainShape(need('salvage_crate', crateRes()), { id: 'salvage_crate', role: 'salvage_crate', footprint: [1, 1] }));
+  Object.keys(OVR.shapes).filter((id) => NEW_ID.test(id) && knownShapeId(id)).sort().forEach((id) => {
+    const sh = ovrShape(id, newBase(id));
+    if (sh) out.push(plainShape(sh, { id, role: id.endsWith('_wreck') ? 'wreck' : 'construction_paused' }));
+  });
+  return out;
+}
+function exportPalette() {
+  const pal = palFor(EXPORT_SEL.steps, eff()), out = { note: 'only the values that differ from shapes-current.json' };
+  if (pal.band.state === 'cand') Object.assign(out, { side: pal.band.side, side_dark: pal.band.sideDark });
+  if (pal.owners.state === 'cand') out.owner_base = [1, 2, 3, 4, 5, 6, 7, 8].map((o) => pal.owners.hex[o]);
+  if (pal.cliff && pal.cliff.state === 'cand') out.cliff = pal.cliff.raw;
+  if (pal.fog.state === 'cand') out.fog = pal.fog.factor;
+  const cargo = cargoHex();
+  if (cargo) out.cargo = cargo;
+  if (GROUND.dark !== D.palette.ground.other_biome_0.ground) out.dark_ground = GROUND.dark;
+  const wreck = { top: OVR.palette.WRECK_TOP, side: OVR.palette.WRECK_SIDE, side_dark: OVR.palette.WRECK_SIDE_DARK };
+  if (Object.values(wreck).some(Boolean)) out.wreck = Object.fromEntries(Object.entries(wreck).filter(([, v]) => v).map(([k, v]) => [k, asHex(v)]));
+  const baked = namesOf(optionOf('owners', R6.owners));
+  if (baked) out.owner_names = baked;
+  if (Object.keys(OVR.palette).length || Object.keys(OVR.paletteDark).length) out.round6 = { palette: OVR.palette, paletteDark: OVR.paletteDark };
+  return out;
+}
+function corrections(shapes) {
+  const by = Object.fromEntries(shapes.map((s) => [s.id, s]));
+  const hull = by.frc_light_vehicle.parts.filter((p) => p.angle !== 'turret').flatMap((p) => p.prims);
+  const xs = hull.flatMap((q) => [q.offset[0] - q.size[0] / 2, q.offset[0] + q.size[0] / 2]);
+  const tracks = by.frc_tank.parts.find((p) => p.name === 'body').prims.filter((q) => q.slot === 2);
+  return {
+    frc_light_vehicle_hull_length_cells: round6(Math.max(...xs) - Math.min(...xs)),
+    tank_height_units: Object.fromEntries(Object.keys(TANK_ROLES_EXPORT).map((id) => [id, round6(topOf(by[id]))])),
+    frc_tank_track_length_cells: round6(tracks[0].size[0]),
+  };
+}
+const TANK_ROLES_EXPORT = { usa_tank: 1, china_tank: 1, frc_tank: 1, china_light_vehicle: 1 };
+
+function flatValue(v) {
+  const scalar = (x) => x === null || typeof x !== 'object';
+  return scalar(v) || (Array.isArray(v) ? v.every(scalar) : Object.values(v).every((e) => scalar(e) || (Array.isArray(e) && e.every(scalar))));
+}
+function ser(v, depth) {
+  if (v === null || typeof v !== 'object' || (flatValue(v) && JSON.stringify(v).length < 220)) return JSON.stringify(v);
+  const pad = '\t'.repeat(depth + 1), end = '\t'.repeat(depth);
+  if (Array.isArray(v)) return '[\n' + v.map((e) => pad + ser(e, depth + 1)).join(',\n') + '\n' + end + ']';
+  return '{\n' + Object.keys(v).filter((k) => v[k] !== undefined).map((k) => pad + JSON.stringify(k) + ': ' + ser(v[k], depth + 1)).join(',\n') + '\n' + end + '}';
+}
+
+async function runExport() {
+  CUR = EXPORT_SEL; OVR = r6Ovr(); useGround(false);
+  const shapes = D.shapes.map((s) => exportShape(s.id)), extras = exportExtras();
+  const doc = {
+    meta: {
+      source: 'docs/images/map-art/source/round6.html',
+      git_revision: D.meta.git_revision,
+      date_utc: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+      note: 'git_revision is the game revision of shapes-current.json this export is built on. A detail level without its own list uses parts; a damage variant is used at every detail.',
+      picks: { steps: EXPORT_SEL.steps, fix4b: EXPORT_SEL.fix4b, fix6: EXPORT_SEL.fix6, ...(Object.keys(R6).length ? { round6: R6 } : {}) },
+      provisional: {
+        missing_zoom2: shapes.filter((s) => !(s.parts_by_detail && s.parts_by_detail[2])).map((s) => s.id),
+        note: 'No zoom 2 version is drawn for these ids (or the drawn one sits on a hull that was replaced); they bake from parts at detail 2. Never invented here.',
+      },
+      corrections: corrections(shapes),
+    },
+    palette: exportPalette(),
+    shapes,
+    extras,
+  };
+  const r = await fetch('/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: ser(doc, 0) + '\n' });
+  if (r.status !== 204) throw new Error('export not recorded: HTTP ' + r.status);
+}
+
+// ---------- round trip ----------
+function posesOf(doc) {
+  const out = [];
+  doc.shapes.concat(doc.extras.filter((e) => e.parts)).forEach((s) => {
+    [0, ...Object.keys(s.damage_variants || {}).map(Number)].forEach((variant) => [0, 1, 2].forEach((detail) => POSE_HEADINGS.forEach((hb) => {
+      const tb = s.has_turret ? (hb + TURRET_OFFSET) % 64 : hb;
+      out.push({ key: [s.id, variant, detail, hb, tb].join('|'), shape: s, variant, detail, hb, tb });
+    })));
+  });
+  return out;
+}
+// Where one equal sort key puts two prims first differs by float noise between the page and the game; the picture is judged by painting both orders.
+const RASTER_STEP = 0.25;
+function paintedSlots(tris, lo, size) {
+  const w = Math.ceil(size[0] / RASTER_STEP) + 1, h = Math.ceil(size[1] / RASTER_STEP) + 1, cells = new Int8Array(w * h).fill(-1);
+  tris.forEach((t) => {
+    const [a, b, c] = [[t.v[0], t.v[1]], [t.v[2], t.v[3]], [t.v[4], t.v[5]]], den = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+    if (Math.abs(den) < 1e-9) return;
+    const x0 = Math.max(0, Math.floor((Math.min(a[0], b[0], c[0]) - lo[0]) / RASTER_STEP)), x1 = Math.min(w - 1, Math.ceil((Math.max(a[0], b[0], c[0]) - lo[0]) / RASTER_STEP));
+    const y0 = Math.max(0, Math.floor((Math.min(a[1], b[1], c[1]) - lo[1]) / RASTER_STEP)), y1 = Math.min(h - 1, Math.ceil((Math.max(a[1], b[1], c[1]) - lo[1]) / RASTER_STEP));
+    for (let iy = y0; iy <= y1; iy++) for (let ix = x0; ix <= x1; ix++) {
+      const px = lo[0] + (ix + 0.5) * RASTER_STEP, py = lo[1] + (iy + 0.5) * RASTER_STEP;
+      const l0 = ((b[1] - c[1]) * (px - c[0]) + (c[0] - b[0]) * (py - c[1])) / den, l1 = ((c[1] - a[1]) * (px - c[0]) + (a[0] - c[0]) * (py - c[1])) / den;
+      if (l0 >= -1e-6 && l1 >= -1e-6 && 1 - l0 - l1 >= -1e-6) cells[iy * w + ix] = t.slot;
+    }
+  });
+  return cells;
+}
+function samePicture(a, b) {
+  const xs = a.flatMap((t) => [t.v[0], t.v[2], t.v[4]]), ys = a.flatMap((t) => [t.v[1], t.v[3], t.v[5]]);
+  const lo = [Math.min(...xs), Math.min(...ys)], size = [Math.max(...xs) - lo[0], Math.max(...ys) - lo[1]];
+  const pa = paintedSlots(a, lo, size), pb = paintedSlots(b, lo, size);
+  return pa.every((s, k) => s === pb[k]);
+}
+function posePartList(pose) {
+  const dv = pose.variant && pose.shape.damage_variants && pose.shape.damage_variants[pose.variant];
+  return dv ? dv.parts : partsAt(pose.shape, pose.detail);
+}
+// Empty when the order is a valid back-to-front sort of the page's own keys (keys equal to 1e-6 may swap), else the reason it is not.
+function orderFault(pose, order) {
+  const parts = posePartList(pose);
+  if (!Array.isArray(order) || order.length !== parts.length) return 'its prim order does not list every part';
+  for (let pi = 0; pi < parts.length; pi++) {
+    const part = parts[pi], seq = order[pi], n = part.prims.length;
+    if (!Array.isArray(seq) || seq.length !== n || seq.some((i) => !Number.isInteger(i) || i < 0 || i >= n) || new Set(seq).size !== n) return `part ${part.name} lists prim indices that are not a permutation of 0..${n - 1}`;
+    const angle = part.angle === 'fixed' ? 0 : ((part.angle === 'turret' ? pose.tb : pose.hb) * Math.PI * 2) / 64, c = Math.cos(angle), s = Math.sin(angle);
+    const key = (i) => { const q = part.prims[i].offset; return q[0] * c - q[1] * s + q[0] * s + q[1] * c; };
+    if (!seq.every((i, k) => k === 0 || key(seq[k - 1]) <= key(i) + 1e-6)) return `part ${part.name} is not drawn back to front`;
+  }
+  return '';
+}
+function projectPose(pose, extra) {
+  return projectShape(pose.shape, { heading: (pose.hb * Math.PI * 2) / 64, turret: pose.shape.has_turret ? (pose.tb * Math.PI * 2) / 64 : null, detail: pose.detail, variant: pose.variant, ...extra })
+    .map((t) => ({ slot: t.slot, knife: !!t.knife, v: t.pts.flatMap((p) => [p[0], p[1]]) }));
+}
+// Equal sort keys draw in float-noise order, so a tie is accepted only when the page, re-drawn in the game's order, matches the game.
+function comparePose(pose, game) {
+  const other = game.tris.map((r) => ({ slot: r[6], v: r.slice(0, 6) })), pageOrder = [];
+  const js = projectPose(pose, { orderOut: pageOrder });
+  if (js.length !== other.length) return { status: 'fail', msg: js.length + ' triangles on the page, ' + other.length + ' in the game' };
+  const diff = (a, b) => Math.max(0, ...a.v.map((x, k) => Math.abs(x - b.v[k])));
+  const strict = (a, b) => a.slot === b.slot && diff(a, b) < 1e-3;
+  const sides = (a, b) => a.knife && [a.slot, b.slot].every((s) => s === 2 || s === 3) && diff(a, b) < 1e-3;
+  if (js.every((t, i) => strict(t, other[i]))) return { status: 'ok', max: Math.max(0, ...js.map((t, i) => diff(t, other[i]))) };
+  const pageFault = orderFault(pose, pageOrder), gameFault = orderFault(pose, game.order);
+  if (pageFault) return { status: 'fail', msg: 'the page draws ' + pageFault };
+  if (gameFault) return { status: 'fail', msg: 'the game order is wrong: ' + gameFault };
+  const again = projectPose(pose, { order: game.order });
+  let knife = 0, max = 0;
+  for (let i = 0; i < again.length; i++) {
+    if (strict(again[i], other[i])) { max = Math.max(max, diff(again[i], other[i])); continue; }
+    if (!sides(again[i], other[i])) return { status: 'fail', msg: `triangle ${i} (slot ${again[i].slot} on the page, ${other[i].slot} in the game) differs although the prims are drawn in the game's order` };
+    knife++; max = Math.max(max, diff(again[i], other[i]));
+  }
+  const orderDiffers = JSON.stringify(pageOrder) !== JSON.stringify(game.order), mask = (list) => list.map((t) => (t.knife ? { ...t, slot: 2 } : t));
+  if (orderDiffers && !samePicture(mask(js), mask(again))) return { status: 'fail', msg: 'prims of one equal sort key are drawn in another order and that changes the picture' + (knife ? ' (and shade differs on ' + knife + ' triangles)' : '') };
+  return { status: 'tie', max, knife, msg: [orderDiffers ? 'prim order differs, same picture' : '', knife ? 'shade differs on ' + knife + ' triangles (knife-edge faces)' : ''].filter(Boolean).join(', ') };
+}
+async function loadDoc(set) {
+  if (set === 'today') return D;
+  const r = await fetch('/docs/images/map-art/shapes-picked.json', { cache: 'no-store' });
+  if (!r.ok) throw new Error('fetch shapes-picked.json: HTTP ' + r.status);
+  return r.json();
+}
+const KNOWN_FAILING = ['frc_builder|0|2|24|24']; // today's game shape; P2.4's eight-heading paint-order audit fixes it
+async function runRoundtrip() {
+  const lines = [];
+  try {
+    const set = H.get('set') === 'today' ? 'today' : 'picked';
+    const [doc, res] = await Promise.all([loadDoc(set), fetch('/build/map-art/roundtrip-godot.json', { cache: 'no-store' })]);
+    if (!res.ok) throw new Error('fetch roundtrip-godot.json: HTTP ' + res.status);
+    const game = await res.json(), have = new Map();
+    game.forEach((g) => have.set([g.shape, g.variant, g.detail, g.hull_bucket, g.turret_bucket].join('|'), g));
+    const poses = posesOf(doc), want = new Set(poses.map((p) => p.key));
+    let bad = 0, ties = 0, shade = 0, known = 0, worst = 0;
+    poses.forEach((p) => {
+      const g = have.get(p.key);
+      if (!g) { lines.push('MISSING ' + p.key); bad++; return; }
+      const r = comparePose(p, g);
+      if (r.max !== undefined) worst = Math.max(worst, r.max);
+      if (r.status === 'ok') lines.push(`ok ${p.key} max ${r.max.toExponential(2)}`);
+      else if (r.status === 'tie') { ties++; shade += r.knife; lines.push(`TIE ${p.key} ${r.msg}`); } else if (KNOWN_FAILING.includes(p.key)) { known++; lines.push(`FAIL-KNOWN ${p.key} ${r.msg} | listed failing (user, 2026-11-17), P2.4 paint-order audit`); } else { bad++; lines.push(`FAIL ${p.key} ${r.msg}`); }
+    });
+    have.forEach((g, key) => { if (!want.has(key)) { lines.push('EXTRA ' + key); bad++; } });
+    lines.push(bad ? `FAIL ${bad} of ${poses.length}` : `PASS ${poses.length} max ${worst.toExponential(2)} px ties ${ties} shade ${shade} triangles known-failing ${known}`);
+  } catch (e) { lines.push('FAIL ' + (e && e.message || e)); }
+  await post('roundtrip', lines.join('\n') + '\n');
+}
+
+// ---------- audit ----------
+const SLAB = '#121c24';
+const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const lum = (rgb) => { const [r, g, b] = rgb.map(lin); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const contrast = (a, b) => { const [hi, lo] = [lum(hex2rgb(a)), lum(hex2rgb(b))].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+const MACHADO = {
+  deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+  protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]] };
+function lab(linRgb) {
+  const [r, g, b] = linRgb;
+  const X = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.95047, Y = 0.2126729 * r + 0.7151522 * g + 0.072175 * b, Z = (0.0193339 * r + 0.119192 * g + 0.9503041 * b) / 1.08883;
+  const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))];
+}
+const simulate = (hex, m) => { const l = hex2rgb(hex).map(lin); return m ? m.map((row) => Math.min(1, Math.max(0, row[0] * l[0] + row[1] * l[1] + row[2] * l[2]))) : l; };
+const dE = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+function minDistance(ha, hb) {
+  const L = (h, m) => lab(simulate(h, m));
+  return Math.min(...[null, MACHADO.deuteranopia, MACHADO.protanopia].map((m) => dE(L(ha, m), L(hb, m))));
+}
+const SHARE_FLOOR = { infantry: 0.3, laborer: 0.3, rocket_infantry: 0.2, tank_usa: 0.28, tank_china: 0.28, tank_china_gatling: 0.28, tank_frc: 0.28 };
+function ownerShare(shape, detail) {
+  const parts = partsAt(shape, detail), one = (p) => ({ ...shape, parts: [p], damage_variants: null, parts_by_detail: null });
+  let total = 0;
+  POSE_HEADINGS.forEach((b) => {
+    const a = (b * TAU) / 64, tris = [];
+    parts.forEach((p, i) => projectShape(one(p), { heading: a, turret: a, detail }).forEach((t) => tris.push({ part: i, slot: t.slot, p: t.pts, d: t.pts.map((q) => (q[1] + q[2]) / 16) })));
+    const r = auditRaster(tris, parts.length);
+    total += r.owner / Math.max(r.drawn, 1);
+  });
+  return total / POSE_HEADINGS.length;
+}
+// Findings that are accepted or owned elsewhere; each prints as a KNOWN line with its source. Nothing is added without the user.
+// Owner top to ground colour-vision distance (minDistance), today's values floored to 0.01; the bar is not decided (user 2026-11-17), so a lower value fails.
+const GROUND_KINDS = ['sand', 'dark ground', 'fogged sand', 'fogged dark ground'];
+const DE_FROM = {
+  'sand': [71.74, 14.31, 15.5, 49.41, 31.88, 70.65, 34.95, 41.47],
+  'dark ground': [54.37, 20.55, 20.98, 73.71, 53.92, 47.67, 15.27, 34.08],
+  'fogged sand': [50.63, 10.18, 10.93, 35.43, 22.96, 49.75, 24.37, 29.14],
+  'fogged dark ground': [38.78, 14.04, 14.65, 52.11, 37.94, 33.99, 11.03, 24.06],
+};
+const KNOWN = [
+  ...GROUND_KINDS.map((g) => ({ re: new RegExp(`^colour vision owner (\\d) \\w+ default from ${g}: smallest dE ([\\d.]+)`), ok: (m) => +m[2] >= DE_FROM[g][m[1] - 1], when: () => !R6.owners, source: 'measured, bar not decided (user 2026-11-17)' })),
+  { re: /^china_rifle_infantry owner colour share at detail 2: ([\d.]+) %/, ok: (m) => +m[1] >= 21.2, source: 'design-answers-2026-11-08.md:686 records about 23 % against the 30 % floor; 21.2 % is the value measured on this page, a lower value is not known' },
+];
+
+function subjectsOf(shape) {
+  const views = [['parts', shape.parts]];
+  if (shape.parts_by_detail && shape.parts_by_detail[2]) views.push(['detail 2', shape.parts_by_detail[2]]);
+  Object.entries(shape.damage_variants || {}).forEach(([v, d]) => views.push(['damage ' + v, d.parts]));
+  return views.map(([tag, parts]) => ({ tag, shape: { ...shape, parts, has_turret: hasTurret(parts), damage_variants: null, parts_by_detail: null } }));
+}
+function newAudit(prefix) {
+  const a = { found: [], checks: 0, infos: [] };
+  a.check = (ok, line) => { a.checks++; if (!ok) a.found.push(prefix + line); };
+  a.count = () => { a.checks++; };
+  a.measure = (line) => { a.checks++; a.found.push(prefix + line); };
+  a.info = (line) => a.infos.push(prefix + line);
+  a.add = (line) => a.found.push(prefix + line);
+  return a;
+}
+const auditShapesNow = () => D.shapes.map((s) => exportShape(s.id)).concat(exportExtras().filter((e) => e.footprint || e.role === 'wreck'));
+function shapeFindings(a, shapes) {
+  shapes.forEach((s) => subjectsOf(s).forEach(({ tag, shape }) => {
+    a.count();
+    auditAny(shape).issues.forEach((issue) => a.add(`${s.id} ${tag}: ${issue}`));
+  }));
+  shapes.filter((s) => SHARE_FLOOR[s.role]).forEach((s) => [0, 2].forEach((d) => {
+    const share = ownerShare({ ...s, damage_variants: null }, d);
+    a.check(share >= SHARE_FLOOR[s.role], `${s.id} owner colour share at detail ${d}: ${(share * 100).toFixed(1)} % (floor ${SHARE_FLOOR[s.role] * 100} %)`);
+  }));
+}
+function useGround(dark) { GKEY = dark ? 'dark' : 'sand'; PAL = palFor(EXPORT_SEL.steps, eff()); }
+const ownerTops = () => [1, 2, 3, 4, 5, 6, 7, 8].map((o) => slotsFor(o, 'default')[0]);
+const HUD_AMBER = '#f7c871';
+function cargoApart(a, cargo, tag) {
+  const far = (what, hex) => a.check(minDistance(cargo, hex) >= 20, `colour vision cargo colour / ${what}${tag}: smallest dE ${minDistance(cargo, hex).toFixed(1)} (bar 20)`);
+  ownerTops().forEach((top, i) => far(`owner ${i + 1} ${OWNER_NAME[i]}`, top));
+  far('HUD amber', HUD_AMBER);
+}
+const ownerMin = (tops, g) => Math.min(...tops.map((t) => minDistance(t, g)));
+const TODAY_MIN = () => Object.fromEntries(GROUND_KINDS.map((k) => [k, Math.min(...DE_FROM[k])]));
+// The palette as a whole (owner order may change): pairs, HUD slab, the per-ground minimum owner distance against today's minimum, cargo and HUD amber, side bands.
+function paletteChecks(a, data, names) {
+  const today = TODAY_MIN();
+  const sets = [['sand', false], ['dark ground', true]].map(([name, dark]) => { useGround(dark); return { name, dark, tops: ownerTops(), g: GROUND[dark ? 'dark' : 'sand'], cargo: cargoHex(), band: PAL.band, fog: PAL.fog.factor }; });
+  sets.forEach(({ name, tops, g, cargo, band, fog }) => {
+    for (let x = 0; x < 8; x++) for (let y = x + 1; y < 8; y++) {
+      const m = minDistance(tops[x], tops[y]);
+      a.check(m >= 20, `colour vision owner ${x + 1} ${names[x]} / ${y + 1} ${names[y]} (${name} set): smallest dE ${m.toFixed(2)} (bar 20)`);
+    }
+    tops.forEach((top, i) => {
+      const n = `${i + 1} ${names[i]}`;
+      a.check(contrast(top, SLAB) >= 3, `contrast owner ${n} on HUD slab (${name} set): ${contrast(top, SLAB).toFixed(2)} (bar 3)`);
+      if (cargo) a.check(minDistance(top, cargo) >= 20, `colour vision owner ${n} / cargo colour (${name} set): smallest dE ${minDistance(top, cargo).toFixed(2)} (bar 20)`);
+      a.check(minDistance(top, HUD_AMBER) >= 20, `colour vision owner ${n} / HUD amber (${name} set): smallest dE ${minDistance(top, HUD_AMBER).toFixed(2)} (bar 20)`);
+    });
+    [['SIDE', band.side], ['SIDE_DARK', band.sideDark]].forEach(([n, hex]) => a.check(contrast(hex, g) >= 3, `contrast band ${n} on ${name}: ${contrast(hex, g).toFixed(2)} (bar 3)`));
+    const kinds = [[name, tops, g]];
+    if (fog) kinds.push([`fogged ${name}`, tops.map((t) => scaleHex(t, fog)), scaleHex(g, fog)]);
+    kinds.forEach(([kind, ts, gg]) => {
+      const m = ownerMin(ts, gg);
+      a.info(`palette minimum owner distance from ${kind}: ${m.toFixed(2)} (today's minimum ${today[kind].toFixed(2)})`);
+      a.check(m >= today[kind] - 1e-9, `colour vision owner minimum from ${kind}: ${m.toFixed(2)} (not below today's ${today[kind].toFixed(2)})`);
+    });
+  });
+}
+function usesChecks(a, data, usedDatas, names, usedKeys) {
+  OVR = mergeOvr(ovrOf(usedDatas), ovrOf([data]));
+  [['sand', false], ['dark ground', true]].forEach(([name, dark]) => {
+    useGround(dark);
+    const cargo = cargoHex();
+    if (!cargo) return;
+    const tops = ownerTops(), ds = tops.map((t) => minDistance(t, cargo)), low = ds.indexOf(Math.min(...ds));
+    a.info(`smallest owner / cargo colour distance with the ${usedKeys} option shown (${name} set): ${ds[low].toFixed(2)} (owner ${low + 1} ${names[low]}, bar 20)`);
+    tops.forEach((top, i) => a.check(ds[i] >= 20, `colour vision owner ${i + 1} ${names[i]} / cargo colour (with the ${usedKeys} option shown, ${name} set): smallest dE ${ds[i].toFixed(2)} (bar 20)`));
+  });
+}
+function wreckInfo(a, data, used, usedNames) {
+  const sets = [['today\'s owners', ovrOf([data]), OWNER_NAME], used.length && ['the used option\'s owners', mergeOvr(ovrOf(used.map((u) => u.data)), ovrOf([data])), usedNames]].filter(Boolean);
+  sets.forEach(([label, ovr, names]) => {
+    OVR = ovr;
+    [['sand', false], ['dark ground', true]].forEach(([name, dark]) => {
+      useGround(dark);
+      const top = asHex(eff().WRECK_TOP), g = GROUND[dark ? 'dark' : 'sand'], fog = PAL.fog.factor;
+      if (!top) return;
+      const line = (where, hex, bg) => a.info(`wreck top ${top} on ${where}: contrast ${contrast(hex, bg).toFixed(2)}, colour vision distance ${minDistance(hex, bg).toFixed(2)}`);
+      line(name, top, g);
+      if (fog) line(`fogged ${name}`, scaleHex(top, fog), scaleHex(g, fog));
+      const ds = ownerTops().map((t) => minDistance(t, top)), low = ds.indexOf(Math.min(...ds));
+      a.info(`wreck top ${top} smallest colour vision distance to an owner top (${label}, ${name} set): ${ds[low].toFixed(2)} (owner ${low + 1} ${names[low]})`);
+    });
+  });
+}
+function auditOption(key, opt, data, names, used) {
+  const a = newAudit(`CAND6 ${key} ${opt} `);
+  dataProblems(data).forEach((p) => a.check(false, 'data: ' + p));
+  OVR = ovrOf([data]);
+  const ids = Object.keys(OVR.shapes).filter(knownShapeId);
+  useGround(false);
+  shapeFindings(a, auditShapesNow().filter((s) => ids.includes(s.id)));
+  [['sand', false, GROUND.sand], ['dark ground', true, GROUND.dark]].forEach(([name, dark, g]) => {
+    useGround(dark);
+    const e = eff(), set = (n) => (data.palette || {})[n] !== undefined || (dark && (data.paletteDark || {})[n] !== undefined);
+    if (set('CARGO') || (dark && set('DARK_GROUND'))) {
+      const cargo = cargoHex(), slabs = set('CARGO') ? [[`pile base slab (${name} set)`, PAL.band.sideDark], [`HUD slab (${name} set)`, SLAB]] : [];
+      if (cargo) [[`${name}`, g], ...slabs].forEach(([where, bg]) => a.check(contrast(cargo, bg) >= 3, `contrast cargo colour on ${where}: ${contrast(cargo, bg).toFixed(2)} (bar 3)`));
+    }
+    if (set('CARGO') && cargoHex()) {
+      const cargo = cargoHex(), far = (what, hex) => a.check(minDistance(cargo, hex) >= 20, `colour vision cargo colour / ${what} (${name} set): smallest dE ${minDistance(cargo, hex).toFixed(2)} (bar 20)`);
+      far('HUD amber', HUD_AMBER);
+    }
+    if (set('BUILDING_SIDE_DARK')) a.check(contrast(e.BUILDING_SIDE_DARK, g) >= 3, `contrast building side dark on ${name}: ${contrast(e.BUILDING_SIDE_DARK, g).toFixed(2)} (bar 3)`);
+    [['SIDE', PAL.band.side], ['SIDE_DARK', PAL.band.sideDark]].filter(([n]) => set(n)).forEach(([n, hex]) => a.check(contrast(hex, g) >= 3, `contrast band ${n} on ${name}: ${contrast(hex, g).toFixed(2)} (bar 3)`));
+  });
+  if (['OWNERS', 'DARK_GROUND', 'CARGO'].some((n) => (data.palette || {})[n] !== undefined || (data.paletteDark || {})[n] !== undefined)) paletteChecks(a, data, names || OWNER_NAME);
+  if (['WRECK_TOP'].some((n) => (data.palette || {})[n] !== undefined || (data.paletteDark || {})[n] !== undefined)) wreckInfo(a, data, used || [], namesOf((used || [])[(used || []).length - 1]) || OWNER_NAME);
+  if (used && used.length && ['CARGO'].some((n) => (data.palette || {})[n] !== undefined || (data.paletteDark || {})[n] !== undefined)) usesChecks(a, data, used.map((u) => u.data), namesOf(used[used.length - 1]) || OWNER_NAME, ((window.CAND6[key] || {}).uses || []).join(', '));
+  return a;
+}
+function runAuditChecks(only) {
+  CUR = EXPORT_SEL; LEGACY = false; OVR = r6Ovr(); useGround(false);
+  const a = newAudit(''), darkSet = Object.keys(OVR.paletteDark).length > 0, bakedOwners = !!(OVR.palette.OWNERS || OVR.paletteDark.OWNERS);
+  shapeFindings(a, auditShapesNow());
+  const tops = ownerTops(), cargo = cargoHex();
+  useGround(true);
+  const topsDark = ownerTops(), cargoDark = cargoHex(), fogDark = PAL.fog.factor;
+  useGround(false);
+  const grounds = [['sand', GROUND.sand], ['dark ground', GROUND.dark]], fog = PAL.fog.factor;
+  if (bakedOwners) {
+    paletteChecks(a, null, namesOf(optionOf('owners', R6.owners)) || OWNER_NAME);
+    useGround(false);
+  } else {
+    for (let o = 1; o <= 8; o++) {
+      const n = `${o} ${OWNER_NAME[o - 1]}`;
+      a.check(contrast(tops[o - 1], SLAB) >= 3, `contrast owner ${n} default on HUD slab: ${contrast(tops[o - 1], SLAB).toFixed(2)} (bar 3)`);
+      const from = (name, top, g) => a.measure(`colour vision owner ${n} default from ${name}: smallest dE ${minDistance(top, g).toFixed(2)}`);
+      from('sand', tops[o - 1], GROUND.sand);
+      from('dark ground', topsDark[o - 1], GROUND.dark);
+      if (fog) from('fogged sand', scaleHex(tops[o - 1], fog), scaleHex(GROUND.sand, fog));
+      if (fogDark) from('fogged dark ground', scaleHex(topsDark[o - 1], fogDark), scaleHex(GROUND.dark, fogDark));
+    }
+    [['default', tops], darkSet && ['default (dark ground set)', topsDark]].filter(Boolean).forEach(([tag, set]) => {
+      for (let x = 0; x < 8; x++) for (let y = x + 1; y < 8; y++) {
+        const m = minDistance(set[x], set[y]);
+        a.check(m >= 20, `colour vision owner ${x + 1} ${OWNER_NAME[x]} / ${y + 1} ${OWNER_NAME[y]} ${tag}: smallest dE ${m.toFixed(1)} (bar 20)`);
+      }
+    });
+    [['SIDE', PAL.band.side], ['SIDE_DARK', PAL.band.sideDark]].forEach(([band, hex]) => grounds.forEach(([name, g]) => a.check(contrast(hex, g) >= 3, `contrast band ${band} on ${name}: ${contrast(hex, g).toFixed(2)} (bar 3)`)));
+  }
+  if (cargo) {
+    [['sand', GROUND.sand, cargo], ['dark ground', GROUND.dark, cargoDark], ['pile base slab', PAL.band.sideDark, cargo], ['HUD slab', SLAB, cargo]].forEach(([name, g, c]) => a.check(contrast(c, g) >= 3, `contrast cargo colour on ${name}: ${contrast(c, g).toFixed(2)} (bar 3)`));
+    const amber = (c, tag) => a.check(minDistance(c, HUD_AMBER) >= 20, `colour vision cargo colour / HUD amber${tag}: smallest dE ${minDistance(c, HUD_AMBER).toFixed(2)} (bar 20)`);
+    if (bakedOwners) { amber(cargo, ' default'); if (darkSet) amber(cargoDark, ' default (dark ground set)'); } else {
+      cargoApart(a, cargo, ' default');
+      if (darkSet) { useGround(true); cargoApart(a, cargoDark, ' default (dark ground set)'); useGround(false); }
+    }
+  }
+  OVR = { shapes: {}, palette: {}, paletteDark: {}, overlays: [] };
+  useGround(false);
+  Object.entries(window.CAND6).filter(([key]) => !only || key === only).forEach(([key, step]) => ['A', 'B'].filter((opt) => step && step[opt]).forEach((opt) => {
+    const o = auditOption(key, opt, step[opt].data, namesOf(step[opt]), usedOptions(key));
+    a.found.push(...o.found); a.infos.push(...o.infos); a.checks += o.checks;
+  }));
+  stepProblems(only).forEach((l) => a.add(l));
+  if (only && !window.CAND6[only]) a.add(`CAND6 ${only} missing (file not loaded or threw at load)`);
+  if (only) document.getElementById('err').textContent.split('\n').filter((l) => l.includes(`cand6-${only}.js`)).forEach((l) => a.add(`CAND6 ${only} load error: ${l}`));
+  a.checks += only ? (window.CAND6[only] ? 1 : 0) : Object.keys(window.CAND6).length;
+  return { found: a.found, checks: a.checks, infos: a.infos };
+}
+async function runAudit() {
+  const lines = [], file = H.get('name') || 'audit', only = H.get('step');
+  if (!NAME_RE.test(file)) throw new Error('bad report name ' + file);
+  try {
+    if (only && !STEP_KEYS.includes(only)) throw new Error('audit step ' + only + ' is not a step key');
+    const { found, checks, infos } = runAuditChecks(only);
+    const isKnown = (line) => KNOWN.find((k) => { const m = k.re.exec(line); return m && (!k.when || k.when()) && (!k.ok || k.ok(m)); });
+    const unexpected = found.filter((l) => !isKnown(l));
+    infos.forEach((l) => lines.push('INFO ' + l));
+    found.filter(isKnown).forEach((l) => lines.push(`KNOWN ${l} | ${isKnown(l).source}`));
+    unexpected.forEach((l) => lines.push('unexpected: ' + l));
+    lines.push(unexpected.length ? `FAIL ${unexpected.length}` : `PASS ${checks} known ${found.length - unexpected.length}`);
+  } catch (e) { lines.push('FAIL ' + (e && e.stack || e)); }
+  await post(file, lines.join('\n') + '\n');
+}
+</script>
+<script>
+'use strict';
+const H = new URLSearchParams(location.hash.slice(1));
+const WEIGHTS = [400, 600, 700, 800];
+const NAME_RE = /^[a-z0-9-]+$/;
+
+async function loadFonts() {
+  if (H.get('font') === 'arial') FONT = 'Arial, sans-serif';
+  if (H.get('font') === 'inter') {
+    FONT = 'Inter, Arial, sans-serif';
+    for (const [w, f] of [[400, 'Regular'], [600, 'SemiBold'], [700, 'Bold']]) {
+      document.fonts.add(await new FontFace('Inter', `url(/build/map-art/proof-fonts/Inter-${f}.woff2)`, { weight: String(w) }).load());
+    }
+  }
+  const loaded = await Promise.all(WEIGHTS.map((w) => document.fonts.load(`${w} 16px "Public Sans"`)));
+  if (H.get('font') !== 'arial' && loaded.some((l) => !l.length)) throw new Error('Public Sans did not load for every weight: nothing is drawn');
+}
+async function post(name, text) {
+  const r = await fetch('/report?name=' + encodeURIComponent(name), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: text });
+  if (r.status !== 204) addErr('report not recorded: HTTP ' + r.status);
+}
+const reports = {
+  fonts() {
+    const faces = [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Public Sans' && f.status === 'loaded');
+    const lines = WEIGHTS.map((w) => {
+      const ok = document.fonts.check(`${w} 16px "Public Sans"`) && faces.some((f) => f.weight === String(w));
+      return { w, ok, text: `${w} ${ok ? 'ok' : 'FAIL'}` };
+    });
+    const n = lines.filter((l) => l.ok).length;
+    return lines.map((l) => l.text).concat(n === WEIGHTS.length ? 'PASS ' + n : 'FAIL ' + n).join('\n') + '\n';
+  },
+  pics: () => Object.keys(PICS).concat('PASS ' + Object.keys(PICS).length).join('\n') + '\n',
+};
+async function hudOptions() {
+  if (!window.HUDV5) throw new Error('hud.js missing: no HUD layer');
+  const doc = await (await fetch('/docs/images/hud-v5/layout.json')).json();
+  return Object.fromEntries(Object.entries(doc.meta.picks).map(([k, v]) => [k, v.value]));
+}
+function addHud(stage, o, state, scale) {
+  const layer = document.createElement('div');
+  layer.style.cssText = `position:absolute;left:0;top:0;width:1280px;height:720px;transform:scale(${scale});transform-origin:0 0`;
+  layer.innerHTML = HUDV5.hud(o, { state, size: '1280x720', tier: H.get('tier') || 'full' });
+  stage.appendChild(layer);
+}
+function drawPic(name, o) {
+  const p = PICS[name], as = H.get('as') === 'shot' ? 'shot' : 'final', scale = H.get('scale') === '2' ? 2 : 1;
+  document.body.className = 'shot'; app.className = 'shot';
+  app.innerHTML = '';
+  const stage = p.draw({ sel: p[as], scale });
+  if (o) addHud(stage, o, H.get('hud') || p.hud, scale);
+  app.appendChild(stage);
+  if (o) HUDV5.placeCards(stage);
+}
+// ---------- step shots and the pick page ----------
+const STEP_PIC = /^step(\d+)-([AB])(-dark)?$/;
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+function drawStepShot(n, show, ground, zoom, scale) {
+  const key = STEPS6[n - 1], s = window.CAND6[key];
+  if (!s) throw new Error('[step missing: ' + (key || n) + ']');
+  const pz = s.pics && s.pics.zoom, shown = show || showOf(key), z = zoom || (pz != null ? String(pz) : s.view && s.view.palette ? '1' : '0.5');
+  if (shown !== '0' && !optionOf(key, shown)) throw new Error(key + ' has no option ' + shown);
+  if (!ZOOMS.includes(z)) throw new Error('bad zoom ' + z);
+  document.body.className = 'shot'; app.className = 'shot';
+  app.innerHTML = '';
+  app.appendChild(stepStage(key, shown, { zoom: z, ground: ground === 'dark' ? 'dark' : 'sand' }, scale));
+}
+
+const UI = { n: Math.max(0, (+H.get('step') || 1) - 1), show: {}, ground: 'sand', zoom: '0.5', zoomSet: false, heading: 0, hud: false, notes: {}, picked: {}, status: {}, hudOpts: null };
+const isConfirm = (s) => !s.B;
+const shownZoom = (s) => (!UI.zoomSet && s && s.view && s.view.palette ? '1' : UI.zoom);
+const showFor = (key) => UI.show[key] || showOf(key);
+function listHtml(v) { return !v ? '' : '<ul>' + [].concat(v).map((x) => `<li>${esc(x)}</li>`).join('') + '</ul>'; }
+function renderPick() {
+  const key = STEPS6[UI.n], s = window.CAND6[key];
+  const chips = STEPS6.map((k, i) => `<button class="chip${i === UI.n ? ' on' : ''}" data-step="${i}">${i + 1} ${esc(k)}${UI.picked[k] ? ' · ' + esc(UI.picked[k]) : ''}</button>`).join('');
+  const nav = '<button data-act="prev"><kbd>P</kbd>Previous</button> <button data-act="next"><kbd>N</kbd>Next</button>';
+  if (!s) { app.innerHTML = `<div class="top"><div class="chips">${chips}</div><h2>[step missing: ${esc(key)}]</h2><p>cand6-${esc(key)}.js did not load.</p><p>${nav}</p></div>`; return; }
+  const show = showFor(key), opt = s[show], confirm = isConfirm(s), st = UI.status[key];
+  const flip = confirm ? '' : ['A', 'B'].map((x) => `<button data-show="${x}" class="${x === show ? 'on' : ''}"><kbd>${x}</kbd>${esc(s[x] ? s[x].name : '(missing)')}</button>`).join(' ');
+  const act = confirm
+    ? '<button id="pick"><kbd>Enter</kbd>Yes, as drawn</button> <button id="change">Change (say what in the note)</button>'
+    : `<button id="pick">Pick ${show} <kbd>Enter</kbd></button>`;
+  const pz = s.pics && +s.pics.zoom, hint = pz > +shownZoom(s) ? (key === 'surfaces' ? 'Z: zoom 1 to see doors' : `Z: zoom ${pz} for the detail`) : '';
+  const usedKeys = (s.uses || []).filter((k) => STEP_KEYS.includes(k) && k !== key && usedOptions(key).length), usedNow = usedKeys.map((k) => [k, optionOf(k, usedShow(k))]).filter(([, o]) => o);
+  const stageNote = usedNow.length ? 'Shown with ' + usedNow.map(([k, o]) => `step ${STEPS6.indexOf(k) + 1}'s ${esc(o.name)}`).join(' and ') + '.' : "Other steps' choices are not applied here.";
+  const tg = [['hud', 'H', 'HUD v5 layer', UI.hud], ['ground', 'G', 'Ground: ' + UI.ground, false], ['zoom', 'Z', 'Zoom ' + shownZoom(s), false], ['head', '[ ]', 'Heading ' + UI.heading, false]]
+    .map(([a, k, t, on]) => `<button data-act="${a}" class="${on ? 'on' : ''}"><kbd>${k}</kbd>${t}</button>`).join(' ');
+  app.innerHTML = `<div class="cols"><div class="chips">${chips}</div><div class="text"><h2>Step ${UI.n + 1} of ${STEPS6.length}: ${esc(s.q)}</h2>
+    <p>${esc(s.why)}</p><p><b>What changes:</b> ${esc(s.look)}</p>
+    <p class="rec-line">Claude's pick: <b>${esc(s.rec)}</b>${s.recWhy ? ' · ' + esc(s.recWhy) : ''}</p>${s.numbers ? '<h3 class="nums">Numbers</h3>' + listHtml(s.numbers) : ''}</div>
+    <div class="bars"><div class="bar">${flip} ${act} <span class="rec">${st && (confirm || st.pick === show) ? st.html : ''}</span></div><div class="bar">${tg}${hint ? ` <span class="hint">${esc(hint)}</span>` : ''}</div></div><div id="host"></div>
+    <div class="under"><p class="stage-note">${stageNote}</p><p><b>${esc(show)}${opt ? ': ' + esc(opt.name) : ''}</b></p><textarea id="cm" placeholder="Note (optional)">${esc(UI.notes[key])}</textarea>
+    <p>${nav}</p></div></div>`;
+  const stage = stepStage(key, show, { zoom: shownZoom(s), ground: UI.ground, heading: UI.heading }, 1);
+  $('#host').appendChild(stage);
+  if (UI.hud) {
+    if (!UI.hudOpts) addErr('HUD layer unavailable (hud.js or layout.json missing)');
+    else { addHud(stage, UI.hudOpts, 'none', 1); HUDV5.placeCards(stage); }
+  }
+}
+async function postPick(key, pick, note) {
+  const s = window.CAND6[key], what = esc(s && s[pick] ? s[pick].name : pick);
+  let html;
+  try {
+    const r = await fetch('/pick', { method: 'POST', body: JSON.stringify({ key, pick, note }) });
+    if (r.status === 204) UI.picked[key] = pick;
+    html = r.status === 204 ? `Recorded: ${what}.` : `<span class="fail">Not recorded: HTTP ${r.status}. Kept on this page: ${what}.</span>`;
+  } catch (e) { html = `<span class="fail">Not recorded: server not reachable. Kept on this page: ${what}.</span>`; }
+  UI.status[key] = { pick, html };
+  document.querySelectorAll('.rec').forEach((el) => { el.innerHTML = html; });
+  document.querySelectorAll('.chip').forEach((el, i) => { if (STEPS6[i] === key && UI.picked[key]) el.textContent = `${i + 1} ${key} · ${UI.picked[key]}`; });
+}
+const choose = (pick) => { const key = STEPS6[UI.n], s = window.CAND6[key]; if (s) postPick(key, pick || (isConfirm(s) ? 'yes' : showFor(key)), UI.notes[key] || ''); };
+const go = (n) => { UI.n = (n + STEPS6.length) % STEPS6.length; renderPick(); };
+const ACTS = {
+  prev: () => go(UI.n - 1), next: () => go(UI.n + 1),
+  hud: () => { UI.hud = !UI.hud; renderPick(); },
+  ground: () => { UI.ground = UI.ground === 'sand' ? 'dark' : 'sand'; renderPick(); },
+  zoom: () => { const s = window.CAND6[STEPS6[UI.n]]; UI.zoom = ZOOMS[(ZOOMS.indexOf(shownZoom(s)) + 1) % ZOOMS.length]; UI.zoomSet = true; renderPick(); },
+  head: () => { UI.heading = (UI.heading + 1) % 8; renderPick(); },
+};
+function startPick(saved) {
+  Object.entries(saved).forEach(([k, v]) => {
+    if (!STEPS6.includes(k) || !v) return;
+    UI.picked[k] = v.pick; UI.notes[k] = v.note || '';
+    if (['A', 'B'].includes(v.pick) && window.CAND6[k] && window.CAND6[k][v.pick]) UI.show[k] = v.pick;
+  });
+  app.addEventListener('click', (e) => {
+    const hit = (q) => e.target.closest(q);
+    if (hit('[data-step]')) go(+hit('[data-step]').dataset.step);
+    else if (hit('[data-show]')) { UI.show[STEPS6[UI.n]] = hit('[data-show]').dataset.show; renderPick(); }
+    else if (hit('[data-act]')) ACTS[hit('[data-act]').dataset.act]();
+    else if (hit('#pick')) choose();
+    else if (hit('#change')) choose('change');
+  });
+  app.addEventListener('input', (e) => { if (e.target.id === 'cm') UI.notes[STEPS6[UI.n]] = e.target.value; });
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase(), key = STEPS6[UI.n], s = window.CAND6[key];
+    if (k === 'enter' && e.target.tagName === 'BUTTON') return;
+    if ((k === 'a' || k === 'b') && s && s[k.toUpperCase()] && !isConfirm(s)) { UI.show[key] = k.toUpperCase(); renderPick(); }
+    else if (k === 'enter') choose();
+    else if (k === 'h') ACTS.hud();
+    else if (k === 'g') ACTS.ground();
+    else if (k === 'z') ACTS.zoom();
+    else if (k === '[' || k === ']') { UI.heading = (UI.heading + (k === ']' ? 1 : 7)) % 8; renderPick(); }
+    else if (k === 'n') ACTS.next();
+    else if (k === 'p') ACTS.prev();
+  });
+  renderPick();
+}
+const fetchPicks = (loud) => fetch('picks.json').then((r) => (r.ok ? r.json() : {}), () => ({})).then((j) => { if (j && typeof j === 'object' && !Array.isArray(j)) return j; throw new Error('not an object'); })  .catch(() => { if (loud) addErr('picks.json unreadable: showing the recommended options'); return {}; });
+async function start() {
+  stepProblems().forEach(addErr);
+  const name = H.get('pic'), rep = H.get('report'), stepPic = name && STEP_PIC.exec(name), shot = H.has('step') && H.get('shot') === '1';
+  const job = { export: runExport, roundtrip: runRoundtrip, audit: runAudit }[[...H.keys()].find((k) => ['export', 'roundtrip', 'audit'].includes(k))];
+  const pickPage = !(name || rep || job || shot || H.has('list') || H.has('world')), scale = H.get('scale') === '2' ? 2 : 1;
+  const wantHud = H.get('hud') || (name && PICS[name] && PICS[name].hud);
+  const [, hudOpts, saved] = await Promise.all([loadFonts(), wantHud || pickPage ? hudOptions().catch((e) => { if (wantHud) throw e; return null; }) : null, fetchPicks(pickPage)]);
+  SAVED = saved;
+  if (job) await job();
+  else if (rep) {
+    if (!reports[rep]) throw new Error('unknown report ' + rep);
+    const file = H.get('name') || rep;
+    if (!NAME_RE.test(file)) throw new Error('bad report name ' + file);
+    await post(file, reports[rep]());
+  } else if (stepPic) drawStepShot(+stepPic[1], stepPic[2], stepPic[3] ? 'dark' : 'sand', H.get('zoom'), scale);
+  else if (shot) drawStepShot(+H.get('step'), H.get('show'), H.get('ground'), H.get('zoom'), scale);
+  else if (name && PICS[name]) drawPic(name, wantHud ? hudOpts : null);
+  else if (H.has('world')) { document.body.className = 'shot'; app.className = 'shot'; app.innerHTML = ''; app.appendChild(MARKS.worldStage(H.get('world'), scale)); }
+  else if (pickPage) {
+    UI.hudOpts = hudOpts;
+    startPick(saved);
+  } else app.innerHTML = '<h2>Map art pictures</h2><ul>' + Object.keys(PICS).map((n) => `<li><a href="#pic=${n}&as=shot">${n}</a></li>`).join('') + '</ul>';
+}
+start().catch((e) => addErr('start: ' + (e && e.stack || e)));
+</script>
+</body>
+</html>

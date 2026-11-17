@@ -32,8 +32,8 @@ From `layout.json` `tokens` (measured on the page):
 | `muted` | `#93a5b0` | Labels, hints, key chip letters, blocked cell text |
 | `sel` | `#60e5ed` | Cyan: armed or selected control only |
 | `amber` | `#f7c871` | "Needs you now" only |
-| `you` | `#44adf4` | Own owner colour: panel edge, progress bars |
-| `enemy` | `#d54f3b` | Enemy owner colour on the panel edge |
+| `you` | `#628ffa` | Own owner colour (palette A): panel edge, progress bars |
+| `enemy` | `#d6120c` | Enemy owner colour on the panel edge |
 | `ally` | `#69ceaa` | Teammate ping arrow and minimap dots (Full) |
 | `panel`, `edge` | `#1b2731`, `#263842` | Carried over from v4; not used on these pictures |
 
@@ -43,7 +43,7 @@ Colour rules (design answers, "HUD v4 mock-ups" and "HUD v5 mock-ups"):
 
 - **Cyan** marks only an armed or selected control: fill `panel2` plus a 2 px inset `sel` outline. Buttons are flat otherwise.
 - **Amber** means "needs you now" only: a cost the player cannot afford, `LOW POWER`, the cell card's reason line, the refusal line, alerts. Money is plain text. No red warning text: red is an owner colour.
-- **Owner colour** on the panel edge and progress bars is the colour the game draws that owner's units in, lightened toward white in 5 % steps only until it reaches 3:1 against `bg`. None of the eight lifted owner colours needs it; the lowest, purple, is 3.10:1 (design answers, findings on the page).
+- **Owner colour** on the panel edge and progress bars is the colour the game draws that owner's units in, lightened toward white in 5 % steps only until it reaches 3:1 against `bg`. None of the eight owner colours of palette A (round 6, user 2026-11-17) needs it; the lowest, purple `#7242fe`, is 3.23:1, red `#d6120c` 3.25:1 (computed from `source/hud.js` `OWNERS` and `BG`).
 - Own panels, the card included, carry a 4 px left edge in `you`; an enemy's panel in `enemy`; a supply pile's in `line` (grey, user, 2026-11-16).
 
 ## Type scale
