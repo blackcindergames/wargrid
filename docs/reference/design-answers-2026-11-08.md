@@ -1050,3 +1050,20 @@ The timed Ashfall playtest from the [player-experience review](#player-experienc
 - **First minimap:** click or drag moves the camera, flash on attack, blank at low power; right-click orders on the minimap are not in it.
 - **Merge:** P3 takes all of the Later item Minimap and attack alerts.
 - **Name:** "See the whole map".
+
+## P2.3a groundwork questionnaire (user, 2026-11-17)
+
+Answers to a read-only gap map of today's HUD against HUD v5 (working notes `p2-3a-groundwork.md`, private), with research and player-experience reviews where the user asked. The nine map-mark, edge and canvas questions wait for map art round 6. Inputs for the P2.3a design, not a design.
+
+- **Interim:** today's button column becomes one bottom-right slab until P2.3b; no queue row in P2.3a.
+- **Window shapes:** the view is capped at 2.4:1 (2560x1080 and 3440x1440 fill the screen) and 16:10 (Steam Deck, MacBooks in fullscreen), the same online and offline; black bars beyond, a different shade from the canvas. Today's aspect is `keep`, so nobody loses width. Research found no RTS with a documented fairness cap (Zero Hour fork PR #1711 calls extra view an advantage). Rendered gate row at 2560x1080; headless layout tests at 1280x720, 1280x800 and 3440x1440.
+- **A/B before the plan, one batched session (offscreen if a hidden path works, else one window):** the two colour token sets, the health-bar rule, value size 13 against 14 px, and the drag box: white outline with faint fill, green outline without fill, owner colour with low fill.
+- **Plumbing:** tabular numbers through a `FontVariation` with `tnum`; `game/ui/launcher_theme.tres` grows into the one theme; the `view_player` rider happens in P2.3a.
+- **Places:** online notices top centre; the F3 overlay, the playtest checklist and the note form drop down under the Playtest chip.
+- **Panels:** enemy and allied buildings and units show name and health with their owner colour on the edge; enemy sites show no build percent; one unit shows name and health only; health rounds up; kind rows in roster order; your stalled site reads a muted `PAUSED · NO BUILDER` in place of `UNDER CONSTRUCTION`.
+- **Supply pile panel:** only `CREDITS LEFT` (boxes times 75; `Empty` at zero); docked and waiting counts dropped; "in line" stays on the collector's panel. Zero Hour's hover shows the dollar value left (GeneralsGameCode `InGameUI.cpp:2719-2727` @ afc2a103f). Piles are click-only.
+- **Selection:** kind rows: click narrows to the kind, shift-click removes it (replaces "shift-click adds"; StarCraft II and Age of Empires IV remove with shift on the panel); no mixed unit and building selection in P2.3a, revisited with P3's control groups.
+- **Refusals:** one line, a new refusal replaces it and restarts the 3 s; refusals a player cannot cause read "Order not possible" (raw text to the playtest log); one wording table for match and launcher; F30's quiet beep fixed with F29; placement refusals only after the click.
+- **Dropped:** "You are blue (P1)" and the tick counter (F3 keeps it). Credits written `4,800`; the resume hint stays in the interim key-hint line.
+- **Later riders:** for see your economy, collectors against an ideal count on the depot and a nearly-empty pile alert; for P3, a map mark on your own stalled sites.
+

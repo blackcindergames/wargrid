@@ -88,7 +88,7 @@ Heights per state (measured, HUD px): Core one, builder, build, place, blocked, 
 Blocks:
 
 - **Identity**: name 14 / 700; then 8 below a 160 x 6 health bar and `cur / max`, 8 apart. A label can sit at the right end of the name row (`QUEUE 4 / 9`, `UNDER CONSTRUCTION`). Full puts a 64 px glyph 8 left of the block.
-- **Kind rows** (many): header row 18 high, then rows of 186 x 26 in two columns, 4 apart both ways. A row: padding 0 8 4, name 13 / 600 filling the row, count right-aligned in 28, a 3 px health bar along its bottom; Full adds a 22 px glyph. Click narrows the selection to that kind, shift-click adds (design answers).
+- **Kind rows** (many): header row 18 high, then rows of 186 x 26 in two columns, 4 apart both ways. A row: padding 0 8 4, name 13 / 600 filling the row, count right-aligned in 28, a 3 px health bar along its bottom; Full adds a 22 px glyph. Click narrows the selection to that kind, shift-click removes that kind (user, 2026-11-17, [design answers](design-answers-2026-11-08.md#p23a-groundwork-questionnaire-user-2026-11-17)).
 - **Queue** (factory, user, 2026-11-16): nine 36 x 36 slots, 4 apart, 8 under the identity. A filled slot is a `btn` button showing, in Core, the key of the cell that made the item (`Q Q W Q`), in Full a 24 px glyph; the first has a 4 px `you` progress bar on its bottom edge. Click cancels.
 - **Footer** (factory): muted `Right-click ground: rally point` on the left; Full adds `Sell` (122 x 32, glyph 20, muted `+1,000`) on the right. The Full Power Plant panel ends in the same `Sell` button (`+500`).
 - **Key and value lines** (plant, pile): label column 112 wide, value 13 / 700.
