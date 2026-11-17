@@ -11,12 +11,33 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.gd")
 const Combat = preload("res://scripts/simulation/combat.gd")
 const TeamMatch = preload("res://scripts/debug/team_match.gd")
+const OnlineDriver = preload("res://scripts/match/online_driver.gd")
+const Lockstep = preload("res://scripts/net/lockstep.gd")
+const Wire = preload("res://scripts/net/wire.gd")
 const FACTIONS := {1: "usa", 2: "china"}
 const MATCH_TICKS: int = 900
 const DIGEST_EVERY: int = 30
 
+# The relay forwards ticks; over and again end at the relay.
+class PairTransport extends RefCounted:
+	var patient: bool = false
+	var peer
+	var inbox := PackedStringArray()
+	var others: Array[String] = []
+	func poll() -> PackedStringArray:
+		var out := inbox
+		inbox = PackedStringArray()
+		return out
+	func send_text(text: String) -> void:
+		if Wire.decode(text).message.get("type") == "tick": peer.inbox.append(text)
+		else: others.append(text)
+	func closed() -> bool: return false
+	func silent(_now: int) -> bool: return false
+	func close() -> void: pass
+	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
+
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -32,9 +53,9 @@ func _job(commands: Array = [], bots: Array = []):
 	job.bots.assign(bots)
 	return job
 
-func _own_unit(sim, kind: String = "") -> int:
+func _own_unit(sim, kind: String = "", owner: int = 1) -> int:
 	for entity in sim.snapshot().entities:
-		if entity.owner == 1 and (kind.is_empty() or entity.kind == kind): return entity.id
+		if entity.owner == owner and (kind.is_empty() or entity.kind == kind): return entity.id
 	return -1
 
 func _move(id: int) -> Dictionary:
@@ -348,4 +369,104 @@ func test_sb3_ring_off_same_digest(runner) -> bool:
 	for row: String in rows:
 		if row.ends_with("\t0000000000000000"): zero_rows += 1
 	runner.check(rows.size() == 11 and zero_rows == 10 and not rows[10].ends_with("0000000000000000"), "SB3 ring off wrote nothing: ten zero rows, then one written (%d zero of %d)" % [zero_rows, rows.size()])
+	return true
+
+func _pair_drivers() -> Dictionary:
+	var a := PairTransport.new()
+	var b := PairTransport.new()
+	a.peer = b
+	b.peer = a
+	var one = OnlineDriver.new(a, Lockstep.new(1, [1, 2] as Array[int]), "usa", 1)
+	var two = OnlineDriver.new(b, Lockstep.new(2, [1, 2] as Array[int]), "china", 2)
+	for driver in [one, two]:
+		driver.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
+		driver.start()
+	return {"drivers": [one, two], "transports": [a, b]}
+
+# Breaks the transports' reference cycle.
+func _unpair(pair: Dictionary) -> void:
+	pair.transports[0].peer = null
+
+# With lag, seat 2 steps lag - 1 times on every lag-th frame: seat 1 stalls, then gets two packets at once.
+func _frames(drivers: Array, frames: int, lag: int) -> int:
+	var double_takes: int = 0
+	for frame in frames:
+		var before: int = drivers[0].current().tick
+		drivers[0].step()
+		drivers[0].drain()
+		if drivers[0].current().tick == before + 2: double_takes += 1
+		if lag > 0 and frame % lag != lag - 1: continue
+		for i in lag - 1 if lag > 0 else 1:
+			drivers[1].step()
+			drivers[1].drain()
+	return double_takes
+
+func _lines_to(lines: PackedStringArray, last_tick: int) -> Array:
+	return Array(lines).filter(func(line: String) -> bool: return Wire.decode(line).message.tick <= last_tick)
+
+func _replay_rows(lines: PackedStringArray, last_tick: int) -> PackedStringArray:
+	var sim = Skirmish.create(true, "human", {}, Skirmish.MAP_PATH, [] as Array[int])
+	var by_tick: Dictionary = {}
+	for line in lines:
+		var message: Dictionary = Wire.decode(line).message
+		by_tick[message.tick] = message.commands
+	var rows := PackedStringArray()
+	for tick in last_tick + 1:
+		if tick % DIGEST_EVERY == 0: rows.append("%d\t%s" % [tick, StateHash.digest(sim.snapshot())])
+		for command in by_tick.get(tick, []): sim.issue_command(command)
+		sim.step()
+	return rows
+
+func _ended_any(drivers: Array) -> bool:
+	return drivers.any(func(driver) -> bool: return driver._lockstep.status().begins_with("ended"))
+
+func test_sb4_two_drivers_loopback(runner) -> bool:
+	var pair: Dictionary = _pair_drivers()
+	var one = pair.drivers[0]
+	var two = pair.drivers[1]
+	_frames(pair.drivers, 20, 0)
+	one.submit(_move(_own_unit(one.pump.live())))
+	one.submit(_move(999))
+	two.submit(_move(_own_unit(two.pump.live(), "", 2)))
+	var double_takes: int = _frames(pair.drivers, 360, 3)
+	runner.check(double_takes > 0, "SB4 loopback: seat 1 takes two ticks in one callback on some frames, got %d" % double_takes)
+	var rows: PackedStringArray = one._lockstep.hash_rows()
+	var other: PackedStringArray = two._lockstep.hash_rows()
+	var common: int = mini(rows.size(), other.size())
+	runner.check(common >= 8 and rows.slice(0, common) == other.slice(0, common), "SB4 loopback hash rows agree on %d common rows" % common)
+	var last: int = mini(one.current().tick, two.current().tick) - 1
+	var lines: Array = _lines_to(one.match_log().commands, last)
+	runner.check(lines.size() >= 2 and lines == _lines_to(two.match_log().commands, last), "SB4 loopback command logs agree up to tick %d (%d lines)" % [last, lines.size()])
+	runner.check(_replay_rows(one.match_log().commands, 210) == rows.slice(0, 8) and _replay_rows(PackedStringArray(), 210) != rows.slice(0, 8), "SB4 a replay of the command log gives the first 8 hash rows, and the orders change them")
+	var answers: Array[Dictionary] = one.take_answers()
+	var theirs: Array[Dictionary] = two.take_answers()
+	runner.check(answers.size() == 2 and answers.filter(func(answer: Dictionary) -> bool: return not answer.ok).size() == 1 and answers.any(func(answer: Dictionary) -> bool: return not answer.ok and int(answer.command.entity_ids[0]) == 999),"SB4 seat 1 gets one refusal, the missing entity, got %s" % [answers])
+	runner.check(theirs.size() == 1 and theirs[0].ok, "SB4 seat 2 gets no refusal, got %s" % [theirs])
+	runner.check(not _ended_any(pair.drivers), "SB4 loopback never ends a lockstep")
+	_unpair(pair)
+	return true
+
+func test_sb4_two_drivers_match_end(runner) -> bool:
+	var pair: Dictionary = _pair_drivers()
+	var drivers: Array = pair.drivers
+	var seen: Array[bool] = [false, false]
+	var frames: int = 0
+	while not (drivers[0].over() and drivers[1].over()) and frames < 400:
+		frames += 1
+		for i in 2:
+			drivers[i].step()
+			drivers[i].drain()
+			if drivers[i].current().tick != 100 or seen[i]: continue
+			seen[i] = true
+			drivers[i].pump.live().remove_object(4)
+			drivers[i].pump.live().remove_object(6)
+	runner.check(seen[0] and seen[1], "SB4 fixture: both seats were seen at tick 100")
+	runner.check(drivers[0].over() and drivers[1].over(), "SB4 both seats end the match (%d frames)" % frames)
+	var records: Array = [drivers[0].record(), drivers[1].record()]
+	runner.check(records[0].tick == records[1].tick and records[0].digest == records[1].digest, "SB4 both seats end on the same tick and digest, got %s" % [records])
+	for transport in pair.transports:
+		var overs: int = transport.others.filter(func(text: String) -> bool: return Wire.decode(text).message.type == "over").size()
+		runner.check(overs == 1, "SB4 each seat sends exactly one over, got %d" % overs)
+	runner.check(not _ended_any(drivers), "SB4 a normal end leaves no ended status")
+	_unpair(pair)
 	return true

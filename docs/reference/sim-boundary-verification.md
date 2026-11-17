@@ -321,15 +321,15 @@ Branch within about 1.5 % of base on every row (Steam Deck: +0.9 % step mean); o
 Plan: [sim boundary SB4](../superpowers/plans/2026-11-17-sim-boundary-sb4.md). Tracked file: no typed absolute path here; logs are named by tag under `~/projects/wargrid-overnight-work/sb4/logs/`. Resume record below is overwritten at each checkpoint; ledger rows, base counts, the line map and the Relay guards recheck are append-only.
 
 ```text
-Resume record (updated 2026-11-17 night, Task 1 evidence done, verification file uncommitted)
-Branch / base commit / working-tree state: sim-boundary-sb4 (worktree ~/projects/wargrid-wt-sb4) / 6489cd2395f0e04c719eebc54fb8397b5d54cf98 (Relay guards merged in `d56ad58`; Task 1 Step 1 symbols: found, `TOO_MANY_ORDERS` online_driver.gd:14,177,178, `FRAME_RESERVE_BYTES` lockstep.gd:8,71) / uncommitted: docs/reference/sim-boundary-verification.md
-Last green task / next incomplete task: none (Task 1 evidence green, commit pending) / Task 2
-Changed paths since last commit: docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: sh tools/run_benchmark.sh (no label) exit 0, BENCHMARK PASSED 2, COMBAT BENCHMARK PASSED 10, LOCKSTEP BENCHMARK PASSED 1; SUITE(base) 1079 cases, 146418 checks, 0 failures, TESTS PASSED 146418
+Resume record (updated 2026-11-17 night, Task 2 review fixes green, commit pending)
+Branch / base commit / working-tree state: sim-boundary-sb4 (worktree ~/projects/wargrid-wt-sb4) / 6489cd2395f0e04c719eebc54fb8397b5d54cf98 (Relay guards merged in `d56ad58`; Task 1 committed as 77707e7) / uncommitted: Task 2 tests and this file
+Last green task / next incomplete task: Task 1, Task 2 Steps 1-5 (review fixes applied) / Task 2 Step 6 commit, then Task 3
+Changed paths since last commit: game/tests/test_sim_pump.gd, game/tests/test_online_scene.gd, docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: SUITE(t2f) exit 0, 1088 cases, 146457 checks, 0 failures, TESTS PASSED 146457; ONLY(t2f, sb4_) exit 0, 9 cases, TESTS PASSED 39; lint, warnings, run_python_tests.sh exit 0; gap proofs t2f-m1, t2f-m2 exit 1, reverts exit 0
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: questions.md answers Q1-Q17 as answered (user, 2026-11-17); local commits per green task pre-authorized by the handoff; owner's manual online check before the merge (Q11, local relay, two windows; never at night); rendered rerun owed after the merge (match/ changed), owner's window
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: commit this file after check_public.sh, then Task 2 (loopback test and online guards on the base)
+Next exact action: Task 2 Step 6, the coordinator's commit of the Task 2 tests and this file, then Task 3
 ```
 
 ### Evidence ledger
@@ -347,9 +347,13 @@ Base: `6489cd2` (`main`, tree `e488b43ccabcb0c7df561e1e6129388d4db762e8`), workt
 | 2026-11-17 | `uptime`; `sh tools/run_benchmark.sh` (no label, records nothing on the branch) | load 2.02 before (no godot process of another run), 1.30 after; exit 0, `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, `BUDGET EXCEEDED open dense hordes300 (regression ceilings held)`; lockstep overhead p99 0.068 ms (limit 0.6); rows p95 / p99 ms: movement open 0.755 / 0.836, movement dense 0.734 / 0.889, combat open 1.883 / 2.228, combat dense 1.839 / 2.207, combat hordes300 2.911 / 3.396 | base, clean |
 | 2026-11-17 | Task 1 Step 6: frame order probe (`godot --headless`, script `<L>/frame-order-probe.gd`, outside tracked source) | exit 0, `FRAME ORDER PASSED 6`; the stalled iteration: `R phys=2 proc=4` (250 ms delay), then `P phys=3..8 proc=5` (six physics callbacks), then `R phys=8 proc=5` | base, clean |
 | 2026-11-17 | Task 1 Step 7: `sh tools/check_public.sh` | exit 0, `PUBLIC CHECK PASSED` | base + verification file, uncommitted |
-| | Task 2: `ONLY(t2, sb4_)` | exit 0, CASES 9 (green on the base by design) | base + Task 2, uncommitted |
-| | Task 2 Step 5: per-task Opus review | findings, applied / rejected | base + Task 2, uncommitted |
-| | Task 2 mutation proofs (each reverted; `git diff --exit-code -- <file>` exit 0 after each) | `_new_answers` returns `[]`: exit 1; `_finish` check without `match_over()`: exit 1 | base + Task 2, uncommitted |
+| 2026-11-17 | Task 2: `ONLY(t2, sb4_)` | exit 0, CASES 9, CHECKS 37, FAILURES 0, `TESTS PASSED 37` (green on the base by design: 2 in `test_sim_pump.gd`, 7 in `test_online_scene.gd`) | base + Task 2, uncommitted |
+| 2026-11-17 | Task 2 Step 4: `run_lint.sh`; `run_warnings.sh`; `run_python_tests.sh` | exit 0 each; `Success: no problems found`; `WARNINGS CHECKED 171 FILES`; `PYTHON TESTS PASSED` | base + Task 2, uncommitted |
+| 2026-11-17 | Task 2: `SUITE(t2)`; replay, economy, combat, team traces against base | exit 0, CASES 1088 (base 1079 + 9), CHECKS 146455, FAILURES 0, `TESTS PASSED 146455`; `REPLAYS MATCHED` 1200, 1200, 1200, 100 | base + Task 2, uncommitted |
+| 2026-11-17 | Task 2 Step 5: per-task Opus review (fresh context, read-only) | P1 0, P2 2, P3 5. Applied: P2-1 the loopback's lag now has seat 2 step twice on every third frame, so seat 1 stalls and then takes two ticks in one `step()`; new check counts those frames (> 0). P2-2 tick 0 holds no units, so the old and new start digests were equal on one map (shown: the first fix try, swapped starts, gave the same digest); the rematch now loads `dry_wells` and a fixture check asserts the old row 0 differs. P3-1, P3-3 status `== "running"`; P3-2 tick `in [9, 10]`; P3-4 replay without orders must differ from the rows; P3-5 `online.lockstep` where it is the driver's lockstep (take-ahead, publish, desync report). Left: P3-5 `_credit` reads and the rematch's `_lockstep` (no public reader; Task 4 renames fail loudly) | base + Task 2 + fixes, uncommitted |
+| 2026-11-17 | Task 2 review fixes: gap proofs on `online_driver.gd` (each reverted with the Edit tool; `git diff --exit-code -- game/scripts/match/online_driver.gd` exit 0 after each, logs `t2f-m1-revert.log`, `t2f-m2-revert.log`) | `CATCH_UP_STEPS = 1`: `ONLY(t2f-m1, sb4_two_drivers)` exit 1, only the new two-ticks check fails (the old checks passed it); start snapshot cached across matches: `ONLY(t2f-m2, sb4_rematch)` exit 1 (row-0 and tick-4 hash checks fail) | base + Task 2 + fixes, uncommitted |
+| 2026-11-17 | Task 2 review fixes: `ONLY(t2f, sb4_)`; `SUITE(t2f)`; replay, economy, combat, team traces against base; lint; warnings; `run_python_tests.sh` | exit 0, CASES 9, CHECKS 39, `TESTS PASSED 39`; exit 0, CASES 1088, CHECKS 146457, FAILURES 0, `TESTS PASSED 146457`; `REPLAYS MATCHED` 1200, 1200, 1200, 100; exit 0 each, `Success: no problems found`, `WARNINGS CHECKED 171 FILES`, `PYTHON TESTS PASSED` | base + Task 2 + fixes, uncommitted |
+| 2026-11-17 | Task 2 mutation proofs on `online_driver.gd` (each reverted with the Edit tool; `git diff --exit-code -- game/scripts/match/online_driver.gd` exit 0 after each, logs `t2m1-revert.log`, `t2m2-revert.log`) | `_new_answers` returns `[]`: `ONLY(t2m1, sb4_two_drivers)` exit 1 (both answer checks fail); `_finish` check without `match_over()`: `ONLY(t2m2, sb4_take_ahead)` exit 1 (match-end and one-over checks fail) | base + Task 2, uncommitted |
 | | Task 3 Step 2: `ONLY(t3red, sb4_)` | exit 1, missing `take` / digest parameter | Task 2 + Task 3 tests |
 | | Task 3 Step 4: `ONLY(t3, sb4_)`; `ONLY(t3l, test_lockstep)`; untouched-file diff; lockstep benchmark; `SUITE(t3)`; `NET(t3, match)`, `NET(t3, rematch)`; `EQUAL(t3)`; lint; warnings | | |
 | | Task 3 mutation proofs | | |
