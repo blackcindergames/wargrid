@@ -5,13 +5,13 @@ Plan: [P12 plan](../superpowers/plans/2026-11-17-p12-notes-that-never-block.md).
 ```text
 Resume record (updated 2026-11-17)
 Branch / base commit / working-tree state: main / 10d152c / P12 merged at 7f6d36f, post-merge records committed
-Last green task / next incomplete task: P12 done, merged to local main / push (user)
+Last green task / next incomplete task: P12 done, merged and pushed / none
 Changed paths since last commit: none
 Last command / cases / checks / failures / exit / marker: rendered benchmark / 4 layouts / - / 0 / 0 / RENDERED BENCHMARK PASSED 4
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); every gate passed; Safari and Chrome untested, accepted (user, 2026-11-17); not pushed: CI (Linux, Windows) and compare_local_traces follow the push
+Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); every gate passed; Safari and Chrome untested, accepted (user, 2026-11-17); pushed 2026-11-17, CI green, traces matched
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: push main with the user's approval, then gh run watch and compare_local_traces
+Next exact action: none; P12 closed
 ```
 
 ## Web download probe (Task 1)
@@ -75,3 +75,4 @@ The probe (`build/p12-probe/`, untracked) copies it from `new Blob` to `revokeOb
 | 2026-11-17 | merge | fast-forward `p12-notes` into local `main` (user, 2026-11-17; not pushed) | `main`, `7f6d36f` | merged |
 | 2026-11-17 | merge | `sh tools/run_benchmark.sh` on clean `main` | `main`, `7f6d36f` | exit 0; load 1.44 at start, 1.04 at end; 23 rows recorded (auto row) |
 | 2026-11-17 | merge | rendered rerun `sh tools/run_game.sh res://scenes/movement_benchmark.tscn` (approved by the user 2026-11-17), `perf_record.py --label "P12 merge rendered"`, `perf_chart.py` | `main`, `7f6d36f` | RENDERED BENCHMARK PASSED 4, vsync off, Ashfall frame p95 2.211 ms; 8 rows recorded |
+| 2026-11-17 | push | `git push` of `main` (user, 2026-11-17); CI run 44086927919; `sh tools/compare_local_traces.sh 44086927919` | `main`, `09a6fd7` | CI green on Linux and Windows (`gh run watch --exit-status` exit 0); traces exit 0: economy 1200, combat 1200, team 100, netplay 301 REPLAYS MATCHED |
