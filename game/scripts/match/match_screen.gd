@@ -115,7 +115,7 @@ func _exit_tree() -> void:
 
 func _add_playtest() -> void:
 	_playtest = PlaytestOverlay.new()
-	_playtest.setup(FocusCards.card(FocusCards.shown(), FocusCards.load_cards()), playtest_context, playtest_match)
+	_playtest.setup(FocusCards.card(FocusCards.shown(), FocusCards.load_cards()), playtest_context, playtest_match, playtest_header)
 	$HUD.add_child(_playtest)
 	$HUD.move_child(_playtest, _pause.get_index())
 	_pause.opened.connect(_playtest.observe_menu)
@@ -142,9 +142,16 @@ func playtest_match() -> Dictionary:
 	var played: Dictionary = driver.match_log()
 	return _match_record(played.mode, played.factions, played.commands)
 
+func playtest_header() -> Dictionary:
+	var played: Dictionary = driver.match_log()
+	return _header(played.mode, played.factions)
+
+func _header(mode: String, match_factions: Array) -> Dictionary:
+	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "build": PlaytestSettings.build_id()}
+
 func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
 	var record: Dictionary = driver.record()
-	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "end_tick": record.tick, "end_digest": record.digest, "build": PlaytestSettings.build_id(), "result": hud._result_text(record.match), "commands": lines}
+	return _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": hud._result_text(record.match), "commands": lines})
 
 func _take_answers() -> void:
 	for answer: Dictionary in driver.take_answers():
@@ -230,7 +237,7 @@ func _process(delta: float) -> void:
 	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
 	var presented_at: int = Time.get_ticks_usec()
 	if _present_if_due() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - presented_at
-	pan_camera(Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down"), delta)
+	if not _typing(): pan_camera(Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down"), delta)
 	_view.advance_frame()
 	if not _auto_pending: return
 	_auto_sample((_auto_tick_usec + _view.draw_usec) / 1000.0)
@@ -270,6 +277,10 @@ func change_zoom(direction: int) -> void:
 	_view.set_zoom(ZOOMS[index])
 
 func _unhandled_input(event: InputEvent) -> void:
+	# A field passes on shortcuts it does not use (Cmd+S, Ctrl+1); orders ignore modifiers, so they would fire.
+	if event is InputEventKey and _typing(): return
+	var click := event as InputEventMouseButton
+	if click != null and click.pressed and click.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT] and _typing() and not _playtest.holds_match(): get_viewport().gui_release_focus()
 	orders.handle(event)
 
 func _refresh() -> void:

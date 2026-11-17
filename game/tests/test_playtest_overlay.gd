@@ -11,6 +11,8 @@ const SessionForm = preload("res://scripts/playtest/session_form.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const MarkerCapture = preload("res://scripts/playtest/marker_capture.gd")
+const PlaytestOverlay = preload("res://scripts/playtest/playtest_overlay.gd")
+const Iso = preload("res://scripts/presentation/isometric.gd")
 const LAUNCHER: String = "res://scenes/launcher.tscn"
 const CARD_ECONOMY := "p1-frc-economy"
 const CARD_TUNNELS := "p1-frc-tunnels-online"
@@ -40,7 +42,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_drops_pending_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -310,8 +312,46 @@ func _form_shown(main) -> bool:
 	var form: Control = _form(main)
 	return form != null and form.visible
 
+func _no_form(main) -> bool:
+	return _form(main) == null
+
+func _panel(main) -> Control:
+	return main.get_node("HUD/Playtest/Checklist")
+
+func _field(main, field_name: String) -> LineEdit:
+	return _panel(main).find_child(field_name, true, false) as LineEdit
+
+func _markers_title(main) -> String:
+	var label: Label = _panel(main).find_child("MarkersTitle", true, false)
+	return label.text if label != null else ""
+
+func _current_text() -> String:
+	var path: String = sessions.path_join(PlaytestSession.CURRENT)
+	return FileAccess.get_file_as_string(path) if FileAccess.file_exists(path) else ""
+
+func _stored_answer(question_id: String) -> String:
+	var stored: Variant = JSON.parse_string(_current_text())
+	return str(stored.answers.get(question_id, {}).get("text", "")) if stored is Dictionary else ""
+
+func _pending(main, type: String) -> int:
+	return (main.driver.pump.live().snapshot().pending_commands + main.driver.queued()).filter(func(command: Dictionary) -> bool: return command.type == type).size()
+
+func _end_offline(main) -> void:
+	var state: Dictionary = main.driver.pump.live().snapshot()
+	for object: Dictionary in state.entities + state.buildings:
+		if object.owner == 2: main.driver.pump.live().remove_object(object.id)
+	BaseScene.tick(main)
+	main.get_node("HUD/Playtest")._process(0.0)
+
+func _focus_in_panel(main) -> bool:
+	var focus: Control = main.get_viewport().gui_get_focus_owner()
+	return focus != null and _panel(main).is_ancestor_of(focus)
+
+func _questions() -> Array:
+	return FocusCards.card(CARD_ECONOMY, FocusCards.load_cards()).questions
+
 func _press(main, button_name: String) -> bool:
-	var form: Control = _form(main)
+	var form: Control = main.get_node("HUD/Playtest")
 	var button: Button = form.find_child(button_name, true, false) if form != null else null
 	if button == null or not button.is_visible_in_tree(): return false
 	if button.toggle_mode: button.button_pressed = true
@@ -358,7 +398,7 @@ func test_leave_flow(runner) -> bool:
 	var scenes := _scenes(main)
 	_key(runner, KEY_ESCAPE)
 	_click(main, "Back to main menu")
-	runner.check(scenes == [LAUNCHER] and not _form_shown(main), "PO9 leaving with the helper on changes scene at once and shows no form, scenes %s" % [scenes])
+	runner.check(scenes == [LAUNCHER] and _no_form(main), "PO9 leaving with the helper on changes scene at once and shows no form, scenes %s" % [scenes])
 	runner.check(PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1, "PO9 the left match lands in the open sitting")
 	main.free()
 	_end(saved)
@@ -367,7 +407,7 @@ func test_leave_flow(runner) -> bool:
 	scenes = _scenes(main)
 	_key(runner, KEY_ESCAPE)
 	_click(main, "Back to main menu")
-	runner.check(scenes == [LAUNCHER] and _form(main) != null and not _form_shown(main) and PlaytestSession.current == null, "PO9 helper off: leaving changes scene at once and no form shows, got %s" % [scenes])
+	runner.check(scenes == [LAUNCHER] and _no_form(main) and PlaytestSession.current == null, "PO9 helper off: leaving changes scene at once and no form shows, got %s" % [scenes])
 	main.free()
 	_end(saved)
 	saved = _begin()
@@ -376,9 +416,9 @@ func test_leave_flow(runner) -> bool:
 	scenes = _scenes(main)
 	_key(runner, KEY_ESCAPE)
 	_click(main, "Back to main menu")
-	runner.check(online.transport.close_calls == 0 and scenes.is_empty() and not _form_shown(main), "PO9 online: asking to leave does nothing yet")
+	runner.check(online.transport.close_calls == 0 and scenes.is_empty() and _no_form(main), "PO9 online: asking to leave does nothing yet")
 	_click(main, "Leave")
-	runner.check(online.transport.close_calls == 1 and scenes == [LAUNCHER] and not _form_shown(main), "PO9 online leave closes the transport once, changes scene at once and shows no form, closed %d, scenes %s" % [online.transport.close_calls, scenes])
+	runner.check(online.transport.close_calls == 1 and scenes == [LAUNCHER] and _no_form(main), "PO9 online leave closes the transport once, changes scene at once and shows no form, closed %d, scenes %s" % [online.transport.close_calls, scenes])
 	runner.check(PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1, "PO9 online the left match lands in the open sitting")
 	main.free()
 	_end(saved)
@@ -396,23 +436,22 @@ func test_match_end_opens_review_once(runner) -> bool:
 		if object.owner == 2: enemies[object.id] = true
 	for id: int in enemies: main.driver.pump.live().remove_object(id)
 	BaseScene.tick(main)
-	runner.check(main.driver.pump.live().match_over() and not _form_shown(main), "PO11 fixture: match over, no review before the overlay polls")
+	runner.check(main.driver.pump.live().match_over() and PlaytestSession.current.data.matches[0].get("unfinished", false), "PO11 fixture: match over, still unfinished before the overlay polls")
 	overlay._process(0.0)
-	var comment: LineEdit = _form(main).find_child("Comment_0_0", true, false) if _form(main) != null else null
-	runner.check(_form_shown(main) and PlaytestSession.current.data.matches.size() == 1 and comment != null, "PO11 one poll shows the review with the marker's comment field")
-	runner.check(main.get_node("HUD/Playtest").get_index() > main.get_node("HUD/ResultPanel").get_index(), "PO11 the review form draws above the result panel")
+	var comment: LineEdit = _field(main, "Comment_0_0")
+	var matches: Array = PlaytestSession.current.data.matches
+	runner.check(_panel(main).visible and matches.size() == 1 and not matches[0].has("unfinished") and comment != null, "PO11 one poll files the match and lists the marker's comment field in the panel")
+	runner.check(main.get_node("HUD/Playtest").get_index() > main.get_node("HUD/ResultPanel").get_index(), "PO11 the panel draws above the result panel")
 	if comment != null:
 		comment.text = "looks fine"
-		comment.text_changed.emit(comment.text) # setting text does not emit, and typing emits deferred
-		runner.check(PlaytestSession.current.data.matches[0].markers[0].comment == "looks fine", "PO11 typing a comment saves it on the marker, field '%s' stored '%s'" % [comment.text, PlaytestSession.current.data.matches[0].markers[0].comment])
+		comment.text_submitted.emit(comment.text)
+		runner.check(PlaytestSession.current.data.matches[0].markers[0].comment == "looks fine", "PO11 a submitted comment saves on the marker, stored '%s'" % PlaytestSession.current.data.matches[0].markers[0].comment)
 	overlay._process(0.0)
 	runner.check(PlaytestSession.current.data.matches.size() == 1, "PO11 a second poll adds no second match")
-	runner.check(overlay.reviewing(), "PO11 reviewing() is true while the form is open")
+	runner.check(not overlay.holds_match(), "PO11 the panel at match end holds nothing")
 	var scenes := _scenes(main)
-	_press(main, "NextMatch")
-	runner.check(not overlay.reviewing() and scenes.is_empty(), "PO11 NextMatch at match end closes the form and stays in the match")
 	main.get_node("HUD/PauseMenu").leave_requested.emit()
-	runner.check(scenes == [LAUNCHER] and not _form_shown(main) and PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1, "PO11 leaving after the review changes scene at once, adds no second match and keeps the sitting, scenes %s" % [scenes])
+	runner.check(scenes == [LAUNCHER] and _no_form(main) and PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1, "PO11 leaving after the match end changes scene at once, adds no second match and keeps the sitting, scenes %s" % [scenes])
 	main.free()
 	_end(saved)
 	return true
@@ -420,41 +459,30 @@ func test_match_end_opens_review_once(runner) -> bool:
 func test_back_to_menu_from_result_panel(runner) -> bool:
 	var saved: String = _begin()
 	var main = await _scene(runner)
-	var overlay = main.get_node("HUD/Playtest")
 	_camera(main)
-	var state: Dictionary = main.driver.pump.live().snapshot()
-	for object: Dictionary in state.entities + state.buildings:
-		if object.owner == 2: main.driver.pump.live().remove_object(object.id)
-	BaseScene.tick(main)
-	overlay._process(0.0)
-	_press(main, "NextMatch")
+	_end_offline(main)
 	main._refresh()
 	var panel: Control = main.get_node("HUD/ResultPanel")
 	var scenes := _scenes(main)
-	runner.check(panel.visible and not _form_shown(main), "PO11b fixture: result panel up, review closed")
+	runner.check(panel.visible and _no_form(main), "PO11b fixture: result panel up, no form")
 	(panel.get_node("Center/Card/Box/Buttons/ChangeSetup") as Button).pressed.emit()
-	runner.check(scenes == [LAUNCHER] and not _form_shown(main), "PO11b Back to menu with a focus card changes scene at once and shows no form, scenes %s" % [scenes])
+	runner.check(scenes == [LAUNCHER] and _no_form(main) and PlaytestSession.current.data.matches.size() == 1, "PO11b Back to menu with a focus card changes scene at once and the match is filed, scenes %s" % [scenes])
 	main.free()
 	_end(saved)
 	return true
 
 func test_leave_after_closed_sitting(runner) -> bool:
-	for ending: String in ["SaveSession", "DiscardSession"]:
+	for filled: bool in [true, false]:
 		var saved: String = _begin()
 		var main = await _scene(runner)
 		var overlay = main.get_node("HUD/Playtest")
-		var state: Dictionary = main.driver.pump.live().snapshot()
-		for object: Dictionary in state.entities + state.buildings:
-			if object.owner == 2: main.driver.pump.live().remove_object(object.id)
-		BaseScene.tick(main)
-		overlay._process(0.0)
-		_press(main, "EndSession")
-		_rate_all(runner, main, 3)
-		_press(main, ending)
-		if ending == "SaveSession": _press(main, "Close")
+		_end_offline(main)
+		if filled: _rate_all(runner, main, 3)
+		PlaytestSession.close_sitting(false, overlay.download)
 		var scenes := _scenes(main)
 		main.get_node("HUD/PauseMenu").leave_requested.emit()
-		runner.check(scenes == [LAUNCHER] and not _form_shown(main), "PO11b leaving after %s does not offer the closed sitting again, scenes %s" % [ending, scenes])
+		var filed: Array = _saved_session().get("matches", [])
+		runner.check(scenes == [LAUNCHER] and _no_form(main) and filed.size() == (1 if filled else 0) and _current_text().is_empty(), "PO11b leaving after a closed sitting (filled %s) reaches the launcher at once and files nothing again, scenes %s, filed %d" % [filled, scenes, filed.size()])
 		main.free()
 		_end(saved)
 	return true
@@ -471,10 +499,9 @@ func test_two_match_session_file(runner) -> bool:
 	var digests: Array[String] = [StateHash.digest(main.driver.pump.live().snapshot())]
 	var commands: Array = [main.playtest_match().commands]
 	overlay.end_match()
-	runner.check(_form_shown(main), "PO12 ending match 1 shows its review")
-	_press(main, "NextMatch")
+	runner.check(_panel(main).visible and not overlay.holds_match(), "PO12 ending match 1 shows the panel and holds nothing")
 	main._restart()
-	runner.check(overlay.get_node("Checklist").visible and not _form_shown(main), "PO12 a restart brings the checklist back and closes the form")
+	runner.check(_panel(main).visible, "PO12 a restart keeps the panel")
 	_move_own_unit(main)
 	runner.check(main.hud.note.is_empty(), "PO12 fixture: the second move is accepted, '%s'" % main.hud.note)
 	_run(main, 45)
@@ -483,19 +510,16 @@ func test_two_match_session_file(runner) -> bool:
 	_mark(overlay, "confusing", "match two second")
 	digests.append(StateHash.digest(main.driver.pump.live().snapshot()))
 	commands.append(main.playtest_match().commands)
-	var scenes := _scenes(main)
 	main.orders.selected_ids.clear()
 	overlay.end_match()
-	runner.check(_form_shown(main) and scenes.is_empty(), "PO12 ending match 2 shows its review")
-	runner.check(_press(main, "EndSession"), "PO12 the review offers EndSession")
 	var card: Dictionary = FocusCards.card(CARD_ECONOMY, FocusCards.load_cards())
 	_rate_all(runner, main, 4)
-	var first: LineEdit = _form(main).find_child("Answer_" + card.questions[0].id, true, false) if _form_shown(main) else null
-	runner.check(first != null, "PO12 the first question has a text field")
+	var first: LineEdit = _field(main, "Answer_" + card.questions[0].id)
+	runner.check(first != null, "PO12 the first question has a text field in the panel")
 	if first != null:
 		first.text = "clear"
-		first.text_changed.emit(first.text)
-	runner.check(_press(main, "SaveSession"), "PO12 SaveSession is offered")
+		first.text_submitted.emit(first.text)
+	PlaytestSession.close_sitting(false, overlay.download)
 	var file: Dictionary = _saved_session()
 	var matches: Array = file.get("matches", [])
 	runner.check(matches.size() == 2, "PO12 the file holds 2 matches, got %d" % matches.size())
@@ -509,8 +533,6 @@ func test_two_match_session_file(runner) -> bool:
 	var answers: Dictionary = file.get("answers", {})
 	runner.check(card.questions.all(func(question: Dictionary) -> bool: return answers.has(question.id) and int(answers[question.id].score) == 4), "PO12 every question holds score 4, got %s" % [answers])
 	runner.check(answers.get(card.questions[0].id, {}).get("text", "") == "clear", "PO12 the first answer keeps its text")
-	runner.check(_form_text(main).contains("Saved to") and _form(main).find_child("ShowInFolder", true, false) != null, "PO12 the form shows the path and Show in folder")
-	runner.check(scenes.is_empty() and _press(main, "Close") and not _form_shown(main) and scenes.is_empty(), "PO12 Close shuts the form and stays in the match")
 	var out: String = OS.get_environment("WARGRID_SESSION_OUT")
 	if not out.is_empty() and not file.is_empty():
 		for name in DirAccess.get_files_at(sessions):
@@ -565,76 +587,44 @@ func test_desktop_write_error_keeps_session(runner) -> bool:
 	_end(saved)
 	return true
 
-func _fabricate(session: PlaytestSession, matches: int, markers: int) -> void:
-	for m in matches:
-		for k in markers: session.add_marker(MarkerCapture.marker(["good", "bad", "confusing"][k % 3], "marker %d.%d with a longish note to wrap" % [m, k], {"tick": k * 10}, ""), {})
-		session.finish_match({"mode": "offline", "end_tick": 100})
-
-func _visible_buttons(form: Control) -> Array[Button]:
-	var found: Array[Button] = []
-	for node in form.find_children("*", "Button", true, false):
-		if node.is_visible_in_tree(): found.append(node)
-	return found
-
-func _in_scroll(node: Node, form: Node) -> bool:
-	var up: Node = node.get_parent()
-	while up != null and up != form:
-		if up is ScrollContainer: return true
-		up = up.get_parent()
-	return false
-
-func _check_form_layout(runner, main, form: Control, size: Vector2i, stage: String) -> void:
-	var screen := Rect2(Vector2.ZERO, Vector2(size))
-	runner.check(form.visible and screen.encloses(form.get_global_rect()), "PO15 %s form inside %s, rect %s" % [stage, size, form.get_global_rect()])
-	for other in ["HUD/Status", "HUD/Economy"]:
-		var control: Control = main.get_node(other)
-		runner.check(not form.get_global_rect().intersects(Rect2(control.global_position, control.get_combined_minimum_size())), "PO15 %s form clear of %s at %s" % [stage, other, size])
-	var scroll: Control = form.find_children("*", "ScrollContainer", true, false)[0]
-	var shown: Array[Button] = []
-	for button in _visible_buttons(form):
-		var rect: Rect2 = button.get_global_rect()
-		if _in_scroll(button, form):
-			if scroll.get_global_rect().encloses(rect): shown.append(button)
-		else:
-			runner.check(form.get_global_rect().encloses(rect), "PO15 %s pinned button %s inside the form at %s" % [stage, button.name, size])
-			shown.append(button)
-	for i in shown.size():
-		for j in range(i + 1, shown.size()):
-			runner.check(not shown[i].get_global_rect().intersects(shown[j].get_global_rect()), "PO15 %s buttons %s and %s overlap at %s" % [stage, shown[i].name, shown[j].name, size])
-
 func test_form_layout(runner) -> bool:
-	var saved: String = _begin()
-	var card: Dictionary = FocusCards.card(CARD_ECONOMY, FocusCards.load_cards())
+	var longest: Dictionary = {}
+	for card: Dictionary in FocusCards.load_cards():
+		if JSON.stringify(card).length() > JSON.stringify(longest).length(): longest = card
+	var saved: String = _begin(true, longest.id)
 	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
 		PlaytestSession.current = null
+		DirAccess.remove_absolute(sessions.path_join(PlaytestSession.CURRENT))
 		var port := SubViewport.new()
 		port.size = size
 		runner.root.add_child(port)
 		var main = await _scene(runner, Skirmish, port)
 		var overlay = main.get_node("HUD/Playtest")
 		_camera(main)
-		_fabricate(PlaytestSession.current, 2, 6)
-		for k in 6: PlaytestSession.current.add_marker(MarkerCapture.marker("bad", "pending %d with a longish note to wrap" % k, {"tick": k}, ""), {})
-		overlay.match_record = func() -> Dictionary: return {"mode": "offline", "end_tick": 100}
-		overlay.end_match()
+		for k in 5: _mark(overlay, ["good", "bad", "confusing"][k % 3], "marker %d with a longish note that has to wrap in the panel" % k)
+		_end_offline(main)
+		main._refresh()
 		await runner.process_frame
 		await runner.process_frame
-		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size) and PlaytestSession.current.data.matches.size() == 3, "PO15 fixture: a real %s viewport and 3 matches" % size)
-		var form: Control = _form(main)
-		if form == null:
-			runner.check(false, "PO15 the form exists")
-			port.free()
-			continue
-		_check_form_layout(runner, main, form, size, "review")
-		_press(main, "EndSession")
-		await runner.process_frame
-		await runner.process_frame
-		_check_form_layout(runner, main, form, size, "questions")
-		_rate_all(runner, main, 2)
-		_press(main, "SaveSession")
-		await runner.process_frame
-		await runner.process_frame
-		_check_form_layout(runner, main, form, size, "saved")
+		var panel: Control = _panel(main)
+		var rect: Rect2 = panel.get_global_rect()
+		var screen := Rect2(Vector2.ZERO, Vector2(size))
+		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size) and PlaytestSession.current.data.focus == longest.id, "PO15 fixture: a real %s viewport and the longest card" % size)
+		runner.check(panel.visible and rect.size.y <= 0.6 * size.y + 0.5, "PO15 the panel is at most 60 %% of %s high, got %s" % [size, rect.size])
+		runner.check(screen.encloses(rect), "PO15 the panel is inside %s, rect %s" % [size, rect])
+		for other in ["HUD/Status", "HUD/Economy"]:
+			var control: Control = main.get_node(other)
+			runner.check(not rect.intersects(Rect2(control.global_position, control.get_combined_minimum_size())), "PO15 the panel is clear of %s at %s" % [other, size])
+		var card: Control = main.get_node("HUD/ResultPanel/Center/Card")
+		runner.check(card.is_visible_in_tree() and not rect.intersects(card.get_global_rect()), "PO15 the panel is clear of the result card at %s, card %s panel %s" % [size, card.get_global_rect(), rect])
+		var scrolls: Array[Node] = panel.find_children("*", "ScrollContainer", true, false)
+		var last: Control = panel.find_child("Comment_0_4", true, false)
+		runner.check(scrolls.size() == 1 and last != null, "PO15 the panel scrolls and lists the fifth marker's comment at %s" % size)
+		if scrolls.size() == 1 and last != null:
+			(scrolls[0] as ScrollContainer).ensure_control_visible(last)
+			await runner.process_frame
+			await runner.process_frame
+			runner.check(scrolls[0].get_global_rect().encloses(last.get_global_rect()), "PO15 the scroll reaches the last comment field at %s, scroll %s field %s" % [size, scrolls[0].get_global_rect(), last.get_global_rect()])
 		port.free()
 	_end(saved)
 	return true
@@ -653,41 +643,36 @@ func test_resume_uses_stored_card(runner) -> bool:
 	_end(saved)
 	return true
 
-func test_restart_drops_pending_markers(runner) -> bool:
+func test_restart_keeps_markers(runner) -> bool:
 	var saved: String = _begin()
 	var main = await _scene(runner)
 	var overlay = main.get_node("HUD/Playtest")
 	_camera(main)
 	_mark(overlay, "bad", "abandoned")
 	main._restart()
-	runner.check(PlaytestSession.current.data.matches[PlaytestSession.current.marker_match()].markers.is_empty(), "PO17 a restart drops the abandoned match's markers")
+	var matches: Array = PlaytestSession.current.data.matches
+	runner.check(matches.size() == 1 and matches[0].get("unfinished", false) and matches[0].markers.size() == 1, "PO17 a restart keeps the abandoned match's marker as an unfinished entry, got %s" % [matches.map(func(entry: Dictionary) -> int: return entry.markers.size())])
 	_mark(overlay, "bad", "helper switched off")
 	overlay.set_active(false)
 	main._restart()
 	overlay.set_active(true)
-	runner.check(PlaytestSession.current.data.matches[PlaytestSession.current.marker_match()].markers.is_empty(), "PO17 a restart with the helper off drops them too")
+	runner.check(matches.size() == 2 and matches[1].get("unfinished", false) and matches[1].markers.size() == 1 and matches[1].markers[0].text == "helper switched off", "PO17 a restart with the helper off keeps them too")
 	main.free()
 	_end(saved)
 	return true
 
 func test_scale_legend(runner) -> bool:
 	var saved: String = _begin()
-	var session := PlaytestSession.resume_or_open(CARD_ECONOMY, "0.11.0-dev+abc")
-	session.finish_match({"mode": "offline", "end_tick": 10})
-	var card: Dictionary = FocusCards.card(CARD_ECONOMY, FocusCards.load_cards())
-	var form := SessionForm.new()
-	runner.root.add_child(form)
-	form.open_questions(session, card)
-	var legends: Array[Node] = form.find_children("ScaleLegend", "Label", true, false)
+	var main = await _scene(runner)
+	var questions: Array = _questions()
+	var legends: Array[Node] = _panel(main).find_children("ScaleLegend", "Label", true, false)
 	runner.check(legends.size() == 1 and (legends[0] as Label).text == SessionForm.SCALE_LEGEND, "PO18 one ScaleLegend with the exact text, got %d" % legends.size())
 	if legends.size() == 1:
-		var box: Node = legends[0].get_parent()
-		var last: Control = box.find_child("%s_5" % card.questions[card.questions.size() - 1].id, true, false)
-		var match_label: int = -1
-		for child in box.get_children():
-			if child is Label and child.text == "Match 1": match_label = child.get_index()
-		runner.check(last != null and legends[0].get_index() > last.get_parent().get_index() and legends[0].get_index() < match_label, "PO18 the legend sits after the last question and before Match 1")
-	form.free()
+		var rows: Node = legends[0].get_parent()
+		var last: Control = rows.find_child("%s_5" % questions[questions.size() - 1].id, true, false)
+		var title: Control = rows.find_child("MarkersTitle", false, false)
+		runner.check(last != null and title != null and legends[0].get_index() > last.get_parent().get_index() and legends[0].get_index() < title.get_index(), "PO18 the legend sits after the last question and before the marker list")
+	main.free()
 	_end(saved)
 	return true
 
@@ -721,18 +706,373 @@ func test_sb2_review_form_and_pending_answer(runner) -> bool:
 	lockstep._rejections.append({"tick": 9, "sequence": 5, "error": "Outside map"})
 	lockstep._rejections.append({"tick": 9, "sequence": 6, "error": "No units left"})
 	main._playtest.end_match()
-	runner.check(_form_shown(main), "RA7 fixture: the form is open")
+	runner.check(_panel(main).visible and not main._playtest.holds_match(), "RA7 fixture: the panel is open and holds nothing")
 	BaseScene.tick(main)
-	runner.check(main.orders._awaiting_build.is_empty() and main.hud.note == "Rejected: No units left", "RA7 online answers arrive behind the form, note '%s'" % main.hud.note)
+	runner.check(main.orders._awaiting_build.is_empty() and main.hud.note == "Rejected: No units left", "RA7 online answers arrive with the panel open, note '%s'" % main.hud.note)
 	main.free()
 	_end(saved)
 	saved = _begin()
 	main = await _scene(runner)
 	main._submit({"type": "move", "entity_ids": [_own_unit(main)], "target": [-5.0, -5.0]})
 	main._playtest.end_match()
-	runner.check(_form_shown(main), "RA7 offline fixture: the form is open")
+	runner.check(_panel(main).visible and not main._playtest.holds_match(), "RA7 offline fixture: the panel is open and holds nothing")
 	BaseScene.tick(main)
-	runner.check(main.hud.note.is_empty() and main.driver.queued().size() == 1, "RA7 offline delivers nothing while the form holds the match, note '%s'" % main.hud.note)
+	runner.check(main.driver.queued().is_empty(), "RA7 offline delivers the queued move with the panel open, queued %d" % main.driver.queued().size())
+	main.free()
+	_end(saved)
+	return true
+
+func _enter_key() -> InputEventKey:
+	var event := InputEventKey.new()
+	event.keycode = KEY_ENTER
+	event.physical_keycode = KEY_ENTER
+	event.pressed = true
+	return event
+
+func test_open_panel_never_holds(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	runner.check(_panel(main).visible and _panel(main).find_child("Rows", true, false) != null and not overlay.holds_match() and not main.menu_open(), "PO20 the open panel holds nothing and is no menu")
+	var tick: int = main.driver.pump.live().tick()
+	_move_own_unit(main)
+	runner.check(_pending(main, "move") == 1, "PO20 a move order is sent with the panel open")
+	_run(main, 10)
+	runner.check(main.driver.pump.live().tick() == tick + 10 and _pending(main, "move") == 0 and main.hud.note.is_empty(), "PO20 ten frames advance ten ticks and deliver the move, tick %d, note '%s'" % [main.driver.pump.live().tick() - tick, main.hud.note])
+	overlay.open_marker()
+	runner.check(overlay.holds_match() and main.menu_open(), "PO20 the marker dialog still holds the match")
+	_run(main, 5)
+	runner.check(main.driver.pump.live().tick() == tick + 10, "PO20 the tick stops while the marker dialog is open")
+	main.free()
+	_end(saved)
+	return true
+
+func test_match_end_shows_panel_without_focus(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	_camera(main)
+	_end_offline(main)
+	main._refresh()
+	runner.check(_panel(main).visible and not _focus_in_panel(main), "PO21 match end shows the panel without taking the focus, focus %s" % main.get_viewport().gui_get_focus_owner())
+	var kept = main.driver.pump.live()
+	main._input(_enter_key())
+	runner.check(not is_same(main.driver.pump.live(), kept), "PO21 Enter on the result panel plays again")
+	runner.check(_panel(main).visible, "PO21 Play again keeps the open panel open")
+	_key(runner, KEY_QUOTELEFT)
+	main._restart()
+	runner.check(not _panel(main).visible, "PO21 Play again keeps a hidden panel hidden")
+	main.free()
+	_end(saved)
+	return true
+
+func test_marker_list_this_and_last(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	_mark(overlay, "good", "first")
+	runner.check(_markers_title(main) == "This match" and _field(main, "Comment_0_0") != null, "PO22 a marker lists under This match, title '%s'" % _markers_title(main))
+	overlay.end_match()
+	runner.check(_markers_title(main) == "This match" and _field(main, "Comment_0_0") != null, "PO22 the ended match stays This match, title '%s'" % _markers_title(main))
+	main._restart()
+	var comment: LineEdit = _field(main, "Comment_0_0")
+	runner.check(_markers_title(main) == "Last match" and comment != null and comment.editable, "PO22 after Play again the old markers list as Last match, title '%s'" % _markers_title(main))
+	if comment != null:
+		comment.text = "later"
+		comment.text_submitted.emit(comment.text)
+		runner.check(PlaytestSession.current.data.matches[0].markers[0].comment == "later", "PO22 a Last match comment saves to entry 0")
+	_mark(overlay, "bad", "second")
+	runner.check(_markers_title(main) == "This match" and _field(main, "Comment_1_0") != null and _field(main, "Comment_0_0") == null, "PO22 the new match's first marker switches to This match, title '%s'" % _markers_title(main))
+	main.free()
+	_end(saved)
+	return true
+
+func test_typing_is_text_not_keys(runner) -> bool:
+	var saved: String = _begin()
+	var card: Dictionary = FocusCards.card(CARD_ECONOMY, FocusCards.load_cards()).duplicate(true)
+	card.try.append({"id": "h", "text": "Press H", "trigger": "key:H"})
+	var overlay = PlaytestOverlay.new()
+	overlay.setup(card, func() -> Dictionary: return {"tick": 0, "camera": [0.0, 0.0], "selected": [], "over": false, "menu": false}, func() -> Dictionary: return {}, func() -> Dictionary: return {})
+	runner.root.add_child(overlay)
+	overlay.set_active(true)
+	var answer: LineEdit = overlay.get_node("Checklist").find_child("Answer_" + card.questions[0].id, true, false)
+	runner.check(answer != null, "PO23 fixture: the panel has the answer field")
+	if answer != null:
+		answer.grab_focus()
+		_key(runner, KEY_QUOTELEFT, 96)
+		_key(runner, KEY_N, 110)
+		_key(runner, KEY_H, 104)
+		runner.check(overlay.get_node("Checklist").visible and not overlay.get_node("MarkerDialog").visible and not overlay.checked("h"), "PO23 ` N H in a field toggle nothing, open no marker and tick no key trigger")
+		runner.check(overlay.get_viewport().gui_get_focus_owner() is LineEdit, "PO23 the field keeps the focus")
+		_key(runner, KEY_ESCAPE)
+		_key(runner, KEY_H, 104)
+		runner.check(overlay.checked("h"), "PO23 fixture: H outside a field ticks the key trigger")
+	overlay.free()
+	_end(saved)
+	return true
+
+func test_field_saves_on_submit_and_exit(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var questions: Array = _questions()
+	var answer: LineEdit = _field(main, "Answer_" + questions[0].id)
+	var footer: Label = _panel(main).find_child("Saved", true, false)
+	runner.check(answer != null and footer != null and not footer.visible, "PO24 fixture: the answer field and a hidden Saved footer")
+	if answer != null and footer != null:
+		var before: String = _current_text()
+		answer.grab_focus()
+		answer.text = "typed"
+		answer.text_changed.emit(answer.text)
+		runner.check(_current_text() == before, "PO24 typing alone writes nothing")
+		answer.text_submitted.emit(answer.text)
+		await runner.process_frame
+		runner.check(_stored_answer(questions[0].id) == "typed" and main.get_viewport().gui_get_focus_owner() == null, "PO24 Enter saves the field and releases the focus, stored '%s'" % _stored_answer(questions[0].id))
+		runner.check(footer.visible and footer.text == "Saved %s" % PlaytestSession.current.saved_at, "PO24 the footer shows the save time, got '%s'" % footer.text)
+		var second: LineEdit = _field(main, "Answer_" + questions[1].id)
+		second.grab_focus()
+		second.text = "left"
+		main.get_viewport().gui_release_focus()
+		runner.check(_stored_answer(questions[1].id) == "left", "PO24 leaving a field saves it, stored '%s'" % _stored_answer(questions[1].id))
+	main.free()
+	_end(saved)
+	return true
+
+func test_world_click_releases_field(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	_mark(overlay, "bad", "click away")
+	var unit: int = _own_unit(main)
+	main.orders.selected_ids.assign([unit])
+	var comment: LineEdit = _field(main, "Comment_0_0")
+	runner.check(comment != null, "PO25 fixture: the marker's comment field")
+	if comment != null:
+		comment.grab_focus()
+		comment.text = "clicked"
+		var target := Vector2.ZERO
+		for entity: Dictionary in main.driver.pump.live().snapshot().entities:
+			if entity.id == unit: target = Vector2(entity.position[0] + 4.0, entity.position[1])
+		var click := InputEventMouseButton.new()
+		click.position = main.get_node("WorldView").get_global_transform_with_canvas() * Iso.world_to_plane(target)
+		click.button_index = MOUSE_BUTTON_RIGHT
+		click.pressed = true
+		main._unhandled_input(click)
+		runner.check(main.get_viewport().gui_get_focus_owner() == null and PlaytestSession.current.data.matches[0].markers[0].comment == "clicked", "PO25 a right click on the ground releases and saves the field, focus %s" % main.get_viewport().gui_get_focus_owner())
+		runner.check(_pending(main, "move") == 1, "PO25 the same click sends the move")
+		_key(runner, KEY_S, 115)
+		runner.check(_pending(main, "stop") == 1, "PO25 the stop hotkey then sends a stop")
+	main.free()
+	_end(saved)
+	return true
+
+func test_escape_in_field(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var questions: Array = _questions()
+	var answer: LineEdit = _field(main, "Answer_" + questions[0].id)
+	runner.check(answer != null, "PO26 fixture: the answer field")
+	if answer != null:
+		answer.grab_focus()
+		answer.text = "escaped"
+		_key(runner, KEY_ESCAPE)
+		runner.check(main.get_viewport().gui_get_focus_owner() == null and _stored_answer(questions[0].id) == "escaped" and not main.get_node("HUD/PauseMenu").visible, "PO26 Esc in a field releases and saves it and leaves the pause menu closed")
+		_key(runner, KEY_ESCAPE)
+		runner.check(main.get_node("HUD/PauseMenu").visible, "PO26 a second Esc opens the pause menu")
+	main.free()
+	_end(saved)
+	return true
+
+func test_toggles_take_no_focus(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	_mark(overlay, "good", "focus")
+	var toggles: Array[Node] = []
+	var fields: Array[Node] = []
+	for path in ["Checklist", "MarkerDialog"]:
+		for button: BaseButton in overlay.get_node(path).find_children("*", "BaseButton", true, false):
+			if button.toggle_mode: toggles.append(button)
+		fields.append_array(overlay.get_node(path).find_children("*", "LineEdit", true, false))
+	var grabbing: Array = toggles.filter(func(button: BaseButton) -> bool: return button.focus_mode != Control.FOCUS_NONE).map(func(button: BaseButton) -> String: return button.name)
+	runner.check(toggles.size() > 10 and grabbing.is_empty(), "PO27 every toggle takes no focus, %d toggles, focusable %s" % [toggles.size(), grabbing])
+	runner.check(fields.size() > 1 and fields.all(func(field: LineEdit) -> bool: return field.focus_mode == Control.FOCUS_ALL), "PO27 every text field takes focus, %d fields" % fields.size())
+	var answer: LineEdit = _field(main, "Answer_" + _questions()[0].id)
+	if answer != null:
+		answer.grab_focus()
+		runner.check(answer.has_focus() and answer.get_theme_stylebox("focus") != answer.get_theme_stylebox("normal"), "PO27 a focused field has its own focus style")
+	main.free()
+	_end(saved)
+	return true
+
+func test_header_has_no_digest(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	var keys: Array = ["mode", "map", "seed", "factions", "seat", "build"]
+	var header: Dictionary = main.playtest_header()
+	runner.check(not header.has("end_digest") and header.has_all(keys), "PO28 the mid-match header has no digest and every header field, got %s" % [header.keys()])
+	_mark(overlay, "bad", "cut short")
+	var stored: Variant = JSON.parse_string(_current_text())
+	var entry: Dictionary = stored.matches[0] if stored is Dictionary and not stored.matches.is_empty() else {}
+	runner.check(entry.has_all(keys) and entry.get("unfinished", false) and str(entry.get("map", "")) == str(header.map), "PO28 the marker's entry on disk carries the header, got %s" % [entry.keys()])
+	main.free()
+	_end(saved)
+	return true
+
+func _mod_key(runner, code: Key, ctrl: bool, meta: bool) -> void:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.physical_keycode = code
+	event.ctrl_pressed = ctrl
+	event.meta_pressed = meta
+	event.pressed = true
+	runner.root.push_input(event)
+
+func _select_builder(main) -> bool:
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
+		if unit.owner != main.local_player: continue
+		main.orders.selected_ids.assign([unit.id])
+		main._refresh()
+		if not main.orders.menu.is_empty(): return true
+	return false
+
+func test_modifier_keys_stay_in_field(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	runner.check(_select_builder(main), "PO29 fixture: a selected unit with a build menu")
+	var answer: LineEdit = _field(main, "Answer_" + _questions()[0].id)
+	answer.grab_focus()
+	_mod_key(runner, KEY_S, true, false)
+	_mod_key(runner, KEY_S, false, true)
+	runner.check(_pending(main, "stop") == 0, "PO29 Ctrl+S and Cmd+S in a field send no stop, got %d" % _pending(main, "stop"))
+	_mod_key(runner, KEY_1, true, false)
+	_mod_key(runner, KEY_E, false, true)
+	runner.check(main.orders._placement_kind.is_empty() and _pending(main, "produce") == 0, "PO29 Ctrl+1 and Cmd+E in a field pick nothing, placement '%s'" % main.orders._placement_kind)
+	runner.check(answer.has_focus(), "PO29 the field keeps the focus")
+	main.free()
+	_end(saved)
+	return true
+
+func test_arrows_do_not_pan_while_typing(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var camera: Camera2D = main.get_node("Camera2D")
+	var answer: LineEdit = _field(main, "Answer_" + _questions()[0].id)
+	answer.grab_focus()
+	var start: Vector2 = camera.position
+	Input.action_press("ui_right")
+	main._process(0.1)
+	runner.check(camera.position == start, "PO30 an arrow held while typing does not pan, moved %s" % (camera.position - start))
+	main.get_viewport().gui_release_focus()
+	main._process(0.1)
+	Input.action_release("ui_right")
+	runner.check(camera.position != start, "PO30 fixture: the same arrow pans outside a field")
+	main.free()
+	_end(saved)
+	return true
+
+func test_world_click_keeps_dialog_text(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	overlay.open_marker()
+	var text: LineEdit = _dialog(main).find_child("Text", true, false)
+	var click := InputEventMouseButton.new()
+	click.position = Vector2(200, 200)
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	main._unhandled_input(click)
+	runner.check(text.has_focus(), "PO31 a world click with the marker dialog open keeps its text focused, focus %s" % main.get_viewport().gui_get_focus_owner())
+	main.free()
+	_end(saved)
+	return true
+
+func test_panel_shrinks_on_resize(runner) -> bool:
+	var saved: String = _begin()
+	var port := SubViewport.new()
+	port.size = Vector2i(1920, 1080)
+	runner.root.add_child(port)
+	var main = await _scene(runner, Skirmish, port)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	for k in 8: _mark(overlay, "bad", "marker %d with a longish note that has to wrap in the panel" % k)
+	await runner.process_frame
+	await runner.process_frame
+	var tall: float = _panel(main).size.y
+	port.size = Vector2i(1280, 720)
+	await runner.process_frame
+	await runner.process_frame
+	var rect: Rect2 = _panel(main).get_global_rect()
+	runner.check(tall > 0.6 * 720.0, "PO32 fixture: the panel is taller than 60 %% of 720 at 1080, got %s" % tall)
+	runner.check(rect.size.y <= 0.6 * 720.0 + 0.5 and Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(rect), "PO32 the panel shrinks into 60 %% of 720 after a resize, rect %s" % rect)
+	port.free()
+	_end(saved)
+	return true
+
+func test_focused_text_survives_rebuilds(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	var id: String = _questions()[0].id
+	_mark(overlay, "bad", "one")
+	var steps: Array = [["marker", func() -> void: _mark(overlay, "good", "two")], ["end", func() -> void: overlay.end_match()], ["begin", func() -> void: main._restart()]]
+	for step: Array in steps:
+		var answer: LineEdit = _field(main, "Answer_" + id)
+		answer.grab_focus()
+		answer.text = "answer before " + step[0]
+		step[1].call()
+		runner.check(_stored_answer(id) == "answer before " + step[0], "PO33 a focused answer survives the %s rebuild, stored '%s'" % [step[0], _stored_answer(id)])
+	_mark(overlay, "bad", "three")
+	var comment: LineEdit = _field(main, "Comment_1_0")
+	comment.grab_focus()
+	comment.text = "comment before end"
+	overlay.end_match()
+	runner.check(PlaytestSession.current.data.matches[1].markers[0].comment == "comment before end", "PO33 a focused comment survives the end rebuild")
+	main.free()
+	_end(saved)
+	return true
+
+func test_enter_in_field_then_play_again(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	_camera(main)
+	_end_offline(main)
+	main._refresh()
+	var id: String = _questions()[0].id
+	var answer: LineEdit = _field(main, "Answer_" + id)
+	answer.grab_focus()
+	answer.text = "entered"
+	var kept = main.driver.pump.live()
+	_key(runner, KEY_ENTER)
+	runner.check(is_same(main.driver.pump.live(), kept) and _stored_answer(id) == "entered" and main.get_viewport().gui_get_focus_owner() == null, "PO34 the first Enter saves and releases the field without playing again")
+	_key(runner, KEY_ENTER)
+	runner.check(not is_same(main.driver.pump.live(), kept), "PO34 the second Enter plays again")
+	main.free()
+	_end(saved)
+	return true
+
+func _no_markers_line(main) -> String:
+	var label: Label = _panel(main).find_child("NoMarkers", true, false)
+	return label.text if label != null else ""
+
+func test_empty_marker_states(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	runner.check(_markers_title(main) == "This match" and _no_markers_line(main) == "No markers yet (N adds one)", "PO35 a fresh match shows the empty state, '%s' '%s'" % [_markers_title(main), _no_markers_line(main)])
+	overlay.end_match()
+	runner.check(_markers_title(main) == "This match" and _no_markers_line(main) == "No markers yet (N adds one)", "PO35 an ended match without markers shows the empty state")
+	main._restart()
+	runner.check(_markers_title(main) == "This match" and _no_markers_line(main) == "No markers yet (N adds one)", "PO35 after a match without markers there is no Last match, '%s'" % _markers_title(main))
+	_mark(overlay, "good", "one")
+	runner.check(_no_markers_line(main).is_empty() and _panel(main).find_children("*", "Label", true, false).all(func(label: Label) -> bool: return label.text != "No markers."), "PO35 a marker replaces the empty state")
 	main.free()
 	_end(saved)
 	return true

@@ -4,14 +4,14 @@ Plan: [P12 plan](../superpowers/plans/2026-11-17-p12-notes-that-never-block.md).
 
 ```text
 Resume record (updated 2026-11-17)
-Branch / base commit / working-tree state: p12-notes / 10d152c / Task 2 committed, clean
-Last green task / next incomplete task: Task 2 (PO17 red by plan) / Task 3
+Branch / base commit / working-tree state: p12-notes / 10d152c / Task 3 committed, clean
+Last green task / next incomplete task: Task 3 (PO13, PO14 red by plan) / Task 4
 Changed paths since last commit: none
-Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1047 / 146799 / 2 (PO17) / 1 / -
-Known red case or blocker: PO17 test_restart_drops_pending_markers, inverted in Task 3
-Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); stop gate A passed (Firefox, Vivaldi); Chromium second-download prompt checked at gate 3
+Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1063 / 146353 / 6 (PO13, PO14) / 1 / -
+Known red case or blocker: PO13 test_web_save_downloads, PO14 test_desktop_write_error_keeps_session, rewritten as exit tests in Task 4
+Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); stop gate A passed (Firefox, Vivaldi); Chromium second-download prompt checked at gate 3; owner questions open: Saved footer after a failed write, tick vs mm:ss
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 3 (Opus subagent)
+Next exact action: Task 4 (Opus subagent)
 ```
 
 ## Web download probe (Task 1)
@@ -41,3 +41,10 @@ The probe (`build/p12-probe/`, untracked) copies it from `new Blob` to `revokeOb
 | 2026-11-17 | 2 | Codex review (gpt-6-astra high) of the Task 2 diff | `9fced9f` plus Task 2 | 2 important, 3 minor. Fixed: NB7 could not fail if `settle` ignored `current` (new check: an open sitting with no stored file is filed on a build change; red with the `current` branch removed, green restored); `_store` now returns `store_string`'s result (an untestable short write no longer counts as filed). Ruled, not fixed: a same-second `started` collision of two web copies (a sitting needs a manual entry, so two in one second do not happen); `filled()` without the key in memory (every in-memory session carries the flag; `_stored()` derives it for 0.13.x files); a record carrying `unfinished` (`_match_record` never sets it); the Python test does not pin the `.get("end_digest")` path for a finished match |
 | 2026-11-17 | 2 | `run_lint.sh`, `run_warnings.sh`, `test_sim_boundary.py`, `run_python_checks.sh` | `9fced9f` plus Task 2 and review fixes | exit 0 each |
 | 2026-11-17 | 2 | full `sh tools/run_tests.sh` | `9fced9f` plus Task 2 and review fixes | CASES 1047 CHECKS 146799 FAILURES 2, exit 1: both in PO17 `test_restart_drops_pending_markers` (Task 3 inverts it); simulation/net/relay/protocol diff empty |
+| 2026-11-17 | 3 | red `WARGRID_TEST_ONLY` test_playtest_overlay and test_online_scene, Task 3 tests on the old code | `eb39843` plus Task 3 tests | exit 1 each: suites fail to compile (`Too many arguments for "setup()"`); captured before implementing |
+| 2026-11-17 | 3 | red per case, PO23's `setup` made a dynamic call for this run only | `eb39843` plus Task 3 tests | overlay CASES 30 FAILURES 48 (PO9-PO12, PO15, PO18, RA7, PO20-PO22, PO24-PO27; PO23, PO28 script errors); online FAILURES 1 (N35); already green: inverted PO17, N14, N31, R2 |
+| 2026-11-17 | 3 | mutations: click release removed from `match_screen._unhandled_input`; Esc release removed from overlay `_input` | `eb39843` plus Task 3 | PO25 red (2 of 4 checks), PO26 red (2 of 3); restored |
+| 2026-11-17 | 3 | Codex review (gpt-6-astra high) and player-experience review of the Task 3 diff | `eb39843` plus Task 3 | fixed test-first: modifier shortcuts (Ctrl/Cmd+S, Ctrl+1, Cmd+E) leaked from a focused field into orders (PO29); arrow keys panned the camera while typing (PO30); a world click took focus from the marker dialog's text (PO31); one empty state "No markers yet (N adds one)", "Last match" only with markers (PO35). Added guards that passed before any fix: panel shrinks after a resize (PO32, SubViewport only), focused unsaved text survives rebuilds (PO33), Enter in a field then Enter plays again (PO34). Tab from the last field wraps to the first (probe, no fix). Ruled, not fixed: a `driver.record` call-count guard for PO28, a helper-off PO17 variant, score unpress. Owner questions: "Saved" footer after a failed write, tick vs mm:ss in marker rows |
+| 2026-11-17 | 3 | red review tests before the fixes | `eb39843` plus Task 3 plus review tests | overlay CASES 38 FAILURES 13: PO13 x3, PO14 x3, PO29 x2, PO30, PO31, PO35 x3 |
+| 2026-11-17 | 3 | `WARGRID_TEST_ONLY` online_scene, playtest.gd, skirmish_scene; lint, warnings, boundary | `eb39843` plus Task 3 and review fixes | exit 0 each (62/3088/0, 24/287/0, 58/328/0); lint, warnings, boundary exit 0; simulation/net/relay/protocol diff empty |
+| 2026-11-17 | 3 | full `sh tools/run_tests.sh` (coordinator rerun) | `eb39843` plus Task 3 and review fixes | CASES 1063 CHECKS 146353 FAILURES 6, exit 1: only PO13 x3 and PO14 x3 (moved to the exits in Task 4); no SCRIPT ERROR |
