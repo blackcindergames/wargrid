@@ -50,6 +50,7 @@ func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	saved_dir = PlaytestSession.dir
 	PlaytestSession.dir = sessions
 	PlaytestSession.current = null
+	PlaytestSession.last_filed = ""
 	FocusCards.chosen = card
 	return saved
 
@@ -58,6 +59,7 @@ func _end(saved: String) -> void:
 	WargridTestRunner.remove_dir(sessions)
 	PlaytestSession.dir = saved_dir
 	PlaytestSession.current = null
+	PlaytestSession.last_filed = ""
 	AudioSettings.path = saved
 	FocusCards.chosen = ""
 
@@ -127,7 +129,8 @@ func test_marker_pauses_offline(runner) -> bool:
 	runner.check(not _dialog(main).visible and not main.menu_open(), "PO1 saving closes the note")
 	BaseScene.tick(main)
 	runner.check(main.driver.pump.live().tick() == tick + 1, "PO1 tick advances after saving")
-	var markers: Array[Dictionary] = PlaytestSession.current.pending_markers()
+	var session: PlaytestSession = PlaytestSession.current
+	var markers: Array = session.data.matches[session.marker_match()].markers
 	runner.check(markers.size() == 1 and markers[0].kind == "good" and markers[0].text == "nice" and markers[0].tick == tick and markers[0].selected == [unit] and not markers[0].jpg.is_empty(), "PO1 marker holds kind, text, tick, selection and a screenshot, got %s" % [markers.map(func(m: Dictionary) -> Dictionary: return m.merged({"jpg": m.jpg.length()}, true))])
 	runner.check(camera.seen_dialog_visible.size() == 1, "PO1 one capture per note")
 	main.free()
@@ -159,7 +162,8 @@ func test_capture_before_dialog(runner) -> bool:
 	camera.image = null
 	main.get_node("HUD/Playtest").open_marker()
 	main.get_node("HUD/Playtest").save_marker("bad", "no shot")
-	var markers: Array[Dictionary] = PlaytestSession.current.pending_markers()
+	var session: PlaytestSession = PlaytestSession.current
+	var markers: Array = session.data.matches[session.marker_match()].markers
 	runner.check(markers.size() == 1 and markers[0].jpg == "" and markers[0].kind == "bad", "PO3 a failed capture still saves the marker with an empty jpg")
 	main.free()
 	_end(saved)
@@ -200,7 +204,7 @@ func test_marker_ignored_when_menu_or_over(runner) -> bool:
 	BaseScene.tick(main)
 	runner.check(main.driver.pump.live().match_over(), "PO5 fixture: match over")
 	_key(runner, KEY_N)
-	runner.check(not _dialog(main).visible and PlaytestSession.current.pending_markers().is_empty(), "PO5 N after the match ended opens nothing")
+	runner.check(not _dialog(main).visible and PlaytestSession.current.data.matches.is_empty(), "PO5 N after the match ended opens nothing")
 	main.free()
 	_end(saved)
 	return true
@@ -563,7 +567,7 @@ func test_desktop_write_error_keeps_session(runner) -> bool:
 
 func _fabricate(session: PlaytestSession, matches: int, markers: int) -> void:
 	for m in matches:
-		for k in markers: session.add_marker(MarkerCapture.marker(["good", "bad", "confusing"][k % 3], "marker %d.%d with a longish note to wrap" % [m, k], {"tick": k * 10}, ""))
+		for k in markers: session.add_marker(MarkerCapture.marker(["good", "bad", "confusing"][k % 3], "marker %d.%d with a longish note to wrap" % [m, k], {"tick": k * 10}, ""), {})
 		session.finish_match({"mode": "offline", "end_tick": 100})
 
 func _visible_buttons(form: Control) -> Array[Button]:
@@ -610,7 +614,7 @@ func test_form_layout(runner) -> bool:
 		var overlay = main.get_node("HUD/Playtest")
 		_camera(main)
 		_fabricate(PlaytestSession.current, 2, 6)
-		for k in 6: PlaytestSession.current.add_marker(MarkerCapture.marker("bad", "pending %d with a longish note to wrap" % k, {"tick": k}, ""))
+		for k in 6: PlaytestSession.current.add_marker(MarkerCapture.marker("bad", "pending %d with a longish note to wrap" % k, {"tick": k}, ""), {})
 		overlay.match_record = func() -> Dictionary: return {"mode": "offline", "end_tick": 100}
 		overlay.end_match()
 		await runner.process_frame
@@ -656,12 +660,12 @@ func test_restart_drops_pending_markers(runner) -> bool:
 	_camera(main)
 	_mark(overlay, "bad", "abandoned")
 	main._restart()
-	runner.check(PlaytestSession.current.pending_markers().is_empty(), "PO17 a restart drops the abandoned match's markers")
+	runner.check(PlaytestSession.current.data.matches[PlaytestSession.current.marker_match()].markers.is_empty(), "PO17 a restart drops the abandoned match's markers")
 	_mark(overlay, "bad", "helper switched off")
 	overlay.set_active(false)
 	main._restart()
 	overlay.set_active(true)
-	runner.check(PlaytestSession.current.pending_markers().is_empty(), "PO17 a restart with the helper off drops them too, got %d" % PlaytestSession.current.pending_markers().size())
+	runner.check(PlaytestSession.current.data.matches[PlaytestSession.current.marker_match()].markers.is_empty(), "PO17 a restart with the helper off drops them too")
 	main.free()
 	_end(saved)
 	return true

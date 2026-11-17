@@ -72,7 +72,7 @@ func _record_match() -> int:
 func begin_match() -> void:
 	_reviewed = false
 	_form.hide()
-	if _session != null: _session.clear_pending()
+	if _session != null: _session.start_match()
 	if not _active: return
 	_open_session()
 	_checklist.show()
@@ -110,7 +110,7 @@ func open_marker() -> void:
 	_text.grab_focus()
 
 func save_marker(kind: String, text: String) -> void:
-	_session.add_marker(MarkerCapture.marker(kind, text, _captured, _jpg))
+	_session.add_marker(MarkerCapture.marker(kind, text, _captured, _jpg), {})
 	cancel_marker()
 
 func cancel_marker() -> void:
@@ -140,7 +140,7 @@ func _tick_triggers(matches: Callable) -> void:
 		var id: String = item.id
 		if item.has("trigger") and not checked(id) and matches.call(item.trigger):
 			_boxes[id].set_pressed_no_signal(true)
-			_session.set_checked(id, true)
+			_session.set_checked(id, true, false)
 
 func _build_checklist() -> void:
 	_checklist = _corner_panel("Checklist", CHECKLIST_WIDTH, 1.0)
@@ -155,7 +155,7 @@ func _build_checklist() -> void:
 		check.text = item.text
 		check.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		check.focus_mode = Control.FOCUS_NONE
-		check.toggled.connect(func(on: bool) -> void: _session.set_checked(item.id, on))
+		check.toggled.connect(func(on: bool) -> void: _session.set_checked(item.id, on, true))
 		box.add_child(check)
 		_boxes[item.id] = check
 	_checklist.hide()

@@ -124,6 +124,24 @@ class PlaytestSessionTest(unittest.TestCase):
         rows = [r.split("\t") for r in ps.replay_rows(s, self.path)]
         self.assertEqual(rows[0][4:9], ["7", "frc,china", "60", "aa", "30,60"])
 
+    def _with_unfinished(self):
+        data = session()
+        cut = data["matches"][1]
+        del cut["end_digest"]
+        cut.update({"unfinished": True, "result": "unfinished", "commands": []})
+        return data
+
+    def test_unfinished_match(self):
+        path = self._write(self._with_unfinished())
+        s = ps.load_session(path)
+        self.assertIn("result=unfinished (unfinished)", ps.summary_lines(s, [None, None])[-1])
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rows = ps.replay_rows(s, path)
+        self.assertEqual([r.split("\t")[0] for r in rows], ["1"])
+        self.assertIn("match 2 was cut short", err.getvalue())
+        self.assertFalse(path.with_name("plain-m2.cmd").exists())
+
     def _write(self, data):
         other = self.path.with_name("plain.json")
         other.write_text(json.dumps(data))

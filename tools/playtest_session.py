@@ -52,7 +52,7 @@ def summary_lines(session: dict, jpgs: list[Path | None]) -> list[str]:
     for k, m in enumerate(session["matches"], 1):
         lines.append(
             f"MATCH {k} {m['mode']} {m['map']} seed={m['seed']} seat={m['seat']} end_tick={m['end_tick']} "
-            f"build={_build(session, m)} result={m['result']}"
+            f"build={_build(session, m)} result={m['result']}{' (unfinished)' if m.get('unfinished') else ''}"
         )
         for i, mk in enumerate(m["markers"], 1):
             jpg = next(flat, None)
@@ -72,6 +72,9 @@ def _build(session: dict, match: dict) -> str:
 def replay_rows(session: dict, path: Path) -> list[str]:
     rows = []
     for k, m in enumerate(session["matches"], 1):
+        if m.get("unfinished"):
+            print(f"match {k} was cut short: no replay", file=sys.stderr)
+            continue
         cmd = path.with_name(f"{path.stem}-m{k}.cmd")
         cmd.write_text("".join(line + "\n" for line in m["commands"]))
         factions = "-" if m["mode"] == "online" else ",".join(m["factions"])
@@ -84,7 +87,7 @@ def replay_rows(session: dict, path: Path) -> list[str]:
             str(m["seed"]),
             factions,
             str(m["end_tick"]),
-            m["end_digest"],
+            m.get("end_digest", ""),
             ticks,
             _build(session, m),
         ]
