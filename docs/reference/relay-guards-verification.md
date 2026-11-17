@@ -183,7 +183,7 @@ Every P3 of the night's 14 review files (`logs/review-*.md`, `backups/f19-review
 | 3 | review-t1 | A1 no longer exercises the silence rule on a write-stalled socket | dropped | plan accepted A1; recorded only so A1 is not counted as silence coverage |
 | 4 | review-t1 | `leadLimit` comment is three lines | **fix now** | `relay/room.go` `leadLimit`: cut to a one-line why (user rule); the derivation is already in guide ch. 11 |
 | 5 | review-t2 | Plan row: `over` with a pending entry, then the peer's frame completes and compares; untested | **fix now** | `relay/hash_test.go`: one `testRoom` case: seat 1 frame 34 hash a, `onOver`, seat 2 frame 34 hash b, expect one `DESYNC` |
-| 6 | review-t2 | BF-U2 does not check the peak across the rematch | **fix now** | `relay/hash_test.go` `TestByteFieldsAcrossRematch`: parse `seat1_peak_bps`, assert `>= 2100` (timing-safe) |
+| 6 | review-t2 | BF-U2 does not check the peak across the rematch | **fix now** | `relay/hash_test.go` `TestByteFieldsAcrossRematch`: parse `seat1_peak_bps`, assert `>= 2100` (timing-safe); done in part: a rematch that resets `peak` but not `winBytes` stays green, rider to night 10 Lighter relay frames (user, 2026-11-17) |
 | 7 | review-t2 | Netplay's negative `! grep` checks pass if `relay.log` is missing | dropped | invalid: `start_relay` always writes `relay.log`, and remote mode allows only `match` (guard in `run_netplay.sh`) |
 | 8 | review-t2 | `seatN_peak_bps` reads as bits per second | dropped | docs now say the value is bytes (guide ch. 11 "Leaving", `development.md` Logs) |
 | 9 | review-t2 | `sizedTick` builds its padding indirectly | dropped | nit; correct |
