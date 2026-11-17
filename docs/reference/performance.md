@@ -7,31 +7,31 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 213% | 🔺 1% worse | 2026-11-17 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-17 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | 🔻 1% better | 2026-11-17 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔺 1% worse | 2026-11-17 |
-| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 8% worse | 2026-11-17 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 70% | ➖ same | 2026-11-17 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔺 3% worse | 2026-11-17 |
-| Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔺 3% worse | 2026-11-17 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 1% worse | 2026-11-17 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 3% worse | 2026-11-17 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 210% | 🔻 2% better | 2026-11-17 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 162% | 🔺 1% worse | 2026-11-17 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-17 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 1% worse | 2026-11-17 |
+| Drawing the screen | 🟢 OK | ███████░░░ 72% | ➖ same (busy host) | 2026-11-17 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔺 1% worse (busy host) | 2026-11-17 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | ➖ same | 2026-11-17 |
+| Unit movement | 🟢 OK | ████░░░░░░ 42% | ➖ same | 2026-11-17 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔺 4% worse | 2026-11-17 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 1% better | 2026-11-17 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 42% of budget (P12 Notes that never block, 2026-11-17), 3% slower than auto 66cbab99 (worst vs worst); run-to-run spread up to 50%
-- movement p99: 24% of budget (P12 Notes that never block, 2026-11-17), 1% slower than auto 66cbab99 (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 73% of budget (P12 Notes that never block, 2026-11-17), 1% slower than auto 66cbab99 (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (P12 Notes that never block, 2026-11-17), 3% slower than auto 66cbab99 (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 160% of budget, exceeded (P12 Notes that never block, 2026-11-17), unchanged vs auto 66cbab99 (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 142% of budget, exceeded (P12 Notes that never block, 2026-11-17), 1% faster than auto 66cbab99 (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 213% of budget, exceeded (P12 Notes that never block, 2026-11-17), 1% slower than auto 66cbab99 (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 72% of budget (Relay guards merge rendered, 2026-11-17), 8% slower than Sim boundary SB3 (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 70% of budget (Relay guards merge rendered, 2026-11-17), unchanged vs Sim boundary SB3 (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (P12 Notes that never block, 2026-11-17), 3% slower than auto 66cbab99 (worst vs worst); run-to-run spread not measured
+- movement p95: 42% of budget (auto a3b466d, 2026-11-17), unchanged vs P12 Notes that never block (worst vs worst); run-to-run spread up to 50%
+- movement p99: 25% of budget (auto a3b466d, 2026-11-17), 4% slower than P12 Notes that never block (worst vs worst); run-to-run spread up to 50%
+- combat gated p95: 74% of budget (auto a3b466d, 2026-11-17), 1% slower than P12 Notes that never block (worst vs worst); run-to-run spread up to 58%
+- combat gated p99: 58% of budget (auto a3b466d, 2026-11-17), unchanged vs P12 Notes that never block (worst vs worst); run-to-run spread up to 58%
+- combat stress p95: 162% of budget, exceeded (auto a3b466d, 2026-11-17), 1% slower than P12 Notes that never block (worst vs worst); run-to-run spread up to 41%
+- plumbing, movement layouts: 142% of budget, exceeded (auto a3b466d, 2026-11-17), unchanged vs P12 Notes that never block (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 210% of budget, exceeded (auto a3b466d, 2026-11-17), 2% faster than P12 Notes that never block (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 72% of budget (P12 merge rendered, 2026-11-17), unchanged vs Relay guards merge rendered (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- Ashfall tick-frame p95: 71% of budget (P12 merge rendered, 2026-11-17), 1% slower than Relay guards merge rendered (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- lockstep p99: 11% of budget (auto a3b466d, 2026-11-17), 1% faster than P12 Notes that never block (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
