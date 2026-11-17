@@ -32,8 +32,9 @@
       const nx = (b[1] - a[1]), ny = -(b[0] - a[0]); // (b - a).rotated(-PI / 2)
       if (nx + ny <= 1e-3 * Math.hypot(nx, ny)) continue;
       const s = nx - ny < 0 ? sideSlots[0] : sideSlots[1];
-      out.push({ slot: s, pts: [v(a, top), v(b, top), v(b, base)] });
-      out.push({ slot: s, pts: [v(a, top), v(b, base), v(a, base)] });
+      const knife = sideSlots[0] !== sideSlots[1] && Math.abs(nx - ny) <= 1e-6 * Math.hypot(nx, ny); // the slot test sits on its threshold: float noise decides
+      out.push({ slot: s, knife, pts: [v(a, top), v(b, top), v(b, base)] });
+      out.push({ slot: s, knife, pts: [v(a, top), v(b, base), v(a, base)] });
     }
   }
 
@@ -74,11 +75,15 @@
     const hull = bucket(opts.heading || 0);
     const turretBucket = opts.turret != null && shape.has_turret ? bucket(opts.turret) : hull;
     const out = [];
+    let partIndex = 0;
     for (const part of partsOf(shape, detail, opts.variant)) {
       const pb = part.angle === 'turret' ? turretBucket : hull;
       const angle = part.angle === 'fixed' ? 0 : (pb * TAU) / BUCKETS;
       const centre = rot(part.pivot[0], part.pivot[1], (hull * TAU) / BUCKETS);
-      for (const prim of backToFront(part.prims, angle)) {
+      const drawn = opts.order ? opts.order[partIndex].map((i) => part.prims[i]) : backToFront(part.prims, angle);
+      partIndex++;
+      if (opts.orderOut) opts.orderOut.push(drawn.map((q) => part.prims.indexOf(q)));
+      for (const prim of drawn) {
         let corners;
         if (prim.type === 'cylinder') {
           const n = SEGMENTS[Math.min(Math.max(detail, 0), 2)];
@@ -172,17 +177,18 @@
         }
       }
     });
-    let wrong = 0; const seen = new Array(parts).fill(0), shown = new Array(parts).fill(0);
+    let wrong = 0, drawn = 0, owner = 0; const seen = new Array(parts).fill(0), shown = new Array(parts).fill(0);
     for (let cell = 0; cell < painter.length; cell++) {
       if (painter[cell] < 0) continue;
       const top = tris[painter[cell]], nr = tris[near[cell]];
       seen[nr.part]++; shown[top.part]++;
+      drawn++; if (top.slot === SLOT.roof || top.slot === SLOT.roof_dark || top.slot === SLOT.owner_flat) owner++;
       if (painter[cell] !== near[cell] && top.slot !== nr.slot) {
         const l = bary(top, lo[0] + (cell % w) + 0.5, lo[1] + Math.floor(cell / w) + 0.5);
         if (l && nearD[cell] - depthAt(top, l) > 0.02) wrong++;
       }
     }
-    return { wrong, covered: seen.map((v, k) => (v > 0 && shown[k] === 0 ? k : -1)).filter((k) => k >= 0) };
+    return { wrong, drawn, owner, covered: seen.map((v, k) => (v > 0 && shown[k] === 0 ? k : -1)).filter((k) => k >= 0) };
   }
   function auditShape(shape) {
     const wedge = shape.parts.some((p) => p.prims.some((q) => q.type === 'wedge'));
@@ -238,7 +244,7 @@
   }
   const auditAny = (shape) => (shape.footprint ? auditShape(shape) : auditUnit(shape));
 
-  const api = { projectShape, drawShape, countTriangles, countPrims, auditShape, auditUnit, auditAny, bucket, detailFor, SLOT, SLOPE_SHADE, TAU };
+  const api = { projectShape, drawShape, countTriangles, countPrims, auditRaster, auditShape, auditUnit, auditAny, bucket, detailFor, SLOT, SLOPE_SHADE, TAU };
   if (typeof module !== 'undefined') module.exports = api;
   else Object.assign(root, api);
 })(typeof window !== 'undefined' ? window : globalThis);

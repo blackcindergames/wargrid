@@ -1,0 +1,3805 @@
+{
+	"meta": {
+		"source": "docs/images/map-art/source/round6.html",
+		"git_revision": "10b9423302620f25d74a087fc12907d4651e2e8a",
+		"date_utc": "2026-11-17T12:31:27Z",
+		"note": "git_revision is the game revision of shapes-current.json this export is built on. A detail level without its own list uses parts; a damage variant is used at every detail.",
+		"picks": {
+			"steps": {
+				"barracks": "B",
+				"factory": "B",
+				"hq": "B",
+				"depot": "B",
+				"power": "B",
+				"wedge": "A",
+				"rifle": "A",
+				"rocket": "A",
+				"dozer": "B",
+				"light": "B",
+				"pile": "B",
+				"cargo": "B",
+				"crate": "B",
+				"site": "B",
+				"heli": "A",
+				"damage": "A",
+				"tanks": "A",
+				"zoom_low": "0",
+				"zoom_high": "A",
+				"fix_bldg": "A",
+				"fix_unit": "A",
+				"band": "A",
+				"owners": "A",
+				"neon": "0",
+				"cliff": "A",
+				"decor": "B",
+				"fog": "B"
+			},
+			"fix4b": true,
+			"fix6": true
+		},
+		"provisional": {
+			"missing_zoom2": [
+				"china_builder",
+				"china_light_vehicle",
+				"china_rocket_infantry",
+				"china_tank",
+				"frc_builder",
+				"frc_light_vehicle",
+				"frc_rocket_infantry",
+				"frc_tank",
+				"usa_builder",
+				"usa_collector",
+				"usa_rocket_infantry",
+				"usa_tank",
+				"china_defence",
+				"china_power_plant",
+				"china_supply_center",
+				"frc_defence",
+				"frc_hole_1",
+				"frc_hole_2",
+				"frc_hole_3",
+				"frc_supply_center",
+				"usa_defence",
+				"usa_power_plant",
+				"usa_supply_center"
+			],
+			"note": "No zoom 2 version is drawn for these ids (or the drawn one sits on a hull that was replaced); they bake from parts at detail 2. Never invented here."
+		},
+		"corrections": {
+			"frc_light_vehicle_hull_length_cells": 0.65,
+			"tank_height_units": {"usa_tank":3,"china_tank":3,"frc_tank":3,"china_light_vehicle":3},
+			"frc_tank_track_length_cells": 0.7
+		}
+	},
+	"palette": {
+		"note": "only the values that differ from shapes-current.json",
+		"side": "#1c2e39",
+		"side_dark": "#0e1b23",
+		"owner_base": ["#44adf4","#d54f3b","#4fc389","#ecdc3c","#e08522","#9249ac","#008d8d","#ffa5d4"],
+		"cliff": {
+			"height_px": 8,
+			"factors": {"top_lightened":0.22,"side_darkened":0.55,"lit_side_extra_lightened":0.12},
+			"sand": {"cliff_top":"#bba780","cliff_side":"#4c4029","cliff_side_lit":"#615743"},
+			"dark": {"cliff_top":"#989388","cliff_side":"#37352e","cliff_side_lit":"#4f4d47"},
+			"rim": null
+		},
+		"fog": 0.65,
+		"cargo": "#dde4e6"
+	},
+	"shapes": [
+		{
+			"id": "china_builder",
+			"name": "Bulldozer",
+			"faction": "china",
+			"class": "vehicle",
+			"role": "bulldozer",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.07,0,0],"size":[0.6,0.5,0.6],"slot":3,"type":"box"},
+						{"offset":[-0.07,0,0.6],"size":[0.56,0.46,1.4],"slot":0,"type":"box"},
+						{"offset":[0.31,0,0],"size":[0.13,0.62,1.8],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "cab",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.2,0,2],"size":[0.26,0.32,1.8],"slot":1,"type":"box"},
+						{"offset":[-0.2,0,3.8],"size":[0.32,0.38,0.4],"slot":0,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "china_collector",
+			"name": "Supply Truck",
+			"faction": "china",
+			"class": "vehicle",
+			"role": "collector_truck",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.84,0.44,2],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "cargo",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.12,0,2],"size":[0.4,0.32,1.5],"slot":4,"type":"box"},
+						{"offset":[0.3,0,2],"size":[0.22,0.4,2.5],"slot":1,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.84,0.44,2],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "cargo",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.12,0,2],"size":[0.4,0.32,1.5],"slot":4,"type":"box"},
+							{"offset":[0.3,0,2],"size":[0.22,0.4,2.5],"slot":1,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.84,0.44,2],"slot":0,"type":"box"},
+							{"offset":[-0.005,-0.225,0.1],"size":[0.7,0.02,0.8],"slot":3,"type":"box"},
+							{"offset":[0.005,0.225,0.1],"size":[0.7,0.02,0.8],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "cargo",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.12,0,2],"size":[0.4,0.32,1.5],"slot":4,"type":"box"},
+							{"offset":[0.3,0,2],"size":[0.22,0.4,2.5],"slot":1,"type":"box"},
+							{"offset":[0.42,0,3.4],"size":[0.02,0.4,0.8],"slot":3,"type":"box"}
+						]
+					}
+				]
+			}
+		},
+		{
+			"id": "china_light_vehicle",
+			"name": "Medium Tank",
+			"faction": "china",
+			"class": "vehicle",
+			"role": "tank_china",
+			"layer": "ground",
+			"has_turret": true,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.76,0.48,2],"slot":1,"type":"box"},
+						{"offset":[0,-0.29,0],"size":[0.72,0.1,1.5],"slot":2,"type":"box"},
+						{"offset":[0,0.29,0],"size":[0.72,0.1,1.5],"slot":2,"type":"box"}
+					]
+				},
+				{
+					"name": "turret",
+					"angle": "turret",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.03,0,2],"size":[0.52,0.5,0.55],"slot":0,"type":"box"},
+						{"offset":[-0.03,0,2.55],"size":[0.34,0.34,0.45],"slot":0,"type":"box"},
+						{"offset":[0.475,0,2.15],"size":[0.48,0.12,0.7],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "china_rifle_infantry",
+			"name": "Militia",
+			"faction": "china",
+			"class": "infantry",
+			"role": "infantry",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+						{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+						{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+						{"offset":[-0.14,0,1.6],"size":[0.12,0.16,1.4],"slot":1,"type":"box"},
+						{"offset":[0.2,0.1,2.2],"size":[0.24,0.05,0.4],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+							{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+							{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+							{"offset":[-0.14,0,1.6],"size":[0.12,0.16,1.4],"slot":1,"type":"box"},
+							{"offset":[0.2,0.1,2.2],"size":[0.24,0.05,0.4],"slot":4,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+							{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+							{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+							{"offset":[-0.14,0,1.6],"size":[0.12,0.16,1.4],"slot":1,"type":"box"},
+							{"offset":[0.2,0.1,2.2],"size":[0.24,0.05,0.4],"slot":4,"type":"box"},
+							{"offset":[-0.14,0,3],"size":[0.1,0.14,0.1],"slot":3,"type":"box"}
+						]
+					}
+				]
+			}
+		},
+		{
+			"id": "china_rocket_infantry",
+			"name": "Anti-Tank Trooper",
+			"faction": "china",
+			"class": "infantry",
+			"role": "rocket_infantry",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+						{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+						{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+						{"offset":[-0.14,0,1.6],"size":[0.12,0.16,1.4],"slot":1,"type":"box"},
+						{"offset":[0,0.17,3],"size":[0.4,0.08,0.55],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "china_tank",
+			"name": "Rotary Gun Tank",
+			"faction": "china",
+			"class": "vehicle",
+			"role": "tank_china_gatling",
+			"layer": "ground",
+			"has_turret": true,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.76,0.48,2],"slot":1,"type":"box"},
+						{"offset":[0,-0.29,0],"size":[0.72,0.1,1.5],"slot":2,"type":"box"},
+						{"offset":[0,0.29,0],"size":[0.72,0.1,1.5],"slot":2,"type":"box"}
+					]
+				},
+				{
+					"name": "turret",
+					"angle": "turret",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.07,0,2],"size":[0.4,0.44,0.55],"slot":0,"type":"box"},
+						{"offset":[-0.07,0,2.55],"size":[0.26,0.3,0.45],"slot":0,"type":"box"},
+						{"offset":[0.37,-0.065,2.1],"size":[0.36,0.13,0.75],"slot":4,"type":"box"},
+						{"offset":[0.37,0.065,2.1],"size":[0.36,0.13,0.75],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "frc_builder",
+			"name": "Laborer",
+			"faction": "frc",
+			"class": "infantry",
+			"role": "laborer",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+						{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+						{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+						{"offset":[-0.1,0,2.45],"size":[0.06,0.09,0.45],"slot":1,"type":"box"},
+						{"offset":[-0.1,0,2.9],"size":[0.05,0.11,0.3],"slot":7,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "frc_light_vehicle",
+			"name": "Armed Pickup",
+			"faction": "frc",
+			"class": "vehicle",
+			"role": "light_vehicle",
+			"layer": "ground",
+			"has_turret": true,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.65,0.38,1.3],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "cab",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.1814,-0.04,1.3],"size":[0.257,0.3,1.5],"slot":0,"type":"box"},
+						{"offset":[-0.1512,0.17,1.3],"size":[0.3326,0.04,0.5],"slot":1,"type":"box"},
+						{"offset":[-0.1512,-0.17,1.3],"size":[0.3326,0.04,0.5],"slot":1,"type":"box"},
+						{"offset":[-0.305,0,1.3],"size":[0.04,0.3,0.5],"slot":1,"type":"box"},
+						{"offset":[-0.1512,0.05,1.3],"size":[0.07,0.07,2.3],"slot":4,"type":"box"},
+						{"offset":[-0.1512,-0.09,1.3],"size":[0.12,0.12,0.25],"slot":5,"type":"cylinder"}
+					]
+				},
+				{
+					"name": "turret",
+					"angle": "turret",
+					"pivot": [-0.1512,0.05],
+					"prims": [
+						{"offset":[0,0,3.6],"size":[0.14,0.12,0.35],"slot":4,"type":"box"},
+						{"offset":[0.22,0,3.65],"size":[0.3,0.08,0.22],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "frc_rifle_infantry",
+			"name": "Insurgent",
+			"faction": "frc",
+			"class": "infantry",
+			"role": "infantry",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+						{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+						{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+						{"offset":[0.12,0.1,2.2],"size":[0.22,0.04,0.4],"slot":4,"type":"box"},
+						{"offset":[-0.125,-0.07,1],"size":[0.09,0.1,0.6],"slot":1,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+							{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+							{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+							{"offset":[0.12,0.1,2.2],"size":[0.22,0.04,0.4],"slot":4,"type":"box"},
+							{"offset":[-0.125,-0.07,1],"size":[0.09,0.1,0.6],"slot":1,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.14,0.14,0.3],"slot":5,"type":"cylinder"},
+							{"offset":[0,0,0.3],"size":[0.13,0.13,1.5],"slot":3,"type":"cylinder"},
+							{"offset":[0,0,1.8],"size":[0.17,0.17,0.15],"slot":3,"type":"cylinder"},
+							{"offset":[0,0,1.95],"size":[0.16,0.16,1.25],"slot":6,"type":"cylinder"},
+							{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+							{"offset":[0.12,0.1,2.2],"size":[0.22,0.04,0.4],"slot":4,"type":"box"},
+							{"offset":[-0.125,-0.07,1],"size":[0.09,0.1,0.6],"slot":1,"type":"box"}
+						]
+					}
+				]
+			}
+		},
+		{
+			"id": "frc_rocket_infantry",
+			"name": "Rocket Fighter",
+			"faction": "frc",
+			"class": "infantry",
+			"role": "rocket_infantry",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+						{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+						{"offset":[0,0,3.2],"size":[0.11,0.11,1.3],"slot":7,"type":"cylinder"},
+						{"offset":[-0.02,0.11,2.6],"size":[0.38,0.07,0.4],"slot":4,"type":"box"},
+						{"offset":[-0.125,-0.07,1],"size":[0.09,0.1,0.6],"slot":1,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "frc_tank",
+			"name": "Light Tank",
+			"faction": "frc",
+			"class": "vehicle",
+			"role": "tank_frc",
+			"layer": "ground",
+			"has_turret": true,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.68,0.26,1.9],"slot":1,"type":"box"},
+						{"offset":[0,-0.18,0],"size":[0.7,0.1,1.4],"slot":2,"type":"box"},
+						{"offset":[0,0.18,0],"size":[0.7,0.1,1.4],"slot":2,"type":"box"}
+					]
+				},
+				{
+					"name": "turret",
+					"angle": "turret",
+					"pivot": [-0.1,-0.04],
+					"prims": [
+						{"offset":[0,0,1.9],"size":[0.32,0.3,1.1],"slot":0,"type":"box"},
+						{"offset":[-0.12,0.21,1.9],"size":[0.2,0.12,0.75],"slot":0,"type":"box"},
+						{"offset":[0.34,0,2.15],"size":[0.36,0.08,0.45],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "usa_builder",
+			"name": "Bulldozer",
+			"faction": "usa",
+			"class": "vehicle",
+			"role": "bulldozer",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.06,0,0],"size":[0.56,0.32,2],"slot":0,"type":"box"},
+						{"offset":[-0.06,0.21,0],"size":[0.6,0.1,1.4],"slot":2,"type":"box"},
+						{"offset":[-0.06,-0.21,0],"size":[0.6,0.1,1.4],"slot":2,"type":"box"},
+						{"offset":[0.33,0,0],"size":[0.08,0.64,2.2],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "cab",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.13,0,2],"size":[0.26,0.26,2.8],"slot":0,"type":"box"},
+						{"offset":[-0.13,0,4.8],"size":[0.14,0.14,0.15],"slot":1,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "usa_collector",
+			"name": "Supply Helicopter",
+			"faction": "usa",
+			"class": "air",
+			"role": "helicopter",
+			"layer": "air",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.5,0.26,1],"slot":7,"type":"box"},
+						{"offset":[0,0,1],"size":[0.96,0.34,2],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "rotor",
+					"angle": "fixed",
+					"pivot": [0.33,0],
+					"prims": [
+						{"offset":[0,0,3.2],"size":[0.62,0.05,0.15],"slot":4,"type":"box"},
+						{"offset":[0,0,3.35],"size":[0.05,0.62,0.15],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "rotor_rear",
+					"angle": "fixed",
+					"pivot": [-0.33,0],
+					"prims": [
+						{"offset":[0,0,3],"size":[0.2,0.2,0.8],"slot":1,"type":"cylinder"},
+						{"offset":[0,0,3.9],"size":[0.62,0.05,0.15],"slot":4,"type":"box"},
+						{"offset":[0,0,4.05],"size":[0.05,0.62,0.15],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "usa_light_vehicle",
+			"name": "Scout Car",
+			"faction": "usa",
+			"class": "vehicle",
+			"role": "light_vehicle",
+			"layer": "ground",
+			"has_turret": true,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0.25],"size":[0.64,0.36,1.25],"slot":0,"type":"box"},
+						{"offset":[0,-0.21,0],"size":[0.5,0.06,0.8],"slot":3,"type":"box"},
+						{"offset":[0,0.21,0],"size":[0.5,0.06,0.8],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "cab",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.04,0,1.5],"size":[0.34,0.28,0.8],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "turret",
+					"angle": "turret",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.04,0,2.3],"size":[0.14,0.14,0.4],"slot":4,"type":"box"},
+						{"offset":[0.16,0,2.38],"size":[0.26,0.08,0.32],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0.25],"size":[0.64,0.36,1.25],"slot":0,"type":"box"},
+							{"offset":[0,-0.21,0],"size":[0.5,0.06,0.8],"slot":3,"type":"box"},
+							{"offset":[0,0.21,0],"size":[0.5,0.06,0.8],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "cab",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.04,0,1.5],"size":[0.34,0.28,0.8],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "turret",
+						"angle": "turret",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.04,0,2.3],"size":[0.14,0.14,0.4],"slot":4,"type":"box"},
+							{"offset":[0.16,0,2.38],"size":[0.26,0.08,0.32],"slot":4,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0.25],"size":[0.64,0.36,1.25],"slot":0,"type":"box"},
+							{"offset":[0,-0.21,0],"size":[0.5,0.06,0.8],"slot":3,"type":"box"},
+							{"offset":[0,0.21,0],"size":[0.5,0.06,0.8],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "cab",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.04,0,1.5],"size":[0.34,0.28,0.8],"slot":1,"type":"box"},
+							{"offset":[0.135,0,1.6],"size":[0.02,0.22,0.5],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "turret",
+						"angle": "turret",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.04,0,2.3],"size":[0.14,0.14,0.4],"slot":4,"type":"box"},
+							{"offset":[0.1,0,2.4],"size":[0.18,0.05,0.2],"slot":4,"type":"box"}
+						]
+					}
+				]
+			}
+		},
+		{
+			"id": "usa_rifle_infantry",
+			"name": "Rifleman",
+			"faction": "usa",
+			"class": "infantry",
+			"role": "infantry",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+						{"offset":[0,0,1.8],"size":[0.17,0.17,1.4],"slot":6,"type":"cylinder"},
+						{"offset":[0,0,3.2],"size":[0.13,0.13,1.15],"slot":7,"type":"cylinder"},
+						{"offset":[0,0,4.35],"size":[0.09,0.09,0.15],"slot":3,"type":"cylinder"},
+						{"offset":[0.2,0,2.3],"size":[0.24,0.04,0.3],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+							{"offset":[0,0,1.8],"size":[0.17,0.17,1.4],"slot":6,"type":"cylinder"},
+							{"offset":[0,0,3.2],"size":[0.13,0.13,1.15],"slot":7,"type":"cylinder"},
+							{"offset":[0,0,4.35],"size":[0.09,0.09,0.15],"slot":3,"type":"cylinder"},
+							{"offset":[0.2,0,2.3],"size":[0.24,0.04,0.3],"slot":4,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+							{"offset":[0,0,1.8],"size":[0.16,0.16,1.4],"slot":6,"type":"cylinder"},
+							{"offset":[0,0,3.2],"size":[0.11,0.11,0.95],"slot":7,"type":"cylinder"},
+							{"offset":[0,0,4.15],"size":[0.14,0.14,0.35],"slot":3,"type":"cylinder"},
+							{"offset":[0.2,0,2.3],"size":[0.24,0.04,0.3],"slot":4,"type":"box"}
+						]
+					}
+				]
+			}
+		},
+		{
+			"id": "usa_rocket_infantry",
+			"name": "Rocket Trooper",
+			"faction": "usa",
+			"class": "infantry",
+			"role": "rocket_infantry",
+			"layer": "ground",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.13,0.13,1.8],"slot":3,"type":"cylinder"},
+						{"offset":[0,0,1.8],"size":[0.17,0.17,1.4],"slot":6,"type":"cylinder"},
+						{"offset":[0,0,3.2],"size":[0.13,0.13,1.15],"slot":7,"type":"cylinder"},
+						{"offset":[0,0,4.35],"size":[0.09,0.09,0.15],"slot":3,"type":"cylinder"},
+						{"offset":[0,0.12,2.9],"size":[0.38,0.08,0.45],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "usa_tank",
+			"name": "Battle Tank",
+			"faction": "usa",
+			"class": "vehicle",
+			"role": "tank_usa",
+			"layer": "ground",
+			"has_turret": true,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.9,0.24,1.2],"slot":1,"type":"box"},
+						{"offset":[0,-0.16,0],"size":[0.9,0.08,1.2],"slot":2,"type":"box"},
+						{"offset":[0,0.16,0],"size":[0.9,0.08,1.2],"slot":2,"type":"box"}
+					]
+				},
+				{
+					"name": "deck",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.175,0,1.2],"size":[0.55,0.24,0.8],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "turret",
+					"angle": "turret",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.06,0,2],"size":[0.4,0.3,1],"slot":0,"type":"box"},
+						{"offset":[0.39,0,2.4],"size":[0.5,0.09,0.5],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "china_barracks",
+			"name": "Barracks",
+			"faction": "china",
+			"class": "building",
+			"role": "barracks",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "plinth",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[1.94,1.94,1],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "rooms",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.62,-0.42,1],"size":[0.56,1,3],"slot":0,"type":"box"},
+						{"offset":[0,-0.42,1],"size":[0.56,1,3],"slot":0,"type":"box"},
+						{"offset":[0.62,-0.42,1],"size":[0.56,1,3],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "arcade",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0.4,1],"size":[1.8,0.64,1.6],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "doors",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.62,0.735,1],"size":[0.3,0.04,1.3],"slot":3,"type":"box"},
+						{"offset":[0,0.735,1],"size":[0.3,0.04,1.3],"slot":3,"type":"box"},
+						{"offset":[0.62,0.735,1],"size":[0.3,0.04,1.3],"slot":3,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "plinth",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[1.94,1.94,1],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "rooms",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.62,-0.42,1],"size":[0.56,1,3],"slot":0,"type":"box"},
+							{"offset":[0,-0.42,1],"size":[0.56,1,3],"slot":0,"type":"box"},
+							{"offset":[0.62,-0.42,1],"size":[0.56,1,3],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "arcade",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0.4,1],"size":[1.8,0.64,1.6],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "doors",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.62,0.735,1],"size":[0.3,0.04,1.3],"slot":3,"type":"box"},
+							{"offset":[0,0.735,1],"size":[0.3,0.04,1.3],"slot":3,"type":"box"},
+							{"offset":[0.62,0.735,1],"size":[0.3,0.04,1.3],"slot":3,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "plinth",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[1.94,1.94,1.5],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "rooms",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.62,-0.42,1.5],"size":[0.56,1,4],"slot":0,"type":"box"},
+							{"offset":[0,-0.42,1.5],"size":[0.56,1,4],"slot":0,"type":"box"},
+							{"offset":[0.62,-0.42,1.5],"size":[0.56,1,4],"slot":0,"type":"box"},
+							{"offset":[-0.62,0.095,4],"size":[0.36,0.03,0.7],"slot":3,"type":"box"},
+							{"offset":[0,0.095,4],"size":[0.36,0.03,0.7],"slot":3,"type":"box"},
+							{"offset":[0.62,0.095,4],"size":[0.36,0.03,0.7],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "arcade",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0.4,1.5],"size":[1.8,0.64,2],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "doors",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.62,0.735,1.5],"size":[0.3,0.04,1.6],"slot":3,"type":"box"},
+							{"offset":[0,0.735,1.5],"size":[0.3,0.04,1.6],"slot":3,"type":"box"},
+							{"offset":[0.62,0.735,1.5],"size":[0.3,0.04,1.6],"slot":3,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0,0],"size":[1.94,1.94,1.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "rooms",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.62,-0.67,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"},
+								{"offset":[-0.62,-0.17,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"},
+								{"offset":[0,-0.67,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"},
+								{"offset":[0,-0.17,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"},
+								{"offset":[0.62,-0.67,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "arcade",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.605,0.4,1.5],"size":[0.59,0.64,2],"slot":1,"type":"box"},
+								{"offset":[0,0.4,1.5],"size":[0.62,0.64,2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "doors",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.62,0.735,1.5],"size":[0.3,0.04,1.6],"slot":3,"type":"box"},
+								{"offset":[0,0.735,1.5],"size":[0.3,0.04,1.6],"slot":3,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0,0],"size":[1.94,1.94,1.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "rooms",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.62,-0.67,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"},
+								{"offset":[0,-0.67,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"},
+								{"offset":[0,-0.17,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"},
+								{"offset":[0.62,-0.67,1.5],"size":[0.56,0.5,4],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "arcade",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0.4,1.5],"size":[0.62,0.64,2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "doors",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0.735,1.5],"size":[0.3,0.04,1.6],"slot":3,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.62,-0.17,1.5],"size":[0.2,0.2,8],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "china_command_center",
+			"name": "Headquarters",
+			"faction": "china",
+			"class": "building",
+			"role": "command_center",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "plinth",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,2],"size":[2.5,2.5,8],"slot":0,"type":"box"},
+						{"offset":[0,1.27,2],"size":[0.6,0.04,4],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "step",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.15,-0.15,10],"size":[1.6,1.6,5],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "tower",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.3,-0.3,15],"size":[0.7,0.7,8],"slot":0,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "plinth",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,2],"size":[2.5,2.5,8],"slot":0,"type":"box"},
+							{"offset":[0,1.27,2],"size":[0.6,0.04,4],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "step",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.15,-0.15,10],"size":[1.6,1.6,5],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "tower",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.3,-0.3,15],"size":[0.7,0.7,8],"slot":0,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "plinth",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,2],"size":[2.5,2.5,8],"slot":0,"type":"box"},
+							{"offset":[0,1.27,2],"size":[0.6,0.04,4],"slot":3,"type":"box"},
+							{"offset":[1.255,0,6.5],"size":[0.02,2,1],"slot":2,"type":"box"},
+							{"offset":[-0.4,1.255,6.5],"size":[0.6,0.02,1],"slot":3,"type":"box"},
+							{"offset":[0.4,1.255,6.5],"size":[0.6,0.02,1],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "step",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.15,-0.15,10],"size":[1.6,1.6,5],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "tower",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.3,-0.3,15],"size":[0.7,0.7,8],"slot":0,"type":"box"},
+							{"offset":[-0.3,0.055,19],"size":[0.5,0.02,2.5],"slot":3,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.3,2],"size":[2.5,1.9,8],"slot":1,"type":"box"},
+								{"offset":[-0.85,0.95,2],"size":[0.8,0.6,8],"slot":1,"type":"box"},
+								{"offset":[0,0.95,2],"size":[0.9,0.6,8],"slot":1,"type":"box"},
+								{"offset":[0,1.27,2],"size":[0.6,0.04,4],"slot":3,"type":"box"}
+							]
+						},
+						{
+							"name": "step",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.15,-0.15,10],"size":[1.6,1.6,5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "tower",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.3,-0.3,15],"size":[0.7,0.7,8],"slot":1,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.3,2],"size":[2.5,1.9,8],"slot":1,"type":"box"},
+								{"offset":[0,0.95,2],"size":[0.9,0.6,8],"slot":1,"type":"box"},
+								{"offset":[0,1.27,2],"size":[0.6,0.04,4],"slot":3,"type":"box"},
+								{"offset":[-1,0.95,2],"size":[0.2,0.2,15],"slot":5,"type":"cylinder"}
+							]
+						},
+						{
+							"name": "step",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.15,-0.15,10],"size":[1.6,1.6,5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "tower",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.3,-0.3,15],"size":[0.7,0.7,8],"slot":1,"type":"box"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "china_defence",
+			"name": "Rotary Gun Tower",
+			"faction": "china",
+			"class": "building",
+			"role": "defence_china",
+			"layer": "ground",
+			"footprint": [1,1],
+			"has_turret": true,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.8,2.5],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "turret",
+					"angle": "turret",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,2.5],"size":[0.4,0.4,1],"slot":0,"type":"box"},
+						{"offset":[0.34,-0.07,2.8],"size":[0.28,0.05,0.5],"slot":4,"type":"box"},
+						{"offset":[0.34,0.07,2.8],"size":[0.28,0.05,0.5],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "china_factory",
+			"name": "Vehicle Factory",
+			"faction": "china",
+			"class": "building",
+			"role": "war_factory",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "plinth",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "hall",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,-0.25,2],"size":[2.7,2.3,10],"slot":0,"type":"box"},
+						{"offset":[-0.1,0.92,2],"size":[1.7,0.04,7],"slot":3,"type":"box"},
+						{"offset":[-0.1,1.2,2],"size":[1.7,0.5,0.4],"slot":4,"type":"box"},
+						{"offset":[-1.1,1.05,2],"size":[0.3,0.3,8.5],"slot":0,"type":"box"},
+						{"offset":[0.9,1.05,2],"size":[0.3,0.3,8.5],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "roof",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,-0.4,12],"size":[2.1,1.6,2.5],"slot":0,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "plinth",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "hall",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,-0.25,2],"size":[2.7,2.3,10],"slot":0,"type":"box"},
+							{"offset":[-0.1,0.92,2],"size":[1.7,0.04,7],"slot":3,"type":"box"},
+							{"offset":[-0.1,1.2,2],"size":[1.7,0.5,0.4],"slot":4,"type":"box"},
+							{"offset":[-1.1,1.05,2],"size":[0.3,0.3,8.5],"slot":0,"type":"box"},
+							{"offset":[0.9,1.05,2],"size":[0.3,0.3,8.5],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "roof",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,-0.4,12],"size":[2.1,1.6,2.5],"slot":0,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "plinth",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "hall",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,-0.25,2],"size":[2.7,2.3,10],"slot":0,"type":"box"},
+							{"offset":[-0.1,0.92,2],"size":[1.7,0.04,7],"slot":3,"type":"box"},
+							{"offset":[-0.1,1.2,2],"size":[1.7,0.5,0.4],"slot":4,"type":"box"},
+							{"offset":[-1.1,1.05,2],"size":[0.3,0.3,8.5],"slot":0,"type":"box"},
+							{"offset":[0.9,1.05,2],"size":[0.3,0.3,8.5],"slot":0,"type":"box"},
+							{"offset":[1.355,-0.25,8],"size":[0.02,1.8,1],"slot":2,"type":"box"}
+						]
+					},
+					{
+						"name": "roof",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,-0.4,12],"size":[2.1,1.6,2.5],"slot":0,"type":"box"},
+							{"offset":[1.055,-0.4,12.6],"size":[0.02,1.2,0.8],"slot":2,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "hall",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.5,2],"size":[2.7,1.8,10],"slot":1,"type":"box"},
+								{"offset":[-1.15,0.65,2],"size":[0.4,0.5,10],"slot":1,"type":"box"},
+								{"offset":[-0.1,0.65,2],"size":[1.7,0.5,10],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "front",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.1,0.92,2],"size":[1.7,0.04,7],"slot":3,"type":"box"},
+								{"offset":[-0.1,1.2,2],"size":[1.7,0.5,0.4],"slot":4,"type":"box"},
+								{"offset":[-1.1,1.05,2],"size":[0.3,0.3,8.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.4,12],"size":[2.1,1.6,2.5],"slot":1,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0,0],"size":[2.94,2.94,2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "hall",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.5,2],"size":[2.7,1.8,10],"slot":1,"type":"box"},
+								{"offset":[-0.1,0.65,2],"size":[1.7,0.5,10],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "front",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.1,0.92,2],"size":[1.7,0.04,7],"slot":3,"type":"box"},
+								{"offset":[-0.1,1.2,2],"size":[1.7,0.5,0.4],"slot":4,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.4,12],"size":[2.1,1.6,2.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[1.05,0.65,2],"size":[0.2,0.2,16.5],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "china_power_plant",
+			"name": "Power Plant",
+			"faction": "china",
+			"class": "building",
+			"role": "power_plant",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "plinth",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[1.94,1.94,1],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "drums",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.47,0.27,1],"size":[0.82,0.82,10],"slot":0,"type":"cylinder"},
+						{"offset":[0.27,-0.47,1],"size":[0.82,0.82,10],"slot":0,"type":"cylinder"}
+					]
+				},
+				{
+					"name": "caps",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.47,0.27,11],"size":[0.56,0.56,1],"slot":4,"type":"cylinder"},
+						{"offset":[0.27,-0.47,11],"size":[0.56,0.56,1],"slot":4,"type":"cylinder"}
+					]
+				}
+			],
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.435,0,0],"size":[1.07,1.94,2],"slot":1,"type":"box"},
+								{"offset":[0.535,-0.435,0],"size":[0.87,1.07,2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "drums",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.454,0.254,2],"size":[1,1,2.5],"slot":1,"type":"cylinder"},
+								{"offset":[-0.454,0.254,4.5],"size":[1,1,3],"slot":1,"type":"cylinder"},
+								{"offset":[0.254,-0.454,2],"size":[1,1,5.5],"slot":1,"type":"cylinder"}
+							]
+						},
+						{
+							"name": "caps",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.454,0.254,7.5],"size":[0.66,0.66,1],"slot":4,"type":"cylinder"},
+								{"offset":[0.254,-0.454,7.5],"size":[0.66,0.66,1],"slot":4,"type":"cylinder"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.435,0,0],"size":[1.07,1.94,2],"slot":1,"type":"box"},
+								{"offset":[0.535,-0.435,0],"size":[0.87,1.07,2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "drums",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.454,0.254,2],"size":[1,1,2.5],"slot":1,"type":"cylinder"},
+								{"offset":[0.254,-0.454,2],"size":[1,1,5.5],"slot":1,"type":"cylinder"}
+							]
+						},
+						{
+							"name": "caps",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.254,-0.454,7.5],"size":[0.66,0.66,1],"slot":4,"type":"cylinder"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.454,0.254,4.5],"size":[0.2,0.2,8],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "china_supply_center",
+			"name": "Supply Depot",
+			"faction": "china",
+			"class": "building",
+			"role": "supply_depot",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "plinth",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[2.94,2.94,1],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "pad",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,1],"size":[2.6,2.6,1.5],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "gantry",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1,-0.7,2.5],"size":[0.34,0.34,8.5],"slot":4,"type":"box"},
+						{"offset":[1,-0.7,2.5],"size":[0.34,0.34,8.5],"slot":4,"type":"box"},
+						{"offset":[0,-0.7,9],"size":[1.66,0.34,2],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.585,0],"size":[2.94,1.77,1],"slot":1,"type":"box"},
+								{"offset":[0,0.885,0],"size":[0.6,1.17,1],"slot":1,"type":"box"},
+								{"offset":[-0.885,0.885,0],"size":[1.17,1.17,1],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "pad",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.5,1],"size":[2.6,1.6,1.5],"slot":1,"type":"box"},
+								{"offset":[0,0.8,1],"size":[0.6,1,1.5],"slot":1,"type":"box"},
+								{"offset":[-0.8,0.8,1],"size":[1,1,1.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "gantry",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-1,-0.7,2.5],"size":[0.34,0.34,8.5],"slot":4,"type":"box"},
+								{"offset":[1,-0.7,2.5],"size":[0.34,0.34,8.5],"slot":4,"type":"box"},
+								{"offset":[0,-0.7,9],"size":[1.66,0.34,2],"slot":4,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "plinth",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.585,0],"size":[2.94,1.77,1],"slot":1,"type":"box"},
+								{"offset":[0,0.885,0],"size":[0.6,1.17,1],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "pad",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.5,1],"size":[2.6,1.6,1.5],"slot":1,"type":"box"},
+								{"offset":[0,0.8,1],"size":[0.6,1,1.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "gantry",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-1,-0.7,2.5],"size":[0.34,0.34,8.5],"slot":4,"type":"box"},
+								{"offset":[1,-0.7,2.5],"size":[0.34,0.34,8.5],"slot":4,"type":"box"},
+								{"offset":[0,-0.7,9],"size":[1.66,0.34,2],"slot":4,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.88,0.88,0],"size":[0.2,0.2,15],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "frc_barracks",
+			"name": "Barracks",
+			"faction": "frc",
+			"class": "building",
+			"role": "barracks",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.675,-0.05,0],"size":[0.55,1.1,4],"slot":0,"type":"box"},
+						{"offset":[-0.075,0.2,0],"size":[0.55,1.1,2.8],"slot":0,"type":"box"},
+						{"offset":[0.525,-0.2,0],"size":[0.55,1.1,3.6],"slot":0,"type":"box"},
+						{"offset":[0.885,-0.2,0],"size":[0.17,0.7,2],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "doors",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.76,0.52,0],"size":[0.2,0.04,2.4],"slot":3,"type":"box"},
+						{"offset":[-0.07,0.77,0],"size":[0.2,0.04,2],"slot":3,"type":"box"},
+						{"offset":[0.52,0.37,0],"size":[0.2,0.04,2.3],"slot":3,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.675,-0.05,0],"size":[0.55,1.1,4],"slot":0,"type":"box"},
+							{"offset":[-0.075,0.2,0],"size":[0.55,1.1,2.8],"slot":0,"type":"box"},
+							{"offset":[0.525,-0.2,0],"size":[0.55,1.1,3.6],"slot":0,"type":"box"},
+							{"offset":[0.885,-0.2,0],"size":[0.17,0.7,2],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "doors",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.76,0.52,0],"size":[0.2,0.04,2.4],"slot":3,"type":"box"},
+							{"offset":[-0.07,0.77,0],"size":[0.2,0.04,2],"slot":3,"type":"box"},
+							{"offset":[0.52,0.37,0],"size":[0.2,0.04,2.3],"slot":3,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.525,-0.15,0],"size":[0.85,1.3,5],"slot":0,"type":"box"},
+							{"offset":[0.325,0.125,0],"size":[0.75,1.35,4],"slot":0,"type":"box"},
+							{"offset":[0.825,0.125,0],"size":[0.25,0.95,2.5],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "doors",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.575,0.52,0],"size":[0.25,0.04,3],"slot":3,"type":"box"},
+							{"offset":[0.275,0.82,0],"size":[0.25,0.04,2.5],"slot":3,"type":"box"},
+							{"offset":[-0.29,0.51,2.6],"size":[0.18,0.02,1],"slot":3,"type":"box"},
+							{"offset":[-0.84,0.51,2.6],"size":[0.12,0.02,1],"slot":3,"type":"box"},
+							{"offset":[0.56,0.81,2],"size":[0.16,0.02,0.9],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "vent",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0.35,-0.2,4],"size":[0.14,0.3,0.3],"slot":4,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.525,-0.15,0],"size":[0.85,1.3,5],"slot":1,"type":"box"},
+								{"offset":[0.325,-0.075,0],"size":[0.75,0.95,4],"slot":1,"type":"box"},
+								{"offset":[0.175,0.6,0],"size":[0.45,0.4,4],"slot":1,"type":"box"},
+								{"offset":[0.825,-0.1,0],"size":[0.25,0.5,2.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "doors",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.575,0.52,0],"size":[0.25,0.04,3],"slot":3,"type":"box"},
+								{"offset":[0.275,0.82,0],"size":[0.25,0.04,2.5],"slot":3,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.525,-0.35,0],"size":[0.85,0.9,5],"slot":1,"type":"box"},
+								{"offset":[-0.4,0.3,0],"size":[0.6,0.4,5],"slot":1,"type":"box"},
+								{"offset":[0.325,-0.075,0],"size":[0.75,0.95,4],"slot":1,"type":"box"},
+								{"offset":[0.175,0.6,0],"size":[0.45,0.4,4],"slot":1,"type":"box"},
+								{"offset":[0.825,-0.1,0],"size":[0.25,0.5,2.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "doors",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.575,0.52,0],"size":[0.25,0.04,3],"slot":3,"type":"box"},
+								{"offset":[0.275,0.82,0],"size":[0.25,0.04,2.5],"slot":3,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.6,-0.55,5],"size":[0.16,0.16,5.5],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "frc_command_center",
+			"name": "Headquarters",
+			"faction": "frc",
+			"class": "building",
+			"role": "command_center",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.225,0,0],"size":[2.45,2.9,13],"slot":0,"type":"box"},
+						{"offset":[1.225,0.325,0],"size":[0.45,2.25,6],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "tower",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.175,-0.625,13],"size":[0.55,0.55,12],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "mast",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.35,-0.45,25],"size":[0.1,0.1,8],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.225,0,0],"size":[2.45,2.9,13],"slot":0,"type":"box"},
+							{"offset":[1.225,0.325,0],"size":[0.45,2.25,6],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "tower",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0.175,-0.625,13],"size":[0.55,0.55,12],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "mast",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0.35,-0.45,25],"size":[0.1,0.1,8],"slot":4,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.225,0,0],"size":[2.45,2.9,13],"slot":0,"type":"box"},
+							{"offset":[1.225,0.325,0],"size":[0.45,2.25,6],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "windows",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.225,1.46,9],"size":[2.15,0.02,1.2],"slot":3,"type":"box"},
+							{"offset":[-0.225,1.46,4.5],"size":[2.15,0.02,1.2],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "tower",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0.175,-0.625,13],"size":[0.55,0.55,12],"slot":0,"type":"box"},
+							{"offset":[0.175,-0.34,21],"size":[0.45,0.02,1.2],"slot":3,"type":"box"},
+							{"offset":[0.175,-0.34,17],"size":[0.45,0.02,1.2],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "mast",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0.35,-0.45,25],"size":[0.1,0.1,8],"slot":4,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.225,-0.225,0],"size":[2.45,2.45,13],"slot":1,"type":"box"},
+								{"offset":[-0.45,1.225,0],"size":[2,0.45,13],"slot":1,"type":"box"},
+								{"offset":[1.225,0.1,0],"size":[0.45,1.8,6],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "tower",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.175,-0.625,13],"size":[0.55,0.55,12],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "mast",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.35,-0.45,25],"size":[0.1,0.1,8],"slot":4,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.225,-0.225,0],"size":[2.45,2.45,13],"slot":1,"type":"box"},
+								{"offset":[-0.225,1.225,0],"size":[1.55,0.45,13],"slot":1,"type":"box"},
+								{"offset":[1.225,0.1,0],"size":[0.45,1.8,6],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "tower",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.175,-0.625,13],"size":[0.55,0.55,12],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "mast",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.35,-0.45,25],"size":[0.1,0.1,8],"slot":4,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-1.1,-1.1,13],"size":[0.16,0.16,7],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "frc_defence",
+			"name": "Tunnel Hub",
+			"faction": "frc",
+			"class": "building",
+			"role": "defence_frc",
+			"layer": "ground",
+			"footprint": [1,1],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.8,1],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "hole",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,1],"size":[0.4,0.4,0.2],"slot":5,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "frc_factory",
+			"name": "Vehicle Yard",
+			"faction": "frc",
+			"class": "building",
+			"role": "war_factory",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.45,0.025,0],"size":[2,2.35,12],"slot":0,"type":"box"},
+						{"offset":[0.85,-0.8,0],"size":[0.5,0.5,9],"slot":4,"type":"cylinder"},
+						{"offset":[1.025,0.475,0],"size":[0.85,1.45,5.5],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "roof",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.75,-0.55,12],"size":[1,0.8,0.6],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "opening",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.45,1.22,0],"size":[1.5,0.04,8],"slot":3,"type":"box"},
+						{"offset":[-0.45,1.345,0],"size":[1.5,0.21,0.5],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.45,0.025,0],"size":[2,2.35,12],"slot":0,"type":"box"},
+							{"offset":[0.85,-0.8,0],"size":[0.5,0.5,9],"slot":4,"type":"cylinder"},
+							{"offset":[1.025,0.475,0],"size":[0.85,1.45,5.5],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "roof",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.75,-0.55,12],"size":[1,0.8,0.6],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "opening",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.45,1.22,0],"size":[1.5,0.04,8],"slot":3,"type":"box"},
+							{"offset":[-0.45,1.345,0],"size":[1.5,0.21,0.5],"slot":4,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.45,0.025,0],"size":[2,2.35,12],"slot":0,"type":"box"},
+							{"offset":[0.85,-0.8,0],"size":[0.5,0.5,9],"slot":4,"type":"cylinder"},
+							{"offset":[1.025,0.475,0],"size":[0.85,1.45,5.5],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "roof",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.75,-0.55,12],"size":[1,0.8,0.6],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "opening",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.45,1.22,0],"size":[1.5,0.04,8],"slot":3,"type":"box"},
+							{"offset":[-0.45,1.345,0],"size":[1.5,0.21,0.5],"slot":4,"type":"box"},
+							{"offset":[-0.45,1.225,8],"size":[1.5,0.05,0.5],"slot":4,"type":"box"},
+							{"offset":[-0.45,1.21,9.6],"size":[1.5,0.02,1],"slot":3,"type":"box"},
+							{"offset":[1.025,1.21,2.6],"size":[0.55,0.02,0.8],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "vent",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[1,0.2,5.5],"size":[0.3,0.3,0.4],"slot":4,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.45,0.025,0],"size":[2,2.35,12],"slot":1,"type":"box"},
+								{"offset":[0.85,-0.8,0],"size":[0.5,0.5,9],"slot":4,"type":"cylinder"},
+								{"offset":[1.025,0.2,0],"size":[0.85,0.9,5.5],"slot":1,"type":"box"},
+								{"offset":[0.8,0.925,0],"size":[0.4,0.55,5.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.75,-0.55,12],"size":[1,0.8,0.6],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "opening",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.45,1.22,0],"size":[1.5,0.04,8],"slot":3,"type":"box"},
+								{"offset":[-0.45,1.345,0],"size":[1.5,0.21,0.5],"slot":4,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.45,-0.225,0],"size":[2,1.85,12],"slot":1,"type":"box"},
+								{"offset":[-0.325,0.95,0],"size":[1.75,0.5,12],"slot":1,"type":"box"},
+								{"offset":[0.85,-0.8,0],"size":[0.5,0.5,9],"slot":4,"type":"cylinder"},
+								{"offset":[1.025,0.2,0],"size":[0.85,0.9,5.5],"slot":1,"type":"box"},
+								{"offset":[0.8,0.925,0],"size":[0.4,0.55,5.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.75,-0.55,12],"size":[1,0.8,0.6],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "opening",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.45,1.22,0],"size":[1.5,0.04,8],"slot":3,"type":"box"},
+								{"offset":[-0.45,1.345,0],"size":[1.5,0.21,0.5],"slot":4,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.3,-0.9,12],"size":[0.16,0.16,5.5],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "frc_hole_1",
+			"name": "Rubble",
+			"faction": "frc",
+			"class": "building",
+			"role": "rubble_1",
+			"layer": "ground",
+			"footprint": [1,1],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.6,0.6,0.5],"slot":4,"type":"box"},
+						{"offset":[0.15,0,0.5],"size":[0.2,0.2,0.8],"slot":3,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "frc_hole_2",
+			"name": "Rubble",
+			"faction": "frc",
+			"class": "building",
+			"role": "rubble_2",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[1.6,1.6,0.5],"slot":4,"type":"box"},
+						{"offset":[0.4,0,0.5],"size":[0.533333,0.533333,0.8],"slot":3,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "frc_hole_3",
+			"name": "Rubble",
+			"faction": "frc",
+			"class": "building",
+			"role": "rubble_3",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[2.6,2.6,0.5],"slot":4,"type":"box"},
+						{"offset":[0.65,0,0.5],"size":[0.866667,0.866667,0.8],"slot":3,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "frc_supply_center",
+			"name": "Supply Cache",
+			"faction": "frc",
+			"class": "building",
+			"role": "supply_depot",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.35,0,0],"size":[2.2,2.9,3.5],"slot":0,"type":"box"},
+						{"offset":[1.1,-0.6,0],"size":[0.55,0.55,6],"slot":4,"type":"cylinder"},
+						{"offset":[1.1,0.575,0],"size":[0.7,1.75,2.5],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "gantry",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.2,-0.2,3.5],"size":[0.2,0.2,8.5],"slot":4,"type":"box"},
+						{"offset":[-0.35,-0.2,12],"size":[1.9,0.16,1],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.35,-0.275,0],"size":[2.2,2.35,3.5],"slot":1,"type":"box"},
+								{"offset":[-0.575,1.175,0],"size":[1.75,0.55,3.5],"slot":1,"type":"box"},
+								{"offset":[1.1,-0.6,0],"size":[0.55,0.55,6],"slot":4,"type":"cylinder"},
+								{"offset":[1.1,0.275,0],"size":[0.7,1.15,2.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "gantry",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-1.2,-0.2,3.5],"size":[0.2,0.2,8.5],"slot":4,"type":"box"},
+								{"offset":[-0.35,-0.2,12],"size":[1.9,0.16,1],"slot":4,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.35,-0.275,0],"size":[2.2,2.35,3.5],"slot":1,"type":"box"},
+								{"offset":[-0.325,1.175,0],"size":[1.25,0.55,3.5],"slot":1,"type":"box"},
+								{"offset":[1.1,-0.6,0],"size":[0.55,0.55,6],"slot":4,"type":"cylinder"},
+								{"offset":[1.1,0.275,0],"size":[0.7,1.15,2.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.4,-1.1,3.5],"size":[0.16,0.16,8],"slot":5,"type":"cylinder"}
+							]
+						},
+						{
+							"name": "gantry",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-1.2,-0.2,3.5],"size":[0.2,0.2,8.5],"slot":4,"type":"box"},
+								{"offset":[-0.35,-0.2,12],"size":[1.9,0.16,1],"slot":4,"type":"box"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "usa_barracks",
+			"name": "Barracks",
+			"faction": "usa",
+			"class": "building",
+			"role": "barracks",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "rooms",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.68,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"},
+						{"offset":[0,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"},
+						{"offset":[0.68,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "doors",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.68,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"},
+						{"offset":[0,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"},
+						{"offset":[0.68,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "rooms",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.68,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"},
+							{"offset":[0,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"},
+							{"offset":[0.68,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "doors",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.68,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"},
+							{"offset":[0,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"},
+							{"offset":[0.68,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "rooms",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.68,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"},
+							{"offset":[0,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"},
+							{"offset":[0.68,0,0],"size":[0.56,1.3,5],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "doors",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.68,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"},
+							{"offset":[0,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"},
+							{"offset":[0.68,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"}
+						]
+					},
+					{
+						"name": "finish",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.68,-0.05,5],"size":[0.36,1,0.06],"slot":1,"type":"box"},
+							{"offset":[0,-0.05,5],"size":[0.36,1,0.06],"slot":1,"type":"box"},
+							{"offset":[0.68,-0.05,5],"size":[0.36,1,0.06],"slot":1,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "rooms",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.68,0,0],"size":[0.56,1.3,5],"slot":1,"type":"box"},
+								{"offset":[0,0,0],"size":[0.56,1.3,5],"slot":1,"type":"box"},
+								{"offset":[0.68,-0.325,0],"size":[0.56,0.65,5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "doors",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.68,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"},
+								{"offset":[0,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "rooms",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.68,-0.325,0],"size":[0.56,0.65,5],"slot":1,"type":"box"},
+								{"offset":[0,0,0],"size":[0.56,1.3,5],"slot":1,"type":"box"},
+								{"offset":[0.68,-0.325,0],"size":[0.56,0.65,5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "doors",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0.67,0],"size":[0.22,0.04,2.6],"slot":3,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.25,5],"size":[0.18,0.18,6],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "usa_command_center",
+			"name": "Headquarters",
+			"faction": "usa",
+			"class": "building",
+			"role": "command_center",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[2.8,2.8,10],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "roof",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,10],"size":[1.4,1.4,9.2],"slot":0,"type":"box"},
+						{"offset":[0,0,19.2],"size":[0.8,0.8,0.2],"slot":1,"type":"box"},
+						{"offset":[0,0,19.4],"size":[0.14,0.14,10],"slot":4,"type":"cylinder"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[2.8,2.8,10],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "roof",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,10],"size":[1.4,1.4,9.2],"slot":0,"type":"box"},
+							{"offset":[0,0,19.2],"size":[0.8,0.8,0.2],"slot":1,"type":"box"},
+							{"offset":[0,0,19.4],"size":[0.14,0.14,10],"slot":4,"type":"cylinder"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[2.8,2.8,10],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "panel",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,10],"size":[2.2,2.2,0.06],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "roof",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,10],"size":[1.4,1.4,9.2],"slot":0,"type":"box"},
+							{"offset":[0,0,19.2],"size":[0.8,0.8,0.2],"slot":1,"type":"box"},
+							{"offset":[0,0,19.4],"size":[0.14,0.14,10],"slot":4,"type":"cylinder"}
+						]
+					},
+					{
+						"name": "finish",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0.72,0,15],"size":[0.04,1,0.8],"slot":4,"type":"box"},
+							{"offset":[0,0.72,15],"size":[1,0.04,0.8],"slot":3,"type":"box"},
+							{"offset":[1.42,0,6],"size":[0.04,2,0.8],"slot":4,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.35,0],"size":[2.8,2.1,10],"slot":1,"type":"box"},
+								{"offset":[-0.35,1.05,0],"size":[2.1,0.7,10],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0,10],"size":[1.4,1.4,9.2],"slot":1,"type":"box"},
+								{"offset":[0,0,19.2],"size":[0.8,0.8,0.2],"slot":1,"type":"box"},
+								{"offset":[0,0,19.4],"size":[0.14,0.14,10],"slot":4,"type":"cylinder"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "body",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.35,0],"size":[2.8,2.1,10],"slot":1,"type":"box"},
+								{"offset":[0,1.05,0],"size":[1.4,0.7,10],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0,10],"size":[1.4,1.4,9.2],"slot":1,"type":"box"},
+								{"offset":[0,0,19.2],"size":[0.8,0.8,0.2],"slot":1,"type":"box"},
+								{"offset":[0,0,19.4],"size":[0.14,0.14,10],"slot":4,"type":"cylinder"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[1.1,-0.75,10],"size":[0.18,0.18,13],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "usa_defence",
+			"name": "Missile Battery",
+			"faction": "usa",
+			"class": "building",
+			"role": "defence_usa",
+			"layer": "ground",
+			"footprint": [1,1],
+			"has_turret": true,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.8,2.5],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "turret",
+					"angle": "turret",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,2.5],"size":[0.45,0.35,1.2],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "rack",
+					"angle": "turret",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.1,0,3.7],"size":[0.3,0.25,0.4],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "usa_factory",
+			"name": "Vehicle Factory",
+			"faction": "usa",
+			"class": "building",
+			"role": "war_factory",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "hall",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,-0.35,0],"size":[2.9,2.2,13],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "roof",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+						{"offset":[0,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+						{"offset":[0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "opening",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0.77,0],"size":[1.9,0.04,9],"slot":3,"type":"box"},
+						{"offset":[0,0.79,9],"size":[2.1,0.08,0.8],"slot":4,"type":"box"},
+						{"offset":[0,1.12,0],"size":[2.1,0.66,0.5],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "hall",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,-0.35,0],"size":[2.9,2.2,13],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "roof",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+							{"offset":[0,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+							{"offset":[0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "opening",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0.77,0],"size":[1.9,0.04,9],"slot":3,"type":"box"},
+							{"offset":[0,0.79,9],"size":[2.1,0.08,0.8],"slot":4,"type":"box"},
+							{"offset":[0,1.12,0],"size":[2.1,0.66,0.5],"slot":4,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "hall",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,-0.35,0],"size":[2.9,2.2,13],"slot":0,"type":"box"}
+						]
+					},
+					{
+						"name": "roof",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[-0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+							{"offset":[0,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+							{"offset":[0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"}
+						]
+					},
+					{
+						"name": "opening",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0.77,0],"size":[1.9,0.04,9],"slot":3,"type":"box"},
+							{"offset":[0,0.79,9],"size":[2.1,0.08,0.8],"slot":4,"type":"box"},
+							{"offset":[0,1.12,0],"size":[2.1,0.66,0.5],"slot":4,"type":"box"}
+						]
+					},
+					{
+						"name": "finish",
+						"angle": "fixed",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[1.47,-0.35,9.5],"size":[0.04,1.8,0.9],"slot":4,"type":"box"},
+							{"offset":[-0.3,-0.35,13],"size":[0.18,0.18,0.4],"slot":4,"type":"box"},
+							{"offset":[0.3,-0.35,13],"size":[0.18,0.18,0.4],"slot":4,"type":"box"},
+							{"offset":[0,0.77,10.4],"size":[1.5,0.04,0.5],"slot":3,"type":"box"}
+						]
+					}
+				]
+			},
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "hall",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.7,0],"size":[2.9,1.5,13],"slot":1,"type":"box"},
+								{"offset":[-0.2,0.4,0],"size":[2.5,0.7,13],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+								{"offset":[0,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+								{"offset":[0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "opening",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0.77,0],"size":[1.9,0.04,9],"slot":3,"type":"box"},
+								{"offset":[0,0.79,9],"size":[2.1,0.08,0.8],"slot":4,"type":"box"},
+								{"offset":[0,1.12,0],"size":[2.1,0.66,0.5],"slot":4,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "hall",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.7,0],"size":[2.9,1.5,13],"slot":1,"type":"box"},
+								{"offset":[0,0.4,0],"size":[2.1,0.7,13],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+								{"offset":[0,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"},
+								{"offset":[0.75,-0.35,13],"size":[0.3,1.5,0.2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "opening",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,0.77,0],"size":[1.9,0.04,9],"slot":3,"type":"box"},
+								{"offset":[0,0.79,9],"size":[2.1,0.08,0.8],"slot":4,"type":"box"},
+								{"offset":[0,1.12,0],"size":[2.1,0.66,0.5],"slot":4,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[1.15,-0.3,13],"size":[0.18,0.18,6],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "usa_power_plant",
+			"name": "Power Plant",
+			"faction": "usa",
+			"class": "building",
+			"role": "power_plant",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "base",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[1.8,1.8,1],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "roof",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,1],"size":[1,1,0.2],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "drums",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.5,-0.5,1.2],"size":[0.42,0.42,16],"slot":4,"type":"cylinder"},
+						{"offset":[-0.5,0.5,1.2],"size":[0.42,0.42,16],"slot":4,"type":"cylinder"},
+						{"offset":[0.5,-0.5,17.2],"size":[0.42,0.42,0.8],"slot":0,"type":"cylinder"},
+						{"offset":[-0.5,0.5,17.2],"size":[0.42,0.42,0.8],"slot":0,"type":"cylinder"}
+					]
+				}
+			],
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "base",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.4,0],"size":[1.8,1,1],"slot":1,"type":"box"},
+								{"offset":[-0.4,0.5,0],"size":[1,0.8,1],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.2,1],"size":[1,0.6,0.2],"slot":1,"type":"box"},
+								{"offset":[-0.2,0.3,1],"size":[0.6,0.4,0.2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "drums",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.5,-0.5,1.2],"size":[0.42,0.42,16],"slot":4,"type":"cylinder"},
+								{"offset":[-0.5,0.5,1.2],"size":[0.42,0.42,16],"slot":4,"type":"cylinder"},
+								{"offset":[0.5,-0.5,17.2],"size":[0.42,0.42,0.8],"slot":1,"type":"cylinder"},
+								{"offset":[-0.5,0.5,17.2],"size":[0.42,0.42,0.8],"slot":1,"type":"cylinder"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "base",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.4,0],"size":[1.8,1,1],"slot":1,"type":"box"},
+								{"offset":[-0.2,0.5,0],"size":[0.6,0.8,1],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "roof",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.2,1],"size":[1,0.6,0.2],"slot":1,"type":"box"},
+								{"offset":[-0.2,0.3,1],"size":[0.6,0.4,0.2],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "drums",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.5,-0.5,1.2],"size":[0.42,0.42,16],"slot":4,"type":"cylinder"},
+								{"offset":[0.5,-0.5,17.2],"size":[0.42,0.42,0.8],"slot":1,"type":"cylinder"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-0.4,0.25,1.2],"size":[0.18,0.18,11],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		},
+		{
+			"id": "usa_supply_center",
+			"name": "Supply Depot",
+			"faction": "usa",
+			"class": "building",
+			"role": "supply_depot",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "pad",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[2.9,2.9,1.5],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "bay",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.2,0.2,1.5],"size":[1.3,1.3,0.15],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "gantry_legs",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.28,-1.28,1.5],"size":[0.2,0.2,10],"slot":4,"type":"box"},
+						{"offset":[1.28,-1.28,1.5],"size":[0.2,0.2,10],"slot":4,"type":"box"},
+						{"offset":[-1.28,1.28,1.5],"size":[0.2,0.2,10],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "gantry_beams",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,-1.28,11.5],"size":[2.7600000000000002,0.2,0.8],"slot":4,"type":"box"},
+						{"offset":[-1.28,0.1,11.5],"size":[0.2,2.56,0.8],"slot":4,"type":"box"}
+					]
+				}
+			],
+			"damage_variants": {
+				"1": {
+					"parts": [
+						{
+							"name": "pad",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.3,0],"size":[2.9,2.3,1.5],"slot":1,"type":"box"},
+								{"offset":[-0.3,1.15,0],"size":[2.3,0.6,1.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "bay",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.2,0.2,1.5],"size":[1.3,1.3,0.15],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "gantry_legs",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-1.28,-1.28,1.5],"size":[0.2,0.2,10],"slot":4,"type":"box"},
+								{"offset":[1.28,-1.28,1.5],"size":[0.2,0.2,10],"slot":4,"type":"box"},
+								{"offset":[-1.28,1.28,1.5],"size":[0.2,0.2,10],"slot":4,"type":"box"}
+							]
+						},
+						{
+							"name": "gantry_beams",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-1.28,11.5],"size":[2.7600000000000002,0.2,0.8],"slot":4,"type":"box"},
+								{"offset":[-1.28,0.1,11.5],"size":[0.2,2.56,0.8],"slot":4,"type":"box"}
+							]
+						}
+					]
+				},
+				"2": {
+					"parts": [
+						{
+							"name": "pad",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-0.3,0],"size":[2.9,2.3,1.5],"slot":1,"type":"box"},
+								{"offset":[0,1.15,0],"size":[1.7,0.6,1.5],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "bay",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.2,0.2,1.5],"size":[1.3,1.3,0.15],"slot":1,"type":"box"}
+							]
+						},
+						{
+							"name": "gantry_legs",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[-1.28,-1.28,1.5],"size":[0.2,0.2,10],"slot":4,"type":"box"},
+								{"offset":[1.28,-1.28,1.5],"size":[0.2,0.2,10],"slot":4,"type":"box"}
+							]
+						},
+						{
+							"name": "gantry_beams",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0,-1.28,11.5],"size":[2.7600000000000002,0.2,0.8],"slot":4,"type":"box"}
+							]
+						},
+						{
+							"name": "smoke",
+							"angle": "fixed",
+							"pivot": [0,0],
+							"prims": [
+								{"offset":[0.9,-0.4,1.5],"size":[0.18,0.18,11.5],"slot":5,"type":"cylinder"}
+							]
+						}
+					]
+				}
+			}
+		}
+	],
+	"extras": [
+		{
+			"id": "default_building",
+			"role": "default_building",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[2,2,14],"slot":0,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "default_vehicle",
+			"role": "default_vehicle",
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "heading",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.5,3],"slot":0,"type":"box"}
+					]
+				}
+			],
+			"parts_by_detail": {
+				"1": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.8,0.5,3],"slot":0,"type":"box"},
+							{"offset":[0,0,3],"size":[0.3,0.3,1.5],"slot":4,"type":"box"}
+						]
+					}
+				],
+				"2": [
+					{
+						"name": "body",
+						"angle": "heading",
+						"pivot": [0,0],
+						"prims": [
+							{"offset":[0,0,0],"size":[0.8,0.5,3],"slot":0,"type":"box"},
+							{"offset":[0,0,3],"size":[0.3,0.3,1.5],"slot":4,"type":"box"}
+						]
+					}
+				]
+			}
+		},
+		{
+			"id": "supply_source_default",
+			"role": "supply_source",
+			"footprint": [4,5],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[3.8,4.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{"angle":"fixed","name":"crates","pivot":[0,0],"prims":[]},
+				{"angle":"fixed","name":"stack","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_big_100",
+			"role": "supply_source",
+			"footprint": [4,5],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[3.8,4.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "crates",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.32,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-1.32,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-1.32,0,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,0,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,0,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,0,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-1.32,0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-1.32,1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"}
+					]
+				},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_big_60",
+			"role": "supply_source",
+			"footprint": [4,5],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[3.8,4.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "crates",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.32,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-1.32,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-1.32,0,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,0,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,0,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,0,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"}
+					]
+				},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_big_25",
+			"role": "supply_source",
+			"footprint": [4,5],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[3.8,4.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "crates",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.32,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-0.44,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[0.44,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[1.32,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"},
+						{"offset":[-1.32,-0.92,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"}
+					]
+				},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_big_5",
+			"role": "supply_source",
+			"footprint": [4,5],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[3.8,4.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "crates",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.32,-1.84,0.5],"size":[0.8,0.72,4],"slot":0,"type":"box"}
+					]
+				},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_big_0",
+			"role": "supply_source",
+			"footprint": [4,5],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[3.8,4.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{"name":"crates","angle":"fixed","pivot":[0,0],"prims":[]},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_small_100",
+			"role": "supply_source",
+			"footprint": [1,1],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "crates",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,-0.24,0.5],"size":[0.66,0.18,4],"slot":0,"type":"box"},
+						{"offset":[0,0,0.5],"size":[0.66,0.18,4],"slot":0,"type":"box"},
+						{"offset":[0,0.24,0.5],"size":[0.66,0.18,4],"slot":0,"type":"box"}
+					]
+				},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_small_60",
+			"role": "supply_source",
+			"footprint": [1,1],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "crates",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,-0.24,0.5],"size":[0.66,0.18,4],"slot":0,"type":"box"},
+						{"offset":[0,0,0.5],"size":[0.66,0.18,4],"slot":0,"type":"box"}
+					]
+				},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_small_25",
+			"role": "supply_source",
+			"footprint": [1,1],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "crates",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,-0.24,0.5],"size":[0.66,0.18,4],"slot":0,"type":"box"}
+					]
+				},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_small_5",
+			"role": "supply_source",
+			"footprint": [1,1],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "crates",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.17,-0.24,0.5],"size":[0.3,0.18,2],"slot":0,"type":"box"}
+					]
+				},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "pile_small_0",
+			"role": "supply_source",
+			"footprint": [1,1],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0,0,0],"size":[0.8,0.8,0.5],"slot":3,"type":"box"}
+					]
+				},
+				{"name":"crates","angle":"fixed","pivot":[0,0],"prims":[]},
+				{"name":"stack","angle":"fixed","pivot":[0,0],"prims":[]}
+			]
+		},
+		{
+			"id": "site_frame_3_10",
+			"name": "Vehicle Yard",
+			"faction": "frc",
+			"class": "building",
+			"role": "construction_frame",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "post_back",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.42,-1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.45,0.025,0],"size":[2,2.35,1.2],"slot":0,"type":"box"},
+						{"offset":[0.85,-0.8,0],"size":[0.5,0.5,0.9],"slot":4,"type":"cylinder"},
+						{"offset":[1.025,0.475,0],"size":[0.85,1.45,0.55],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "roof",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.75,-0.55,1.2],"size":[1,0.8,0.06],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "opening",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.45,1.22,0],"size":[1.5,0.04,0.8],"slot":3,"type":"box"},
+						{"offset":[-0.45,1.345,0],"size":[1.5,0.21,0.05],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "posts",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[1.42,-1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"},
+						{"offset":[-1.42,1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"},
+						{"offset":[1.42,1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "site_frame_3_50",
+			"name": "Vehicle Yard",
+			"faction": "frc",
+			"class": "building",
+			"role": "construction_frame",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "post_back",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.42,-1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.45,0.025,0],"size":[2,2.35,6],"slot":0,"type":"box"},
+						{"offset":[0.85,-0.8,0],"size":[0.5,0.5,4.5],"slot":4,"type":"cylinder"},
+						{"offset":[1.025,0.475,0],"size":[0.85,1.45,2.75],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "roof",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.75,-0.55,6],"size":[1,0.8,0.3],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "opening",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.45,1.22,0],"size":[1.5,0.04,4],"slot":3,"type":"box"},
+						{"offset":[-0.45,1.345,0],"size":[1.5,0.21,0.25],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "posts",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[1.42,-1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"},
+						{"offset":[-1.42,1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"},
+						{"offset":[1.42,1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "site_frame_3_90",
+			"name": "Vehicle Yard",
+			"faction": "frc",
+			"class": "building",
+			"role": "construction_frame",
+			"layer": "ground",
+			"footprint": [3,3],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "post_back",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-1.42,-1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.45,0.025,0],"size":[2,2.35,10.8],"slot":0,"type":"box"},
+						{"offset":[0.85,-0.8,0],"size":[0.5,0.5,8.1],"slot":4,"type":"cylinder"},
+						{"offset":[1.025,0.475,0],"size":[0.85,1.45,4.95],"slot":0,"type":"box"}
+					]
+				},
+				{
+					"name": "roof",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.75,-0.55,10.8],"size":[1,0.8,0.54],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "opening",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.45,1.22,0],"size":[1.5,0.04,7.2],"slot":3,"type":"box"},
+						{"offset":[-0.45,1.345,0],"size":[1.5,0.21,0.45],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "posts",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[1.42,-1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"},
+						{"offset":[-1.42,1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"},
+						{"offset":[1.42,1.42,0],"size":[0.09,0.09,13.6],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "site_frame_2_10",
+			"name": "Barracks",
+			"faction": "frc",
+			"class": "building",
+			"role": "construction_frame",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "post_back",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.92,-0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.525,-0.15,0],"size":[0.85,1.3,0.5],"slot":0,"type":"box"},
+						{"offset":[0.325,0.125,0],"size":[0.75,1.35,0.4],"slot":0,"type":"box"},
+						{"offset":[0.825,0.125,0],"size":[0.25,0.95,0.25],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "doors",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.575,0.52,0],"size":[0.25,0.04,0.3],"slot":3,"type":"box"},
+						{"offset":[0.275,0.82,0],"size":[0.25,0.04,0.25],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "posts",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.92,-0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"},
+						{"offset":[-0.92,0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"},
+						{"offset":[0.92,0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "site_frame_2_50",
+			"name": "Barracks",
+			"faction": "frc",
+			"class": "building",
+			"role": "construction_frame",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "post_back",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.92,-0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.525,-0.15,0],"size":[0.85,1.3,2.5],"slot":0,"type":"box"},
+						{"offset":[0.325,0.125,0],"size":[0.75,1.35,2],"slot":0,"type":"box"},
+						{"offset":[0.825,0.125,0],"size":[0.25,0.95,1.25],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "doors",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.575,0.52,0],"size":[0.25,0.04,1.5],"slot":3,"type":"box"},
+						{"offset":[0.275,0.82,0],"size":[0.25,0.04,1.25],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "posts",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.92,-0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"},
+						{"offset":[-0.92,0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"},
+						{"offset":[0.92,0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "site_frame_2_90",
+			"name": "Barracks",
+			"faction": "frc",
+			"class": "building",
+			"role": "construction_frame",
+			"layer": "ground",
+			"footprint": [2,2],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "post_back",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.92,-0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"}
+					]
+				},
+				{
+					"name": "body",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.525,-0.15,0],"size":[0.85,1.3,4.5],"slot":0,"type":"box"},
+						{"offset":[0.325,0.125,0],"size":[0.75,1.35,3.6],"slot":0,"type":"box"},
+						{"offset":[0.825,0.125,0],"size":[0.25,0.95,2.25],"slot":1,"type":"box"}
+					]
+				},
+				{
+					"name": "doors",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.575,0.52,0],"size":[0.25,0.04,2.7],"slot":3,"type":"box"},
+						{"offset":[0.275,0.82,0],"size":[0.25,0.04,2.25],"slot":3,"type":"box"}
+					]
+				},
+				{
+					"name": "posts",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.92,-0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"},
+						{"offset":[-0.92,0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"},
+						{"offset":[0.92,0.92,0],"size":[0.09,0.09,6],"slot":4,"type":"box"}
+					]
+				}
+			]
+		},
+		{
+			"id": "salvage_crate",
+			"name": "Salvage crate",
+			"layer": "ground",
+			"footprint": [1,1],
+			"has_turret": false,
+			"parts": [
+				{
+					"name": "mark",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[0.02,0.02,0],"size":[0.84,0.5,0.06],"slot":7,"type":"box"}
+					]
+				},
+				{
+					"name": "crate",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.08,-0.02,0.06],"size":[0.34,0.28,1.2],"slot":4,"type":"box"},
+						{"offset":[0.2,0.1,0.06],"size":[0.2,0.2,1.6],"slot":5,"type":"cylinder"}
+					]
+				},
+				{
+					"name": "strap",
+					"angle": "fixed",
+					"pivot": [0,0],
+					"prims": [
+						{"offset":[-0.08,-0.02,1.26],"size":[0.36,0.08,0.12],"slot":7,"type":"box"}
+					]
+				}
+			],
+			"role": "salvage_crate"
+		}
+	]
+}

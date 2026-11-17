@@ -127,7 +127,7 @@ const c4entry = (fac, option, key) => {
 const composeMemo = {};
 function shapeIn(id) {
   if (!BASE[id]) return null;
-  const mkey = id + '|' + JSON.stringify([CUR.steps, CUR.fix4b]);
+  const mkey = id + '|' + JSON.stringify([CUR.steps, CUR.fix4b, CUR.fix6]);
   return composeMemo[mkey] || (composeMemo[mkey] = compose(id, CUR.steps));
 }
 // shape.parts = detail 0, parts_by_detail[1] and [2] when a zoom option applies, damage_variants[1] and [2] when a damage option applies.
@@ -146,8 +146,8 @@ function compose(id, sel) {
   if (TANKS.includes(id)) { const r = need('tanks', id); if (r) parts = r.parts; }
   const fixStep = FIXB.includes(id) ? 'fix_bldg' : FIXU.includes(id) ? 'fix_unit' : null;
   if (fixStep) { const r = need(fixStep, id); if (r) parts = r.parts; }
-  const b4 = CUR.fix4b && PK.cand4b && PK.cand4b[fac] && PK.cand4b[fac][id];
-  const over = b4 && Array.isArray(b4.parts) ? b4 : null;
+  const b4 = CUR.fix4b && PK.cand4b && PK.cand4b[fac] && PK.cand4b[fac][id], b6 = CUR.fix6 && PK.fix6 && PK.fix6[fac] && PK.fix6[fac][id];
+  const over = [b6, b4].find((b) => b && Array.isArray(b.parts)) || null; // a replaced hull has no zoom 2 version: the drawn ones sit on today's hulls
   if (over) { parts = over.parts; applied = true; }
   if (isBody && OPT.damage[sel.damage]) {
     dmg = {};
@@ -644,6 +644,310 @@ const placeholdersStage = () => gridStage('1', (cfg, items) => {
 <script src="pics.js" onerror="MISSING.push('pics.js')"></script>
 <script>
 'use strict';
+// ---------- export, round trip and audit (hashes #export, #roundtrip, #audit) ----------
+const EXPORT_SEL = { ...ALL_PICKED, fix6: true };
+const POSE_HEADINGS = [0, 8, 16, 24, 32, 40, 48, 56], TURRET_OFFSET = 11;
+const hasTurret = (parts) => parts.some((p) => p.angle === 'turret');
+const partsAt = (s, detail) => (detail > 0 && s.parts_by_detail && s.parts_by_detail[detail]) || s.parts;
+const allLists = (s) => [s.parts, ...Object.values(s.parts_by_detail || {}), ...Object.values(s.damage_variants || {}).map((v) => v.parts)];
+const topOf = (s) => Math.max(...allLists(s).flatMap((l) => l.flatMap((p) => p.prims.map((q) => q.offset[2] + q.size[2]))));
+const round6 = (v) => Math.round(v * 1e6) / 1e6;
+
+function plainShape(s, over) {
+  const out = {};
+  ['id', 'name', 'faction', 'class', 'role', 'layer', 'footprint'].forEach((k) => { if (s[k] !== undefined) out[k] = s[k]; });
+  out.has_turret = hasTurret(s.parts);
+  out.parts = s.parts;
+  if (s.parts_by_detail && (s.parts_by_detail[1] || s.parts_by_detail[2])) out.parts_by_detail = s.parts_by_detail;
+  if (s.damage_variants) out.damage_variants = Object.fromEntries(Object.entries(s.damage_variants).map(([k, v]) => [k, { parts: v.parts }]));
+  return Object.assign(out, over);
+}
+function exportShape(id) {
+  const r = shapeIn(id);
+  if (r.state === 'missing') throw new Error(id + ' has no picked version for ' + (r.miss || []).join(', '));
+  return plainShape(r.shape);
+}
+function exportExtras() {
+  const need = (id, res) => { if (!res.shape || res.state !== 'cand') throw new Error('extra ' + id + ' is ' + res.state); return res.shape; };
+  const out = ['default_building', 'default_vehicle', 'supply_source_default'].map((id) => plainShape(EXTRA[id], { role: EXTRA[id].role }));
+  ['big', 'small'].forEach((size) => PCTS.forEach((pct) => {
+    const id = 'pile_' + size + '_' + pct;
+    out.push(plainShape(need(id, pileRes(size, pct)), { id, role: 'supply_source', footprint: size === 'big' ? [4, 5] : [1, 1] }));
+  }));
+  [3, 2].forEach((n) => [10, 50, 90].forEach((pct) => {
+    const id = 'site_frame_' + n + '_' + pct;
+    out.push(plainShape(need(id, siteRes(n, pct)), { id, role: 'construction_frame', footprint: [n, n] }));
+  }));
+  out.push(plainShape(need('salvage_crate', crateRes()), { id: 'salvage_crate', role: 'salvage_crate', footprint: [1, 1] }));
+  return out;
+}
+function exportPalette() {
+  const pal = palFor(EXPORT_SEL.steps), out = { note: 'only the values that differ from shapes-current.json' };
+  if (pal.band.state === 'cand') Object.assign(out, { side: pal.band.side, side_dark: pal.band.sideDark });
+  if (pal.owners.state === 'cand') out.owner_base = [1, 2, 3, 4, 5, 6, 7, 8].map((o) => pal.owners.hex[o]);
+  if (pal.cliff && pal.cliff.state === 'cand') out.cliff = pal.cliff.raw;
+  if (pal.fog.state === 'cand') out.fog = pal.fog.factor;
+  const cargo = cargoHex();
+  if (cargo) out.cargo = cargo;
+  return out;
+}
+function corrections(shapes) {
+  const by = Object.fromEntries(shapes.map((s) => [s.id, s]));
+  const hull = by.frc_light_vehicle.parts.filter((p) => p.angle !== 'turret').flatMap((p) => p.prims);
+  const xs = hull.flatMap((q) => [q.offset[0] - q.size[0] / 2, q.offset[0] + q.size[0] / 2]);
+  const tracks = by.frc_tank.parts.find((p) => p.name === 'body').prims.filter((q) => q.slot === 2);
+  return {
+    frc_light_vehicle_hull_length_cells: round6(Math.max(...xs) - Math.min(...xs)),
+    tank_height_units: Object.fromEntries(Object.keys(TANK_ROLES_EXPORT).map((id) => [id, round6(topOf(by[id]))])),
+    frc_tank_track_length_cells: round6(tracks[0].size[0]),
+  };
+}
+const TANK_ROLES_EXPORT = { usa_tank: 1, china_tank: 1, frc_tank: 1, china_light_vehicle: 1 };
+
+function flatValue(v) {
+  const scalar = (x) => x === null || typeof x !== 'object';
+  return scalar(v) || (Array.isArray(v) ? v.every(scalar) : Object.values(v).every((e) => scalar(e) || (Array.isArray(e) && e.every(scalar))));
+}
+function ser(v, depth) {
+  if (v === null || typeof v !== 'object' || (flatValue(v) && JSON.stringify(v).length < 220)) return JSON.stringify(v);
+  const pad = '\t'.repeat(depth + 1), end = '\t'.repeat(depth);
+  if (Array.isArray(v)) return '[\n' + v.map((e) => pad + ser(e, depth + 1)).join(',\n') + '\n' + end + ']';
+  return '{\n' + Object.keys(v).filter((k) => v[k] !== undefined).map((k) => pad + JSON.stringify(k) + ': ' + ser(v[k], depth + 1)).join(',\n') + '\n' + end + '}';
+}
+
+async function runExport() {
+  CUR = EXPORT_SEL;
+  const shapes = D.shapes.map((s) => exportShape(s.id)), extras = exportExtras();
+  const doc = {
+    meta: {
+      source: 'docs/images/map-art/source/round6.html',
+      git_revision: D.meta.git_revision,
+      date_utc: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+      note: 'git_revision is the game revision of shapes-current.json this export is built on. A detail level without its own list uses parts; a damage variant is used at every detail.',
+      picks: { steps: EXPORT_SEL.steps, fix4b: EXPORT_SEL.fix4b, fix6: EXPORT_SEL.fix6 },
+      provisional: {
+        missing_zoom2: shapes.filter((s) => !(s.parts_by_detail && s.parts_by_detail[2])).map((s) => s.id),
+        note: 'No zoom 2 version is drawn for these ids (or the drawn one sits on a hull that was replaced); they bake from parts at detail 2. Never invented here.',
+      },
+      corrections: corrections(shapes),
+    },
+    palette: exportPalette(),
+    shapes,
+    extras,
+  };
+  const r = await fetch('/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: ser(doc, 0) + '\n' });
+  if (r.status !== 204) throw new Error('export not recorded: HTTP ' + r.status);
+}
+
+// ---------- round trip ----------
+function posesOf(doc) {
+  const out = [];
+  doc.shapes.concat(doc.extras.filter((e) => e.parts)).forEach((s) => {
+    [0, ...Object.keys(s.damage_variants || {}).map(Number)].forEach((variant) => [0, 1, 2].forEach((detail) => POSE_HEADINGS.forEach((hb) => {
+      const tb = s.has_turret ? (hb + TURRET_OFFSET) % 64 : hb;
+      out.push({ key: [s.id, variant, detail, hb, tb].join('|'), shape: s, variant, detail, hb, tb });
+    })));
+  });
+  return out;
+}
+// Where one equal sort key puts two prims first differs by float noise between the page and the game; the picture is judged by painting both orders.
+const RASTER_STEP = 0.25;
+function paintedSlots(tris, lo, size) {
+  const w = Math.ceil(size[0] / RASTER_STEP) + 1, h = Math.ceil(size[1] / RASTER_STEP) + 1, cells = new Int8Array(w * h).fill(-1);
+  tris.forEach((t) => {
+    const [a, b, c] = [[t.v[0], t.v[1]], [t.v[2], t.v[3]], [t.v[4], t.v[5]]], den = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+    if (Math.abs(den) < 1e-9) return;
+    const x0 = Math.max(0, Math.floor((Math.min(a[0], b[0], c[0]) - lo[0]) / RASTER_STEP)), x1 = Math.min(w - 1, Math.ceil((Math.max(a[0], b[0], c[0]) - lo[0]) / RASTER_STEP));
+    const y0 = Math.max(0, Math.floor((Math.min(a[1], b[1], c[1]) - lo[1]) / RASTER_STEP)), y1 = Math.min(h - 1, Math.ceil((Math.max(a[1], b[1], c[1]) - lo[1]) / RASTER_STEP));
+    for (let iy = y0; iy <= y1; iy++) for (let ix = x0; ix <= x1; ix++) {
+      const px = lo[0] + (ix + 0.5) * RASTER_STEP, py = lo[1] + (iy + 0.5) * RASTER_STEP;
+      const l0 = ((b[1] - c[1]) * (px - c[0]) + (c[0] - b[0]) * (py - c[1])) / den, l1 = ((c[1] - a[1]) * (px - c[0]) + (a[0] - c[0]) * (py - c[1])) / den;
+      if (l0 >= -1e-6 && l1 >= -1e-6 && 1 - l0 - l1 >= -1e-6) cells[iy * w + ix] = t.slot;
+    }
+  });
+  return cells;
+}
+function samePicture(a, b) {
+  const xs = a.flatMap((t) => [t.v[0], t.v[2], t.v[4]]), ys = a.flatMap((t) => [t.v[1], t.v[3], t.v[5]]);
+  const lo = [Math.min(...xs), Math.min(...ys)], size = [Math.max(...xs) - lo[0], Math.max(...ys) - lo[1]];
+  const pa = paintedSlots(a, lo, size), pb = paintedSlots(b, lo, size);
+  return pa.every((s, k) => s === pb[k]);
+}
+function posePartList(pose) {
+  const dv = pose.variant && pose.shape.damage_variants && pose.shape.damage_variants[pose.variant];
+  return dv ? dv.parts : partsAt(pose.shape, pose.detail);
+}
+// Empty when the order is a valid back-to-front sort of the page's own keys (keys equal to 1e-6 may swap), else the reason it is not.
+function orderFault(pose, order) {
+  const parts = posePartList(pose);
+  if (!Array.isArray(order) || order.length !== parts.length) return 'its prim order does not list every part';
+  for (let pi = 0; pi < parts.length; pi++) {
+    const part = parts[pi], seq = order[pi], n = part.prims.length;
+    if (!Array.isArray(seq) || seq.length !== n || seq.some((i) => !Number.isInteger(i) || i < 0 || i >= n) || new Set(seq).size !== n) return `part ${part.name} lists prim indices that are not a permutation of 0..${n - 1}`;
+    const angle = part.angle === 'fixed' ? 0 : ((part.angle === 'turret' ? pose.tb : pose.hb) * Math.PI * 2) / 64, c = Math.cos(angle), s = Math.sin(angle);
+    const key = (i) => { const q = part.prims[i].offset; return q[0] * c - q[1] * s + q[0] * s + q[1] * c; };
+    if (!seq.every((i, k) => k === 0 || key(seq[k - 1]) <= key(i) + 1e-6)) return `part ${part.name} is not drawn back to front`;
+  }
+  return '';
+}
+function projectPose(pose, extra) {
+  return projectShape(pose.shape, { heading: (pose.hb * Math.PI * 2) / 64, turret: pose.shape.has_turret ? (pose.tb * Math.PI * 2) / 64 : null, detail: pose.detail, variant: pose.variant, ...extra })
+    .map((t) => ({ slot: t.slot, knife: !!t.knife, v: t.pts.flatMap((p) => [p[0], p[1]]) }));
+}
+// Equal sort keys draw in float-noise order, so a tie is accepted only when the page, re-drawn in the game's order, matches the game.
+function comparePose(pose, game) {
+  const other = game.tris.map((r) => ({ slot: r[6], v: r.slice(0, 6) })), pageOrder = [];
+  const js = projectPose(pose, { orderOut: pageOrder });
+  if (js.length !== other.length) return { status: 'fail', msg: js.length + ' triangles on the page, ' + other.length + ' in the game' };
+  const diff = (a, b) => Math.max(0, ...a.v.map((x, k) => Math.abs(x - b.v[k])));
+  const strict = (a, b) => a.slot === b.slot && diff(a, b) < 1e-3;
+  const sides = (a, b) => a.knife && [a.slot, b.slot].every((s) => s === 2 || s === 3) && diff(a, b) < 1e-3;
+  if (js.every((t, i) => strict(t, other[i]))) return { status: 'ok', max: Math.max(0, ...js.map((t, i) => diff(t, other[i]))) };
+  const pageFault = orderFault(pose, pageOrder), gameFault = orderFault(pose, game.order);
+  if (pageFault) return { status: 'fail', msg: 'the page draws ' + pageFault };
+  if (gameFault) return { status: 'fail', msg: 'the game order is wrong: ' + gameFault };
+  const again = projectPose(pose, { order: game.order });
+  let knife = 0, max = 0;
+  for (let i = 0; i < again.length; i++) {
+    if (strict(again[i], other[i])) { max = Math.max(max, diff(again[i], other[i])); continue; }
+    if (!sides(again[i], other[i])) return { status: 'fail', msg: `triangle ${i} (slot ${again[i].slot} on the page, ${other[i].slot} in the game) differs although the prims are drawn in the game's order` };
+    knife++; max = Math.max(max, diff(again[i], other[i]));
+  }
+  const orderDiffers = JSON.stringify(pageOrder) !== JSON.stringify(game.order), mask = (list) => list.map((t) => (t.knife ? { ...t, slot: 2 } : t));
+  if (orderDiffers && !samePicture(mask(js), mask(again))) return { status: 'fail', msg: 'prims of one equal sort key are drawn in another order and that changes the picture' + (knife ? ' (and shade differs on ' + knife + ' triangles)' : '') };
+  return { status: 'tie', max, knife, msg: [orderDiffers ? 'prim order differs, same picture' : '', knife ? 'shade differs on ' + knife + ' triangles (knife-edge faces)' : ''].filter(Boolean).join(', ') };
+}
+async function loadDoc(set) {
+  if (set === 'today') return D;
+  const r = await fetch('/docs/images/map-art/shapes-picked.json', { cache: 'no-store' });
+  if (!r.ok) throw new Error('fetch shapes-picked.json: HTTP ' + r.status);
+  return r.json();
+}
+const KNOWN_FAILING = ['frc_builder|0|2|24|24']; // today's game shape; P2.4's eight-heading paint-order audit fixes it
+async function runRoundtrip() {
+  const lines = [];
+  try {
+    const set = H.get('set') === 'today' ? 'today' : 'picked';
+    const [doc, res] = await Promise.all([loadDoc(set), fetch('/build/map-art/roundtrip-godot.json', { cache: 'no-store' })]);
+    if (!res.ok) throw new Error('fetch roundtrip-godot.json: HTTP ' + res.status);
+    const game = await res.json(), have = new Map();
+    game.forEach((g) => have.set([g.shape, g.variant, g.detail, g.hull_bucket, g.turret_bucket].join('|'), g));
+    const poses = posesOf(doc), want = new Set(poses.map((p) => p.key));
+    let bad = 0, ties = 0, shade = 0, known = 0, worst = 0;
+    poses.forEach((p) => {
+      const g = have.get(p.key);
+      if (!g) { lines.push('MISSING ' + p.key); bad++; return; }
+      const r = comparePose(p, g);
+      if (r.max !== undefined) worst = Math.max(worst, r.max);
+      if (r.status === 'ok') lines.push(`ok ${p.key} max ${r.max.toExponential(2)}`);
+      else if (r.status === 'tie') { ties++; shade += r.knife; lines.push(`TIE ${p.key} ${r.msg}`); } else if (KNOWN_FAILING.includes(p.key)) { known++; lines.push(`FAIL-KNOWN ${p.key} ${r.msg} | listed failing (user, 2026-11-17), P2.4 paint-order audit`); } else { bad++; lines.push(`FAIL ${p.key} ${r.msg}`); }
+    });
+    have.forEach((g, key) => { if (!want.has(key)) { lines.push('EXTRA ' + key); bad++; } });
+    lines.push(bad ? `FAIL ${bad} of ${poses.length}` : `PASS ${poses.length} max ${worst.toExponential(2)} px ties ${ties} shade ${shade} triangles known-failing ${known}`);
+  } catch (e) { lines.push('FAIL ' + (e && e.message || e)); }
+  await post('roundtrip', lines.join('\n') + '\n');
+}
+
+// ---------- audit ----------
+const SLAB = '#121c24';
+const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const lum = (rgb) => { const [r, g, b] = rgb.map(lin); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const contrast = (a, b) => { const [hi, lo] = [lum(hex2rgb(a)), lum(hex2rgb(b))].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+const MACHADO = {
+  deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+  protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]] };
+function lab(linRgb) {
+  const [r, g, b] = linRgb;
+  const X = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.95047, Y = 0.2126729 * r + 0.7151522 * g + 0.072175 * b, Z = (0.0193339 * r + 0.119192 * g + 0.9503041 * b) / 1.08883;
+  const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))];
+}
+const simulate = (hex, m) => { const l = hex2rgb(hex).map(lin); return m ? m.map((row) => Math.min(1, Math.max(0, row[0] * l[0] + row[1] * l[1] + row[2] * l[2]))) : l; };
+const dE = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+function minDistance(ha, hb) {
+  const L = (h, m) => lab(simulate(h, m));
+  return Math.min(...[null, MACHADO.deuteranopia, MACHADO.protanopia].map((m) => dE(L(ha, m), L(hb, m))));
+}
+const SHARE_FLOOR = { infantry: 0.3, laborer: 0.3, rocket_infantry: 0.2, tank_usa: 0.28, tank_china: 0.28, tank_china_gatling: 0.28, tank_frc: 0.28 };
+function ownerShare(shape, detail) {
+  const parts = partsAt(shape, detail), one = (p) => ({ ...shape, parts: [p], damage_variants: null, parts_by_detail: null });
+  let total = 0;
+  POSE_HEADINGS.forEach((b) => {
+    const a = (b * TAU) / 64, tris = [];
+    parts.forEach((p, i) => projectShape(one(p), { heading: a, turret: a, detail }).forEach((t) => tris.push({ part: i, slot: t.slot, p: t.pts, d: t.pts.map((q) => (q[1] + q[2]) / 16) })));
+    const r = auditRaster(tris, parts.length);
+    total += r.owner / Math.max(r.drawn, 1);
+  });
+  return total / POSE_HEADINGS.length;
+}
+// Findings that are accepted or owned elsewhere; each prints as a KNOWN line with its source. Nothing is added without the user.
+const DARK_TOPS = { 1: 1.86, 2: 1.09, 3: 2.07, 5: 1.65, 6: 1.21, 7: 1.13, 8: 2.53 }; // owner top on the dark ground, measured; a lower value fails
+const KNOWN = [
+  { re: /^contrast owner \d \w+ default on sand:/, source: 'design-answers-2026-11-08.md:653 (round 5, lifted default set): "No owner top reaches 3:1 against sand"; the side band carries the outline' },
+  { re: /^contrast owner \d \w+ default in fog on sand:/, source: 'accepted (user, 2026-11-17): fog dims owner colour on purpose; the side band separates shapes' },
+  { re: /^contrast owner (\d) \w+ default on dark ground: ([\d.]+)/, ok: (m) => +m[2] >= DARK_TOPS[m[1]], source: 'open: round 6 pick step owners_dark (user, 2026-11-17); Task 24 removes this entry' },
+  { re: /^contrast cargo colour on sand: ([\d.]+)/, ok: (m) => +m[1] >= 2.44, source: 'open: round 6 pick step cargo (user, 2026-11-17); Task 24 removes this entry' },
+  { re: /^china_rifle_infantry owner colour share at detail 2: ([\d.]+) %/, ok: (m) => +m[1] >= 21.2, source: 'design-answers-2026-11-08.md:686 records about 23 % against the 30 % floor; 21.2 % is the value measured on this page, a lower value is not known' },
+];
+
+function subjectsOf(shape) {
+  const views = [['parts', shape.parts]];
+  if (shape.parts_by_detail && shape.parts_by_detail[2]) views.push(['detail 2', shape.parts_by_detail[2]]);
+  Object.entries(shape.damage_variants || {}).forEach(([v, d]) => views.push(['damage ' + v, d.parts]));
+  return views.map(([tag, parts]) => ({ tag, shape: { ...shape, parts, has_turret: hasTurret(parts), damage_variants: null, parts_by_detail: null } }));
+}
+function runAuditChecks() {
+  CUR = EXPORT_SEL; LEGACY = false; PAL = palFor(EXPORT_SEL.steps);
+  const found = [];
+  let checks = 0;
+  const check = (ok, line) => { checks++; if (!ok) found.push(line); };
+  const shapes = D.shapes.map((s) => exportShape(s.id)).concat(exportExtras().filter((e) => e.footprint));
+  shapes.forEach((s) => subjectsOf(s).forEach(({ tag, shape }) => {
+    const a = auditAny(shape);
+    checks++;
+    a.issues.forEach((issue) => found.push(`${s.id} ${tag}: ${issue}`));
+  }));
+  shapes.filter((s) => SHARE_FLOOR[s.role]).forEach((s) => [0, 2].forEach((d) => {
+    const share = ownerShare({ ...s, damage_variants: null }, d);
+    check(share >= SHARE_FLOOR[s.role], `${s.id} owner colour share at detail ${d}: ${(share * 100).toFixed(1)} % (floor ${SHARE_FLOOR[s.role] * 100} %)`);
+  }));
+  const grounds = [['sand', GROUND.sand], ['dark ground', GROUND.dark], ['HUD slab', SLAB]], fog = PAL.fog.factor;
+  for (let o = 1; o <= 8; o++) {
+    const top = slotsFor(o, 'default')[0];
+    grounds.forEach(([name, g]) => check(contrast(top, g) >= 3, `contrast owner ${o} ${OWNER_NAME[o - 1]} default on ${name}: ${contrast(top, g).toFixed(2)} (bar 3)`));
+    if (fog) check(contrast(scaleHex(top, fog), scaleHex(GROUND.sand, fog)) >= 3, `contrast owner ${o} ${OWNER_NAME[o - 1]} default in fog on sand: ${contrast(scaleHex(top, fog), scaleHex(GROUND.sand, fog)).toFixed(2)} (bar 3)`);
+  }
+  for (let a = 1; a <= 8; a++) for (let b = a + 1; b <= 8; b++) {
+    const m = minDistance(slotsFor(a, 'default')[0], slotsFor(b, 'default')[0]);
+    check(m >= 20, `colour vision owner ${a} ${OWNER_NAME[a - 1]} / ${b} ${OWNER_NAME[b - 1]} default: smallest dE ${m.toFixed(1)} (bar 20)`);
+  }
+  [['SIDE', PAL.band.side], ['SIDE_DARK', PAL.band.sideDark]].forEach(([band, hex]) => grounds.slice(0, 2).forEach(([name, g]) => check(contrast(hex, g) >= 3, `contrast band ${band} on ${name}: ${contrast(hex, g).toFixed(2)} (bar 3)`)));
+  const cargo = cargoHex();
+  if (cargo) [['sand', GROUND.sand], ['dark ground', GROUND.dark], ['pile base slab', PAL.band.sideDark], ['HUD slab', SLAB]].forEach(([name, g]) => check(contrast(cargo, g) >= 3, `contrast cargo colour on ${name}: ${contrast(cargo, g).toFixed(2)} (bar 3)`));
+  // window.CAND6[step][option][id] = {parts}, added by the round 6 pick steps.
+  Object.entries(window.CAND6 || {}).forEach(([step, options]) => Object.entries(options).forEach(([option, items]) => Object.entries(items || {}).forEach(([id, raw]) => {
+    if (!raw || !Array.isArray(raw.parts)) return;
+    const base = BASE[id] || EXTRA[id] || {};
+    checks++;
+    auditAny({ ...base, id, parts: raw.parts, has_turret: hasTurret(raw.parts), damage_variants: null, parts_by_detail: null }).issues.forEach((issue) => found.push(`CAND6 ${step}/${option}/${id}: ${issue}`));
+  })));
+  return { found, checks };
+}
+async function runAudit() {
+  const lines = [];
+  try {
+    const { found, checks } = runAuditChecks();
+    const isKnown = (line) => KNOWN.find((k) => { const m = k.re.exec(line); return m && (!k.ok || k.ok(m)); });
+    const unexpected = found.filter((l) => !isKnown(l));
+    found.filter(isKnown).forEach((l) => lines.push(`KNOWN ${l} | ${isKnown(l).source}`));
+    unexpected.forEach((l) => lines.push('unexpected: ' + l));
+    lines.push(unexpected.length ? `FAIL ${unexpected.length}` : `PASS ${checks} known ${found.length - unexpected.length}`);
+  } catch (e) { lines.push('FAIL ' + (e && e.stack || e)); }
+  await post('audit', lines.join('\n') + '\n');
+}
+</script>
+<script>
+'use strict';
 const H = new URLSearchParams(location.hash.slice(1));
 const WEIGHTS = [400, 600, 700, 800];
 const NAME_RE = /^[a-z0-9-]+$/;
@@ -697,8 +1001,9 @@ function drawPic(name, o) {
 }
 async function start() {
   const [, hudOpts] = await Promise.all([loadFonts(), H.get('hud') ? hudOptions() : null]);
-  const rep = H.get('report'), name = H.get('pic');
-  if (rep) {
+  const rep = H.get('report'), name = H.get('pic'), job = { export: runExport, roundtrip: runRoundtrip, audit: runAudit }[[...H.keys()].find((k) => ['export', 'roundtrip', 'audit'].includes(k))];
+  if (job) await job();
+  else if (rep) {
     if (!reports[rep]) throw new Error('unknown report ' + rep);
     const file = H.get('name') || rep;
     if (!NAME_RE.test(file)) throw new Error('bad report name ' + file);
