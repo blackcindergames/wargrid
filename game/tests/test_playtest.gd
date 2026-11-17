@@ -9,7 +9,7 @@ const Launcher = preload("res://scenes/launcher.tscn")
 const SessionForm = preload("res://scripts/playtest/session_form.gd")
 const FocusCardView = preload("res://scripts/playtest/focus_card_view.gd")
 const HEADER := {"mode": "offline", "map": "dry_wells", "seed": 1, "factions": ["frc", "china"], "seat": 0, "build": "0.11.0-dev+abc"}
-const SHIPPED := ["p2.2-slice-2", "p2.2-quick-rematch", "p2.1-new-launcher", "p2-you-clicked", "p1-frc-economy", "p1-frc-tunnels-online", "p1-look-and-m6-fixes", "old-checks-2026-11"]
+const SHIPPED := ["p12-notes", "p2.2-slice-2", "p2.2-quick-rematch", "p2.1-new-launcher", "p2-you-clicked", "p1-frc-economy", "p1-frc-tunnels-online", "p1-look-and-m6-fixes", "old-checks-2026-11"]
 var scratch: String = "user://test-playtest-settings-%d.cfg" % OS.get_process_id()
 var commit_scratch: String = "user://test-playtest-commit-%d.txt" % OS.get_process_id()
 var sessions: String = "user://test-playtests-%d" % OS.get_process_id()
@@ -191,9 +191,9 @@ func _check_this_build(runner, port: SubViewport, view: Rect2, label: String, pa
 			var picker: OptionButton = panel.find_child("Picker", true, false)
 			runner.check(picker.item_count == SHIPPED.size() and not picker.disabled, "PT6 Picker lists every card and is enabled, got %d" % picker.item_count)
 			runner.check(_filed_shown(launcher) and _filed_label(launcher) == "Notes folder:" and _last_filed(launcher).text == ProjectSettings.globalize_path(PlaytestSession.dir), "PT6 with nothing filed the desktop panel shows the notes folder at %s" % label)
-			picker.select(4)
-			picker.item_selected.emit(4)
-			runner.check(FocusCards.chosen == "p1-frc-economy", "PT6 choosing item 5 sets the chosen card, got %s" % FocusCards.chosen)
+			picker.select(SHIPPED.find("p1-frc-economy"))
+			picker.item_selected.emit(SHIPPED.find("p1-frc-economy"))
+			runner.check(FocusCards.chosen == "p1-frc-economy", "PT6 choosing a card sets the chosen card, got %s" % FocusCards.chosen)
 			panel.find_child("Close", true, false).pressed.emit()
 			runner.check(not panel.visible and launcher.get_node("Pages").visible, "PT6 Close returns to the launcher at %s" % label)
 	launcher.free()

@@ -1,4 +1,14 @@
 [
+ {"id": "p12-notes", "title": "Notes that never block",
+  "new": ["The playtest notes live in one panel: checklist, questions and markers, any time during or after a match. Its title shows the key that opens it (`).", "The panel never pauses or blocks play and has no Save button: notes save themselves. Only the marker box (N) pauses an offline match while it is open.", "On desktop your notes are filed when you quit or close the window; in the browser they download when you come back to the launcher."],
+  "try": [
+   {"id": "panel", "text": "Type a comment into one of the panel's fields mid-match, then click the battlefield and give an order"},
+   {"id": "marker", "text": "Press N, pick a kind and Save, finish the match, then type a comment under the marker"},
+   {"id": "quit", "text": "Desktop: type in a field, leave the cursor in it, close the window, restart and look in the Notes folder shown on this card. Browser: go back to the main menu and look in your downloads."}],
+  "questions": [
+   {"id": "never_blocked", "text": "Saving my notes never got in my way"},
+   {"id": "found_file", "text": "I could find my saved notes"},
+   {"id": "saved_itself", "text": "I never had to think about saving"}]},
  {"id": "p2.2-slice-2", "title": "Result panel",
   "new": ["After a match the panel shows the match length and, for every player, units built, units lost and buildings lost.", "If your opponent leaves mid-match you win, and the panel says so.", "Leaving an online match now says what it means."],
   "try": [

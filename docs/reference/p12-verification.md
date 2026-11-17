@@ -4,14 +4,14 @@ Plan: [P12 plan](../superpowers/plans/2026-11-17-p12-notes-that-never-block.md).
 
 ```text
 Resume record (updated 2026-11-17)
-Branch / base commit / working-tree state: p12-notes / 10d152c / Task 4 committed, clean
-Last green task / next incomplete task: Task 4 / Task 5
+Branch / base commit / working-tree state: p12-notes / 10d152c / Task 5 committed, clean
+Last green task / next incomplete task: Task 5 (benchmark pending) / Task 5 Step 3 benchmark, then stop gate 1
 Changed paths since last commit: none
-Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1072 / 146396 / 0 / 0 / TESTS PASSED
+Last command / cases / checks / failures / exit / marker: sh tools/run_checks.sh / - / 5 / 0 / 0 / CHECKS PASSED
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); stop gate A passed (Firefox, Vivaldi); owner answers 2026-11-17 (desktop-only window close, "Not saved", m:ss, Chromium second download checked at gate 3)
+Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); stop gate A passed; owner answers 2026-11-17; rendered rerun owed after the merge (match_screen.gd changed)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 5 (Sonnet subagent)
+Next exact action: benchmark alone, then gate review (Grok + Opus + player-experience), then /ponytail-review
 ```
 
 ## Web download probe (Task 1)
@@ -55,3 +55,7 @@ The probe (`build/p12-probe/`, untracked) copies it from `new Blob` to `revokeOb
 | 2026-11-17 | 4 | red review-round tests before the fixes | `1e2b4b8` plus Task 4 plus review tests | overlay CASES 42 FAILURES 4 (PO13 x2, PO36, NB14); playtest CASES 28 FAILURES 11 (PT6 x4, NB12 x3, NB13 x2, NB15, PT14); empty-kind row red (", 0:00: ok"); mutations for guards green before: close_out removed from pause Quit -> NB10 red; the same-card guard removed -> NB13 red; keep_match removed -> PO14 red; restored |
 | 2026-11-17 | 4 | `WARGRID_TEST_ONLY` overlay, playtest.gd, launcher, online_scene, skirmish_scene; lint, warnings, boundary | `1e2b4b8` plus Task 4 and review fixes | exit 0 each (42/208/0, 28/309/0, 64/5727/0, 62/3088/0, 58/328/0); lint, warnings, boundary exit 0; simulation/net/relay/protocol diff empty |
 | 2026-11-17 | 4 | full `sh tools/run_tests.sh` (coordinator) | `1e2b4b8` plus Task 4 and review fixes | CASES 1072 CHECKS 146396 FAILURES 0, exit 0, no SCRIPT ERROR |
+| 2026-11-17 | 5 | focus card `p12-notes`, guide 05 and 13, packages, STATUS; `WARGRID_TEST_ONLY=test_playtest`, `test_launcher` | `b262857` plus Task 5 | 78/552/0 exit 0; 64/5727/0 exit 0 (`test_launcher.gd` L15b pinned the old first card's title, updated) |
+| 2026-11-17 | 5 | full `sh tools/run_tests.sh` | `b262857` plus Task 5 (first round) | CASES 1072 CHECKS 146396 FAILURES 0, exit 0 |
+| 2026-11-17 | 5 | docs review: Codex (gpt-6.1-sol medium) and Sonnet | `b262857` plus Task 5 | fixed: marker headings inverted; "no buttons / nothing pauses" false for the marker box; F22 labelled fixed before the gates; "every exit" (the launcher keeps a desktop sitting open); "unfinished" only after a crash or closed tab; download is requested, Chromium limit stated; no promise that notes cannot be lost; `setup` takes three callables; marker box rules; "sitting" defined; guide entry reordered; card try items and questions one thing each |
+| 2026-11-17 | 5 | `run_checks.sh`, `roadmap.py`, `check_public.sh` after the docs round | `b262857` plus Task 5 | CHECKS PASSED 5, exit 0; no README diff; PUBLIC CHECK PASSED |
