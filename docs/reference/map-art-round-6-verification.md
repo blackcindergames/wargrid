@@ -1,13 +1,13 @@
 ```text
-Resume record (updated 2026-11-17, commit point D)
-Branch / base commit / working-tree state: spike-art-6 / commit point D (Task 31), main merged in locally (8cb338c) / clean after the commit
-Last green task / next incomplete task: Task 31 (documents review accepted, ponytail cuts 1 and 8 proven) / Task 32 (both repositories in line)
+Resume record (updated 2026-11-17, commit point E)
+Branch / base commit / working-tree state: spike-art-6 / commit point E (Task 32), main merged in locally (8cb338c) / clean after the commit
+Last green task / next incomplete task: Task 32 (both repositories in line, review accepted) / none: the plan is done; push, merge and the P2.3a design are the user's
 Changed paths since last commit: none
 Last command / cases / checks / failures / exit / marker: run_tests TESTS PASSED 146411 (1079 cases); run_checks CHECKS PASSED 5; full audit PASS 830 known 1; 42 pictures re-shot after the cuts, AE 0; links 826, citations 124, 0 bad
 Known red case or blocker: frc_builder|0|2|24|24 listed failing (P2.4); docs/images/hud-v5/source/export_layout.sh can report "not rewritten" by chance (whole-second -nt check), a rerun passes
-Approved decisions, pre-authorizations used, deferred gates: stop gates 1 to 5 done; picks and questionnaire answers in the Task 21 and Task 22 rows (user, 2026-11-17); local merge of main and commits A to D (pre-approved); §11 line and the ponytail cut choice (user, 2026-11-17); commit point E pre-approved (user, 2026-11-17)
+Approved decisions, pre-authorizations used, deferred gates: stop gates 1 to 5 done; picks and questionnaire answers in the Task 21 and Task 22 rows (user, 2026-11-17); local merge of main and commits A to D (pre-approved); §11 line and the ponytail cut choice (user, 2026-11-17); commit point E with a local commit in the private notes (pre-approved, user, 2026-11-17)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: Task 32: private P2.3a groundwork Q11 to Q19 from round 6, P2.3a and P3 rows, fresh Opus review, commit point E in both repositories
+Next exact action: the user decides push and merge of spike-art-6; then the P2.3a design
 ```
 
 ## Zero Hour defaults
@@ -306,3 +306,9 @@ Coordinator cross-check (2026-11-17): `DeadTankHulk` `hulk.ini:841-848` (MinLife
 - Ponytail review: 15 findings; the user chose (2026-11-17) cut 1 (dead page pieces) and cut 8 (doc duplicates); the rest listed in the source README's "Deferred cuts". Proof: full audit `PASS 830 known 1` before and after (logs identical); 42 pictures re-shot to `build/map-art/cut/`, `magick compare -metric AE` 0 for all 42.
 - `sh tools/run_tests.sh`: `CASES 1079 CHECKS 146411 FAILURES 0`, `TESTS PASSED 146411`, exit 0 (before the cuts; no file under `game/` or `tools/` changed since).
 - `sh tools/run_checks.sh`: `CHECKS PASSED 5`, exit 0 (after the cuts). ruff format/check, mypy, gdlint over `docs/images/map-art/source`: exit 0. `sh tools/run_shell_checks.sh`: exit 0. `git status --short game tools`: empty.
+
+### 2026-11-17 Task 32: Both repositories in line (tree: spike-art-6 b22f34e plus `docs/packages.md` P2.3a and P3 rows and `docs/reference/map-art-shapes.md` P2.3a section and one "Not covered" line; private groundwork notes Q11 to Q19 answered, not in this repository)
+- `sh tools/check_public.sh > build/map-art/logs/32-public.log 2>&1`: `PUBLIC CHECK PASSED`, exit 0.
+- Link and citation check (Task 30 script over the three changed documents, this file included, `build/map-art/logs/32-links.log`): `docs 3 links 218 citations-checked 69 fails 0`, exit 0.
+- `git diff --quiet README.md`: exit 0. `git status --short game tools`: empty.
+- Fresh Opus high review of both repositories' changes: accept with minors, 0 Critical, 0 Important, 5 Minor; M2 to M5 applied; M1 kept: the stalled-site mark's white style stays an agent proposal (the user decided the P3 mark, not its style). `check_public.sh` PUBLIC CHECK PASSED; links 333, citations 54, 0 bad.

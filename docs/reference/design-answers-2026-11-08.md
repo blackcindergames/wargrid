@@ -1102,7 +1102,7 @@ The timed Ashfall playtest from the [player-experience review](#player-experienc
 
 ## P2.3a groundwork questionnaire (user, 2026-11-17)
 
-Answers to a read-only gap map of today's HUD against HUD v5 (working notes `p2-3a-groundwork.md`, private), with research and player-experience reviews where the user asked. The nine map-mark, edge and canvas questions wait for map art round 6. Inputs for the P2.3a design, not a design.
+Answers to a read-only gap map of today's HUD against HUD v5 (working notes `p2-3a-groundwork.md`, private), with research and player-experience reviews where the user asked. The nine map-mark, edge and canvas questions wait for map art round 6 (answered from round 6 on 2026-11-17: [map art shapes](map-art-shapes.md#p23a-see-your-selection-map-edge-canvas-and-marks)). Inputs for the P2.3a design, not a design.
 
 - **Interim:** today's button column becomes one bottom-right slab until P2.3b; no queue row in P2.3a.
 - **Window shapes:** the view is capped at 2.4:1 (2560x1080 and 3440x1440 fill the screen) and 16:10 (Steam Deck, MacBooks in fullscreen), the same online and offline; black bars beyond, a different shade from the canvas. Today's aspect is `keep`, so nobody loses width. Research found no RTS with a documented fairness cap (Zero Hour fork PR #1711 calls extra view an advantage). Rendered gate row at 2560x1080; headless layout tests at 1280x720, 1280x800 and 3440x1440.

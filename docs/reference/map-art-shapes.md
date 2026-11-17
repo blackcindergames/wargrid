@@ -47,7 +47,7 @@ Pictures: [gate reference](../images/map-art/gate-reference-z1.webp), [marks](..
 | Building selection | Footprint diamond, white 1.5 over a 4.5 under-stroke | Carried, not decided |
 | Hover | Four corner ticks, 0.32 of each diamond edge, line 1.5 | Ticks decided (2026-11-15); 0.32 and 1.5 carried, not decided |
 | Attack target | X, arm 6, line 2, 8 px above the ground point | X decided; sizes carried, not decided |
-| Move confirmation | Ring 9 x 4.5, line 1.5, one still of the 0.4 s close | 0.4 s decided; start and end radius not decided |
+| Move confirmation | Ring 9 x 4.5, line 1.5, one still of the 0.4 s close | 0.4 s decided; start and end radius not decided; line 1.5 carried, not decided |
 | Placement valid / blocked | Cell outline 1.25; blocked adds an X between edge midpoints (0.22 to 0.78 of the cell), 1.5; ghost at 55 % | Shapes decided; widths carried, not decided |
 | Range ring | 9 cells for the Rotary Gun Tower (`game/scripts/simulation/definitions/shared.gd:21`), iso ellipse rx 407, ry 204; line 1.25 | Range: game data. Line carried, not decided |
 | Rally | Line from the door 1.25; pole 24, line 1.5; flag 10 x 9; foot ring 4 x 2, line 1 | Pole and flag decided; sizes carried, not decided |
@@ -57,6 +57,9 @@ Pictures: [gate reference](../images/map-art/gate-reference-z1.webp), [marks](..
 - **Health bars:** the green-yellow-red fill with a thin owner frame is decided (HUD round, user, 2026-11-09); the pictures keep the game's colours (`health_color`, `world_view.gd:84`; bar 24 x 3, `:61`) by a coordinator call; the bar rule goes to the P2.3a health-bar A/B ([groundwork](design-answers-2026-11-08.md#p23a-groundwork-questionnaire-user-2026-11-17)).
 - **The "." key cap.** A filled square was tried in the gate picture and reverted: "." is the decided idle-builder key ([controls](design-answers-2026-11-08.md#controls-friends-playtest-user-2026-11-08)). Whether a bare "." reads on a key cap is for P2.3a to check.
 - **Owner colours in the HUD** follow palette A: the HUD v5 tokens `you` `#628ffa` and `enemy` `#d6120c` in `docs/images/hud-v5/layout.json` (lifted until 3:1 on `bg`; neither needed it). The P2.3a token A/B also checks owner colours against the cyan `sel` of the set that wins (user, 2026-11-17). Open (agent finding, 2026-11-17): palette A green `#4ad49b` sits 15.0 from the HUD `ally` token `#69ceaa` (teammate ping arrow and minimap dots, [layout](hud-v5-layout.md)), 7.8 under deuteranopia, below the owner-pair bar of 20; not decided whether the token A/B checks owners against `ally` as well, or the minimap draws owner colours (Full set, P3).
+- **Minimap dots (P3):** the HUD v5 source draws own squares in `you`, enemy diamonds in palette A red `#d6120c` and ally discs in `ally` (`docs/images/hud-v5/source/hud.js:89-98`); with more than one enemy, whether diamonds take each owner's colour is P3's design (agent finding); the ally colour is the open point above.
+- **Neon and friend/foe for the owner edge:** the edge and bars need no Neon variant, since Neon is removed (P2.4 rider); with P2.4's friend/foe mode on, the edge takes that mode's colours ([riders](#p24-three-armies-unit-shapes-and-the-palette)).
+- **Paused site:** the panel's `PAUSED · NO BUILDER` sits beside the map's four corner posts alone ([paused construction](#p26-three-kinds-of-base-buildings-doors-paused-sites-no-power)), which look like a site just started; P3's stalled-site mark is the map side (agent proposal: in the white mark style above, shape not drawn).
 - **Owner without colour** (open, agent finding, 2026-11-17): the selection panel shows a selected enemy's owner by colour only; in 3v3, with the friend/foe mode on or for a colour-blind player, nothing says which enemy owns a unit. Not decided whether the panel names the owner (player name or seat) beside the owner-colour edge.
 
 Game today and the tests these touch:
@@ -167,7 +170,7 @@ Wrecks are their own small item after P2.4 (user, 2026-11-17). Pictures: [today]
 
 - **Zoom 2 versions** of the 23 ids in `meta.provisional.missing_zoom2` (units in P2.4, buildings in P2.6); the export never invents them.
 - **Stale zoom 2 barracks:** `china_barracks` and `frc_barracks` `parts_by_detail["2"]` are the bodies before round 4's fixes (China 5.5 high instead of 4; FRC two rooms 5 high instead of three rooms 4 high), so they break the zoom 2 rule; P2.6 redraws both from `parts` (agent finding, not asked).
-- **Own stalled-site mark:** the P3 rider; until then the owner tells a paused site from a just-started one only by the selection panel (agent finding, 2026-11-17).
+- **Own stalled-site mark:** the P3 rider, in the white mark style with its shape not drawn (agent proposal); until then the owner tells a paused site from a just-started one only by the selection panel (agent finding, 2026-11-17).
 - **F21 stays open** until the art lab confirms the bolt in the game.
 - **Art lab list** (design non-goals and round 6): the occluded-unit cue (F17), pale roof edges, the contact mark under infantry, the completion settle and roof inset, dark ground on Ashfall, health bar size and rule, owner colours under fog for colour-blind players, F21's bolt, wrecks drawn under units.
 - **Not decided:** the health-bar rule (P2.3a A/B); the bar shade against the canvas (P2.3a design); mark line widths and sizes marked "carried" above; the dashed line's width and dash; the move ring's start and end radius; the crate drum's colour on the pad; a calmer, darker building roof (the 2026-11-09 answer) against today's full owner colour (P2.6).
