@@ -10,7 +10,7 @@ Lockstep assumes the same start, the same commands per tick and the same code. I
 
 ```mermaid
 flowchart TD
-    A["Both peers finish tick 60<br/>finish_tick hashes<br/>the snapshot"] --> B
+    A["Both peers finish tick 60<br/>the tick's job digests<br/>the snapshot, finish_tick<br/>takes the digest"] --> B
     B["Each peer puts its hash<br/>into the tick packet<br/>it sends right then"] --> C
     C["Relay forwards the packets<br/>and never compares values"] --> D
     D["Receiver reaches<br/>that packet's tick<br/>_verify_hashes compares<br/>with its own for tick 60"] --> E
@@ -29,7 +29,7 @@ flowchart TD
 Three layers carry this, each with a different job.
 
 - **Rules** keep the simulation reproducible in the first place (next section).
-- **The digest** is a short hash of the snapshot. Lockstep computes it every `hash_interval` ticks (default 30, one second) and sends it inside the tick packet. The relay checks only the format of the field, never its value ([digest research](../reference/state-digest-research.md), section 1).
+- **The digest** is a short hash of the snapshot. Every `hash_interval` ticks (default 30, one second) it is computed (online by the tick's pump job, which hands it to lockstep) and sent inside the tick packet. The relay checks only the format of the field, never its value ([digest research](../reference/state-digest-research.md), section 1).
 - **Traces** are files of per-tick hashes. Tests write them, CI and a local script compare them across operating systems, and the netplay scripts compare them across live clients.
 
 ## The rules, by theme
@@ -73,15 +73,15 @@ Why the proposal exists, from the [research note](../reference/state-digest-rese
 The netplay script has a scenario that does this on purpose (`tools/run_netplay.sh perturb`). Two headless clients play a match through a real relay, and seat 2 is started with `--perturb-at-tick 40`. A test hook then adds one credit to seat 2's player directly in the simulation, bypassing the command path. Nobody sent a different command; only the state differs.
 
 1. At tick 30 both peers hash and agree. Nothing is wrong yet.  
-   `Lockstep.finish_tick → StateHash.digest`
+   `run_job (want_digest) → StateHash.digest → Lockstep.finish_tick` (the headless client still lets `finish_tick` call `StateHash.digest` itself)
 2. At tick 40 the hook runs on seat 2 only, so seat 2's copy of that player has one credit more than seat 1's copy.  
    `headless_client._test_hooks`
 3. At tick 60 both peers hash again, this time to different values, and each puts its hash into the tick packet it sends at that moment.  
    `Lockstep.finish_tick`
 4. When a peer reaches the tick of the packet carrying that hash, it compares the sender's hash for tick 60 with its own. The values differ, so it ends the match as `ended_desync` ("hash mismatch at tick 60"). Because both sides compare, both end.  
-   `Lockstep.advance → _verify_hashes → _end`
+   `Lockstep.take → _verify_hashes → _end` (`advance` in the headless client)
 5. Each client writes `desync-seat<N>.json`: seat, tick, the hash rows so far, the full command log, the snapshot taken at the hash tick, the hash ring (the last 64 per-tick hashes, see below), and the match's map, seed and start choices. The headless clients write it into the scenario's report folder; in the game it goes to a `desync` folder under `user://` or, in the browser, is offered as a download.  
-   `Lockstep.desync_report(sim) → headless_client._write_logs` (game: `online_driver._write_report`)
+   `Lockstep.desync_report(sim) → headless_client._write_logs` (game: `online_driver._finish → _write_report`, whose `_report` asks the pump for the ring with a `want_ring` query job and adds it to `Lockstep.desync_report()`)
 6. `tools/desync_diff.py` takes the two reports. It compares the command logs first, then the snapshots, walking dictionaries with sorted keys and arrays by index, and prints the path of the first difference. Before that path it prints the first tick at which the two hash rings differ (`ring diverges at tick 41`). It exits 1 on a difference (`RING ONLY` when only the rings differ) and 0 with `IDENTICAL` otherwise.  
    `desync_diff.first_difference → _walk`, `ring_divergence`
 7. `tools/desync_bisect.py` takes one or both reports and replays the command log through the headless oracle, which writes one ring hash per tick. It names, per seat, the first tick where a hashed field of the report's ring leaves the local replay, and the first differing snapshot field. With `--client-b CMD` it replays on a second client (another platform or build of the same engine version) and compares the two ring logs; a ring that ends early on one client counts as a difference. If the oracle errors or exceeds its timeout, it writes the run's output to `oracle-<tag>.log` in the output folder and reports `BISECT FAILED` naming that file; a malformed report also ends in `BISECT FAILED` (exit 2).  
@@ -141,8 +141,8 @@ Playtest sessions use this. `tools/replay_session.sh` unpacks each recorded matc
 - `game/scripts/simulation/simulation.gd` — `next_random`, `RNG_SEED`, `_rng` (snapshot field `rng`), `snapshot`; `_tick_hash`, `hash_ring`, `HASH_RING_SIZE` (the per-tick ring). `match_stats`, `_match_stats` (display-only counters, outside both).
 - `game/scripts/simulation/start_spots.gd` — `assign`: the only seeded Godot RNG, setup only.
 - `game/scripts/match_settings.gd` — `starts`: where the relay seed reaches `StartSpots`.
-- `game/scripts/net/lockstep.gd` — `finish_tick` (hash on hash ticks), `wants_snapshot`, `_verify_hashes`, `desync_report` (carries `hash_ring`), `hash_rows`, `command_log`, `log_lines`.
-- `game/scripts/match/online_driver.gd` — `_write_report`: writes or downloads the desync JSON.
+- `game/scripts/net/lockstep.gd` — `finish_tick` (hash on hash ticks, from the job's digest when given), `wants_snapshot`, `take` and `_verify_hashes` (a quiet take leaves a mismatch undecided), `desync_report` (carries `hash_ring` when given a simulation), `hash_rows`, `command_log`, `log_lines`.
+- `game/scripts/match/online_driver.gd` — `_report` (ring from a query job), `_write_report`: writes or downloads the desync JSON.
 - `game/scripts/net/headless_client.gd` — `_test_hooks` (`perturb-at-tick`), `_replay_oracle`, `_oracle_sim`, `_state_row`, `--ring-log`, `--hash-log`, `--command-log`, `--replay-log`, `--factions`, `--state-ticks`, `--snapshot-dir`.
 - `tools/replay_session.sh`, `tools/playtest_session.py` — `replay_rows`: replay a playtest session's matches through the oracle.
 - `tools/test_sim_math.py` — the static determinism check (`CLOCK`, `RNG`, `NATIVE_HASH`, banned maths).
@@ -165,4 +165,4 @@ Playtest sessions use this. `tools/replay_session.sh` unpacks each recorded matc
 - Previous: [4. The tick](04-the-tick.md) for the sorted order the rules rely on. Next: [11. Multiplayer](11-multiplayer.md) for packets, relay and input delay.
 
 ---
-Checked against `60b6674`; the unhashed-counter passage against `0b1e03e`; the offline ring switch against `f46993b`. Files: `game/scripts/simulation/state_hash.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/start_spots.gd`, `game/scripts/match_settings.gd`, `game/scripts/net/lockstep.gd`, `game/scripts/net/headless_client.gd`, `game/scripts/match/online_driver.gd`, `game/scripts/launcher.gd`, `game/scripts/presentation/sound_director.gd`, `tools/test_sim_math.py`, `tools/compare_replays.py`, `tools/compare_local_traces.sh`, `tools/desync_diff.py`, `tools/desync_bisect.py`, `tools/run_netplay.sh`, `tools/replay_session.sh`, `tools/playtest_session.py`, `tools/run_python_checks.sh`, `game/tests/test_replay.gd`, `game/tests/test_state_hash.gd`, `game/tests/test_team_match.gd`, `game/tests/test_lockstep.gd`, `game/tests/test_match_stats.gd`, `.github/workflows/ci.yml`
+Checked against `60b6674`; the unhashed-counter passage against `0b1e03e`; the offline ring switch against `f46993b`; the digest and report passages for the game's online driver against `ca6a802` (SB4 branch). Files: `game/scripts/match/sim_pump.gd`, `game/scripts/simulation/state_hash.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/start_spots.gd`, `game/scripts/match_settings.gd`, `game/scripts/net/lockstep.gd`, `game/scripts/net/headless_client.gd`, `game/scripts/match/online_driver.gd`, `game/scripts/launcher.gd`, `game/scripts/presentation/sound_director.gd`, `tools/test_sim_math.py`, `tools/compare_replays.py`, `tools/compare_local_traces.sh`, `tools/desync_diff.py`, `tools/desync_bisect.py`, `tools/run_netplay.sh`, `tools/replay_session.sh`, `tools/playtest_session.py`, `tools/run_python_checks.sh`, `game/tests/test_replay.gd`, `game/tests/test_state_hash.gd`, `game/tests/test_team_match.gd`, `game/tests/test_lockstep.gd`, `game/tests/test_match_stats.gd`, `.github/workflows/ci.yml`
