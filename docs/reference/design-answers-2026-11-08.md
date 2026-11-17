@@ -1019,3 +1019,24 @@ Source: Hypersomnia review (private). Items that went into package rows, finding
 
 - **Bot reaction delay as a level lever** (user, 2026-11-16), later, M8.1 bot levels input: the delay between seeing a threat and reacting cuts competence, as the other level levers do; it only means something once fog exists, because today's bot reads the whole state.
 - **Keyed randomness dropped** (user, 2026-11-16): the draw stays one global stream. Revisit only if a "Cheaper step" experiment fails its digests because of draw order.
+
+## P12 Notes that never block questionnaire (user, 2026-11-17)
+
+Inputs: the P12 research note (private), [F22](../STATUS.md#findings-list). Zero Hour has no playtest form, so each answer is a Wargrid tooling call.
+
+- **No buttons** (user, 2026-11-17): only the action buttons go (Next match, End session, Save session, Discard, Close, Try again, Show in folder). The 1-5 score toggles stay, and so do the marker dialog's Save and Cancel.
+- **Reached during a match** (user, 2026-11-17): the form merges into the checklist panel, one panel on the ` key, holding the checklist, the questions and this match's markers.
+- **Never pauses** (user, 2026-11-17): an open form neither pauses offline play nor blocks orders; only the marker dialog keeps its offline pause.
+- **Filled in** (user, 2026-11-17): text, a score, a manual tick or a marker. Automatic trigger ticks alone file nothing.
+- **Sitting end** (user, 2026-11-17): a sitting ends when its file is written on quit (desktop) or downloaded (web); a new build id also starts a new sitting. Resume after a crash through `current.json` stays.
+- **Web download** (user, 2026-11-17): on every return to the launcher when something new was filled in; a closed tab's notes stay in `user://` and download at the next start. Needs a browser check.
+- **Desktop exits** (user, 2026-11-17): pause Quit, launcher Quit and closing the window all write the file.
+- **Mid-match record** (user, 2026-11-17): written on each marker and at match end, with no timer and no state digest mid-match; the record carries an additive unfinished field, so the format stays 1.
+- **Interrupted match** (user, 2026-11-17): a match cut short by a crash or a closed tab stays in its sitting, flagged unfinished, with no new UI.
+- **Discard dropped** (user, 2026-11-17): no discard action is left; an unwanted file is deleted by hand.
+- **Build path** (user, 2026-11-17): the checklist panel grows into the form, and the match in progress lives in the session as an unfinished match.
+- **Field saves** (user, 2026-11-17): text fields save on Enter or when focus leaves the field, not on every keystroke.
+- **Match end** (user, 2026-11-17): the panel opens by itself without taking focus, so the result panel keeps Enter.
+- **Card picker** (user, 2026-11-17): the launcher's focus-card picker no longer locks while a sitting is open. Picking another card files the open sitting if anything was filled in, then starts a new one, the same way a new build does.
+- **Saved hint** (user, 2026-11-17): passive text only. The panel footer shows "Saved" with the time of the last write. The launcher line under "Session open" shows the last filed path as selectable text on desktop, or "Notes downloaded: <name>" on web.
+- **Earlier markers** (user, 2026-11-17): after Play again, the previous match's markers stay listed as "Last match", with comment fields, until the new match gets its first marker.
