@@ -1,0 +1,9 @@
+body{margin:0;background:#0a0f14;color:#dfe7ec;font:14px/1.45 "Public Sans","Helvetica Neue",Helvetica,Arial,sans-serif}
+#err{position:fixed;left:0;right:0;top:0;z-index:99;background:#b3261e;color:#fff;font:600 14px ui-monospace,Menlo,monospace;padding:8px 14px;white-space:pre-wrap}
+#err:empty{display:none}
+[hidden]{display:none!important}
+#app{padding:12px 24px 60px}
+#app.shot{padding:0}
+.stage{position:relative;overflow:hidden;background:#a88e5c}
+.stage canvas{position:absolute;left:0;top:0;display:block}
+a{color:#60e5ed}

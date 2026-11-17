@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Wargrid map art, round 6</title>
+<link rel="stylesheet" href="../../hud-v5/source/hud.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div id="err"></div>
+<div id="app"></div>
+<script>
+window.MISSING = [];
+window.addErr = function (msg) { var e = document.getElementById('err'); if (e && e.textContent.indexOf(msg) < 0) e.textContent += msg + '\n'; };
+addEventListener('error', function (e) { addErr(e.message + ' (' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ')'); });
+addEventListener('unhandledrejection', function (e) { addErr('unhandled: ' + (e.reason && e.reason.message || e.reason)); });
+</script>
+<script src="shapes-current.js" onerror="MISSING.push('shapes-current.js')"></script>
+<script src="draw.js" onerror="MISSING.push('draw.js')"></script>
+<script src="picked.js" onerror="MISSING.push('picked.js')"></script>
+<script src="scenes.js" onerror="MISSING.push('scenes.js')"></script>
+<script src="scenes5.js" onerror="MISSING.push('scenes5.js')"></script>
+<script src="../../hud-v5/source/glyphs.js" onerror="MISSING.push('glyphs.js')"></script>
+<script src="../../hud-v5/source/glyphs3.js" onerror="MISSING.push('glyphs3.js')"></script>
+<script src="../../hud-v5/source/hud.js" onerror="MISSING.push('hud.js')"></script>
+<script>
+'use strict';
+const $ = (s, r) => (r || document).querySelector(s);
+const D = window.SHAPES, PK = window.PICKED;
+if (!D || !window.projectShape || !window.SCENES || !PK) throw new Error('core file missing (' + MISSING.join(', ') + '): nothing can be drawn');
+const SC5 = Object.assign({ PLATEAU: { x: [0, -1], y: [0, -1] }, CELLS: [], UP: [], DOWN: [], PATCH_FOCUS: [7, 31], DECOR_FOCUS: [17, 41], DECOR_ORIGIN: [0, 0], FOG_EDGE: [24, 24], FOG_FOCUS: [24, 24], FOG_UNITS: [] }, window.SCENES5 || {});
+const app = $('#app');
+
+// ---------- data ----------
+const BASE = {};
+D.shapes.forEach((s) => { BASE[s.id] = s; });
+const EXTRA = {};
+D.extras.forEach((s) => { EXTRA[s.id] = s; });
+const ZOOMS = ['0.5', '1', '2'];
+const FACTIONS = ['usa', 'china', 'frc'], FNAME = { usa: 'USA', china: 'China', frc: 'FRC' };
+const OWNER_NAME = ['blue', 'red', 'green', 'gold', 'orange', 'purple', 'teal', 'pink'];
+const OWNER_PAIRS = [[1, 2], [3, 4], [5, 6], [7, 8]];
+const OWNERS_5 = OWNER_PAIRS.map((p, i) => [p[0], p[1], OWNER_PAIRS[(i + 1) % 4][0]]);
+const OWNERS_L = [[1, 2, 4], [4, 1, 2], [3, 5, 6], [7, 8, 1]]; // rounds 1 to 4 (legacy pictures)
+const PAIRS = [['usa', 'china'], ['china', 'frc'], ['frc', 'usa']];
+const SUFFIX = { barracks: 'barracks', factory: 'factory', hq: 'command_center', depot: 'supply_center', power: 'power_plant' };
+const UNIT_SUFFIX = { rifle: 'rifle_infantry', rocket: 'rocket_infantry', dozer: 'builder', light: 'light_vehicle', tank: 'tank' };
+const PCTS = [100, 60, 25, 5, 0], BOXES = { big: [400, 240, 100, 20, 0], small: [50, 30, 12, 2, 0] };
+const SITE_BUILD = { 3: 'frc_factory', 2: 'frc_barracks' };
+const ORDER = ['barracks', 'factory', 'command_center', 'supply_center', 'power_plant'];
+const bodiesOf = (f) => ORDER.map((r) => f + '_' + r).filter((id) => BASE[id]);
+const BODIES = FACTIONS.flatMap(bodiesOf);
+const TANKS = ['usa_tank', 'china_light_vehicle', 'china_tank', 'frc_tank'], LIGHTS = ['usa_light_vehicle', 'frc_light_vehicle'];
+const ZSET = {
+  usa: ['usa_barracks', 'usa_factory', 'usa_command_center', 'usa_tank', 'usa_light_vehicle', 'usa_rifle_infantry'],
+  china: ['china_barracks', 'china_factory', 'china_command_center', 'china_light_vehicle', 'china_tank', 'china_collector', 'china_rifle_infantry'],
+  frc: ['frc_barracks', 'frc_factory', 'frc_command_center', 'frc_tank', 'frc_light_vehicle', 'frc_rifle_infantry'],
+};
+const ZALL = FACTIONS.flatMap((f) => ZSET[f]);
+const FIXB = ['china_power_plant', 'china_barracks', 'frc_barracks'], FIXU = ['usa_rifle_infantry', 'usa_rocket_infantry', 'usa_light_vehicle', 'frc_light_vehicle'];
+const OPT = { damage: { A: 'front' }, tanks: { A: 'boxes' }, zoom_low: {}, zoom_high: { A: 'added' }, fix_bldg: { A: 'fixed' }, fix_unit: { A: 'fixed' } };
+const OPT1 = { barracks: { B: 'bold' }, factory: { B: 'bold' }, hq: { B: 'bold' }, depot: { B: 'bold' }, power: { B: 'bold' }, rifle: { A: 'restrained' }, rocket: { A: 'restrained' }, dozer: { B: 'bold' }, light: { B: 'bold' } };
+const STEP_OF_SUFFIX = { barracks: 'barracks', factory: 'factory', command_center: 'hq', supply_center: 'depot', power_plant: 'power', rifle_infantry: 'rifle', rocket_infantry: 'rocket', builder: 'dozer', light_vehicle: 'light' };
+const OPT5 = { band: { A: 'deeper' }, owners: { A: 'lift' }, cliff: { A: 'firm' }, decor: { B: 'flat' }, fog: { B: 'lighter' } };
+const CLIFF_H = 8; // terrain_view.gd CLIFF_HEIGHT
+const OPTION = { pile: { B: 'rows' }, crate: { B: 'marked' }, heli: { A: 'one' } };
+
+// ---------- selection: one option per step, rounds 1 to 6 ----------
+// '0' = today, absent = the step does not apply (the earlier rounds' look stays); the picked options are the values of ALL_PICKED.
+// legacy: draw the rounds 1 to 4 way (old ground and shadow, no palette); the re-shoot selections leave it off.
+const R1 = { barracks: 'B', factory: 'B', hq: 'B', depot: 'B', power: 'B', wedge: 'A', rifle: 'A', rocket: 'A', dozer: 'B', light: 'B' };
+const R3 = { pile: 'B', cargo: 'B', crate: 'B', site: 'B', heli: 'A' };
+const R4 = { damage: 'A', tanks: 'A', zoom_low: '0', zoom_high: 'A', fix_bldg: 'A', fix_unit: 'A' };
+const R5 = { band: 'A', owners: 'A', neon: '0', cliff: 'A', decor: 'B', fog: 'B' };
+const todayOf = (o) => Object.fromEntries(Object.keys(o).map((k) => [k, '0']));
+const mkSel = (steps, over) => ({ steps, fix4b: false, fix6: false, legacy: false, ...over });
+const ALL_PICKED = mkSel({ ...R1, ...R3, ...R4, ...R5 }, { fix4b: true });
+const ALL_TODAY = mkSel({ ...todayOf(R1), ...todayOf(R3), ...todayOf(R4), ...todayOf(R5) });
+let CUR = ALL_PICKED; // the selection of the picture being drawn
+let SCALE = 1;
+let LEGACY = false; // rounds 1 to 4 pictures: the round 1 to 4 ground and shadow, no palette
+let PAL = null;
+const stepVal = (k) => CUR.steps[k];
+
+// ---------- shape resolution ----------
+const candCache = {};
+function mk(cacheKey, raw, base, id) {
+  if (!raw || !Array.isArray(raw.parts) || !base) return null;
+  if (cacheKey in candCache && candCache[cacheKey].raw === raw) return candCache[cacheKey].shape;
+  const shape = { ...base, id, parts: raw.parts, damage_variants: raw.damage_variants, parts_by_detail: raw.parts_by_detail, tri_count: undefined };
+  try { ZOOMS.forEach((z) => { countTriangles(shape, +z, 0); bboxPx(shape, +z); }); } catch (e) { addErr('candidate ' + cacheKey + ' is invalid: ' + e.message); candCache[cacheKey] = { raw, shape: null }; return null; }
+  candCache[cacheKey] = { raw, shape };
+  return shape;
+}
+function candShape(option, id) {
+  const src = BASE[id] && BASE[id].class === 'building' ? PK.cand : PK.cand2, fac = id.split('_')[0];
+  return mk(option + '|' + id, src && src[fac] && src[fac][option] && src[fac][option][id], BASE[id], id);
+}
+const cand3 = (group, option, key, base) => mk('3|' + group + '|' + option + '|' + key, PK.cand3 && PK.cand3[group] && PK.cand3[group][option] && PK.cand3[group][option][key], base, key);
+function resolve(id, option) {
+  if (!BASE[id]) return null;
+  if (!option) return { shape: BASE[id], state: 'current' };
+  const c = candShape(option, id);
+  return c ? { shape: c, state: 'cand' } : { shape: BASE[id], state: 'missing' };
+}
+function bakedOption(id) {
+  const k = STEP_OF_SUFFIX[id.replace(/^[a-z]+_/, '')];
+  return (k && OPT1[k][stepVal(k)]) || null;
+}
+function heliRes() {
+  const option = OPTION.heli[stepVal('heli')];
+  if (!option) return { shape: BASE.usa_collector, state: 'current' };
+  const sh = cand3('heli', option, 'usa_collector', BASE.usa_collector);
+  return sh ? { shape: sh, state: 'cand' } : { shape: BASE.usa_collector, state: 'missing' };
+}
+function pickedRes(id) {
+  if (id === 'usa_collector') return heliRes();
+  const r = resolve(id, bakedOption(id));
+  if (r.state === 'missing') r.state = 'current';
+  return r;
+}
+
+const c4entry = (fac, option, key) => {
+  const c = PK.cand4 && PK.cand4[fac], o = c && c[option], r = o && o[key];
+  return r && Array.isArray(r.parts) ? r : null;
+};
+const composeMemo = {};
+function shapeIn(id) {
+  if (!BASE[id]) return null;
+  const mkey = id + '|' + JSON.stringify([CUR.steps, CUR.fix4b]);
+  return composeMemo[mkey] || (composeMemo[mkey] = compose(id, CUR.steps));
+}
+// shape.parts = detail 0, parts_by_detail[1] and [2] when a zoom option applies, damage_variants[1] and [2] when a damage option applies.
+function compose(id, sel) {
+  const fac = id.split('_')[0], p = pickedRes(id), base = p.shape, isBody = BODIES.includes(id);
+  if (isBody && sel.damage === '0') return { shape: BASE[id], state: 'current' };
+  const miss = [];
+  let parts = base.parts, dmg = base.damage_variants, applied = false;
+  const need = (step, key) => {
+    const opt = OPT[step][sel[step]];
+    if (!opt) return null;
+    const r = c4entry(fac, opt, key);
+    if (r) applied = true; else miss.push(key);
+    return r;
+  };
+  if (TANKS.includes(id)) { const r = need('tanks', id); if (r) parts = r.parts; }
+  const fixStep = FIXB.includes(id) ? 'fix_bldg' : FIXU.includes(id) ? 'fix_unit' : null;
+  if (fixStep) { const r = need(fixStep, id); if (r) parts = r.parts; }
+  const b4 = CUR.fix4b && PK.cand4b && PK.cand4b[fac] && PK.cand4b[fac][id];
+  const over = b4 && Array.isArray(b4.parts) ? b4 : null;
+  if (over) { parts = over.parts; applied = true; }
+  if (isBody && OPT.damage[sel.damage]) {
+    dmg = {};
+    [1, 2].forEach((v) => { const r = need('damage', id + '@' + v); if (r) dmg[v] = { parts: r.parts }; });
+  }
+  let d0 = parts, pbd = base.parts_by_detail;
+  if (ZALL.includes(id) && !over) {
+    const a = need('zoom_low', id + '@d0'), b = need('zoom_high', id + '@d2');
+    if (a || b) { if (a) d0 = a.parts; pbd = { 1: parts, 2: b ? b.parts : parts }; }
+  }
+  if (!applied) return miss.length ? { shape: base, state: 'missing', miss } : p;
+  const shape = { ...base, parts: d0, damage_variants: dmg, parts_by_detail: pbd, tri_count: undefined };
+  try { ZOOMS.forEach((z) => { countTriangles(shape, +z, 0); [1, 2].forEach((v) => dmg && dmg[v] && countTriangles(shape, +z, 0, v)); bboxPx(shape, +z); }); } catch (e) { addErr('candidate ' + id + ' is invalid: ' + e.message); return { shape: base, state: 'missing', miss: ['invalid'] }; }
+  return { shape, state: miss.length ? 'missing' : 'cand', miss };
+}
+const tagOf = (b) => (b >= 40 ? 40 : b >= 15 ? 15 : b >= 5 ? 5 : b >= 1 ? 1 : 0);
+const todayPile = (size, pct) => EXTRA['supply_source_' + (size === 'big' ? '4x5' : '1x1') + '_boxes' + tagOf(BOXES[size][PCTS.indexOf(pct)])];
+function pileRes(size, pct) {
+  const c = stepVal('pile'), today = todayPile(size, pct), boxes = BOXES[size][PCTS.indexOf(pct)];
+  if (c === '0') return { shape: today, state: 'current', boxes, text: true };
+  const sh = cand3('piles', OPTION.pile[c], size + '_' + pct, today);
+  return sh ? { shape: sh, state: 'cand', boxes } : { shape: today, state: 'missing', boxes };
+}
+function cargoHex() { const l = PK.cand3.piles.cargo; return stepVal('cargo') === 'B' && l[0] ? l[0].hex : null; }
+function pileSlots(cfg) {
+  const a = slotsFor(0, cfg.set).slice(), hex = cargoHex();
+  if (hex) { a[0] = a[6] = hex; a[1] = scaleHex(hex, 0.75); }
+  return a;
+}
+const CRATE_BASE = { id: 'salvage_crate', name: 'Salvage crate', footprint: [1, 1], layer: 'ground', has_turret: false };
+function crateRes() {
+  const c = stepVal('crate'), option = OPTION.crate[c];
+  if (!option) return { today: true, state: c === '0' ? 'current' : 'today' };
+  const raw3b = PK.cand3b && PK.cand3b.site && PK.cand3b.site.crate;
+  const sh = (raw3b && mk('3b|crate', raw3b, CRATE_BASE, 'crate')) || cand3('site', option, 'crate', CRATE_BASE);
+  return sh ? { shape: sh, state: 'cand' } : { today: true, state: 'missing' };
+}
+function siteRes(n, pct) {
+  const c = stepVal('site'), building = shapeIn(SITE_BUILD[n]).shape;
+  if (c === 'B') {
+    const f = cand3('site', 'frame', 'site' + n + '_' + pct, BASE[SITE_BUILD[n]]);
+    return f ? { shape: f, rise: 1, state: 'cand', building } : { shape: building, rise: pct / 100, state: 'missing', building };
+  }
+  return { shape: building, rise: pct / 100, state: 'current', building, text: c === '0' ? pct + '%' : null };
+}
+// Option B in a base whose building has no frame stage: the game's rise plus four corner posts built like the frame parts.
+function postShapes(building, n) {
+  let top = 0;
+  building.parts.forEach((p) => p.prims.forEach((q) => { top = Math.max(top, q.offset[2] + q.size[2]); }));
+  const c = n / 2 - 0.08, post = (x, y) => ({ offset: [x, y, 0], size: [0.09, 0.09, top + 1], slot: 4, type: 'box' });
+  const mk = (name, prims) => ({ ...building, parts: [{ name, angle: 'fixed', pivot: [0, 0], prims }], damage_variants: undefined, parts_by_detail: undefined, tri_count: undefined });
+  return { back: mk('post_back', [post(-c, -c)]), front: mk('posts', [post(c, -c), post(-c, c), post(c, c)]) };
+}
+
+// ---------- counts ----------
+const bboxCache = new WeakMap();
+function bboxPx(shape, zoom, variant) {
+  let m = bboxCache.get(shape);
+  if (!m) bboxCache.set(shape, (m = {}));
+  const mkey = zoom + '|' + (variant || 0);
+  if (m[mkey]) return m[mkey];
+  const tris = projectShape(shape, { heading: 0, detail: detailFor(zoom), variant });
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  tris.forEach((t) => t.pts.forEach((p) => { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }));
+  return (m[mkey] = { x0: x0 * zoom, y0: y0 * zoom, x1: x1 * zoom, y1: y1 * zoom, w: (x1 - x0) * zoom, h: (y1 - y0) * zoom });
+}
+function selfCheck() {
+  const bad = [];
+  D.shapes.forEach((s) => {
+    if (countPrims(s) !== s.prim_count) bad.push(s.id + ' prims ' + countPrims(s) + ' vs ' + s.prim_count);
+    ZOOMS.forEach((z) => { const n = countTriangles(s, +z, 0); if (n !== s.tri_count[z].heading0) bad.push(s.id + ' z' + z + ' ' + n + ' vs ' + s.tri_count[z].heading0); });
+  });
+  return bad;
+}
+const CHECK_BAD = selfCheck();
+if (CHECK_BAD.length) addErr('Count self-check FAILED: ' + CHECK_BAD.slice(0, 6).join('; '));
+
+// ---------- colour maths ----------
+const hex2rgb = (h) => [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16) / 255);
+const mix = (a, b, t) => { const x = hex2rgb(a), y = hex2rgb(b); return '#' + x.map((v, i) => Math.round((v + (y[i] - v) * t) * 255).toString(16).padStart(2, '0')).join(''); };
+const scaleHex = (h, k) => '#' + hex2rgb(h).map((v) => Math.min(255, Math.round(v * 255 * k)).toString(16).padStart(2, '0')).join('');
+const GROUND = { sand: D.palette.ground.sand_biome_1.ground, dark: D.palette.ground.other_biome_0.ground };
+const slotsFor = (owner, set) => { const nm = set === 'neon' ? 'neon' : 'normal', a = D.palette.owner_slots[String(owner)][nm].hex.slice(); return PAL ? PAL.apply(a, owner, nm) : a; };
+
+// ---------- palette, ground, cliffs, decoration, fog ----------
+const to2 = (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0');
+const lighten = (h, a) => '#' + hex2rgb(h).map((v) => to2(v + (1 - v) * a)).join(''); // Godot Color.lightened
+const darken = (h, a) => '#' + hex2rgb(h).map((v) => to2(v * (1 - a))).join(''); // Godot Color.darkened
+const asHex = (v) => (typeof v === 'string' && /^#?[0-9a-f]{6}$/i.test(v.trim()) ? '#' + v.trim().replace('#', '').toLowerCase() : null);
+const fnum = (v) => (typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && isFinite(+v) ? +v : null);
+function pickKey(o, names) {
+  if (!o || typeof o !== 'object') return undefined;
+  for (const n of names) if (o[n] !== undefined) return o[n];
+  const keys = Object.keys(o);
+  for (const n of names) { const k = keys.find((x) => x.toLowerCase() === n.toLowerCase()); if (k !== undefined) return o[k]; }
+  return undefined;
+}
+const C5 = (group, step, opt) => { const g = PK.cand5 && PK.cand5[group], o = g && g[step], r = o && o[opt]; return r === undefined || r === null ? null : r; };
+function bandRes(letter) {
+  const today = { state: 'current', side: D.palette.side, sideDark: D.palette.side_dark, shadow: { alpha: 0.3, r: 6, rAir: 8, flat: false, building: null } };
+  if (!letter || letter === '0') return today;
+  const raw = C5('colour', 'band', OPT5.band[letter]);
+  if (!raw) return { ...today, state: 'missing' };
+  const out = { ...today, state: 'cand', shadow: { ...today.shadow } }, sh = out.shadow;
+  const side = asHex(pickKey(raw, ['SIDE', 'unit_side'])), sd = asHex(pickKey(raw, ['SIDE_DARK', 'sideDark'])), sv = pickKey(raw, ['SHADOW']);
+  if (side) out.side = side;
+  if (sd) out.sideDark = sd;
+  const a = Array.isArray(sv) ? fnum(sv[3]) : fnum(pickKey(sv, ['alpha', 'a'])) ?? fnum(sv), r = fnum(pickKey(raw, ['GROUND_SHADOW_RADIUS'])), ra = fnum(pickKey(raw, ['SHADOW_RADIUS']));
+  const flat = pickKey(raw, ['SHADOW_FLAT']), grow = fnum(pickKey(raw, ['BUILDING_SHADOW_GROW'])), off = pickKey(raw, ['BUILDING_SHADOW_OFFSET']);
+  if (a != null) sh.alpha = a;
+  if (r != null) sh.r = r;
+  if (ra != null) sh.rAir = ra;
+  if (flat !== undefined) sh.flat = !!flat;
+  if (grow != null || Array.isArray(off)) sh.building = { grow: grow || 0, off: Array.isArray(off) ? [fnum(off[0]) || 0, fnum(off[1]) || 0] : [0, 0] };
+  return out;
+}
+function ownersRes(letter) {
+  const today = { state: 'current', hex: {}, dark: {} };
+  if (!letter || letter === '0') return today;
+  const raw = C5('colour', 'owners', OPT5.owners[letter]);
+  if (!raw) return { ...today, state: 'missing' };
+  const src = Array.isArray(raw) ? raw : pickKey(raw, ['OWNER_BASE', 'owners', 'colours', 'colors', 'hex', 'default', 'values', 'base']) || raw;
+  const out = { state: 'cand', hex: {}, dark: {} };
+  const take = (v) => (typeof v === 'string' ? asHex(v) : v && typeof v === 'object' ? asHex(pickKey(v, ['hex', 'base', 'roof', 'colour', 'color'])) : null);
+  for (let o = 1; o <= 8; o++) {
+    const v = Array.isArray(src) ? src[o - 1] : src && typeof src === 'object' ? (src[o] !== undefined ? src[o] : src[OWNER_NAME[o - 1]]) : undefined, h = take(v);
+    if (h) { out.hex[o] = h; const d = v && typeof v === 'object' ? asHex(pickKey(v, ['roof_dark', 'dark', 'darkened'])) : null; if (d) out.dark[o] = d; }
+  }
+  if (!Object.keys(out.hex).length) out.state = 'unparsed';
+  return out;
+}
+function fogRes(letter) {
+  if (!letter || letter === '0') return { state: 'current', factor: null };
+  const raw = C5('colour', 'fog', OPT5.fog[letter]);
+  const f = fnum(raw) ?? fnum(pickKey(raw, ['FOG', 'factor', 'value', 'k', 'brightness', 'f', 'multiplier']));
+  if (f != null && f > 0 && f <= 1) return { state: 'cand', factor: f };
+  return { state: raw ? 'unparsed' : 'missing', factor: 0.5 };
+}
+function cliffRes(letter) {
+  if (!letter) return null;
+  if (letter === '0') return { state: 'current', raw: {} };
+  const raw = C5('terrain', 'cliff', OPT5.cliff[letter]);
+  return raw ? { state: 'cand', raw } : { state: 'missing', raw: {} };
+}
+const decorRes = (letter) => (!letter || letter === '0' ? null : (() => { const raw = C5('terrain', 'decor', OPT5.decor[letter]); return raw ? { state: 'cand', raw } : { state: 'missing', raw: null }; })());
+function cliffColours(res, gk) {
+  const key = gk === 'dark' ? 'other_biome_0' : 'sand_biome_1', g = D.palette.ground[key], raw0 = res ? res.raw : {};
+  const raw = pickKey(raw0, [gk, key, gk === 'dark' ? 'dark_biome' : 'sand_biome']) || raw0;
+  const col = (v, today, how) => (asHex(v) ? asHex(v) : fnum(v) != null ? (how === 'L' ? lighten(g.ground, fnum(v)) : darken(g.ground, fnum(v))) : today);
+  const top = col(pickKey(raw, ['top', 'cliff_top', 'top_factor', 'top_lighten', 'lighten']), g.cliff_top, 'L'), side = col(pickKey(raw, ['side', 'cliff_side', 'side_factor', 'side_darken', 'darken']), g.cliff_side, 'D');
+  const sl = pickKey(raw, ['cliff_side_lit', 'side_light', 'side_lighten', 'front_light', 'lit_side', 'front']), sideL = asHex(sl) || lighten(side, fnum(sl) ?? 0.08);
+  const rr = pickKey(raw, ['rim']) !== undefined ? pickKey(raw, ['rim']) : pickKey(raw0, ['rim']), ro = rr && typeof rr === 'object' ? rr : {}, rimOn = rr !== undefined && rr !== null && rr !== false;
+  const rimW = fnum(pickKey(ro, ['width_px', 'width', 'w', 'px'])) ?? fnum(rr) ?? 1.5, rimC = asHex(pickKey(ro, [gk, key, 'colour', 'color', 'hex'])) || lighten(top, fnum(pickKey(ro, ['top_lightened', 'lighten', 'factor'])) ?? 0.35);
+  const h = Math.min(CLIFF_H, fnum(pickKey(raw0, ['height_px', 'height', 'h'])) ?? fnum(pickKey(raw, ['height_px', 'height', 'h'])) ?? CLIFF_H);
+  return { top, side, sideL, h, rim: rimOn ? { w: rimW, col: rimC } : null, ground: g.ground };
+}
+const palMemo = {};
+function palFor(sel) {
+  const key = JSON.stringify(sel);
+  if (palMemo[key]) return palMemo[key];
+  const band = bandRes(sel.band), owners = ownersRes(sel.owners), fog = fogRes(sel.fog), cliff = cliffRes(sel.cliff), decor = decorRes(sel.decor);
+  return (palMemo[key] = { sel, band, owners, fog, cliff, decor,
+    apply(slots, owner, nm) {
+      slots[2] = band.side; slots[3] = band.sideDark;
+      if (owner >= 1 && nm === 'normal' && owners.hex[owner]) { const h = owners.hex[owner]; slots[0] = slots[6] = h; slots[1] = owners.dark[owner] || darken(h, 0.25); }
+      return slots;
+    } });
+}
+const setOf = () => (!LEGACY && stepVal('neon') === 'A' ? 'neon' : 'default');
+
+// ---------- stage ----------
+const plane = (cx, cy) => [32 * (cx - cy), 16 * (cx + cy)];
+// terrain_view.gd _build_ground: shade = ((x * 73856093) ^ (y * 19349663)) & 15) / 15 - 0.5; lightened(shade * 0.08) above 0, else darkened(-shade * 0.08).
+const groundCell = (hex, cx, cy) => { const sh = ((Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) & 15) / 15 - 0.5; return sh > 0 ? lighten(hex, sh * 0.08) : darken(hex, -sh * 0.08); };
+const toScreen = (ox, oy, z, c) => { const q = plane(c[0], c[1]); return [ox + q[0] * z, oy + q[1] * z]; };
+function fillPoly(ctx, pts, colour, stroke) {
+  ctx.fillStyle = colour; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach((q) => ctx.lineTo(q[0], q[1])); ctx.closePath(); ctx.fill();
+  if (stroke) { ctx.strokeStyle = colour; ctx.lineWidth = stroke; ctx.lineJoin = 'round'; ctx.stroke(); }
+}
+function groundRange(z, ox, oy) {
+  const inv = (X, Y) => { const px = (X - ox) / z, py = (Y - oy) / z; return [(px / 32 + py / 16) / 2, (py / 16 - px / 32) / 2]; };
+  const cs = [inv(0, 0), inv(1280, 0), inv(0, 720), inv(1280, 720)];
+  return [Math.floor(Math.min(...cs.map((c) => c[0]))) - 1, Math.ceil(Math.max(...cs.map((c) => c[0]))) + 1, Math.floor(Math.min(...cs.map((c) => c[1]))) - 1, Math.ceil(Math.max(...cs.map((c) => c[1]))) + 1];
+}
+function paintGround(ctx, z, ox, oy, colour) {
+  ctx.fillStyle = colour; ctx.fillRect(0, 0, 1280, 720);
+  const [c0, c1, r0, r1] = groundRange(z, ox, oy);
+  for (let cx = c0; cx <= c1; cx++) for (let cy = r0; cy <= r1; cy++) {
+    const quad = [[cx, cy], [cx + 1, cy], [cx + 1, cy + 1], [cx, cy + 1]].map((c) => toScreen(ox, oy, z, c));
+    if (LEGACY) {
+      const h = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0, shade = 1 + 0.04 * (((h % 2001) / 1000) - 1);
+      fillPoly(ctx, quad, scaleHex(colour, shade), 0);
+    } else fillPoly(ctx, quad, groundCell(colour, cx, cy), 0.6);
+  }
+}
+// Decoration from the picked decor option (patch frame: cells from the patch's top-left corner, placed at SC5.DECOR_ORIGIN in the world).
+const decorMemo = new Map();
+function decorData(res, gk) {
+  if (!res || !res.raw) return null;
+  if (decorMemo.has(res.raw) && decorMemo.get(res.raw)[gk]) return decorMemo.get(res.raw)[gk];
+  const raw = res.raw, cols = pickKey(raw, ['colours', 'colors']) || {};
+  const colour = (v, d, cm) => { const m = cm || cols; if (asHex(v)) return asHex(v); const e = m[v]; return asHex(e) || (e && typeof e === 'object' ? asHex(e[gk]) : null) || d; };
+  const off = SC5.DECOR_ORIGIN || [0, 0], at = (c) => [c[0] + off[0], c[1] + off[1]];
+  const polys = (list, d, cm) => (Array.isArray(list) ? list : []).flatMap((g) => {
+    const many = pickKey(g, ['polys', 'polygons']), one = pickKey(g, ['poly', 'polygon', 'cells', 'points']), fill = colour(pickKey(g, ['colour', 'color', 'fill', 'hex', 'c']), d, cm);
+    return (Array.isArray(many) ? many : Array.isArray(one) ? [one] : Array.isArray(g) ? [g] : []).filter((q) => Array.isArray(q) && q.length >= 3).map((q) => ({ poly: q.map(at), fill, alpha: fnum(pickKey(g, ['alpha', 'a'])) ?? 1, name: pickKey(g, ['kind', 'name']) }));
+  });
+  const out = { ground: polys(pickKey(raw, ['ground', 'patches']), '#7f6f4a'), shapes: [], water: [], bad: [] };
+  const wr = pickKey(raw, ['water']) || (PK.cand5 && PK.cand5.terrain && pickKey(PK.cand5.terrain, ['water']));
+  if (wr) out.water = polys([wr], '#6f8794', pickKey(wr, ['colours', 'colors']) || cols).map((g) => ({ ...g, fill: colour('water', g.fill, pickKey(wr, ['colours', 'colors']) || cols) }));
+  (pickKey(raw, ['shapes', 'objects', 'items']) || []).forEach((o, i) => {
+    const cell = pickKey(o, ['at', 'cell', 'pos', 'position', 'xy']), sh = pickKey(o, ['shape']), parts = pickKey(o, ['parts']) || (sh && sh.parts), h = fnum(pickKey(o, ['heading', 'angle', 'rot'])) || 0, pal = pickKey(o, ['palette', 'slots']);
+    if (!Array.isArray(cell) || !Array.isArray(parts)) { out.bad.push('shape ' + i); return; }
+    const shape = { id: 'decor' + i, parts, layer: 'ground', has_turret: false, class: 'unit' };
+    try { countTriangles(shape, 1, 0); } catch (e) { out.bad.push('shape ' + i + ': ' + e.message); return; }
+    const slots = ['#8098a5', darken('#8098a5', 0.25), '#3d515f', '#263842', '#8098a5', '#2a2c2e', '#8098a5', '#d8c8ae'];
+    if (Array.isArray(pal)) pal.forEach((v, k) => { const c = colour(v, null); if (c && k < 8) slots[k] = c; });
+    out.shapes.push({ cell: at(cell), shape, slots, heading: Math.abs(h) > 6.3 ? (h * Math.PI) / 180 : h });
+  });
+  const m = decorMemo.get(res.raw) || {};
+  m[gk] = out; decorMemo.set(res.raw, m);
+  return out;
+}
+function paintDecorGround(ctx, z, ox, oy, res, gk) {
+  const d = decorData(res, gk);
+  if (!d) return;
+  d.water.concat(d.ground).forEach((g) => { ctx.globalAlpha = g.alpha; fillPoly(ctx, g.poly.map((c) => toScreen(ox, oy, z, c)), g.fill, 0.6); ctx.globalAlpha = 1; });
+}
+// terrain_view.gd _draw_blocked: three quads per cell (front-left side, front-right side, lifted top); rim = a thin lit strip along the two front edges of the top.
+function paintCliffCell(ctx, it, cfg) {
+  const { ox, oy } = cfg.origin, z = +cfg.zoom, k = cfg.cliffCol, [x, y] = it.cell, lift = [0, -k.h * z];
+  const c = [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]].map((p) => toScreen(ox, oy, z, p)), up = (p) => [p[0] + lift[0], p[1] + lift[1]];
+  fillPoly(ctx, [c[3], c[2], up(c[2]), up(c[3])], k.sideL, 0.5);
+  fillPoly(ctx, [c[2], c[1], up(c[1]), up(c[2])], k.side, 0.5);
+  fillPoly(ctx, [up(c[0]), up(c[1]), up(c[2]), up(c[3])], k.top, 0.5);
+  if (k.rim) {
+    const w = k.rim.w * z, dn = (p) => [p[0], p[1] - w], raised = cfg.cliffSet;
+    if (!raised.has(x + ',' + (y + 1))) fillPoly(ctx, [up(c[3]), up(c[2]), dn(up(c[2])), dn(up(c[3]))], k.rim.col, 0);
+    if (!raised.has((x + 1) + ',' + y)) fillPoly(ctx, [up(c[2]), up(c[1]), dn(up(c[1])), dn(up(c[2]))], k.rim.col, 0);
+  }
+}
+function diamondPath(ctx, ax, ay, fx, fy, z) {
+  const c = [[-fx / 2, -fy / 2], [fx / 2, -fy / 2], [fx / 2, fy / 2], [-fx / 2, fy / 2]].map((q) => [ax + z * 32 * (q[0] - q[1]), ay + z * 16 * (q[0] + q[1])]);
+  ctx.beginPath(); ctx.moveTo(c[0][0], c[0][1]); c.slice(1).forEach((q) => ctx.lineTo(q[0], q[1])); ctx.closePath();
+}
+// Today: units only, a diamond of radius 6 (air 8) at alpha 0.3; the band option may flatten it and add a building shadow.
+function paintShadow(ctx, it, z) {
+  const sh = PAL.band.shadow;
+  if (it.unit && !it.noShadow) {
+    const r = it.shape.layer === 'air' ? sh.rAir : sh.r, ry = sh.flat ? r / 2 : r;
+    ctx.save(); ctx.translate(it.ax, it.ay); ctx.scale(z, z); ctx.fillStyle = `rgba(0,0,0,${sh.alpha})`;
+    ctx.beginPath(); ctx.moveTo(0, -ry); ctx.lineTo(r, 0); ctx.lineTo(0, ry); ctx.lineTo(-r, 0); ctx.closePath(); ctx.fill(); ctx.restore();
+  } else if (it.bld && it.fp && sh.building) {
+    const b = sh.building, q = plane(b.off[0], b.off[1]);
+    diamondPath(ctx, it.ax + z * q[0], it.ay + z * q[1], it.fp[0] + 2 * b.grow, it.fp[1] + 2 * b.grow, z);
+    ctx.fillStyle = `rgba(0,0,0,${sh.alpha})`; ctx.fill();
+  }
+}
+let FONT = '"Public Sans", Arial, sans-serif';
+// item: {shape, owner, ax, ay (stage px of the anchor), fp (footprint, buildings), tint, heading, unit, empty, label}
+function paintItems(ctx, items, cfg) {
+  const z = +cfg.zoom;
+  items.filter((it) => it.fp).forEach((it) => {
+    if (it.bld && !LEGACY) paintShadow(ctx, it, z);
+    diamondPath(ctx, it.ax, it.ay, it.fp[0], it.fp[1], z);
+    if (it.empty) { ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]); return; }
+    ctx.fillStyle = it.tint || mix(slotsFor(it.owner, cfg.set)[0], it.site ? '#887966' : '#687b8c', it.site ? 0.6 : 0.4); ctx.fill();
+  });
+  items.forEach((it) => {
+    if (it.cliff) { paintCliffCell(ctx, it, cfg); return; }
+    if (it.caption) { ctx.font = `600 11px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(30,18,0,.72)'; ctx.fillText(it.caption, it.ax, it.ay); ctx.textAlign = 'start'; return; }
+    if (it.empty) {
+      if (it.label) { ctx.font = `600 13px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.fillText(it.label, it.ax, it.ay + 4); }
+      return;
+    }
+    if (it.square) { const w = 4 * z; ctx.fillStyle = '#e8c547'; ctx.fillRect(it.ax - w / 2, it.ay - w / 2, w, w); return; }
+    if (it.selected && it.fp) { diamondPath(ctx, it.ax, it.ay, it.fp[0], it.fp[1], z); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    if (it.selected && it.hw) { const w = it.hw * z; ctx.beginPath(); ctx.moveTo(it.ax - w, it.ay); ctx.lineTo(it.ax, it.ay - w / 2); ctx.lineTo(it.ax + w, it.ay); ctx.lineTo(it.ax, it.ay + w / 2); ctx.closePath(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke(); }
+    if (it.unit && !LEGACY) paintShadow(ctx, it, z);
+    drawShape(ctx, it.shape, { x: it.ax, y: it.ay, zoom: z, heading: it.heading || 0, turret: it.unit ? it.heading || 0 : null, rise: it.rise, slots: it.slots || slotsFor(it.owner, cfg.set), flat: null, shadow: LEGACY && !!it.unit, variant: it.variant });
+  });
+  ctx.font = `${12 * z}px ${FONT}`; ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+  items.forEach((it) => (it.texts || []).forEach((t) => ctx.fillText(t.t, it.ax + t.dx, it.ay + t.dy)));
+  ctx.textAlign = 'start';
+}
+
+const ang = (k) => (k * Math.PI) / 4;
+const TEXT_H = 15; // approximate height of Godot's fallback font at size 12
+function pileTexts(size, boxes, z) { // world_view.gd:pile_text_points: back corner of the footprint, 8 px up, two lines
+  const [fx, fy] = size === 'big' ? [4, 5] : [1, 1], x = z * 16 * (fy - fx), y = z * (-8 * (fx + fy) - 8);
+  return [{ t: 'Boxes ' + boxes, dx: x, dy: y - z * TEXT_H }, { t: 'docked 0 · waiting 0', dx: x, dy: y }];
+}
+const pileItem = (size, pct, res, cfg, ax, ay, extra) => ({ shape: res.shape, owner: 0, slots: pileSlots(cfg), ax, ay, fp: size === 'big' ? [4, 5] : [1, 1], tint: '#9f8045',
+  texts: res.text ? pileTexts(size, res.boxes, +cfg.zoom) : null, ...extra });
+const siteItem = (n, res, cfg, owner, ax, ay, pct, extra) => ({ shape: res.shape, owner, ax, ay, fp: [n, n], site: true, rise: res.rise, texts: res.text ? [{ t: res.text, dx: 0, dy: 0 }] : null, ...extra });
+
+// ---------- rows (round 4 views) ----------
+const ownOf = (cfg, id) => cfg.triples[cfg.owner][FACTIONS.indexOf(id.split('_')[0])];
+const spec = (cfg, id, extra) => ({ shape: shapeIn(id).shape, owner: ownOf(cfg, id), ...(BASE[id].footprint ? { fp: BASE[id].footprint } : { unit: true, heading: ang(cfg.heading) }), ...extra });
+const slotW = (s, z) => Math.max(bboxPx(s.shape, z, 0).w, s.fp ? 32 * (s.fp[0] + s.fp[1]) * z : 0) + 12;
+function layoutRow(specs, ay, z, out, lo = 16, hi = 1264) {
+  const ws = specs.map((s) => slotW(s, z)), tot = ws.reduce((a, b) => a + b, 0), gap = Math.max(0, (hi - lo - tot) / specs.length);
+  let x = lo + gap / 2;
+  specs.forEach((s, i) => { out.push({ ...s, ax: x + ws[i] / 2, ay }); x += ws[i] + gap; });
+}
+function headingGrid(cfg, out, ids, y0, dy) {
+  ids.forEach((id, k) => { for (let i = 0; i < 8; i++) out.push(spec(cfg, id, { ax: 90 + 150 * i, ay: y0 + dy * k, heading: ang(cfg.heading + i), selected: k === 0 && i === 0, hw: 16 })); });
+}
+const ROLE_LABEL = { barracks: 'Barracks', factory: 'Factory', command_center: 'HQ', supply_center: 'Depot', power_plant: 'Power plant' };
+function damageRows(cfg, out) {
+  const z = +cfg.zoom, facs = z < 1 ? FACTIONS : [PAIRS[cfg.pair][0]], room = 1248, rowH = 80 + 80 * z, top = 24 + 80 * z, rows = [];
+  facs.forEach((f) => bodiesOf(f).forEach((id) => {
+    const members = [0, 1, 2].map((v) => spec(cfg, id, { variant: v })), w = members.reduce((a, m) => a + slotW(m, z), 0);
+    let r = rows[rows.length - 1];
+    if (!r || r.f !== f || r.w + w > room) rows.push((r = { f, gs: [], w: 0 }));
+    r.gs.push({ id, f, members }); r.w += w;
+  }));
+  rows.forEach((r, k) => {
+    const ay = top + k * rowH, gap = Math.max(0, Math.min(60, (room - r.w) / r.gs.length));
+    if (ay + 30 > 720) return;
+    let x = 16 + Math.max(0, room - r.w - gap * r.gs.length) / 2 + gap / 2;
+    r.gs.forEach((g) => {
+      const x0 = x, fp = BASE[g.id].footprint;
+      g.members.forEach((m) => { const w = slotW(m, z); out.push({ ...m, ax: x + w / 2, ay }); x += w; });
+      out.push({ caption: FNAME[g.f] + ' ' + ROLE_LABEL[g.id.replace(/^[a-z]+_/, '')] + ' · 100 / 70 / 35 %', ax: (x0 + x) / 2, ay: ay + 8 * z * (fp[0] + fp[1]) + 14 });
+      x += gap;
+    });
+  });
+}
+const sampleSpecs = (cfg, f, kind) => ZSET[f].filter((id) => !kind || (kind === 'b') === !!BASE[id].footprint)
+  .flatMap((id) => (/rifle_infantry$/.test(id) ? [0, 2, 5].map((i) => spec(cfg, id, { heading: ang(cfg.heading + i) })) : [spec(cfg, id)]));
+const ROWS4 = {
+  damage: damageRows,
+  tanks: (cfg, out) => headingGrid(cfg, out, TANKS.concat(LIGHTS), 80, 106),
+  fix_unit: (cfg, out) => headingGrid(cfg, out, FIXU, 100, 150),
+  fix_bldg: (cfg, out) => { const z = +cfg.zoom, ays = z >= 2 ? [270, 610] : [230, 500]; ['china', 'frc'].forEach((f, k) => layoutRow(bodiesOf(f).map((id) => spec(cfg, id)), ays[k], z, out)); },
+  zoom_high: (cfg, out) => { const f = PAIRS[cfg.pair][0]; layoutRow(sampleSpecs(cfg, f, 'b'), 250, +cfg.zoom, out); layoutRow(sampleSpecs(cfg, f, 'u'), 580, +cfg.zoom, out); },
+};
+
+// ---------- the base scene ----------
+const roleId = (fac, role) => fac + '_' + (role === 'rifle' || role === 'rocket' ? UNIT_SUFFIX[role] : role === 'light' ? 'light_vehicle' : role === 'dozer' ? 'builder' : 'tank');
+// cfg.focusKey: the round 5 step whose camera the picture uses (zoomed in); cfg.dmg: three damage levels spread over each base; cfg.mix: China's tank crowd mixes both tanks.
+const FOCUS_OF = { band: [19, 20], owners: [19, 20], neon: [19, 20], cliff: SC5.PATCH_FOCUS, decor: SC5.DECOR_FOCUS, fog: SC5.FOG_FOCUS };
+function baseItems(cfg) {
+  const z = +cfg.zoom, [fw, fe] = PAIRS[cfg.pair], ow = cfg.triples[cfg.owner], owners = [ow[0], ow[1]];
+  const blds = SCENES.buildings((id) => BASE[id] && BASE[id].footprint, fw, fe);
+  const sites = SCENES.SITES.map((st) => {
+    const fac = st.side === 'west' ? fw : fe, id = fac + '_' + st.role, fp = BASE[id].footprint, o = SCENES.ORIGINS[st.side], n = fp[0];
+    const west = st.side === 'west';
+    return { id: 'site_' + id, bid: id, n, side: st.side, rise: st.rise, cell: west ? [o[0] + st.local[0], o[1] + st.local[1]] : [o[0] + st.local[1], o[1] + st.local[0]], fp: west ? fp : [fp[1], fp[0]] };
+  });
+  const pileBoxes = SCENES.PILES.map((p) => ({ id: 'pile', cell: p.cell, fp: p.size === 'big' ? [4, 5] : [1, 1] }));
+  const bad = SCENES.overlaps(blds.concat(sites, pileBoxes));
+  if (bad.length) addErr('scenes.js: footprints overlap: ' + bad.join(', '));
+  const frcEast = fw !== 'frc';
+  const cam = cfg.cam != null ? cfg.cam : z < 1 ? 2 : 0, free = z >= 1 && cfg.cam == null;
+  const f = cfg.focus || (free && FOCUS_OF[cfg.focusKey]) || SCENES.FOCUS[cam], fp0 = plane(f[0], f[1]), anc = cfg.anchor || SCENES.ANCHOR;
+  let ox = anc[0] - z * fp0[0], oy = anc[1] - z * fp0[1];
+  const toPx = (cx, cy) => { const q = plane(cx, cy); return [ox + z * q[0], oy + z * q[1]]; };
+  const items = [];
+  const dim = (it) => { const b = bboxPx(it.shape, z); return { x0: it.ax + b.x0, x1: it.ax + b.x1, bottom: it.ay + Math.max(b.y1, it.fp ? z * 16 * (it.fp[0] + it.fp[1]) / 2 : 0) }; };
+  const seen = { west: 0, east: 0 };
+  blds.forEach((b) => {
+    const r = shapeIn(b.id), c = SCENES.centreOf(b), p = toPx(c[0], c[1]);
+    const variant = cfg.dmg && BODIES.includes(b.id) ? (seen[b.side]++ + (b.side === 'east' ? 1 : 0)) % 3 : 0;
+    items.push({ shape: r.shape, owner: owners[b.side === 'west' ? 0 : 1], ax: p[0], ay: p[1], depth: c[0] + c[1], fp: b.fp, bld: true, variant, selected: b.side === 'west' && b.suffix === 'command_center' });
+  });
+  sites.forEach((st) => {
+    const c = SCENES.centreOf(st), p = toPx(c[0], c[1]), pct = st.rise >= 0.7 ? 90 : 50, owner = owners[st.side === 'west' ? 0 : 1], fac = st.side === 'west' ? fw : fe;
+    const choice = stepVal('site'), bshape = shapeIn(st.bid).shape;
+    const frame = choice === 'B' && fac === 'frc' ? cand3('site', 'frame', 'site' + st.n + '_' + pct, BASE[st.bid]) : null;
+    if (frame) { items.push(siteItem(st.n, { shape: frame, rise: 1 }, cfg, owner, p[0], p[1], pct, { depth: c[0] + c[1], fp: st.fp, bld: true })); return; }
+    const text = choice === '0' ? pct + '%' : null, post = choice === 'B' ? postShapes(bshape, st.n) : null;
+    if (post) items.push({ shape: post.back, owner, ax: p[0], ay: p[1], depth: c[0] + c[1] - 0.001, bld: true });
+    items.push(siteItem(st.n, { shape: bshape, rise: st.rise, text }, cfg, owner, p[0], p[1], pct, { depth: c[0] + c[1], fp: st.fp, bld: true }));
+    if (post) items.push({ shape: post.front, owner, ax: p[0], ay: p[1], depth: c[0] + c[1] + 0.001, bld: true });
+  });
+  SCENES.PILES.forEach((pl) => {
+    const fp = pl.size === 'big' ? [4, 5] : [1, 1], c = [pl.cell[0] + fp[0] / 2, pl.cell[1] + fp[1] / 2], p = toPx(c[0], c[1]);
+    items.push(pileItem(pl.size, pl.pct, pileRes(pl.size, pl.pct), cfg, p[0], p[1], { depth: c[0] + c[1] }));
+  });
+  const a = (-Math.PI / 4) + (cfg.heading * Math.PI) / 4, unitItem = (id, owner, cell, heading, extra) => {
+    const r = shapeIn(id), p = toPx(cell[0], cell[1]);
+    items.push({ shape: r.shape, owner, ax: p[0], ay: p[1] - (extra && extra.up ? CLIFF_H * z : 0), depth: cell[0] + cell[1], unit: true, heading, ...extra });
+  };
+  [['west', fw, owners[0], 0], ['east', fe, owners[1], 1]].forEach(([side, fac, owner, k]) => {
+    let ti = 0;
+    SCENES.ARMY.forEach(([role, x, y]) => {
+      let id = roleId(fac, role);
+      if (cfg.mix && role === 'tank' && fac === 'china' && ti++ % 2) id = 'china_light_vehicle';
+      unitItem(id, owner, k ? SCENES.transpose([x, y]) : [x, y], k ? a + Math.PI : a, { enemy: k === 1 });
+    });
+  });
+  SCENES.TRUCKS.forEach(([x, y, k]) => unitItem('china_collector', owners[k], [x, y], a, { enemy: k === 1 }));
+  // Salvage crates exist only for an FRC player: near the FRC army, else near the east army.
+  (cfg.noCrates ? [] : SCENES.CRATES).forEach(([x, y]) => {
+    const cell = frcEast ? SCENES.transpose([x, y]) : [x, y], c = crateRes(), p = toPx(cell[0], cell[1]);
+    items.push(c.today ? { square: true, ax: p[0], ay: p[1], depth: cell[0] + cell[1] } : { shape: c.shape, owner: 0, slots: pileSlots(cfg), ax: p[0], ay: p[1], depth: cell[0] + cell[1] });
+  });
+  SCENES.AIR.forEach(([x, y], i) => unitItem('usa_collector', owners[i], [x, y], a + i * Math.PI, { air: true, enemy: i === 1 }));
+  if (PAL && PAL.cliff) {
+    SC5.CELLS.forEach((c) => items.push({ cliff: true, cell: c, depth: c[0] + c[1] + 1 }));
+    SC5.UP.forEach(([role, x, y]) => unitItem(roleId(fw, role), owners[0], [x, y], a, { up: true, depth: Math.floor(x) + Math.floor(y) + 1.5 }));
+    SC5.DOWN.forEach(([role, x, y]) => unitItem(roleId(fw, role), owners[0], [x, y], a));
+  }
+  const dd = PAL && decorData(PAL.decor, cfg.ground);
+  if (dd) dd.shapes.forEach((sh) => { const p = toPx(sh.cell[0], sh.cell[1]); items.push({ shape: sh.shape, slots: sh.slots, ax: p[0], ay: p[1], depth: sh.cell[0] + sh.cell[1], heading: sh.heading, deco: true }); });
+  const fog = PAL && PAL.fog.factor;
+  if (fog) SC5.FOG_UNITS.forEach(([role, x, y]) => unitItem(roleId(fe, role), owners[1], [x, y], a + Math.PI, { enemy: true }));
+  if (cam === 2 && z < 1) { // fit: buildings end 35 px above the dock slabs, everything else 7 px, scene centred
+    let x0 = 1e9, x1 = -1e9, bBottom = -1e9, oBottom = -1e9;
+    items.forEach((it) => {
+      if (it.cliff || it.deco) return;
+      if (it.square) { oBottom = Math.max(oBottom, it.ay + 4); return; }
+      const d = dim(it);
+      if (it.bld) { x0 = Math.min(x0, d.x0); x1 = Math.max(x1, d.x1); bBottom = Math.max(bBottom, d.bottom); } else oBottom = Math.max(oBottom, it.fp ? d.bottom : it.ay + 8);
+    });
+    const dx = 640 - (x0 + x1) / 2, dy = Math.min(720 - 168 - 35 - bBottom, 720 - 168 - 7 - oBottom);
+    items.forEach((it) => { if (!it.cliff) { it.ax += dx; it.ay += dy; } });
+    ox += dx; oy += dy;
+  }
+  const edge = toPx(SC5.FOG_EDGE[0], SC5.FOG_EDGE[1])[0], shown = fog ? items.filter((it) => !(it.enemy && it.ax > edge)) : items; // enemy units in the fog are not seen; buildings stay (frozen)
+  shown.sort((p, q) => (p.air ? 1 : 0) - (q.air ? 1 : 0) || p.depth - q.depth);
+  return { items: shown, ox, oy, edge };
+}
+
+// ---------- stages ----------
+const CFG0 = { zoom: '0.5', ground: 'sand', owner: 0, pair: 0, heading: 0, cam: null, dmg: false, mix: false };
+function startStage(cfg) {
+  LEGACY = !!CUR.legacy;
+  PAL = LEGACY ? null : palFor(CUR.steps);
+  cfg.triples = LEGACY ? OWNERS_L : OWNERS_5;
+  cfg.set = setOf();
+  cfg.cliffCol = PAL && PAL.cliff ? cliffColours(PAL.cliff, cfg.ground) : null;
+  cfg.cliffSet = new Set(SC5.CELLS.map((c) => c[0] + ',' + c[1]));
+  const el = document.createElement('div');
+  el.className = 'stage';
+  el.style.width = 1280 * SCALE + 'px'; el.style.height = 720 * SCALE + 'px';
+  const cv = document.createElement('canvas');
+  cv.width = 1280 * SCALE; cv.height = 720 * SCALE; cv.style.width = cv.width + 'px'; cv.style.height = cv.height + 'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  el.appendChild(cv);
+  return { el, ctx };
+}
+function baseStage(over) {
+  const cfg = { ...CFG0, ...over }, { el, ctx } = startStage(cfg), z = +cfg.zoom, b = baseItems(cfg);
+  cfg.origin = { ox: b.ox, oy: b.oy };
+  paintGround(ctx, z, b.ox, b.oy, GROUND[cfg.ground]);
+  if (PAL) paintDecorGround(ctx, z, b.ox, b.oy, PAL.decor, cfg.ground);
+  paintItems(ctx, b.items, cfg);
+  if (PAL && PAL.fog.factor && PAL.fog.factor < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - PAL.fog.factor})`; ctx.fillRect(b.edge, 0, 1280 - b.edge, 720); }
+  return el;
+}
+function rowStage(key, over) {
+  const cfg = { ...CFG0, ...over }, { el, ctx } = startStage(cfg), items = [];
+  ROWS4[key](cfg, items);
+  paintGround(ctx, +cfg.zoom, 0, 0, GROUND.sand);
+  paintItems(ctx, items, cfg);
+  return el;
+}
+function gridStage(zoom, build) {
+  const cfg = { ...CFG0, zoom }, { el, ctx } = startStage(cfg), items = [];
+  build(cfg, items);
+  paintGround(ctx, +zoom, 0, 0, GROUND.sand);
+  paintItems(ctx, items, cfg);
+  return el;
+}
+const COLS = (n) => Array.from({ length: n }, (_, i) => 128 + (1024 / (n - 1)) * i);
+const GRID_ROWS = [150, 365, 580];
+const buildingsGrid = () => gridStage('1', (cfg, items) => {
+  const xs = COLS(5);
+  FACTIONS.forEach((f, r) => ['barracks', 'factory', 'hq', 'depot', 'power'].forEach((role, c) => {
+    const id = f + '_' + SUFFIX[role], res = BASE[id] && shapeIn(id);
+    if (res) items.push({ shape: res.shape, owner: 1, ax: xs[c], ay: GRID_ROWS[r], fp: BASE[id].footprint });
+  }));
+});
+const unitsGrid = () => gridStage('2', (cfg, items) => {
+  const xs = COLS(5);
+  const ids = (f) => [f + '_rifle_infantry', f + '_rocket_infantry', f + '_builder', f === 'china' ? null : f + '_light_vehicle', f === 'usa' ? 'usa_collector' : null];
+  FACTIONS.forEach((f, r) => ids(f).forEach((id, c) => {
+    const res = id && shapeIn(id);
+    if (res) items.push({ shape: res.shape, owner: 1, ax: xs[c], ay: GRID_ROWS[r] + 60, unit: true, heading: 0 });
+  }));
+});
+const placeholdersStage = () => gridStage('1', (cfg, items) => {
+  PCTS.forEach((pct, i) => items.push(pileItem('big', pct, pileRes('big', pct), cfg, 144 + 248 * i, 150, {})));
+  PCTS.forEach((pct, i) => items.push(pileItem('small', pct, pileRes('small', pct), cfg, 70 + 105 * i, 350, {})));
+  [['frc_rifle_infantry', 770, 350], ['frc_rocket_infantry', 880, 350]].forEach(([id, x, y]) => items.push({ shape: shapeIn(id).shape, owner: 1, ax: x, ay: y, unit: true, heading: 0 }));
+  [[700, 380], [825, 320], [940, 385]].forEach(([x, y]) => { const c = crateRes(); items.push(c.today ? { square: true, ax: x, ay: y } : { shape: c.shape, owner: 0, slots: pileSlots(cfg), ax: x, ay: y }); });
+  [10, 50, 90].forEach((pct, i) => items.push(siteItem(3, siteRes(3, pct), cfg, 1, [213, 640, 1067][i], 580, pct, {})));
+});
+</script>
+<script src="pics.js" onerror="MISSING.push('pics.js')"></script>
+<script>
+'use strict';
+const H = new URLSearchParams(location.hash.slice(1));
+const WEIGHTS = [400, 600, 700, 800];
+const NAME_RE = /^[a-z0-9-]+$/;
+
+async function loadFonts() {
+  if (H.get('font') === 'arial') FONT = 'Arial, sans-serif';
+  if (H.get('font') === 'inter') {
+    FONT = 'Inter, Arial, sans-serif';
+    for (const [w, f] of [[400, 'Regular'], [600, 'SemiBold'], [700, 'Bold']]) {
+      document.fonts.add(await new FontFace('Inter', `url(/build/map-art/proof-fonts/Inter-${f}.woff2)`, { weight: String(w) }).load());
+    }
+  }
+  const loaded = await Promise.all(WEIGHTS.map((w) => document.fonts.load(`${w} 16px "Public Sans"`)));
+  if (H.get('font') !== 'arial' && loaded.some((l) => !l.length)) throw new Error('Public Sans did not load for every weight: nothing is drawn');
+}
+async function post(name, text) {
+  const r = await fetch('/report?name=' + encodeURIComponent(name), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: text });
+  if (r.status !== 204) addErr('report not recorded: HTTP ' + r.status);
+}
+const reports = {
+  fonts() {
+    const faces = [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Public Sans' && f.status === 'loaded');
+    const lines = WEIGHTS.map((w) => {
+      const ok = document.fonts.check(`${w} 16px "Public Sans"`) && faces.some((f) => f.weight === String(w));
+      return { w, ok, text: `${w} ${ok ? 'ok' : 'FAIL'}` };
+    });
+    const n = lines.filter((l) => l.ok).length;
+    return lines.map((l) => l.text).concat(n === WEIGHTS.length ? 'PASS ' + n : 'FAIL ' + n).join('\n') + '\n';
+  },
+  pics: () => Object.keys(PICS).concat('PASS ' + Object.keys(PICS).length).join('\n') + '\n',
+};
+async function hudOptions() {
+  if (!window.HUDV5) throw new Error('hud.js missing (' + MISSING.join(', ') + '): no HUD layer');
+  const doc = await (await fetch('/docs/images/hud-v5/layout.json')).json();
+  return Object.fromEntries(Object.entries(doc.meta.picks).map(([k, v]) => [k, v.value]));
+}
+function addHud(stage, o, state, scale) {
+  const layer = document.createElement('div');
+  layer.style.cssText = `position:absolute;left:0;top:0;width:1280px;height:720px;transform:scale(${scale});transform-origin:0 0`;
+  layer.innerHTML = HUDV5.hud(o, { state, size: '1280x720', tier: H.get('tier') || 'full' });
+  stage.appendChild(layer);
+}
+function drawPic(name, o) {
+  const p = PICS[name], as = H.get('as') === 'shot' ? 'shot' : 'final', scale = H.get('scale') === '2' ? 2 : 1;
+  document.body.className = 'shot'; app.className = 'shot';
+  app.innerHTML = '';
+  const stage = p.draw({ sel: p[as], scale });
+  if (o) addHud(stage, o, H.get('hud'), scale);
+  app.appendChild(stage);
+  if (o) HUDV5.placeCards(stage);
+}
+async function start() {
+  const [, hudOpts] = await Promise.all([loadFonts(), H.get('hud') ? hudOptions() : null]);
+  const rep = H.get('report'), name = H.get('pic');
+  if (rep) {
+    if (!reports[rep]) throw new Error('unknown report ' + rep);
+    const file = H.get('name') || rep;
+    if (!NAME_RE.test(file)) throw new Error('bad report name ' + file);
+    await post(file, reports[rep]());
+  } else if (name && PICS[name]) drawPic(name, hudOpts);
+  else app.innerHTML = '<h2>Map art pictures</h2><ul>' + Object.keys(PICS).map((n) => `<li><a href="#pic=${n}&as=shot">${n}</a></li>`).join('') + '</ul>';
+}
+start().catch((e) => addErr('start: ' + (e && e.stack || e)));
+</script>
+</body>
+</html>
