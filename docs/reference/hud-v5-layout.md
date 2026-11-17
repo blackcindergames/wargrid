@@ -174,7 +174,7 @@ The 13 states drawn, both sets; pictures at 2560 x 1600 for a 1280 x 800 layout.
 | place | Rotary Gun Tower armed on `A`, `V` Cancel, forecast in the top strip | [core-place](../images/hud-v5/core-place.webp) | [full-place](../images/hud-v5/full-place.webp) |
 | blocked | Vehicle Factory armed on `R`, forecast, refusal line | [core-blocked](../images/hud-v5/core-blocked.webp) | [full-blocked](../images/hud-v5/full-blocked.webp) |
 | enemy | Battle Tank (a USA unit), `312 / 480`, enemy edge; no card | [core-enemy](../images/hud-v5/core-enemy.webp) | [full-enemy](../images/hud-v5/full-enemy.webp) |
-| pile | Supply Pile, `BOXES LEFT 142`, `COLLECTORS 2 docked · 1 waiting`, grey edge; no card | [core-pile](../images/hud-v5/core-pile.webp) | [full-pile](../images/hud-v5/full-pile.webp) |
+| pile | Supply Pile, `CREDITS LEFT 10,650` (`Empty` at zero), grey edge; no card. Drawn with `BOXES LEFT 142` and `COLLECTORS 2 docked · 1 waiting`, both replaced (user, 2026-11-17, [questionnaire](design-answers-2026-11-08.md#p23a-groundwork-questionnaire-user-2026-11-17)); the pictures and the 86 px height are redrawn with the P2.3a design | [core-pile](../images/hud-v5/core-pile.webp) | [full-pile](../images/hud-v5/full-pile.webp) |
 | site | Vehicle Factory, `UNDER CONSTRUCTION`, progress `62 %`, `1,240 / 2,000`; no card | [core-site](../images/hud-v5/core-site.webp) | [full-site](../images/hud-v5/full-site.webp) |
 
 Credits, income, group sizes and queue contents are illustrative; names, costs, build times, health and power come from `game/scripts/simulation/definitions/china.gd`, and for the enemy Battle Tank from `usa.gd` (`max_hp` 480000, shown as 480).
