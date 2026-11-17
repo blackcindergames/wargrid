@@ -1,8 +1,8 @@
 # Map art: source
 
-The page and scripts the pictures in `docs/images/map-art/` are made from. Every picture is a vector redraw of the game's exported shapes, so any of them can be re-made at 2560 x 1440 without upscaling.
+The page and scripts the pictures in `docs/images/map-art/` and the HUD v5 backdrops are made from. The page draws the HUD layer with the shared HUD file `../../hud-v5/source/hud.js` and `hud.css`. Every picture is a vector redraw of the game's exported shapes, so any of them can be re-made at 2560 x 1440 without upscaling.
 
-Needs: Firefox (`/Applications/Firefox.app`), `python3`, `cwebp`; for proofs `magick` and `compare` (ImageMagick); Godot (`$GODOT_BIN` or `godot`) for the shape export and the round trip. A missing tool may be installed with Homebrew or `uv` (Pillow only as `uv run --with pillow python3 ...`).
+Needs: Firefox at `/Applications/Firefox.app`, `python3`, `cwebp`, ImageMagick (`magick`, `compare`) for proofs, Godot (`$GODOT_BIN` or `godot`) for the shape export and the round trip. A missing tool may be installed with Homebrew or `uv` (Pillow only as `uv run --with pillow python3 ...`).
 
 Run from the repository root: `python3 docs/images/map-art/source/server.py` serves the repository root on 127.0.0.1:8769. Open `http://127.0.0.1:8769/docs/images/map-art/source/round6.html` in Firefox for the round 6 pick page (from 1760 px of window width the text panel sits right of the stage, the buttons, note and navigation stay in view at 1920 x 1080; narrower windows stack); `#list` lists the pictures.
 
@@ -20,7 +20,7 @@ Hashes (the page never shows anything else on a stage):
 |---|---|
 | `round6.html` | The page: shape resolution per step, ground, shadows, cliffs, fog, the scenes and the stages |
 | `pics.js` | `PICS`: one entry per picture, `{shot, final, draw}`; adds `old-shapes-check-z1` and, from each step's `pics`, `<key>-today-z<zoom>` and `<key>-picked-z<zoom>` (underscores in the key become hyphens) |
-| `cand6-<key>.js` | Round 6 step files, one per step in the order `surfaces`, `edge`, `power`, `owners`, `cargo`, `paused`, `wrecks`, optional `clash`; a missing file shows `[step missing: <key>]` |
+| `cand6-<key>.js` | Round 6 step files, one per step in the order `surfaces`, `edge`, `power`, `owners`, `cargo`, `paused`, `wrecks`; a missing file shows `[step missing: <key>]` |
 | `picked.js` | `PICKED`: the picked option data of rounds 1 to 5, in the structure the page reads |
 | `draw.js`, `scenes.js`, `scenes5.js` | The shape projection and canvas drawing; the base scene cells; the round 5 terrain cells |
 | `shapes-current.json`, `shapes-current.js` | The game's shapes exported at `10b9423`; the `.js` is what the page loads |
@@ -28,6 +28,7 @@ Hashes (the page never shows anything else on a stage):
 | `roundtrip.gd` | Headless Godot: bakes every shape of an export with `ShapeBake` (`-- --in=<json> --out=<json>`) |
 | `export.sh`, `roundtrip.sh` | Run the page's `#export` and check the corrections; bake and compare the round trip (`sh roundtrip.sh [shapes json]`) |
 | `marks.js` | `MARKS`: the white map marks, the twelve `#world` backdrop scenes and the `marks-z1` and `gate-reference-z1` stages, drawn with the page's functions in the baked round 6 look |
+| `shoot_worlds.sh` | `sh shoot_worlds.sh [state ...]`: the HUD v5 backdrops from `#world`, 2560 x 1600 PNG into `docs/images/hud-v5/source/worlds/` (needs the server) |
 | `page.css` | Page styles and the four Public Sans faces from `game/fonts/` |
 | `server.py` | Static server; `POST /pick` writes `picks.json` (ignored by Git), `POST /export` writes `../shapes-picked.json`, `POST /report?name=` writes `build/map-art/<name>.txt` |
 | `report.sh` | `sh report.sh '<hash>' <name>`: runs a report in headless Firefox, prints it, exits 0 only on `PASS` |
@@ -37,7 +38,7 @@ A selection is `{steps, fix4b, fix6}`: one option per step of rounds 1 to 6 (`'0
 
 ## Round 6 step files (the contract for the drawing agents)
 
-One file per step, `cand6-<key>.js`, key in `surfaces`, `edge`, `power`, `owners`, `cargo`, `paused`, `wrecks`, optional `clash`. It sets `CAND6.<key> = {q, why, look, rec, recWhy, numbers?, view?, pics?, A: {name, data}, B?: {name, data}}`. Step files load before the page's functions: compute nothing at load time (hard-coded values, or getters). `window.R6` (`{<key>: <option key>}`, the baked round 6 picks, one option per step, defined once at the top of `round6.html`) and `window.SHAPES` exist by then.
+One file per step, `cand6-<key>.js`, key in `surfaces`, `edge`, `power`, `owners`, `cargo`, `paused`, `wrecks`. It sets `CAND6.<key> = {q, why, look, rec, recWhy, numbers?, view?, pics?, A: {name, data}, B?: {name, data}}`. Step files load before the page's functions: compute nothing at load time (hard-coded values, or getters). `window.R6` (`{<key>: <option key>}`, the baked round 6 picks, one option per step, defined once at the top of `round6.html`) and `window.SHAPES` exist by then.
 
 - `q`: the question. `why`: why it is asked, with the Zero Hour default where one exists. `look`: what each option looks like, in words (it goes into the reference doc; the page labels it "What changes:").
 - `rec`: the option key Claude recommends, one of the step's option keys (`A`, `B`; a draw-and-confirm step has only `A`, so `A`); anything else is an error banner and an audit line `CAND6 <key> rec invalid`. `recWhy`: one line why. A baked `R6[key]` wins over `rec` for the opening option and the picked pictures.
@@ -56,3 +57,15 @@ One file per step, `cand6-<key>.js`, key in `surfaces`, `edge`, `power`, `owners
 One step owns each shape id and palette name: two steps setting the same one is an error banner and an audit line `CAND6 <key> owns clash`. A key that is not a step is `CAND6 <key> key unknown`.
 
 `#audit` runs the default-set checks (always) and every option of every step: paint order and footprint for the shapes it replaces, owner share for unit shapes; building side and band contrast (3) for what it changes; and for an option that sets `OWNERS`, `DARK_GROUND` or `CARGO` the palette as a whole (owner order may change), on the sand set and the dark-ground set in force: every owner pair colour vision (`minDistance`: normal, deuteranopia, protanopia) >= 20, every owner against the HUD slab >= 3 and against the cargo colour in force and the HUD amber `#F7C871` >= 20, side band and dark side band against the ground in force >= 3, and per ground (sand, dark ground, fogged sand and fogged dark ground at 0.65) the minimum over owners of the owner-to-ground distance not below today's minimum on that ground (bounds in `DE_FROM`, floored to 0.01; there is no owner-top contrast bar against a ground, the bar is not decided, user 2026-11-17). Each palette's per-ground minimum prints as an `INFO` line. A `CARGO` option adds cargo contrast (3) and cargo against the HUD amber (20). Lines are prefixed `CAND6 <key> <A|B> `. `sh report.sh 'audit&name=audit-<key>&step=<key>' audit-<key>` limits the step part to your step (no clash check, nothing of other steps; a missing file is `FAIL`); the last line is `PASS <checks> known <k>` or `FAIL <n>`. Once picks are baked in `R6`, the default audit reads the baked cargo, owner and ground colours, including `paletteDark`, `DARK_GROUND` and a `paletteDark` `FOG`; a baked `OWNERS` option is judged as a whole by the same palette rule as an option (per-ground minima as `INFO`, the baked `names`), so the per-owner distance KNOWN entries apply only while `R6.owners` is empty, and the cargo KNOWN entries (sand 2.44, pink 10.9) only while `R6.cargo` is empty.
+
+## Deferred cuts (ponytail review, next art round)
+
+- `scenes.js`: `TANKS` is exported and never read.
+- `shoot.sh`, `shoot_worlds.sh`, `report.sh`, `export.sh`: the launch-and-wait Firefox loop is copied four times; one sourced helper.
+- `round6.html`: `hex2rgb`, `mix`, `lum`, `contrast` repeat `HUDV5.contrast` and `HUDV5.mix` of `../../hud-v5/source/hud.js` (audit numbers may shift in the third decimal).
+- `../../hud-v5/source/hud.js`, `cand6-owners.js`, `../../../reference/hud-v5-layout.md`: the eight owner colours are listed in three places.
+- `round6.html`, `page.css`, `server.py`, `cand6-*.js`: the pick-page UI, `/pick` and the question prose are finished business now the picks are baked in `R6` (keep the option data the audit reads).
+- `pics.js`, `round6.html`: the `shot` and `legacy` reproduction path of the rounds 1 to 4 pictures has no consumer once every picture is re-shot with `final`.
+- `export_shapes.gd`: `_projected_check` and `_draw_order` write entries to `shapes-current.json` that nothing reads (regenerate the `.json` and `.js` together).
+- `shapes-current.js`: a second committed copy of `shapes-current.json`; let the page fetch the `.json`.
+- `export.sh`: the embedded Python recomputes values that `meta.corrections` already carries (an independent check by design; leave unless shortness matters).

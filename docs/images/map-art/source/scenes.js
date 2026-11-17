@@ -10,9 +10,7 @@ window.SCENES = (function () {
     ['command_center', 0, 0], ['supply_center', 4, 0], ['power_plant', 8, 0], ['power_plant', 8, 3],
     ['factory', 0, 4], ['barracks', 4, 4], ['defence', 7, 6], ['defence', 3, 8],
   ];
-  const SOURCE = { id: 'supply_source_4x5_boxes40', cell: [22, 22], fp: [4, 5] }; // top-left cell, 4x5 footprint, midway between the bases
   const TANKS = Array.from({ length: 8 }, (_, i) => [16.3, 16.5 + 0.95 * i]); // west frame, absolute world cells
-  const INFANTRY = Array.from({ length: 12 }, (_, i) => [17.6 + 0.8 * (i % 3), 16.8 + 0.9 * Math.floor(i / 3)]);
   // Round 2 armies, west frame, absolute world cells: 36 infantry in one crowd (every third a rocket soldier), 6 light vehicles, 2 builders, 8 tanks.
   const ARMY = [];
   for (let j = 0; j < 6; j++) for (let i = 0; i < 6; i++) ARMY.push([(i + j) % 3 === 0 ? 'rocket' : 'rifle', 16.3 + 0.6 * i, 16.5 + 0.6 * j]);
@@ -54,5 +52,5 @@ window.SCENES = (function () {
   const FOCUS = [[9.5, 20.5], [20.5 + SHIFT, 9.5 + SHIFT], [24, 24]];
   // Stage px the focus cell is drawn at: low on purpose so the front buildings reach the dock when zoomed in.
   const ANCHOR = [640, 395];
-  return { ORIGINS: { west: WEST_ORIGIN, east: EAST_ORIGIN }, PILES, CRATES, SITES, AIR, TRUCKS, ARMY, ANCHOR, buildings, overlaps, centreOf, SOURCE, TANKS, INFANTRY, transpose, FOCUS };
+  return { ORIGINS: { west: WEST_ORIGIN, east: EAST_ORIGIN }, PILES, CRATES, SITES, AIR, TRUCKS, ARMY, ANCHOR, buildings, overlaps, centreOf, TANKS, transpose, FOCUS };
 })();

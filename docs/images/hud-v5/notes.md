@@ -32,12 +32,12 @@ HUD coverage of the screen at 1280x800, summed from [layout.json](layout.json) (
 Files beside the pictures:
 
 - [layout.json](layout.json): every slab, cell, row and slot as a rectangle, for 13 states, both sets and three sizes (1280x800, 1280x720, 1920x1080), with the colour tokens and the type scale. Expected values for the HUD's layout tests; how to read it is in the layout reference.
-- [source/](source/README.md): the page the pictures and `layout.json` are made from, self-contained (user, 2026-11-16): the page, its glyphs, the backdrops, a small server and the two scripts that re-make the pictures (`shoot_final.sh`) and the export (`export_layout.sh`); how to run them is in its README. The page loads the fonts from `game/fonts/`. It is the A/B page, so it still holds the options that were not picked; without a recorded pick it shows the first option of each step, which is what was picked.
+- [source/](source/README.md): the page the pictures and `layout.json` are made from, self-contained (user, 2026-11-16): the page, its glyphs, the shared HUD drawing (`source/hud.js`, `source/hud.css`, which the map art page loads too), the backdrops, a small server and the two scripts that re-make the pictures (`shoot_final.sh`) and the export (`export_layout.sh`); how to run them is in its README. The page loads the fonts from `game/fonts/`. It is the A/B page, so it still holds the options that were not picked; without a recorded pick it shows the first option of each step, which is what was picked.
 
 What is real and what is not:
 
 - Unit and building names, costs, build times, health and power come from `game/scripts/simulation/definitions/china.gd`, the enemy Battle Tank's from `usa.gd`. Credits, income, group sizes and queue contents are illustrative; in the Full build menu picture the top strip and group row show mid-game figures over an early base.
-- The world is drawn from the picked map art data ([map art](../map-art/notes.md): picked shapes, lifted owner colours, deeper side band), composed by hand for these scenes. It is not a game screenshot. The white marks (selection, hover ticks, attack X, move ring, placement cells, range ring, rally flag) are mock-up drawings of the decided marks.
+- The world is drawn from the picked map art data ([map art](../map-art/notes.md): picked shapes, owner palette A, deeper side band), composed by hand for these scenes. It is not a game screenshot. The white marks (selection, hover ticks, attack X, move ring, placement cells, range ring, rally flag) are mock-up drawings of the decided marks.
 - The unit selection mark is drawn over the unit, as the game draws it today.
 - The minimap is a sketch, not map data. The glyphs are v4's mock-up drawings; the Build glyph is new and as rough.
 - "Cannot build here" is a proposal; the game prints the simulation's own refusal text today.
@@ -47,4 +47,4 @@ What is real and what is not:
 
 Not drawn: Barracks, a building being sold, two factories selected, buildings and units selected together, a transport with Unload, the playtest note dialog.
 
-Not tested: anything in Godot, a real Steam Deck, colour-vision deficiencies, real hover and clicks. The backdrops were drawn by a generator that reads the map art spike's working data; that generator, the page's build spec and the recorded picks are working files in the private notes repository (`hud-v5/`), so the backdrops here are pictures, not re-makeable from this repository.
+Not tested: anything in Godot beyond the map art geometry round trip, a real Steam Deck, colour-vision deficiencies, real hover and clicks. The backdrops are drawn by the map art page (`../map-art/source/shoot_worlds.sh`, round 6 look); the recorded picks are a working file in the private notes repository.

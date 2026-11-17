@@ -1,13 +1,13 @@
 ```text
-Resume record (updated 2026-11-17, commit point C)
-Branch / base commit / working-tree state: spike-art-6 / commit point C (Task 26) / clean after the commit
-Last green task / next incomplete task: Task 25 (HUD backdrops and re-shoot, review passed) / local merge of main, then Task 27
+Resume record (updated 2026-11-17, commit point D)
+Branch / base commit / working-tree state: spike-art-6 / commit point D (Task 31), main merged in locally (8cb338c) / clean after the commit
+Last green task / next incomplete task: Task 31 (documents review accepted, ponytail cuts 1 and 8 proven) / Task 32 (both repositories in line)
 Changed paths since last commit: none
-Last command / cases / checks / failures / exit / marker: full audit PASS 830 known 1; roundtrip PASS 2208 known-failing 1; export.sh 37 shapes, corrections hold; 42 map art pictures 2x, repeat shoot AE 0; HUD proof: layout.json rects equal HEAD, tokens differ in you/enemy only, top strip differs only inside the production bars
+Last command / cases / checks / failures / exit / marker: run_tests TESTS PASSED 146411 (1079 cases); run_checks CHECKS PASSED 5; full audit PASS 830 known 1; 42 pictures re-shot after the cuts, AE 0; links 826, citations 124, 0 bad
 Known red case or blocker: frc_builder|0|2|24|24 listed failing (P2.4); docs/images/hud-v5/source/export_layout.sh can report "not rewritten" by chance (whole-second -nt check), a rerun passes
-Approved decisions, pre-authorizations used, deferred gates: stop gates 1 to 5 done; picks and questionnaire answers in the Task 21 and Task 22 rows (user, 2026-11-17); HUD proof split (user, 2026-11-17); local merge of main before Task 27 and Task 32 with commit point E approved (user, 2026-11-17); local commits A, B, C (pre-approved); full suite and run_checks.sh deferred to Task 31
+Approved decisions, pre-authorizations used, deferred gates: stop gates 1 to 5 done; picks and questionnaire answers in the Task 21 and Task 22 rows (user, 2026-11-17); local merge of main and commits A to D (pre-approved); §11 line and the ponytail cut choice (user, 2026-11-17); commit point E pre-approved (user, 2026-11-17)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: fresh session from the handoff (map-art-round-6-docs-prompt.txt, private): merge main locally, then Task 27
+Next exact action: Task 32: private P2.3a groundwork Q11 to Q19 from round 6, P2.3a and P3 rows, fresh Opus review, commit point E in both repositories
 ```
 
 ## Zero Hour defaults
@@ -274,3 +274,35 @@ Coordinator cross-check (2026-11-17): `DeadTankHulk` `hulk.ini:841-848` (MinLife
 - `check_public` `PUBLIC CHECK PASSED`; `run_shell_checks` exit 1 on SC2048 in the first `shoot_worlds.sh` (`${*:-...}`), fixed to `set --` and `"$@"`, rerun exit 0 (`w-none` re-shot with the fixed script, same 2560x1600 file).
 - Fix round 1 (ruling R30: the "." in the idle-builder chip is the decided hotkey label, the square was an undecided change that trips the page's "text under 12 px" audit): `hud.js` idle chip restored to `${key('.')}`, the three `.hud .k.dot` lines of `hud.css` deleted (`hud.css` now equals HEAD; `hud.js` differs from HEAD only in `OWNERS`, palette A). `shoot_final.sh` exit 0; `export_layout.sh` said "layout.json was not rewritten" once (whole-second `-nt`), rerun exit 0 `78 screens, coverage sums match`. Probe of all 26 states: no layout error in any. Proof (a) rects equal HEAD with `tokens` removed: True. Proof (b) `tokens` differ in `enemy` and `you` only (`#d6120c`, `#628ffa`): True. Proof (c) (`t25-strip2.log`): 0 differing pixels outside the bars in all 26 pictures (`full-*` 648 or 656 inside, `core-*` 0, `full-blocked` 656 inside, 0 outside; total inside 8448, outside 0). Contact sheet re-made and read: no banner, marks and palette A as before.
 - `sh shoot.sh gate-reference-z1` exit 0 (2560x1440), second shoot `OUT=build/map-art/final-again3` exit 0: `compare -metric AE` 0. The gate's group strip crop read: the idle chip shows the key cap with "." again. `check_public` PASSED, `run_shell_checks` exit 0, `git status --short game tools` empty; server 8767 stopped, 8769 untouched.
+
+### 2026-11-17 Task 27: Reference doc and the design answers' Round 6 block (tree: spike-art-6 8cb338c plus `docs/reference/map-art-shapes.md` new and `docs/reference/design-answers-2026-11-08.md` with the Round 6 block after the scope questionnaire and one link in the P2.4 research paragraph)
+
+- `docs/reference/map-art-shapes.md`: what the round trip proves, how to read `shapes-picked.json`, one section each for P2.3a, P2.4, P2.5, P2.6, wrecks (not placed in a package), and "Not covered or not decided". Values read from `shapes-picked.json` with a `python3` script (heights, footprints, ids, palette); game and test lines re-read at 8cb338c with `rg -n`; `git diff --stat 10b9423 HEAD` over `shapes.gd`, `palette.gd`, `shape_bake.gd`, `world_batch.gd`, `world_view.gd`: empty. Zero Hour colour names re-read in `build/zh_ini/inizh.jsonl` (`multiplayer.ini:44-90`).
+- Link check (scratch script, every relative link and heading anchor of both files): `links 152 bad 0`.
+- `sh tools/check_public.sh > build/map-art/logs/27-public.log 2>&1`: `PUBLIC CHECK PASSED`, exit 0. `git status --short game tools`: empty.
+
+### 2026-11-17 Task 30: Docs link, citation and public check (tree: spike-art-6 8cb338c plus the docs working tree, 12 touched markdown files)
+
+- Link and citation check (scratch script, `build/map-art/logs/30-check.py`): every relative link and `#anchor` in the 12 touched `*.md` files, and every `path:line` citation of a repo file that resolves: `docs 12 links 818 citations-checked 122 fails 0`, exit 0 (`30-links.log`).
+- `docs/images/map-art/`: 42 `*.webp`, every one linked from `notes.md`, every link exists: `webp 42 named-in-notes 42 bad 0`, exit 0 (`30-webp.log`).
+- `rg -n -i 'map-art|hud-v5|mock-up|shapes-current|layout\.json' docs/guide`: no match, exit 1.
+- `sh tools/check_public.sh > build/map-art/logs/30-public.log 2>&1`: `PUBLIC CHECK PASSED`, exit 0. `git status --short game tools`: empty.
+
+### 2026-11-17 Task 28: Art bible v2 (tree: spike-art-6 8cb338c plus the round 6 working tree; `docs/art-direction/ART_DIRECTION.md` rewritten)
+- `sh tools/check_public.sh > build/map-art/logs/28-public.log 2>&1`: `PUBLIC CHECK PASSED`, exit 0.
+- §13 word for word: section text before and after compared with `diff` (`build/map-art/logs/28-s13.log`), empty, exit 0; `git diff` shows no changed line in §13.
+- Links: 283 links in ART_DIRECTION.md and the six files that link its anchors, 0 missing files or anchors (`build/map-art/logs/28-links.log`), exit 0.
+- `git status --short game tools`: empty.
+- Coordinator follow-up (user, 2026-11-17): §11 gains one line on the Godot round trip.
+
+### 2026-11-17 Task 29: Other documents (tree: spike-art-6 8cb338c plus docs edits listed above)
+- `sh tools/check_public.sh > build/map-art/logs/29-public.log 2>&1` -> PUBLIC CHECK PASSED, exit=0
+- `git status --short game tools` -> empty
+- `git diff --quiet README.md` -> exit 0
+- Coordinator follow-up: owner contrast line in `hud-v5-layout.md` recomputed for palette A from `source/hud.js` (`OWNERS`, `BG` `#121c24`): lowest purple 3.23:1, red 3.25:1.
+
+### 2026-11-17 Task 31: Documents review, ponytail review, final checks (tree: spike-art-6 8cb338c plus the docs working tree and the ponytail cuts in `round6.html`, `scenes.js`, `scenes5.js`, `draw.js`)
+- Fresh Opus high review of the documents against `shapes-picked.json`, `shapes.gd`, `shape_bake.gd`, `palette.gd`, `world_view.gd` and the cited tests: 0 Critical, 6 Important, 8 Minor; player-experience review: ready with follow-ups, 4 S2, 5 S3; one fix round, scoped re-review: accept (two minors applied). New open items written to the reference doc's "Not covered or not decided" (agent findings): palette A green against the HUD `ally` token (7.8 under deuteranopia, bar 20), fog and vision of the new cues, naming the owner in 3v3, tritanopia outside the bar, the roof shade (look Q5) for the user at P2.6.
+- Ponytail review: 15 findings; the user chose (2026-11-17) cut 1 (dead page pieces) and cut 8 (doc duplicates); the rest listed in the source README's "Deferred cuts". Proof: full audit `PASS 830 known 1` before and after (logs identical); 42 pictures re-shot to `build/map-art/cut/`, `magick compare -metric AE` 0 for all 42.
+- `sh tools/run_tests.sh`: `CASES 1079 CHECKS 146411 FAILURES 0`, `TESTS PASSED 146411`, exit 0 (before the cuts; no file under `game/` or `tools/` changed since).
+- `sh tools/run_checks.sh`: `CHECKS PASSED 5`, exit 0 (after the cuts). ruff format/check, mypy, gdlint over `docs/images/map-art/source`: exit 0. `sh tools/run_shell_checks.sh`: exit 0. `git status --short game tools`: empty.

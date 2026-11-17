@@ -10,35 +10,33 @@
 <div id="err"></div>
 <div id="app"></div>
 <script>
-window.MISSING = [];
 window.CAND6 = {};
 window.R6 = { surfaces: 'A', edge: 'B', power: 'A', owners: 'A', cargo: 'B', paused: 'A', wrecks: 'A' }; // the baked round 6 picks, {<step key>: <option key>}
 window.addErr = function (msg) { var e = document.getElementById('err'); if (e && e.textContent.indexOf(msg) < 0) e.textContent += msg + '\n'; };
 addEventListener('error', function (e) { addErr(e.message + ' (' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ')'); });
 addEventListener('unhandledrejection', function (e) { addErr('unhandled: ' + (e.reason && e.reason.message || e.reason)); });
 </script>
-<script src="shapes-current.js" onerror="MISSING.push('shapes-current.js')"></script>
-<script src="draw.js" onerror="MISSING.push('draw.js')"></script>
-<script src="picked.js" onerror="MISSING.push('picked.js')"></script>
-<script src="scenes.js" onerror="MISSING.push('scenes.js')"></script>
-<script src="scenes5.js" onerror="MISSING.push('scenes5.js')"></script>
-<script src="../../hud-v5/source/glyphs.js" onerror="MISSING.push('glyphs.js')"></script>
-<script src="../../hud-v5/source/glyphs3.js" onerror="MISSING.push('glyphs3.js')"></script>
-<script src="../../hud-v5/source/hud.js" onerror="MISSING.push('hud.js')"></script>
-<script src="cand6-surfaces.js" onerror="MISSING.push('cand6-surfaces.js')"></script>
-<script src="cand6-edge.js" onerror="MISSING.push('cand6-edge.js')"></script>
-<script src="cand6-power.js" onerror="MISSING.push('cand6-power.js')"></script>
-<script src="cand6-owners.js" onerror="MISSING.push('cand6-owners.js')"></script>
-<script src="cand6-cargo.js" onerror="MISSING.push('cand6-cargo.js')"></script>
-<script src="cand6-paused.js" onerror="MISSING.push('cand6-paused.js')"></script>
-<script src="cand6-wrecks.js" onerror="MISSING.push('cand6-wrecks.js')"></script>
-<script src="cand6-clash.js" onerror="MISSING.push('cand6-clash.js')"></script>
+<script src="shapes-current.js"></script>
+<script src="draw.js"></script>
+<script src="picked.js"></script>
+<script src="scenes.js"></script>
+<script src="scenes5.js"></script>
+<script src="../../hud-v5/source/glyphs.js"></script>
+<script src="../../hud-v5/source/glyphs3.js"></script>
+<script src="../../hud-v5/source/hud.js"></script>
+<script src="cand6-surfaces.js"></script>
+<script src="cand6-edge.js"></script>
+<script src="cand6-power.js"></script>
+<script src="cand6-owners.js"></script>
+<script src="cand6-cargo.js"></script>
+<script src="cand6-paused.js"></script>
+<script src="cand6-wrecks.js"></script>
 <script>
 'use strict';
 const $ = (s, r) => (r || document).querySelector(s);
 const D = window.SHAPES, PK = window.PICKED;
-if (!D || !window.projectShape || !window.SCENES || !PK) throw new Error('core file missing (' + MISSING.join(', ') + '): nothing can be drawn');
-const SC5 = Object.assign({ PLATEAU: { x: [0, -1], y: [0, -1] }, CELLS: [], UP: [], DOWN: [], PATCH_FOCUS: [7, 31], DECOR_FOCUS: [17, 41], DECOR_ORIGIN: [0, 0], FOG_EDGE: [24, 24], FOG_FOCUS: [24, 24], FOG_UNITS: [] }, window.SCENES5 || {});
+if (!D || !window.projectShape || !window.SCENES || !PK) throw new Error('core file missing: nothing can be drawn');
+const SC5 = window.SCENES5;
 const app = $('#app');
 
 // ---------- data ----------
@@ -352,8 +350,8 @@ function palFor(sel, ov) {
 const setOf = () => (!LEGACY && stepVal('neon') === 'A' ? 'neon' : 'default');
 
 // ---------- round 6 options ----------
-const STEP_KEYS = ['surfaces', 'edge', 'power', 'owners', 'cargo', 'paused', 'wrecks', 'clash'];
-const STEPS6 = STEP_KEYS.filter((k) => k !== 'clash' || window.CAND6.clash);
+const STEP_KEYS = ['surfaces', 'edge', 'power', 'owners', 'cargo', 'paused', 'wrecks'];
+const STEPS6 = STEP_KEYS;
 const HEX_NAMES = ['DARK_GROUND', 'WRECK_TOP', 'WRECK_SIDE', 'WRECK_SIDE_DARK', 'SIDE', 'SIDE_DARK', 'PILE_PAD', 'DOOR', 'BUILDING_SIDE_DARK', 'CANVAS', 'EDGE_SIDE', 'CARGO'];
 const NUM_NAMES = ['EDGE_HEIGHT', 'FOG', 'GROUND_SHADOW_RADIUS', 'SHADOW_RADIUS', 'BUILDING_SHADOW_GROW'];
 const PLAIN_NAMES = ['SHADOW', 'SHADOW_FLAT', 'BUILDING_SHADOW_OFFSET'];
@@ -674,7 +672,7 @@ function baseItems(cfg) {
   });
   const a = (-Math.PI / 4) + (cfg.heading * Math.PI) / 4, unitItem = (id, owner, cell, heading, extra) => {
     const r = shapeIn(id), p = toPx(cell[0], cell[1]);
-    items.push({ shape: r.shape, owner, ax: p[0], ay: p[1] - (extra && extra.up ? CLIFF_H * z : 0), depth: cell[0] + cell[1], unit: true, heading, ...extra });
+    items.push({ shape: r.shape, owner, ax: p[0], ay: p[1], depth: cell[0] + cell[1], unit: true, heading, ...extra });
   };
   [['west', fw, owners[0], 0], ['east', fe, owners[1], 1]].forEach(([side, fac, owner, k]) => {
     let ti = 0;
@@ -700,7 +698,6 @@ function baseItems(cfg) {
   SCENES.AIR.forEach(([x, y], i) => unitItem('usa_collector', owners[i], [x, y], a + i * Math.PI, { air: true, enemy: i === 1 }));
   if (PAL && PAL.cliff) {
     SC5.CELLS.forEach((c) => items.push({ cliff: true, cell: c, depth: c[0] + c[1] + 1 }));
-    SC5.UP.forEach(([role, x, y]) => unitItem(roleId(fw, role), owners[0], [x, y], a, { up: true, depth: Math.floor(x) + Math.floor(y) + 1.5 }));
     SC5.DOWN.forEach(([role, x, y]) => unitItem(roleId(fw, role), owners[0], [x, y], a));
   }
   const dd = PAL && decorData(PAL.decor, cfg.ground);
@@ -827,8 +824,8 @@ const oldShapesCheck = () => gridStage('1', (cfg, items) => {
   layoutRow(['frc_builder', 'china_collector', 'frc_hole_1', 'frc_hole_2', 'frc_hole_3'].map(today), 640, 1, items);
 });
 </script>
-<script src="marks.js" onerror="MISSING.push('marks.js')"></script>
-<script src="pics.js" onerror="MISSING.push('pics.js')"></script>
+<script src="marks.js"></script>
+<script src="pics.js"></script>
 <script>
 'use strict';
 // ---------- export, round trip and audit (hashes #export, #roundtrip, #audit) ----------
@@ -1307,7 +1304,7 @@ const reports = {
   pics: () => Object.keys(PICS).concat('PASS ' + Object.keys(PICS).length).join('\n') + '\n',
 };
 async function hudOptions() {
-  if (!window.HUDV5) throw new Error('hud.js missing (' + MISSING.join(', ') + '): no HUD layer');
+  if (!window.HUDV5) throw new Error('hud.js missing: no HUD layer');
   const doc = await (await fetch('/docs/images/hud-v5/layout.json')).json();
   return Object.fromEntries(Object.entries(doc.meta.picks).map(([k, v]) => [k, v.value]));
 }

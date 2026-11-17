@@ -245,6 +245,5 @@
   const auditAny = (shape) => (shape.footprint ? auditShape(shape) : auditUnit(shape));
 
   const api = { projectShape, drawShape, countTriangles, countPrims, auditRaster, auditShape, auditUnit, auditAny, bucket, detailFor, SLOT, SLOPE_SHADE, TAU };
-  if (typeof module !== 'undefined') module.exports = api;
-  else Object.assign(root, api);
+  Object.assign(root, api);
 })(typeof window !== 'undefined' ? window : globalThis);
