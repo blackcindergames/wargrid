@@ -597,11 +597,17 @@ func test_pending_frame_cap(runner) -> bool:
 	refused.sequence = accepted
 	runner.check(queued <= Wire.MAX_FRAME_BYTES - Lockstep.FRAME_RESERVE_BYTES and queued + _encoded_size(refused) > Wire.MAX_FRAME_BYTES - Lockstep.FRAME_RESERVE_BYTES, "L19 the refusal sits exactly at the reserve boundary")
 	runner.check(not ls._submit_times.has(accepted), "L19 the refused order took no latency sample")
-	ls.finish_tick(1, null)
+	var limit: int = Wire.MAX_FRAME_BYTES - Lockstep.FRAME_RESERVE_BYTES
+	var filler := {"type": "move", "pad": ""}
+	var probe: Dictionary = filler.duplicate()
+	probe.merge({"tick": 5, "player": 1, "sequence": accepted})
+	filler.pad = "x".repeat(limit - queued - _encoded_size(probe))
+	runner.check(ls.submit(filler) and ls._queue_bytes == limit, "L19 a filler lands the queue exactly on the reserve")
+	runner.check(ls._queue.back().sequence == accepted, "L19 the refused order consumed no sequence")
+	ls.finish_tick(9_999_990, pair[0].snapshot()) # a hash tick with a long tick number: the largest envelope
 	var frame_ok: bool = sent.size() == 1 and sent[0].to_utf8_buffer().size() <= Wire.MAX_FRAME_BYTES and Wire.decode(sent[0]).ok
-	runner.check(frame_ok, "L19 a full pending frame still fits the 64 KiB cap")
+	runner.check(frame_ok, "L19 a frame filled to the reserve still fits the 64 KiB cap")
 	runner.check(ls.submit(order), "L19 the queue accepts again after the frame is sent")
-	runner.check(ls._queue[0].sequence == accepted, "L19 the refused order consumed no sequence")
 	return true
 
 func test_own_frame_checked(runner) -> bool:

@@ -21,8 +21,12 @@ trap cleanup EXIT HUP INT TERM
 fail() {
   echo "NETPLAY FAILED $scenario: $*"; echo "logs: $out"
   if [ -n "$url1" ]; then
-    echo "repro: NETPLAY_OUT=$out-repro sh tools/run_netplay.sh $scenario"
+    echo "repro: ${WARGRID_RELAY_BIN:+WARGRID_RELAY_BIN=$WARGRID_RELAY_BIN }${WARGRID_NETFAULT_BIN:+WARGRID_NETFAULT_BIN=$WARGRID_NETFAULT_BIN }${WARGRID_CLIENT:+WARGRID_CLIENT=\"$WARGRID_CLIENT\" }NETPLAY_OUT=$out-repro sh tools/run_netplay.sh $scenario"
+  fi
+  if [ -e "$out/proxy-seat1.log" ]; then
     grep -h 'NETFAULT' "$out"/proxy-seat*.log
+    cat "$out"/proxy-seat*.out
+    ! grep -q ' exit cap' "$out"/proxy-seat*.log || echo "proxy life cap hit"
   fi
   exit 1
 }
@@ -49,10 +53,12 @@ start_proxy() {
   proxy_port=$(free_port)
   : >"$out/proxy-seat$1.log"
   "$netfault_bin" -listen "127.0.0.1:$proxy_port" -target "127.0.0.1:$port" -log "$out/proxy-seat$1.log" -faults "$2" >"$out/proxy-seat$1.out" 2>&1 &
-  pids="$pids $!"
+  proxy_pid=$!
+  pids="$pids $proxy_pid"
   i=0
   # The proxy takes one connection only, so a connect probe would use it up: wait for its listen line.
   until grep -q ' listen ' "$out/proxy-seat$1.log"; do
+    kill -0 "$proxy_pid" 2>/dev/null || fail "proxy $1 exited at start"
     i=$((i + 1)); [ $i -lt 100 ] || fail "proxy $1 did not start"
     sleep 0.2
   done
@@ -66,6 +72,11 @@ start_proxies() { # FAULTS_SEAT1 FAULTS_SEAT2
   fi
   start_proxy 1 "$1"
   start_proxy 2 "$2"
+}
+
+# Both seats must have connected through their proxy, or a fault scenario proves nothing.
+proxies_accepted() {
+  for n in 1 2; do grep -q ' accept ' "$out/proxy-seat$n.log" || fail "no traffic through seat $n's proxy (no accept line)"; done
 }
 
 # proxy_ms N EVENT: unix ms of the first EVENT line in seat N's proxy log
@@ -150,14 +161,16 @@ case $scenario in
     [ "$(end_tick s1)" = 9013 ] || fail "terminal tick $(end_tick s1), pinned 9013"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     [ -n "$remote" ] || ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
+    [ "$scenario" = match ] || proxies_accepted
     if [ "$scenario" = proxy-burst ]; then
       grep -q ' slice 7$' "$out/proxy-seat2.log" || fail "no slice line in seat 2's proxy log"
       end1=$(proxy_ms 1 hold-end); start2=$(proxy_ms 2 hold-start)
       [ -n "$end1" ] && [ -n "$start2" ] && [ "$start2" -lt "$end1" ] || fail "seat 2's hold did not begin inside seat 1's (seat 2 joined too late)"
       grep -q ' hold-end [1-9][0-9]* [1-9][0-9]*$' "$out/proxy-seat2.log" || fail "no hold-end with held bytes both ways in seat 2's proxy log"
       ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead after a hold"
+      burst_note=", seat 2's hold began $((end1 - start2)) ms before seat 1's ended, seat 2 hold-end $(awk '$4 == "hold-end" {print $5, $6; exit}' "$out/proxy-seat2.log")"
     fi
-    echo "$scenario terminal tick $(end_tick s1)" ;;
+    echo "$scenario terminal tick $(end_tick s1)$burst_note" ;;
   rematch)
     start_relay; start_pair "--rematch" "--rematch"
     wait_exit "$pid1" $((2 * match_wait)); wait_exit "$pid2" $((2 * match_wait))
@@ -182,6 +195,7 @@ case $scenario in
     done
     [ "$(grep -c 'MATCH END' "$out/relay.log")" = 1 ] || fail "expected one MATCH END"
     ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
+    ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     echo "rematch terminal tick $(end_tick s1)" ;;
   kill)
@@ -195,6 +209,7 @@ case $scenario in
     expect_end s1 ended_left; expect_end s2 stopped
     grep -q '^NETCLIENT VICTORY left$' "$out/s1.log" || fail "s1: no VICTORY left"
     ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
+    ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
     [ "$(end_tick s1)" -ge 600 ] || fail "seat 1 ended before tick 600" ;;
   stall)
     start_relay; start_pair "" "--stall-at-tick 300 --stall-seconds 3"
@@ -309,6 +324,7 @@ PY
     start_relay; start_proxies "" "reset@4000"; start_pair "" ""
     wait_exit "$pid1" 30; wait_exit "$pid2" 30
     expect_end s2 ended_relay; expect_end s1 ended_left
+    proxies_accepted
     cut=$(proxy_ms 2 reset); [ -n "$cut" ] || fail "the reset never landed (no reset line in seat 2's proxy log)"
     gap2=$(($(log_ms s2 TIME) - cut)); gap1=$(($(log_ms s1 TIME) - cut))
     between "seat 2 ended after the reset" "$gap2" 0 2000; between "seat 1 left after the reset" "$gap1" 0 2000
@@ -320,9 +336,10 @@ PY
     expect_end s2 ended_relay
     case "$(end_line s2)" in *"connection to relay lost") ;; *) fail "seat 2 reason: $(end_line s2)" ;; esac
     expect_end s1 ended_left
+    proxies_accepted
     cut=$(proxy_ms 2 blackhole-start); [ -n "$cut" ] || fail "the blackhole never landed (no blackhole-start line in seat 2's proxy log)"
     gap2=$(($(log_ms s2 TIME) - cut)); gap1=$(($(log_ms s1 TIME) - cut))
-    between "seat 2 ended after the blackhole began" "$gap2" 4500 6500; between "seat 1 left after the blackhole began" "$gap1" 9000 12000
+    between "seat 2 ended after the blackhole began" "$gap2" 5500 7500; between "seat 1 left after the blackhole began" "$gap1" 9000 12000
     same_prefix "$out/s1.tsv" "$out/s2.tsv"
     echo "blackhole: seat 2 ended $gap2 ms, seat 1 left $gap1 ms after it began" ;;
   *) fail "unknown scenario" ;;

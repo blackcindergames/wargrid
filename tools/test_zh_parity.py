@@ -517,13 +517,14 @@ class Sweep(unittest.TestCase):
             try:
                 with mock.patch.object(parity.subprocess, "Popen", popen):
                     status, _ = launch((1, "x"), 9000)
+                exited = started[0].poll()
             finally:
                 for proc in started:
                     if proc.poll() is None:
                         proc.kill()
                         proc.wait()
         self.assertNotEqual(status, "timeout")
-        self.assertIsNotNone(started[0].poll())
+        self.assertIsNotNone(exited)  # read before the cleanup kill, so a surviving child fails here
 
     def test_failed_job_keeps_its_output(self) -> None:
         with tempfile.TemporaryDirectory() as t:

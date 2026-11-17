@@ -136,7 +136,7 @@ func TestExpiryRacesJoin(t *testing.T) {
 		b, _ := loopConn(nop)
 		res := g.join(&envelope{protocol: protocol, build: "b", match: a.room.code}, b)
 		if res.seat != nil {
-			b.seat, b.room = res.seat, res.seat.r
+			bindSeat(b, res.seat)
 			eventually(t, "joined but no start", func() bool { return f.has(`"type":"start"`) })
 			time.Sleep(5 * time.Millisecond)
 			if f.has("lobby expired") {

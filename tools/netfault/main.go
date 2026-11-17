@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// A failed scenario must never hang CI on a proxy that nobody closes.
-const maxLife = 120 * time.Second
+// A failed scenario must never hang CI on a proxy that nobody closes; above the default 180 s match_wait.
+const maxLife = 200 * time.Second
 
 func main() {
 	listen := flag.String("listen", "", "address to accept the one connection on")

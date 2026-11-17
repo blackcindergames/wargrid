@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -127,7 +128,9 @@ func (l *lane) release() int {
 	if l.hole {
 		l.discarded += n
 	} else {
-		_ = writeSliced(l.dst, l.held.Bytes(), l.slice)
+		if err := writeSliced(l.dst, l.held.Bytes(), l.slice); err != nil {
+			warn("release-error", err)
+		}
 	}
 	l.held.Reset()
 	l.holding = false
@@ -162,7 +165,14 @@ func (p *proxy) logf(event, detail string) {
 	}
 	p.logMu.Lock()
 	defer p.logMu.Unlock()
-	_, _ = io.WriteString(p.log, line+"\n")
+	if _, err := io.WriteString(p.log, line+"\n"); err != nil {
+		warn("log-error", err)
+	}
+}
+
+// warn goes to stderr, which the netplay script keeps in proxy-seatN.out.
+func warn(kind string, err error) {
+	fmt.Fprintf(os.Stderr, "netfault: %s: %v\n", kind, err)
 }
 
 func (p *proxy) lanes() []*lane { return []*lane{p.up, p.down} }
@@ -176,13 +186,14 @@ func (p *proxy) pipe(l *lane) {
 	buf := make([]byte, 32<<10)
 	for {
 		n, err := l.src.Read(buf)
+		wrote := true
 		if n > 0 {
 			if werr := l.forward(buf[:n]); werr != nil {
-				err = werr
+				err, wrote = werr, false
 			}
 		}
 		if err != nil {
-			p.sideClosed(l)
+			p.sideClosed(l, wrote)
 			return
 		}
 	}
@@ -190,11 +201,15 @@ func (p *proxy) pipe(l *lane) {
 
 // sideClosed passes a close on as a half-close once everything before it is written; it never does so around a
 // blackhole, where the other side must stay open and silent.
-func (p *proxy) sideClosed(l *lane) {
+func (p *proxy) sideClosed(l *lane, wrote bool) {
 	if l.waitHeld() || p.reset.Load() || p.capped.Load() {
 		return
 	}
-	p.logf("close", l.side)
+	if wrote {
+		p.logf("close", l.side)
+	} else {
+		p.logf("close", l.side+" write-error")
+	}
 	if tc, ok := l.dst.(*net.TCPConn); ok {
 		_ = tc.CloseWrite()
 	} else {
@@ -241,7 +256,9 @@ func (p *proxy) doReset() {
 	p.logf("reset", "")
 	for _, c := range []net.Conn{p.up.src, p.up.dst} {
 		if tc, ok := c.(*net.TCPConn); ok {
-			_ = tc.SetLinger(0)
+			if err := tc.SetLinger(0); err != nil {
+				warn("linger-error", err)
+			}
 		}
 	}
 	p.closeBoth()

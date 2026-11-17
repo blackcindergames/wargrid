@@ -3,10 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+// loopMu guards the seat and room of loopConn conns: a lobby expiry may shut a conn while the test is still binding it.
+var loopMu sync.Mutex
 
 // loopConn behaves like a socket whose close comes back as OnClose: shut posts the seat's leave.
 func loopConn(write func([]byte)) (*conn, *atomic.Bool) {
@@ -14,9 +18,20 @@ func loopConn(write func([]byte)) (*conn, *atomic.Bool) {
 	var shut atomic.Bool
 	c.sender = sender{write: write, shut: func() {
 		shut.Store(true)
-		go c.room.post(leaveMsg{c.seat})
+		loopMu.Lock()
+		room, seat := c.room, c.seat
+		loopMu.Unlock()
+		if room != nil {
+			go room.post(leaveMsg{seat})
+		}
 	}}
 	return c, &shut
+}
+
+func bindSeat(c *conn, s *seat) {
+	loopMu.Lock()
+	defer loopMu.Unlock()
+	c.seat, c.room = s, s.r
 }
 
 func testConfig() config {
@@ -40,7 +55,7 @@ func seatedWith(t *testing.T, g *registry, match string, write func([]byte), set
 	if res.seat == nil {
 		t.Fatalf("join %q: %s", match, res.reason)
 	}
-	c.seat, c.room = res.seat, res.seat.r
+	bindSeat(c, res.seat)
 	return c, shut
 }
 

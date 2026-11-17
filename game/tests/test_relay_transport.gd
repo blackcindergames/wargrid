@@ -89,7 +89,7 @@ func test_refused_send_closes(runner) -> bool:
 		first[0].send_text(big)
 		if first[0].closed(): break
 	Engine.print_error_messages = true
-	runner.check(first[0].closed(), "T7 a refused send marks the transport closed, so the match ends as relay lost")
+	runner.check(first[0].closed() and not first[0].is_open(), "T7 a refused send closes the socket, so the match ends as relay lost")
 	first[0].close()
 	first[1].close()
 	var second: Array = _stalled_pair(runner, server, now)

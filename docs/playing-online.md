@@ -30,7 +30,7 @@ Controls are the same as offline. Restart is hidden online.
 | `Desync — report saved to <path>` | The two games disagreed. The match stops and the report is written. |
 | `Protocol error: <reason>` | A malformed frame arrived. The match stops. |
 
-The reasons the relay added on branch `relay-guards` (not deployed yet; the game shows them in the relay's words, as `Relay: <reason>` during a match and without the prefix in the launcher's status line at join; the plain wording here is for the host to pass on). The first two per-address reasons only appear once the relay is set to count addresses, which the hosted relay is not yet:
+The reasons the relay added with Relay guards (on `main`, not deployed yet; the game shows them in the relay's words, as `Relay: <reason>` during a match and without the prefix in the launcher's status line at join; the plain wording here is for the host to pass on). The first two per-address reasons only appear once the relay is set to count addresses, which the hosted relay is not yet:
 
 - `too far ahead`: your game sent ahead of the others. That should not happen in normal play; please report it.
 - `too many connections`: too many games from your network at once.

@@ -164,7 +164,7 @@ Already built or on a branch (checked on `main` `2979497`, 2026-11-16):
 | Atomic admission, hello and lobby deadlines, rematch in the room | built (P2.2 and before) |
 | Drain on the stop signal, 3.5 s, closing lobbies that have not started | built (`relay/main.go` `shutdown`) |
 | Relay address in the invite link | built (`game/scripts/join_link.gd` `link`) |
-| Join and connection limits: `relay busy` for the global ones, `too many connections` and `too many joins` per address | branch `relay-guards`, not merged |
+| Join and connection limits: `relay busy` for the global ones, `too many connections` and `too many joins` per address | on `main` since 2026-11-17, not deployed |
 | Client retry after a failed connect | not built |
 | Slot character, worker names, fail-over, long drain, player limit per worker | not built, not placed |
 

@@ -32,6 +32,7 @@ type limiter struct {
 	globalPeriod time.Duration
 	unknownB     bucket
 	refused      map[string]int
+	warnedAt     time.Time
 }
 
 type ipEntry struct {
@@ -64,6 +65,19 @@ func clientKey(r *http.Request, header string) string {
 		return ip.To4().String()
 	default:
 		return ip.Mask(net.CIDRMask(64, 128)).String()
+	}
+}
+
+// unusableHeader logs at most once a minute that per-IP limits were skipped; never the header value.
+func (l *limiter) unusableHeader() {
+	if l == nil {
+		return
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if now := l.now(); l.warnedAt.IsZero() || now.Sub(l.warnedAt) >= time.Minute {
+		slog.Warn("client ip header unusable, per-IP limits skipped")
+		l.warnedAt = now
 	}
 }
 
@@ -105,6 +119,7 @@ func (l *limiter) join(key string) string {
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	// Per-IP first, so one address's flood cannot drain the global bucket.
 	if key != "" {
 		e := l.entry(key)
 		if e == nil {

@@ -63,5 +63,5 @@ Q5. After losing its target, when does the turret turn back to face forward?
    a) After a short wait (2 s, Humvee and Scorpion 5 s), then turns back — ZH default (TurretAI.cpp:200, :1439)   b) Right away   c) It stays where it last aimed
    Recommendation: a, because it keeps the ZH look and a tank that loses a target briefly is still pointing the right way. Why it matters: one hold-until tick per unit in the hash.
 Q6. Should turreted units be able to fire while driving?
-   a) Yes, turreted units shoot while moving — ZH behaviour (inferred, not checked in source)   b) No, units fire only when they did not move this tick (today, combat.gd:352-358)
+   a) Yes, turreted units shoot while moving — ZH behaviour (inferred, not checked in source)   b) No, units fire only when they did not move this tick (today, `Combat.fire` skips `moved_ids`)
    Recommendation: research first: check ZH source before answering. Why it matters: big gameplay change (attack-move, kiting), and only possible once turrets exist.

@@ -58,11 +58,15 @@ func wantRejected(t *testing.T, what string, r *room, n int, f *frames) {
 }
 
 func TestLeadBoundFollowsOtherSeats(t *testing.T) {
+	logs := captureLogs(t)
 	r, f := testRoom(t, 2)
 	feed(r, 1, 4, 8)
 	wantTicks(t, "start window", f[1], 5)
 	feed(r, 1, 9, 9)
 	wantRejected(t, "tick 9 with seat 2 silent", r, 1, f[0])
+	if !strings.Contains(unquoted(logs, r), "msg=lead bound") {
+		t.Fatalf("rejection wrote no lead bound line:\n%s", logs.String())
+	}
 	feed(r, 1, 10, 12)
 	wantTicks(t, "after the rejection", f[1], 5)
 

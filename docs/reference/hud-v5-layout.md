@@ -37,7 +37,7 @@ From `layout.json` `tokens` (measured on the page):
 | `ally` | `#69ceaa` | Teammate ping arrow and minimap dots (Full) |
 | `panel`, `edge` | `#1b2731`, `#263842` | Carried over from v4; not used on these pictures |
 
-Two fills are literals on the page, not tokens: empty card wells and empty queue slots are `#0f1820`; an empty queue slot also has a 1 px inset outline in `#223241`. Health bars on the page fill `#5cc85a` above 66 %, `#e0d060` above 33 %, `#d8453a` below. Those steps are a drawing simplification: the game blends the three colours (`game/scripts/presentation/world_view.gd:84-88`), and the game's rule wins.
+Two fills are literals on the page, not tokens: empty card wells and empty queue slots are `#0f1820`; an empty queue slot also has a 1 px inset outline in `#223241`. Health bars on the page fill `#5cc85a` above 66 %, `#e0d060` above 33 %, `#d8453a` below. Those steps are a drawing simplification: the game blends the three colours (`game/scripts/presentation/world_view.gd` `health_color`), and the game's rule wins.
 
 Colour rules (design answers, "HUD v4 mock-ups" and "HUD v5 mock-ups"):
 

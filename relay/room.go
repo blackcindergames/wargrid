@@ -288,9 +288,7 @@ func (r *room) forward(t *tickMsg) {
 	}
 }
 
-// leadLimit is the last tick an honest seat can send: it sends T+1+delay only after running T, which needed
-// every other seat's frame for T, and those passed through this room first. The preloaded ticks below the
-// delay allow 2*delay before any peer frame, which is (delay-1)+delay+1.
+// leadLimit is the last tick an honest seat can send (derivation: codebase guide ch. 11).
 func (r *room) leadLimit(s *seat) int {
 	lowest := math.MaxInt
 	for _, o := range r.seats {

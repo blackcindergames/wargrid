@@ -88,6 +88,14 @@ type relay struct {
 	ipHeader string
 }
 
+func (h *relay) key(r *http.Request) string {
+	k := clientKey(r, h.ipHeader)
+	if k == "" && h.ipHeader != "" {
+		h.lim.unusableHeader()
+	}
+	return k
+}
+
 func envInt(name string, def int) int {
 	v, ok := os.LookupEnv(name)
 	if !ok {
@@ -250,7 +258,7 @@ func serve(ln net.Listener, srv *http.Server, reg *registry, drain time.Duration
 func newServer(h *relay) *http.Server {
 	up := gws.NewUpgrader(h, &gws.ServerOption{
 		ReadMaxPayloadSize: 1 << 20, CheckUtf8Enabled: true, Recovery: gws.Recovery,
-		Authorize: func(r *http.Request, s gws.SessionStorage) bool { s.Store("ip", clientKey(r, h.ipHeader)); return true },
+		Authorize: func(r *http.Request, s gws.SessionStorage) bool { s.Store("ip", h.key(r)); return true },
 	})
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) })

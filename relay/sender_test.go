@@ -36,8 +36,11 @@ func TestBatchCutAtFrameCap(t *testing.T) {
 		s.addBatch(bytes.Repeat([]byte("a"), 32767))
 		s.addBatch(bytes.Repeat([]byte("b"), 32768))
 		s.flushNow()
-		if len(f.got) != 1 || len(f.got[0]) != maxMessageBytes {
-			t.Fatalf("got %d messages, first %d bytes, want one of %d", len(f.got), len(f.got[0]), maxMessageBytes)
+		if len(f.got) != 1 {
+			t.Fatalf("got %d messages, want one", len(f.got))
+		}
+		if len(f.got[0]) != maxMessageBytes {
+			t.Fatalf("got a message of %d bytes, want %d", len(f.got[0]), maxMessageBytes)
 		}
 	})
 

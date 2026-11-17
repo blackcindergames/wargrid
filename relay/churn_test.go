@@ -125,7 +125,7 @@ func churnRooms(t *testing.T, cfg config) {
 // well above the few that other tests' sockets still holding on can take away in a full-suite run.
 func TestRoomsDoNotLeakGoroutines(t *testing.T) {
 	cfg := testConfig()
-	cfg.hello, cfg.silence = time.Minute, 2*time.Second
+	cfg.hello = time.Minute
 	t.Run("plain", func(t *testing.T) { churnRooms(t, cfg) })
 	t.Run("test delay", func(t *testing.T) {
 		delayed := cfg

@@ -156,13 +156,48 @@ func TestClientKey(t *testing.T) {
 		{testIPHeader, "2001:db8:1:2:ffff::1", "2001:db8:1:2::"},
 		{testIPHeader, "", ""},
 		{testIPHeader, "not-an-ip", ""},
-		{testIPHeader, "203.0.113.7, 198.51.100.1", ""}, // skipped by the user's Q26 answer; whether to revisit is an open morning question
+		{testIPHeader, "203.0.113.7, 198.51.100.1", ""}, // Q26: skipped, and the relay warns (TestMissingIPHeaderWarnsOncePerMinute)
 		{testIPHeader, "203.0.113.7:4000", ""},
 		{testIPHeader, "::ffff:203.0.113.7", "203.0.113.7"},
 	} {
 		if got := clientKey(req(c.value), c.header); got != c.want {
 			t.Errorf("header %q value %q: key %q, want %q", c.header, c.value, got, c.want)
 		}
+	}
+}
+
+func TestMissingIPHeaderWarnsOncePerMinute(t *testing.T) {
+	logs := captureLogs(t)
+	c := newFakeClock()
+	h := &relay{lim: prodLimiter(c), ipHeader: testIPHeader}
+	req := func(v string) *http.Request {
+		r := httptest.NewRequest(http.MethodGet, "/ws", nil)
+		r.Header.Set(testIPHeader, v)
+		return r
+	}
+	warns := func() int { return strings.Count(logs.String(), "client ip header unusable") }
+	h.key(req("not-an-ip"))
+	h.key(req("203.0.113.7, 198.51.100.1"))
+	c.advance(59 * time.Second)
+	h.key(httptest.NewRequest(http.MethodGet, "/ws", nil))
+	if got := warns(); got != 1 {
+		t.Fatalf("within a minute: %d warnings, want 1\n%s", got, logs.String())
+	}
+	if h.key(req("198.51.100.9")) != "198.51.100.9" || warns() != 1 {
+		t.Fatalf("a usable header must not warn\n%s", logs.String())
+	}
+	c.advance(time.Second)
+	h.key(req("garbage"))
+	if got := warns(); got != 2 {
+		t.Fatalf("after a minute: %d warnings, want 2\n%s", got, logs.String())
+	}
+	if strings.Contains(logs.String(), "203.0.113.7") || strings.Contains(logs.String(), "garbage") {
+		t.Fatalf("warning leaks the header value\n%s", logs.String())
+	}
+	quiet := &relay{lim: prodLimiter(c)}
+	quiet.key(req("not-an-ip"))
+	if got := warns(); got != 2 {
+		t.Fatalf("header unset must not warn: %d warnings\n%s", got, logs.String())
 	}
 }
 
@@ -330,6 +365,7 @@ func TestSlotsReturnAfterInMatchCloses(t *testing.T) {
 		returned(t, l)
 	})
 	t.Run("too_far_ahead", func(t *testing.T) {
+		logs := captureLogs(t)
 		l, url := start(t)
 		a, ac, b, _ := pair(t, l, url)
 		for tick := 4; tick <= 9; tick++ {
@@ -338,6 +374,9 @@ func TestSlotsReturnAfterInMatchCloses(t *testing.T) {
 		hearUntil(t, ac, `"reason":"too far ahead"`)
 		_ = b.WriteClose(1000, nil)
 		returned(t, l)
+		if out := logs.String(); !strings.Contains(out, "lead bound") || strings.Contains(out, testIP) {
+			t.Fatalf("log lacks the lead bound line or carries the client address:\n%s", out)
+		}
 	})
 	t.Run("invalid_message", func(t *testing.T) {
 		l, url := start(t)

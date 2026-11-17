@@ -25,6 +25,10 @@ for p in default: delay:WARGRID_TEST_DELAY_MS=250 silence:WARGRID_SILENCE_MS=300
   done
   "$out/conformance" -url "ws://127.0.0.1:$port/ws" -profile "$profile" -silence 300ms -hello 300ms -lobby 1500ms >"$out/$profile.txt" 2>&1
   grep '^FAIL' "$out/$profile.txt"
+  case $profile in
+    limits | global) ;;
+    *) ! grep 'WARN limit rule=' "$out/relay-$profile.log" || { echo "CONFORMANCE FAILED: $profile tripped a relay limit, logs: $out"; exit 1; } ;;
+  esac
   summary=$(grep '^CONFORM ' "$out/$profile.txt") || { echo "CONFORMANCE FAILED: no summary ($profile), logs: $out"; exit 1; }
   echo "$summary"
   case $summary in

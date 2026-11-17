@@ -281,6 +281,36 @@ func TestHoldDelaysBothDirectionsInOrder(t *testing.T) {
 	}
 }
 
+// A close inside a hold reaches the target only after the held bytes, and only as a half-close.
+func TestCloseDuringHoldKeepsBytesAndHalfClose(t *testing.T) {
+	r := startRig(t, "hold@50:300", 30*time.Second)
+	c, s := r.connect()
+	cs, ss := &sink{}, &sink{}
+	cs.drain(c)
+	ss.drain(s)
+	r.waitLog("hold-start", time.Second)
+	up, down := pattern(1000, 1), pattern(2000, 2)
+	send(t, c, up)
+	if err := c.(*net.TCPConn).CloseWrite(); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(ss.waitLen(t, len(up), 2*time.Second), up) {
+		t.Fatal("held bytes did not reach the target before the close")
+	}
+	if err := ss.waitErr(t, 2*time.Second); !errors.Is(err, io.EOF) {
+		t.Fatalf("target side saw %v, want EOF", err)
+	}
+	send(t, s, down)
+	if !bytes.Equal(cs.waitLen(t, len(down), 2*time.Second), down) {
+		t.Fatal("the target's reply after the client's half-close was lost")
+	}
+	_ = s.Close()
+	if err := cs.waitErr(t, 2*time.Second); !errors.Is(err, io.EOF) {
+		t.Fatalf("client side saw %v, want EOF", err)
+	}
+	r.waitExit()
+}
+
 func TestWriteSlicedCutsEveryWrite(t *testing.T) {
 	var got [][]byte
 	w := writerFunc(func(p []byte) (int, error) { got = append(got, bytes.Clone(p)); return len(p), nil })
@@ -333,19 +363,21 @@ func TestSliceKeepsStreamIdentical(t *testing.T) {
 func TestResetSendsRST(t *testing.T) {
 	r := startRig(t, "reset@200", 30*time.Second)
 	t0 := time.Now()
-	c, _ := r.connect()
-	_ = c.SetReadDeadline(time.Now().Add(3 * time.Second))
-	_, err := c.Read(make([]byte, 16))
-	if time.Since(t0) < 200*time.Millisecond {
-		t.Fatalf("reset after %v", time.Since(t0))
-	}
-	if runtime.GOOS == "windows" {
-		// Go reports the abort with a Windows-specific error, so only EOF (a clean close) is wrong there.
-		if err == nil || errors.Is(err, io.EOF) {
-			t.Fatalf("read after reset returned %v", err)
+	c, s := r.connect()
+	for _, conn := range []net.Conn{c, s} {
+		_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		_, err := conn.Read(make([]byte, 16))
+		if time.Since(t0) < 200*time.Millisecond {
+			t.Fatalf("reset after %v", time.Since(t0))
 		}
-	} else if !errors.Is(err, syscall.ECONNRESET) {
-		t.Fatalf("read after reset returned %v, want ECONNRESET", err)
+		if runtime.GOOS == "windows" {
+			// Go reports the abort with a Windows-specific error, so only EOF (a clean close) is wrong there.
+			if err == nil || errors.Is(err, io.EOF) {
+				t.Fatalf("read after reset returned %v", err)
+			}
+		} else if !errors.Is(err, syscall.ECONNRESET) {
+			t.Fatalf("read after reset returned %v, want ECONNRESET", err)
+		}
 	}
 	r.waitLog(" reset", time.Second)
 	r.waitExit()

@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -140,6 +142,18 @@ func TestHashGroupsNameOddSeat(t *testing.T) {
 	})
 	if !strings.Contains(unquoted(logs, r), "groups=1,3|2") {
 		t.Fatalf("want groups 1,3|2:\n%s", logs.String())
+	}
+}
+
+func TestHashCompletesAfterOver(t *testing.T) {
+	logs := captureLogs(t)
+	r := hashRoom(t, 2)
+	play(r, 2, 4, 33, noHash)
+	sendHash(r, 1, 34, honest(34, hashA))
+	r.onOver(r.seats[1])
+	sendHash(r, 2, 34, honest(34, hashB))
+	if got := strings.Count(unquoted(logs, r), "msg=DESYNC"); got != 1 {
+		t.Fatalf("want one DESYNC from the pending entry completed after over, got %d:\n%s", got, logs.String())
 	}
 }
 
@@ -323,6 +337,13 @@ func TestByteFieldsAcrossRematch(t *testing.T) {
 	b.close()
 	ended(t, r)
 	end := matchEnd(t, logs, r)
+	m := regexp.MustCompile(`seat1_peak_bps=(\d+)`).FindStringSubmatch(end)
+	if m == nil {
+		t.Fatalf("MATCH END lacks seat1_peak_bps: %s", end)
+	}
+	if peak, _ := strconv.Atoi(m[1]); peak < 2100 {
+		t.Fatalf("seat1_peak_bps %d lost the pre-rematch 2000 B frame: %s", peak, end)
+	}
 	for _, want := range []string{"seat1=3f/2600B", "seat1_max_frame=2000", "seat2_max_frame=100"} {
 		if !strings.Contains(end, want) {
 			t.Fatalf("MATCH END lacks %q: %s", want, end)
