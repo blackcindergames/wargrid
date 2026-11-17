@@ -16,7 +16,7 @@ var sessions: String = "user://test-playtests-%d" % OS.get_process_id()
 var saved_dir: String = ""
 
 func cases() -> Array[Callable]:
-	return [test_shipped_focus_file_valid, test_focus_validation, test_trigger_matching, test_switch_defaults_and_override, test_build_id, test_launcher_focus_card, test_switch_saves_without_cards, test_launcher_shows_open_sitting_card, test_capture_bounds, test_marker_fields, test_session_schema, test_session_web_download, test_session_web_backup_fails, test_session_desktop_write, test_session_resumes_after_restart, test_marker_written_mid_match, test_finish_replaces_unfinished, test_restart_keeps_cut_short_entry, test_filled_rules, test_close_sitting_unfilled_leaves_nothing, test_legacy_current_is_filed, test_settle_rules, test_web_copies_never_overwritten, test_suite_playtest_dir_redirected, test_web_launcher_downloads_once, test_card_pick_ends_sitting, test_failed_card_pick_keeps_card, test_marker_row_shows_match_time]
+	return [test_shipped_focus_file_valid, test_focus_validation, test_trigger_matching, test_switch_defaults_and_override, test_build_id, test_launcher_focus_card, test_switch_saves_without_cards, test_launcher_shows_open_sitting_card, test_capture_bounds, test_marker_fields, test_session_schema, test_session_web_download, test_session_web_backup_fails, test_session_desktop_write, test_session_resumes_after_restart, test_marker_written_mid_match, test_finish_replaces_unfinished, test_restart_keeps_cut_short_entry, test_filled_rules, test_close_sitting_unfilled_leaves_nothing, test_legacy_current_is_filed, test_settle_rules, test_web_copies_never_overwritten, test_suite_playtest_dir_redirected, test_web_launcher_downloads_once, test_card_pick_ends_sitting, test_failed_card_pick_keeps_card, test_marker_row_shows_match_time, test_failed_mirror_keeps_current]
 
 func _begin() -> String:
 	var saved: String = AudioSettings.path
@@ -279,7 +279,7 @@ func test_launcher_shows_open_sitting_card(runner) -> bool:
 	var title: String = FocusCards.card(SHIPPED[2], FocusCards.load_cards()).title
 	var panel: Control = launcher.get_node("FocusPanel")
 	runner.check(launcher.get_node("Pages/Play/ThisBuild").text == "This build: " + title, "PT6b ThisBuild names the open sitting's card, got %s" % launcher.get_node("Pages/Play/ThisBuild").text)
-	runner.check(not panel.find_child("Picker", true, false).disabled and panel.find_child("OpenSession", true, false).visible and panel.find_child("OpenSession", true, false).text == "Session open: 1 match", "PT6b the picker stays enabled while Session open shows")
+	runner.check(not panel.find_child("Picker", true, false).disabled and panel.find_child("OpenSession", true, false).visible and panel.find_child("OpenSession", true, false).text == "Session open: 1 match. Picking another card files the session.", "PT6b the picker stays enabled while Session open shows")
 	var shown := PackedStringArray()
 	for label: Label in panel.find_children("*", "Label", true, false): shown.append(label.text)
 	runner.check(title in shown, "PT6b the panel shows the open sitting's card, got %s" % [shown])
@@ -642,7 +642,7 @@ func test_card_pick_ends_sitting(runner) -> bool:
 	picker.select(SHIPPED.find(other))
 	picker.item_selected.emit(SHIPPED.find(other))
 	runner.check(not picker.disabled and _session_files().size() == 1 and FocusCards.shown() == other, "NB13 picking another card files the sitting, got %s, shown %s" % [_session_files(), FocusCards.shown()])
-	runner.check(_filed_shown(launcher) and _filed_label(launcher) == "Previous session saved to" and _last_filed(launcher).text == PlaytestSession.last_filed and PlaytestSession.last_filed.ends_with(".json"), "NB13 LastFiled holds the saved path, got '%s'" % _last_filed(launcher).text)
+	runner.check(_filed_shown(launcher) and _filed_label(launcher) == "Previous session saved to:" and _last_filed(launcher).text == PlaytestSession.last_filed and PlaytestSession.last_filed.ends_with(".json"), "NB13 LastFiled holds the saved path, got '%s'" % _last_filed(launcher).text)
 	picker.select(SHIPPED.find(first))
 	picker.item_selected.emit(SHIPPED.find(first))
 	runner.check(_session_files().size() == 1 and FocusCards.shown() == first, "NB13 picking with no sitting open writes nothing")
@@ -689,5 +689,21 @@ func test_marker_row_shows_match_time(runner) -> bool:
 	var draft_row: String = box.get_child(box.get_child_count() - 2).text
 	runner.check(draft_row == "0:00: ok", "PT14 a draft saved without a kind shows no empty kind, got '%s'" % draft_row)
 	box.free()
+	_end(saved)
+	return true
+
+func test_failed_mirror_keeps_current(runner) -> bool:
+	var saved := _begin()
+	var session := _fresh()
+	session.add_marker(_marker(10), HEADER)
+	var path: String = sessions.path_join(PlaytestSession.CURRENT)
+	var before: PackedByteArray = FileAccess.get_file_as_bytes(path)
+	var blocker: String = path + ".tmp"
+	DirAccess.make_dir_recursive_absolute(blocker) # a directory in the temp file's place makes its open fail
+	session.add_marker(_marker(20), HEADER)
+	runner.check(session.save_failed and before.size() > 0 and FileAccess.get_file_as_bytes(path) == before, "NB16 a failed mirror leaves current.json byte-identical, failed %s" % session.save_failed)
+	DirAccess.remove_absolute(blocker)
+	session.add_marker(_marker(30), HEADER)
+	runner.check(not session.save_failed and _on_disk().matches[0].markers.size() == 3 and not FileAccess.file_exists(blocker), "NB16 the next mirror replaces current.json and leaves no temp file")
 	_end(saved)
 	return true

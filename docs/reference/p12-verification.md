@@ -4,14 +4,14 @@ Plan: [P12 plan](../superpowers/plans/2026-11-17-p12-notes-that-never-block.md).
 
 ```text
 Resume record (updated 2026-11-17)
-Branch / base commit / working-tree state: p12-notes / 10d152c / Task 5 committed, clean
-Last green task / next incomplete task: Task 5 (benchmark pending) / Task 5 Step 3 benchmark, then stop gate 1
+Branch / base commit / working-tree state: p12-notes / 10d152c / gate-1 fixes committed, clean
+Last green task / next incomplete task: stop gate 1 / stop gate 2 (/ponytail-review)
 Changed paths since last commit: none
-Last command / cases / checks / failures / exit / marker: sh tools/run_checks.sh / - / 5 / 0 / 0 / CHECKS PASSED
+Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1079 / 146411 / 0 / 0 / TESTS PASSED
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); stop gate A passed; owner answers 2026-11-17; rendered rerun owed after the merge (match_screen.gd changed)
+Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); gate A passed; owner answers 2026-11-17; benchmark pending (load); rendered rerun owed after the merge; gate 3 owner check pending
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: benchmark alone, then gate review (Grok + Opus + player-experience), then /ponytail-review
+Next exact action: /ponytail-review on Sonnet on 10d152c..HEAD, apply cuts, full suite and run_checks
 ```
 
 ## Web download probe (Task 1)
@@ -59,3 +59,8 @@ The probe (`build/p12-probe/`, untracked) copies it from `new Blob` to `revokeOb
 | 2026-11-17 | 5 | full `sh tools/run_tests.sh` | `b262857` plus Task 5 (first round) | CASES 1072 CHECKS 146396 FAILURES 0, exit 0 |
 | 2026-11-17 | 5 | docs review: Codex (gpt-6.1-sol medium) and Sonnet | `b262857` plus Task 5 | fixed: marker headings inverted; "no buttons / nothing pauses" false for the marker box; F22 labelled fixed before the gates; "every exit" (the launcher keeps a desktop sitting open); "unfinished" only after a crash or closed tab; download is requested, Chromium limit stated; no promise that notes cannot be lost; `setup` takes three callables; marker box rules; "sitting" defined; guide entry reordered; card try items and questions one thing each |
 | 2026-11-17 | 5 | `run_checks.sh`, `roadmap.py`, `check_public.sh` after the docs round | `b262857` plus Task 5 | CHECKS PASSED 5, exit 0; no README diff; PUBLIC CHECK PASSED |
+| 2026-11-17 | 5 | benchmark (Step 3) | `b22c7f3` | skipped: 1-minute load 2.58 above 2.5; pending. `rg playtest` in the benchmark scene and script: no match, the helper is not in the benchmark |
+| 2026-11-17 | gate 1 | gate review: Grok 4.7 high (`grok-4.7-build` reported, end_turn, 2.50 USD), Opus whole-branch, player-experience | `10d152c..b22c7f3` | no critical. Fixed test-first: G1 match end dropped focus from a field, so Enter played again (Opus reproduced, PX); G2 a stale running-match index across match scenes mixed two matches' markers (Opus reproduced); G3 a resumed sitting hid its markers (Grok); G4 match end dropped an open marker draft (Grok, Opus); G5 Ctrl/Cmd+M in a field toggled mute (Grok); G6 a failed `current.json` write could truncate it (Grok; now a temp file renamed on success); G7-G10 card, launcher and empty-state wording, scroll to the markers at match end (PX). Ruled: a web tab close loses the one uncommitted line (spec: no per-keystroke writes); duplicate web download after a failed `last-` copy; the picker reverts silently with the helper off; PO25/PO31 call `_unhandled_input` directly; PO33 cannot fail on the explicit release (Godot releases focus when a focused node leaves the tree); same-minute Saved time; Open folder button; Enter in the marker box; legend order |
+| 2026-11-17 | gate 1 | red gate-1 tests on the old code | `b22c7f3` plus gate-1 tests | overlay CASES 48 FAILURES 6 (PO37 x2, PO38, PO39, PO40, PO42); PO41 FAILURES 1; playtest NB16 FAILURES 1; mutation G2 `start_match` off -> PO38 red; restored |
+| 2026-11-17 | gate 1 | `WARGRID_TEST_ONLY` overlay, playtest.gd, launcher, online_scene, skirmish_scene, pause_menu, audio_settings; lint, warnings, boundary | `b22c7f3` plus gate-1 fixes | exit 0 each (48/221/0, 29/312/0, 64/5727/0, 62/3088/0, 58/328/0, 9/414/0, 16/61/0); lint, warnings, boundary exit 0; simulation/net/relay/protocol diff empty; `FORMAT` 1 |
+| 2026-11-17 | gate 1 | full `sh tools/run_tests.sh`; `sh tools/run_checks.sh` | `b22c7f3` plus gate-1 fixes | CASES 1079 CHECKS 146411 FAILURES 0, exit 0; CHECKS PASSED 5, exit 0. Coordinator wording touch-up after ("files the session", card quit item), `WARGRID_TEST_ONLY=test_playtest` 85/567/0 |

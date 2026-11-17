@@ -46,6 +46,8 @@ func _init() -> void:
 
 # Master mute is session-only (never saved), so a muted session cannot leave the next start silent.
 func _unhandled_input(event: InputEvent) -> void:
+	var focus: Control = get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit: return # a field passes Ctrl/Cmd+M on unhandled
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_M:
 		_mute.button_pressed = not _mute.button_pressed
 

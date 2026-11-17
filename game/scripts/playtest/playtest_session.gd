@@ -18,6 +18,7 @@ static func resume_or_open(focus_id: String, build: String) -> PlaytestSession:
 	session.data = _stored()
 	if session.data.is_empty():
 		session.data = {"format": FORMAT, "build": build, "focus": focus_id, "started": Time.get_datetime_string_from_system(true), "filled": false, "checklist": {}, "answers": {}, "matches": []}
+	else: session.last_match = session.data.matches.size() - 1 # after a crash the panel still lists the stored markers
 	current = session
 	return session
 
@@ -130,8 +131,10 @@ func discard() -> void:
 	DirAccess.remove_absolute(dir.path_join(CURRENT))
 	if current == self: current = null
 
+# Written beside and renamed over, so a failed write never truncates the stored sitting.
 func _mirror() -> void:
-	save_failed = not _store(CURRENT, JSON.stringify(data))
+	var temp: String = CURRENT + ".tmp"
+	save_failed = not (_store(temp, JSON.stringify(data)) and DirAccess.rename_absolute(dir.path_join(temp), dir.path_join(CURRENT)) == OK)
 	if not save_failed: saved_at = Time.get_time_string_from_system().left(5)
 
 func _store(file: String, text: String) -> bool:

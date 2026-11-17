@@ -42,7 +42,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_only, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_only, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states, test_match_end_keeps_field_focus, test_new_scene_starts_new_entry, test_resumed_sitting_lists_markers, test_match_end_keeps_marker_draft, test_mute_key_stays_in_field, test_match_end_scrolls_to_markers]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -1180,7 +1180,7 @@ func test_empty_marker_states(runner) -> bool:
 	_camera(main)
 	runner.check(_markers_title(main) == "This match" and _no_markers_line(main) == "No markers yet (N adds one)", "PO35 a fresh match shows the empty state, '%s' '%s'" % [_markers_title(main), _no_markers_line(main)])
 	overlay.end_match()
-	runner.check(_markers_title(main) == "This match" and _no_markers_line(main) == "No markers yet (N adds one)", "PO35 an ended match without markers shows the empty state")
+	runner.check(_markers_title(main) == "This match" and _no_markers_line(main) == "No markers this match", "PO35 an ended match without markers says so, got '%s'" % _no_markers_line(main))
 	main._restart()
 	runner.check(_markers_title(main) == "This match" and _no_markers_line(main) == "No markers yet (N adds one)", "PO35 after a match without markers there is no Last match, '%s'" % _markers_title(main))
 	_mark(overlay, "good", "one")
@@ -1221,5 +1221,119 @@ func test_window_close_keeps_marker_draft(runner) -> bool:
 	var markers: Array = matches[0].markers if matches.size() == 1 else []
 	runner.check(markers.size() == 1 and markers[0].text == "draft", "NB14 a window close files the open marker draft, got %s" % [markers])
 	main.free()
+	_end(saved)
+	return true
+
+func test_match_end_keeps_field_focus(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	_camera(main)
+	var id: String = _questions()[0].id
+	var answer: LineEdit = _field(main, "Answer_" + id)
+	answer.grab_focus()
+	answer.text = "mid sentence"
+	answer.caret_column = 3
+	_end_offline(main)
+	main._refresh()
+	var focus: Control = main.get_viewport().gui_get_focus_owner()
+	runner.check(focus != null and focus.name == "Answer_" + id and _panel(main).is_ancestor_of(focus) and (focus as LineEdit).caret_column == 3, "PO37 after match end the rebuilt field has the focus and the caret, focus %s" % focus)
+	var kept = main.driver.pump.live()
+	_key(runner, KEY_ENTER)
+	runner.check(is_same(main.driver.pump.live(), kept) and _stored_answer(id) == "mid sentence" and main.get_viewport().gui_get_focus_owner() == null, "PO37 Enter after match end saves and releases the field without playing again, stored '%s'" % _stored_answer(id))
+	_key(runner, KEY_ENTER)
+	runner.check(not is_same(main.driver.pump.live(), kept), "PO37 the second Enter plays again")
+	main.free()
+	_end(saved)
+	return true
+
+func test_new_scene_starts_new_entry(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	var scenes := _scenes(main)
+	_mark(overlay, "bad", "first scene")
+	PlaytestSettings.save_enabled(false)
+	overlay.set_active(false)
+	_key(runner, KEY_ESCAPE)
+	_click(main, "Back to main menu")
+	runner.check(scenes == [LAUNCHER], "PO38 fixture: Back to menu with the helper off leaves")
+	main.free()
+	PlaytestSettings.save_enabled(true)
+	main = await _scene(runner)
+	_camera(main)
+	_mark(main.get_node("HUD/Playtest"), "good", "second scene")
+	var matches: Array = PlaytestSession.current.data.matches
+	runner.check(matches.size() == 2 and matches[1].markers.size() == 1 and matches[1].markers[0].text == "second scene", "PO38 a new match scene's marker starts its own entry, got %s" % [matches.map(func(entry: Dictionary) -> int: return entry.markers.size())])
+	main.free()
+	_end(saved)
+	return true
+
+func test_resumed_sitting_lists_markers(runner) -> bool:
+	var saved: String = _begin()
+	var stored := PlaytestSession.resume_or_open(CARD_ECONOMY, "0.11.0-dev+abc")
+	stored.add_marker({"kind": "bad", "text": "before the crash", "tick": 30, "comment": ""}, {"mode": "offline"})
+	PlaytestSession.current = null
+	var main = await _scene(runner)
+	var comment: LineEdit = _field(main, "Comment_0_0")
+	runner.check(_markers_title(main) == "Last match" and comment != null, "PO39 a resumed sitting lists its marker under Last match, title '%s'" % _markers_title(main))
+	if comment != null:
+		comment.text = "after the crash"
+		comment.text_submitted.emit(comment.text)
+		var on_disk: Variant = JSON.parse_string(_current_text())
+		runner.check(on_disk.matches[0].markers[0].comment == "after the crash", "PO39 its comment saves to the resumed entry")
+	main.free()
+	_end(saved)
+	return true
+
+func test_match_end_keeps_marker_draft(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	overlay.open_marker()
+	_dialog(main).find_child("Text", true, false).text = "draft at the end"
+	overlay.end_match()
+	var matches: Array = PlaytestSession.current.data.matches
+	runner.check(matches.size() == 1 and not matches[0].has("unfinished") and matches[0].markers.size() == 1 and matches[0].markers[0].text == "draft at the end" and not _dialog(main).visible, "PO40 match end files the open marker draft into the finished match, got %s" % [matches])
+	main.free()
+	_end(saved)
+	return true
+
+func test_mute_key_stays_in_field(runner) -> bool:
+	var saved: String = _begin()
+	var main = await _scene(runner)
+	var muted: bool = AudioServer.is_bus_mute(0)
+	_field(main, "Answer_" + _questions()[0].id).grab_focus()
+	_mod_key(runner, KEY_M, true, false)
+	runner.check(AudioServer.is_bus_mute(0) == muted, "PO41 Ctrl+M in a field leaves the mute alone")
+	_mod_key(runner, KEY_M, false, true)
+	runner.check(AudioServer.is_bus_mute(0) == muted, "PO41 Cmd+M in a field leaves the mute alone")
+	main.get_viewport().gui_release_focus()
+	_key(runner, KEY_M)
+	runner.check(AudioServer.is_bus_mute(0) != muted, "PO41 fixture: M outside a field toggles the mute")
+	AudioServer.set_bus_mute(0, muted)
+	main.free()
+	_end(saved)
+	return true
+
+func test_match_end_scrolls_to_markers(runner) -> bool:
+	var saved: String = _begin(true, "p2-you-clicked")
+	var port := SubViewport.new()
+	port.size = Vector2i(1280, 720)
+	runner.root.add_child(port)
+	var main = await _scene(runner, Skirmish, port)
+	var overlay = main.get_node("HUD/Playtest")
+	_camera(main)
+	_mark(overlay, "good", "one")
+	await runner.process_frame
+	var scroll: ScrollContainer = _panel(main).find_child("Rows", true, false).get_parent()
+	runner.check(_panel(main).find_child("Rows", true, false).size.y > scroll.size.y, "PO42 fixture: the card's rows overflow the panel at 720")
+	overlay.end_match()
+	await runner.process_frame
+	await runner.process_frame
+	var title: Control = _panel(main).find_child("MarkersTitle", true, false)
+	runner.check(scroll.get_global_rect().encloses(title.get_global_rect()), "PO42 match end scrolls the markers title into view, title %s, scroll %s" % [title.get_global_rect(), scroll.get_global_rect()])
+	port.free()
 	_end(saved)
 	return true

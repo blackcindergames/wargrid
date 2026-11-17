@@ -61,15 +61,19 @@ func set_active(on: bool) -> void:
 	_checklist.show()
 
 func _open_session() -> void:
+	var first: bool = _session == null
 	_session = PlaytestSession.resume_or_open(str(_card.get("id", "")), PlaytestSettings.build_id())
+	if first: _session.start_match() # the sitting outlives scenes and may still point at the last scene's match
 	_rebuild()
 
 func end_match() -> void:
 	if not _active or _reviewed: return
+	_save_draft()
 	cancel_marker()
 	_record_match()
 	_rebuild()
 	_checklist.show()
+	if not _typing(): _scroll_to_markers.call_deferred()
 
 func keep_match() -> void:
 	if _active and not _reviewed: _record_match()
@@ -77,9 +81,12 @@ func keep_match() -> void:
 func close_out() -> void:
 	if not _active: return
 	get_viewport().gui_release_focus() # focus_exited saves the field being typed in
-	if _dialog.visible and not _text.text.is_empty(): save_marker(_kind, _text.text)
+	_save_draft()
 	keep_match()
 	PlaytestSession.close_sitting(web, download)
+
+func _save_draft() -> void:
+	if _dialog.visible and not _text.text.is_empty(): save_marker(_kind, _text.text)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and not web: close_out() # web files at the next launcher open instead
@@ -148,8 +155,11 @@ func _input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 func _typing() -> bool:
+	return _typed_field() != null
+
+func _typed_field() -> LineEdit:
 	var focus: Control = get_viewport().gui_get_focus_owner()
-	return focus is LineEdit and _checklist.is_ancestor_of(focus)
+	return focus as LineEdit if focus is LineEdit and _checklist.is_ancestor_of(focus) else null
 
 func _viewport_image() -> Image:
 	return get_viewport().get_texture().get_image()
@@ -182,7 +192,10 @@ func _build_checklist() -> void:
 	_checklist.hide()
 
 func _rebuild() -> void:
-	if is_inside_tree() and _typing(): get_viewport().gui_release_focus()
+	var typed: LineEdit = _typed_field() if is_inside_tree() else null
+	var typed_name: String = typed.name if typed != null else ""
+	var caret: int = typed.caret_column if typed != null else 0
+	if typed != null: get_viewport().gui_release_focus()
 	for child in _rows.get_children():
 		_rows.remove_child(child)
 		child.queue_free()
@@ -205,9 +218,21 @@ func _rebuild() -> void:
 	var listed: bool = shown >= 0 and not _session.data.matches[shown].markers.is_empty()
 	_add_row_label("MarkersTitle", "Last match" if listed and not _reviewed and shown == _session.last_match else "This match")
 	if listed: SessionForm.add_markers(_rows, _session, shown)
-	else: _add_row_label("NoMarkers", "No markers yet (%s adds one)" % _key_label(MARKER_KEY))
+	else: _add_row_label("NoMarkers", "No markers this match" if _reviewed else "No markers yet (%s adds one)" % _key_label(MARKER_KEY))
+	_refocus(typed_name, caret)
 	_show_saved()
 	_fit()
+
+# Rows are rebuilt from scratch, so the field being typed in gets its focus back by its stable name.
+func _refocus(field_name: String, caret: int) -> void:
+	var field: LineEdit = _rows.find_child(field_name, true, false) as LineEdit if not field_name.is_empty() else null
+	if field == null: return
+	field.grab_focus()
+	field.caret_column = caret
+
+func _scroll_to_markers() -> void:
+	var title: Control = _rows.get_node_or_null("MarkersTitle")
+	if title != null: _scroll.ensure_control_visible(title)
 
 func _add_row_label(label_name: String, text: String) -> void:
 	var label := Label.new()

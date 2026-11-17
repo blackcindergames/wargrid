@@ -71,10 +71,10 @@ func _render() -> void:
 	_picker.select(_cards.find(current))
 	var open: int = _open_count.call()
 	_session.visible = open >= 0
-	_session.text = "Session open: %d %s" % [open, "match" if open == 1 else "matches"]
+	_session.text = "Session open: %d %s. Picking another card files the session." % [open, "match" if open == 1 else "matches"]
 	var filed: bool = not PlaytestSession.last_filed.is_empty()
 	_filed_row.visible = filed or not _web
-	_filed_label.text = ("Notes downloaded:" if _web else "Previous session saved to") if filed else "Notes folder:"
+	_filed_label.text = ("Notes downloaded:" if _web else "Previous session saved to:") if filed else "Notes folder:"
 	_filed.text = PlaytestSession.last_filed if filed else ProjectSettings.globalize_path(PlaytestSession.dir)
 	for child in _content.get_children():
 		_content.remove_child(child)
