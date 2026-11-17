@@ -37,6 +37,8 @@ var _seat: int
 var _phase: String = "playing"
 var _friend_again: bool = false
 var _rematch_seed: int = -1
+var _taken: Array[int] = []
+var _next_tick: int = 0
 
 func _init(transport: RefCounted, lockstep: RefCounted, faction: String, seat: int) -> void:
 	_transport = transport
@@ -74,6 +76,8 @@ func adopt(value: Simulation) -> void:
 	pump = SimPump.new(value)
 	first_note = pump.start()
 	_last = first_note
+	_next_tick = first_note.tick
+	_taken = []
 	_answers = []
 	_preview_request = {}
 	_preview_answer = {}
@@ -81,7 +85,11 @@ func adopt(value: Simulation) -> void:
 func start() -> void:
 	_lockstep.send = _transport.send_text
 	_lockstep.submit({"type": "choose_faction", "faction": _own_faction})
-	_lockstep.start(pump.live().snapshot()) # shortcut: live read, SB4 moves it into jobs
+	var job := SimPump.Job.new()
+	job.step = false
+	job.want_digest = true
+	var note: SimPump.Note = pump.query(job)
+	_lockstep.start(note.snapshot, note.digest)
 
 func detach() -> void:
 	if _lockstep != null: _lockstep.send = Callable()
@@ -97,30 +105,54 @@ func step() -> void:
 	for text: Variant in _transport.poll(): _lockstep.receive(text)
 	if not _finished and (_transport.closed() or _transport.silent(Time.get_ticks_usec())): _lockstep.set_relay_lost()
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
-	var stepped: bool = false
+	var posted: bool = false
 	for i in CATCH_UP_STEPS:
-		if _credit < 1 or not _lockstep.advance(pump.live()): break # shortcut: live read, SB4 moves it into jobs
-		stepped = true
+		if _credit < 1 or _last.over: break
+		var commands: Variant = _lockstep.take(_next_tick, not _taken.is_empty())
+		if commands == null: break
 		_credit -= 1
-		var job := SimPump.Job.new()
-		job.step = false
-		job.preview = _preview_request
-		pump.post(job)
-		var tick: int = pump.live().tick() # shortcut: live read, SB4 moves it into jobs
-		_lockstep.finish_tick(tick, pump.live().snapshot() if _lockstep.wants_snapshot(tick) else null) # shortcut: live read, SB4 moves it into jobs
-	if stepped: _preview_request = {}
+		pump.post(_tick_job(commands))
+		_taken.append(_next_tick)
+		_next_tick += 1
+		posted = true
+	if posted: _preview_request = {}
 	if _phase == "playing" and _lockstep.received_any(): _transport.patient = false
-	_answers.append_array(_new_answers())
-	if not _finished and (pump.live().match_over() or _ended()): _finish() # shortcut: live read, SB4 moves it into jobs
-	if (_phase == "over" or _phase == "again") and _room_gone(): _close_room()
+
+func _tick_job(commands: Array[Dictionary]) -> SimPump.Job:
+	var job := SimPump.Job.new()
+	job.commands = commands
+	job.preview = _preview_request
+	job.want_digest = _lockstep.wants_snapshot(_next_tick + 1)
+	return job
 
 # The last advance's preview answer wins, as the screen shows the last tick.
 func drain() -> Array[SimPump.Note]:
 	var notes: Array[SimPump.Note] = pump.drain()
 	for note: SimPump.Note in notes:
 		if not note.preview.is_empty(): _preview_answer = note.preview
+		_finish_job(note)
 	if not notes.is_empty(): _last = notes[-1]
+	_answers.append_array(_new_answers())
+	_settle()
 	return notes
+
+# No taken tick: a test's publish job. A tick that did not move on a finished match: taken past the end.
+func _finish_job(note: SimPump.Note) -> void:
+	if _taken.is_empty(): return
+	var tick: int = _taken.pop_front()
+	if note.over and note.tick <= tick: return
+	if note.tick != tick + 1:
+		# Pairing is by post order; a foreign job in between would record and send the wrong tick.
+		_lockstep.set_protocol_error("note at tick %d for taken tick %d" % [note.tick, tick])
+		_taken.clear()
+		return
+	_lockstep.record(tick, note.issued)
+	# An end inside an earlier finish_tick of this drain sent nothing; a later packet would leave a tick gap.
+	if not _ended(): _lockstep.finish_tick(note.tick, note.snapshot if not note.digest.is_empty() else null, note.digest)
+
+func _settle() -> void:
+	if not _finished and (_last.over or _ended()): _finish()
+	if (_phase == "over" or _phase == "again") and _room_gone(): _close_room()
 
 func take_answers() -> Array[Dictionary]:
 	var answers: Array[Dictionary] = _answers
@@ -256,7 +288,11 @@ func _write_report() -> String:
 	return ProjectSettings.globalize_path(path)
 
 func _report() -> Dictionary:
-	var report: Dictionary = _lockstep.desync_report(pump.live()) # shortcut: live read, SB4 moves it into jobs
+	var job := SimPump.Job.new()
+	job.step = false
+	job.want_ring = true
+	var report: Dictionary = _lockstep.desync_report()
+	report.hash_ring = pump.query(job).ring
 	report.merge(MatchSettings.report_fields(_map_path.get_file().get_basename(), _seed, _starts))
 	return report
 

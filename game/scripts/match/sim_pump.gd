@@ -14,6 +14,7 @@ class Job:
 	var bots: Array[int] = []
 	var step: bool = true
 	var want_digest: bool = false
+	var want_ring: bool = false
 	var preview: Dictionary = {}
 
 class Note:
@@ -26,6 +27,7 @@ class Note:
 	var bot_commands: Array[Dictionary] = []
 	var snapshot: Dictionary = {}
 	var digest: String = ""
+	var ring: PackedStringArray = PackedStringArray()
 	var preview: Dictionary = {}
 	var starts: Dictionary = {}
 	var stats: Array[Dictionary] = []
@@ -144,6 +146,7 @@ static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job
 	if job.want_digest:
 		note.snapshot = sim.snapshot()
 		note.digest = StateHash.digest(note.snapshot)
+	if job.want_ring: note.ring = sim.hash_ring()
 	if slot != null:
 		slot.tick = sim.tick()
 		slot.view = sim.view_state()

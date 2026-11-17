@@ -37,7 +37,7 @@ class PairTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -576,4 +576,19 @@ func test_sb4_finish_tick_uses_given_digest(runner) -> bool:
 	var fresh = Lockstep.new(1, [1, 2] as Array[int])
 	fresh.start(snap, "abcdefabcdefabcd")
 	runner.check(real != "abcdefabcdefabcd" and fresh.hash_rows() == PackedStringArray(["0\tabcdefabcdefabcd"]), "SB4 start logs the given digest as row 0, got %s" % [fresh.hash_rows()])
+	return true
+
+func test_sb4_ring_query(runner) -> bool:
+	var pump = SimPump.new(Skirmish.create(true, "human"))
+	pump.start()
+	for i in 40: pump.post(_job())
+	var current = pump.current()
+	var job = SimPump.Job.new()
+	job.step = false
+	job.want_ring = true
+	var ring: PackedStringArray = pump.query(job).ring
+	runner.check(ring == pump.live().hash_ring() and ring.size() == 40, "SB4 the ring query returns the live ring, got %d rows" % ring.size())
+	job.want_ring = false
+	runner.check(pump.query(job).ring.is_empty(), "SB4 a query without want_ring has no ring")
+	runner.check(is_same(pump.current(), current) and pump.live().tick() == 40 and pump.drain().size() == 40, "SB4 the ring query leaves the slots and the note queue alone")
 	return true

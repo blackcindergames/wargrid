@@ -181,6 +181,10 @@ func set_relay_lost() -> void:
 	if _ended(): return
 	_end("ended_relay", "connection to relay lost")
 
+func set_protocol_error(reason: String) -> void:
+	if _ended(): return
+	_end("ended_protocol", reason)
+
 func left_before_start() -> bool:
 	return _left_seat != 0 and _left_after < _delay
 

@@ -18,6 +18,7 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const MapData = preload("res://scripts/simulation/map_data.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 const PEER_TICKS: int = 60
 
 # Records the ticks the world view consumed, after the real director stored them.
@@ -47,7 +48,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -65,6 +66,9 @@ func _peer_packets(transport: FakeTransport, peer: int, from_tick: int, to_tick:
 	for tick in range(from_tick, to_tick + 1):
 		var commands: Array = [{"type": "choose_faction", "faction": "usa", "tick": 4, "player": peer, "sequence": 0}] if tick == 4 else []
 		transport.frames.append(Wire.encode(Wire.tick_message(peer, tick, commands, null)))
+
+func _peer_stop(transport: FakeTransport, tick: int) -> void:
+	transport.frames.append(Wire.encode(Wire.tick_message(1, tick, [{"type": "stop", "entity_ids": [3], "tick": tick, "player": 1, "sequence": 1}], null)))
 
 func _run(main, frames: int) -> void:
 	for i in frames: BaseScene.tick(main)
@@ -1775,6 +1779,9 @@ func test_sb4_rematch_starts_from_new_pump(runner) -> bool:
 	runner.check(not is_same(main.driver._lockstep, old_lockstep) and main.driver._lockstep.hash_rows() == PackedStringArray(["0\t" + digest]), "SB4 the new lockstep's row 0 is the new match's tick-0 digest, got %s" % [main.driver._lockstep.hash_rows()])
 	var last: Dictionary = Wire.decode(online.transport.sent[-1]).message
 	runner.check(last.type == "tick" and last.tick == 4 and last.get("hash", {}).get("tick") == 0 and last.get("hash", {}).get("value") == digest, "SB4 the last frame is the new tick 4 with that hash, got %s" % [last])
+	_run(main, 6)
+	# Lockstep.take trusts its caller's tick, so the driver's count must restart with the new match.
+	runner.check(main.driver.current().tick == 5 and main.driver._lockstep._next_tick == 5 and main.driver.get("_next_tick") == 5, "SB4 the rematch takes ticks 0-4 in order, got %d %d %s" % [main.driver.current().tick, main.driver._lockstep._next_tick, main.driver.get("_next_tick")])
 	main.free()
 	SkirmishMain.map_path = before[0]
 	SkirmishMain.starts = before[1]
@@ -1794,5 +1801,52 @@ func test_sb4_desync_report_ring(runner) -> bool:
 	var report = JSON.parse_string(downloads[0].get_string_from_utf8()) if downloads.size() == 1 else null
 	runner.check(report is Dictionary and report.get("hash_ring") == Array(main.driver.pump.live().hash_ring()) and not report.hash_ring.is_empty(), "SB4 the report's ring is the live ring at the desync")
 	runner.check(report is Dictionary and report.get("hash_rows") == Array(online.lockstep.hash_rows()), "SB4 the report's rows are the lockstep's rows, got %s" % [report.get("hash_rows") if report is Dictionary else null])
+	main.free()
+	return true
+
+func test_sb4_no_send_after_end(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	var driver = main.driver
+	_run(main, 10)
+	_peer_packets(online.transport, 1, 4, 5)
+	_peer_stop(online.transport, 6)
+	_peer_packets(online.transport, 1, 7, PEER_TICKS)
+	var kept: Array[int] = _sent_ticks(online.transport)
+	driver._lockstep._queue.append({"type": "move", "entity_ids": range(1, 20000), "target": [10.5, 10.5], "tick": 9, "player": 2, "sequence": 1})
+	for i in 3: main._physics_process(1.0 / 30.0)
+	main._drain_notes()
+	runner.check(online.lockstep.status() == "ended_protocol" and online.lockstep.end_reason().begins_with("own frame"), "SB4 the oversized own frame ends the match, got %s '%s'" % [online.lockstep.status(), online.lockstep.end_reason()])
+	runner.check(_sent_ticks(online.transport) == kept, "SB4 nothing is sent after the failing frame, got %s from %s" % [_sent_ticks(online.transport), kept])
+	var factions: Array = online.lockstep.command_log().filter(func(command: Dictionary) -> bool: return command.tick == 4 and command.type == "choose_faction")
+	runner.check(factions.size() == 2, "SB4 the recorded tick 4 keeps both faction choices, got %d" % factions.size())
+	runner.check(online.lockstep.command_log().any(func(command: Dictionary) -> bool: return command.tick == 6 and command.type == "stop"), "SB4 a note after the end still records its tick 6")
+	main.free()
+	return true
+
+func test_sb4_foreign_note_ends_match(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	var driver = main.driver
+	_peer_packets(online.transport, 1, 4, 8)
+	_peer_stop(online.transport, 9)
+	_peer_packets(online.transport, 1, 10, PEER_TICKS)
+	_run(main, 8)
+	var t: int = driver.current().tick
+	runner.check(t == 8, "SB4 fixture: steady at tick 8 before the stop at 9, got %d" % t)
+	var kept: Array[int] = _sent_ticks(online.transport)
+	main._physics_process(1.0 / 30.0)
+	runner.check(driver.get("_next_tick") == t + 1, "SB4 fixture: one callback takes tick %d only, got %s" % [t, driver.get("_next_tick")])
+	var job := SimPump.Job.new()
+	job.step = false
+	driver.pump.post(job)
+	main._physics_process(1.0 / 30.0)
+	main._drain_notes()
+	runner.check(online.lockstep.status() == "ended_protocol" and online.lockstep.end_reason().begins_with("note at tick"), "SB4 a foreign note between two ticks ends the match, got %s '%s'" % [online.lockstep.status(), online.lockstep.end_reason()])
+	runner.check(online.lockstep.command_log().all(func(command: Dictionary) -> bool: return command.tick != t + 1), "SB4 the mispaired tick %d is not recorded" % (t + 1))
+	var ticks: Array[int] = _sent_ticks(online.transport)
+	runner.check(ticks.size() == kept.size() + 1 and ticks.slice(0, kept.size()) == kept and ticks[-1] == kept[-1] + 1, "SB4 only tick %d's packet is sent, got %s from %s" % [t, ticks, kept])
+	runner.check(_sent_types(online.transport, "over") == 0, "SB4 no over after a protocol error, got %d" % _sent_types(online.transport, "over"))
+	runner.check(driver.notice().begins_with("Protocol error"), "SB4 the HUD names the protocol error, got '%s'" % driver.notice())
 	main.free()
 	return true

@@ -46,7 +46,6 @@ LIVE_READ = re.compile(r"\.sim\b|\blive\s*\(\s*\)|\bget\(\s*[\"']sim[\"']\s*\)|\
 LIVE_ALLOWLIST: frozenset[str] = frozenset(
     [
         "game/scripts/match/sim_pump.gd",
-        "game/scripts/match/online_driver.gd",  # until SB4 moves lockstep into jobs
     ]
 )
 
@@ -151,8 +150,8 @@ class SimBoundary(unittest.TestCase):
         self.assertEqual(live_reads(SCREEN, "var t = '\\'#' + driver.sim.name  # driver.sim"), [".sim"])
 
     def test_live_allowlist_is_exact_path(self):
-        self.assertEqual(live_reads("game/scripts/presentation/online_driver.gd", "driver.sim.tick()"), [".sim"])
-        self.assertEqual(live_reads("game/scripts/match/online_driver.gd", "driver.sim.tick()"), [])
+        self.assertEqual(live_reads("game/scripts/presentation/sim_pump.gd", "driver.sim.tick()"), [".sim"])
+        self.assertEqual(live_reads("game/scripts/match/sim_pump.gd", "driver.sim.tick()"), [])
 
     def test_screen_reads_no_live_sim(self):
         for path in screen_files(ROOT):
