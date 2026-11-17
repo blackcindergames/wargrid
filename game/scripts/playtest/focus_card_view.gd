@@ -4,14 +4,21 @@ const UiStyle = preload("res://scripts/presentation/ui_style.gd")
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 var _cards: Array[Dictionary]
 var _open_count: Callable
+var _end_sitting: Callable
+var _web: bool
 var _picker: OptionButton
 var _session: Label
+var _filed_row: HBoxContainer
+var _filed_label: Label
+var _filed: LineEdit
 var _content: VBoxContainer
 
-func _init(cards: Array[Dictionary], open_count: Callable = func() -> int: return -1) -> void:
+func _init(cards: Array[Dictionary], open_count: Callable = func() -> int: return -1, end_sitting: Callable = func() -> void: pass, web: bool = false) -> void:
 	name = "FocusPanel"
 	_cards = cards
 	_open_count = open_count
+	_end_sitting = end_sitting
+	_web = web
 	visible = false
 	theme = UiStyle.hud_theme()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -31,6 +38,16 @@ func _init(cards: Array[Dictionary], open_count: Callable = func() -> int: retur
 	_session = Label.new()
 	_session.name = "OpenSession"
 	box.add_child(_session)
+	_filed_row = HBoxContainer.new()
+	box.add_child(_filed_row)
+	_filed_label = Label.new()
+	_filed_label.name = "LastFiledLabel"
+	_filed_row.add_child(_filed_label)
+	_filed = LineEdit.new()
+	_filed.name = "LastFiled"
+	_filed.editable = false # read-only but selectable, so the path can be copied
+	_filed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_filed_row.add_child(_filed)
 	_content = VBoxContainer.new()
 	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(_content)
@@ -42,7 +59,10 @@ func _init(cards: Array[Dictionary], open_count: Callable = func() -> int: retur
 	_render()
 
 func _pick(index: int) -> void:
-	FocusCards.chosen = _cards[index].id
+	var id: String = _cards[index].id
+	if _open_count.call() >= 0 and PlaytestSession.open_focus() != id: _end_sitting.call()
+	# A failed filing leaves the sitting open; switching cards then would mix two cards' answers.
+	if _open_count.call() < 0 or PlaytestSession.open_focus() == id: FocusCards.chosen = id
 	_render()
 
 func _render() -> void:
@@ -50,9 +70,12 @@ func _render() -> void:
 	if current.is_empty(): return
 	_picker.select(_cards.find(current))
 	var open: int = _open_count.call()
-	_picker.disabled = open >= 0
 	_session.visible = open >= 0
-	_session.text = "Session open: %d %s" % [open, "match" if open == 1 else "matches"]
+	_session.text = "Session open: %d %s. Picking another card files the session." % [open, "match" if open == 1 else "matches"]
+	var filed: bool = not PlaytestSession.last_filed.is_empty()
+	_filed_row.visible = filed or not _web
+	_filed_label.text = ("Notes downloaded:" if _web else "Previous session saved to:") if filed else "Notes folder:"
+	_filed.text = PlaytestSession.last_filed if filed else ProjectSettings.globalize_path(PlaytestSession.dir)
 	for child in _content.get_children():
 		_content.remove_child(child)
 		child.queue_free()

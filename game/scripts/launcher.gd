@@ -49,6 +49,7 @@ static var code_applied: bool = false
 var prerelease: bool = PlaytestSettings.prerelease()
 var web: bool = OS.has_feature("web")
 var quit: Callable
+var download: Callable = JavaScriptBridge.download_buffer
 var focus_cards: Array[Dictionary] = FocusCards.load_cards()
 var page: String = _page_value("location.origin + location.pathname")
 var search: String = _page_value("location.search")
@@ -71,10 +72,13 @@ func _ready() -> void:
 	_add_audio()
 	_add_fullscreen()
 	_add_graphics()
+	if PlaytestSettings.enabled(): PlaytestSession.settle(PlaytestSettings.build_id(), web, download)
 	_add_playtest()
 	if not quit.is_valid(): quit = get_tree().quit
 	$Sidebar/Nav/Quit.visible = not web
-	$Sidebar/Nav/Quit.pressed.connect(func() -> void: quit.call())
+	$Sidebar/Nav/Quit.pressed.connect(func() -> void:
+		_close_sitting()
+		quit.call())
 	$Pages/Play/Footer/Start.pressed.connect(func() -> void:
 		_offline_setup()
 		get_tree().change_scene_to_file(OFFLINE_SCENE))
@@ -96,6 +100,12 @@ func _ready() -> void:
 	set_opponent("bot")
 	_apply_page()
 	_install_paste_shim()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and not web: _close_sitting() # web files at the next launcher open instead
+
+func _close_sitting() -> void:
+	if PlaytestSettings.enabled(): PlaytestSession.close_sitting(web, download)
 
 func _install_paste_shim() -> void:
 	if not OS.has_feature("web"):
@@ -250,7 +260,7 @@ func _add_playtest() -> void:
 	column.move_child(toggle, $Pages/Settings/Body/Playtest/PlaytestHeader.get_index() + 1)
 	toggle.toggled.connect(PlaytestSettings.save_enabled)
 	if focus_cards.is_empty(): return
-	var panel := FocusCardView.new(focus_cards, PlaytestSession.open_count)
+	var panel := FocusCardView.new(focus_cards, PlaytestSession.open_count, _close_sitting, web)
 	add_child(panel)
 	var builds: Array[Button] = [$Pages/Play/ThisBuild, $Pages/Join/ThisBuild]
 	var show_panel := func(open: bool) -> void:

@@ -72,6 +72,9 @@ def _build(session: dict, match: dict) -> str:
 def replay_rows(session: dict, path: Path) -> list[str]:
     rows = []
     for k, m in enumerate(session["matches"], 1):
+        if m.get("unfinished"):
+            print(f"match {k} was cut short: no replay", file=sys.stderr)
+            continue
         cmd = path.with_name(f"{path.stem}-m{k}.cmd")
         cmd.write_text("".join(line + "\n" for line in m["commands"]))
         factions = "-" if m["mode"] == "online" else ",".join(m["factions"])
@@ -84,7 +87,7 @@ def replay_rows(session: dict, path: Path) -> list[str]:
             str(m["seed"]),
             factions,
             str(m["end_tick"]),
-            m["end_digest"],
+            m.get("end_digest", ""),
             ticks,
             _build(session, m),
         ]

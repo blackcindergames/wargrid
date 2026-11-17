@@ -1,116 +1,37 @@
-extends PanelContainer
+extends RefCounted
 
-signal next_match
-signal end_session
-signal save_requested
-signal discard_requested
-signal closed
-const WIDTH: float = 420.0
-const MARGIN: float = 16.0
 const SCORES: int = 5
 const SCALE_LEGEND := "1 strongly disagree … 5 strongly agree"
-var _content: VBoxContainer
-var _buttons: HBoxContainer
-var _session: PlaytestSession
 
-func _init() -> void:
-	name = "SessionForm"
-	anchor_left = 1.0
-	anchor_right = 1.0
-	anchor_bottom = 1.0
-	offset_left = -MARGIN - WIDTH
-	offset_right = -MARGIN
-	offset_top = MARGIN
-	offset_bottom = -MARGIN
-	var outer := VBoxContainer.new()
-	add_child(outer)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	outer.add_child(scroll)
-	_content = VBoxContainer.new()
-	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_content)
-	_buttons = HBoxContainer.new()
-	outer.add_child(_buttons)
-	hide()
-
-func open_review(session: PlaytestSession, match_index: int) -> void:
-	_reset(session, "Match %d" % (match_index + 1))
-	_add_markers(match_index)
-	add_action(_buttons, "NextMatch", "Next match", next_match)
-	add_action(_buttons, "EndSession", "End session", end_session)
-	show()
-
-func open_questions(session: PlaytestSession, card: Dictionary) -> void:
-	_reset(session, "How was it?")
-	for question: Dictionary in card.get("questions", []):
-		_add_question(question)
-	_add_label(SCALE_LEGEND).name = "ScaleLegend"
-	for m: int in session.data.matches.size():
-		_add_label("Match %d" % (m + 1))
-		_add_markers(m)
-	add_action(_buttons, "SaveSession", "Save session", save_requested)
-	add_action(_buttons, "DiscardSession", "Discard", discard_requested)
-	show()
-
-func show_saved(where: String, web: bool) -> void:
-	_reset(_session, "Session")
-	if where.is_empty():
-		_add_label("Could not save the session file. It is kept for this sitting.")
-		add_action(_buttons, "SaveSession", "Try again", save_requested)
-		add_action(_buttons, "Close", "Close", closed)
-		return
-	_add_label(("Downloaded %s" if web else "Saved to %s") % where)
-	if not web: add_action(_buttons, "ShowInFolder", "Show in folder", Callable(OS, "shell_show_in_file_manager").bind(where))
-	add_action(_buttons, "Close", "Close", closed)
-
-func _reset(session: PlaytestSession, title: String) -> void:
-	_session = session
-	for box: Control in [_content, _buttons]:
-		for child in box.get_children():
-			box.remove_child(child)
-			child.queue_free()
-	_add_label(title)
-
-func _add_label(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_content.add_child(label)
-	return label
-
-static func add_action(parent: Control, button_name: String, label: String, target: Variant) -> Button:
+static func add_action(parent: Control, button_name: String, label: String, target: Callable) -> Button:
 	var button := Button.new()
 	button.name = button_name
 	button.text = label
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.pressed.connect(target.emit if target is Signal else target)
+	button.pressed.connect(target)
 	parent.add_child(button)
 	return button
 
-func _add_markers(match_index: int) -> void:
-	var markers: Array = _session.data.matches[match_index].markers
-	if markers.is_empty(): _add_label("No markers.")
+static func add_markers(parent: VBoxContainer, session: PlaytestSession, match_index: int) -> void:
+	var markers: Array = session.data.matches[match_index].markers
 	for k: int in markers.size():
 		var marker: Dictionary = markers[k]
-		var text: String = "%s, tick %d" % [str(marker.kind).capitalize(), int(marker.tick)]
+		var seconds: int = floori(float(marker.tick) / Engine.physics_ticks_per_second)
+		var text: String = "%d:%02d" % [floori(seconds / 60.0), seconds % 60]
+		if not str(marker.kind).is_empty(): text = "%s, %s" % [str(marker.kind).capitalize(), text]
 		if not str(marker.text).is_empty(): text += ": " + str(marker.text)
-		_add_label(text)
+		add_label(parent, text)
 		var comment := LineEdit.new()
-		comment.name = "Comment_%d_%d" % [match_index, k]
-		comment.placeholder_text = "Comment"
-		comment.text = marker.comment
-		comment.text_changed.connect(func(value: String) -> void: _session.set_comment(match_index, k, value))
-		_content.add_child(comment)
+		_add_field(parent, comment, "Comment_%d_%d" % [match_index, k], "Comment", str(marker.comment))
+		_save_on_leave(comment, func() -> void: session.set_comment(match_index, k, comment.text))
 
-func _add_question(question: Dictionary) -> void:
+static func add_question(parent: VBoxContainer, session: PlaytestSession, question: Dictionary) -> void:
 	var id: String = question.id
-	var stored: Dictionary = _session.data.answers.get(id, {})
+	var stored: Dictionary = session.data.answers.get(id, {})
 	var score: Array[int] = [int(stored.get("score", 0))]
-	_add_label(question.text)
+	add_label(parent, question.text)
 	var row := HBoxContainer.new()
-	_content.add_child(row)
+	parent.add_child(row)
 	var group := ButtonGroup.new()
 	var answer := LineEdit.new()
 	for n: int in range(1, SCORES + 1):
@@ -118,16 +39,34 @@ func _add_question(question: Dictionary) -> void:
 		button.name = "%s_%d" % [id, n]
 		button.text = str(n)
 		button.toggle_mode = true
+		button.focus_mode = Control.FOCUS_NONE
 		button.button_group = group
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.set_pressed_no_signal(score[0] == n)
 		button.toggled.connect(func(on: bool) -> void:
 			if not on: return
 			score[0] = n
-			_session.set_answer(id, n, answer.text))
+			session.set_answer(id, n, answer.text))
 		row.add_child(button)
-	answer.name = "Answer_" + id
-	answer.placeholder_text = "Optional comment"
-	answer.text = str(stored.get("text", ""))
-	answer.text_changed.connect(func(value: String) -> void: _session.set_answer(id, score[0], value))
-	_content.add_child(answer)
+	_add_field(parent, answer, "Answer_" + id, "Optional comment", str(stored.get("text", "")))
+	_save_on_leave(answer, func() -> void: session.set_answer(id, score[0], answer.text))
+
+static func add_label(parent: VBoxContainer, text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	parent.add_child(label)
+	return label
+
+static func _add_field(parent: VBoxContainer, field: LineEdit, field_name: String, placeholder: String, text: String) -> void:
+	field.name = field_name
+	field.placeholder_text = placeholder
+	field.text = text
+	parent.add_child(field)
+
+# Saving per keystroke would write the file on every letter; Enter or leaving the field is enough.
+static func _save_on_leave(field: LineEdit, save: Callable) -> void:
+	field.text_submitted.connect(func(_text: String) -> void:
+		if field.has_focus(): field.release_focus()
+		else: save.call())
+	field.focus_exited.connect(save)

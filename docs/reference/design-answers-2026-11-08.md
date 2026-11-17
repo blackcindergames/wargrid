@@ -1034,3 +1034,51 @@ Source: Hypersomnia review (private). Items that went into package rows, finding
 
 - **Bot reaction delay as a level lever** (user, 2026-11-16), later, M8.1 bot levels input: the delay between seeing a threat and reacting cuts competence, as the other level levers do; it only means something once fog exists, because today's bot reads the whole state.
 - **Keyed randomness dropped** (user, 2026-11-16): the draw stays one global stream. Revisit only if a "Cheaper step" experiment fails its digests because of draw order.
+
+## P12 Notes that never block questionnaire (user, 2026-11-17)
+
+Inputs: the P12 research note (private), [F22](../STATUS.md#findings-list). Zero Hour has no playtest form, so each answer is a Wargrid tooling call.
+
+- **No buttons** (user, 2026-11-17): only the action buttons go (Next match, End session, Save session, Discard, Close, Try again, Show in folder). The 1-5 score toggles stay, and so do the marker dialog's Save and Cancel.
+- **Reached during a match** (user, 2026-11-17): the form merges into the checklist panel, one panel on the ` key, holding the checklist, the questions and this match's markers.
+- **Never pauses** (user, 2026-11-17): an open form neither pauses offline play nor blocks orders; only the marker dialog keeps its offline pause.
+- **Filled in** (user, 2026-11-17): text, a score, a manual tick or a marker. Automatic trigger ticks alone file nothing.
+- **Sitting end** (user, 2026-11-17): a sitting ends when its file is written on quit (desktop) or downloaded (web); a new build id also starts a new sitting. Resume after a crash through `current.json` stays.
+- **Web download** (user, 2026-11-17): on every return to the launcher when something new was filled in; a closed tab's notes stay in `user://` and download at the next start. Needs a browser check.
+- **Desktop exits** (user, 2026-11-17): pause Quit, launcher Quit and closing the window all write the file.
+- **Mid-match record** (user, 2026-11-17): written on each marker and at match end, with no timer and no state digest mid-match; the record carries an additive unfinished field, so the format stays 1.
+- **Interrupted match** (user, 2026-11-17): a match cut short by a crash or a closed tab stays in its sitting, flagged unfinished, with no new UI.
+- **Discard dropped** (user, 2026-11-17): no discard action is left; an unwanted file is deleted by hand.
+- **Build path** (user, 2026-11-17): the checklist panel grows into the form, and the match in progress lives in the session as an unfinished match.
+- **Field saves** (user, 2026-11-17): text fields save on Enter or when focus leaves the field, not on every keystroke.
+- **Match end** (user, 2026-11-17): the panel opens by itself without taking focus, so the result panel keeps Enter.
+- **Card picker** (user, 2026-11-17): the launcher's focus-card picker no longer locks while a sitting is open. Picking another card files the open sitting if anything was filled in, then starts a new one, the same way a new build does.
+- **Saved hint** (user, 2026-11-17): passive text only. The panel footer shows "Saved" with the time of the last write. The launcher line under "Session open" shows the last filed path as selectable text on desktop, or "Notes downloaded: <name>" on web.
+- **Earlier markers** (user, 2026-11-17): after Play again, the previous match's markers stay listed as "Last match", with comment fields, until the new match gets its first marker.
+
+## P3 timed playtest (user, 2026-11-17)
+
+The timed Ashfall playtest from the [player-experience review](#player-experience-review-user-2026-11-16), played by the user on desktop `main` `a7ba7ac`: from a fight in the enemy base, the trip back to the own base takes 3-4 s with the arrow keys, so 6-8 s away from the fight per round trip.
+
+- **It hurts:** P3 moves right after P2.3b, before P8 and the art packages.
+- **Scope:** minimap, H to the Command Center, control groups and Space to the last alert; edge scrolling and right-drag pan go to the Later item Pan with the mouse. The minimap beats edge scrolling and drag pan for long trips (user's view).
+- **First minimap:** click or drag moves the camera, flash on attack, blank at low power; right-click orders on the minimap are not in it.
+- **Merge:** P3 takes all of the Later item Minimap and attack alerts.
+- **Name:** "See the whole map".
+
+## P2.3a groundwork questionnaire (user, 2026-11-17)
+
+Answers to a read-only gap map of today's HUD against HUD v5 (working notes `p2-3a-groundwork.md`, private), with research and player-experience reviews where the user asked. The nine map-mark, edge and canvas questions wait for map art round 6. Inputs for the P2.3a design, not a design.
+
+- **Interim:** today's button column becomes one bottom-right slab until P2.3b; no queue row in P2.3a.
+- **Window shapes:** the view is capped at 2.4:1 (2560x1080 and 3440x1440 fill the screen) and 16:10 (Steam Deck, MacBooks in fullscreen), the same online and offline; black bars beyond, a different shade from the canvas. Today's aspect is `keep`, so nobody loses width. Research found no RTS with a documented fairness cap (Zero Hour fork PR #1711 calls extra view an advantage). Rendered gate row at 2560x1080; headless layout tests at 1280x720, 1280x800 and 3440x1440.
+- **A/B before the plan, one batched window session in the in-game lab (no offscreen probe first, user 2026-11-17):** the two colour token sets, the health-bar rule, value size 13 against 14 px, and the drag box: white outline with faint fill, green outline without fill, owner colour with low fill.
+- **Plumbing:** tabular numbers through a `FontVariation` with `tnum`; `game/ui/launcher_theme.tres` grows into the one theme; the `view_player` rider happens in P2.3a.
+- **Places:** online notices top centre; the F3 overlay, the playtest checklist and the note form drop down under the Playtest chip.
+- **Panels:** enemy and allied buildings and units show name and health with their owner colour on the edge; enemy sites show no build percent; one unit shows name and health only; health rounds up; kind rows in roster order; your stalled site reads a muted `PAUSED · NO BUILDER` in place of `UNDER CONSTRUCTION`.
+- **Supply pile panel:** only `CREDITS LEFT` (boxes times 75; `Empty` at zero); docked and waiting counts dropped; "in line" stays on the collector's panel. Zero Hour's hover shows the dollar value left (GeneralsGameCode `InGameUI.cpp:2719-2727` @ afc2a103f). Piles are click-only.
+- **Selection:** kind rows: click narrows to the kind, shift-click removes it (replaces "shift-click adds"; StarCraft II and Age of Empires IV remove with shift on the panel); no mixed unit and building selection in P2.3a, revisited with P3's control groups.
+- **Refusals:** one line, a new refusal replaces it and restarts the 3 s; refusals a player cannot cause read "Order not possible" (raw text to the playtest log); one wording table for match and launcher; F30's quiet beep fixed with F29; placement refusals only after the click.
+- **Dropped:** "You are blue (P1)" and the tick counter (F3 keeps it). Credits written `4,800`; the resume hint stays in the interim key-hint line.
+- **Later riders:** for see your economy, collectors against an ideal count on the depot and a nearly-empty pile alert; for P3, a map mark on your own stalled sites.
+
