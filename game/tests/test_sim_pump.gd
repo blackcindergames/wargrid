@@ -387,7 +387,7 @@ func _pair_drivers() -> Dictionary:
 func _unpair(pair: Dictionary) -> void:
 	pair.transports[0].peer = null
 
-# With lag, seat 2 steps lag - 1 times on every lag-th frame: seat 1 stalls, then gets two packets at once.
+# Seat 2 lags so seat 1 sometimes takes two ticks in one callback.
 func _frames(drivers: Array, frames: int, lag: int) -> int:
 	var double_takes: int = 0
 	for frame in frames:

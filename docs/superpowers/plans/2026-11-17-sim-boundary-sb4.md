@@ -366,6 +366,7 @@ Each step is its own short subagent (Model routing); briefs pass the resume reco
 ## Risks
 
 - **Waiting line one frame later (Q2 B):** inside a catch-up or multi-callback frame a quiet take does not set `waiting`; the next frame's loud take does. 33 ms at most inline; longer in SB5 while jobs stay in flight.
+- **False "Waiting" flash after a stall gone (steady-state change, an improvement):** on the base, a second `advance` in a callback set `waiting` whenever the next packet was missing, so during catch-up the HUD could show "Waiting for player N" while the game ran at full speed; the quiet second take no longer does (gate Opus review P3-1 and player-experience review P3-2, 2026-11-17).
 - **Three-callback frames defer a tick (J):** the sixth take of such a frame waits for the drain that sends its own packet; pacing only, every tick runs with the same commands.
 - **Relay guards edits (F):** `finish_tick` and the `test_online_scene.gd` `cases()` line already carry Relay guards' code; SB4 edits beside it (RG2, RG4).
 - **Recorder copy online (Q8 A):** the pump's recorder keeps every accepted online command, unused; memory only.

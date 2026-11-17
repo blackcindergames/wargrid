@@ -111,7 +111,10 @@ func step() -> void:
 		var commands: Variant = _lockstep.take(_next_tick, not _taken.is_empty())
 		if commands == null: break
 		_credit -= 1
-		pump.post(_tick_job(commands))
+		# The tick's packets are already consumed, so a refused job cannot be retried.
+		if not pump.post(_tick_job(commands)):
+			_lockstep.set_protocol_error("sim pump refused tick %d" % _next_tick)
+			break
 		_taken.append(_next_tick)
 		_next_tick += 1
 		posted = true
@@ -125,7 +128,7 @@ func _tick_job(commands: Array[Dictionary]) -> SimPump.Job:
 	job.want_digest = _lockstep.wants_snapshot(_next_tick + 1)
 	return job
 
-# The last advance's preview answer wins, as the screen shows the last tick.
+# The last drained note's preview answer wins, as the screen shows the last tick.
 func drain() -> Array[SimPump.Note]:
 	var notes: Array[SimPump.Note] = pump.drain()
 	for note: SimPump.Note in notes:
@@ -136,15 +139,15 @@ func drain() -> Array[SimPump.Note]:
 	_settle()
 	return notes
 
-# No taken tick: a test's publish job. A tick that did not move on a finished match: taken past the end.
 func _finish_job(note: SimPump.Note) -> void:
+	# Publish jobs (tests) are not ticks.
 	if _taken.is_empty(): return
 	var tick: int = _taken.pop_front()
+	# Taken past the end: the sim did not move.
 	if note.over and note.tick <= tick: return
 	if note.tick != tick + 1:
 		# Pairing is by post order; a foreign job in between would record and send the wrong tick.
 		_lockstep.set_protocol_error("note at tick %d for taken tick %d" % [note.tick, tick])
-		_taken.clear()
 		return
 	_lockstep.record(tick, note.issued)
 	# An end inside an earlier finish_tick of this drain sent nothing; a later packet would leave a tick gap.
