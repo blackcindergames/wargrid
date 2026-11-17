@@ -7,31 +7,31 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 213% | 🔺 1% worse | 2026-11-16 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 164% | 🔺 2% worse | 2026-11-16 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 217% | 🔺 3% worse | 2026-11-16 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 167% | 🔺 4% worse | 2026-11-16 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 144% | ➖ same | 2026-11-16 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 73% | ➖ same | 2026-11-16 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 70% | 🔺 2% worse (busy host) | 2026-11-16 |
 | Drawing the screen | 🟢 OK | ██████░░░░ 67% | 🔻 5% better (busy host) | 2026-11-16 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-16 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 1% worse | 2026-11-16 |
 | Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 1% better | 2026-11-16 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 1% better | 2026-11-16 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-16 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | ➖ same | 2026-11-16 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 1% better | 2026-11-16 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
 - movement p95: 41% of budget (auto f5640fb, 2026-11-16), 1% faster than Sim boundary SB3 (worst vs worst); run-to-run spread up to 50%
-- movement p99: 24% of budget (auto f5640fb, 2026-11-16), 1% faster than Sim boundary SB3 (worst vs worst); run-to-run spread up to 50%
+- movement p99: 24% of budget (auto f5640fb, 2026-11-16), unchanged vs Sim boundary SB3 (worst vs worst); run-to-run spread up to 50%
 - combat gated p95: 73% of budget (auto f5640fb, 2026-11-16), unchanged vs Sim boundary SB3 (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (auto f5640fb, 2026-11-16), 1% faster than Sim boundary SB3 (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 164% of budget, exceeded (auto f5640fb, 2026-11-16), 2% slower than Sim boundary SB3 (worst vs worst); run-to-run spread up to 41%
+- combat gated p99: 59% of budget (auto f5640fb, 2026-11-16), 1% slower than Sim boundary SB3 (worst vs worst); run-to-run spread up to 58%
+- combat stress p95: 167% of budget, exceeded (auto f5640fb, 2026-11-16), 4% slower than Sim boundary SB3 (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 144% of budget, exceeded (auto f5640fb, 2026-11-16), unchanged vs Sim boundary SB3 (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 213% of budget, exceeded (auto f5640fb, 2026-11-16), 1% slower than Sim boundary SB3 (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 217% of budget, exceeded (auto f5640fb, 2026-11-16), 3% slower than Sim boundary SB3 (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 67% of budget (Sim boundary SB3, 2026-11-16), 5% faster than P2.2 Quick rematch slice 2 (merge) (worst vs worst); run-to-run spread not measured, busy host (load 2.7)
 - Ashfall tick-frame p95: 70% of budget (Sim boundary SB3, 2026-11-16), 2% slower than P2.2 Quick rematch slice 2 (merge) (worst vs worst); run-to-run spread not measured, busy host (load 2.7)
-- lockstep p99: 11% of budget (auto f5640fb, 2026-11-16), 3% faster than Sim boundary SB3 (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (auto f5640fb, 2026-11-16), 1% faster than Sim boundary SB3 (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
