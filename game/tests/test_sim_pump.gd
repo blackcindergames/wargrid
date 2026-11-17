@@ -37,7 +37,7 @@ class PairTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -469,4 +469,111 @@ func test_sb4_two_drivers_match_end(runner) -> bool:
 		runner.check(overs == 1, "SB4 each seat sends exactly one over, got %d" % overs)
 	runner.check(not _ended_any(drivers), "SB4 a normal end leaves no ended status")
 	_unpair(pair)
+	return true
+
+func _twin() -> Dictionary:
+	var now: Array[int] = [0]
+	var clock := func() -> int:
+		now[0] += 1000
+		return now[0]
+	var ls = Lockstep.new(1, [1, 2] as Array[int], 4, 30, clock)
+	var frames: Array[String] = []
+	ls.send = func(text: String) -> void: frames.append(text)
+	var sim = Skirmish.create(true, "human")
+	ls.start(sim.snapshot())
+	return {"ls": ls, "sim": sim, "frames": frames}
+
+func _advance_whole(twin: Dictionary) -> bool:
+	if not twin.ls.advance(twin.sim): return false
+	var tick: int = twin.sim.tick()
+	twin.ls.finish_tick(tick, twin.sim.snapshot() if twin.ls.wants_snapshot(tick) else null)
+	return true
+
+func _advance_split(twin: Dictionary) -> bool:
+	var tick: int = twin.sim.tick()
+	var commands = twin.ls.take(tick)
+	if commands == null: return false
+	var issued: Array[Dictionary] = []
+	for command: Dictionary in commands:
+		var result: Dictionary = twin.sim.issue_command(command)
+		issued.append({"command": command, "ok": result.ok, "error": result.error})
+	twin.ls.record(tick, issued)
+	twin.sim.step()
+	var after: int = twin.sim.tick()
+	if not twin.ls.wants_snapshot(after):
+		twin.ls.finish_tick(after, null)
+		return true
+	var snapshot: Dictionary = twin.sim.snapshot()
+	twin.ls.finish_tick(after, snapshot, StateHash.digest(snapshot))
+	return true
+
+func _peer(tick: int, commands: Array = [], hash_entry = null) -> String:
+	return Wire.encode(Wire.tick_message(2, tick, commands, hash_entry))
+
+func _peer_move(sim, tick: int) -> Array:
+	return [_move(_own_unit(sim, "", 2)).merged({"player": 2, "tick": tick, "sequence": 0}, true)]
+
+func _twin_at_four() -> Dictionary:
+	var twin: Dictionary = _twin()
+	for tick in 4: _advance_whole(twin)
+	return twin
+
+func test_sb4_take_record_equals_advance(runner) -> bool:
+	var twins: Array = [_twin(), _twin()]
+	var steps: Array[Callable] = [_advance_whole, _advance_split]
+	var stepped: int = 0
+	for tick in 70:
+		for i in 2:
+			var twin: Dictionary = twins[i]
+			if tick == 10:
+				twin.ls.submit(_move(999))
+				twin.ls.submit(_move(_own_unit(twin.sim)))
+			if tick >= 4: twin.ls.receive(_peer(tick, _peer_move(twin.sim, tick) if tick == 20 else []))
+			if steps[i].call(twin): stepped += 1
+	var a = twins[0].ls
+	var b = twins[1].ls
+	runner.check(stepped == 140 and twins[0].sim.tick() == 70 and twins[1].sim.tick() == 70, "SB4 both twins step 70 ticks (%d steps)" % stepped)
+	runner.check(a.command_log() == b.command_log() and a.command_log().size() == 3 and a.command_log().filter(func(command: Dictionary) -> bool: return command.player == 2).size() == 1, "SB4 take and record log every seat's command as advance does, got %s" % [b.command_log()])
+	runner.check(a.latency_samples() == b.latency_samples() and b.latency_samples().size() == 2 and b.latency_samples()[0] - b.latency_samples()[1] == 1000, "SB4 take and record keep the latency samples, got %s %s" % [a.latency_samples(), b.latency_samples()])
+	runner.check(a.rejections() == b.rejections() and b.rejections().size() == 1 and b.rejections()[0].tick == 15, "SB4 take and record keep the rejection, got %s" % [b.rejections()])
+	runner.check(a.hash_rows() == b.hash_rows() and b.hash_rows().size() == 3, "SB4 take and record keep the hash rows, got %s" % [b.hash_rows()])
+	runner.check(a.status() == b.status() and b.status() == "running", "SB4 take and record keep the status")
+	runner.check(twins[0].frames == twins[1].frames and twins[1].frames.size() == 71, "SB4 take and record send the same frames (%d)" % twins[1].frames.size())
+	runner.check(StateHash.digest(twins[0].sim.snapshot()) == StateHash.digest(twins[1].sim.snapshot()), "SB4 take and record end on the same digest")
+	return true
+
+func test_sb4_quiet_take_keeps_status(runner) -> bool:
+	var twin: Dictionary = _twin_at_four()
+	runner.check(twin.ls.take(4, true) == null and twin.ls.status() == "running", "SB4 quiet take without the peer packet keeps the status")
+	runner.check(twin.ls.take(4) == null and twin.ls.status() == "waiting", "SB4 loud take without the peer packet waits")
+	twin = _twin_at_four()
+	twin.ls.receive(Wire.encode({"type": "left", "seat": 2, "after_tick": 3}))
+	runner.check(twin.ls.take(4, true) == null and twin.ls.status() == "running", "SB4 quiet take after a leave keeps the status, got %s" % twin.ls.status())
+	runner.check(twin.ls.take(4) == null and twin.ls.status() == "ended_left", "SB4 loud take after a leave ends ended_left")
+	twin = _twin_at_four()
+	twin.ls.receive(_peer(4, [], {"tick": 0, "value": "ffffffffffffffff"}))
+	runner.check(twin.ls.take(4, true) == null and twin.ls.desync_report().tick == -1 and twin.ls.status() == "running", "SB4 quiet take on a hash mismatch keeps the status and desync tick, got %s" % twin.ls.status())
+	runner.check(twin.ls.take(4) == null and twin.ls.status() == "ended_desync" and twin.ls.desync_report().tick == 0, "SB4 loud take on a hash mismatch ends ended_desync at tick 0")
+	var twins: Array = [_twin_at_four(), _twin_at_four()]
+	for each: Dictionary in twins: each.ls.receive(_peer(4, _peer_move(each.sim, 4)))
+	var quiet = twins[0].ls.take(4, true)
+	var loud = twins[1].ls.take(4)
+	runner.check(quiet != null and quiet.size() == 1 and quiet == loud, "SB4 a successful quiet take returns the loud take's commands, got %s %s" % [quiet, loud])
+	var missing: Array[int] = twins[0].ls.waiting_for()
+	runner.check(missing.size() == 1 and missing[0] == 2 and twins[0].ls.status() == "running", "SB4 after a quiet take waiting_for names the next tick's missing seat, got %s" % [missing])
+	return true
+
+func test_sb4_finish_tick_uses_given_digest(runner) -> bool:
+	var twin: Dictionary = _twin()
+	var snap: Dictionary = twin.sim.snapshot()
+	var real: String = StateHash.digest(snap)
+	twin.ls.finish_tick(30, snap, "feedfacecafebeef")
+	var sent: Dictionary = Wire.decode(twin.frames[-1]).message
+	runner.check(sent.hash.value == "feedfacecafebeef" and int(sent.hash.tick) == 30 and twin.ls.hash_rows()[-1] == "30\tfeedfacecafebeef", "SB4 finish_tick sends and logs the given digest, got %s" % [sent.get("hash")])
+	twin.ls.finish_tick(60, snap)
+	sent = Wire.decode(twin.frames[-1]).message
+	runner.check(sent.hash.value == real and twin.ls.hash_rows()[-1] == "60\t" + real, "SB4 finish_tick without a digest computes it, got %s" % [sent.get("hash")])
+	var fresh = Lockstep.new(1, [1, 2] as Array[int])
+	fresh.start(snap, "abcdefabcdefabcd")
+	runner.check(real != "abcdefabcdefabcd" and fresh.hash_rows() == PackedStringArray(["0\tabcdefabcdefabcd"]), "SB4 start logs the given digest as row 0, got %s" % [fresh.hash_rows()])
 	return true

@@ -58,9 +58,9 @@ static func for_start(seat: int, message: Dictionary) -> RefCounted:
 func received_any() -> bool:
 	return _received_any
 
-func start(state: Dictionary) -> void:
+func start(state: Dictionary, digest: String = "") -> void:
 	_last_sent = _delay - 1
-	finish_tick(0, state)
+	finish_tick(0, state, digest)
 
 func submit(payload: Dictionary) -> bool:
 	var command: Dictionary = payload.duplicate(true)
@@ -104,33 +104,51 @@ func waiting_for_tick(sim_tick: int) -> Array[int]:
 		if not _packets[s].has(sim_tick): missing.append(s)
 	return missing
 
-func advance(sim: Simulation) -> bool:
-	if _ended() or sim.match_over(): return false
-	var tick: int = sim.tick()
-	if _left_seat != 0 and (tick > _left_after or not _packets[_left_seat].has(tick)): return _end("ended_left", "player %d disconnected" % _left_seat)
+# quiet: the caller cannot tell yet whether the tick before ended the match, so a refusal must not change the status.
+func take(tick: int, quiet: bool = false) -> Variant:
+	if _ended(): return null
+	if _left_seat != 0 and (tick > _left_after or not _packets[_left_seat].has(tick)):
+		if not quiet: _end("ended_left", "player %d disconnected" % _left_seat)
+		return null
 	if not can_step(tick):
-		_status = "waiting"
-		return false
-	if not _verify_hashes(tick): return false
-	var now: int = _clock.call()
+		if not quiet: _status = "waiting"
+		return null
+	if not _verify_hashes(tick, quiet): return null
+	var commands: Array[Dictionary] = []
 	for s in _seats:
-		for command: Variant in _packets[s][tick].commands:
-			var result: Dictionary = sim.issue_command(command)
-			_command_log.append(command)
-			if s != _seat: continue
-			_latency.append(now - _submit_times[command.sequence])
-			_submit_times.erase(command.sequence)
-			if not result.ok: _rejections.append({"tick": tick, "sequence": command.sequence, "error": result.error})
-	for s in _seats: _packets[s].erase(tick)
-	sim.step()
+		for command: Dictionary in _packets[s][tick].commands: commands.append(command)
+		_packets[s].erase(tick)
 	_next_tick = tick + 1
 	_status = "running"
+	return commands
+
+func record(tick: int, issued: Array[Dictionary]) -> void:
+	var now: int = _clock.call()
+	for entry: Dictionary in issued:
+		var command: Dictionary = entry.command
+		_command_log.append(command)
+		if command.player != _seat: continue
+		_latency.append(now - _submit_times[command.sequence])
+		_submit_times.erase(command.sequence)
+		if not entry.ok: _rejections.append({"tick": tick, "sequence": command.sequence, "error": entry.error})
+
+func advance(sim: Simulation) -> bool:
+	if sim.match_over(): return false
+	var tick: int = sim.tick()
+	var commands: Variant = take(tick)
+	if commands == null: return false
+	var issued: Array[Dictionary] = []
+	for command: Dictionary in commands:
+		var result: Dictionary = sim.issue_command(command)
+		issued.append({"command": command, "ok": result.ok, "error": result.error})
+	record(tick, issued)
+	sim.step()
 	return true
 
-func finish_tick(tick: int, state: Variant) -> void:
+func finish_tick(tick: int, state: Variant, digest: String = "") -> void:
 	var hash_entry: Variant = null
 	if state != null and tick % _hash_interval == 0:
-		var value: String = StateHash.digest(state)
+		var value: String = digest if not digest.is_empty() else StateHash.digest(state)
 		_own_hashes[tick] = value
 		_hash_order.append(tick)
 		_hash_snapshot = state
@@ -238,12 +256,13 @@ func _receive_left(message: Dictionary) -> void:
 	_left_seat = message.seat
 	_left_after = message.after_tick
 
-func _verify_hashes(tick: int) -> bool:
+func _verify_hashes(tick: int, quiet: bool = false) -> bool:
 	for s in _seats:
 		var packet: Dictionary = _packets[s][tick]
 		if not packet.has("hash"): continue
 		var hash_entry: Dictionary = packet.hash
 		if _own_hashes.get(hash_entry.tick) != hash_entry.value:
+			if quiet: return false
 			_desync_tick = hash_entry.tick
 			_end("ended_desync", "hash mismatch at tick %d (seat %d)" % [hash_entry.tick, s])
 			return false
