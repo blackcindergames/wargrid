@@ -7,9 +7,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 210% | 🔻 2% better | 2026-11-17 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 211% | 🔻 1% better | 2026-11-17 |
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 162% | 🔺 1% worse | 2026-11-17 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-17 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | ➖ same | 2026-11-17 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 1% worse | 2026-11-17 |
 | Drawing the screen | 🟢 OK | ███████░░░ 72% | ➖ same (busy host) | 2026-11-17 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔺 1% worse (busy host) | 2026-11-17 |
@@ -27,8 +27,8 @@ Details:
 - combat gated p95: 74% of budget (auto a3b466d, 2026-11-17), 1% slower than P12 Notes that never block (worst vs worst); run-to-run spread up to 58%
 - combat gated p99: 58% of budget (auto a3b466d, 2026-11-17), unchanged vs P12 Notes that never block (worst vs worst); run-to-run spread up to 58%
 - combat stress p95: 162% of budget, exceeded (auto a3b466d, 2026-11-17), 1% slower than P12 Notes that never block (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 142% of budget, exceeded (auto a3b466d, 2026-11-17), unchanged vs P12 Notes that never block (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 210% of budget, exceeded (auto a3b466d, 2026-11-17), 2% faster than P12 Notes that never block (worst vs worst); run-to-run spread not measured
+- plumbing, movement layouts: 143% of budget, exceeded (auto a3b466d, 2026-11-17), unchanged vs P12 Notes that never block (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 211% of budget, exceeded (auto a3b466d, 2026-11-17), 1% faster than P12 Notes that never block (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 72% of budget (P12 merge rendered, 2026-11-17), unchanged vs Relay guards merge rendered (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
 - Ashfall tick-frame p95: 71% of budget (P12 merge rendered, 2026-11-17), 1% slower than Relay guards merge rendered (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
 - lockstep p99: 11% of budget (auto a3b466d, 2026-11-17), 1% faster than P12 Notes that never block (worst vs worst); run-to-run spread not measured
