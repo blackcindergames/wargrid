@@ -151,7 +151,7 @@ func _oracle_sim() -> Simulation:
 func _run_steps(limit: int) -> void:
 	for i in limit:
 		if _ending: return
-		if _transport.closed(): _lockstep.set_relay_lost()
+		if _transport.closed() or _transport.silent(Time.get_ticks_usec()): _lockstep.set_relay_lost()
 		if _sim.match_over():
 			if _rematch_step(): return
 			_finish("match_over", "")

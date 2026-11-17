@@ -103,7 +103,7 @@ func TestRoomPanicEndsOnlyThatRoom(t *testing.T) {
 	a, aShut := seated(t, g, "", nop)
 	_, bShut := seated(t, g, a.room.code, boom)
 	other, _ := seated(t, g, "", nop)
-	a.room.post(tickMsg{a.seat, 1, inputDelay, []byte(`{"type":"tick"}`)})
+	a.room.post(tickMsg{a.seat, 1, inputDelay, []byte(`{"type":"tick"}`), hashMsg{}})
 	select {
 	case <-a.room.done:
 	case <-time.After(2 * time.Second):

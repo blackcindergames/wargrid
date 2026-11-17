@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/coder/websocket"
@@ -16,10 +18,31 @@ type client struct {
 	done chan error
 }
 
+// helloGap matches the relay's global join refill (one per 50 ms), so the suite never drains that bucket.
+const helloGap = 50 * time.Millisecond
+
+var (
+	paceMu   sync.Mutex
+	lastDial time.Time
+)
+
 func dial(url string) (*client, error) {
+	paceMu.Lock()
+	time.Sleep(time.Until(lastDial.Add(helloGap)))
+	lastDial = time.Now()
+	paceMu.Unlock()
+	return dialFrom(url, "")
+}
+
+// dialFrom never paces, so the limit cases can burst; addr is sent as the test client-address header.
+func dialFrom(url, addr string) (*client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	c, _, err := websocket.Dial(ctx, url, nil)
+	var opts *websocket.DialOptions
+	if addr != "" {
+		opts = &websocket.DialOptions{HTTPHeader: http.Header{"X-Wargrid-Test-Ip": {addr}}}
+	}
+	c, _, err := websocket.Dial(ctx, url, opts)
 	if err != nil {
 		return nil, err
 	}

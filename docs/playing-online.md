@@ -24,10 +24,18 @@ Controls are the same as offline. Restart is hidden online.
 |---|---|
 | `Waiting for player N` | Their input for the next tick has not arrived. The game resumes by itself. |
 | `Player N disconnected` | The other player left or lost connection. The match stops. |
-| `Connection to relay lost` | No data from the relay for 5 s, or the socket closed. The match stops. |
-| `Relay: <reason>` | The relay refused or ended the session (full match, wrong code, version mismatch). |
+| `Connection to relay lost` | No data from the relay for 5 s, the socket closed, or the game could not send a frame. The match stops. When joining, a wrong code can also show this while the relay is flooded with bad codes; check the code and try again. |
+| `Relay: <reason>` | The relay ended a running match with an error (for example `too far ahead`, listed below the table). Refusals at join time appear in the launcher's status line instead, in the relay's own words. |
+| `Rejected: Too many orders at once; wait a moment` | A note, not an end: so many orders piled up in one tick that they would not fit one network packet, so every order past that point was dropped. Give them again a moment later. |
 | `Desync — report saved to <path>` | The two games disagreed. The match stops and the report is written. |
 | `Protocol error: <reason>` | A malformed frame arrived. The match stops. |
+
+The reasons the relay added on branch `relay-guards` (not deployed yet; the game shows them in the relay's words, as `Relay: <reason>` during a match and without the prefix in the launcher's status line at join; the plain wording here is for the host to pass on). The first two per-address reasons only appear once the relay is set to count addresses, which the hosted relay is not yet:
+
+- `too far ahead`: your game sent ahead of the others. That should not happen in normal play; please report it.
+- `too many connections`: too many games from your network at once.
+- `too many joins`: too many tries in a short time; wait a few seconds (one try comes back every second).
+- `relay busy`: the relay is busy; try again shortly.
 
 ## Reports and latency
 

@@ -69,6 +69,8 @@ type conn struct {
 	queued   atomic.Int64 // bytes waiting in gws's unbounded write queue
 	room     *room        // set by the reader goroutine after a successful hello
 	seat     *seat
+	ip       string // limiter key, "" for none
+	tracked  bool   // OnClose owes the limiter a decrement
 }
 
 func (c *conn) reject(reason string) {
@@ -81,7 +83,9 @@ func (c *conn) reject(reason string) {
 }
 
 type relay struct {
-	reg *registry
+	reg      *registry
+	lim      *limiter
+	ipHeader string
 }
 
 func envInt(name string, def int) int {
@@ -120,18 +124,27 @@ func (h *relay) writeLater(s *gws.Conn, n int, w func() error) {
 }
 
 func (h *relay) OnOpen(s *gws.Conn) {
-	c := &conn{sender: sender{
+	v, _ := s.Session().Load("ip")
+	ip, _ := v.(string) // no Authorize hook (test servers): "", no per-IP rules
+	c := &conn{ip: ip, sender: sender{
 		write: func(f []byte) { h.writeLater(s, len(f), func() error { return s.WriteMessage(gws.OpcodeText, f) }) },
 		shut:  func() { h.writeLater(s, 0, func() error { return s.WriteClose(1000, nil) }) },
 	}, dl: deadline{set: func(t time.Time) { _ = s.SetReadDeadline(t) }}}
 	c.dl.hold(time.Now().Add(h.reg.cfg.hello))
 	s.Session().Store("c", c)
 	slog.Info("connection opened")
+	var reason string
+	reason, c.tracked = h.lim.open(ip)
+	if reason != "" {
+		c.reject(reason)
+	}
 }
 
 func (h *relay) OnClose(s *gws.Conn, err error) {
 	slog.Info("connection closed", "err", err)
-	if c := getConn(s); c.seat != nil {
+	c := getConn(s)
+	h.lim.close(c.ip, c.tracked)
+	if c.seat != nil {
 		c.room.post(leaveMsg{c.seat})
 	}
 }
@@ -161,7 +174,17 @@ func (h *relay) OnMessage(s *gws.Conn, msg *gws.Message) {
 	}
 	switch e.typ {
 	case "hello":
+		if reason := h.lim.join(c.ip); reason != "" {
+			slog.Info("join rejected", "reason", reason)
+			c.reject(reason)
+			return
+		}
 		res := h.reg.join(e, c)
+		if res.seat == nil && res.reason == "unknown match" && !h.lim.unknown() {
+			c.rejected.Store(true) // no reply (ioq3 sv_main.c:727-733)
+			c.close()
+			return
+		}
 		if res.seat == nil {
 			slog.Info("join rejected", "reason", res.reason)
 			c.reject(res.reason)
@@ -170,7 +193,7 @@ func (h *relay) OnMessage(s *gws.Conn, msg *gws.Message) {
 		c.seat = res.seat
 		c.room = res.seat.r
 	case "tick":
-		c.room.post(tickMsg{c.seat, e.seat, e.tick, bytes.Clone(msg.Bytes())})
+		c.room.post(tickMsg{s: c.seat, seat: e.seat, tick: e.tick, data: bytes.Clone(msg.Bytes()), hash: e.hash})
 	case "over":
 		c.room.post(overMsg{c.seat})
 	case "again":
@@ -190,6 +213,7 @@ func main() {
 		lobby:     time.Duration(envInt("WARGRID_LOBBY_MS", 900000)) * time.Millisecond,
 	}
 	drain := time.Duration(envInt("WARGRID_DRAIN_MS", 3500)) * time.Millisecond
+	ipHeader := os.Getenv("WARGRID_CLIENT_IP_HEADER")
 	addr := ":" + os.Getenv("PORT")
 	if addr == ":" {
 		addr = ":8080"
@@ -200,8 +224,9 @@ func main() {
 		slog.Error("listen failed", "err", err)
 		os.Exit(1)
 	}
-	slog.Info("relay started", "addr", addr, "seats", cfg.seats, "hello", cfg.hello, "silence", cfg.silence, "lobby", cfg.lobby, "batch", cfg.batch, "drain", drain)
-	if err := serve(ln, newServer(&relay{reg: reg}), reg, drain); err != nil {
+	slog.Info("relay started", "addr", addr, "seats", cfg.seats, "hello", cfg.hello, "silence", cfg.silence, "lobby", cfg.lobby, "batch", cfg.batch, "drain", drain, "per_ip", ipHeader != "")
+	lim := newLimiter(tableSize, globalBurst, globalPeriod, time.Now)
+	if err := serve(ln, newServer(&relay{reg: reg, lim: lim, ipHeader: ipHeader}), reg, drain); err != nil {
 		slog.Error("serve failed", "err", err)
 		os.Exit(1)
 	}
@@ -223,7 +248,10 @@ func serve(ln net.Listener, srv *http.Server, reg *registry, drain time.Duration
 }
 
 func newServer(h *relay) *http.Server {
-	up := gws.NewUpgrader(h, &gws.ServerOption{ReadMaxPayloadSize: 1 << 20, CheckUtf8Enabled: true, Recovery: gws.Recovery})
+	up := gws.NewUpgrader(h, &gws.ServerOption{
+		ReadMaxPayloadSize: 1 << 20, CheckUtf8Enabled: true, Recovery: gws.Recovery,
+		Authorize: func(r *http.Request, s gws.SessionStorage) bool { s.Store("ip", clientKey(r, h.ipHeader)); return true },
+	})
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) })
 	mux.HandleFunc("GET /ws", func(w http.ResponseWriter, r *http.Request) {

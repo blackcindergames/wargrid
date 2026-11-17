@@ -30,7 +30,7 @@ func pair(t *testing.T, g *registry, wa, wb func([]byte)) (a, b *conn, aShut, bS
 }
 
 func firstTick(c *conn) tickMsg {
-	return tickMsg{c.seat, c.seat.n, inputDelay, []byte(fmt.Sprintf(`{"type":"tick","seat":%d,"tick":%d}`, c.seat.n, inputDelay))}
+	return tickMsg{c.seat, c.seat.n, inputDelay, []byte(fmt.Sprintf(`{"type":"tick","seat":%d,"tick":%d}`, c.seat.n, inputDelay)), hashMsg{}}
 }
 
 func park(a, b *conn) {

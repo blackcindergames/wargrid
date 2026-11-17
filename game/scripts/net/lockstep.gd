@@ -5,6 +5,7 @@ const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const MAX_QUEUED_TICKS: int = 300 # a legitimate peer queues at most about 2 * input delay + 2 ticks; raise this if the relay delay nears 150
+const FRAME_RESERVE_BYTES: int = 256 # the tick envelope and hash around the commands, with room to spare
 
 var send: Callable = func(_frame: String) -> void: pass
 var session_handler: Callable
@@ -20,6 +21,7 @@ var _packets: Dictionary = {}
 var _last_received: Dictionary = {}
 var _last_sent: int = 0
 var _queue: Array = []
+var _queue_bytes: int = 0
 var _sequence: int = 0
 var _submit_times: Dictionary = {}
 var _own_hashes: Dictionary = {}
@@ -60,14 +62,18 @@ func start(state: Dictionary) -> void:
 	_last_sent = _delay - 1
 	finish_tick(0, state)
 
-func submit(payload: Dictionary) -> void:
+func submit(payload: Dictionary) -> bool:
 	var command: Dictionary = payload.duplicate(true)
 	command.tick = _last_sent + 1
 	command.player = _seat
 	command.sequence = _sequence
+	var size: int = Wire.encode(command).to_utf8_buffer().size() + 1
+	if _queue_bytes + size > Wire.MAX_FRAME_BYTES - FRAME_RESERVE_BYTES: return false
 	_submit_times[_sequence] = _clock.call()
 	_sequence += 1
+	_queue_bytes += size
 	_queue.append(command)
+	return true
 
 func receive(text: String) -> void:
 	if _ended(): return
@@ -132,10 +138,15 @@ func finish_tick(tick: int, state: Variant) -> void:
 	var packet_tick: int = tick + _delay
 	var commands: Array = _queue
 	_queue = []
+	_queue_bytes = 0
 	var zone: int = Profiler.begin()
 	var text: String = Wire.encode(Wire.tick_message(_seat, packet_tick, commands, hash_entry))
-	_packets[_seat][packet_tick] = Wire.decode(text).message
+	var own: Dictionary = Wire.decode(text)
 	Profiler.end(&"lockstep.encode", zone)
+	if not own.ok:
+		_end("ended_protocol", "own frame: " + own.error)
+		return
+	_packets[_seat][packet_tick] = own.message
 	_last_sent = packet_tick
 	send.call(text)
 

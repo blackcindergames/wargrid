@@ -73,6 +73,16 @@ func TestParseRules(t *testing.T) {
 	}
 }
 
+func TestParseHashFields(t *testing.T) {
+	e := parseEnvelope([]byte(`{"type":"tick","seat":1,"tick":34,"commands":[],"hash":{"tick":1,"value":"3a0ad3856b168044"}}`))
+	if e == nil || e.hash != (hashMsg{tick: 1, value: "3a0ad3856b168044", ok: true}) {
+		t.Fatalf("hashed tick parsed as %+v", e)
+	}
+	if e := parseEnvelope([]byte(`{"type":"tick","seat":1,"tick":4,"commands":[]}`)); e == nil || e.hash.ok {
+		t.Fatalf("tick without hash parsed as %+v", e)
+	}
+}
+
 func TestJoinProtocolBeatsSettings(t *testing.T) {
 	g := &registry{rooms: map[string]*room{}, cfg: testConfig()}
 	conn := func() *conn { return &conn{sender: sender{write: func([]byte) {}, shut: func() {}}} }

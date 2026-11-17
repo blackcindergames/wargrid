@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"math"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -18,6 +19,7 @@ const (
 	codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	protocol     = 2
 	inputDelay   = 4
+	maxDelay     = inputDelay  // the highest delay a seat may use; the lead bound allows it, adaptive input delay raises it
 	expiryGrace  = time.Second // the socket backstop sits after the room timer, so the error frame lands before the close
 )
 
@@ -37,6 +39,10 @@ type seat struct {
 	lastTick int
 	frames   int
 	bytes    int
+	maxFrame int
+	peak     int // most bytes in one tumbling second
+	winBytes int
+	winStart time.Time
 	dead     bool // rejected: ignore further input, still counts until the socket closes
 	over     bool
 	again    bool
@@ -58,6 +64,7 @@ type tickMsg struct {
 	seat int
 	tick int
 	data []byte // one copy, shared read-only by every recipient
+	hash hashMsg
 }
 
 type leaveMsg struct{ s *seat }
@@ -79,6 +86,11 @@ type room struct {
 	started  bool
 	settings []byte
 	stats    map[int]string
+	// hashes holds comparisons still waiting for a seat: hash tick -> seat -> value.
+	hashes       map[int]map[int]string
+	peaks        map[int][2]int // seat -> max frame, peak bytes per second
+	desyncTick   int
+	desyncGroups string // empty until the first mismatch; hash tick 0 is real
 	// expiresAt is set in create; expiry and expired belong to run().
 	expiresAt time.Time
 	expiry    *time.Timer
@@ -125,7 +137,7 @@ func (r *room) run() {
 			}
 			switch ev := ev.(type) {
 			case tickMsg:
-				r.forward(ev)
+				r.forward(&ev)
 			case overMsg:
 				r.onOver(ev.s)
 			case againMsg:
@@ -239,7 +251,7 @@ func (r *room) start() {
 	}
 }
 
-func (r *room) forward(t tickMsg) {
+func (r *room) forward(t *tickMsg) {
 	s := t.s
 	if s.dead {
 		return
@@ -248,10 +260,23 @@ func (r *room) forward(t tickMsg) {
 		r.refuse(s)
 		return
 	}
+	if t.tick > r.leadLimit(s) {
+		s.dead = true
+		slog.Info("lead bound", "code", r.code, "seat", s.n, "tick", t.tick)
+		s.c.reject("too far ahead")
+		return
+	}
 	if s.lastTick == 0 {
 		s.c.dl.every(r.cfg.silence)
 	}
 	s.lastTick, s.frames, s.bytes = t.tick, s.frames+1, s.bytes+len(t.data)
+	now := time.Now()
+	if now.Sub(s.winStart) >= time.Second {
+		s.winStart, s.winBytes = now, 0
+	}
+	s.winBytes += len(t.data)
+	s.peak, s.maxFrame = max(s.peak, s.winBytes), max(s.maxFrame, len(t.data))
+	r.recordHash(s, t.tick, t.hash)
 	for _, o := range r.seats {
 		if o != s {
 			if r.cfg.batch > 0 {
@@ -261,6 +286,79 @@ func (r *room) forward(t tickMsg) {
 			}
 		}
 	}
+}
+
+// leadLimit is the last tick an honest seat can send: it sends T+1+delay only after running T, which needed
+// every other seat's frame for T, and those passed through this room first. The preloaded ticks below the
+// delay allow 2*delay before any peer frame, which is (delay-1)+delay+1.
+func (r *room) leadLimit(s *seat) int {
+	lowest := math.MaxInt
+	for _, o := range r.seats {
+		if o != s {
+			lowest = min(lowest, max(o.lastTick, inputDelay-1))
+		}
+	}
+	if lowest == math.MaxInt { // no other seat: nothing to stay behind
+		return lowest
+	}
+	return lowest + maxDelay + 1
+}
+
+// recordHash compares a hash once every seat sent it. Honest clients hash tick T in the frame for T+delay
+// (lockstep.finish_tick); other offsets are forwarded but not recorded.
+func (r *room) recordHash(s *seat, tick int, h hashMsg) {
+	if !h.ok || h.tick != tick-inputDelay {
+		return
+	}
+	m := r.hashes[h.tick]
+	if m == nil {
+		m = map[int]string{}
+		r.hashes[h.tick] = m
+	}
+	m[s.n] = h.value
+	if len(m) == len(r.seats) {
+		delete(r.hashes, h.tick)
+		if g := hashGroups(m); strings.Contains(g, "|") && r.desyncGroups == "" {
+			r.desyncTick, r.desyncGroups = h.tick, g
+			slog.Warn("DESYNC", "code", r.code, "tick", h.tick, "groups", g)
+		}
+	}
+	r.pruneHashes()
+}
+
+// pruneHashes drops comparisons that can no longer complete: once every seat sent the frame for h+delay, a
+// missing value never comes. With the lead bound at most maxDelay+1 entries stay open, whatever clients send.
+func (r *room) pruneHashes() {
+	low := math.MaxInt
+	for _, o := range r.seats {
+		low = min(low, o.lastTick)
+	}
+	for h := range r.hashes {
+		if h+inputDelay <= low {
+			delete(r.hashes, h)
+		}
+	}
+}
+
+// hashGroups lists seats with equal values, groups ordered by their lowest seat: "1,3|2".
+func hashGroups(m map[int]string) string {
+	seats := slices.Sorted(maps.Keys(m))
+	placed := map[int]bool{}
+	var groups []string
+	for _, n := range seats {
+		if placed[n] {
+			continue
+		}
+		var g []string
+		for _, o := range seats {
+			if m[o] == m[n] {
+				placed[o] = true
+				g = append(g, fmt.Sprint(o))
+			}
+		}
+		groups = append(groups, strings.Join(g, ","))
+	}
+	return strings.Join(groups, "|")
 }
 
 func (r *room) refuse(s *seat) {
@@ -333,6 +431,7 @@ func (r *room) rematch() {
 		s.lastTick, s.over, s.again = 0, false, false
 	}
 	r.parked = false
+	clear(r.hashes)
 	slog.Info("rematch", "code", r.code)
 	r.start()
 }
@@ -344,14 +443,20 @@ func (r *room) leave(s *seat) bool {
 	for _, o := range r.seats {
 		o.c.send(left, 0)
 	}
+	clear(r.hashes) // a pending comparison cannot complete with the old seat count
 	r.stats[s.n] = fmt.Sprintf("%df/%dB", s.frames, s.bytes)
+	r.peaks[s.n] = [2]int{s.maxFrame, s.peak}
 	if len(r.seats) > 0 {
 		return false
 	}
 	r.reg.remove(r.code, r)
 	args := []any{"code", r.code}
 	for _, n := range slices.Sorted(maps.Keys(r.stats)) {
-		args = append(args, fmt.Sprintf("seat%d", n), r.stats[n])
+		args = append(args, fmt.Sprintf("seat%d", n), r.stats[n],
+			fmt.Sprintf("seat%d_max_frame", n), r.peaks[n][0], fmt.Sprintf("seat%d_peak_bps", n), r.peaks[n][1])
+	}
+	if r.desyncGroups != "" {
+		args = append(args, "desync", r.desyncTick, "desync_groups", r.desyncGroups)
 	}
 	slog.Info("MATCH END", args...)
 	return true
@@ -444,6 +549,7 @@ func (g *registry) create(h *envelope, c *conn) joinResult {
 		code: code, cfg: g.cfg, reg: g, build: h.build, settings: h.settings,
 		joins: make(chan joinReq), events: make(chan any, 64), done: make(chan struct{}),
 		seats: map[int]*seat{}, stats: map[int]string{}, expiresAt: time.Now().Add(g.cfg.lobby),
+		hashes: map[int]map[int]string{}, peaks: map[int][2]int{},
 	}
 	g.rooms[code] = r
 	g.mu.Unlock()

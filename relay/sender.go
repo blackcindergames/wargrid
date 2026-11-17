@@ -63,9 +63,18 @@ func (s *sender) enqueue(frame []byte, delay time.Duration) {
 func (s *sender) addBatch(frame []byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.sealed {
-		s.batch = append(s.batch, frame)
+	if s.sealed {
+		return
 	}
+	size := len(frame)
+	for _, f := range s.batch {
+		size += len(f) + 1
+	}
+	// A joined message over the frame cap may not fit a client's receive buffer, so cut the batch first.
+	if size > maxMessageBytes {
+		s.flushBatch()
+	}
+	s.batch = append(s.batch, frame)
 }
 
 func (s *sender) flushNow() {

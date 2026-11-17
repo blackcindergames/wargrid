@@ -102,7 +102,7 @@ func TestSeatDeadlinesFollowPhase(t *testing.T) {
 	if renewOf(a) != 0 || renewOf(b) != 0 {
 		t.Fatal("start window renews on frames")
 	}
-	a.room.post(tickMsg{a.seat, 1, inputDelay, []byte(`{"type":"tick"}`)})
+	a.room.post(tickMsg{a.seat, 1, inputDelay, []byte(`{"type":"tick"}`), hashMsg{}})
 	eventually(t, "first tick did not start the silence rule", func() bool { return renewOf(a) == cfg.silence })
 	if renewOf(b) != 0 {
 		t.Fatal("the other seat left its start window")

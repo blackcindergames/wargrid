@@ -11,6 +11,7 @@ const CATCH_UP_STEPS: int = 2
 const MAX_CATCH_UP_CREDIT: int = 4
 const DESYNC_DIR: String = "user://desync"
 const LATENCY_FILE: String = "user://netplay-latency.txt"
+const TOO_MANY_ORDERS: String = "Too many orders at once; wait a moment"
 
 var pump: SimPump
 var first_note: SimPump.Note
@@ -171,8 +172,10 @@ func _new_answers() -> Array[Dictionary]:
 	return answers
 
 func submit(payload: Dictionary) -> Dictionary:
-	_lockstep.submit(payload)
-	return {"ok": true, "error": ""}
+	if _lockstep.submit(payload): return {"ok": true, "error": ""}
+	# The screen reads refusals from take_answers, not from this return.
+	_answers.append({"command": payload, "ok": false, "error": TOO_MANY_ORDERS})
+	return {"ok": false, "error": TOO_MANY_ORDERS}
 
 func pauses_sim() -> bool:
 	return false

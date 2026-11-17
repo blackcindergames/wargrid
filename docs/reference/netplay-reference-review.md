@@ -327,7 +327,7 @@ Each step is its own small package with its own plan and stop gate; none is appr
 ## Gaps and unverified points
 
 - Background-tab behaviour of the Wargrid web client: expected from MDN (rAF paused), not observed. Whether browsers answer WebSocket pings for hidden tabs (useful to tell "hidden" from "gone"): unverified.
-- Godot `WebSocketPeer` Nagle default and send flush timing: unverified (doctool dump has no descriptions).
+- Godot `WebSocketPeer` Nagle default and send flush timing: measured native 2026-11-15 on loopback (18,260 frames: client send to relay receive median 41 µs, p95 62 µs, max 547 µs; relay forward to client receive median 2.2 ms, p95 8.5 ms, bounded by the receiving client's frame time); web closed end to end the same day (12,523 send-to-receive pairs through the live relay, p50 18 ms, p95 35 ms, p99 46 ms, one 314 ms outlier; "no send delay found", user, [design answers](design-answers-2026-11-08.md#pre-research-follow-ups-converter-drops-defcon6-web-timing-user-2026-11-15)); the per-leg split on the web is unmeasured. The native rider is an evidence row in the relay guards verification file (private until the branch is accepted). No fix.
 - Real-world loss, jitter and disconnect rates for Wargrid players: never measured; only one home connection and one friend match exist.
 - Gains from adaptive delay, K-tick frames and resume: mechanisms confirmed in references, Wargrid numbers not measured. No numeric improvement is claimed.
 - Warzone 2100 drop/rejoin handling and the flood limits of Warzone 2100 and Zero Hour: not studied (marked in the table). Zero Hour's drop handling: see the 2026-11-13 corrections.
@@ -346,4 +346,6 @@ Reviewed with the user against `main` at `8f6f528` (no relay, protocol or `game/
 
 **New findings:** with three or more seats, two leaves close together can hang the remaining clients: `lockstep.gd` keeps one `_left_seat`, so a second `left` that arrives before play passes the first seat's `after_tick`, with a later `after_tick`, overwrites the first and `can_step` waits forever on the first seat's frames (read in code, not reproduced; two-seat rooms cannot reach it; placed in M9). Peer connection quality (OpenRA's ping labels, 0 A.D.'s notice after 2 s) is in §4 but was missing from the roadmap (placed in M9).
 
-**Still unverified:** Godot `WebSocketPeer` Nagle and flush behaviour, hidden-tab behaviour (placed at the next browser playtest), Recoil `GameServer.cpp` line numbers, loss and jitter in real play.
+**Still unverified:** the web per-leg split of the send path (native and end-to-end web timing measured, see "Gaps and unverified points"), hidden-tab behaviour (placed at the next browser playtest), Recoil `GameServer.cpp` line numbers, loss and jitter in real play.
+
+**Implemented 2026-11-16/17 on branch `relay-guards` (local, not pushed, not deployed):** S1 (lead bound), S5 (per-address caps and join rate, plus a global join bucket and an `unknown match` bucket; header from `WARGRID_CLIENT_IP_HEADER`, unset on fly) and P5.1 (the relay compares hash values and logs `DESYNC` with seat groups; it names groups, not an odd seat). S2 (per-seat byte budget) is not built: `MATCH END` now only reports each seat's largest frame and busiest second. CI, Windows, the browser and the fly header check are unverified; see [chapter 11](../guide/11-multiplayer.md#the-relay).

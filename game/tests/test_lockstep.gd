@@ -80,7 +80,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -575,4 +575,42 @@ func test_left_on_normal_end_tick(runner) -> bool:
 	runner.check(a.sim.match_over(), "L17 seat 2 without objects ends the match")
 	a.ls.receive(Wire.encode({"type": "left", "seat": 2, "after_tick": a.sim.tick()}))
 	runner.check(not a.ls.advance(a.sim) and a.ls.status() != "ended_left" and not a.ls.opponent_left(), "L17 a leave on the tick the match ended is a normal outcome")
+	return true
+
+func _encoded_size(command: Dictionary) -> int:
+	return Wire.encode(command).to_utf8_buffer().size() + 1
+
+func test_pending_frame_cap(runner) -> bool:
+	var pair: Array = _fresh()
+	var ls = pair[1]
+	var sent: Array[String] = []
+	ls.send = func(text: String) -> void: sent.append(text)
+	var order := {"type": "move", "entity_ids": range(1, 301), "target": [10.5, 10.5]}
+	var accepted: int = 0
+	while accepted < 200 and ls.submit(order): accepted += 1
+	runner.check(accepted > 0 and accepted < 200, "L19 the queue refuses an order once the frame is full, accepted " + str(accepted))
+	var queued: int = 0
+	for command: Dictionary in ls._queue: queued += _encoded_size(command)
+	var refused: Dictionary = order.duplicate(true)
+	refused.tick = 5
+	refused.player = 1
+	refused.sequence = accepted
+	runner.check(queued <= Wire.MAX_FRAME_BYTES - Lockstep.FRAME_RESERVE_BYTES and queued + _encoded_size(refused) > Wire.MAX_FRAME_BYTES - Lockstep.FRAME_RESERVE_BYTES, "L19 the refusal sits exactly at the reserve boundary")
+	runner.check(not ls._submit_times.has(accepted), "L19 the refused order took no latency sample")
+	ls.finish_tick(1, null)
+	var frame_ok: bool = sent.size() == 1 and sent[0].to_utf8_buffer().size() <= Wire.MAX_FRAME_BYTES and Wire.decode(sent[0]).ok
+	runner.check(frame_ok, "L19 a full pending frame still fits the 64 KiB cap")
+	runner.check(ls.submit(order), "L19 the queue accepts again after the frame is sent")
+	runner.check(ls._queue[0].sequence == accepted, "L19 the refused order consumed no sequence")
+	return true
+
+func test_own_frame_checked(runner) -> bool:
+	var pair: Array = _fresh()
+	var ls = pair[1]
+	var sent: Array[String] = []
+	ls.send = func(text: String) -> void: sent.append(text)
+	ls._queue.append({"type": "move", "entity_ids": range(1, 20000), "target": [10.5, 10.5], "tick": 5, "player": 1, "sequence": 0})
+	ls.finish_tick(1, null)
+	runner.check(ls.status() == "ended_protocol" and ls.end_reason().begins_with("own frame"), "L20 an undecodable own frame ends the match, got " + ls.end_reason())
+	runner.check(sent.is_empty(), "L20 nothing is sent")
 	return true

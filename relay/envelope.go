@@ -19,6 +19,7 @@ type envelope struct {
 	typ      string
 	seat     int
 	tick     int
+	hash     hashMsg
 	protocol int
 	build    string
 	match    string
@@ -42,18 +43,26 @@ func asInt(v any) (int, bool) {
 
 func asString(v any) (string, bool) { s, ok := v.(string); return s, ok }
 
-func validHash(o map[string]any) bool {
-	h, present := o["hash"]
+type hashMsg struct {
+	tick  int
+	value string
+	ok    bool // present and valid
+}
+
+// parseHash: valid is false only for a hash with the wrong shape; no hash is valid and zero.
+func parseHash(o map[string]any) (h hashMsg, valid bool) {
+	raw, present := o["hash"]
 	if !present {
-		return true
+		return hashMsg{}, true
 	}
-	m, ok := h.(map[string]any)
-	if !ok {
-		return false
+	m, isMap := raw.(map[string]any)
+	if !isMap {
+		return hashMsg{}, false
 	}
-	_, tickOK := asInt(m["tick"])
-	v, strOK := asString(m["value"])
-	return tickOK && strOK && hashRe.MatchString(v)
+	tick, tickOK := asInt(m["tick"])
+	value, strOK := asString(m["value"])
+	valid = tickOK && strOK && hashRe.MatchString(value)
+	return hashMsg{tick, value, valid}, valid
 }
 
 // rawSettings returns the exact bytes of the top-level "settings" value (nil when absent) and whether it is a valid one.
@@ -98,8 +107,8 @@ func parseEnvelope(text []byte) *envelope {
 		s, ok1 := asInt(o["seat"])
 		t, ok2 := asInt(o["tick"])
 		_, ok3 := o["commands"].([]any)
-		if ok1 && ok2 && ok3 && validHash(o) {
-			return &envelope{typ: typ, seat: s, tick: t}
+		if h, ok4 := parseHash(o); ok1 && ok2 && ok3 && ok4 {
+			return &envelope{typ: typ, seat: s, tick: t, hash: h}
 		}
 	case "over", "again":
 		return &envelope{typ: typ}

@@ -14,6 +14,7 @@ var _last_ping: int = 0
 var _last_rx: int = 0
 var _rtt := PackedInt64Array()
 var patient: bool = false
+var _refused: bool = false
 
 func _init(clock: Callable = Time.get_ticks_usec) -> void:
 	_clock = clock
@@ -33,20 +34,26 @@ func poll() -> PackedStringArray:
 		var text: String = _peer.get_packet().get_string_from_utf8()
 		if not _take_pong(text): frames.append(text)
 	var ping: String = take_ping(_clock.call())
-	if ping != "": _peer.send_text(ping)
+	if ping != "": send_text(ping)
 	return frames
 
 func send_text(text: String) -> void:
 	if not is_open(): return
 	if not _sent_any: _last_rx = _clock.call()
 	_sent_any = true
-	_peer.send_text(text)
+	_check_sent(_peer.send_text(text))
+
+# A refused frame leaves a tick gap the relay would reject; closing ends the match as relay lost instead.
+func _check_sent(result: Error) -> void:
+	if result == OK: return
+	_refused = true
+	_peer.close()
 
 func is_open() -> bool:
 	return _called and _peer.get_ready_state() == WebSocketPeer.STATE_OPEN
 
 func closed() -> bool:
-	return _called and _peer.get_ready_state() == WebSocketPeer.STATE_CLOSED
+	return _called and (_refused or _peer.get_ready_state() == WebSocketPeer.STATE_CLOSED)
 
 func close() -> void:
 	if _called: _peer.close()
