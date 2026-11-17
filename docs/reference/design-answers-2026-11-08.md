@@ -1040,3 +1040,13 @@ Inputs: the P12 research note (private), [F22](../STATUS.md#findings-list). Zero
 - **Card picker** (user, 2026-11-17): the launcher's focus-card picker no longer locks while a sitting is open. Picking another card files the open sitting if anything was filled in, then starts a new one, the same way a new build does.
 - **Saved hint** (user, 2026-11-17): passive text only. The panel footer shows "Saved" with the time of the last write. The launcher line under "Session open" shows the last filed path as selectable text on desktop, or "Notes downloaded: <name>" on web.
 - **Earlier markers** (user, 2026-11-17): after Play again, the previous match's markers stay listed as "Last match", with comment fields, until the new match gets its first marker.
+
+## P3 timed playtest (user, 2026-11-17)
+
+The timed Ashfall playtest from the [player-experience review](#player-experience-review-user-2026-11-16), played by the user on desktop `main` `a7ba7ac`: from a fight in the enemy base, the trip back to the own base takes 3-4 s with the arrow keys, so 6-8 s away from the fight per round trip.
+
+- **It hurts:** P3 moves right after P2.3b, before P8 and the art packages.
+- **Scope:** minimap, H to the Command Center, control groups and Space to the last alert; edge scrolling and right-drag pan go to the Later item Pan with the mouse. The minimap beats edge scrolling and drag pan for long trips (user's view).
+- **First minimap:** click or drag moves the camera, flash on attack, blank at low power; right-click orders on the minimap are not in it.
+- **Merge:** P3 takes all of the Later item Minimap and attack alerts.
+- **Name:** "See the whole map".

@@ -68,6 +68,7 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ⏭ | See your selection | Next |
 | 📋 | Team up against bots | Planned |
 | 📋 | Build from the dock | Planned |
+| 📋 | See the whole map | Planned |
 | 📋 | Reconnect after a drop | Planned |
 | 📋 | More maps | Planned |
 | 📋 | Desync reports that send themselves | Planned |
@@ -79,10 +80,9 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 📋 | Friends against friends | Planned |
 | 📋 | Supplies you can read | Planned |
 | 📋 | Three kinds of base | Planned |
-| 📋 | Camera that follows you | Planned |
 | 📋 | Smooth motion | Planned |
 | 💡 | Order controls | Later |
-| 💡 | Minimap and attack alerts | Later |
+| 💡 | Pan with the mouse | Later |
 | 💡 | Smoother big moves | Later |
 | 💡 | Crowds that sort themselves | Later |
 | 💡 | Fog of war | Later |
