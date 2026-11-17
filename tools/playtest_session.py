@@ -52,7 +52,7 @@ def summary_lines(session: dict, jpgs: list[Path | None]) -> list[str]:
     for k, m in enumerate(session["matches"], 1):
         lines.append(
             f"MATCH {k} {m['mode']} {m['map']} seed={m['seed']} seat={m['seat']} end_tick={m['end_tick']} "
-            f"build={_build(session, m)} result={m['result']}{' (unfinished)' if m.get('unfinished') else ''}"
+            f"build={_build(session, m)} result={m['result']}"
         )
         for i, mk in enumerate(m["markers"], 1):
             jpg = next(flat, None)

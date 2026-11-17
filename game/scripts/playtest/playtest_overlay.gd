@@ -73,7 +73,7 @@ func end_match() -> void:
 	_record_match()
 	_rebuild()
 	_checklist.show()
-	if not _typing(): _scroll_to_markers.call_deferred()
+	if _typed_field() == null: _scroll_to_markers.call_deferred()
 
 func keep_match() -> void:
 	if _active and not _reviewed: _record_match()
@@ -144,7 +144,7 @@ func _input(event: InputEvent) -> void:
 	if _dialog.visible:
 		if key != KEY_ESCAPE: return
 		cancel_marker()
-	elif _typing():
+	elif _typed_field() != null:
 		if key != KEY_ESCAPE: return
 		get_viewport().gui_release_focus()
 	elif key == CHECKLIST_KEY: _checklist.visible = not _checklist.visible
@@ -153,9 +153,6 @@ func _input(event: InputEvent) -> void:
 		_tick_triggers(func(trigger: String) -> bool: return trigger.begins_with("key:") and OS.find_keycode_from_string(trigger.substr(4)) == key)
 		return
 	get_viewport().set_input_as_handled()
-
-func _typing() -> bool:
-	return _typed_field() != null
 
 func _typed_field() -> LineEdit:
 	var focus: Control = get_viewport().gui_get_focus_owner()
@@ -195,12 +192,11 @@ func _rebuild() -> void:
 	var typed: LineEdit = _typed_field() if is_inside_tree() else null
 	var typed_name: String = typed.name if typed != null else ""
 	var caret: int = typed.caret_column if typed != null else 0
-	if typed != null: get_viewport().gui_release_focus()
 	for child in _rows.get_children():
 		_rows.remove_child(child)
 		child.queue_free()
 	_boxes.clear()
-	_add_row_label("Title", "%s  (%s)" % [_card.get("title", ""), _key_label(CHECKLIST_KEY)])
+	SessionForm.add_label(_rows, "%s  (%s)" % [_card.get("title", ""), _key_label(CHECKLIST_KEY)]).name = "Title"
 	for item: Dictionary in _card.get("try", []):
 		var check := CheckBox.new()
 		check.name = item.id
@@ -213,12 +209,12 @@ func _rebuild() -> void:
 		_boxes[item.id] = check
 	if _session == null: return
 	for question: Dictionary in _card.get("questions", []): SessionForm.add_question(_rows, _session, question)
-	_add_row_label("ScaleLegend", SessionForm.SCALE_LEGEND)
+	SessionForm.add_label(_rows, SessionForm.SCALE_LEGEND).name = "ScaleLegend"
 	var shown: int = _session.marker_match()
 	var listed: bool = shown >= 0 and not _session.data.matches[shown].markers.is_empty()
-	_add_row_label("MarkersTitle", "Last match" if listed and not _reviewed and shown == _session.last_match else "This match")
+	SessionForm.add_label(_rows, "Last match" if listed and not _reviewed and shown == _session.last_match else "This match").name = "MarkersTitle"
 	if listed: SessionForm.add_markers(_rows, _session, shown)
-	else: _add_row_label("NoMarkers", "No markers this match" if _reviewed else "No markers yet (%s adds one)" % _key_label(MARKER_KEY))
+	else: SessionForm.add_label(_rows, "No markers this match" if _reviewed else "No markers yet (%s adds one)" % _key_label(MARKER_KEY)).name = "NoMarkers"
 	_refocus(typed_name, caret)
 	_show_saved()
 	_fit()
@@ -233,13 +229,6 @@ func _refocus(field_name: String, caret: int) -> void:
 func _scroll_to_markers() -> void:
 	var title: Control = _rows.get_node_or_null("MarkersTitle")
 	if title != null: _scroll.ensure_control_visible(title)
-
-func _add_row_label(label_name: String, text: String) -> void:
-	var label := Label.new()
-	label.name = label_name
-	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_rows.add_child(label)
 
 func _key_label(key: Key) -> String:
 	var label: Key = key if DisplayServer.get_name() == "headless" else DisplayServer.keyboard_get_label_from_physical(key)

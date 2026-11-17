@@ -4,14 +4,14 @@ Plan: [P12 plan](../superpowers/plans/2026-11-17-p12-notes-that-never-block.md).
 
 ```text
 Resume record (updated 2026-11-17)
-Branch / base commit / working-tree state: p12-notes / 10d152c / gate-1 fixes committed, clean
-Last green task / next incomplete task: stop gate 1 / stop gate 2 (/ponytail-review)
+Branch / base commit / working-tree state: p12-notes / 10d152c / gate-2 cuts committed, clean
+Last green task / next incomplete task: stop gate 2 / benchmark (load), then stop gate 3 owner check
 Changed paths since last commit: none
 Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1079 / 146411 / 0 / 0 / TESTS PASSED
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); gate A passed; owner answers 2026-11-17; benchmark pending (load); rendered rerun owed after the merge; gate 3 owner check pending
+Approved decisions, pre-authorizations used, deferred gates: attended day run (user, 2026-11-17); gate A passed; owner answers 2026-11-17; benchmark pending (load 2.58 at Task 5); rendered rerun owed after the merge; gate 3 owner check pending (desktop match, test app on web, Chromium second-download check)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: /ponytail-review on Sonnet on 10d152c..HEAD, apply cuts, full suite and run_checks
+Next exact action: benchmark when the 1-minute load is at or below 2.5; gate 3 with the user (each window and the deploy need approval)
 ```
 
 ## Web download probe (Task 1)
@@ -64,3 +64,5 @@ The probe (`build/p12-probe/`, untracked) copies it from `new Blob` to `revokeOb
 | 2026-11-17 | gate 1 | red gate-1 tests on the old code | `b22c7f3` plus gate-1 tests | overlay CASES 48 FAILURES 6 (PO37 x2, PO38, PO39, PO40, PO42); PO41 FAILURES 1; playtest NB16 FAILURES 1; mutation G2 `start_match` off -> PO38 red; restored |
 | 2026-11-17 | gate 1 | `WARGRID_TEST_ONLY` overlay, playtest.gd, launcher, online_scene, skirmish_scene, pause_menu, audio_settings; lint, warnings, boundary | `b22c7f3` plus gate-1 fixes | exit 0 each (48/221/0, 29/312/0, 64/5727/0, 62/3088/0, 58/328/0, 9/414/0, 16/61/0); lint, warnings, boundary exit 0; simulation/net/relay/protocol diff empty; `FORMAT` 1 |
 | 2026-11-17 | gate 1 | full `sh tools/run_tests.sh`; `sh tools/run_checks.sh` | `b22c7f3` plus gate-1 fixes | CASES 1079 CHECKS 146411 FAILURES 0, exit 0; CHECKS PASSED 5, exit 0. Coordinator wording touch-up after ("files the session", card quit item), `WARGRID_TEST_ONLY=test_playtest` 85/567/0 |
+| 2026-11-17 | gate 2 | `/ponytail-review` (Sonnet) on `10d152c..c55e98d` | `c55e98d` | ship; applied: overlay label helper merged into `SessionForm.add_label`; dead `Signal` branch in `add_action`; `_typing()` wrapper inlined; explicit focus release in `_rebuild` removed (removing a focused row from the tree releases it and saves); redundant `(unfinished)` suffix in the tool summary (`result=unfinished` already says it). Kept: per-frame Saved footer, `_has_content`, both `_typing` checks, the `download`/`web` plumbing |
+| 2026-11-17 | gate 2 | full `sh tools/run_tests.sh`; `sh tools/run_checks.sh` | `c55e98d` plus ponytail cuts | CASES 1079 CHECKS 146411 FAILURES 0, exit 0, no SCRIPT ERROR; CHECKS PASSED 5, exit 0 |

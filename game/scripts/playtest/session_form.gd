@@ -3,12 +3,12 @@ extends RefCounted
 const SCORES: int = 5
 const SCALE_LEGEND := "1 strongly disagree … 5 strongly agree"
 
-static func add_action(parent: Control, button_name: String, label: String, target: Variant) -> Button:
+static func add_action(parent: Control, button_name: String, label: String, target: Callable) -> Button:
 	var button := Button.new()
 	button.name = button_name
 	button.text = label
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.pressed.connect(target.emit if target is Signal else target)
+	button.pressed.connect(target)
 	parent.add_child(button)
 	return button
 
@@ -20,7 +20,7 @@ static func add_markers(parent: VBoxContainer, session: PlaytestSession, match_i
 		var text: String = "%d:%02d" % [floori(seconds / 60.0), seconds % 60]
 		if not str(marker.kind).is_empty(): text = "%s, %s" % [str(marker.kind).capitalize(), text]
 		if not str(marker.text).is_empty(): text += ": " + str(marker.text)
-		_add_label(parent, text)
+		add_label(parent, text)
 		var comment := LineEdit.new()
 		_add_field(parent, comment, "Comment_%d_%d" % [match_index, k], "Comment", str(marker.comment))
 		_save_on_leave(comment, func() -> void: session.set_comment(match_index, k, comment.text))
@@ -29,7 +29,7 @@ static func add_question(parent: VBoxContainer, session: PlaytestSession, questi
 	var id: String = question.id
 	var stored: Dictionary = session.data.answers.get(id, {})
 	var score: Array[int] = [int(stored.get("score", 0))]
-	_add_label(parent, question.text)
+	add_label(parent, question.text)
 	var row := HBoxContainer.new()
 	parent.add_child(row)
 	var group := ButtonGroup.new()
@@ -51,7 +51,7 @@ static func add_question(parent: VBoxContainer, session: PlaytestSession, questi
 	_add_field(parent, answer, "Answer_" + id, "Optional comment", str(stored.get("text", "")))
 	_save_on_leave(answer, func() -> void: session.set_answer(id, score[0], answer.text))
 
-static func _add_label(parent: VBoxContainer, text: String) -> Label:
+static func add_label(parent: VBoxContainer, text: String) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

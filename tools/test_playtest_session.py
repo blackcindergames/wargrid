@@ -134,7 +134,7 @@ class PlaytestSessionTest(unittest.TestCase):
     def test_unfinished_match(self):
         path = self._write(self._with_unfinished())
         s = ps.load_session(path)
-        self.assertIn("result=unfinished (unfinished)", ps.summary_lines(s, [None, None])[-1])
+        self.assertIn("result=unfinished", ps.summary_lines(s, [None, None])[-1])
         err = io.StringIO()
         with contextlib.redirect_stderr(err):
             rows = ps.replay_rows(s, path)
