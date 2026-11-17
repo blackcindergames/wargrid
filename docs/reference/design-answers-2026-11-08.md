@@ -690,6 +690,21 @@ Where the game differs from decided answers (inventory, 2026-11-13; none changed
 
 Not tested: anything in the game, motion, effects, fog, a fight, the rendered benchmark, colour-vision deficiencies beyond a computed table on the page.
 
+**Round 6 scope questionnaire** (user, 2026-11-17; 18 answers in five rounds, all as recommended; after an agent check of the map art against the decisions made since round 5; design: [map art round 6](../superpowers/specs/2026-11-17-map-art-round-6-design.md)). Nothing here starts a package or changes game code:
+- **Round 6 is a consolidation with one short pick round,** against consolidation only, a wide prettiness round, and no round 6. Reason (agent): rounds 1 to 5 are page data never run in Godot, so more page picks are kept few.
+- **Pick topics:** the supply pile pad with the Neon fix (F12); the map edge and canvas; the missing states (paused construction, vehicle wrecks, the low-power and dark-defence look of F21). Ground and decoration polish was not picked and stays with the map ports.
+- **Files:** a trimmed, self-contained copy of the page and the picked data beside the pictures, as HUD v5 has; one export file of the picked shapes as expected values for the shape tests; one reference doc with a section per package (P2.4, P2.5, P2.6); the art bible rewritten as v2 with the decided rules.
+- **Pictures:** all re-shot at 2x; the tank row gets the FRC correction, the zoom 2 versions on picked hulls stay P2.4's; the base scenes get the picked colours and no HUD layer; defences, the Laborer, the supply truck and rubble are checked beside the picked look, and only one that clearly clashes gets a pick step.
+- **Later decisions drawn in:** one picture of the white map marks on sand and on the dark ground; the 2:1 unit shadow in the re-shot pictures; one reference picture that shows all five screenshot marks.
+- **The capture script stays its own item, before P2.4,** outside round 6.
+- **One palette step** for the pile pad, doors on side faces and building sides on the dark ground; the round 5 side band stands.
+- **Art lab items stay in the art lab** (the occluded-unit cue F17, pale roof edges, the contact mark, the completion settle, dark ground on Ashfall, bar size); round 6 only lists them under their package.
+- **Left with their packages:** the Power Plant drums (P2.6 rider) and the driving cues (P2.4 rider); that infantry do not show their faction at zoom 0.5 is accepted.
+- **Judged as before:** a labelled A/B page of about five steps, opening on sand at zoom 0.5 with the lifted owner colours, the HUD v5 layer switchable.
+- **The work runs on subagents** with model and effort chosen per task by the coordinator (user, 2026-11-17).
+- After the design's builder check (user, 2026-11-17; four answers, as recommended): **one shared HUD file,** moved out of the HUD v5 page so the map page loads the same drawing, proven by re-making the 26 HUD pictures and `layout.json` without a difference; **the HUD v5 backdrops are re-made from the map art source after the picks,** and its pictures re-shot once; **round 6 runs before the P2.3a design,** which reads the map edge and the mark sizes from it; **for F21 the page picks a favourite and the art lab confirms it,** so F21 stays open after round 6.
+- On the points the agent was least sure of (user, 2026-11-17; eight answers, seven as recommended): **the shape export is proven in the game's own bake by a headless round trip,** no game code changed, so the picked geometry is the first map art run in Godot; **paused construction and vehicle wrecks are drawn once and confirmed,** not put to an A/B, which leaves four A/B steps; **Neon is fixed, not dropped,** asked again because it is carried through every art package; **the round runs by day in one session,** against the recommended night run for the consolidation; **the art bible states rules in words and links to every number;** **it opens with round 6's gate reference picture,** the GPT north star moves to "Where it started"; **pictures are lossless WebP,** for an estimated 20 to 30 MB of repository growth (agent estimate from today's file sizes); **the glyph-size views are dropped from the page.**
+
 ## Movement design (P2.1 rider; user, 2026-11-14)
 
 Questionnaire for the core movement (P5) and core avoidance (P6) design.
