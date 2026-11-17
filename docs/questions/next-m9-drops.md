@@ -63,6 +63,11 @@ Q11. Should a dropped player be able to rejoin the running match?
    Recommendation: c, because the 3v3 exit gate does not need it and replaying a long match in the browser may be slow. Why it matters: changes what the relay must store per room.
    **Answered c (user, 2026-11-13, netplay reference review):** rejoin after a lost client process comes after M9; short connection drops are covered by M9's seat resume, where the client keeps its simulation.
 
+Q12. Before Q1's 5 s stall screen, when should the small "Waiting for player N" status line appear?
+   a) Not at all: nothing shows until the 5 s screen — ZH default (`DisconnectManager.cpp:110-115`, `NetworkDisconnectTime 5000`, `data\ini\gamedata.ini:458`)   b) After a short wall-clock delay, about 1 s   c) At once on any missed tick (today, `OnlineDriver.notice`)
+   Recommendation: b, because today's line flickers on every single missed tick (a window drag shows it), while a stall of a second or more is worth naming before the screen. Why it matters: presentation only (the clock stays outside the simulation); it also hides SB5's one-to-two-frame worker lag (about 33-63 ms, advisory 2026-11-17, private). Other engines: 0 A.D. warns after 2 s (`source/network/NetProtocol.h:33`), Recoil's "sim lagging" after 500 ms (`rts/Game/Game.h:78`), OpenRA shows connection quality instead (`OpenRA.Game/Network/OrderManager.cs:300-327`). Filed by the user's SB4 answer (user, 2026-11-17); goes with P8's stall screen.
+   **Answered b (user, 2026-11-17):** the line appears after about 1 s of wall-clock stall; it lands with P8's stall screen, or in SB5 if SB5's measurement moves it there.
+
 ## Notes from the Relay guards answers (2026-11-15)
 
 - Relay guards clears pending hashes at every leave (its Q3). In a 3v3 that continues after a drop (bot takeover), that loses one comparison window for the remaining seats, right where a takeover desync is most likely; the next hash 30 ticks later still catches it. Revisit if a match continues past a leave.
