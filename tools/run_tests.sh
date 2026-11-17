@@ -3,7 +3,12 @@ repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 log_dir=$(mktemp -d) || exit 1
 pids=""
 trap 'rm -rf "$log_dir"' EXIT
-trap 'kill $pids 2>/dev/null; exit 1' HUP INT TERM
+# Each child leads its own process group, so the trap also reaches its children, even orphaned ones.
+group() { exec perl -e 'setpgrp; exec @ARGV or die "$ARGV[0]: $!\n"' "$@"; } # only after &: replaces that job's subshell, so $! is the group
+case $(uname -s) in MINGW* | MSYS* | CYGWIN*) group() { exec "$@"; } ;; esac # Windows CI keeps its plain launch; groups there are untested
+# shellcheck disable=SC2086 # pids are numbers
+stop() { for p in $pids; do kill -TERM -$p || kill -TERM $p; done 2>/dev/null; exit 1; }
+trap stop HUP INT TERM
 engine=${GODOT_BIN:-godot}
 exe=${WARGRID_TEST_EXE:-} # an exported tests build runs the suite itself and needs no import
 stamp="$repo_root/game/.godot/wargrid-imported"
@@ -24,9 +29,9 @@ shards=${WARGRID_TEST_SHARDS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
 i=0
 while [ "$i" -lt "$shards" ]; do
 	if [ -n "$exe" ]; then
-		"$exe" --headless -- --shard="$i/$shards" ${only:+"--only=$only"} >"$log_dir/tests.$i.log" 2>&1 &
+		group "$exe" --headless -- --shard="$i/$shards" ${only:+"--only=$only"} >"$log_dir/tests.$i.log" 2>&1 &
 	else
-		"$engine" --headless --path "$repo_root/game" --script res://tests/run_tests.gd -- --shard="$i/$shards" ${only:+"--only=$only"} >"$log_dir/tests.$i.log" 2>&1 &
+		group "$engine" --headless --path "$repo_root/game" --script res://tests/run_tests.gd -- --shard="$i/$shards" ${only:+"--only=$only"} >"$log_dir/tests.$i.log" 2>&1 &
 	fi
 	pids="$pids $!"
 	i=$((i + 1))

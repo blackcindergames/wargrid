@@ -4,10 +4,15 @@ sh tools/ensure_venv.sh || exit 1 # three gates call it, and two parallel venv b
 log_dir=$(mktemp -d) || exit 1
 pids=""
 trap 'rm -rf "$log_dir"' EXIT
-trap 'kill $pids 2>/dev/null; exit 1' HUP INT TERM # shortcut: TERM stops the gates, not their children; start each gate in its own process group if that ever matters
+# Each child leads its own process group, so the trap also reaches its children, even orphaned ones.
+group() { exec perl -e 'setpgrp; exec @ARGV or die "$ARGV[0]: $!\n"' "$@"; } # only after &: replaces that job's subshell, so $! is the group
+case $(uname -s) in MINGW* | MSYS* | CYGWIN*) group() { exec "$@"; } ;; esac # Windows CI keeps its plain launch; groups there are untested
+# shellcheck disable=SC2086 # pids are numbers
+stop() { for p in $pids; do kill -TERM -$p || kill -TERM $p; done 2>/dev/null; exit 1; }
+trap stop HUP INT TERM
 gates="run_lint run_warnings run_python_checks run_shell_checks check_public"
 for gate in $gates; do
-	sh "tools/$gate.sh" >"$log_dir/$gate.log" 2>&1 &
+	group sh "tools/$gate.sh" >"$log_dir/$gate.log" 2>&1 &
 	pids="$pids $!"
 done
 failed=""
