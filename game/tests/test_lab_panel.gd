@@ -25,7 +25,7 @@ func _inside(inner: Rect2, outer: Rect2) -> bool:
 
 func _slabs(hud: Control) -> Array[Control]:
 	var result: Array[Control] = []
-	for name in ["Panel", "Strip", "Ally", "Letter"]:
+	for name in ["Panel", "Strip", "Ally", "Letter", "StripLetter"]:
 		var node: Control = hud.find_child(name, true, false)
 		if node != null: result.append(node)
 	return result
@@ -56,6 +56,8 @@ func test_panel_states_fit(runner) -> bool:
 					runner.check(_inside(hud.panel_rect(), screen) and _inside(hud.strip_rect(), screen), "LP1 %s slot %d panel and strip on screen" % [tag, slot])
 					runner.check(is_equal_approx(hud.panel_rect().end.y, 800.0), "LP1 %s slot %d panel bottom on y 800" % [tag, slot])
 					var letter: Control = hud.find_child("Letter", true, false)
+					var strip_letter: Control = hud.find_child("StripLetter", true, false)
+					runner.check(strip_letter != null and _rect(strip_letter).position.x > hud.strip_rect().end.x and _rect(hud.find_child("Strip", true, false)).encloses(Rect2(hud.strip_rect().position.x, _rect(strip_letter).position.y, 1, _rect(strip_letter).size.y)), "LP1 %s slot %d strip letter beside its strip" % [tag, slot])
 					runner.check(letter != null and _inside(_rect(letter), screen), "LP1 %s slot %d letter tag on screen" % [tag, slot])
 					for slab in _slabs(other):
 						runner.check(letter != null and not _rect(letter).intersects(_rect(slab)), "LP1 %s slot %d letter tag clear of slot %d %s" % [tag, slot, 1 - slot, slab.name])

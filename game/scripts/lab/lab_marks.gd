@@ -12,6 +12,7 @@ const TICK_SHARE: float = 0.32
 const BAR_TRACK := Color(0, 0, 0, 0.7)
 
 var on_top: bool = false
+var _drawn_xform := Transform2D()
 var model: Dictionary = {}:
 	set(value):
 		model = value
@@ -45,6 +46,16 @@ static func bar_rects(top_left: Vector2, fraction: float) -> Dictionary:
 		track = Rect2(top_left - Vector2.ONE, Vector2(26, 5)),
 		frame = Rect2(top_left - Vector2(2, 2), Vector2(28, 7)),
 	}
+
+# Frame, track and fill only stay apart on whole screen pixels; below zoom 1 the bar keeps its 1x size.
+static func screen_bar(rects: Dictionary, to_screen: Transform2D) -> Dictionary:
+	var pixel: float = maxf(1.0, roundf(to_screen.get_scale().x))
+	var anchor: Vector2 = (to_screen * rects.fill.position).round()
+	var result := {scale = pixel}
+	for part: String in ["frame", "track", "fill"]:
+		var rect: Rect2 = rects[part]
+		result[part] = Rect2(anchor + (rect.position - rects.fill.position) * pixel, (rect.size * pixel).round())
+	return result
 
 static func bars(source: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
@@ -99,7 +110,14 @@ func _draw() -> void:
 	if not model.dragging and diamonds.has(model.hovered): _white_segments(hover_ticks(diamonds[model.hovered]), 1.5)
 	for id: int in model.preview:
 		if diamonds.has(id): _white_segments(hover_ticks(diamonds[id]), 1.5)
-	for bar: Dictionary in bars(model): _draw_bar(bar)
+	_drawn_xform = get_global_transform_with_canvas()
+	draw_set_transform_matrix(_drawn_xform.affine_inverse())
+	for bar: Dictionary in bars(model): _draw_bar(bar, screen_bar(bar.rects, _drawn_xform))
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+
+# Bars sit in screen pixels, so a pan or zoom must redraw them.
+func _process(_delta: float) -> void:
+	if on_top and visible and get_global_transform_with_canvas() != _drawn_xform: queue_redraw()
 
 static func _footprint(building: Dictionary, definition: Dictionary) -> PackedVector2Array:
 	var origin := Vector2(building.origin[0], building.origin[1])
@@ -116,8 +134,8 @@ func _white_segments(points: PackedVector2Array, width: float) -> void:
 	draw_multiline(points, LabLook.UNDER_STROKE, width + 2.0, true)
 	draw_multiline(points, Color.WHITE, width, true)
 
-func _draw_bar(bar: Dictionary) -> void:
-	# A centred 1 px stroke on the inset rect keeps the outline inside the 28 x 7 frame.
-	draw_rect(bar.rects.frame.grow(-0.5), bar.frame, false, 1.0)
-	draw_rect(bar.rects.track, BAR_TRACK)
-	draw_rect(bar.rects.fill, bar.fill)
+func _draw_bar(bar: Dictionary, screen: Dictionary) -> void:
+	# A centred stroke on the inset rect keeps the outline inside the frame.
+	draw_rect(screen.frame.grow(-screen.scale / 2.0), bar.frame, false, screen.scale)
+	draw_rect(screen.track, BAR_TRACK)
+	draw_rect(screen.fill, bar.fill)

@@ -10,8 +10,8 @@ const Palette = preload("res://scripts/presentation/palette.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const VisualDirector = preload("res://scripts/presentation/visual_director.gd")
 
-# Plane rects, so a held box stays on the army at every zoom: none, over the army, across the south-west map edge, over the army with Shift.
-const HELD_BOXES: Array[Rect2] = [Rect2(), Rect2(-140, 280, 200, 140), Rect2(-328, 444, 210, 190), Rect2(-140, 280, 200, 140)]
+# Plane rects, so a held box stays put at every zoom: none, over the army, 44 % past the south-west map edge yet within a zoom-2 screen, over the army with Shift.
+const HELD_BOXES: Array[Rect2] = [Rect2(), Rect2(-140, 280, 200, 140), Rect2(-330, 440, 200, 380), Rect2(-140, 280, 200, 140)]
 const SHIFT_BOX: int = 3
 const BASELINE_STYLE: int = 2
 const TOKEN_SET_NUMBERS: int = 13

@@ -26,7 +26,7 @@ const B_HEX := {"bg": "172731", "btn": "223640", "panel2": "2b4453", "quiet": "1
 const SLOT_ONE_HEX: Array[String] = ["628ffa", "d6120c", "4ad49b", "f8e425", "0e92a7", "7242fe", "ec8600", "f79cef"]
 
 func cases() -> Array[Callable]:
-	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules, test_new_questions_switch, test_no_labels_in_window, test_held_boxes, test_session_only_as_main, test_round_trip_to_old_question, test_key_interactions, test_opponent_skips_ally, test_live_view_selection, test_capture_list, test_clip_list]
+	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules, test_new_questions_switch, test_no_labels_in_window, test_held_boxes, test_session_only_as_main, test_round_trip_to_old_question, test_key_interactions, test_opponent_skips_ally, test_live_view_selection, test_capture_list, test_clip_list, test_bar_screen_pixels]
 
 func test_token_sets(runner) -> bool:
 	var a: Dictionary = LabLook.tokens(&"a")
@@ -594,7 +594,13 @@ func test_live_view_selection(runner) -> bool:
 
 func test_capture_list(runner) -> bool:
 	var shots: Array[Dictionary] = LabCapture.shots()
-	runner.check(shots.size() == 75, "LB21 75 shots, got %d" % shots.size())
+	runner.check(shots.size() == 77, "LB21 77 shots, got %d" % shots.size())
+	var groups := {}
+	for shot: Dictionary in shots:
+		var key: String = "%s %s %s" % [shot.question, "live" if shot.live else "canvas" if shot.canvas else "", shot.held if shot.held == 3 else ""]
+		groups[key] = groups.get(key, 0) + 1
+	runner.check(groups == {"token_set  ": 12, "token_set canvas ": 2, "health_bar  ": 12, "health_bar live ": 6, "value_size  ": 6, "drag_box  ": 36, "drag_box  3": 3}, "LB21 group counts: %s" % groups)
+	runner.check(LabCapture.camera_for(shots[0]) == LabCapture.TOKEN_SAND and LabCapture.camera_for(shots[12]) == LabCapture.TOKEN_CANVAS, "LB21 token_set shots frame both panels alike")
 	var names: Array = shots.map(func(shot: Dictionary) -> String: return shot.name)
 	runner.check(names.size() == _unique(names).size(), "LB21 shot names are unique")
 	runner.check(shots.all(func(shot: Dictionary) -> bool: return AbVariants.P2_3A.has(shot.question)), "LB21 no shot outside the four new questions")
@@ -621,7 +627,22 @@ func test_clip_list(runner) -> bool:
 	for scene: Array in wanted:
 		runner.check(clips.any(func(clip: Dictionary) -> bool: return [clip.question, clip.variant, clip.scene, clip.shift] == scene), "LB22 clip %s is listed" % [scene])
 	runner.check(clips.all(func(clip: Dictionary) -> bool: return clip.name.begins_with("%s-%s-" % [clip.question, "abc"[clip.variant]])), "LB22 clip names start with question and letter")
-	runner.check(clips.all(func(clip: Dictionary) -> bool: return clip.frames >= 90 and clip.frames <= 180), "LB22 every clip runs 3 to 6 s at 30 fps")
+	runner.check(clips.all(func(clip: Dictionary) -> bool: return clip.frames >= 170 and clip.frames <= 190), "LB22 every clip runs about 6 s at 30 fps")
+	var points: Array[Vector2] = [Vector2.ZERO, Vector2(100, 0)]
+	runner.check(LabClips.along(points, 10, 20, 9) == Vector2.ZERO and LabClips.along(points, 10, 20, 30) == Vector2(100, 0) and LabClips.along(points, 10, 20, 99) == Vector2(100, 0), "LB22 along dwells, then arrives and stays")
+	var middle: Vector2 = LabClips.along(points, 10, 20, 20)
+	runner.check(middle.x > 0.0 and middle.x < 100.0 and middle.y == 0.0, "LB22 along moves between the points")
+	return true
+
+func test_bar_screen_pixels(runner) -> bool:
+	var rects: Dictionary = LabMarks.bar_rects(Vector2(10.4, 20.2), 0.5)
+	for zoom: float in [0.5, 1.0, 2.0]:
+		var screen: Dictionary = LabMarks.screen_bar(rects, Transform2D(0.0, Vector2.ONE * zoom, 0.0, Vector2(13.3, 7.7)))
+		var pixel: float = maxf(1.0, zoom)
+		var whole: bool = [screen.frame, screen.track, screen.fill].all(func(rect: Rect2) -> bool: return rect.position == rect.position.round() and rect.size == rect.size.round())
+		runner.check(whole and screen.scale == pixel, "LB23 zoom %s: the bar sits on whole screen pixels" % zoom)
+		runner.check(screen.track == screen.frame.grow(-pixel) and screen.fill.position == screen.track.position + Vector2.ONE * pixel, "LB23 zoom %s: frame, track and fill are %s px apart" % [zoom, pixel])
+		runner.check(screen.fill.size == Vector2(12, 3) * pixel and screen.track.size == Vector2(26, 5) * pixel, "LB23 zoom %s: fill and track keep their size" % zoom)
 	return true
 
 func _unique(values: Array) -> Array:

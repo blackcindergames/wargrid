@@ -33,8 +33,15 @@ func show_state(state: StringName, tokens: Dictionary, number_size: int, slot: i
 	size = SCREEN
 	_add_column(state, slot, letter)
 	_strip = _top_strip(state == &"low_power")
-	_strip.position = Vector2(8, STRIP_Y[slot])
-	add_child(_strip)
+	var strip_row := _row(8)
+	strip_row.position = Vector2(8, STRIP_Y[slot])
+	strip_row.add_child(_strip)
+	if not letter.is_empty():
+		var tag := _letter_tag(letter)
+		tag.name = "StripLetter"
+		tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		strip_row.add_child(tag)
+	add_child(strip_row)
 	if slot == 0: add_child(_ally_chip())
 
 func panel_rect() -> Rect2:

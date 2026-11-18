@@ -33,5 +33,6 @@ func _draw() -> void:
 		draw_rect(box, GREEN_TODAY, false, 1.0)
 		return
 	if style == 1: draw_rect(box, FILL)
-	draw_rect(box, LabLook.UNDER_STROKE, false, LINE_WIDTH + 2.0)
-	draw_rect(box, Color.WHITE, false, LINE_WIDTH)
+	# Antialiased like the marks, so 1.5 px reads as 1.5 and not as a hard 2.
+	draw_rect(box, LabLook.UNDER_STROKE, false, LINE_WIDTH + 2.0, true)
+	draw_rect(box, Color.WHITE, false, LINE_WIDTH, true)

@@ -8,27 +8,31 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const DRAG_FROM := Vector2(110, 250)
 const DRAG_TO := Vector2(630, 620)
 const DRAG_DWELL: int = 15
-const DRAG_MOVE: int = 75
-const HOVER_DWELL: int = 12
-const HOVER_MOVE: int = 14
+const DRAG_MOVE: int = 120
+const HOVER_DWELL: int = 24
+const HOVER_MOVE: int = 28
+const CLIP_FRAMES: int = 180
+const FRAME_CAP: int = 2500
 const HOVER_AREA := Rect2(0, 120, 1280, 520)
 const WARM_FRAMES: int = 2
 
 var _viewport: SubViewport
 var _lab: Node
 var _route: Array[Vector2] = []
+var _frames: int = 0
+var _failed: bool = false
 
 static func clips() -> Array[Dictionary]:
 	var list: Array[Dictionary] = []
-	for style in 3: list.append(_clip(&"drag_box", style, &"drag", 120))
-	list.append(_clip(&"drag_box", 0, &"drag", 120, true))
-	list.append(_clip(&"health_bar", 0, &"hover", 90))
-	for rule in 3: list.append(_clip(&"health_bar", rule, &"live", 180))
+	for style in 3: list.append(_clip(&"drag_box", style, &"drag"))
+	list.append(_clip(&"drag_box", 0, &"drag", true))
+	list.append(_clip(&"health_bar", 0, &"hover"))
+	for rule in 3: list.append(_clip(&"health_bar", rule, &"live"))
 	return list
 
-static func _clip(question: StringName, variant: int, scene: StringName, frames: int, shift: bool = false) -> Dictionary:
+static func _clip(question: StringName, variant: int, scene: StringName, shift: bool = false) -> Dictionary:
 	var what: String = "shift-drag" if shift else String(scene)
-	return {name = "%s-%s-%s" % [question, LabCapture.LETTERS[variant], what], question = question, variant = variant, scene = scene, frames = frames, shift = shift}
+	return {name = "%s-%s-%s" % [question, LabCapture.LETTERS[variant], what], question = question, variant = variant, scene = scene, frames = CLIP_FRAMES, shift = shift}
 
 # Movie Maker records at the project's 1280x720 viewport whatever the window, so frames come from the 1280x800 SubViewport.
 func _initialize() -> void:
@@ -37,6 +41,7 @@ func _initialize() -> void:
 		printerr("usage: godot --path game --fixed-fps 30 --script res://scripts/lab/lab_clips.gd -- OUTPUT_DIR")
 		quit(1)
 		return
+	process_frame.connect(_watch)
 	_run(args[0])
 
 func _run(directory: String) -> void:
@@ -44,8 +49,7 @@ func _run(directory: String) -> void:
 	for clip: Dictionary in clips():
 		var problem: String = await _record(clip, directory.path_join(clip.name))
 		if not problem.is_empty():
-			printerr("lab_clips: %s: %s" % [clip.name, problem])
-			quit(1)
+			_fail("%s: %s" % [clip.name, problem])
 			return
 		print("recorded %s %d frames" % [clip.name, clip.frames])
 	print("CLIPS DONE %d" % clips().size())
@@ -71,7 +75,7 @@ func _record(clip: Dictionary, folder: String) -> String:
 func _setup(clip: Dictionary) -> bool:
 	if not (LabCapture.setup(_viewport, clip.question, clip.variant) and LabCapture.lab_line(_viewport, KEY_P, "panel many (P)")): return false
 	if clip.scene != &"live": return true
-	LabCapture.to_first_shot(_lab, 0)
+	if not LabCapture.to_first_shot(_lab, 0): return false
 	_lab.paused = false
 	return LabCapture.lab_line(_viewport, KEY_V, "view live (V)")
 
@@ -130,3 +134,14 @@ static func _motion(at: Vector2, held: bool, shift: bool) -> InputEventMouseMoti
 	event.shift_pressed = shift
 	event.button_mask = MOUSE_BUTTON_MASK_LEFT if held else 0
 	return event
+
+# A hang (a script error kills the await chain) must end the run, not wait for the shell timeout.
+func _watch() -> void:
+	_frames += 1
+	if _frames > FRAME_CAP: _fail("frame cap %d reached" % FRAME_CAP)
+
+func _fail(message: String) -> void:
+	if _failed: return
+	_failed = true
+	printerr("lab_clips: ", message)
+	quit(1)
