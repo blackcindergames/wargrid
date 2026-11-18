@@ -16,6 +16,7 @@ Researched questions for the user's design wizard: one short question at a time,
 | [next-m8-bot-economy.md](next-m8-bot-economy.md) | Bot economy (M8) | open |
 | [next-bot-attack-reach.md](next-bot-attack-reach.md) | Bot attack reach | open, partly overtaken by the 2026-11-09 wave fix |
 | [next-m81-styles.md](next-m81-styles.md) | Difficulty and play styles (M8.1) | open |
+| [next-bots-fair-human.md](next-bots-fair-human.md) | Fair, human and challenging bots (P7, M8, M8.1) | Q1, Q3, Q4, Q7, Q8 answered 2026-11-18; Q2, Q6 overtaken by the six-level design; Q5, Q9-Q15 open |
 | [next-m9-lobby.md](next-m9-lobby.md) | Lobby (M9) | open |
 | [next-m9-drops.md](next-m9-drops.md) | Dropped players (M9) | Q1, Q2, Q4, Q5 answered 2026-11-16, Q11 2026-11-13, Q12 (waiting line after about 1 s) 2026-11-17; rest open |
 | [zh-defaults-followup.md](zh-defaults-followup.md) | Zero Hour defaults follow-up | Q12, Q13 open |
@@ -26,4 +27,4 @@ Researched questions for the user's design wizard: one short question at a time,
 | [later-ux-experiments.md](later-ux-experiments.md) | Parked UX experiments (preview, alerts, selection lens, workload, order intent) | parked 2026-11-15; command wheel and formation drag rejected |
 | [movement-pathing-brief.md](movement-pathing-brief.md) | Movement and pathing (finer grid, any angle, navmesh, flow fields) | wizard run 2026-11-10: grid size, unit size (size classes), order, feel and priority answered; base method waits for the timing spike |
 
-Next by milestone order: `next-batch-b.md` (M7.9 fog is answered); the remaining world questions wait for the in-game art lab.
+Next by milestone order: `next-batch-b.md` (M7.9 fog is answered); the remaining world questions wait for the in-game art lab. Before P7's design: `next-bots-fair-human.md` Q11 and Q12.

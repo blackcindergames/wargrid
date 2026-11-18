@@ -27,7 +27,7 @@ Sources. **ZH src** = ~/projects/CnC_Generals_Zero_Hour @ 0a05454, paths under G
 - **inferred** The dish extends over 4 s (`RadarExtendTime = 4000`, factionbuilding.ini:1188-1190); presentation only.
 
 ### Skirmish AI
-- **source** ZH has three levels, not four: lobby slots Easy, Medium, Brutal map to `DIFFICULTY_EASY/NORMAL/HARD` (ZH src GameLogic/System/GameLogic.cpp:1429-1431). Wargrid's five levels are already decided, so only the levers matter.
+- **source** ZH has three levels, not four: lobby slots Easy, Medium, Brutal map to `DIFFICULTY_EASY/NORMAL/HARD` (ZH src GameLogic/System/GameLogic.cpp:1429-1431). Wargrid's five levels (six since 2026-11-18) are already decided, so only the levers matter.
 - **source** Gatherer counts (`ResourceGatherersEasy/Normal/Hard`) are identical across levels in every faction (default\aidata.ini:68-70 etc., checked all 16 entries: 2 or 5, never different between levels). So gatherers are not a lever at all in the shipped data.
 - **source** Levers that do change with level:
   - Which scripts run: each script has Easy/Normal/Hard flags (ZH src ScriptEngine/ScriptEngine.cpp:6955-6972; Common/RTS/Team.cpp:1155-1177). That decides the attack waves: Easy has 3 waves, Normal 4, Hard 5; escalation tick 20 s / 10 s / 10 s; first launch about 300 s / 150 s / 10 s (decoded in docs/reference/m7-verification-archive-research.md "Wave timing").

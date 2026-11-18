@@ -1116,3 +1116,38 @@ Answers to a read-only gap map of today's HUD against HUD v5 (working notes `p2-
 - **Dropped:** "You are blue (P1)" and the tick counter (F3 keeps it). Credits written `4,800`; the resume hint stays in the interim key-hint line.
 - **Later riders:** for see your economy, collectors against an ideal count on the depot and a nearly-empty pile alert; for P3, a map mark on your own stalled sites.
 
+## Bot vision (user, 2026-11-17)
+
+What the bots are for. The open questions it raises are in [next-bots-fair-human.md](../questions/next-bots-fair-human.md). Levels, order of work and the top-level bar were settled on 2026-11-18 ([bot difficulty design](#bot-difficulty-design-user-2026-11-18)).
+
+- **Purpose:** excellent bots for when friends are not available. Fair but challenging, not overwhelming.
+- **Human feel:** bots feel like human players, with the same information, resources and game mechanics. No cheating. Whether "same mechanics" also rules out bot-only automatic unit behaviour was settled on 2026-11-18: it does (Q7 b, Q8 b).
+- **Levels:** the highest level challenges a really competent human player; lower levels scale down the way some humans simply play worse. This differs from "the hardest should beat the user and friends regularly" (2026-11-05); the 2026-11-18 design replaced that bar. The user and friends expect to start on a medium level and work up; since 2026-11-18 that is Regular.
+- **Order of work:** quick, effective wins soon; advanced work later. How soon, given that bot changes wait for M8 except a launch rule that passes the Bot attack test (user, 2026-11-16), is Q5.
+- **Later content (said separately the same day):** Supply Drop Zone, Hackers, the Black Market and oil derricks come later, and the bots must later make proper use of them, of general's powers and of the missing ground and air units.
+
+## Bot difficulty design (user, 2026-11-18)
+
+A difficulty design from the user, settled in one questionnaire. It replaces "about five levels", "strong bot first, ladder after" and the top-level bar of 2026-11-05, and answers [next-bots-fair-human.md](../questions/next-bots-fair-human.md) Q1, Q3, Q4, Q7 and Q8 (Q2 and Q6 are overtaken). The fairness rules of 2026-11-05 stand.
+
+- **Six levels, default Regular**, each with one line saying who it is for:
+
+  | Level | For | What it does |
+  |---|---|---|
+  | Cadet | complete beginners | basic economy, little aggression, forgives the player's mistakes |
+  | Recruit | casual players | working economy and combat, simple plans |
+  | Regular | average RTS players | competent production, expansion and attacks |
+  | Veteran | experienced players | stronger openings, scouting, timing attacks, unit control |
+  | Elite | highly competitive players | efficient economy, coordinated tactics, adapts to what it scouts |
+  | Nemesis | experts | the strongest fair bot we can build; professional strength is a direction, claimed only with evidence |
+
+- **One bot, skill profiles:** one shared bot with a skill profile per level, not six bots. Levels differ in strategy, economy, tactics, use of scouted information, doing several things at once, and execution (reaction time and orders per minute within human limits). Higher levels decide better; they do not just order faster.
+- **Weaker levels:** a lower level is weaker only by missing competences a weaker player lacks (scouts less, expands late, focuses fire worse, reacts slower), never by deliberately wrong choices, idle workers or slowness for its own sake.
+- **Same rules for every level, Nemesis included:** same resources, costs, income and production rules as a human; fog of war and scouting respected once fog exists; no knowledge of hidden enemy positions or plans; no inhuman reaction or unit control; only ordinary game commands. Bot units follow the same automatic unit rules as human-owned units everywhere; where units should behave differently, it is a stance a human can also set, or an ordinary order (Q7 b, Q8 b).
+- **Order of work:** one shared bot, built to Regular first as the baseline; then Recruit, Veteran and Elite; then Cadet; Nemesis improves continuously. Replaces "strong bot first, levels cut once from it".
+- **Bot against bot:** benchmarks across maps, factions, styles and both seats check that each level beats the one below and catch regressions. A level ships only if it beats the one below by more than chance alone produces (the noise floor); otherwise it is reworked, or the ladder ships fewer levels until it does.
+- **Human checks:** a one-tap rating after every logged match (too easy, close, too hard); about ten logged matches at Regular and at the top level first (Q4 b); win rates per level only once enough matches exist. The user's group is the first human data point and is recorded as such, not as a level's audience; testers of other skill levels follow when they exist.
+- **What is not claimed:** bot-against-bot results alone do not show human-level skill. Elite and Nemesis are never weakened because the user and friends cannot beat them.
+- **First human data (Q1 a):** the user and one friend each play two short logged matches against today's bot with the playtest helper, with the one tap after each.
+- **Regular's bar (Q3 b):** about even against an average player of the user's group in their first matches, most matches close.
+- **Later, not in the first plan:** opponent modelling and adaptation beyond reacting to what was scouted (Elite and Nemesis, long term).
