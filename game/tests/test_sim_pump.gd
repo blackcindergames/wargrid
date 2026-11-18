@@ -46,7 +46,7 @@ class NullJobPump extends SimPump:
 		return super(job, slot)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_gapped_finish_tick_after_end_keeps_reason, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_gapped_finish_tick_after_end_keeps_reason, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -727,4 +727,63 @@ func test_ph_take_checks_next_tick(runner) -> bool:
 	var legal: Dictionary = _twin_at_four()
 	legal.ls.receive(_peer(4))
 	runner.check(legal.ls.take(4) != null and legal.ls.status() == "running", "PH the expected tick is taken")
+	return true
+
+func _remove_both(sim) -> void:
+	sim.remove_object(4)
+	sim.remove_object(6)
+
+# Seat 2 is a plain Lockstep and Simulation pair, the way the headless client plays it.
+func _advance_peer_frame(peer: Dictionary, frame: int) -> void:
+	for text in peer.inbox.poll(): peer.ls.receive(text)
+	if frame == 40: peer.ls.submit(_move(_own_unit(peer.sim, "", 2)))
+	if peer.sim.tick() == 100 and not peer.removed:
+		peer.removed = true
+		_remove_both(peer.sim)
+	if peer.ls.advance(peer.sim):
+		var tick: int = peer.sim.tick()
+		peer.ls.finish_tick(tick, peer.sim.snapshot() if peer.ls.wants_snapshot(tick) else null)
+	if peer.sim.match_over() and not peer.over_sent:
+		peer.over_sent = true
+		peer.order.accepts(Wire.encode({"type": "over"}))
+
+func test_ph_driver_matches_advance_peer(runner) -> bool:
+	var a := PairTransport.new()
+	var b := PairTransport.new()
+	a.peer = b
+	var driver = OnlineDriver.new(a, Lockstep.new(1, [1, 2] as Array[int]), "usa", 1)
+	driver.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
+	driver.start()
+	var ls = Lockstep.new(2, [1, 2] as Array[int])
+	var peer := {"ls": ls, "inbox": b, "order": RelayFrameOrder.new(), "removed": false, "over_sent": false,
+		"sim": Skirmish.create(true, "human", {}, Skirmish.MAP_PATH, [] as Array[int])}
+	ls.send = func(text: String) -> void:
+		if peer.order.accepts(text) and Wire.decode(text).message.type == "tick": a.inbox.append(text)
+	ls.submit({"type": "choose_faction", "faction": "china"})
+	ls.start(peer.sim.snapshot())
+	var removed: bool = false
+	var frames: int = 0
+	while not (driver.over() and peer.sim.match_over()) and frames < 400:
+		frames += 1
+		_advance_peer_frame(peer, frames)
+		driver.step()
+		driver.drain()
+		if frames == 20:
+			driver.submit(_move(_own_unit(driver.pump.live())))
+			driver.submit(_move(999))
+		if driver.current().tick == 100 and not removed:
+			removed = true
+			_remove_both(driver.pump.live())
+	runner.check(removed and peer.removed, "PH fixture: both sides removed at tick 100")
+	runner.check(driver.over() and peer.sim.match_over(), "PH both end the match (%d frames)" % frames)
+	var rows: PackedStringArray = driver._lockstep.hash_rows()
+	runner.check(rows.size() >= 4 and rows == ls.hash_rows(), "PH hash rows equal through the end, got %d and %d" % [rows.size(), ls.hash_rows().size()])
+	var lines: PackedStringArray = Lockstep.log_lines(driver._lockstep.command_log())
+	runner.check(lines.size() >= 3 and lines == Lockstep.log_lines(ls.command_log()), "PH command logs equal, got %d lines" % lines.size())
+	var record: Dictionary = driver.record()
+	runner.check(record.tick == peer.sim.tick() and record.digest == StateHash.digest(peer.sim.snapshot()), "PH same end tick and digest, got %d and %d" % [record.tick, peer.sim.tick()])
+	var overs: int = a.others.filter(func(text: String) -> bool: return Wire.decode(text).message.type == "over").size()
+	runner.check(a.order.refusals.is_empty() and peer.order.refusals.is_empty() and overs == 1 and peer.over_sent, "PH every frame of both sides is legal at the relay, got %s and %s" % [a.order.refusals, peer.order.refusals])
+	a.peer = null
+	ls.send = Callable()
 	return true

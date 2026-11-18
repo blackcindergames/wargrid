@@ -437,15 +437,15 @@ Findings that change later tasks: none. Every cited symbol exists; only `match_s
 Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`; `main` `6854ff5` merged in at `07f0c59` (user, 2026-11-18). Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-18, Task 8 review fix P2-1 green, uncommitted)
+Resume record (updated 2026-11-18, Task 9 green, uncommitted)
 Branch / base commit / working-tree state: pump-hardening / code base 6ae89cd; HEAD 07f0c59 merges main (P2.3a lab, bot plans; user, 2026-11-18, handoff), so Task 1's "empty diff" gate is restated as: `git diff 6ae89cd -- game/scripts tools relay protocol`, minus `game/scripts/lab/`, is empty (checked, empty); the lab, `art_lab.tscn`, `test_lab_panel.gd`, `test_selection_lab.gd` and their two `run_tests.gd` entries are the only other differences / only this file changed
-Last green task / next incomplete task: Task 8 (online preview on one job per step call, review fix P2-1 applied, awaiting the coordinator's commit; Tasks 1 to 7 committed) / Task 9
-Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/scripts/match/online_driver.gd, game/tests/test_online_scene.gd
-Last command / cases / checks / failures / exit / marker: Task 8 review fix: `SUITE(t8fix)` exit 0, CASES 1142, CHECKS 148860, FAILURES 0, `TESTS PASSED 148860`; `TRACES(t8fix)` replay, economy, combat `REPLAYS MATCHED 1200`, team 100; `NET(t8fix, match)` exit 0 `NETPLAY PASSED` (terminal tick 9013), `s1.tsv` 301 matched, `s1.cmd` cmp silent; lint, warnings (183 files), python tests, `check_public.sh` exit 0; mutation t8fix-mut red, restore `cmp` exit 0
+Last green task / next incomplete task: Task 9 (reference test against a plain `advance(sim)` peer, awaiting review and the coordinator's commit; Tasks 1 to 8 committed) / Task 10
+Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/tests/test_sim_pump.gd
+Last command / cases / checks / failures / exit / marker: Task 9: `SUITE(t9)` exit 0, CASES 1143, CHECKS 148866, FAILURES 0, `TESTS PASSED 148866`; `TRACES(t9)` replay, economy, combat `REPLAYS MATCHED 1200`, team 100; lint, warnings (183 files), python tests, `check_public.sh` exit 0; mutation t9m1 red (6 named PH checks), restore `cmp` exit 0
 Known red case or blocker: none. Stash entry `park-t6-pump` stays in the stash list unpopped
 Approved decisions, pre-authorizations used, deferred gates: six plan choices answered (user, 2026-11-18; plan "Owner answers"); one local commit per green task pre-authorized, never push or merge (user, 2026-11-18); hybrid start in an attended session, owner approves prompts by phone; benchmarks above load 2.5 run, tagged "host under load", evening rerun listed (user, 2026-11-18)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: coordinator commits Task 8; Task 9 (reference test against a plain `advance(sim)` peer); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
+Next exact action: Task 9 review loop, coordinator commits Task 9; Task 10 (nested cache freeze); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
 ```
 
 | Task | What | Status |
@@ -457,8 +457,8 @@ Next exact action: coordinator commits Task 8; Task 9 (reference test against a 
 | 5 | One `close_match` call on every exit path | green, committed |
 | 6 | Lockstep refuses out-of-order `take` and `finish_tick` | green after the owner-approved benchmark fix (one checked `peer.take(tick)` in `run_lockstep.gd`, owner, 2026-11-18) and review fixes (P2-1 to P2-3), committed |
 | 7 | Relay frame-order rule in the fake transport; receive that ends the lockstep | green after review fixes (P2-1 to P2-3), committed |
-| 8 | Online preview on one job per step call | green after review fix P2-1, uncommitted |
-| 9 | Reference test against a plain `advance(sim)` peer | not started |
+| 8 | Online preview on one job per step call | green after review fix P2-1, committed |
+| 9 | Reference test against a plain `advance(sim)` peer | green, uncommitted |
 | 10 | Nested cache freeze, warm-up from the freeze list | not started |
 | 11 | Static check: pump access outside the drivers, per-file counts | not started |
 | 12 | Profiled team-load row through `post` and `drain` | not started |
@@ -507,6 +507,8 @@ Next exact action: coordinator commits Task 8; Task 9 (reference test against a 
 | 2026-11-18 | Task 8 Step 5: mutations by `cp` backup and `cmp` restore: t8m1 `last = true`, t8m2 `last` without the `can_step` term; `ONLY(t8m<n>, test_ph_preview)` | both exit 1 (`PH on its last job`; `PH a one-tick step call carries the preview`); restore `cmp` exit 0 | same |
 | 2026-11-18 | Task 8 review fix P2-1: new `test_ph_preview_on_steady_step` (no stall, one step call, one note with the preview), `ONLY(t8fix, test_ph_preview)`; mutation drops `_credit < 1` from `last` (`cp` backup, `cmp` restore), `ONLY(t8fix-mut, test_ph_preview)` and the full suite on the mutation | green exit 0, CASES 3 CHECKS 4 FAILURES 0; mutation exit 1, `FAIL: PH a steady one-credit step call carries the preview, got 1 notes`; full suite on the mutation CASES 1142 FAILURES 1, that check only; restore `cmp` exit 0 | same tree plus fix |
 | 2026-11-18 | Task 8 review fix: `SUITE(t8fix)`, `TRACES(t8fix)`, `NET(t8fix, match)`, `NETEQ` on `match`, lint, warnings, python tests, `check_public.sh` | suite exit 0, CASES 1142, CHECKS 148860, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); match terminal tick 9013 `NETPLAY PASSED`, `s1.tsv` 301 matched, `s1.cmd` cmp silent; lint clean, `WARNINGS CHECKED 183 FILES`, `PYTHON TESTS PASSED`, `PUBLIC CHECK PASSED`; load 2.98 before the suite (host under load) | same tree plus fix |
+| 2026-11-18 | Task 9 Step 2: `ONLY(t9, test_ph_driver_matches)` (characterization, passes at once: it tests existing behaviour); mutation t9m1 `_tick_job` `wants_snapshot(_next_tick)` instead of `_next_tick + 1`, `cp` backup, `cmp` restore | green exit 0, CASES 1 CHECKS 6; peer-first frame order met the "removed at tick 100" fixture; the test needed `ls.send = Callable()` at its end (a closure cycle leaked resources, exit 1); mutation exit 1, 6 named PH checks fail (`hash rows equal through the end, got 1 and 2`, end tick 34 vs 39); restore `cmp` exit 0 | pump-hardening, HEAD after Task 8 |
+| 2026-11-18 | Task 9 Step 3: `SUITE(t9)`, `TRACES(t9)`, lint, warnings, python tests, `check_public.sh` | suite exit 0, CASES 1143, CHECKS 148866, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); lint clean, `WARNINGS CHECKED 183 FILES`, `PYTHON TESTS PASSED`, `PUBLIC CHECK PASSED`; load 1.54 before the suite | same tree plus Task 9 |
 
 ### Base counts (Task 1)
 
