@@ -20,6 +20,8 @@ The 1920 x 1080 rectangles are the 1280 x 720 ones (text-hugging widths differ b
 
 From `layout.json` `tokens` (measured on the page):
 
+Set A won the P2.3a A/B (user, 2026-11-18; [picks](design-answers-2026-11-08.md#p23a-ab-lab-picks-user-2026-11-18)); the table below is unchanged.
+
 | Token | Value | Use |
 |---|---|---|
 | `bg` | `#121c24` | Every slab: top strip, ledge, selection panel, card, minimap frame, cell card, refusal line |
@@ -46,6 +48,24 @@ Colour rules (design answers, "HUD v4 mock-ups" and "HUD v5 mock-ups"):
 - **Owner colour** on the panel edge and progress bars is the colour the game draws that owner's units in, lightened toward white in 5 % steps only until it reaches 3:1 against `bg`. None of the eight owner colours of palette A (round 6, user 2026-11-17) needs it; the lowest, purple `#7242fe`, is 3.23:1, red `#d6120c` 3.25:1 (computed from `source/hud.js` `OWNERS` and `BG`).
 - Own panels, the card included, carry a 4 px left edge in `you`; an enemy's panel in `enemy`; a supply pile's in `line` (grey, user, 2026-11-16).
 
+## Owner colours against `sel`
+
+Computed for set A's `sel` `#60e5ed` (agent, 2026-11-18; P2.3a A/B lab, Task 9 Step 3 of the [plan](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md)). Contrast is WCAG 2.x; ΔE is CIELAB ΔE76 under normal vision and under Machado 2009 deuteranopia and protanopia at severity 1. The formula is in the plan's Task 9 Step 3.
+
+| Owner | Value | Contrast | ΔE normal | ΔE deut. | ΔE prot. |
+|---|---|---|---|---|---|
+| blue | `#628ffa` | 2.04 | 70.5 | 48.7 | 52.5 |
+| red | `#d6120c` | 3.53 | 130.1 | 81.2 | 73.8 |
+| green | `#4ad49b` | 1.25 | 37.1 | 33.0 | 35.0 |
+| gold | `#f8e425` | 1.16 | 101.7 | 99.6 | 97.4 |
+| teal | `#0e92a7` | 2.45 | 30.8 | 28.9 | 29.8 |
+| purple | `#7242fe` | 3.55 | 127.3 | 77.6 | 82.9 |
+| orange | `#ec8600` | 1.75 | 110.5 | 91.1 | 79.0 |
+| pink | `#f79cef` | 1.27 | 81.3 | 7.1 | 28.9 |
+| ally token | `#69ceaa` | 1.27 | 25.4 | 25.5 | 25.5 |
+
+Pink's 7.1 under deuteranopia was already accepted (user, 2026-11-17).
+
 ## Type scale
 
 Public Sans from `game/fonts/` (weights 400, 600, 700), tabular numbers everywhere. Line heights measured in the page CSS.
@@ -60,6 +80,8 @@ Public Sans from `game/fonts/` (weights 400, 600, 700), tabular numbers everywhe
 | Labels, uppercase, letter-spacing 0.1 em | 12 | 700 | 14 |
 | Hints (rally line, `/ min`) | 12 | 400 | 14 |
 | Key chips | 12 | 700 | 18 |
+
+The Numbers row stays 13 / 700 (user, 2026-11-18; the owner was unsure against 14 / 700): it gets one look on the Steam Deck's 1x screen in the P2.3a playtest and switches to 14 / 700 if numbers read poorly there ([picks](design-answers-2026-11-08.md#p23a-ab-lab-picks-user-2026-11-18)).
 
 12 px is the floor. The widest unit or building name of the three factions is 102.1 px at 12 / 600; every name fits a two-line cell at the 84 px name width (the page's name-fit table and its audit, no miss). Many names take two lines, for example Vehicle Factory, Rocket Trooper, Missile Battery, Anti-Tank Trooper, Supply Helicopter, Rotary Gun Tower, Rotary Gun Tank and Rocket Fighter; the name-fit table on the page has the full list.
 

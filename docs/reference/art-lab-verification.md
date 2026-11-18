@@ -260,11 +260,12 @@ Plan: [P2.3a A/B lab](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md); spec: [d
 | 2026-11-18 | 6 | lab_capture 77 shots + 3 stacks, lab_clips 8 clips at 6 s; selection_lab 23/558, lab_panel 4/1687, art_lab 5/165; PX + correctness reviews, fix round 1 | `65bab01` | green, review clean |
 | 2026-11-18 | 7 | claude.ai picture page and fly.io browser build of the lab, both outside the repo | `5ecf4d0` | done |
 | 2026-11-18 | 8 | guide docs; full suite exit 0, 1122 cases, 148781 checks, 0 failures; run_checks 5 passed; protected-paths and isolation checks clean; final Opus and player-experience reviews | `5ecf4d0` | green |
+| 2026-11-18 | 9 | the owner's picks from the pictures page and the fly lab; docs write-back; `check_public.sh` exit 0 | `02e1b70` | picks recorded ([design answers](design-answers-2026-11-08.md#p23a-ab-lab-picks-user-2026-11-18)) |
 
 What was built (branch commit `ff26a6b`; guide: [chapter 5](../guide/05-presentation.md#the-four-p23a-questions), [chapter 13](../guide/13-testing-and-tooling.md#offscreen-captures)): four questions in the art lab (token set A against B side by side, health-bar rule, value size 14 against 13, drag box) on a frozen 120-unit army drawn in palette A through a lab-only `WorldView` subclass, with a lab-only HUD v5 panel and keys P, G, D, V. No file under `game/scripts/presentation/`, `game/scripts/match/` or `game/scripts/simulation/` changed.
 
-Offscreen run (2026-11-18, 1280x800 `SubViewport`): `lab_capture.gd` exit 0, `CAPTURE DONE 77 shots, 3 stacks at tick 46`, 80 PNGs; `lab_clips.gd` under `--fixed-fps 30` exit 0, `CLIPS DONE 8`, eight 180-frame MP4s. Movie Maker recorded 1280x720 and cut 40 px off the top and bottom, so it was not used. Health bars at zoom 0.5 are drawn in whole screen pixels and the capture checks every bar for a lost frame, track or fill. The owner has not yet answered the four questions.
+Offscreen run (2026-11-18, 1280x800 `SubViewport`): `lab_capture.gd` exit 0, `CAPTURE DONE 77 shots, 3 stacks at tick 46`, 80 PNGs; `lab_clips.gd` under `--fixed-fps 30` exit 0, `CLIPS DONE 8`, eight 180-frame MP4s. Movie Maker recorded 1280x720 and cut 40 px off the top and bottom, so it was not used. Health bars at zoom 0.5 are drawn in whole screen pixels and the capture checks every bar for a lost frame, track or fill. The owner answered the four questions on 2026-11-18 (Task 9).
 
-Last green task / next incomplete task: Task 8 / Task 9.
+Last green task / next incomplete task: Task 9 / none (merge after approval).
 
-Next exact action: the owner's picks (Task 9) and the write-back.
+Next exact action: merge decision.

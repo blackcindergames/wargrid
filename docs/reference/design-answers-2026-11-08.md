@@ -1139,3 +1139,16 @@ A private design critique of the sim boundary and worker thread (2026-11-17, aga
 - **SB5b gate:** before production switches to the threaded build, open the threaded test app from a link in each chat app friends use, and one listen check.
 - **SB5a inherits list** recorded in the spec now, one line per item with its source.
 - **Fresh Slot per job** (answer 11) lands in Pump hardening; **room before `take`** (a refused post ends an online match, so with SB5a's queue cap the driver checks for room first and clears the pending-build flag when a pump stops or fails) is on SB5a's inherits list.
+
+## P2.3a A/B lab picks (user, 2026-11-18)
+
+Four questions from the [A/B lab spec](../superpowers/specs/2026-11-18-p2-3a-ab-lab-design.md), judged from pictures and clips rendered at 1280x800 in the round 6 look, plus a browser build of the lab, on an office screen and a phone.
+
+1. **Colour tokens: set A** (the HUD v5 tokens, unchanged; [Colour tokens](hud-v5-layout.md#colour-tokens)).
+2. **Health-bar rule: A, "damaged or hovered".** A unit shows its bar when damaged or under the mouse; selected healthy units show none. This replaces today's "selected, damaged or hovered" (`WorldView.shows_health`) in P2.3a. Zero Hour's rule is "selected or hovered".
+3. **Number size: B, Numbers 13/700** (v5, unchanged; [Type scale](hud-v5-layout.md#type-scale)). Preferred on an office screen, but the owner was unsure. It gets one look on the Steam Deck's 1x screen in the P2.3a playtest and switches to 14/700 if numbers read poorly there.
+4. **Drag box: A, white 1.5 px line, no fill**, over the white-mark under-stroke rgba(14,18,22,0.78) drawn 2 px wider, with the live corner-tick preview on own units the release would pick. Today's green box goes.
+
+Finding, not a decision (agent, 2026-11-18): in the lab, a framed health bar (1 px owner frame, black track, 24x3 fill) only keeps frame, track and fill apart at zoom 0.5 when drawn in screen space, snapped to whole pixels, at its zoom 1 size. The P2.3a design must decide the bar's size per zoom.
+
+The owner colours against `sel` `#60e5ed` are computed in [Owner colours against `sel`](hud-v5-layout.md#owner-colours-against-sel).
