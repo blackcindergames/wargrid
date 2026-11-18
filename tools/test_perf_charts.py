@@ -441,20 +441,21 @@ class PerfRecordTest(unittest.TestCase):
         self.assertEqual(perf_record.next_run(rows, "T", "deck"), 1)
 
 
-def _git_repo(path: Path) -> None:
-    def git(*args: str) -> None:
-        env = {
-            **os.environ,
-            "GIT_AUTHOR_NAME": "t",
-            "GIT_AUTHOR_EMAIL": "t@t",
-            "GIT_COMMITTER_NAME": "t",
-            "GIT_COMMITTER_EMAIL": "t@t",
-        }
-        subprocess.run(["git", *args], cwd=path, env=env, capture_output=True, check=True)
+def _git(path: Path, *args: str) -> None:
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@t",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@t",
+    }
+    subprocess.run(["git", *args], cwd=path, env=env, capture_output=True, check=True)
 
-    git("init", "-q", "-b", "main")
-    git("add", ".")
-    git("commit", "-qm", "init")
+
+def _git_repo(path: Path) -> None:
+    _git(path, "init", "-q", "-b", "main")
+    _git(path, "add", ".")
+    _git(path, "commit", "-qm", "init")
 
 
 class AutoRecordTest(unittest.TestCase):
@@ -564,8 +565,22 @@ class AutoRecordTest(unittest.TestCase):
 
 STUB_GODOT = """#!/bin/sh
 case "$*" in
+*--import*)
+	case "$*" in
+	*"$STUB_REPO/game"*) ;;
+	*)
+		[ -z "${STUB_REF_IMPORT_FAIL:-}" ] || exit 1
+		[ -z "${STUB_REF_IMPORT_ERROR:-}" ] || echo "ERROR: stub import"
+		;;
+	esac
+	;;
 *run_movement*) cat "$STUB_DIR/movement.out" ;;
-*run_combat*) cat "$STUB_DIR/combat.out" ;;
+*run_combat*)
+	case "$*" in
+	*"$STUB_REPO/game"*) cat "$STUB_DIR/combat.out" ;;
+	*) cat "$STUB_DIR/${STUB_REF:-combat}.out" ;;
+	esac
+	;;
 *run_lockstep*) cat "$STUB_DIR/lockstep.out" ;;
 *run_profile*) cat "$STUB_DIR/profile.out" ;;
 esac
@@ -576,9 +591,13 @@ exit 0
 def _stub_outputs() -> dict[str, str]:
     head, rest = HEADLESS_LOG.split("COMBAT open", 1)
     combat, lock = ("COMBAT open" + rest).split("LOCKSTEP overhead_ms", 1)
+    combat += "COMBAT STRESS PASS open x\nCOMBAT STRESS PASS dense x\n"
     return {
         "movement": head + "BUDGET PASS a\nBUDGET PASS b\n" + "WORST TICK movement open ms=1.000 tick=1\n" * 2,
         "combat": combat + "COMBAT BUDGET PASS x\n" * 7 + "WORST TICK combat open ms=1.000 tick=1\n" * 10,
+        "ref_slow": combat.replace('"p95":1.866', '"p95":1.777', 1)
+        + "COMBAT BUDGET PASS x\n" * 7
+        + "WORST TICK combat open ms=1.000 tick=1\n" * 10,
         "lockstep": "LOCKSTEP overhead_ms"
         + lock
         + "LOCKSTEP BUDGET PASS y\n"
@@ -596,7 +615,7 @@ class RunBenchmarkTest(unittest.TestCase):
         (self.repo / "tools").mkdir(parents=True)
         (self.repo / "game").mkdir()
         (self.repo / "game" / ".keep").write_text("")
-        for name in ("run_benchmark.sh", "perf_record.py", "perf_chart.py"):
+        for name in ("run_benchmark.sh", "run_bench_pairs.sh", "perf_pairs.py", "perf_record.py", "perf_chart.py"):
             shutil.copy(tools / name, self.repo / "tools" / name)
         ref = self.repo / "docs" / "reference"
         ref.mkdir(parents=True)
@@ -617,12 +636,18 @@ class RunBenchmarkTest(unittest.TestCase):
         godot.chmod(0o755)
         _git_repo(self.repo)
 
-    def run_script(self, **env: str) -> subprocess.CompletedProcess[str]:
+    def run_script(self, script: str = "tools/run_benchmark.sh", **env: str) -> subprocess.CompletedProcess[str]:
         full = {k: v for k, v in os.environ.items() if not k.startswith("PERF_")}
-        full |= {"GODOT_BIN": str(self.stub / "godot"), "STUB_DIR": str(self.stub), **env}
-        return subprocess.run(
-            ["sh", "tools/run_benchmark.sh"], check=False, cwd=self.repo, env=full, capture_output=True, text=True
-        )
+        full |= {"GODOT_BIN": str(self.stub / "godot"), "STUB_DIR": str(self.stub), "STUB_REPO": str(self.repo), **env}
+        return subprocess.run(["sh", script], check=False, cwd=self.repo, env=full, capture_output=True, text=True)
+
+    def branch_with(self, rel: str, name: str = "spike-x") -> None:
+        _git(self.repo, "checkout", "-qb", name)
+        target = self.repo / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("extends Node\n")
+        _git(self.repo, "add", ".")
+        _git(self.repo, "commit", "-qm", "change")
 
     def test_records_and_regenerates_tables_on_clean_main(self) -> None:
         readme = self.repo / "README.md"
@@ -687,6 +712,84 @@ class RunBenchmarkTest(unittest.TestCase):
         before = self.csv.read_bytes()
         self.assertNotEqual(self.run_script(PERF_LABEL="x").returncode, 0)
         self.assertEqual(self.csv.read_bytes(), before)
+
+    def test_clean_main_skips_the_pair_gate(self) -> None:
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PAIR GATE SKIPPED", result.stdout)
+        self.assertEqual(len([r for r in read_rows(self.csv) if r["label"].startswith("auto ")]), 6)
+
+    def test_branch_touching_game_runs_pairs_and_passes(self) -> None:
+        self.branch_with("game/x.gd")
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PAIR GATE PASSED", result.stdout)
+
+    def test_branch_slower_than_reference_fails_and_never_records(self) -> None:
+        self.branch_with("game/x.gd")
+        before = self.csv.read_bytes()
+        result = self.run_script(STUB_REF="ref_slow", PERF_LABEL="x")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PAIR GATE FAILED open:p95", result.stdout)
+        self.assertEqual(self.csv.read_bytes(), before)
+
+    def test_unusable_reference_run_is_inconclusive_and_never_records(self) -> None:
+        self.branch_with("game/x.gd")
+        (self.stub / "ref_broken.out").write_text("COMBAT BENCHMARK PASSED 10\n")
+        before = self.csv.read_bytes()
+        result = self.run_script(STUB_REF="ref_broken", PERF_LABEL="x")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("INCONCLUSIVE ref run 1 unusable", result.stdout)
+        self.assertEqual(self.csv.read_bytes(), before)
+
+    def test_uncommitted_game_file_on_main_runs_pairs(self) -> None:
+        (self.repo / "game" / "y.gd").write_text("extends Node\n")
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PAIR REF", result.stdout)
+
+    def test_reference_import_failure_is_inconclusive(self) -> None:
+        before = self.csv.read_bytes()
+        result = self.run_script(PERF_REF="HEAD", STUB_REF_IMPORT_FAIL="1", PERF_LABEL="x")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PAIR GATE INCONCLUSIVE import", result.stdout)
+        self.assertEqual(self.csv.read_bytes(), before)
+
+    def test_reference_import_error_line_is_inconclusive(self) -> None:
+        result = self.run_script(PERF_REF="HEAD", STUB_REF_IMPORT_ERROR="1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PAIR GATE INCONCLUSIVE import", result.stdout)
+
+    def test_docs_only_branch_skips_pairs(self) -> None:
+        self.branch_with("docs/note.md")
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PAIR GATE SKIPPED", result.stdout)
+
+    def test_perf_ref_forces_pairs_on_main(self) -> None:
+        result = self.run_script(PERF_REF="HEAD")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PAIR REF", result.stdout)
+
+    def test_missing_main_is_inconclusive(self) -> None:
+        _git(self.repo, "branch", "-m", "main", "other")
+        result = self.run_script()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("INCONCLUSIVE no merge base", result.stdout)
+
+    def test_ceiling_alarm_line_is_report_only(self) -> None:
+        combat = self.stub / "combat.out"
+        combat.write_text(combat.read_text() + "COMBAT STRESS ALARM dense x\n")
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("CEILING ALARM dense (report only)", result.stdout)
+
+    def test_branch_run_without_completion_marker_fails(self) -> None:
+        combat = self.stub / "combat.out"
+        combat.write_text(combat.read_text().replace("COMBAT BENCHMARK PASSED 10\n", ""))
+        result = self.run_script("tools/run_bench_pairs.sh", PERF_REF="HEAD")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PAIR GATE FAILED branch run 1", result.stdout)
 
 
 if __name__ == "__main__":

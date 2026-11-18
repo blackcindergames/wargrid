@@ -22,6 +22,7 @@ run combat.log --script res://benchmarks/run_combat.gd
 grep -Eq '^COMBAT BENCHMARK PASSED 10$' "$log_dir/combat.log" || exit 1
 [ "$(grep -c '^COMBAT BUDGET PASS ' "$log_dir/combat.log")" -eq 7 ] || exit 1
 [ "$(grep -c '^WORST TICK ' "$log_dir/combat.log")" -eq 10 ] || exit 1
+sh "$repo_root/tools/run_bench_pairs.sh" || exit 1
 run lockstep.log --script res://benchmarks/run_lockstep.gd
 grep -Eq '^LOCKSTEP BENCHMARK PASSED 1$' "$log_dir/lockstep.log" || exit 1
 [ "$(grep -c '^LOCKSTEP BUDGET PASS ' "$log_dir/lockstep.log")" -eq 1 ] || exit 1
@@ -30,7 +31,9 @@ grep -Eq '^LOCKSTEP BENCHMARK PASSED 1$' "$log_dir/lockstep.log" || exit 1
 run profile.log --script res://benchmarks/run_profile.gd
 grep -Eq '^PROFILE COMPLETE 11$' "$log_dir/profile.log" || exit 1
 over=$(cat "$log_dir"/*.log | sed -n 's/^OVER BUDGET \([^ ]*\) .*/\1/p' | tr '\n' ' ')
-[ -z "$over" ] || echo "BUDGET EXCEEDED ${over% } (regression ceilings held)"
+[ -z "$over" ] || echo "BUDGET EXCEEDED ${over% }"
+alarm=$(sed -n 's/^COMBAT STRESS ALARM \([^ ]*\) .*/\1/p' "$log_dir/combat.log" | tr '\n' ' ')
+[ -z "$alarm" ] || echo "CEILING ALARM ${alarm% } (report only)"
 
 record_perf() {
 	cat "$log_dir/tests.log" "$log_dir/combat.log" "$log_dir/lockstep.log" "$log_dir/profile.log" >"$log_dir/all.log"
