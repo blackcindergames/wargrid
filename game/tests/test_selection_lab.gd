@@ -16,6 +16,8 @@ const SelectionLab = preload("res://scripts/lab/selection_lab.gd")
 const LabPanel = preload("res://scripts/lab/lab_panel.gd")
 const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.gd")
 const SCENE = preload("res://scenes/art_lab.tscn")
+const LabCapture = preload("res://scripts/lab/lab_capture.gd")
+const LabClips = preload("res://scripts/lab/lab_clips.gd")
 const PANEL_SLOTS: Array[Rect2] = [Rect2(0, 664, 408, 136), Rect2(416, 664, 408, 136)]
 
 const ROLES: Array[StringName] = [&"bg", &"btn", &"panel2", &"quiet", &"well", &"line", &"text", &"muted", &"hint", &"sel", &"amber", &"you", &"enemy", &"ally"]
@@ -24,7 +26,7 @@ const B_HEX := {"bg": "172731", "btn": "223640", "panel2": "2b4453", "quiet": "1
 const SLOT_ONE_HEX: Array[String] = ["628ffa", "d6120c", "4ad49b", "f8e425", "0e92a7", "7242fe", "ec8600", "f79cef"]
 
 func cases() -> Array[Callable]:
-	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules, test_new_questions_switch, test_no_labels_in_window, test_held_boxes, test_session_only_as_main, test_round_trip_to_old_question, test_key_interactions, test_opponent_skips_ally, test_live_view_selection]
+	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules, test_new_questions_switch, test_no_labels_in_window, test_held_boxes, test_session_only_as_main, test_round_trip_to_old_question, test_key_interactions, test_opponent_skips_ally, test_live_view_selection, test_capture_list, test_clip_list]
 
 func test_token_sets(runner) -> bool:
 	var a: Dictionary = LabLook.tokens(&"a")
@@ -589,3 +591,40 @@ func test_live_view_selection(runner) -> bool:
 	runner.check(_marks(lab).selected == army.selected and _marks(lab).hovered == army.hovered and _marks(lab).map_size == LabArmy.MAP_SIZE, "LB20 leaving health_bar from the live view restores the frozen selection")
 	lab.free()
 	return true
+
+func test_capture_list(runner) -> bool:
+	var shots: Array[Dictionary] = LabCapture.shots()
+	runner.check(shots.size() == 75, "LB21 75 shots, got %d" % shots.size())
+	var names: Array = shots.map(func(shot: Dictionary) -> String: return shot.name)
+	runner.check(names.size() == _unique(names).size(), "LB21 shot names are unique")
+	runner.check(shots.all(func(shot: Dictionary) -> bool: return AbVariants.P2_3A.has(shot.question)), "LB21 no shot outside the four new questions")
+	runner.check(shots.all(func(shot: Dictionary) -> bool: return shot.name.begins_with("%s-%s-%s-" % [shot.question, "abc"[shot.variant], shot.state])), "LB21 names start with question, letter and panel state")
+	for question: StringName in AbVariants.P2_3A:
+		# token_set A already shows both sets side by side; B only swaps the panels.
+		var count: int = 1 if question == &"token_set" else AbVariants.LABELS[question].size()
+		for choice in count:
+			runner.check(shots.any(func(shot: Dictionary) -> bool: return shot.question == question and shot.variant == choice), "LB21 %s variant %d is shot" % [question, choice])
+	runner.check(not shots.any(func(shot: Dictionary) -> bool: return shot.question == &"token_set" and shot.variant == 1), "LB21 token_set shoots only variant A")
+	for size in 2:
+		for state: StringName in [&"one", &"many", &"building"]:
+			runner.check(shots.any(func(shot: Dictionary) -> bool: return shot.question == &"value_size" and shot.variant == size and shot.state == state), "LB21 value_size %d has %s" % [size, state])
+	for held in [1, 2, 3]:
+		runner.check(shots.any(func(shot: Dictionary) -> bool: return shot.question == &"drag_box" and shot.held == held), "LB21 drag_box has held box %d" % held)
+	runner.check(shots.filter(func(shot: Dictionary) -> bool: return shot.live).all(func(shot: Dictionary) -> bool: return shot.question == &"health_bar"), "LB21 only health_bar shots are live")
+	return true
+
+func test_clip_list(runner) -> bool:
+	var clips: Array[Dictionary] = LabClips.clips()
+	var names: Array = clips.map(func(clip: Dictionary) -> String: return clip.name)
+	runner.check(not names.is_empty() and names.size() == _unique(names).size(), "LB22 clip names are unique")
+	var wanted: Array = [[&"drag_box", 0, &"drag", false], [&"drag_box", 1, &"drag", false], [&"drag_box", 2, &"drag", false], [&"drag_box", 0, &"drag", true], [&"health_bar", 0, &"hover", false], [&"health_bar", 0, &"live", false], [&"health_bar", 1, &"live", false], [&"health_bar", 2, &"live", false]]
+	for scene: Array in wanted:
+		runner.check(clips.any(func(clip: Dictionary) -> bool: return [clip.question, clip.variant, clip.scene, clip.shift] == scene), "LB22 clip %s is listed" % [scene])
+	runner.check(clips.all(func(clip: Dictionary) -> bool: return clip.name.begins_with("%s-%s-" % [clip.question, "abc"[clip.variant]])), "LB22 clip names start with question and letter")
+	runner.check(clips.all(func(clip: Dictionary) -> bool: return clip.frames >= 90 and clip.frames <= 180), "LB22 every clip runs 3 to 6 s at 30 fps")
+	return true
+
+func _unique(values: Array) -> Array:
+	var seen := {}
+	for value in values: seen[value] = true
+	return seen.keys()
