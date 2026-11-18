@@ -14,7 +14,7 @@ const Fixture = preload("res://tests/combat_fixture.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
 
 func cases() -> Array[Callable]:
-	return [test_catch_up_collects_every_step, test_collect_step_copies, test_stalled_tick_is_collected_once, test_event_accessors_are_live, test_every_weapon_and_kind_has_a_cue, test_cue_by_weapon_then_damage_type, test_tier_picks_weapon, test_rifle_burst_plays_once_per_burst, test_splash_weapons_add_impact, test_death_cues, test_death_uses_previous_snapshot, test_unknown_dead_object_is_skipped, test_limits_and_cap, test_far_shot_takes_no_voice, test_mass_death_batch, test_container_burst, test_placement_and_errors, test_hole_and_site_are_not_placements, test_setup_phase_is_silent, test_stalled_tick_is_silent, test_first_shot_after_restart_is_heard, test_scenes_boot_with_sound, test_bus_layout, test_update_drains_pending]
+	return [test_catch_up_collects_every_step, test_collect_step_copies, test_stalled_tick_is_collected_once, test_event_accessors_are_live, test_every_weapon_and_kind_has_a_cue, test_cue_by_weapon_then_damage_type, test_tier_picks_weapon, test_rifle_burst_plays_once_per_burst, test_splash_weapons_add_impact, test_death_cues, test_death_uses_previous_snapshot, test_unknown_dead_object_is_skipped, test_limits_and_cap, test_far_shot_takes_no_voice, test_mass_death_batch, test_container_burst, test_placement_and_errors, test_hole_and_site_are_not_placements, test_setup_phase_is_silent, test_stalled_tick_is_silent, test_first_shot_after_restart_is_heard, test_scenes_boot_with_sound, test_bus_layout, test_update_drains_pending, test_click_after_leaving_tree_is_silent]
 
 func test_catch_up_collects_every_step(runner) -> bool:
 	var suite = OnlineTests.new()
@@ -335,4 +335,17 @@ func test_bus_layout(runner) -> bool:
 	for bus in ["Music", "Effects", "Voice"]:
 		var index: int = AudioServer.get_bus_index(bus)
 		runner.check(index > 0 and is_zero_approx(AudioServer.get_bus_volume_db(index) - (-6.0 if bus == "Effects" else 0.0)) and AudioServer.get_bus_send(index) == &"Master", "SD23 bus %s at its trim level sending to Master" % bus)
+	return true
+
+func test_click_after_leaving_tree_is_silent(runner) -> bool:
+	var screen := Node2D.new()
+	var button := Button.new()
+	screen.add_child(button)
+	button.pressed.connect(func() -> void: runner.root.remove_child(screen)) # like change_scene_to_file, before the click handler
+	screen.add_child(Player.new(1))
+	runner.root.add_child(screen)
+	await runner.process_frame
+	button.pressed.emit()
+	runner.check(screen.get_node("Sound").last_requests().is_empty(), "SD24 a click after the screen left the tree plays nothing")
+	screen.free()
 	return true

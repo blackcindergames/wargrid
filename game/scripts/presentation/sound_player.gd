@@ -121,5 +121,6 @@ func _watch(button: Node) -> void:
 	(button as BaseButton).pressed.connect(_click)
 
 func _click() -> void:
+	if not is_inside_tree(): return # a button that changes scene has already taken the screen out of the tree
 	var requests: Array[Dictionary] = [director.ui_request("click")]
 	play(requests)
