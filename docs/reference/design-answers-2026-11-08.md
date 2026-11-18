@@ -1152,3 +1152,4 @@ Four questions from the [A/B lab spec](../superpowers/specs/2026-11-18-p2-3a-ab-
 Finding, not a decision (agent, 2026-11-18): in the lab, a framed health bar (1 px owner frame, black track, 24x3 fill) only keeps frame, track and fill apart at zoom 0.5 when drawn in screen space, snapped to whole pixels, at its zoom 1 size. The P2.3a design must decide the bar's size per zoom.
 
 The owner colours against `sel` `#60e5ed` are computed in [Owner colours against `sel`](hud-v5-layout.md#owner-colours-against-sel).
+- **Confirmed in motion** (user, 2026-11-18): in the browser build of the lab, started on the picks, the owner checked health bars A in the live fight, hover and drag box A with its corner-tick preview, and kept all four picks.
