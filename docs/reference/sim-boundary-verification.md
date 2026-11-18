@@ -437,15 +437,15 @@ Findings that change later tasks: none. Every cited symbol exists; only `match_s
 Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`; `main` `6854ff5` merged in at `07f0c59` (user, 2026-11-18). Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-18, Task 10 green, uncommitted)
+Resume record (updated 2026-11-18, Task 11 green, uncommitted)
 Branch / base commit / working-tree state: pump-hardening / code base 6ae89cd; HEAD 07f0c59 merges main (P2.3a lab, bot plans; user, 2026-11-18, handoff), so Task 1's "empty diff" gate is restated as: `git diff 6ae89cd -- game/scripts tools relay protocol`, minus `game/scripts/lab/`, is empty (checked, empty); the lab, `art_lab.tscn`, `test_lab_panel.gd`, `test_selection_lab.gd` and their two `run_tests.gd` entries are the only other differences / only this file changed
-Last green task / next incomplete task: Task 10 (nested cache freeze, warm-up from the freeze list; awaiting review and the coordinator's commit; Tasks 1 to 9 committed) / Task 11
-Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/tests/test_sim_pump.gd, game/scripts/match/sim_pump.gd, game/scripts/simulation/definitions/definitions.gd
-Last command / cases / checks / failures / exit / marker: Task 10: `SUITE(t10)` exit 0, CASES 1144, CHECKS 148868, FAILURES 0, `TESTS PASSED 148868`; `TRACES(t10)` replay, economy, combat `REPLAYS MATCHED 1200`, team 100; lint, warnings (183 files), python tests, `check_public.sh` exit 0; mutations t10m1 and t10m2 red, restore `cmp` exit 0
+Last green task / next incomplete task: Task 11 (static check: pump access outside the drivers; awaiting review and the coordinator's commit; Tasks 1 to 10 committed) / Task 12
+Changed paths since last commit: docs/reference/sim-boundary-verification.md, tools/test_sim_boundary.py
+Last command / cases / checks / failures / exit / marker: Task 11: `run_python_checks.sh` exit 0 (ruff, mypy 47 files, `PYTHON TESTS PASSED`); `test_sim_boundary` 17 tests OK; red run exit 1 (new names missing); mutation t11m1 red naming `hud.gd` 1, restore `cmp` exit 0; lint, warnings (183 files), `check_public.sh` exit 0; no `.gd` file changed, so no suite run (last suite: Task 10, CASES 1144, `TESTS PASSED 148868`)
 Known red case or blocker: none. Stash entry `park-t6-pump` stays in the stash list unpopped
 Approved decisions, pre-authorizations used, deferred gates: six plan choices answered (user, 2026-11-18; plan "Owner answers"); one local commit per green task pre-authorized, never push or merge (user, 2026-11-18); hybrid start in an attended session, owner approves prompts by phone; benchmarks above load 2.5 run, tagged "host under load", evening rerun listed (user, 2026-11-18)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: Task 10 review loop, coordinator commits Task 10; Task 11 (static check); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
+Next exact action: Task 11 review loop, coordinator commits Task 11; Task 12 (profiled team-load row); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
 ```
 
 | Task | What | Status |
@@ -459,8 +459,8 @@ Next exact action: Task 10 review loop, coordinator commits Task 10; Task 11 (st
 | 7 | Relay frame-order rule in the fake transport; receive that ends the lockstep | green after review fixes (P2-1 to P2-3), committed |
 | 8 | Online preview on one job per step call | green after review fix P2-1, committed |
 | 9 | Reference test against a plain `advance(sim)` peer | green, committed |
-| 10 | Nested cache freeze, warm-up from the freeze list | green, uncommitted |
-| 11 | Static check: pump access outside the drivers, per-file counts | not started |
+| 10 | Nested cache freeze, warm-up from the freeze list | green, committed |
+| 11 | Static check: pump access outside the drivers, per-file counts | green, uncommitted |
 | 12 | Profiled team-load row through `post` and `drain` | not started |
 | 13a | Docs: contract, spec, core chapters | not started |
 | 13b | Docs: presentation, performance, testing, status | not started |
@@ -512,6 +512,8 @@ Next exact action: Task 10 review loop, coordinator commits Task 10; Task 11 (st
 | 2026-11-18 | Task 10 Step 2: red `ONLY(t10red, test_ph_nested)` | exit 1: `PH start freezes every cached view (74 views)` fails (CASES 1 CHECKS 2), no SCRIPT ERROR; load 1.77 | pump-hardening, HEAD after Task 9 |
 | 2026-11-18 | Task 10 Step 3/4: `ONLY(t10g, test_sim_pump)`, `SUITE(t10)`, `TRACES(t10)`, lint, warnings, python tests, `check_public.sh` | `test_sim_pump` CASES 29 CHECKS 124 FAILURES 0; suite exit 0, CASES 1144, CHECKS 148868, FAILURES 0 (no writer into a cached view; Review Focus 5 clear); four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); lint clean, `WARNINGS CHECKED 183 FILES`, `PYTHON TESTS PASSED`, `PUBLIC CHECK PASSED`; load 1.69 before the suite | same tree plus Task 10 |
 | 2026-11-18 | Task 10 Step 5: mutations by `cp` backup and `cmp` restore: t10m1 `_freeze` without the recursion into dictionary values; t10m2 sixth entry `"probe": {}` in `_named_caches`; `ONLY(t10m1, test_ph_nested)`, `ONLY(t10m2, test_sim_pump)` | m1 exit 1, `FAIL: PH start freezes every cached view (74 views)`; m2 exit 1, SCRIPT ERROR "Invalid access to property or key 'probe'" at every pump start (red by error line, as designed); both restores `cmp` exit 0 | same tree |
+| 2026-11-18 | Task 11 Step 2/3: red `python3 -m unittest test_sim_boundary` with `scanned_files` stubbed and `pump_accesses` absent (copy, restored); green; mutation t11m1 appends `var t: int = driver.pump.current().tick` to `hud.gd` (`cp` backup, `cmp` restore) | red exit 1 (failures 1, errors 3, new names missing); green 17 tests OK, counts 9 (`offline_driver.gd`) and 9 (`online_driver.gd`) equal `rg -c '\bpump\s*\.'`, every other scanned file 0, so the widened scan (match, presentation, playtest, launcher, net) also finds no live read; m1 exit 1 `hud.gd touches the pump 1 times: ['.pump.current']`; `cmp` exit 0 | pump-hardening, HEAD after Task 10 |
+| 2026-11-18 | Task 11 Step 4: `run_python_checks.sh` (ruff format applied once to the new code), lint, warnings, `check_public.sh` | exit 0 each; mypy 47 files, `PYTHON TESTS PASSED`, `WARNINGS CHECKED 183 FILES`, `PUBLIC CHECK PASSED`; load 1.68 after | same tree plus Task 11 |
 
 ### Base counts (Task 1)
 

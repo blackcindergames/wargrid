@@ -90,8 +90,31 @@ def live_reads(path, text):
     return LIVE_READ.findall(code)
 
 
-def screen_files(root):
-    return sorted(p for folder in ("match", "presentation") for p in (root / "game/scripts" / folder).rglob("*.gd"))
+SCAN_EXCLUDED = (
+    "game/scripts/simulation/",
+    "game/scripts/debug/",
+    "game/scripts/lab/",
+    "game/scripts/net/headless_client.gd",
+)
+PUMP_ACCESS = re.compile(r"\.pump\b(?:\s*\.\s*\w+)?|\bpump\s*\.\s*\w+|\bget\(\s*[\"']pump[\"']\s*\)")
+PUMP_FILE = "game/scripts/match/sim_pump.gd"
+PUMP_COUNTS: dict[str, int] = {
+    "game/scripts/match/offline_driver.gd": 9,
+    "game/scripts/match/online_driver.gd": 9,
+}
+
+
+def scanned_files(root):
+    return sorted(
+        p for p in (root / "game/scripts").rglob("*.gd") if not p.relative_to(root).as_posix().startswith(SCAN_EXCLUDED)
+    )
+
+
+def pump_accesses(path, text):
+    if path == PUMP_FILE:
+        return []
+    code = "\n".join(strip_comment(line) for line in text.splitlines())
+    return [re.sub(r"\s+", "", m) for m in PUMP_ACCESS.findall(code)]
 
 
 SCREEN = "game/scripts/match/match_screen.gd"
@@ -154,9 +177,39 @@ class SimBoundary(unittest.TestCase):
         self.assertEqual(live_reads("game/scripts/match/sim_pump.gd", "driver.sim.tick()"), [])
 
     def test_screen_reads_no_live_sim(self):
-        for path in screen_files(ROOT):
+        for path in scanned_files(ROOT):
             found = live_reads(path.relative_to(ROOT).as_posix(), path.read_text())
             self.assertFalse(found, f"{path.name} reads the live simulation: {found}")
+
+    def test_pump_access_flagged(self):
+        hud = "game/scripts/match/hud.gd"
+        self.assertEqual(pump_accesses(hud, "var t: int = driver.pump.current().tick"), [".pump.current"])
+        self.assertEqual(pump_accesses(hud, "var p = driver.pump"), [".pump"])
+        self.assertEqual(pump_accesses(hud, "if not pump . post(job): return"), ["pump.post"])
+        self.assertEqual(pump_accesses(hud, 'var p = driver.get("pump")'), ['get("pump")'])
+
+    def test_pump_access_ignores_lookalikes(self):
+        hud = "game/scripts/match/hud.gd"
+        self.assertEqual(pump_accesses(hud, "var n: SimPump.Note = null\nvar c = pump_count"), [])
+        self.assertEqual(pump_accesses(hud, "var a = 1  # driver.pump.live()"), [])
+        self.assertEqual(pump_accesses(PUMP_FILE, "pump.post(job)"), [])
+
+    def test_pump_access_counts_pinned(self):
+        for path in scanned_files(ROOT):
+            rel = path.relative_to(ROOT).as_posix()
+            found = pump_accesses(rel, path.read_text())
+            self.assertEqual(len(found), PUMP_COUNTS.get(rel, 0), f"{rel} touches the pump {len(found)} times: {found}")
+
+    def test_pump_counts_files_exist(self):
+        for rel in PUMP_COUNTS:
+            self.assertTrue((ROOT / rel).is_file(), f"{rel} is gone: remove it from PUMP_COUNTS")
+
+    def test_scan_covers_scripts(self):
+        rels = {p.relative_to(ROOT).as_posix() for p in scanned_files(ROOT)}
+        for rel in ("match/match_screen.gd", "playtest/playtest_overlay.gd", "launcher.gd"):
+            self.assertIn(f"game/scripts/{rel}", rels)
+        for rel in ("simulation/simulation.gd", "net/headless_client.gd"):
+            self.assertNotIn(f"game/scripts/{rel}", rels)
 
 
 if __name__ == "__main__":
