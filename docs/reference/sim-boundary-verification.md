@@ -434,7 +434,7 @@ Findings that change later tasks: none. Every cited symbol exists; only `match_s
 
 ## Pump hardening
 
-Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`. Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
+Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`; `main` `6854ff5` merged in at `07f0c59` (user, 2026-11-18). Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
 
 ```text
 Resume record (updated 2026-11-18, Task 1 green, uncommitted)
