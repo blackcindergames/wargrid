@@ -13,7 +13,7 @@ Status: approved in substance by the owner (2026-11-15); drafted by Fable 5.2 fr
 1. One owner of the `Simulation` per match (`SimPump`); one published result per tick; no main-thread reference to the live simulation in match or presentation code.
 2. Inline and worker are one code path; the worker-only part is the queue, about 60 lines, behind an off-by-default flag; that figure holds for the queue only, SB5a also inherits the [list below](#sb5a-inherits).
 3. Snapshot, digest and other heavy reads happen only on request.
-4. A result shape later packages extend without re-opening the boundary: state in tick-stamped slots (four recycled ones today; answer 11 is closed: a fresh `Slot` per job, in Pump hardening), per-tick events and command results in a drained queue.
+4. A result shape later packages extend without re-opening the boundary: state in tick-stamped slots (a fresh `Slot` per job since Pump hardening, answer 11), per-tick events and command results in a drained queue.
 5. Digests, traces and netplay pins unchanged by every step.
 
 ## Non-goals
@@ -35,7 +35,7 @@ Status: approved in substance by the owner (2026-11-15); drafted by Fable 5.2 fr
 ## Where the inputs disagree
 
 - **F** The "7.7 ms every 30th tick" (snapshot 3.3 + digest 4.4 ms, `ow/worker-threads/deck-profile/run1.log`) is the spike driver's own cadence (`spike/game/scripts/match/worker_driver.gd:72,114`). On `main`, offline has no periodic snapshot (`game/scripts/match/offline_driver.gd:31-35`); online has one per hash tick (`online_driver.gd:63`). So SB1's content is the per-input reads.
-- **F** `ow/worker-threads/simpump-design.md` §3.4 advises "no reused arrays"; the owner decided reused slots, which is today's state (Slot objects rotate and are reused). Answer 11, closed 2026-11-18, replaces that with a fresh `Slot` per job (Pump hardening); in-place reuse of unit columns is closed.
+- **F** `ow/worker-threads/simpump-design.md` §3.4 advises "no reused arrays"; the owner decided reused slots, which was the state through SB4 (Slot objects rotated and were reused). Answer 11, closed 2026-11-18, replaced that with a fresh `Slot` per job (Pump hardening, on branch `pump-hardening`, not merged); in-place reuse of unit columns is closed.
 - **F** The same report says online rematch does not exist; P2.2 adds it (`wargrid-wt-rematch` plan, Task 6: `_phase`, `take_rematch`, `create` re-entered). The pump must be re-creatable per match in both drivers.
 - **F** "A rejection is lost when two ticks run before one refresh" is merged on `main` (`match_screen.gd:187`, `hud.gd:50`); the drain keeps that merge.
 - **F** OpenRA's hash check finds writes by unsynced code (`ow/sim-boundary/research-openra.md` §3); Wargrid's hazard is reads ("Guard").
@@ -49,7 +49,7 @@ Status: approved in substance by the owner (2026-11-15); drafted by Fable 5.2 fr
 | Mutex around the live sim | smallest diff | an input event blocks a frame for a whole tick; an unlocked read is an untestable crash |
 | Third driver + facade (spike) | exists | two code paths; stale reads; refuses orders (`worker_driver.gd:210`) |
 | Pump under both drivers, fresh result per tick (`simpump-design.md`) | simplest | allocation per tick; no previous state for P4 |
-| **Pump under both drivers, four slots + note queue** | decided; P4 gets current and previous; events never latest-wins | a stale slot reference is a new bug class (Risks) |
+| **Pump under both drivers, a slot per job + note queue** | decided; P4 gets current and previous; events never latest-wins | a stale slot reference is a new bug class (Risks) |
 | Previous and current inside the sim (0 A.D., `ow/sim-boundary/research-0ad.md` §2) | no copy | touches hashed state |
 
 **Where bots run**
@@ -73,11 +73,13 @@ New `game/scripts/match/sim_pump.gd` (`RefCounted`; outside `simulation/` becaus
 
 ```gdscript
 class Job:    # one per tick, or a query (step = false)
-    var commands: Array[Dictionary]   # seat order; a missing `tick` and `sequence` is stamped by run_job
+    var commands: Array[Dictionary]   # seat order; a missing `tick` is stamped by run_job, a missing `sequence` only with stamp_sequence (offline)
     var bots: Array[int]              # seats that may decide in this job; [2] offline 1v1, empty online
     var step: bool = true
     var want_digest: bool             # snapshot + digest; online hash ticks, tick 0, final record
     var want_ring: bool               # desync report
+    var want_log: bool                # the note carries the recorded command log
+    var stamp_sequence: bool = false  # offline: a missing sequence becomes last accepted plus one
     var preview: Dictionary           # {player, builder_id, kind, origin} or empty
 
 class Note:   # queue entry, exactly one per job, drained in order
@@ -91,6 +93,7 @@ class Note:   # queue entry, exactly one per job, drained in order
     var snapshot: Dictionary          # only with want_digest
     var digest: String
     var ring: PackedStringArray       # only with want_ring
+    var log: Array[Dictionary]        # only with want_log
     var preview: Dictionary
     var starts: Dictionary            # job 0 only: seat -> start cell
     var stats: Array[Dictionary]      # match_stats() after the job
@@ -101,30 +104,29 @@ class Slot:   # state, latest wins
 
 func _init(sim: Simulation) -> void   # also creates the CommandRecorder; no `threaded` argument: the mode is not built
 func start() -> Note                  # worker: warm and freeze caches, run job 0 on the caller, then spawn
-func post(job: Job) -> bool           # worker: false when the queue has no room or the pump failed; inline: false only after stop()
+func post(job: Job) -> bool           # worker: false when the queue has no room or the pump failed; inline: false after stop() or once a null run_job result failed the pump
 func drain() -> Array[Note]           # worker: under the lock, takes all notes and rotates slots; sets `failed`
 func current() -> Slot                # worker: main only, never written after publishing
 func previous() -> Slot               # worker: main only; null until two ticks were taken
 func query(job: Job) -> Note          # worker: hands the job to the worker and waits, bounded by the stall limit (SB5a); inline: runs on the caller
-func record() -> Dictionary           # {tick, digest, match} from a query job with want_digest; worker: through query
-func recorder() -> CommandRecorder    # inline only; goes in Pump hardening, record() returns the command log instead
+func record() -> Dictionary           # {tick, digest, match, commands} from a query job with want_digest and want_log; worker: through query
 func busy() -> bool                   # worker: true while a job runs or is queued; inline: false
 func stop() -> void                   # inline: sets a flag, later posts return false; worker: never joins after a failure, otherwise a bounded wait
 func live() -> Simulation            # tests and pre-start setup; worker: asserts not busy()
 static func run_job(sim, recorder, job, slot) -> Note   # slot null for a query
 ```
 
-`done` cannot see a script error, and release builds raise none (engine claim from the sim boundary critique (private), not re-checked here). Online, the 30-tick digest is the backstop for a job that went wrong; offline there is none. Pump hardening fails the pump on a null `run_job` result; the error-count fault flag for debug and test builds is on the [SB5a list](#sb5a-inherits). `MAX_QUEUED` is not in `sim_pump.gd` yet, so whether it counts the running job is not decided; the SB5a plan fixes it before the thread lands.
+`done` cannot see a script error, and release builds raise none (engine claim from the sim boundary critique (private), not re-checked here). Online, the 30-tick digest is the backstop for a job that went wrong; offline there is none. Pump hardening fails the pump on a null `run_job` result (done); the error-count fault flag for debug and test builds is on the [SB5a list](#sb5a-inherits). `MAX_QUEUED` is not in `sim_pump.gd` yet, so whether it counts the running job is not decided; the SB5a plan fixes it before the thread lands.
 
 `run_job` is the only function that touches the simulation. Order, same as today (**F** `offline_driver.gd:32-33,48`): issue `commands`, run `bots` through `Skirmish.issue_opponents(recorder, job.bots)` (exists, `skirmish.gd:67`; today the offline driver calls `issue_opponent(_recording())`, seat 2 only, `offline_driver.gd:32`, `skirmish.gd:64-65`; the `bots` field is new), `step()` unless over, copy events and results, write the view into `slot`, then the extras. Application order is `(tick, player, sequence)` anyway (`simulation.gd:325`).
 
 ### Slots and notes
 
-Today four `Slot` objects with roles WRITE (owner thread), READY, CURRENT, PREVIOUS (main). Publish, under one lock: append the note, swap WRITE and READY. Drain, under one lock: take all notes; if READY is newer, PREVIOUS returns to the pool, CURRENT becomes PREVIOUS, READY becomes CURRENT. Neither thread ever writes a slot the other can read.
+Through SB4 the pump had four recycled `Slot` objects (roles WRITE, READY, CURRENT, PREVIOUS); since Pump hardening every job gets a new `Slot`. Publish, under one lock: append the note and make the new slot READY (a newer READY replaces an undrained one). Drain, under one lock: take all notes; if a READY slot is waiting, CURRENT becomes PREVIOUS and READY becomes CURRENT. A slot is never written after it is published, so neither thread writes a slot the other can read. The inline pump does this without a lock (`sim_pump.gd` `post`, `drain`).
 
 - Invariant (tested): after `drain`, `current().tick` equals the last note's tick.
 - A READY slot overwritten before a drain is correct for state (latest wins) and is why events are not in it.
-- Answer 11 is closed (user, 2026-11-18): the pump publishes a fresh `Slot` per job and never writes one after publishing, so main may keep any number of slots, for example a ring of poses for P4. Today's recycled slots (`sim_pump.gd` `_publish`, `_rotate`) change to this in Pump hardening (user, 2026-11-18).
+- Answer 11 is closed (user, 2026-11-18): the pump publishes a fresh `Slot` per job and never writes one after publishing, so main may keep any number of slots, for example a ring of poses for P4. The recycled slots (`_publish`, `_rotate`) went in Pump hardening (user, 2026-11-18); `post` now creates the slot and `drain` swaps `current()` and `previous()`.
 - `previous().tick` can be two behind after a skipped tick; `world_view.gd:242` already drops its blend then.
 - `run_job` assigns a fresh `view_state()` into the slot (a stale reader sees old values, never a resize).
 - **Viewer** (agent proposal). The published view is global. A read that depends on a viewer (the local player's fog, a bot's seat filter) rides on the job like the preview's player and comes back in the note, never as a per-player slot.
@@ -188,7 +190,7 @@ One rule per kind of data, so the hand-over (view build 1.6 ms per tick Deck nat
 1. Structural: nothing outside the pump holds the simulation; `live()` asserts in worker mode.
 2. Static: `tools/test_sim_boundary.py` gains a check that no file under `game/scripts/match/` or `presentation/` names `.sim` or `live()` (allowlist: the pump).
 3. The worker-mode suite at SB5a: a missed read has no object to read.
-4. Caches (`Definitions`, `CombatDefinitions.radius`, `Registry.reach_cache`, `Skirmish._skirmish_map`) are warmed and `make_read_only()` in both modes. A late insert from the HUD is then two error lines and a default value, which fails the suite (`tools/run_tests.sh`) but nothing in a running game; the freeze is shallow (top level only, `definitions.gd` `freeze_caches`) until Pump hardening freezes nested values and derives the warm-up from the freeze list. The freeze coexists with `Registry.add_test_kind` / `clear_test_kinds` (`definitions.gd:56-61`, `_reset` `:137-143`, at `d108b90`): those test helpers reset to unfrozen copies, and `_reset` also clears `reach_cache`, which `Combat._reach` fills and reads (`combat.gd:83-85`).
+4. Caches (`Definitions`, `CombatDefinitions.radius`, `Registry.reach_cache`, `Skirmish._skirmish_map`) are warmed and `make_read_only()` in both modes. A late insert from the HUD is then two error lines and a default value, which fails the suite (`tools/run_tests.sh`) but nothing in a running game; `freeze_caches` freezes nested values, and the pump derives its warm-up from the same list (`definitions.gd` `cache_names()`, `sim_pump.gd` `_warm_and_freeze`), since Pump hardening. The freeze coexists with `Registry.add_test_kind` / `clear_test_kinds` (`definitions.gd:56-61`, `_reset` `:137-143`, at `d108b90`): those test helpers reset to unfrozen copies, and `_reset` also clears `reach_cache`, which `Combat._reach` fills and reads (`combat.gd:83-85`).
 
 OpenRA's hash check is not adopted (answer 8).
 
@@ -202,7 +204,7 @@ Night packages, each one fresh subagent per task, each resumable from its verifi
 | SB2 Answers one tick later | own-command answers (both drivers) and the placement preview arrive with the next tick; placement and checklist follow the answer | listed order, HUD and sound tests gain one physics call; same error strings behind `Rejected: `, same sounds; two-tick merge test green; IC1 rows re-pinned only in the fields of answer 17; IC2 unchanged | P2.3a refused-order line; alerts |
 | SB3 Pump inline, offline (done 2026-11-16, merged to local `main` in `6333249`) | `sim_pump.gd`, slots, notes, bots in the job, cache freeze, static check, camera from job 0; tests move to `pump.live()` | pump against direct digests over 900 ticks; skirmish and team traces equal; slot invariant tests; ledger row; view-build split reported | P4 current and previous; P5, P6 behind the pump; bot read function |
 | SB4 Online on the pump (done: merged to local `main` 2026-11-18, fast-forward `14e254d`, not pushed, owner check still owed; [verification](../../reference/sim-boundary-verification.md#sb4)) | lockstep split, rematch re-creates the pump, ring by query job | lockstep tests untouched and green; loopback test of two drivers; `run_netplay.sh` match and rematch; vectors untouched | fog and minimap online |
-| Pump hardening (night package before SB5a; its slot at the next night-run preparation and its name are agent proposals) | the inline-testable part of the critique: a fresh `Slot` per job (answer 11); offline keeps its queue and preview request on a refused post (folds in STATUS F32's `post` part); a null `run_job` result publishes nothing and fails the pump; one "end the match" call that stops the pump on every exit path (leave, quit, window close) before it records; `record()` returns the command log, `recorder()` goes, `playtest_header()` stops building the log; static check widened to any member access on a pump outside the two drivers, with per-file counts; nested cache freeze with the warm-up derived from the freeze list; SB4 leftovers (`Lockstep.finish_tick` refuses to send after the lockstep ended or for a tick that is not the last sent plus one; a reference test of a scene driver against a plain `advance(sim)` peer with hashes through the match end; `FakeTransport` applies the relay's frame-order rule; the preview request on one job per step call; STATUS F35, the sequence stamp only on request); SB4 review riders (`take` checks `tick == _next_tick`; a test for a receive that ends the lockstep while a job is undrained); one profiled team-load row through `SimPump.post` and `drain` beside the direct row; update the SB5 comments at `offline_driver.gd:149` and `definitions.gd:120` (comments only) ([critique review](../../reference/design-answers-2026-11-08.md#sim-boundary-critique-review-user-2026-11-18)) | all inline tests; digests, traces and pins equal | SB5a shrinks back to the queue |
+| Pump hardening (implemented on branch `pump-hardening`, 2026-11-18, not merged; gate result in its [verification](../../reference/sim-boundary-verification.md#pump-hardening); night package before SB5a; its slot at the next night-run preparation and its name were agent proposals) | the inline-testable part of the critique: a fresh `Slot` per job (answer 11); offline keeps its queue and preview request on a refused post (folds in STATUS F32's `post` part); a null `run_job` result publishes nothing and fails the pump; one "end the match" call that stops the pump on every exit path (leave, quit, window close) before it records; `record()` returns the command log, `recorder()` goes, `playtest_header()` stops building the log; static check widened to any member access on a pump outside the two drivers, with per-file counts; nested cache freeze with the warm-up derived from the freeze list; SB4 leftovers (`Lockstep.finish_tick` refuses to send after the lockstep ended or for a tick that is not the last sent plus one; a reference test of a scene driver against a plain `advance(sim)` peer with hashes through the match end; `FakeTransport` applies the relay's frame-order rule; the preview request on one job per step call; STATUS F35, the sequence stamp only on request); SB4 review riders (`take` checks `tick == _next_tick`; a test for a receive that ends the lockstep while a job is undrained); one profiled team-load row through `SimPump.post` and `drain` beside the direct row; update the SB5 comments at `offline_driver.gd:149` and `definitions.gd:120` (the first went with the `recorder()` shortcut, the second with the shallow freeze) ([critique review](../../reference/design-answers-2026-11-08.md#sim-boundary-critique-review-user-2026-11-18)) | all inline tests; digests, traces and pins equal | SB5a shrinks back to the queue |
 | SB5a Worker mode: the thread (flag off) | thread, native and headless behind an environment switch, `MAX_QUEUED`, both-mode tests, fault and stall, `worker_ab.py` into `tools/` with its test; the [inherits list](#sb5a-inherits) | digests equal on four loads in both modes; scene suite green under the flag; fault ends the match within 5 s; loopback online with one worker client | SB5b, the decision row |
 | SB5b Worker mode: the web half | threaded Web preset, COOP/COEP in `web/sws.toml`, the preset-and-headers pairing check in `tools/test_deploy_web.py`, pause-menu toggle with a headless layout test; on the test app only until a GO | pairing check goes red on a mismatch; before production switches to the threaded build, the threaded test app opens from a link in each chat app friends use, and one listen check | the decision row |
 | SB6 Decision rows (attended; after SB5b, probing the threaded test app, because SB5b keeps the threaded web build there until a GO: agent proposal) | Deck Firefox, 3+ interleaved runs per arm; mixed online match; fault probe in the release web build; one attended look at offline placement with the worker on. Bench: scripted input; the quality the automatic pick chooses and Low; offline rows without the 30-tick digest; the online cadence as its own row; arms worker, no-threads inline, and inline with the `Engine.max_physics_steps_per_frame` cap. An attended Deck session without threads (inline arm at the picked quality, at Low, and with the cap at 1 or 2) comes before the SB5a plan | the go rule, whole: `tick_rate` at least 29.7 (tolerance and a test); refused posts and the longest run of refusals (limits not yet set) replace the backlog guard, which cannot exceed the queue cap; pace judged on the worst two-second window as well as the average; report-only rows for tick arrival spread and answer latency; a no-harm row on a fast machine. PARK or DROP: production stays on the no-threads build, the flag code stays and the suite runs under the flag in CI. GO: the worker is on by default on desktop builds too (user, 2026-11-18); re-measured at the P6 and fog gates and at P9, the switch stays until then ([critique review](../../reference/design-answers-2026-11-08.md#sim-boundary-critique-review-user-2026-11-18)) | the day release that turns it on |
@@ -211,7 +213,7 @@ Night packages, each one fresh subagent per task, each resumable from its verifi
 
 Each line has its source: a change number of the sim boundary critique (private) with its finding, or a code comment. Items without a note are in the user's list of 2026-11-18 ([critique review](../../reference/design-answers-2026-11-08.md#sim-boundary-critique-review-user-2026-11-18)).
 
-- `query()` goes through the worker and waits, bounded by the stall limit (change 21, A2; `offline_driver.gd` `match_log` shortcut comment).
+- `query()` goes through the worker and waits, bounded by the stall limit (change 21, A2; `record()` is a query job and the offline `match_log` reads its log through it).
 - `stop()` never joins after a failure, otherwise a bounded wait; the stall is counted in frames; the loop re-checks the quit flag after each job (change 22, A5).
 - An owner-thread check in `run_job` in every build: `push_error` and fail the pump (change 23, A6). This is not the debug hash check answer 8 declined.
 - A fault flag from an error-count `Logger` in debug and test builds; fault and stall cases run as their own process (change 24, A3).
