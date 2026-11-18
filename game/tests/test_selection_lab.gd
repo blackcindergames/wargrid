@@ -43,7 +43,6 @@ func test_token_sets(runner) -> bool:
 		runner.check(order[0] < order[1] and order[1] < order[2] and order[2] < order[3], "LB1 lightness order well < bg < quiet < panel2")
 	for role in [&"you", &"enemy", &"ally"]:
 		runner.check(a[role] == b[role], "LB1 %s equal across sets" % role)
-	runner.check(LabLook.SLOT_MAP.size() == 12, "LB1 slot map has 12 rows")
 	return true
 
 func test_palette_a(runner) -> bool:

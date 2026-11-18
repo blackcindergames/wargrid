@@ -17,21 +17,6 @@ const SET_B_SOURCE := {
 	&"you": Color("628ffa"), &"enemy": Color("d6120c"), &"ally": Color("69ceaa"),
 }
 const DERIVED_ROLES: Array[StringName] = [&"panel2", &"quiet", &"well"]
-const SLOT_MAP: Array = [
-	[&"bg", "#121c24", "slab", "#172731"],
-	[&"btn", "#223241", "control", "#223640"],
-	[&"line", "#2e3f4b", "divider", "#40535d"],
-	[&"text", "#eef3f5", "text", "#f1f5f7"],
-	[&"muted", "#93a5b0", "secondary text", "#b7c4cc"],
-	[&"hint", "#93a5b0", "muted", "#96a5ae"],
-	[&"sel", "#60e5ed", "selected", "#67deeb"],
-	[&"amber", "#f7c871", "attention", "#f7c871"],
-	[&"panel2", "#26384a", "derived", "#2b4453"],
-	[&"quiet", "#16212a", "derived", "#1a2c37"],
-	[&"well", "#0c141a", "derived", "#121f28"],
-	[&"you_enemy_ally", "#628ffa #d6120c #69ceaa", "same", "#628ffa #d6120c #69ceaa"],
-]
-
 # map-art-shapes.md P2.3a, Palette A (slots 1-8) and the round 6 sides.
 const PALETTE_A: Array[Color] = [
 	Color("628ffa"), Color("d6120c"), Color("4ad49b"), Color("f8e425"),
@@ -48,7 +33,6 @@ const CANVAS := Color("08090a")
 const DARK_GROUND := Color("7b7566")
 
 const RULES: Array[StringName] = [&"damaged_or_hovered", &"selected_or_hovered", &"selected_damaged_or_hovered"]
-const DRAG_STYLES: Array[StringName] = [&"white", &"white_fill", &"green_today"]
 const VALUE_SIZES: Array[int] = [14, 13]
 
 const FONT_FILES := {400: "PublicSans-Regular", 600: "PublicSans-SemiBold", 700: "PublicSans-Bold"}
