@@ -23,7 +23,7 @@ Status: approved in substance by the owner (2026-11-15); drafted by Fable 5.2 fr
 - Fog, minimap, the bot read function, launch rules: named here only as consumers.
 - A wire or digest change (`protocol/vectors` fixed); Wargrid's own digest (`docs/reference/determinism-rules.md:42`).
 - Bot seats in the online scene client (M9); packed simulation state (P5).
-- Headless client and replays: they keep `Lockstep.advance(sim)` (`game/scripts/net/headless_client.gd:159`).
+- Headless client: it keeps `Lockstep.advance(sim)` (`game/scripts/net/headless_client.gd:180`); the replay oracle steps its own simulation without lockstep ([guide chapter 10](../../guide/10-determinism-and-replays.md)).
 
 ## Anti-goals
 
