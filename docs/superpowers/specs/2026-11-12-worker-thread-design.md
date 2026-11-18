@@ -1,5 +1,7 @@
 # Simulation on a worker thread: design (2026-11-12)
 
+> Superseded by the [sim boundary design](2026-11-15-sim-boundary-design.md) for status, the go rule, header timing and package order (the thread now comes as SB5a and SB5b, decided at SB6; [critique review](../../reference/design-answers-2026-11-08.md#sim-boundary-critique-review-user-2026-11-18)). Still standing: the thread rules, the failure table and the pairing test.
+
 Status: **proposed, design only. Nothing built, no thread, no benchmark, no header change.** Task T5 of the [performance next plan](../plans/2026-11-11-performance-next.md) (the plan now links this file name). Written against `perf-next` at 96334d6 (T1 clock and T4 view rows in the tree). Lever A2 of the [performance note](../../reference/performance-next.md) (sections 5.2, 6, 7 step 2, 8). Waits for stop gate 3 and the user.
 
 Labels: **measured** (a row in the [verification file](../../reference/performance-next-verification.md), the note or `~/projects/wargrid-perf-work/threads/threads-result.md`), **source** (file:line at 96334d6, or Godot `4.7.2-stable` in `~/projects/wargrid-perf-work/godot`), **inferred** (arithmetic on measured rows), **estimate** (not measured). Host for every measured number: the Mac mini. No Steam Deck number exists; every "target" number is a Mac number times F = 5.5.

@@ -1,5 +1,7 @@
 # Worker thread spike verification
 
+This file is still the pre-run template and was not filled in. The run's result tables are private evidence (the spike's morning summary, private); the Deck rows are summarised in the [design answers](design-answers-2026-11-08.md#worker-thread-ab-and-the-sim-boundary-user-2026-11-15).
+
 ```text
 Resume record (updated 2026-11-15, Questions decided)
 Branch / base commit / working-tree state: not created (Task 0 cuts spike-worker-threads from main into ~/projects/wargrid-wt-worker) / base = main at the preparation commit (`git log -1` on main) / tree clean after that commit
