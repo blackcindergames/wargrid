@@ -13,6 +13,7 @@ const VisualDirector = preload("res://scripts/presentation/visual_director.gd")
 # Plane rects, so a held box stays put at every zoom: none, over the army, 44 % past the south-west map edge yet within a zoom-2 screen, over the army with Shift.
 const HELD_BOXES: Array[Rect2] = [Rect2(), Rect2(-140, 280, 200, 140), Rect2(-330, 440, 200, 380), Rect2(-140, 280, 200, 140)]
 const SHIFT_BOX: int = 3
+const HELD_NAMES: Array[String] = ["none", "army", "edge", "army+Shift"]
 const BASELINE_STYLE: int = 2
 const TOKEN_SET_NUMBERS: int = 13
 
@@ -135,7 +136,9 @@ func reset() -> void:
 	_refresh()
 
 func status_line() -> String:
-	return "panel %s (P) | ground %s (G) | box %d (D) | view %s (V)" % [LabPanel.STATES[_panel_state], "dark" if _dark else "sand", _held, "live" if _live_view() else "frozen"]
+	var line: String = "panel %s (P) | ground %s (G) | box %s (D) | selected %d" % [LabPanel.STATES[_panel_state], "dark" if _dark else "sand", HELD_NAMES[_held], _selected.size()]
+	if _question == &"health_bar": line += " | view %s (V)" % ("live" if _live_view() else "frozen")
+	return line
 
 func _process(_delta: float) -> void:
 	if _on: _place_box()

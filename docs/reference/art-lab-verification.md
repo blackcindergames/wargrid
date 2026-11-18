@@ -1,17 +1,11 @@
 Resume record (updated 2026-11-10, smooth movement toggle, destinations toggle, click marker done)
 Branch / base commit / working-tree state: spike-art-lab / fdf3e49 / uncommitted code and docs (game/scripts/{main.gd,debug/movement_benchmark.gd,presentation/{graphics_settings,pause_menu,world_view}.gd}, tests, performance.md, this file)
-| 2026-11-18 | 2 | test_selection_lab 8 cases, 305 checks, 0 failures; test_art_lab 5/121 green; lint, warnings, boundary check pass | `3274ee4` | green, review clean |
-| 2026-11-18 | 3 | test_selection_lab 12 cases, 355 checks, 0 failures; test_art_lab green; lint, warnings, boundary pass | `892f98c` | green, review clean |
-| 2026-11-18 | 4 | test_lab_panel 4 cases, 1495 checks, 0 failures; test_selection_lab 355/0; lint, warnings, boundary pass | `7de1041` | green, review clean |
-| 2026-11-18 | 5 | test_selection_lab 20 cases, 510 checks; test_lab_panel 4/1495; test_art_lab 5/165; lint, warnings, boundary, isolation pass; fix round 1 for three visible minors | `2a00ac0` | green, review clean |
-| 2026-11-18 | 6 | lab_capture 77 shots + 3 stacks, lab_clips 8 clips at 6 s; selection_lab 23/558, lab_panel 4/1687, art_lab 5/165; PX + correctness reviews, fix round 1 | `65bab01` | green, review clean |
-
-Last green task / next incomplete task: Task 6 / Task 8.
+Last green task / next incomplete task: toggles and click marker / none in the lab; integration steps
 Changed paths since last commit: see Branch line
 Last command / cases / checks / failures / exit / marker: full suite / 728 cases, 139569 checks, 0 failures / exit 0 / TESTS PASSED 139569; lint 0; warnings 137 files 0; `sh tools/run_benchmark.sh` exit 0, 10 BUDGET PASS
 Known red case or blocker: none in tests; gated Ashfall frame p95 7.753 and 19.144 ms vs 3.3 guard EXCEEDED with interpolation off (machine-wide slowdown, cause not established); default config (interpolation on, High) exceeds the Ashfall guard
 Approved decisions, pre-authorizations used, deferred gates: as before; timed runs shortened by user request (2 gated + 1 report-only per layout)
-Next exact action: Task 7 replacement (claude.ai page, fly lab), then Task 8 docs and gates.
+Next exact action: coordinator: push spike-art-lab, test deploy, local merge into main, then the sim interface and determinism notes (approval needed for push and deploy)
 
 ## Evidence rows (append-only)
 
@@ -259,11 +253,18 @@ Plan: [P2.3a A/B lab](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md); spec: [d
 |---|---|---|---|---|
 | 2026-11-18 | Setup | worktree `~/projects/wargrid-wt-p23a-ab` from `main` `6ae89cd`; spec and plan committed | branch | done |
 | 2026-11-18 | 1 | `WARGRID_TEST_ONLY=test_selection_lab` 4 cases, 75 checks, 0 failures; lint and warnings exit 0 | `3e32e3a` | green, review clean |
+| 2026-11-18 | 2 | test_selection_lab 8 cases, 305 checks, 0 failures; test_art_lab 5/121 green; lint, warnings, boundary check pass | `3274ee4` | green, review clean |
+| 2026-11-18 | 3 | test_selection_lab 12 cases, 355 checks, 0 failures; test_art_lab green; lint, warnings, boundary pass | `892f98c` | green, review clean |
+| 2026-11-18 | 4 | test_lab_panel 4 cases, 1495 checks, 0 failures; test_selection_lab 355/0; lint, warnings, boundary pass | `7de1041` | green, review clean |
+| 2026-11-18 | 5 | test_selection_lab 20 cases, 510 checks; test_lab_panel 4/1495; test_art_lab 5/165; lint, warnings, boundary, isolation pass; fix round 1 for three visible minors | `2a00ac0` | green, review clean |
+| 2026-11-18 | 6 | lab_capture 77 shots + 3 stacks, lab_clips 8 clips at 6 s; selection_lab 23/558, lab_panel 4/1687, art_lab 5/165; PX + correctness reviews, fix round 1 | `65bab01` | green, review clean |
+| 2026-11-18 | 7 | claude.ai picture page and fly.io browser build of the lab, both outside the repo | `5ecf4d0` | done |
+| 2026-11-18 | 8 | guide docs; full suite exit 0, 1122 cases, 148781 checks, 0 failures; run_checks 5 passed; protected-paths and isolation checks clean; final Opus and player-experience reviews | `5ecf4d0` | green |
 
 What was built (branch commit `ff26a6b`; guide: [chapter 5](../guide/05-presentation.md#the-four-p23a-questions), [chapter 13](../guide/13-testing-and-tooling.md#offscreen-captures)): four questions in the art lab (token set A against B side by side, health-bar rule, value size 14 against 13, drag box) on a frozen 120-unit army drawn in palette A through a lab-only `WorldView` subclass, with a lab-only HUD v5 panel and keys P, G, D, V. No file under `game/scripts/presentation/`, `game/scripts/match/` or `game/scripts/simulation/` changed.
 
 Offscreen run (2026-11-18, 1280x800 `SubViewport`): `lab_capture.gd` exit 0, `CAPTURE DONE 77 shots, 3 stacks at tick 46`, 80 PNGs; `lab_clips.gd` under `--fixed-fps 30` exit 0, `CLIPS DONE 8`, eight 180-frame MP4s. Movie Maker recorded 1280x720 and cut 40 px off the top and bottom, so it was not used. Health bars at zoom 0.5 are drawn in whole screen pixels and the capture checks every bar for a lost frame, track or fill. The owner has not yet answered the four questions.
 
-Last green task / next incomplete task: Task 6 / Task 8.
+Last green task / next incomplete task: Task 8 / Task 9.
 
-Next exact action: Task 7 replacement (claude.ai page, fly lab), then Task 8 docs and gates.
+Next exact action: the owner's picks (Task 9) and the write-back.

@@ -405,19 +405,23 @@ func test_held_boxes(runner) -> bool:
 		var box: Rect2 = SelectionLab.HELD_BOXES[1]
 		runner.check(points.filter(func(at: Vector2) -> bool: return box.has_point(at)).size() >= 5, "LB15 %s: box 1 holds at least 5 own units" % label)
 		runner.check(not _marks(lab).preview.is_empty() and _marks(lab).dragging and selection._drag.showing, "LB15 %s: box 1 shows its preview" % label)
+		runner.check(selection.status_line().contains("box army (D)"), "LB15 %s: the line names box 1 army" % label)
 		runner.check(_marks(lab).hovered == hovered and not _marks(lab).preview.has(hovered), "LB15 %s: the hovered enemy gets no ticks while a box is held" % label)
 		runner.check(selection._drag.box.is_equal_approx(_screen_rect(lab, box)) and selection._drag.box.size.is_equal_approx(box.size * lab.ZOOMS[lab.zoom_index]), "LB15 %s: the held box stays on its plane rect" % label)
 		_press(lab, KEY_D)
+		runner.check(selection.status_line().contains("box edge (D)"), "LB15 %s: the line names box 2 edge" % label)
 		box = SelectionLab.HELD_BOXES[2]
 		var off_map: bool = false
 		for corner: Vector2 in [box.position, box.end, Vector2(box.position.x, box.end.y), Vector2(box.end.x, box.position.y)]:
 			if not _on_map(Iso.plane_to_world(corner)): off_map = true
 		runner.check(off_map and selection._drag.showing, "LB15 %s: box 2 reaches off the map" % label)
 		_press(lab, KEY_D)
+		runner.check(selection.status_line().contains("box army+Shift (D)"), "LB15 %s: the line names box 3 army+Shift" % label)
 		var preview: Array = _marks(lab).preview
 		runner.check(not preview.is_empty() and selection._army.selected.all(func(id: int) -> bool: return not preview.has(id)), "LB15 %s: box 3 (Shift) previews only units not yet selected" % label)
 		_press(lab, KEY_D)
 		runner.check(not selection._drag.showing and not _marks(lab).dragging, "LB15 %s: D wraps to no box" % label)
+		runner.check(selection.status_line().contains("box none (D)"), "LB15 %s: the line names the wrapped box none" % label)
 		lab.cycle_zoom()
 	lab.free()
 	return true
@@ -468,6 +472,8 @@ func test_round_trip_to_old_question(runner) -> bool:
 	_go(lab, &"token_set")
 	var enemy_owners: Array = _marks(lab).state.entities.map(func(row: Dictionary) -> int: return row.owner)
 	runner.check(lab.variants.opponent_owner == 4 and enemy_owners.has(4) and enemy_owners.count(3) == 12, "LB17 entering with opponent owner 3 steps the enemy to owner 4, off the ally's colour")
+	_go(lab, &"biome")
+	runner.check(lab.variants.opponent_owner == 3, "LB17 leaving the new questions brings back the opponent colour owner 3")
 	lab.free()
 	return true
 
@@ -478,9 +484,9 @@ func test_key_interactions(runner) -> bool:
 	_go(lab, &"token_set")
 	for code in [KEY_P, KEY_G, KEY_D]: _press(lab, code)
 	var line: String = selection.status_line()
-	runner.check(line == "panel many (P) | ground dark (G) | box 1 (D) | view frozen (V)", "LB18 P, G and D change the lab line: %s" % line)
+	runner.check(line == "panel many (P) | ground dark (G) | box army (D) | selected 10", "LB18 P, G and D change the lab line, with the box named, the selection counted and no view in token_set: %s" % line)
 	_press(lab, KEY_BRACKETRIGHT)
-	runner.check(selection.status_line() == line, "LB18 ] into health_bar keeps panel, ground and box")
+	runner.check(selection.status_line().begins_with(line), "LB18 ] into health_bar keeps panel, ground, box and selection")
 	for i in 3: _press(lab, KEY_D)
 	selection.pointer(_button(Vector2(300, 300), true), view)
 	selection.pointer(_motion(Vector2(400, 380)), view)
@@ -488,6 +494,7 @@ func test_key_interactions(runner) -> bool:
 	_press(lab, KEY_BRACKETRIGHT)
 	runner.check(not selection._dragging and not selection._drag.showing and lab.current_question() == &"value_size", "LB18 ] mid-drag ends the drag")
 	_go(lab, &"health_bar")
+	runner.check(selection.status_line().ends_with("selected 10 | view frozen (V)"), "LB18 health_bar names the frozen view after the selection count")
 	_press(lab, KEY_V)
 	line = selection.status_line()
 	runner.check(line.ends_with("view live (V)") and view._state.map.size[0] == 40 and _marks(lab).map_size == Vector2i(40, 40), "LB18 V in health_bar shows the live fight")
@@ -501,7 +508,7 @@ func test_key_interactions(runner) -> bool:
 	_go(lab, &"health_bar")
 	_press(lab, KEY_V)
 	_go(lab, &"value_size")
-	runner.check(not selection.key(KEY_V) and selection.status_line().ends_with("view frozen (V)"), "LB18 V outside health_bar does nothing")
+	runner.check(not selection.key(KEY_V) and not selection.status_line().contains("view"), "LB18 V outside health_bar does nothing and the line has no view")
 	var label: Label = selection._panels[0].labels()[0]
 	_press(lab, KEY_Q)
 	runner.check(lab.quality == GraphicsSettings.LOW and selection._panels[0].labels()[0] == label, "LB18 Q changes quality and leaves the panel")
@@ -518,7 +525,7 @@ func test_key_interactions(runner) -> bool:
 	_press(lab, KEY_D)
 	selection.pointer(_button(Vector2(10, 10), true), view)
 	selection.pointer(_button(Vector2(10, 10), false), view)
-	runner.check(_marks(lab).selected.is_empty(), "LB18 a click on empty ground clears the selection")
+	runner.check(_marks(lab).selected.is_empty() and selection.status_line().contains("selected 0"), "LB18 a click on empty ground clears the selection and the line says selected 0")
 	_press(lab, KEY_R)
 	runner.check(selection._held == 0 and _marks(lab).selected == selection._army.selected and lab.fight.simulation.tick() <= 1, "LB18 R restarts the fight, drops the box and brings the fixture selection back")
 	_go(lab, &"biome")

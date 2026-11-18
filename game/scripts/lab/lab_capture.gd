@@ -229,7 +229,7 @@ static func _near(color: Color, wanted: Color) -> bool:
 func _apply(shot: Dictionary) -> bool:
 	var ready: bool = setup(_viewport, shot.question, shot.variant, shot.zoom) \
 		and lab_line(_viewport, KEY_G, "ground %s" % ("dark" if shot.dark else "sand")) \
-		and lab_line(_viewport, KEY_D, "box %d (D)" % shot.held) \
+		and lab_line(_viewport, KEY_D, "box %s (D)" % SelectionLab.HELD_NAMES[shot.held]) \
 		and lab_line(_viewport, KEY_P, "panel %s (P)" % shot.state) \
 		and (shot.question != &"health_bar" or lab_line(_viewport, KEY_V, "view %s (V)" % ("live" if shot.live else "frozen")))
 	_lab._camera.position = camera_for(shot)

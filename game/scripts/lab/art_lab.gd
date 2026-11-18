@@ -25,6 +25,7 @@ var zoom_index: int = 1
 var paused: bool = false
 var selection_lab: SelectionLab = SelectionLab.new()
 var _current: Dictionary = {}
+var _opponent_before: int = 0
 var _selected: Array[int] = []
 var _visuals := VisualDirector.new()
 var _ground := AbOverlay.new()
@@ -98,12 +99,16 @@ func _show(state: Dictionary) -> void:
 	_ground.visible = not _lab_question()
 	_top.visible = not _lab_question()
 	if _lab_question():
+		if _opponent_before == 0: _opponent_before = variants.opponent_owner
 		# Owner 3 is the frozen army's ally.
 		if variants.opponent_owner == LabArmy.ALLY: variants.opponent_owner += 1
 		# Neon reaches horde rings through the batch even under palette A; leaving re-applies it.
 		if _view.bright_owners(): _view.set_bright_owners(false)
 		selection_lab.present(current_question(), variants, state)
 		return
+	if _opponent_before != 0:
+		variants.opponent_owner = _opponent_before
+		_opponent_before = 0
 	selection_lab.hide_all(_view)
 	_view.set_state(AbVariants.recolored(state, variants.opponent_owner), _selected)
 
