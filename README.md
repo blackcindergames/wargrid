@@ -99,16 +99,16 @@ Performance against the low-end budget (generated):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 223% | 🔺 1% worse (busy host) | 2026-11-18 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 168% | ➖ same (busy host) | 2026-11-18 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 149% | ➖ same (busy host) | 2026-11-18 |
-| Drawing the screen | 🟢 OK | ████████░░ 83% | 🔺 15% worse (busy host) | 2026-11-18 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 79% | 🔺 12% worse (busy host) | 2026-11-18 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 76% | ➖ same (busy host) | 2026-11-18 |
-| Combat, normal fights, slowest moments | 🟢 OK | ██████░░░░ 61% | 🔻 2% better (busy host) | 2026-11-18 |
-| Unit movement | 🟢 OK | ████░░░░░░ 44% | ➖ same (busy host) | 2026-11-18 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same (busy host) | 2026-11-18 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 4% better (busy host) | 2026-11-18 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 211% | 🔻 5% better | 2026-11-18 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | 🔻 5% better | 2026-11-18 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | 🔻 5% better | 2026-11-18 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-18 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔻 10% better | 2026-11-18 |
+| Drawing the screen | 🟢 OK | ██████░░░░ 69% | 🔻 16% better | 2026-11-18 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 5% better | 2026-11-18 |
+| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 7% better | 2026-11-18 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 5% better | 2026-11-18 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 4% better | 2026-11-18 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 

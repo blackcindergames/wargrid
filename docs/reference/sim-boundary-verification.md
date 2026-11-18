@@ -385,8 +385,8 @@ Visible windows: never at night (Q11 A, user 2026-11-17). Commands and what to l
 
 | Date | Check | Result | Tree |
 |---|---|---|---|
-| | Manual online match: local relay (`PORT=18600 go run .` in `relay/`), two `sh tools/run_game.sh` windows (Create, Join with relay URL `ws://127.0.0.1:18600/ws`), one short match plus a rematch | match runs and ends normally / Play again starts a second match / no waiting line stays / no desync (no notice, no new `desync-seat<N>.json`): each pass or what was seen | branch tip |
-| | Rendered rerun (`movement_benchmark.tscn`, `perf_record.py --label "Sim boundary SB4"`) | row recorded | after the merge |
+| 2026-11-18 | Manual online match: local relay (`PORT=18600 go run .` in `relay/`), two `sh tools/run_game.sh` windows (Create, Join with relay URL `ws://127.0.0.1:18600/ws`), one short match plus a rematch | pass (owner, 2026-11-18: "everything worked"): match ended normally, rematch started, no waiting line stayed, no desync notice, no new `desync-seat<N>.json` (folder holds only an older file from before the check). Logs: command latency p50 97-174 ms, RTT p95 34 ms; one presentation error per window, `Playback can only happen when a node is inside the scene tree` from `SoundPlayer._click` (`sound_player.gd:125`), not SB4 | `main` `6854ff5` (SB4 merged before the check) |
+| 2026-11-18 | Rendered rerun (`movement_benchmark.tscn`, `perf_record.py --label "Sim boundary SB4 + pump hardening merge rendered"`; one run covers both merges) | `RENDERED BENCHMARK PASSED 4`, 8 rows recorded; horde frame interval p95 1.678 ms (P12 merge row 1.676), tick p95 5.023 ms; load 2.39 at start | `main` `1d6b9bd` (pump hardening fast-forwarded) |
 
 ### Base counts (Task 1 Step 5)
 
