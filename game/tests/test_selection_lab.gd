@@ -24,7 +24,7 @@ const B_HEX := {"bg": "172731", "btn": "223640", "panel2": "2b4453", "quiet": "1
 const SLOT_ONE_HEX: Array[String] = ["628ffa", "d6120c", "4ad49b", "f8e425", "0e92a7", "7242fe", "ec8600", "f79cef"]
 
 func cases() -> Array[Callable]:
-	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules, test_new_questions_switch, test_no_labels_in_window, test_held_boxes, test_session_only_as_main, test_round_trip_to_old_question, test_key_interactions, test_opponent_skips_ally]
+	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules, test_new_questions_switch, test_no_labels_in_window, test_held_boxes, test_session_only_as_main, test_round_trip_to_old_question, test_key_interactions, test_opponent_skips_ally, test_live_view_selection]
 
 func test_token_sets(runner) -> bool:
 	var a: Dictionary = LabLook.tokens(&"a")
@@ -463,6 +463,9 @@ func test_round_trip_to_old_question(runner) -> bool:
 	_press(lab, KEY_Q)
 	_press(lab, KEY_O)
 	runner.check(lab.variants.is_b(&"biome") and lab.quality != quality and lab.variants.opponent_owner == 3, "LB17 AB7's Tab, Q and O behave as before")
+	_go(lab, &"token_set")
+	var enemy_owners: Array = _marks(lab).state.entities.map(func(row: Dictionary) -> int: return row.owner)
+	runner.check(lab.variants.opponent_owner == 4 and enemy_owners.has(4) and enemy_owners.count(3) == 12, "LB17 entering with opponent owner 3 steps the enemy to owner 4, off the ally's colour")
 	lab.free()
 	return true
 
@@ -551,5 +554,38 @@ func test_opponent_skips_ally(runner) -> bool:
 	lab.variants.opponent_owner = 8
 	_press(lab, KEY_O)
 	runner.check(lab.variants.opponent_owner == 2, "LB19 O wraps from 8 to 2")
+	_go(lab, &"owner_palette")
+	_press(lab, KEY_TAB)
+	runner.check(lab._view._batch.bright_owners, "LB19 owner_palette B turns Neon on")
+	_go(lab, &"health_bar")
+	_press(lab, KEY_TAB)
+	runner.check(not lab._view._batch.bright_owners, "LB19 Neon stays off in the new questions, also after Tab re-applies the variants")
+	for i in 2: _press(lab, KEY_BRACKETLEFT)
+	runner.check(lab.current_question() == &"owner_palette" and lab._view._batch.bright_owners, "LB19 back on owner_palette Neon returns")
+	lab.free()
+	return true
+
+func test_live_view_selection(runner) -> bool:
+	var lab = await _lab(runner)
+	var selection = lab.selection_lab
+	var army = selection._army
+	_go(lab, &"health_bar")
+	_press(lab, KEY_V)
+	var live: Dictionary = _marks(lab).state
+	var own: Array = _own_rows(live).map(func(row: Dictionary) -> int: return row.id)
+	var picked: Array = _marks(lab).selected
+	runner.check(picked.size() == 10 and picked.all(func(id: int) -> bool: return own.has(id)), "LB20 the live view selects 10 own live units")
+	runner.check(picked == SelectionLab.live_pick(live) and _marks(lab).hovered == -1, "LB20 the live view picks by the fixture rule and clears hover")
+	var full: Array[int] = [1, 2, 3, 4, 5, 6]
+	var rows: Array = []
+	for id in range(1, 13): rows.append({id = id, owner = LabArmy.OWN, hp = 10 if full.has(id) else 5, max_hp = 10})
+	rows.append({id = 13, owner = LabArmy.ENEMY, hp = 10, max_hp = 10})
+	runner.check(SelectionLab.live_pick({entities = rows}) == ([1, 2, 3, 4, 5, 7, 8, 9, 10, 11] as Array[int]), "LB20 live_pick takes 5 full and 5 damaged own units")
+	runner.check(SelectionLab.live_pick({entities = rows.slice(0, 4)}) == ([1, 2, 3, 4] as Array[int]), "LB20 live_pick falls back to the first own units")
+	_press(lab, KEY_V)
+	runner.check(_marks(lab).selected == army.selected and _marks(lab).hovered == army.hovered, "LB20 V back restores the frozen selection and hover")
+	_press(lab, KEY_V)
+	_press(lab, KEY_BRACKETRIGHT)
+	runner.check(_marks(lab).selected == army.selected and _marks(lab).hovered == army.hovered and _marks(lab).map_size == LabArmy.MAP_SIZE, "LB20 leaving health_bar from the live view restores the frozen selection")
 	lab.free()
 	return true

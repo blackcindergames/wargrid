@@ -98,6 +98,10 @@ func _show(state: Dictionary) -> void:
 	_ground.visible = not _lab_question()
 	_top.visible = not _lab_question()
 	if _lab_question():
+		# Owner 3 is the frozen army's ally.
+		if variants.opponent_owner == LabArmy.ALLY: variants.opponent_owner += 1
+		# Neon reaches horde rings through the batch even under palette A; leaving re-applies it.
+		if _view.bright_owners(): _view.set_bright_owners(false)
 		selection_lab.present(current_question(), variants, state)
 		return
 	selection_lab.hide_all(_view)
@@ -149,7 +153,6 @@ func toggle_quality() -> void:
 
 func cycle_opponent_colour() -> void:
 	variants.opponent_owner = 2 if variants.opponent_owner >= 8 else variants.opponent_owner + 1
-	if variants.opponent_owner == LabArmy.ALLY and _lab_question(): variants.opponent_owner += 1
 	_show(_current)
 
 func cycle_zoom() -> void:

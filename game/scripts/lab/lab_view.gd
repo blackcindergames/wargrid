@@ -33,6 +33,9 @@ func set_palette_a(on: bool) -> void:
 	_structures.queue_redraw()
 	_rebuild_batch()
 
+func bright_owners() -> bool:
+	return _bright
+
 func _tint(owner_id: int) -> Color:
 	if _palette_a and owner_id >= 1 and owner_id <= LabLook.PALETTE_A.size(): return LabLook.PALETTE_A[owner_id - 1]
 	return super(owner_id)

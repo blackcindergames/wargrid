@@ -37,6 +37,9 @@ var _panel_key: Array = []
 var _dark: bool = false
 var _held: int = 0
 var _live: bool = false
+var _was_live: bool = false
+var _frozen_selected: Array[int] = []
+var _frozen_hovered: int = -1
 var _dragging: bool = false
 var _drag_start := Vector2.ZERO
 var _drag_point := Vector2.ZERO
@@ -128,6 +131,7 @@ func reset() -> void:
 	_held = 0
 	_dragging = false
 	_live = false
+	_was_live = false
 	_refresh()
 
 func status_line() -> String:
@@ -153,6 +157,7 @@ func _live_view() -> bool:
 
 func _refresh() -> void:
 	if not _on: return
+	if _live_view() != _was_live: _swap_selection()
 	var source: Dictionary = _live_state if _live_view() else _army.state
 	_shown = AbVariants.recolored(source, _variants.opponent_owner)
 	_view.set_biome(0 if _dark else Palette.DEFAULT_BIOME)
@@ -160,6 +165,35 @@ func _refresh() -> void:
 	_view.set_visuals(visuals if _live_view() else null)
 	_view.set_state(LabArmy.view_copy(_shown), [] as Array[int])
 	_update()
+
+# Frozen ids mean nothing in the live fight, so each view keeps its own selection and hover.
+func _swap_selection() -> void:
+	_was_live = not _was_live
+	_dragging = false
+	if _was_live:
+		_frozen_selected = _selected
+		_frozen_hovered = _hovered
+		_selected = live_pick(_live_state)
+		_hovered = -1
+	else:
+		_selected = _frozen_selected
+		_hovered = _frozen_hovered
+
+# Like the fixture: 5 own units at full health and 5 damaged, else the first 10 own.
+static func live_pick(state: Dictionary) -> Array[int]:
+	var own: Array[int] = []
+	var full: Array[int] = []
+	var damaged: Array[int] = []
+	for row: Dictionary in state.entities:
+		if row.owner != LabArmy.OWN: continue
+		own.append(row.id)
+		if row.hp == row.max_hp: full.append(row.id)
+		else: damaged.append(row.id)
+	if full.size() < 5 or damaged.size() < 5: return own.slice(0, 10)
+	var picked: Array[int] = full.slice(0, 5)
+	picked.append_array(damaged.slice(0, 5))
+	picked.sort()
+	return picked
 
 func _update() -> void:
 	if not _on: return
