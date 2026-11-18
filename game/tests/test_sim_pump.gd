@@ -43,7 +43,7 @@ class NullJobPump extends SimPump:
 		return super(job, slot)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -141,7 +141,7 @@ func test_sb3_two_notes_one_drain(runner) -> bool:
 	var results: Array = []
 	for i in 60:
 		var command: Dictionary = _halt(battle.builder).merged({"tick": pump.live().tick(), "sequence": pump.live().last_sequence(1) + 1})
-		runner.check(pump.recorder().issue_command(command).ok, "SB3 external command accepted")
+		runner.check(pump.live().issue_command(command).ok, "SB3 external command accepted")
 		pump.live().step()
 		events = pump.live().combat_events().duplicate(true)
 		results = pump.live().command_results().duplicate(true)
@@ -651,4 +651,17 @@ func test_ph_sequence_stamp_only_on_request(runner) -> bool:
 	pump.post(_job([_move(id)]))
 	issued = pump.drain()[0].issued
 	runner.check(issued[0].ok and issued[0].command.sequence == 0, "PH with the flag it is stamped, got %s" % [issued[0]])
+	return true
+
+func test_ph_record_returns_command_log(runner) -> bool:
+	var pump = _pump()
+	var id: int = _own_unit(pump.live())
+	pump.post(_job([_move(id), _move(999999)]))
+	pump.drain()
+	var r: Dictionary = pump.record()
+	runner.check(r.keys() == ["tick", "digest", "match", "commands"], "PH record has tick, digest, match and commands, got %s" % [r.keys()])
+	runner.check(r.get("commands", []).size() == 1 and r.commands[0].entity_ids == [id], "PH the log holds the accepted command only")
+	if r.has("commands") and not r.commands.is_empty(): r.commands[0].type = "x"
+	runner.check(pump.record().get("commands", [{}])[0].get("type", "") == "move", "PH record hands a copy")
+	runner.check(not pump.has_method("recorder"), "PH recorder() is gone")
 	return true

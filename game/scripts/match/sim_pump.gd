@@ -15,6 +15,7 @@ class Job:
 	var step: bool = true
 	var want_digest: bool = false
 	var want_ring: bool = false
+	var want_log: bool = false
 	var preview: Dictionary = {}
 	var stamp_sequence: bool = false
 
@@ -29,6 +30,8 @@ class Note:
 	var snapshot: Dictionary = {}
 	var digest: String = ""
 	var ring: PackedStringArray = PackedStringArray()
+	@warning_ignore("shadowed_global_identifier")
+	var log: Array[Dictionary] = []
 	var preview: Dictionary = {}
 	var starts: Dictionary = {}
 	var stats: Array[Dictionary] = []
@@ -96,8 +99,9 @@ func record() -> Dictionary:
 	var job := Job.new()
 	job.step = false
 	job.want_digest = true
+	job.want_log = true
 	var note: Note = query(job)
-	return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match}
+	return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match, "commands": note.log}
 
 func busy() -> bool:
 	return false
@@ -107,9 +111,6 @@ func stop() -> void:
 
 func live() -> Simulation:
 	return _sim
-
-func recorder() -> CommandRecorder:
-	return _recorder
 
 func _note_for(job: Job, slot: Slot) -> Note:
 	return run_job(_sim, _recorder, job, slot)
@@ -146,6 +147,7 @@ static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job
 		note.snapshot = sim.snapshot()
 		note.digest = StateHash.digest(note.snapshot)
 	if job.want_ring: note.ring = sim.hash_ring()
+	if job.want_log: note.log.assign(command_recorder.commands().duplicate(true))
 	if slot != null:
 		slot.tick = sim.tick()
 		slot.view = sim.view_state()

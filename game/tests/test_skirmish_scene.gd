@@ -1166,7 +1166,7 @@ func test_offline_driver_stamps_like_the_scene(runner) -> bool:
 	driver.flush()
 	var queued: Array = driver.pump.live().snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "stop")
 	var stamps: Array = queued.map(func(command: Dictionary) -> Array: return [command.tick, command.player, command.sequence])
-	runner.check(first.ok and refused.ok and second.ok and stamps == [[tick, 1, 0], [tick, 1, 1]] and driver.pump.recorder().commands().size() == 2, "OD1 offline driver stamps tick, player and sequence like main._submit")
+	runner.check(first.ok and refused.ok and second.ok and stamps == [[tick, 1, 0], [tick, 1, 1]] and driver.record().commands.size() == 2, "OD1 offline driver stamps tick, player and sequence like main._submit")
 	driver.step()
 	driver.drain()
 	var answers: Array = driver.take_answers().map(func(answer: Dictionary) -> Array: return [answer.command.type, answer.command.sequence, answer.ok, not answer.error.is_empty()])
@@ -1468,6 +1468,14 @@ func test_sb3_submit_queues(runner) -> bool:
 	main.free()
 	return true
 
+func _replayed_digest(main, recorded: Array[Dictionary]) -> String:
+	var oracle = Skirmish.create(true, "ai", main.factions, main.map_path, main.starts)
+	var pending: Array = recorded.duplicate()
+	for tick in main.driver.record().tick:
+		while not pending.is_empty() and pending[0].tick == tick: oracle.issue_command(pending.pop_front())
+		oracle.step()
+	return StateHash.digest(oracle.snapshot())
+
 func test_sb3_match_log_equals_recorder(runner) -> bool:
 	var main = await _setup(runner)
 	var stop := {"type": "stop", "entity_ids": [1]}
@@ -1476,10 +1484,11 @@ func test_sb3_match_log_equals_recorder(runner) -> bool:
 		if i == 20: main.driver.submit({"type": "move", "entity_ids": [1], "target": [-5.0, -5.0]})
 		if i == 30: main.driver.submit(stop)
 		BaseScene.tick(main)
-	var recorded: Array[Dictionary] = main.driver.pump.recorder().commands()
+	var recorded: Array[Dictionary] = main.driver.record().commands
 	var own: int = recorded.filter(func(command: Dictionary) -> bool: return command.player == 1).size()
 	runner.check(own == 2 and recorded.size() > own, "SB3 fixture: two accepted own orders and the bot's, got %d of %d" % [own, recorded.size()])
 	runner.check(main.driver.match_log().commands == Lockstep.log_lines(recorded), "SB3 the offline match log equals the recorder's commands")
+	runner.check(_replayed_digest(main, recorded) == main.driver.record().digest, "SB3 a replay of the recorded commands reaches the recorded digest")
 	main.free()
 	return true
 

@@ -147,7 +147,7 @@ func playtest_match() -> Dictionary:
 	return _match_record(played.mode, played.factions, played.commands)
 
 func playtest_header() -> Dictionary:
-	var played: Dictionary = driver.match_log()
+	var played: Dictionary = driver.match_header()
 	return _header(played.mode, played.factions)
 
 func _header(mode: String, match_factions: Array) -> Dictionary:

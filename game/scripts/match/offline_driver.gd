@@ -148,6 +148,8 @@ func leave() -> void:
 func detach() -> void:
 	pass
 
-# shortcut: reads the pump's recorder on the caller so log and record() share one state; SB5 moves it into the record query
+func match_header() -> Dictionary:
+	return {"mode": "offline", "factions": [_factions[1], _factions[2]]}
+
 func match_log() -> Dictionary:
-	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "commands": Lockstep.log_lines(pump.recorder().commands())}
+	return match_header().merged({"commands": Lockstep.log_lines(pump.record().commands)})
