@@ -180,7 +180,9 @@ What a player notices: a Level control on the Play page next to the bot's factio
 
 Changes to the earlier cut (`5-m8-package-cut.md`): L1 "about five levels" becomes six, shipped one at a time as each passes (S7 is the first L1 step); "strong bot first" is gone (Regular first); B10 "A fair bot that can beat you" becomes Elite's gate; the opening repertoire is no longer a level lever (Q9 b: every level varies).
 
-## 7. Proposed package rows (not applied; the owner approves edits to tracked documents)
+## 7. Package rows
+
+Applied 2026-11-18 (user): the Bot report card and Bot attack test night rows, lane renumbered (Bot report card night 10, Lighter relay frames 11, Bot attack test 12, Cheaper step 13). Still proposed, waiting for the Bot attack test's result (user, 2026-11-18): the Economy curve night and the two day rows.
 
 `docs/packages.md`, night lane:
 
