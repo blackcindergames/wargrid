@@ -46,7 +46,7 @@ class NullJobPump extends SimPump:
 		return super(job, slot)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_gapped_finish_tick_after_end_keeps_reason, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_gapped_finish_tick_after_end_keeps_reason, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -786,4 +786,16 @@ func test_ph_driver_matches_advance_peer(runner) -> bool:
 	runner.check(a.order.refusals.is_empty() and peer.order.refusals.is_empty() and overs == 1 and peer.over_sent, "PH every frame of both sides is legal at the relay, got %s and %s" % [a.order.refusals, peer.order.refusals])
 	a.peer = null
 	ls.send = Callable()
+	return true
+
+func test_ph_nested_cache_freeze(runner) -> bool:
+	_pump()
+	var views: Array = []
+	for id: String in Registry.units() + Registry.buildings():
+		for view: Dictionary in [Registry.unit_view(id), Registry.building_view(id), Registry.profile_view(id)]:
+			if not view.is_empty(): views.append(view)
+	runner.check(not views.is_empty() and views.all(func(view: Dictionary) -> bool: return view.is_read_only()), "PH start freezes every cached view (%d views)" % views.size())
+	Registry.add_test_kind("ph_probe", _rifle_row("rifle"))
+	runner.check(not Registry.unit_view("ph_probe").is_read_only(), "PH a test kind resets to writable caches")
+	Registry.clear_test_kinds()
 	return true

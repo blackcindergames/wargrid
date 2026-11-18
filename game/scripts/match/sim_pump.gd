@@ -115,13 +115,16 @@ func live() -> Simulation:
 func _note_for(job: Job, slot: Slot) -> Note:
 	return run_job(_sim, _recorder, job, slot)
 
+static func _warm_reach(id: String) -> void:
+	if not CombatDefinitions.weapon(CombatDefinitions.profile(id).get("weapon", "")).is_empty(): Combat.reach_of(id)
+
+static func _warmers() -> Dictionary:
+	return {"unit": Registry.unit_view, "building": Registry.building_view, "profile": Registry.profile_view, "radius": CombatDefinitions.radius, "reach": _warm_reach}
+
 func _warm_and_freeze() -> void:
-	for id: String in Registry.units() + Registry.buildings():
-		Registry.unit_view(id)
-		Registry.building_view(id)
-		Registry.profile_view(id)
-		CombatDefinitions.radius(id)
-		if not CombatDefinitions.weapon(CombatDefinitions.profile(id).get("weapon", "")).is_empty(): Combat.reach_of(id)
+	var warmers: Dictionary = _warmers()
+	for name: String in Registry.cache_names():
+		for id: String in Registry.units() + Registry.buildings(): warmers[name].call(id)
 	Registry.freeze_caches()
 	Skirmish.freeze_map()
 
