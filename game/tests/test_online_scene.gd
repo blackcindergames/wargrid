@@ -37,6 +37,7 @@ class FakeTransport extends RefCounted:
 	var is_silent: bool = false
 	var close_calls: int = 0
 	var order := RelayFrameOrder.new()
+	var expect_refusal: bool = false
 	func poll() -> PackedStringArray:
 		var out := frames
 		frames = PackedStringArray()
@@ -46,6 +47,7 @@ class FakeTransport extends RefCounted:
 	func send_text(text: String) -> void:
 		sent.append(text)
 		if order.accepts(text): return
+		if not expect_refusal: push_error("relay refused: %s" % text)
 		frames.append(Wire.encode({"type": "error", "reason": "invalid message"}))
 		is_closed = true
 	func closed() -> bool: return is_closed
@@ -1870,7 +1872,10 @@ func test_sb4_refused_post_ends_match(runner) -> bool:
 	_run(main, 8)
 	var kept: Array[int] = _sent_ticks(online.transport)
 	driver.pump.stop()
+	var kept_tick: int = driver.pump.live().tick()
+	var kept_sequence: int = driver.pump.live().last_sequence(2)
 	_run(main, 1)
+	runner.check(driver.pump.live().tick() == kept_tick and driver.pump.live().last_sequence(2) == kept_sequence, "PH a refused online post issues and steps nothing, got tick %d" % driver.pump.live().tick())
 	runner.check(online.lockstep.status() == "ended_protocol" and online.lockstep.end_reason() == "sim pump refused tick 8", "SB4 a refused job ends the match, got %s '%s'" % [online.lockstep.status(), online.lockstep.end_reason()])
 	runner.check(driver.over() and online.transport.closed() and driver.notice().begins_with("Protocol error"), "SB4 the refusal closes the room and names it, got '%s'" % driver.notice())
 	runner.check(_sent_ticks(online.transport) == kept and _sent_types(online.transport, "over") == 0, "SB4 nothing is sent for the refused tick, got %s from %s" % [_sent_ticks(online.transport), kept])
@@ -1906,6 +1911,7 @@ func test_ph_fake_relay_frame_order(runner) -> bool:
 	runner.check(order.accepts(_tick_text(4)), "PH relay rule: a rematch resets the last tick and over")
 	runner.check(order.accepts(Wire.encode({"type": "over"})) and order.accepts(Wire.encode({"type": "again"})), "PH relay rule: a rematch resets again")
 	var transport := FakeTransport.new()
+	transport.expect_refusal = true
 	transport.send_text(Wire.encode({"type": "over"}))
 	var replies: Array = Array(transport.poll()).map(func(text: String) -> Dictionary: return Wire.decode(text).message)
 	runner.check(replies == [{"type": "error", "reason": "invalid message"}], "PH fake relay: an illegal frame queues the relay's error, got %s" % [replies])
@@ -1965,9 +1971,9 @@ func test_ph_frame_order_through_end_and_rematch(runner) -> bool:
 	SkirmishMain.match_seed = before[2]
 	return true
 
-func _preview_fixture(online: Dictionary) -> int:
+func _preview_fixture(online: Dictionary, peer_to: int = 8) -> int:
 	var main = online.main
-	_peer_packets(online.transport, 2, 4, 8)
+	_peer_packets(online.transport, 2, 4, peer_to)
 	_run(main, 16)
 	_place(main)
 	BaseScene.new().hover(main, Iso.world_to_plane(Vector2(10.5, 10.5)))
@@ -2000,10 +2006,7 @@ func test_ph_preview_on_single_job_when_next_tick_waits(runner) -> bool:
 func test_ph_preview_on_steady_step(runner) -> bool:
 	var online: Dictionary = await _online(runner, 1)
 	var main = online.main
-	_peer_packets(online.transport, 2, 4, PEER_TICKS)
-	_run(main, 16)
-	_place(main)
-	BaseScene.new().hover(main, Iso.world_to_plane(Vector2(10.5, 10.5)))
+	_preview_fixture(online, PEER_TICKS)
 	main._physics_process(1.0 / 30.0)
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	runner.check(notes.size() == 1 and not notes[0].preview.is_empty(), "PH a steady one-credit step call carries the preview, got %d notes" % notes.size())

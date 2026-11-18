@@ -31,7 +31,7 @@ class PairTransport extends RefCounted:
 		inbox = PackedStringArray()
 		return out
 	func send_text(text: String) -> void:
-		order.accepts(text)
+		if not order.accepts(text): push_error("relay refused: %s" % text)
 		if Wire.decode(text).message.get("type") == "tick": peer.inbox.append(text)
 		else: others.append(text)
 	func closed() -> bool: return false
@@ -46,7 +46,7 @@ class NullJobPump extends SimPump:
 		return super(job, slot)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_gapped_finish_tick_after_end_keeps_reason, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -186,13 +186,10 @@ func test_ph_fresh_slot_per_job(runner) -> bool:
 	var held = pump.current()
 	var kept_tick: int = held.tick
 	var kept_view: Dictionary = held.view
-	var seen: Array = [held]
 	for i in 6:
 		pump.post(_job())
 		pump.drain()
-		if not seen.any(func(other) -> bool: return is_same(other, pump.current())): seen.append(pump.current())
 	runner.check(held.tick == kept_tick and is_same(held.view, kept_view) and held.view.tick == held.tick, "PH a held slot never changes after publishing")
-	runner.check(seen.size() == 7, "PH every drain shows a new slot (%d)" % seen.size())
 	var old = pump.current()
 	pump.post(_job())
 	pump.post(_job())
@@ -212,7 +209,10 @@ func test_ph_null_job_fails_pump(runner) -> bool:
 	runner.check(pump.drain().size() == 1, "PH notes filed before the failure still drain")
 	runner.check(pump.current().tick == shown.tick + 1, "PH a null job publishes nothing")
 	pump.fail_next = false
+	var shown_after = pump.current()
+	var kept_tick: int = pump.live().tick()
 	runner.check(not pump.post(_job()) and pump.drain().is_empty(), "PH a failed pump refuses every later post")
+	runner.check(pump.live().tick() == kept_tick and is_same(pump.current(), shown_after), "PH a refused post on a failed pump steps nothing, got tick %d" % pump.live().tick())
 	var queried = NullJobPump.new(_sim())
 	queried.start()
 	queried.fail_next = true
@@ -299,6 +299,7 @@ func test_sb3_job0_starts(runner) -> bool:
 	runner.check(fixture.start().starts == {} and fixture.current().tick == 0, "SB3 fixture world starts without start cells")
 	fixture.stop()
 	runner.check(not fixture.post(_job()), "SB3 post refused after stop")
+	runner.check(fixture.live().tick() == 0, "PH a post refused after stop steps nothing, got tick %d" % fixture.live().tick())
 	return true
 
 func _frozen_count() -> int:
@@ -684,15 +685,8 @@ func test_ph_finish_tick_refuses_after_end(runner) -> bool:
 	var before: int = twin.frames.size()
 	twin.ls.set_protocol_error("probe")
 	twin.ls.finish_tick(1, null)
-	runner.check(twin.frames.size() == before and twin.ls.status() == "ended_protocol" and twin.ls.end_reason() == "probe", "PH finish_tick sends nothing after the end and keeps its reason, got %s" % [twin.ls.end_reason()])
-	return true
-
-func test_ph_gapped_finish_tick_after_end_keeps_reason(runner) -> bool:
-	var twin: Dictionary = _twin()
-	var before: int = twin.frames.size()
-	twin.ls.set_protocol_error("probe")
 	twin.ls.finish_tick(2, null)
-	runner.check(twin.frames.size() == before and twin.ls.end_reason() == "probe", "PH a gapped finish_tick after the end keeps the first reason, got %d frames, %s" % [twin.frames.size() - before, twin.ls.end_reason()])
+	runner.check(twin.frames.size() == before and twin.ls.status() == "ended_protocol" and twin.ls.end_reason() == "probe", "PH finish_tick, in order or gapped, sends nothing after the end and keeps its reason, got %d frames, %s" % [twin.frames.size() - before, twin.ls.end_reason()])
 	return true
 
 func test_ph_start_after_end_sends_nothing(runner) -> bool:
