@@ -46,7 +46,7 @@ class NullJobPump extends SimPump:
 		return super(job, slot)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_gapped_finish_tick_after_end_keeps_reason, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -617,9 +617,11 @@ func test_sb4_finish_tick_uses_given_digest(runner) -> bool:
 	var twin: Dictionary = _twin()
 	var snap: Dictionary = twin.sim.snapshot()
 	var real: String = StateHash.digest(snap)
+	for tick in range(1, 30): twin.ls.finish_tick(tick, null)
 	twin.ls.finish_tick(30, snap, "feedfacecafebeef")
 	var sent: Dictionary = Wire.decode(twin.frames[-1]).message
 	runner.check(sent.hash.value == "feedfacecafebeef" and int(sent.hash.tick) == 30 and twin.ls.hash_rows()[-1] == "30\tfeedfacecafebeef", "SB4 finish_tick sends and logs the given digest, got %s" % [sent.get("hash")])
+	for tick in range(31, 60): twin.ls.finish_tick(tick, null)
 	twin.ls.finish_tick(60, snap)
 	sent = Wire.decode(twin.frames[-1]).message
 	runner.check(sent.hash.value == real and twin.ls.hash_rows()[-1] == "60\t" + real, "SB4 finish_tick without a digest computes it, got %s" % [sent.get("hash")])
@@ -675,4 +677,54 @@ func test_ph_pair_drivers_send_legal_frames(runner) -> bool:
 	runner.check(double_takes > 0, "PH fixture: seat 1 takes two ticks in one callback, got %d" % double_takes)
 	runner.check(pair.transports[0].order.refusals.is_empty() and pair.transports[1].order.refusals.is_empty(), "PH both seats send only frames the relay accepts, got %s and %s" % [pair.transports[0].order.refusals, pair.transports[1].order.refusals])
 	_unpair(pair)
+	return true
+
+func test_ph_finish_tick_refuses_after_end(runner) -> bool:
+	var twin: Dictionary = _twin()
+	var before: int = twin.frames.size()
+	twin.ls.set_protocol_error("probe")
+	twin.ls.finish_tick(1, null)
+	runner.check(twin.frames.size() == before and twin.ls.status() == "ended_protocol" and twin.ls.end_reason() == "probe", "PH finish_tick sends nothing after the end and keeps its reason, got %s" % [twin.ls.end_reason()])
+	return true
+
+func test_ph_gapped_finish_tick_after_end_keeps_reason(runner) -> bool:
+	var twin: Dictionary = _twin()
+	var before: int = twin.frames.size()
+	twin.ls.set_protocol_error("probe")
+	twin.ls.finish_tick(2, null)
+	runner.check(twin.frames.size() == before and twin.ls.end_reason() == "probe", "PH a gapped finish_tick after the end keeps the first reason, got %d frames, %s" % [twin.frames.size() - before, twin.ls.end_reason()])
+	return true
+
+func test_ph_start_after_end_sends_nothing(runner) -> bool:
+	var ls = Lockstep.new(1, [1, 2] as Array[int], 4, 30, func() -> int: return 0)
+	var frames: Array[String] = []
+	ls.send = func(text: String) -> void: frames.append(text)
+	ls.set_protocol_error("probe")
+	ls.start(Skirmish.create(true, "human").snapshot())
+	runner.check(frames.is_empty() and ls.hash_rows().is_empty() and ls.end_reason() == "probe", "PH start after the end sends nothing and logs no hash row, got %d frames" % frames.size())
+	return true
+
+func test_ph_finish_tick_refuses_out_of_order(runner) -> bool:
+	var gap: Dictionary = _twin()
+	gap.ls.finish_tick(2, null)
+	runner.check(gap.frames.size() == 1 and gap.ls.end_reason() == "own tick 6 after 4", "PH a gap is refused, got %d frames, %s" % [gap.frames.size(), gap.ls.end_reason()])
+	var repeat: Dictionary = _twin()
+	repeat.ls.finish_tick(1, null)
+	repeat.ls.finish_tick(1, null)
+	runner.check(repeat.frames.size() == 2 and repeat.ls.end_reason() == "own tick 5 after 5", "PH a repeat is refused, got %d frames, %s" % [repeat.frames.size(), repeat.ls.end_reason()])
+	var ordered: Dictionary = _twin()
+	for tick in range(1, 4): ordered.ls.finish_tick(tick, null)
+	var ticks: Array = ordered.frames.slice(1).map(func(text: String) -> int: return Wire.decode(text).message.tick)
+	runner.check(ticks == [5, 6, 7] and ordered.ls.status() == "running", "PH in order sends each, got %s %s" % [ticks, ordered.ls.status()])
+	return true
+
+func test_ph_take_checks_next_tick(runner) -> bool:
+	var ahead: Dictionary = _twin_at_four()
+	runner.check(ahead.ls.take(5) == null and ahead.ls.status() == "ended_protocol" and ahead.ls.end_reason() == "take tick 5, expected 4", "PH take ahead ends the lockstep, got %s" % [ahead.ls.end_reason()])
+	runner.check(ahead.ls.take(9) == null and ahead.ls.end_reason() == "take tick 5, expected 4", "PH take after the end keeps the first reason")
+	var quiet: Dictionary = _twin_at_four()
+	runner.check(quiet.ls.take(3, true) == null and quiet.ls.status() == "ended_protocol", "PH a quiet take does not hide a wrong tick, got %s" % [quiet.ls.status()])
+	var legal: Dictionary = _twin_at_four()
+	legal.ls.receive(_peer(4))
+	runner.check(legal.ls.take(4) != null and legal.ls.status() == "running", "PH the expected tick is taken")
 	return true

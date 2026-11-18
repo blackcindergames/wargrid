@@ -104,9 +104,12 @@ func waiting_for_tick(sim_tick: int) -> Array[int]:
 		if not _packets[s].has(sim_tick): missing.append(s)
 	return missing
 
-# quiet: the caller cannot tell yet whether the tick before ended the match, so a refusal must not change the status.
+# quiet: the caller cannot tell yet whether the tick before ended the match, so a wait, leave or hash refusal keeps the status; a wrong tick always ends.
 func take(tick: int, quiet: bool = false) -> Variant:
 	if _ended(): return null
+	if tick != _next_tick:
+		_end("ended_protocol", "take tick %d, expected %d" % [tick, _next_tick])
+		return null
 	if _left_seat != 0 and (tick > _left_after or not _packets[_left_seat].has(tick)):
 		if not quiet: _end("ended_left", "player %d disconnected" % _left_seat)
 		return null
@@ -146,6 +149,10 @@ func advance(sim: Simulation) -> bool:
 	return true
 
 func finish_tick(tick: int, state: Variant, digest: String = "") -> void:
+	if _ended(): return
+	if tick + _delay != _last_sent + 1:
+		_end("ended_protocol", "own tick %d after %d" % [tick + _delay, _last_sent])
+		return
 	var hash_entry: Variant = null
 	if state != null and tick % _hash_interval == 0:
 		var value: String = digest if not digest.is_empty() else StateHash.digest(state)

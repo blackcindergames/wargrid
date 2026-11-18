@@ -1788,7 +1788,7 @@ func test_sb4_rematch_starts_from_new_pump(runner) -> bool:
 	var last: Dictionary = Wire.decode(online.transport.sent[-1]).message
 	runner.check(last.type == "tick" and last.tick == 4 and last.get("hash", {}).get("tick") == 0 and last.get("hash", {}).get("value") == digest, "SB4 the last frame is the new tick 4 with that hash, got %s" % [last])
 	_run(main, 6)
-	# Lockstep.take trusts its caller's tick, so the driver's count must restart with the new match.
+	# Lockstep.take now refuses any other tick, so the driver's count must restart with the new match.
 	runner.check(main.driver.current().tick == 5 and main.driver._lockstep._next_tick == 5 and main.driver.get("_next_tick") == 5, "SB4 the rematch takes ticks 0-4 in order, got %d %d %s" % [main.driver.current().tick, main.driver._lockstep._next_tick, main.driver.get("_next_tick")])
 	main.free()
 	SkirmishMain.map_path = before[0]

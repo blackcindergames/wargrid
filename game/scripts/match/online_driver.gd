@@ -153,8 +153,7 @@ func _finish_job(note: SimPump.Note) -> void:
 		_lockstep.set_protocol_error("note at tick %d for taken tick %d" % [note.tick, tick])
 		return
 	_lockstep.record(tick, note.issued)
-	# An end inside an earlier finish_tick of this drain sent nothing; a later packet would leave a tick gap.
-	if not _ended(): _lockstep.finish_tick(note.tick, note.snapshot if not note.digest.is_empty() else null, note.digest)
+	_lockstep.finish_tick(note.tick, note.snapshot if not note.digest.is_empty() else null, note.digest)
 
 func _settle() -> void:
 	if not _finished and (_last.over or _ended()): _finish()

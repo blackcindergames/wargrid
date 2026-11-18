@@ -604,6 +604,7 @@ func test_pending_frame_cap(runner) -> bool:
 	filler.pad = "x".repeat(limit - queued - _encoded_size(probe))
 	runner.check(ls.submit(filler) and ls._queue_bytes == limit, "L19 a filler lands the queue exactly on the reserve")
 	runner.check(ls._queue.back().sequence == accepted, "L19 the refused order consumed no sequence")
+	ls._last_sent = 9_999_990 + ls._delay - 1
 	ls.finish_tick(9_999_990, pair[0].snapshot()) # a hash tick with a long tick number: the largest envelope
 	var frame_ok: bool = sent.size() == 1 and sent[0].to_utf8_buffer().size() <= Wire.MAX_FRAME_BYTES and Wire.decode(sent[0]).ok
 	runner.check(frame_ok, "L19 a frame filled to the reserve still fits the 64 KiB cap")

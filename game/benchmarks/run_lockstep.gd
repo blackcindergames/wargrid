@@ -44,6 +44,9 @@ func _measure() -> bool:
 		inbox.clear()
 		for text in peer_inbox: peer.receive(text)
 		peer_inbox.clear()
+		if peer.take(tick) == null:
+			push_error("Lockstep benchmark peer refused tick %d: %s (%s)" % [tick, peer.status(), peer.end_reason()])
+			return false
 		if not mine.advance(sim):
 			push_error("Lockstep benchmark stalled at tick %d: %s" % [tick, mine.status()])
 			return false
