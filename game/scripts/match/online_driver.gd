@@ -27,6 +27,7 @@ var _seed: int = 0
 var _report_path: String = ""
 var _finished: bool = false
 var _left: bool = false
+var _stopped: bool = false
 var _credit: int = 0
 var _rejections_seen: int = 0
 var _log_seen: int = 0
@@ -73,6 +74,7 @@ func create(map_path: String, starts: Array[int], _factions: Dictionary, match_s
 
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
+	_stopped = false
 	pump = SimPump.new(value)
 	first_note = pump.start()
 	_last = first_note
@@ -92,6 +94,7 @@ func start() -> void:
 	_lockstep.start(note.snapshot, note.digest)
 
 func stop() -> void:
+	_stopped = true
 	pump.stop()
 
 func detach() -> void:
@@ -109,7 +112,7 @@ func step() -> void:
 	if not _finished and (_transport.closed() or _transport.silent(Time.get_ticks_usec())): _lockstep.set_relay_lost()
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
 	for i in CATCH_UP_STEPS:
-		if _credit < 1 or _last.over: break
+		if _credit < 1 or _last.over or _stopped: break
 		var commands: Variant = _lockstep.take(_next_tick, not _taken.is_empty())
 		if commands == null: break
 		_credit -= 1
