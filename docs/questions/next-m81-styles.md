@@ -1,6 +1,6 @@
 # Next: what the three bot play styles do, and how levels are tested (M8.1)
 
-Sources. **ZH src** = ~/projects/CnC_Generals_Zero_Hour @ 0a05454, paths under `GeneralsMD/Code/GameEngine/Source/`. **Research doc** = wargrid `docs/reference/m7-verification-archive-research.md` (decoded `SkirmishScripts.scb`). Already decided, not asked: about five levels cut by removing competence, never by rule or economy bonuses; three styles (aggressive, economic, defensive) plus "random"; one difficulty and one style setting for all bots (blueprint §7 M8.1, lobby mockup, design-answers 2026-11-08). ZH has no play styles; the ZH options below are the closest things in its skirmish scripts.
+Sources. **ZH src** = ~/projects/CnC_Generals_Zero_Hour @ 0a05454, paths under `GeneralsMD/Code/GameEngine/Source/`. **Research doc** = wargrid `docs/reference/m7-verification-archive-research.md` (decoded `SkirmishScripts.scb`). Already decided, not asked: about five levels (six since 2026-11-18) cut by removing competence, never by rule or economy bonuses; three styles (aggressive, economic, defensive) plus "random"; one difficulty and one style setting for all bots (blueprint §7 M8.1, lobby mockup, design-answers 2026-11-08). ZH has no play styles; the ZH options below are the closest things in its skirmish scripts.
 
 ## Findings (short, cited)
 - **source** ZH's level differences come from scripts: Easy 3 waves, Normal 4, Hard 5; first launch about 300 s / 150 s / 10 s (`zh-defaults-followup.md` Skirmish AI; research doc "Wave timing").

@@ -244,3 +244,28 @@ A/B click results (`~/projects/wargrid-art-work/ab-results/web-20261110-155052.l
 - Click marker: the existing move/attack-move/rally ring (`add_hint`, 40 ticks, own `_submit` only) now replaces the previous marker and fades (`hint_alpha`); H3 changed from "adds a second hint" to "stays one". Lifetime is 40 sim ticks (1.33 s at 30 Hz), not wall time, so it freezes while an offline match is paused; no marker for a right click with no movable selection. Drawn in the overlay as before, no new draw call.
 - Menu layout test E8 at 1280x720 and 1920x1080 includes the Smooth and Destinations buttons: no overlap.
 - Timed runs (shortened to 2 gated, 1 report-only per layout at the user's request): see performance.md "Smooth movement toggle". Gated ashfall frame p95 7.753 and 19.144 ms vs 3.3 guard: EXCEEDED; interpolation off does not fix it; ashfall tick p50 8-10 ms (earlier 2.8-3.2) in on and off runs alike, so the cause looks machine-wide, not established. `sh tools/run_benchmark.sh` alone: exit 0, 10 BUDGET PASS.
+
+### 2026-11-18 P2.3a A/B lab (branch p2-3a-ab-lab)
+
+Plan: [P2.3a A/B lab](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md); spec: [design](../superpowers/specs/2026-11-18-p2-3a-ab-lab-design.md).
+
+| Date | Task | What ran | Tree | Result |
+|---|---|---|---|---|
+| 2026-11-18 | Setup | worktree `~/projects/wargrid-wt-p23a-ab` from `main` `6ae89cd`; spec and plan committed | branch | done |
+| 2026-11-18 | 1 | `WARGRID_TEST_ONLY=test_selection_lab` 4 cases, 75 checks, 0 failures; lint and warnings exit 0 | `3e32e3a` | green, review clean |
+| 2026-11-18 | 2 | test_selection_lab 8 cases, 305 checks, 0 failures; test_art_lab 5/121 green; lint, warnings, boundary check pass | `3274ee4` | green, review clean |
+| 2026-11-18 | 3 | test_selection_lab 12 cases, 355 checks, 0 failures; test_art_lab green; lint, warnings, boundary pass | `892f98c` | green, review clean |
+| 2026-11-18 | 4 | test_lab_panel 4 cases, 1495 checks, 0 failures; test_selection_lab 355/0; lint, warnings, boundary pass | `7de1041` | green, review clean |
+| 2026-11-18 | 5 | test_selection_lab 20 cases, 510 checks; test_lab_panel 4/1495; test_art_lab 5/165; lint, warnings, boundary, isolation pass; fix round 1 for three visible minors | `2a00ac0` | green, review clean |
+| 2026-11-18 | 6 | lab_capture 77 shots + 3 stacks, lab_clips 8 clips at 6 s; selection_lab 23/558, lab_panel 4/1687, art_lab 5/165; PX + correctness reviews, fix round 1 | `65bab01` | green, review clean |
+| 2026-11-18 | 7 | claude.ai picture page and fly.io browser build of the lab, both outside the repo | `5ecf4d0` | done |
+| 2026-11-18 | 8 | guide docs; full suite exit 0, 1122 cases, 148781 checks, 0 failures; run_checks 5 passed; protected-paths and isolation checks clean; final Opus and player-experience reviews | `5ecf4d0` | green |
+| 2026-11-18 | 9 | the owner's picks from the pictures page and the fly lab; docs write-back; `check_public.sh` exit 0 | `02e1b70` | picks recorded ([design answers](design-answers-2026-11-08.md#p23a-ab-lab-picks-user-2026-11-18)) |
+
+What was built (branch commit `ff26a6b`; guide: [chapter 5](../guide/05-presentation.md#the-four-p23a-questions), [chapter 13](../guide/13-testing-and-tooling.md#offscreen-captures)): four questions in the art lab (token set A against B side by side, health-bar rule, value size 14 against 13, drag box) on a frozen 120-unit army drawn in palette A through a lab-only `WorldView` subclass, with a lab-only HUD v5 panel and keys P, G, D, V. No file under `game/scripts/presentation/`, `game/scripts/match/` or `game/scripts/simulation/` changed.
+
+Offscreen run (2026-11-18, 1280x800 `SubViewport`): `lab_capture.gd` exit 0, `CAPTURE DONE 77 shots, 3 stacks at tick 46`, 80 PNGs; `lab_clips.gd` under `--fixed-fps 30` exit 0, `CLIPS DONE 8`, eight 180-frame MP4s. Movie Maker recorded 1280x720 and cut 40 px off the top and bottom, so it was not used. Health bars at zoom 0.5 are drawn in whole screen pixels and the capture checks every bar for a lost frame, track or fill. The owner answered the four questions on 2026-11-18 (Task 9).
+
+Last green task / next incomplete task: Task 9 / none (merge after approval).
+
+Next exact action: merge decision.

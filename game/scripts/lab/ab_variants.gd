@@ -6,13 +6,18 @@ const Palette = preload("res://scripts/presentation/palette.gd")
 const Fight = preload("res://scripts/lab/lab_fight.gd")
 
 const QUESTIONS: Array[StringName] = [
-	&"biome", &"signature", &"shake", &"owner_palette", &"sand_tone",
+	&"biome", &"signature", &"shake", &"owner_palette", &"token_set", &"health_bar", &"value_size", &"drag_box", &"sand_tone",
 ]
+const P2_3A: Array[StringName] = [&"token_set", &"health_bar", &"value_size", &"drag_box"]
 const LABELS := {
 	&"biome": ["sand ground (the game default)", "dark ground #7B7566"],
 	&"signature": ["no signature effect (no special weapon in the fight)", "big core and rings on building and vehicle deaths"],
 	&"shake": ["no camera shake (today)", "small shake on building and vehicle deaths"],
 	&"owner_palette": ["today's owner colours (the game default)", "brighter, more saturated owner colours (Neon mode)"],
+	&"token_set": ["set A left, set B right"],
+	&"health_bar": ["damaged or hovered", "selected or hovered (Zero Hour)", "selected, damaged or hovered (today)"],
+	&"value_size": ["Numbers 14/700", "Numbers 13/700 (v5)"],
+	&"drag_box": ["white 1.5 px, no fill", "white 1.5 px, 4 % white fill", "green 1 px, no fill (today, baseline only)"],
 	&"sand_tone": ["#7B7566", "#8A7D62", "#998559", "#A88E5C", "#B29763", "#C4A568"],
 }
 const SAND_STEPS: Array[Color] = [Color("7b7566"), Color("8a7d62"), Color("998559"), Color("a88e5c"), Color("b29763"), Color("c4a568")]

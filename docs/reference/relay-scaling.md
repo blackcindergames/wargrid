@@ -186,7 +186,7 @@ Player texts (proposed by the player-experience review, 2026-11-16; the starting
 
 When the two workers refuse for different reasons, show the more useful one: a version mismatch must reach the version message, not "servers full".
 
-Open: the player limit's number (night 10); which service turns the webhook into a push (chosen in the package's design); whether the platform can alert on its own failing health checks (not checked); the runbook for repointing the names.
+Open: the player limit's number (night Lighter relay frames); which service turns the webhook into a push (chosen in the package's design); whether the platform can alert on its own failing health checks (not checked); the runbook for repointing the names.
 
 ### Research for P8 (2026-11-16)
 
