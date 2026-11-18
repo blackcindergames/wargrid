@@ -16,6 +16,7 @@ class Job:
 	var want_digest: bool = false
 	var want_ring: bool = false
 	var preview: Dictionary = {}
+	var stamp_sequence: bool = false
 
 class Note:
 	var done: bool = true
@@ -128,7 +129,7 @@ static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job
 	for payload: Dictionary in job.commands:
 		var command: Dictionary = payload.duplicate(true)
 		if not command.has("tick"): command.tick = sim.tick()
-		if not command.has("sequence"): command.sequence = sim.last_sequence(command.player) + 1
+		if job.stamp_sequence and not command.has("sequence"): command.sequence = sim.last_sequence(command.player) + 1
 		var result: Dictionary = command_recorder.issue_command(command)
 		note.issued.append({"command": command, "ok": result.ok, "error": result.error})
 	var recorded: int = command_recorder.commands().size()

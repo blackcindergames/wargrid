@@ -46,9 +46,10 @@ func step() -> void:
 	job.commands = _queue
 	job.bots = BOTS
 	job.preview = _preview_request
+	job.stamp_sequence = true
+	if not pump.post(job): return
 	_queue = []
 	_preview_request = {}
-	pump.post(job)
 
 func drain() -> Array[SimPump.Note]:
 	var notes: Array[SimPump.Note] = pump.drain()
@@ -75,6 +76,7 @@ func flush() -> void:
 	var job := SimPump.Job.new()
 	job.commands = _queue
 	job.step = false
+	job.stamp_sequence = true
 	_queue = []
 	var note: SimPump.Note = pump.query(job)
 	_flushed.append_array(note.issued)

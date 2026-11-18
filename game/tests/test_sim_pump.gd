@@ -43,7 +43,7 @@ class NullJobPump extends SimPump:
 		return super(job, slot)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -57,6 +57,7 @@ func _job(commands: Array = [], bots: Array = []):
 	var job = SimPump.Job.new()
 	job.commands.assign(commands)
 	job.bots.assign(bots)
+	job.stamp_sequence = true
 	return job
 
 func _own_unit(sim, kind: String = "", owner: int = 1) -> int:
@@ -637,4 +638,17 @@ func test_sb4_ring_query(runner) -> bool:
 	job.want_ring = false
 	runner.check(pump.query(job).ring.is_empty(), "SB4 a query without want_ring has no ring")
 	runner.check(is_same(pump.current(), current) and pump.live().tick() == 40 and pump.drain().size() == 40, "SB4 the ring query leaves the slots and the note queue alone")
+	return true
+
+func test_ph_sequence_stamp_only_on_request(runner) -> bool:
+	var pump = _pump()
+	var id: int = _own_unit(pump.live())
+	var bare = SimPump.Job.new()
+	bare.commands.assign([_move(id)])
+	pump.post(bare)
+	var issued: Array = pump.drain()[0].issued
+	runner.check(not issued[0].ok and issued[0].error == "Missing field: sequence" and pump.live().last_sequence(1) == -1, "PH without the flag a missing sequence is refused, got %s" % [issued[0]])
+	pump.post(_job([_move(id)]))
+	issued = pump.drain()[0].issued
+	runner.check(issued[0].ok and issued[0].command.sequence == 0, "PH with the flag it is stamped, got %s" % [issued[0]])
 	return true

@@ -27,7 +27,7 @@ const TABLE: String = "HUD/ResultPanel/Center/Card/Box/Table"
 const LENGTH: String = "HUD/ResultPanel/Center/Card/Box/Length"
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -1598,5 +1598,29 @@ func test_sb3_record_reads_live_without_queue(runner) -> bool:
 	runner.check(stepped.commands.size() == played.commands.size() + 1 and stepped.commands[-1].contains("stop"), "SB3 the record's log holds the order its digest contains, got %s" % [stepped.commands.slice(played.commands.size())])
 	main.driver.drain()
 	runner.check(main.driver.match_log().commands == stepped.commands, "SB3 the drain adds nothing to the log")
+	main.free()
+	return true
+
+func test_ph_refused_post_keeps_queue_and_preview(runner) -> bool:
+	var main = await _setup(runner)
+	var driver = main.driver
+	for i in 5: BaseScene.tick(main)
+	var builder: int = driver.pump.live().snapshot().entities.filter(func(u: Dictionary) -> bool: return u.owner == 1 and u.kind == "usa_builder")[0].id
+	var req := {"player": 1, "builder_id": builder, "kind": "usa_power_plant", "origin": Vector2i(10, 10)}
+	var other := {"player": 1, "builder_id": builder, "kind": "usa_power_plant", "origin": Vector2i(14, 10)}
+	driver.submit({"type": "stop", "entity_ids": [1]})
+	driver.request_preview(req)
+	driver.pump.stop()
+	BaseScene.tick(main)
+	var types := func() -> Array: return driver.queued().map(func(c: Dictionary) -> String: return c.type)
+	runner.check(types.call() == ["stop"], "PH a refused post keeps the queued order, got %s" % [types.call()])
+	runner.check(driver.get("_preview_request") == req, "PH a refused post keeps the preview request")
+	driver.submit({"type": "move", "entity_ids": [1], "target": [12.5, 12.5]})
+	runner.check(types.call() == ["stop", "move"], "PH a submit after the refusal queues behind, got %s" % [types.call()])
+	driver.request_preview(other)
+	BaseScene.tick(main)
+	runner.check(driver.get("_preview_request") == other, "PH a newer request replaces the kept one")
+	driver.request_preview({})
+	runner.check(driver.get("_preview_request").is_empty() and driver.preview_answer().is_empty(), "PH an empty request clears request and answer")
 	main.free()
 	return true

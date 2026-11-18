@@ -437,22 +437,22 @@ Findings that change later tasks: none. Every cited symbol exists; only `match_s
 Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`; `main` `6854ff5` merged in at `07f0c59` (user, 2026-11-18). Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-18, Task 2 green, uncommitted)
+Resume record (updated 2026-11-18, Task 3 green, uncommitted)
 Branch / base commit / working-tree state: pump-hardening / code base 6ae89cd; HEAD 07f0c59 merges main (P2.3a lab, bot plans; user, 2026-11-18, handoff), so Task 1's "empty diff" gate is restated as: `git diff 6ae89cd -- game/scripts tools relay protocol`, minus `game/scripts/lab/`, is empty (checked, empty); the lab, `art_lab.tscn`, `test_lab_panel.gd`, `test_selection_lab.gd` and their two `run_tests.gd` entries are the only other differences / only this file changed
-Last green task / next incomplete task: Task 2 (awaiting the coordinator's commit; Task 1 committed) / Task 3
-Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/scripts/match/sim_pump.gd, game/tests/test_sim_pump.gd
-Last command / cases / checks / failures / exit / marker: `SUITE(t2)`: exit 0, CASES 1124, CHECKS 148794, FAILURES 0, `TESTS PASSED 148794`; `TRACES(t2)`: replay, economy, combat `REPLAYS MATCHED 1200`, team `REPLAYS MATCHED 100`; lint, warnings (182 files), python tests exit 0; mutation proof t2m1 red (`PH a null job publishes nothing`), revert exit 0. Netplay and team match not rerun (Task 2 touches no online path; run at Task 14)
+Last green task / next incomplete task: Task 3 (awaiting the coordinator's commit; Tasks 1 and 2 committed) / Task 4
+Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/scripts/match/sim_pump.gd, game/scripts/match/offline_driver.gd, game/tests/test_sim_pump.gd, game/tests/test_online_scene.gd, game/tests/test_skirmish_scene.gd
+Last command / cases / checks / failures / exit / marker: `SUITE(t3)`: exit 0, CASES 1127, CHECKS 148802, FAILURES 0, `TESTS PASSED 148802`; `TRACES(t3)`: replay, economy, combat `REPLAYS MATCHED 1200`, team `REPLAYS MATCHED 100`; lint, warnings (182 files), python tests exit 0; mutation proof t3m1 red (4 named PH checks), revert exit 0. Netplay and team match not rerun (offline flag only; online jobs now unstamped, covered by the new peer case; run at Task 14)
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: six plan choices answered (user, 2026-11-18; plan "Owner answers"); one local commit per green task pre-authorized, never push or merge (user, 2026-11-18); hybrid start in an attended session, owner approves prompts by phone; benchmarks above load 2.5 run, tagged "host under load", evening rerun listed (user, 2026-11-18)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: coordinator commits Task 2; Task 3 (offline job flow); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
+Next exact action: coordinator commits Task 3; Task 4 (`record()` returns the command log); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
 ```
 
 | Task | What | Status |
 |---|---|---|
 | 1 | Base counts and line map | green, committed |
-| 2 | Fresh slot per job; a null job fails the pump | green, uncommitted |
-| 3 | Offline job flow: stamp on request (F35), refused post keeps queue and preview (F32) | not started |
+| 2 | Fresh slot per job; a null job fails the pump | green, committed |
+| 3 | Offline job flow: stamp on request (F35), refused post keeps queue and preview (F32) | green, uncommitted |
 | 4 | `record()` returns the command log; `recorder()` goes; header without log | not started |
 | 5 | One `close_match` call on every exit path | not started |
 | 6 | Lockstep refuses out-of-order `take` and `finish_tick` | not started |
@@ -476,6 +476,9 @@ Next exact action: coordinator commits Task 2; Task 3 (offline job flow); every 
 | 2026-11-18 | Task 2 Step 0/2: `ONLY(t2s0, test_sim_pump)`; red `ONLY(t2red, test_ph_)`, `ONLY(t2red-inv, test_sb3_slot_invariant)` | s0 exit 0, 89 checks; red exit 1: 7 named PH checks fail (CASES 2 CHECKS 9) and the replaced slot check fails (4 slots); no SCRIPT ERROR | pump-hardening, HEAD after Task 1 |
 | 2026-11-18 | Task 2 Step 3/4: `ONLY(t2g)`, `SUITE(t2)`, `TRACES(t2)`, lint, warnings, python tests | `test_sim_pump` CASES 19 CHECKS 98; suite exit 0, CASES 1124, CHECKS 148794, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); lint clean, `WARNINGS CHECKED 182 FILES`, `PYTHON TESTS PASSED`; load 1.05 before | same tree plus Task 2 changes |
 | 2026-11-18 | Task 2 Step 5: mutation `_ready = slot` before the null check in `post`; `ONLY(t2m1, test_ph_null_job)`; revert `git diff --exit-code` | exit 1, `FAIL: PH a null job publishes nothing`; revert exit 0 | same tree |
+| 2026-11-18 | Task 3 Step 0/2: `ONLY(t3s0, test_sim_pump)`; red `ONLY(t3red, test_ph_)` | s0 exit 0, 98 checks; red exit 1: 7 named PH checks fail (CASES 5 CHECKS 17), no SCRIPT ERROR | pump-hardening, HEAD after Task 2 |
+| 2026-11-18 | Task 3 Step 3/4: `ONLY(t3g, test_ph_)`, `SUITE(t3)`, `TRACES(t3)`, lint, warnings, python tests | `test_ph_` CASES 5 CHECKS 17 FAILURES 0; suite exit 0, CASES 1127, CHECKS 148802, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); lint clean, `WARNINGS CHECKED 182 FILES`, `PYTHON TESTS PASSED`; load 1.80 before | same tree plus Task 3 changes |
+| 2026-11-18 | Task 3 Step 5: mutation `step` clears `_queue` and `_preview_request` before `post`; `ONLY(t3m1, test_ph_refused_post)`; revert `git diff --exit-code` | exit 1, 4 named PH checks fail; revert exit 0 | same tree |
 
 ### Base counts (Task 1)
 
