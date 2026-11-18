@@ -431,3 +431,68 @@ Plan cites are `main` `1be405a`; right column is the base. A function name is th
 | docs: guide 01 :92, :105, :128, :131, :148; 04 :36, :118, :148, :165, :181; 05 :161, :231; 10 :82, :84, :144-145, :168; 11 :13, :39-54, :79-93, :178, :184, :196, :235, :240, :262; 12 :158, :215; 13 :100, :255; `sim-interface.md` :42, :62; spec :196; `STATUS.md` :36 | footers re-found: 01 :148, 04 :181, 05 :244 (was :231), 10 :168, 11 :262, 12 :215, 13 :255; `sim-interface.md` :62 (live-read sentence), spec :196 (SB4 row), `STATUS.md` :36 (night 6 row); the other guide spots are found by their text in Task 5 (guide 05 moved by P12) |
 
 Findings that change later tasks: none. Every cited symbol exists; only `match_screen.gd`, guide 05 and a few `online_driver.gd` and `test_online_scene.gd` lines moved, as the plan expected.
+
+## Pump hardening
+
+Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`. Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
+
+```text
+Resume record (updated 2026-11-18, plan reviewed and fixed, no task started)
+Branch / base commit / working-tree state: pump-hardening / code base 6ae89cd, docs prep commit on top before Task 1 (Task 1 checks `git diff 6ae89cd --stat -- game tools relay protocol` is empty) / plan and this section uncommitted until the prep commit
+Last green task / next incomplete task: none / Task 1
+Changed paths since last commit: docs/superpowers/plans/2026-11-18-pump-hardening.md, docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: none
+Known red case or blocker: none
+Approved decisions, pre-authorizations used, deferred gates: six plan choices answered (user, 2026-11-18; plan "Owner answers"); one local commit per green task pre-authorized, never push or merge (user, 2026-11-18); hybrid start in an attended session, owner approves prompts by phone; benchmarks above load 2.5 run, tagged "host under load", evening rerun listed (user, 2026-11-18)
+Usage so far (python3 tools/session_usage.py <session files>): not recorded
+Next exact action: prep commit on pump-hardening; then the hybrid start from the handoff; Task 1
+```
+
+| Task | What | Status |
+|---|---|---|
+| 1 | Base counts and line map | not started |
+| 2 | Fresh slot per job; a null job fails the pump | not started |
+| 3 | Offline job flow: stamp on request (F35), refused post keeps queue and preview (F32) | not started |
+| 4 | `record()` returns the command log; `recorder()` goes; header without log | not started |
+| 5 | One `close_match` call on every exit path | not started |
+| 6 | Lockstep refuses out-of-order `take` and `finish_tick` | not started |
+| 7 | Relay frame-order rule in the fake transport; receive that ends the lockstep | not started |
+| 8 | Online preview on one job per step call | not started |
+| 9 | Reference test against a plain `advance(sim)` peer | not started |
+| 10 | Nested cache freeze, warm-up from the freeze list | not started |
+| 11 | Static check: pump access outside the drivers, per-file counts | not started |
+| 12 | Profiled team-load row through `post` and `drain` | not started |
+| 13a | Docs: contract, spec, core chapters | not started |
+| 13b | Docs: presentation, performance, testing, status | not started |
+| 14 | Gate: checks, suite, netplay, benchmark, reviews | not started |
+| 15 | Review fixes; stop gate | not started |
+
+### Evidence ledger
+
+| Date | Command | Result | Tree |
+|---|---|---|---|
+
+### Base counts (Task 1)
+
+| Count | Command | Base | Plan (`6ae89cd`) |
+|---|---|---|---|
+
+### Line map (Task 1)
+
+Plan cites are `6ae89cd`; the right column is the base, filled by Task 1. A function name is the stable anchor.
+
+| Plan cite | Base location |
+|---|---|
+| `sim_pump.gd` `Job` :12-18, `Note` :20-33, `Slot` :35-37, fields :39-47, `start` :53-63, `post` :65-69, `drain` :71-75, `query` :83-84, `record` :86-91, `recorder` :102-103, `_warm_and_freeze` :105-113, `_publish` :115-119, `_rotate` :121-126, `run_job` :128-156 (sequence stamp :133) | |
+| `offline_driver.gd` `adopt` :27-37, `step` :42-51, `drain` :53-63, `flush` :73-80, `record` :85-86, `leave` :143-144, shortcut comment :149, `match_log` :150-151 | |
+| `online_driver.gd` `adopt` :74-83, `step` :104-122, `_tick_job` :124-129, `drain` :132-140, `_finish_job` :142-154 (end guard :153-154), `match_log` :263-265 | |
+| `match_screen.gd` quit wiring :84-87, `_exit_tree` :117-118, `playtest_match` :145-147, `playtest_header` :149-151, `_match_record` :156-158, `_leave` :175-181 | |
+| `playtest_overlay.gd` `close_out` :81-86, `_notification` :91-92 | |
+| `lockstep.gd` `start` :61-63, `take` :107-123, `finish_tick` :148-169 | |
+| `definitions.gd` freeze comments :119-120, `freeze_caches` :121-122, `_named_caches` :134-135, `_reset` :137-143 | |
+| `tools/test_sim_boundary.py` `LIVE_READ` :45, `LIVE_ALLOWLIST` :46-50, `screen_files` :93-94, `test_screen_reads_no_live_sim` :156-159 | |
+| `test_sim_pump.gd` `PairTransport` :22-37, `cases()` :39-40, `_job` :50-54, `pump.recorder()` :137, `test_sb3_slot_invariant` :150-171 (four-slot check :171), `test_sb4_finish_tick_uses_given_digest` :566-579 (calls :570, :573) | |
+| `test_online_scene.gd` `FakeTransport` :31-48, `cases()` :50-51, `_online` :53-63, RP8 :1586-1605, `test_sb4_foreign_note_ends_match` :1829, comment "Lockstep.take trusts its caller's tick" :1783 | |
+| `test_skirmish_scene.gd` OD1 recorder :1169, `test_sb3_match_log_equals_recorder` recorder :1479; `test_lockstep.gd` L19 `finish_tick` :607 | |
+| `run_profile.gd` `_run` :22-47, `_team_match` :129-147; marker `run_benchmark.sh:31`, `run_profile.sh:17`, `perf_record.py:37`, `test_perf_charts.py:50` | |
+| `relay/room.go` `forward` :254-262, `refuse` :362-365, `onOver` :367-379, `onAgain` :405-420, `rematch` :427-430 | |
