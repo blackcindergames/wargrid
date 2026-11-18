@@ -346,7 +346,7 @@ func _own_rows(state: Dictionary) -> Array:
 func test_new_questions_switch(runner) -> bool:
 	var lab = await _lab(runner)
 	var selection = lab.selection_lab
-	var counts := {&"token_set": 2, &"health_bar": 3, &"value_size": 2, &"drag_box": 3}
+	var counts := {&"token_set": 1, &"health_bar": 3, &"value_size": 2, &"drag_box": 3}
 	runner.check(AbVariants.P2_3A.size() == 4 and AbVariants.QUESTIONS.slice(4, 8) == AbVariants.P2_3A and AbVariants.QUESTIONS[-1] == &"sand_tone", "LB13 the four new questions sit before sand_tone")
 	for question: StringName in AbVariants.P2_3A:
 		runner.check(lab.variants.variant_count(question) == counts[question], "LB13 %s has %d variants" % [question, counts[question]])
@@ -358,7 +358,7 @@ func test_new_questions_switch(runner) -> bool:
 			match question:
 				&"token_set":
 					for slot in 2:
-						var set_name: StringName = [&"a", &"b"][slot ^ choice]
+						var set_name: StringName = [&"a", &"b"][slot]
 						var panel = selection._panels[slot]
 						runner.check(panel.visible and is_equal_approx(panel.panel_rect().position.x, LabPanel.PANEL_X[slot]), "LB13 token_set %d: panel %d shown in slot %d" % [choice, slot, slot])
 						runner.check(panel.labels()[0].text == String(set_name).to_upper() and _panel_bg(panel) == LabLook.tokens(set_name).bg, "LB13 token_set %d: slot %d shows set %s with its letter" % [choice, slot, set_name])
@@ -436,6 +436,7 @@ func test_session_only_as_main(runner) -> bool:
 	lab._start_session()
 	# The headless display server always reports unresizable as false, so only size and scale are checked.
 	runner.check(lab.current_question() == &"token_set" and window.content_scale_size == Vector2i(1280, 800), "LB16 a session starts on token_set at a 1280x800 content scale")
+	runner.check([lab.variants.variant(&"token_set"), lab.variants.variant(&"health_bar"), lab.variants.variant(&"value_size"), lab.variants.variant(&"drag_box")] == [0, 0, 1, 0], "LB16 a session starts on the owner's picks")
 	window.size = before[0]
 	window.content_scale_size = before[1]
 	window.unresizable = before[2]
@@ -612,11 +613,10 @@ func test_capture_list(runner) -> bool:
 	runner.check(shots.all(func(shot: Dictionary) -> bool: return AbVariants.P2_3A.has(shot.question)), "LB21 no shot outside the four new questions")
 	runner.check(shots.all(func(shot: Dictionary) -> bool: return shot.name.begins_with("%s-%s-%s-" % [shot.question, "abc"[shot.variant], shot.state])), "LB21 names start with question, letter and panel state")
 	for question: StringName in AbVariants.P2_3A:
-		# token_set A already shows both sets side by side; B only swaps the panels.
-		var count: int = 1 if question == &"token_set" else AbVariants.LABELS[question].size()
+		# token_set has one variant: both sets side by side.
+		var count: int = AbVariants.LABELS[question].size()
 		for choice in count:
 			runner.check(shots.any(func(shot: Dictionary) -> bool: return shot.question == question and shot.variant == choice), "LB21 %s variant %d is shot" % [question, choice])
-	runner.check(not shots.any(func(shot: Dictionary) -> bool: return shot.question == &"token_set" and shot.variant == 1), "LB21 token_set shoots only variant A")
 	for size in 2:
 		for state: StringName in [&"one", &"many", &"building"]:
 			runner.check(shots.any(func(shot: Dictionary) -> bool: return shot.question == &"value_size" and shot.variant == size and shot.state == state), "LB21 value_size %d has %s" % [size, state])

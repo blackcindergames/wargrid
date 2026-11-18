@@ -14,7 +14,7 @@ const LABELS := {
 	&"signature": ["no signature effect (no special weapon in the fight)", "big core and rings on building and vehicle deaths"],
 	&"shake": ["no camera shake (today)", "small shake on building and vehicle deaths"],
 	&"owner_palette": ["today's owner colours (the game default)", "brighter, more saturated owner colours (Neon mode)"],
-	&"token_set": ["set A left, set B right", "set B left, set A right"],
+	&"token_set": ["set A left, set B right"],
 	&"health_bar": ["damaged or hovered", "selected or hovered (Zero Hour)", "selected, damaged or hovered (today)"],
 	&"value_size": ["Numbers 14/700", "Numbers 13/700 (v5)"],
 	&"drag_box": ["white 1.5 px, no fill", "white 1.5 px, 4 % white fill", "green 1 px, no fill (today, baseline only)"],

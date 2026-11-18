@@ -239,10 +239,9 @@ func _release(view: Node2D) -> void:
 
 func _show_panels() -> void:
 	var both: bool = _question == &"token_set"
-	var swap: int = _variants.variant(&"token_set")
 	var number_size: int = LabLook.VALUE_SIZES[_variants.variant(&"value_size")]
 	_panels[1].visible = both
-	var wanted: Array = [both, swap, number_size, _panel_state]
+	var wanted: Array = [both, number_size, _panel_state]
 	if wanted == _panel_key: return
 	_panel_key = wanted
 	var state: StringName = LabPanel.STATES[_panel_state]
@@ -250,5 +249,5 @@ func _show_panels() -> void:
 		_panels[0].show_state(state, LabLook.tokens(&"a"), number_size, 0, "")
 		return
 	for slot in 2:
-		var token_set: StringName = [&"a", &"b"][slot ^ swap]
+		var token_set: StringName = [&"a", &"b"][slot]
 		_panels[slot].show_state(state, LabLook.tokens(token_set), TOKEN_SET_NUMBERS, slot, String(token_set).to_upper())

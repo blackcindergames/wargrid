@@ -18,6 +18,9 @@ const LAB_STATUS_TOP: float = 96.0
 const STATUS_TOP: float = 16.0
 
 var fight: Fight = Fight.new()
+# The owner's P2.3a picks: a session opens on them, Tab compares against the others.
+const PICKS := {&"token_set": 0, &"health_bar": 0, &"value_size": 1, &"drag_box": 0}
+
 var variants := AbVariants.new()
 var question_index: int = 0
 var quality: int = GraphicsSettings.HIGH
@@ -59,7 +62,7 @@ func _start_session() -> void:
 	window.unresizable = true
 	var letters := PackedStringArray()
 	for question in AbVariants.P2_3A:
-		variants.set_variant(question, randi() % variants.variant_count(question))
+		variants.set_variant(question, PICKS[question])
 		letters.append("%s %s" % [question, "ABCDEF"[variants.variant(question)]])
 	question_index = AbVariants.QUESTIONS.find(&"token_set")
 	print("P2.3a start variants: ", ", ".join(letters))
