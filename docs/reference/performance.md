@@ -10,9 +10,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 211% | 🔺 1% worse | 2026-11-18 |
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 159% | 🔻 1% better | 2026-11-18 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | ➖ same | 2026-11-18 |
+| Drawing the screen | 🟢 OK | ████████░░ 83% | 🔺 15% worse (busy host) | 2026-11-18 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 79% | 🔺 12% worse (busy host) | 2026-11-18 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-18 |
-| Drawing the screen | 🟢 OK | ███████░░░ 72% | ➖ same (busy host) | 2026-11-17 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔺 1% worse (busy host) | 2026-11-17 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 2% better | 2026-11-18 |
 | Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔺 1% worse | 2026-11-18 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 1% worse | 2026-11-18 |
@@ -29,8 +29,8 @@ Details:
 - combat stress p95: 159% of budget, exceeded (auto dfea626, 2026-11-18), 1% faster than Sim boundary SB4 (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 143% of budget, exceeded (auto dfea626, 2026-11-18), unchanged vs Sim boundary SB4 (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 211% of budget, exceeded (auto dfea626, 2026-11-18), 1% slower than Sim boundary SB4 (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 72% of budget (P12 merge rendered, 2026-11-17), unchanged vs Relay guards merge rendered (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
-- Ashfall tick-frame p95: 71% of budget (P12 merge rendered, 2026-11-17), 1% slower than Relay guards merge rendered (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- rendered tick-frame p95: 83% of budget (Sim boundary SB4, 2026-11-18), 15% slower than P12 merge rendered (worst vs worst); run-to-run spread not measured, busy host (load 2.8)
+- Ashfall tick-frame p95: 79% of budget (Sim boundary SB4, 2026-11-18), 12% slower than P12 merge rendered (worst vs worst); run-to-run spread not measured, busy host (load 2.8)
 - lockstep p99: 11% of budget (auto dfea626, 2026-11-18), 1% slower than Sim boundary SB4 (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
