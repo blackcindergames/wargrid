@@ -36,8 +36,14 @@ class PairTransport extends RefCounted:
 	func close() -> void: pass
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
+class NullJobPump extends SimPump:
+	var fail_next: bool = false
+	func _note_for(job: SimPump.Job, slot: SimPump.Slot) -> SimPump.Note:
+		if fail_next: return null
+		return super(job, slot)
+
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -168,7 +174,47 @@ func test_sb3_slot_invariant(runner) -> bool:
 	runner.check(held == 60, "SB3 CURRENT equals the last note and differs from PREVIOUS (%d)" % held)
 	runner.check(views == 60, "SB3 every slot holds a fresh view of its own tick (%d)" % views)
 	runner.check(kept == 60, "SB3 a post leaves CURRENT and PREVIOUS untouched until the drain (%d)" % kept)
-	runner.check(seen.size() <= 4, "SB3 at most four slots (%d)" % seen.size())
+	runner.check(seen.size() == 61, "PH every job publishes a new slot, answer 11 (%d)" % seen.size())
+	return true
+
+func test_ph_fresh_slot_per_job(runner) -> bool:
+	var pump = _pump()
+	var held = pump.current()
+	var kept_tick: int = held.tick
+	var kept_view: Dictionary = held.view
+	var seen: Array = [held]
+	for i in 6:
+		pump.post(_job())
+		pump.drain()
+		if not seen.any(func(other) -> bool: return is_same(other, pump.current())): seen.append(pump.current())
+	runner.check(held.tick == kept_tick and is_same(held.view, kept_view) and held.view.tick == held.tick, "PH a held slot never changes after publishing")
+	runner.check(seen.size() == 7, "PH every drain shows a new slot (%d)" % seen.size())
+	var old = pump.current()
+	pump.post(_job())
+	pump.post(_job())
+	pump.drain()
+	runner.check(pump.current().tick == old.tick + 2 and is_same(pump.previous(), old), "PH two posts, one drain: current is the second job, previous the old current")
+	return true
+
+func test_ph_null_job_fails_pump(runner) -> bool:
+	var pump = NullJobPump.new(_sim())
+	pump.start()
+	pump.post(_job())
+	pump.drain()
+	var shown = pump.current()
+	runner.check(pump.post(_job()), "PH a good job before the failure is accepted")
+	pump.fail_next = true
+	runner.check(not pump.post(_job()), "PH a null job is refused")
+	runner.check(pump.drain().size() == 1, "PH notes filed before the failure still drain")
+	runner.check(pump.current().tick == shown.tick + 1, "PH a null job publishes nothing")
+	pump.fail_next = false
+	runner.check(not pump.post(_job()) and pump.drain().is_empty(), "PH a failed pump refuses every later post")
+	var queried = NullJobPump.new(_sim())
+	queried.start()
+	queried.fail_next = true
+	var answer = queried.query(_job())
+	queried.fail_next = false
+	runner.check(answer == null and not queried.post(_job()), "PH a null query fails the pump")
 	return true
 
 func test_sb3_sequence_stamp(runner) -> bool:

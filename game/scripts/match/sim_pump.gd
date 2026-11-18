@@ -39,12 +39,11 @@ class Slot:
 var _sim: Simulation
 var _recorder: CommandRecorder
 var _notes: Array[Note] = []
-var _write := Slot.new()
-var _ready := Slot.new()
 var _current: Slot
 var _previous: Slot
-var _published: bool = false
+var _ready: Slot = null
 var _stopped: bool = false
+var _failed: bool = false
 
 func _init(sim: Simulation) -> void:
 	_sim = sim
@@ -54,24 +53,31 @@ func start() -> Note:
 	_warm_and_freeze()
 	var job := Job.new()
 	job.step = false
-	var note: Note = run_job(_sim, _recorder, job, _write)
-	_publish()
-	_rotate()
+	_current = Slot.new()
+	var note: Note = _note_for(job, _current)
 	var map: Dictionary = _sim.map_data()
 	if not map.is_empty():
 		for player: Dictionary in _current.view.players: note.starts[player.id] = MapData.start_cell(map, player.id)
 	return note
 
 func post(job: Job) -> bool:
-	if _stopped: return false
-	_notes.append(run_job(_sim, _recorder, job, _write))
-	_publish()
+	if _stopped or _failed: return false
+	var slot := Slot.new()
+	var note: Note = _note_for(job, slot)
+	if note == null:
+		_failed = true
+		return false
+	_notes.append(note)
+	_ready = slot
 	return true
 
 func drain() -> Array[Note]:
 	var notes: Array[Note] = _notes
 	_notes = []
-	if _published: _rotate()
+	if _ready != null:
+		_previous = _current
+		_current = _ready
+		_ready = null
 	return notes
 
 func current() -> Slot:
@@ -81,7 +87,9 @@ func previous() -> Slot:
 	return _previous
 
 func query(job: Job) -> Note:
-	return run_job(_sim, _recorder, job, null)
+	var note: Note = _note_for(job, null)
+	if note == null: _failed = true
+	return note
 
 func record() -> Dictionary:
 	var job := Job.new()
@@ -102,6 +110,9 @@ func live() -> Simulation:
 func recorder() -> CommandRecorder:
 	return _recorder
 
+func _note_for(job: Job, slot: Slot) -> Note:
+	return run_job(_sim, _recorder, job, slot)
+
 func _warm_and_freeze() -> void:
 	for id: String in Registry.units() + Registry.buildings():
 		Registry.unit_view(id)
@@ -111,19 +122,6 @@ func _warm_and_freeze() -> void:
 		if not CombatDefinitions.weapon(CombatDefinitions.profile(id).get("weapon", "")).is_empty(): Combat.reach_of(id)
 	Registry.freeze_caches()
 	Skirmish.freeze_map()
-
-func _publish() -> void:
-	var written: Slot = _write
-	_write = _ready
-	_ready = written
-	_published = true
-
-func _rotate() -> void:
-	var free: Slot = _previous if _previous != null else Slot.new()
-	_previous = _current
-	_current = _ready
-	_ready = free
-	_published = false
 
 static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job, slot: Slot) -> Note:
 	var note := Note.new()
