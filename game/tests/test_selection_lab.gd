@@ -7,6 +7,10 @@ const LabArmy = preload("res://scripts/lab/lab_army.gd")
 const Palette = preload("res://scripts/presentation/palette.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
+const LabMarks = preload("res://scripts/lab/lab_marks.gd")
+const LabDragBox = preload("res://scripts/lab/lab_drag_box.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.gd")
 const PANEL_SLOTS: Array[Rect2] = [Rect2(0, 664, 408, 136), Rect2(416, 664, 408, 136)]
 
 const ROLES: Array[StringName] = [&"bg", &"btn", &"panel2", &"quiet", &"well", &"line", &"text", &"muted", &"hint", &"sel", &"amber", &"you", &"enemy", &"ally"]
@@ -15,7 +19,7 @@ const B_HEX := {"bg": "172731", "btn": "223640", "panel2": "2b4453", "quiet": "1
 const SLOT_ONE_HEX: Array[String] = ["628ffa", "d6120c", "4ad49b", "f8e425", "0e92a7", "7242fe", "ec8600", "f79cef"]
 
 func cases() -> Array[Callable]:
-	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen]
+	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules]
 
 func test_token_sets(runner) -> bool:
 	var a: Dictionary = LabLook.tokens(&"a")
@@ -181,4 +185,107 @@ func test_fixture_on_screen(runner) -> bool:
 			var plane: Vector2 = Vector2(x, y) - Vector2(640, 400) + Iso.world_to_plane(LabArmy.CAMERA_FOCUS)
 			if not _on_map(Iso.plane_to_world(plane)): canvas_under_panel = true
 	runner.check(canvas_under_panel, "LB8 the panel also covers canvas off the map")
+	return true
+
+func test_mark_geometry(runner) -> bool:
+	var infantry: PackedVector2Array = LabMarks.unit_diamond("usa_rifle_infantry", Vector2.ZERO)
+	runner.check(infantry == PackedVector2Array([Vector2(0, -5), Vector2(10, 0), Vector2(0, 5), Vector2(-10, 0)]), "LB9 infantry diamond corners")
+	var weapon: Dictionary = CombatDefinitions.weapon(Registry.kind("usa_tank").get("weapon", ""))
+	runner.check(weapon.get("damage_type") == "armor_piercing", "LB9 usa_tank carries an armour-piercing weapon")
+	runner.check(LabMarks.unit_diamond("usa_tank", Vector2.ZERO)[1].x == 19.0, "LB9 armour-piercing vehicle half width 19")
+	runner.check(LabMarks.unit_diamond("usa_builder", Vector2.ZERO)[1].x == 16.0, "LB9 builder half width 16")
+	var moved: PackedVector2Array = LabMarks.unit_diamond("usa_rifle_infantry", Vector2(3, 4))
+	runner.check(moved[0] == Vector2(3, -1), "LB9 the diamond sits on its plane point")
+	var ticks: PackedVector2Array = LabMarks.hover_ticks(infantry)
+	runner.check(ticks.size() == 16, "LB9 hover ticks are 8 segments")
+	var edge: float = infantry[0].distance_to(infantry[1])
+	for i in 8:
+		runner.check(absf(ticks[2 * i].distance_to(ticks[2 * i + 1]) - 0.32 * edge) < 1e-4, "LB9 tick %d is 0.32 of the edge" % i)
+		runner.check(infantry.has(ticks[2 * i]), "LB9 tick %d starts at a corner" % i)
+	return true
+
+func test_edge_faces(runner) -> bool:
+	var faces: Array[PackedVector2Array] = LabMarks.edge_faces(Vector2i(24, 24))
+	runner.check(faces.size() == 2 and faces[0].size() == 4 and faces[1].size() == 4, "LB10 two 4-point faces")
+	var lit: PackedVector2Array = faces[0]
+	var shaded: PackedVector2Array = faces[1]
+	runner.check(lit[0] == Iso.world_to_plane(Vector2(0, 24)) and lit[1] == Iso.world_to_plane(Vector2(24, 24)), "LB10 lit top edge is the south-west map edge")
+	runner.check(lit[2] == lit[1] + Vector2(0, 24) and lit[3] == lit[0] + Vector2(0, 24), "LB10 lit bottom hangs 24 px lower")
+	runner.check(shaded[0] == Iso.world_to_plane(Vector2(24, 0)) and shaded[1] == Iso.world_to_plane(Vector2(24, 24)), "LB10 shaded top edge is the south-east map edge")
+	runner.check(shaded[2] == shaded[1] + Vector2(0, 24) and shaded[3] == shaded[0] + Vector2(0, 24), "LB10 shaded bottom hangs 24 px lower")
+	return true
+
+func _model(army, rule: int, hovered: int) -> Dictionary:
+	return {state = army.state, selected = army.selected, hovered = hovered, rule = rule, preview = [] as Array[int], dragging = false, map_size = LabArmy.MAP_SIZE}
+
+func _bar_ids(model: Dictionary) -> Array:
+	var ids: Array = LabMarks.bars(model).map(func(bar: Dictionary) -> int: return bar.id)
+	ids.sort()
+	return ids
+
+func test_framed_bars(runner) -> bool:
+	var rects: Dictionary = LabMarks.bar_rects(Vector2(10, 10), 0.5)
+	runner.check(rects.fill == Rect2(10, 10, 12, 3), "LB11 fill rect")
+	runner.check(rects.track == Rect2(9, 9, 26, 5), "LB11 track rect")
+	runner.check(rects.frame == Rect2(8, 8, 28, 7), "LB11 frame rect")
+	var army = LabArmy.new()
+	var damaged: Array = army.state.entities.filter(func(row: Dictionary) -> bool: return row.hp < row.max_hp).map(func(row: Dictionary) -> int: return row.id)
+	var expected: Array = damaged + [army.hovered]
+	expected.sort()
+	var under_damaged: Array = _bar_ids(_model(army, 0, army.hovered))
+	runner.check(under_damaged == expected, "LB11 rule 0 shows the 48 damaged units plus the hovered enemy")
+	for id: int in army.selected:
+		var row: Dictionary = _row(army.state, id)
+		if row.hp == row.max_hp: runner.check(not under_damaged.has(id), "LB11 rule 0 hides healthy selected %d" % id)
+	expected = army.selected + [army.hovered]
+	expected.sort()
+	runner.check(_bar_ids(_model(army, 1, army.hovered)) == expected, "LB11 rule 1 shows the 10 selected plus the hovered")
+	expected = damaged + [army.hovered]
+	for id: int in army.selected:
+		if not expected.has(id): expected.append(id)
+	expected.sort()
+	runner.check(_bar_ids(_model(army, 2, army.hovered)) == expected, "LB11 rule 2 shows the union")
+	var enemy: Array = LabMarks.bars(_model(army, 0, army.hovered)).filter(func(bar: Dictionary) -> bool: return _row(army.state, bar.id).get("owner") == 2)
+	runner.check(not enemy.is_empty() and enemy[0].frame == Color("d6120c"), "LB11 an owner 2 frame is palette A red")
+	var hovered_bar: Array = LabMarks.bars(_model(army, 1, army.hovered)).filter(func(bar: Dictionary) -> bool: return bar.id == army.hovered)
+	var row: Dictionary = _row(army.state, army.hovered)
+	var top_left: Vector2 = View.WorldBatch.pick_extent(row.kind).position + Iso.world_to_plane(Vector2(row.position[0], row.position[1])) + Vector2(0, -10)
+	runner.check(hovered_bar.size() == 1 and hovered_bar[0].rects.fill.position == top_left and hovered_bar[0].fill == View.health_color(1.0), "LB11 a unit bar sits 10 px above its pick box, filled by health colour")
+	runner.check(_bar_ids(_model(army, 0, 999999)) == _bar_ids(_model(army, 0, -1)) and _bar_ids(_model(army, 0, -1)).size() == 48, "LB11 a missing hovered id adds no bar")
+	var drawn: Array = []
+	for on_top in [false, true]:
+		var marks = LabMarks.new()
+		marks.on_top = on_top
+		var model: Dictionary = _model(army, 2, army.hovered)
+		model.preview = army.selected.slice(0, 3)
+		marks.model = model
+		runner.root.add_child(marks)
+		drawn.append(marks)
+	var drag = LabDragBox.new()
+	drag.showing = true
+	drag.box = Rect2(10, 10, 40, 30)
+	runner.root.add_child(drag)
+	drawn.append(drag)
+	for style in 3:
+		drag.style = style
+		await runner.process_frame
+	for node: Node in drawn: node.free()
+	return true
+
+func test_drag_rules(runner) -> bool:
+	runner.check(not LabDragBox.past_threshold(Vector2.ZERO, Vector2(5.9, 0)), "LB12 5.9 px is not a drag")
+	runner.check(LabDragBox.past_threshold(Vector2.ZERO, Vector2(6.0, 0)), "LB12 6 px is a drag")
+	var start: Array[int] = [5]
+	runner.check(LabMarks.preview_ids([3, 5, 7] as Array[int], start, true) == ([3, 7] as Array[int]), "LB12 Shift preview drops the start selection")
+	runner.check(LabMarks.preview_ids([3, 5, 7] as Array[int], start, false) == ([3, 5, 7] as Array[int]), "LB12 plain preview is the picked set")
+	runner.check(LabMarks.release_selection([7, 3] as Array[int], start, true) == ([3, 5, 7] as Array[int]), "LB12 Shift release adds to the start selection, sorted")
+	runner.check(LabMarks.release_selection([7, 3] as Array[int], start, false) == ([3, 7] as Array[int]), "LB12 plain release is the picked set, sorted")
+	runner.check(start == ([5] as Array[int]), "LB12 the start selection is left unchanged")
+	var drag = LabDragBox.new()
+	drag.box = Rect2(Vector2(50, 40), Vector2(10, 20) - Vector2(50, 40))
+	var up_left: Rect2 = drag.box
+	drag.box = Rect2(Vector2(10, 20), Vector2(50, 40) - Vector2(10, 20))
+	runner.check(up_left == drag.box and drag.box == Rect2(10, 20, 40, 20), "LB12 an up-left drag gives the same box as down-right")
+	runner.check(drag.mouse_filter == Control.MOUSE_FILTER_IGNORE, "LB12 the drag box ignores the mouse")
+	drag.free()
 	return true
