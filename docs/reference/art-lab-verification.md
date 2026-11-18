@@ -244,3 +244,15 @@ A/B click results (`~/projects/wargrid-art-work/ab-results/web-20261110-155052.l
 - Click marker: the existing move/attack-move/rally ring (`add_hint`, 40 ticks, own `_submit` only) now replaces the previous marker and fades (`hint_alpha`); H3 changed from "adds a second hint" to "stays one". Lifetime is 40 sim ticks (1.33 s at 30 Hz), not wall time, so it freezes while an offline match is paused; no marker for a right click with no movable selection. Drawn in the overlay as before, no new draw call.
 - Menu layout test E8 at 1280x720 and 1920x1080 includes the Smooth and Destinations buttons: no overlap.
 - Timed runs (shortened to 2 gated, 1 report-only per layout at the user's request): see performance.md "Smooth movement toggle". Gated ashfall frame p95 7.753 and 19.144 ms vs 3.3 guard: EXCEEDED; interpolation off does not fix it; ashfall tick p50 8-10 ms (earlier 2.8-3.2) in on and off runs alike, so the cause looks machine-wide, not established. `sh tools/run_benchmark.sh` alone: exit 0, 10 BUDGET PASS.
+
+### 2026-11-18 P2.3a A/B lab (branch p2-3a-ab-lab)
+
+Plan: [P2.3a A/B lab](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md); spec: [design](../superpowers/specs/2026-11-18-p2-3a-ab-lab-design.md).
+
+| Date | Task | What ran | Tree | Result |
+|---|---|---|---|---|
+| 2026-11-18 | Setup | worktree `~/projects/wargrid-wt-p23a-ab` from `main` `6ae89cd`; spec and plan committed | branch | done |
+
+Last green task / next incomplete task: Setup / Task 1.
+
+Next exact action: dispatch Task 1 (lab look).
