@@ -8,6 +8,7 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const ScriptedHuman = preload("res://scripts/simulation/scripted_human.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 
 const WARMUP: int = 300
 const SAMPLES: int = 1800
@@ -15,6 +16,9 @@ const MATCH_LIMIT: int = 12000
 const TOP_SLOW: int = 10
 var _view: Node2D
 var _no_selection: Array[int] = []
+var _direct_ms: float = 0.0
+var _direct_end_tick: int = 0
+var _direct_status: String = ""
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -41,6 +45,8 @@ func _run() -> void:
 		_fixed("combat_" + layout, CombatWorkload.create(layout))
 		done += 1
 	_team_match()
+	done += 1
+	_team_match_pump()
 	done += 1
 	_view.free()
 	print("PROFILE COMPLETE ", done)
@@ -135,13 +141,64 @@ func _team_match() -> void:
 	var max_cells: int = 0
 	while not sim.match_over() and sim.tick() < TeamMatch.TEAM_TICK_CAP:
 		if sim.tick() == WARMUP: _phase("team_match", true)
+		var zone: int = Profiler.begin()
 		TeamMatch.step(sim)
+		Profiler.end(&"team.tick", zone)
 		_frame(sim)
 		peak = maxi(peak, sim._entities.size())
 		if sim.tick() > WARMUP:
 			max_cells = maxi(max_cells, sim.path_cells())
 			if sim.path_cells() >= Simulation.PATH_CELLS_PER_TICK: capped += 1
+	_direct_ms = _zone_mean(&"team.tick") + _zone_mean(&"view_state")
+	_direct_end_tick = sim.tick()
+	_direct_status = sim.snapshot().match.status
 	_phase("team_match", false)
 	Profiler.enabled = false
 	print("PROFILE_PATHS team_match capped_ticks=", capped, " max_cells=", max_cells, " budget=", Simulation.PATH_CELLS_PER_TICK)
 	print("PROFILE_END team_match ticks=", sim.tick(), " status=", sim.snapshot().match.status, " peak_entities=", peak)
+
+func _zone_mean(zone: StringName) -> float:
+	var total: float = 0.0
+	for value: float in Profiler.series(zone): total += value
+	return total / maxi(Profiler.ticks(), 1)
+
+func _team_match_pump() -> void:
+	var pump := SimPump.new(TeamMatch.create())
+	pump.start()
+	var seats: Array[int] = []
+	for entry: Dictionary in TeamMatch.SEATS: seats.append(entry.seat)
+	Profiler.reset()
+	Profiler.enabled = true
+	var notes: int = 0
+	var window_ticks: int = 0
+	var over: bool = false
+	while not over and pump.live().tick() < TeamMatch.TEAM_TICK_CAP:
+		var sampled: bool = pump.live().tick() > WARMUP
+		if pump.live().tick() == WARMUP: _phase("team_match_pump", true)
+		var job := SimPump.Job.new()
+		job.bots = seats
+		var zone: int = Profiler.begin()
+		var posted: bool = pump.post(job)
+		Profiler.end(&"pump.post", zone)
+		if not posted:
+			push_error("pump row: post refused at tick %d" % pump.live().tick())
+			break
+		zone = Profiler.begin()
+		var drained: Array[SimPump.Note] = pump.drain()
+		Profiler.end(&"pump.drain", zone)
+		_view.set_view(pump.current().view, _no_selection)
+		Profiler.end_tick()
+		for note: SimPump.Note in drained: over = over or note.over
+		if sampled:
+			notes += drained.size()
+			window_ticks += 1
+	var pump_ms: float = _zone_mean(&"pump.post") + _zone_mean(&"pump.drain")
+	_phase("team_match_pump", false)
+	Profiler.enabled = false
+	var end_tick: int = pump.live().tick()
+	var status: String = pump.live().snapshot().match.status
+	print("PROFILE_PUMP team_match end_tick=", end_tick, " status=", status, " window_ticks=", window_ticks, " notes=", notes,
+		" direct_ms=%.4f pump_ms=%.4f extra_ms=%.4f extra_pct=%.2f" % [_direct_ms, pump_ms, pump_ms - _direct_ms, 100.0 * (pump_ms - _direct_ms) / maxf(_direct_ms, 0.0001)])
+	if notes != window_ticks: push_error("pump row: %d notes for %d window ticks" % [notes, window_ticks])
+	if end_tick != _direct_end_tick or status != _direct_status:
+		push_error("pump row ends at tick %d (%s), direct row at %d (%s)" % [end_tick, status, _direct_end_tick, _direct_status])

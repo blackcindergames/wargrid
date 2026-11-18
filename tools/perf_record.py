@@ -34,7 +34,7 @@ MARKERS = {
     "combat": "COMBAT BENCHMARK PASSED 10",
     "lockstep": "LOCKSTEP BENCHMARK PASSED 1",
     "rendered": "RENDERED BENCHMARK PASSED 4",
-    "profile": "PROFILE COMPLETE 10",
+    "profile": "PROFILE COMPLETE 11",
 }
 HEADLESS = re.compile(r"^HEADLESS (\S+) tick_ms=(\{[^}]*\})", re.M)
 COMBAT = re.compile(r"^COMBAT ([a-z0-9_]+) tick_ms=(\{[^}]*\})", re.M)

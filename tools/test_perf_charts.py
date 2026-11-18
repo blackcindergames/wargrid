@@ -47,7 +47,7 @@ PROFILE movement_open zone=step mean_ms=0.6461 share=100.0% p50=0.6400 p95=0.700
 PROFILE movement_open zone=view_state mean_ms=0.3022 share=46.8% p50=0.3040 p95=0.3120 max=0.378 calls_per_tick=1.00
 PROFILE movement_open zone=view_rows mean_ms=0.2500 share=38.0% p50=0.2500 p95=0.2600 max=0.300 calls_per_tick=1.00
 PROFILE movement_open zone=view.sort mean_ms=0.0550 share=8.5% p50=0.0550 p95=0.0580 max=0.080 calls_per_tick=1.00
-PROFILE COMPLETE 10
+PROFILE COMPLETE 11
 """
 
 HEADLESS_P95_OPEN = 0.707

@@ -28,7 +28,7 @@ grep -Eq '^LOCKSTEP BENCHMARK PASSED 1$' "$log_dir/lockstep.log" || exit 1
 [ "$(grep -c '^WORST TICK ' "$log_dir/lockstep.log")" -eq 1 ] || exit 1
 # Hand-off cost (view_state + view.sort + view.batch) for the plumbing rows; profiled, so never a tick budget.
 run profile.log --script res://benchmarks/run_profile.gd
-grep -Eq '^PROFILE COMPLETE 10$' "$log_dir/profile.log" || exit 1
+grep -Eq '^PROFILE COMPLETE 11$' "$log_dir/profile.log" || exit 1
 over=$(cat "$log_dir"/*.log | sed -n 's/^OVER BUDGET \([^ ]*\) .*/\1/p' | tr '\n' ' ')
 [ -z "$over" ] || echo "BUDGET EXCEEDED ${over% } (regression ceilings held)"
 
