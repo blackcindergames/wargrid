@@ -4,13 +4,14 @@ Branch / base commit / working-tree state: spike-art-lab / fdf3e49 / uncommitted
 | 2026-11-18 | 3 | test_selection_lab 12 cases, 355 checks, 0 failures; test_art_lab green; lint, warnings, boundary pass | `892f98c` | green, review clean |
 | 2026-11-18 | 4 | test_lab_panel 4 cases, 1495 checks, 0 failures; test_selection_lab 355/0; lint, warnings, boundary pass | `7de1041` | green, review clean |
 | 2026-11-18 | 5 | test_selection_lab 20 cases, 510 checks; test_lab_panel 4/1495; test_art_lab 5/165; lint, warnings, boundary, isolation pass; fix round 1 for three visible minors | `2a00ac0` | green, review clean |
+| 2026-11-18 | 6 | lab_capture 77 shots + 3 stacks, lab_clips 8 clips at 6 s; selection_lab 23/558, lab_panel 4/1687, art_lab 5/165; PX + correctness reviews, fix round 1 | `65bab01` | green, review clean |
 
-Last green task / next incomplete task: Task 5 / Task 6.
+Last green task / next incomplete task: Task 6 / Task 8.
 Changed paths since last commit: see Branch line
 Last command / cases / checks / failures / exit / marker: full suite / 728 cases, 139569 checks, 0 failures / exit 0 / TESTS PASSED 139569; lint 0; warnings 137 files 0; `sh tools/run_benchmark.sh` exit 0, 10 BUDGET PASS
 Known red case or blocker: none in tests; gated Ashfall frame p95 7.753 and 19.144 ms vs 3.3 guard EXCEEDED with interpolation off (machine-wide slowdown, cause not established); default config (interpolation on, High) exceeds the Ashfall guard
 Approved decisions, pre-authorizations used, deferred gates: as before; timed runs shortened by user request (2 gated + 1 report-only per layout)
-Next exact action: dispatch Task 6 (captures and clips).
+Next exact action: Task 7 replacement (claude.ai page, fly lab), then Task 8 docs and gates.
 
 ## Evidence rows (append-only)
 
@@ -259,6 +260,6 @@ Plan: [P2.3a A/B lab](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md); spec: [d
 | 2026-11-18 | Setup | worktree `~/projects/wargrid-wt-p23a-ab` from `main` `6ae89cd`; spec and plan committed | branch | done |
 | 2026-11-18 | 1 | `WARGRID_TEST_ONLY=test_selection_lab` 4 cases, 75 checks, 0 failures; lint and warnings exit 0 | `3e32e3a` | green, review clean |
 
-Last green task / next incomplete task: Task 5 / Task 6.
+Last green task / next incomplete task: Task 6 / Task 8.
 
-Next exact action: dispatch Task 6 (captures and clips).
+Next exact action: Task 7 replacement (claude.ai page, fly lab), then Task 8 docs and gates.
