@@ -437,20 +437,20 @@ Findings that change later tasks: none. Every cited symbol exists; only `match_s
 Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`. Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-18, plan reviewed and fixed, no task started)
-Branch / base commit / working-tree state: pump-hardening / code base 6ae89cd, docs prep commit on top before Task 1 (Task 1 checks `git diff 6ae89cd --stat -- game tools relay protocol` is empty) / plan and this section uncommitted until the prep commit
-Last green task / next incomplete task: none / Task 1
-Changed paths since last commit: docs/superpowers/plans/2026-11-18-pump-hardening.md, docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: none
+Resume record (updated 2026-11-18, Task 1 green, uncommitted)
+Branch / base commit / working-tree state: pump-hardening / code base 6ae89cd; HEAD 07f0c59 merges main (P2.3a lab, bot plans; user, 2026-11-18, handoff), so Task 1's "empty diff" gate is restated as: `git diff 6ae89cd -- game/scripts tools relay protocol`, minus `game/scripts/lab/`, is empty (checked, empty); the lab, `art_lab.tscn`, `test_lab_panel.gd`, `test_selection_lab.gd` and their two `run_tests.gd` entries are the only other differences / only this file changed
+Last green task / next incomplete task: Task 1 (base at 07f0c59, awaiting the coordinator's commit) / Task 2
+Changed paths since last commit: docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: `SUITE(base)`: exit 0, CASES 1122, CHECKS 148785, FAILURES 0, `TESTS PASSED 148785`; `NET(base, match)` and `NET(base, rematch)`: exit 0, terminal tick 9013 both; team match exit 0, `TEAM MATCH won tick=38786 winner=2 units_peak=268`; lint, warnings (182 files), python tests exit 0
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: six plan choices answered (user, 2026-11-18; plan "Owner answers"); one local commit per green task pre-authorized, never push or merge (user, 2026-11-18); hybrid start in an attended session, owner approves prompts by phone; benchmarks above load 2.5 run, tagged "host under load", evening rerun listed (user, 2026-11-18)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: prep commit on pump-hardening; then the hybrid start from the handoff; Task 1
+Next exact action: coordinator commits Task 1; Task 2 (fresh slot per job); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
 ```
 
 | Task | What | Status |
 |---|---|---|
-| 1 | Base counts and line map | not started |
+| 1 | Base counts and line map | green, uncommitted |
 | 2 | Fresh slot per job; a null job fails the pump | not started |
 | 3 | Offline job flow: stamp on request (F35), refused post keeps queue and preview (F32) | not started |
 | 4 | `record()` returns the command log; `recorder()` goes; header without log | not started |
@@ -471,28 +471,40 @@ Next exact action: prep commit on pump-hardening; then the hybrid start from the
 
 | Date | Command | Result | Tree |
 |---|---|---|---|
+| 2026-11-18 | Task 1 Step 1: `uptime`, `pgrep -fl godot`; restated gate `git diff 6ae89cd --name-only -- game/scripts tools relay protocol` minus `game/scripts/lab/` | load 1.72 1.64 1.69; no godot process; diff empty | pump-hardening, HEAD `07f0c59` (main merged; user, 2026-11-18); other differences from `6ae89cd`: the lab, `art_lab.tscn`, `test_lab_panel.gd`, `test_selection_lab.gd`, two `run_tests.gd` entries |
+| 2026-11-18 | Task 1 Step 2: `SUITE(base)` (four trace variables), `ONLY(base-pump/-online/-lock/-overlay/-skirmish)`, `NET(base, match)`, `NET(base, rematch)`, `run_team_match.sh`, `run_lint.sh`, `run_warnings.sh`, `run_python_tests.sh` | all exit 0; CASES 1122, CHECKS 148785, FAILURES 0, `TESTS PASSED 148785`; ONLY 89, 3134, 118, 221, 328 checks; both terminal ticks 9013, `NETPLAY PASSED`; `TEAM MATCH won tick=38786 winner=2 units_peak=268`; lint clean; `WARNINGS CHECKED 182 FILES`; `PYTHON TESTS PASSED`; load 2.44 after the run | same tree; base includes the two lab suites (72 suites) |
 
 ### Base counts (Task 1)
 
 | Count | Command | Base | Plan (`6ae89cd`) |
 |---|---|---|---|
+| Suites in `run_tests.gd` | `rg -o 'preload\("res://tests/' game/tests/run_tests.gd` | 72 (70 + `test_selection_lab`, `test_lab_panel` from the main merge) | not stated |
+| Suite cases / checks | `SUITE(base)` | CASES 1122, CHECKS 148785 (includes the two lab suites) | not stated |
+| `cases()` length `test_sim_pump` / `test_online_scene` / `test_lockstep` / `test_playtest_overlay` / `test_skirmish_scene` | count of the `cases()` list | 17 / 72 / 26 / 48 / 58 | not stated |
+| `ONLY` checks, same five suites | `ONLY(base-*)` | 89 / 3134 / 118 / 221 / 328 | not stated |
+| Pump accesses in the drivers | `rg -c '\bpump\s*\.'` | offline_driver 8, online_driver 8 | 8, 8 |
+| `recorder()` sites | `rg -n 'recorder\(\)' game tools` | `offline_driver.gd:151`, `sim_pump.gd:102`, `test_sim_pump.gd:137`, `test_skirmish_scene.gd:1169` and `:1479`, `tools/test_sim_boundary.py:146` (string fixture, stays) | as listed in the plan |
+| `shortcut:` and `SB5` notes | `rg -n 'shortcut:\|SB5' offline_driver.gd definitions.gd` | `offline_driver.gd:149`, `definitions.gd:120` | same |
+| Netplay terminal ticks | `NET(base, match)`, `NET(base, rematch)` | 9013, 9013 (`NETPLAY PASSED`) | 9013 |
+| Team match | `run_team_match.sh` | `TEAM MATCH won tick=38786 winner=2 units_peak=268` | same |
+| Static | lint, warnings, python tests | `Success: no problems found`; `WARNINGS CHECKED 182 FILES`; `PYTHON TESTS PASSED` | not stated |
 
 ### Line map (Task 1)
 
-Plan cites are `6ae89cd`; the right column is the base, filled by Task 1. A function name is the stable anchor.
+Plan cites are `6ae89cd`; the right column is the base (HEAD `07f0c59`), filled by Task 1. A function name is the stable anchor.
 
 | Plan cite | Base location |
 |---|---|
-| `sim_pump.gd` `Job` :12-18, `Note` :20-33, `Slot` :35-37, fields :39-47, `start` :53-63, `post` :65-69, `drain` :71-75, `query` :83-84, `record` :86-91, `recorder` :102-103, `_warm_and_freeze` :105-113, `_publish` :115-119, `_rotate` :121-126, `run_job` :128-156 (sequence stamp :133) | |
-| `offline_driver.gd` `adopt` :27-37, `step` :42-51, `drain` :53-63, `flush` :73-80, `record` :85-86, `leave` :143-144, shortcut comment :149, `match_log` :150-151 | |
-| `online_driver.gd` `adopt` :74-83, `step` :104-122, `_tick_job` :124-129, `drain` :132-140, `_finish_job` :142-154 (end guard :153-154), `match_log` :263-265 | |
-| `match_screen.gd` quit wiring :84-87, `_exit_tree` :117-118, `playtest_match` :145-147, `playtest_header` :149-151, `_match_record` :156-158, `_leave` :175-181 | |
-| `playtest_overlay.gd` `close_out` :81-86, `_notification` :91-92 | |
-| `lockstep.gd` `start` :61-63, `take` :107-123, `finish_tick` :148-169 | |
-| `definitions.gd` freeze comments :119-120, `freeze_caches` :121-122, `_named_caches` :134-135, `_reset` :137-143 | |
-| `tools/test_sim_boundary.py` `LIVE_READ` :45, `LIVE_ALLOWLIST` :46-50, `screen_files` :93-94, `test_screen_reads_no_live_sim` :156-159 | |
-| `test_sim_pump.gd` `PairTransport` :22-37, `cases()` :39-40, `_job` :50-54, `pump.recorder()` :137, `test_sb3_slot_invariant` :150-171 (four-slot check :171), `test_sb4_finish_tick_uses_given_digest` :566-579 (calls :570, :573) | |
-| `test_online_scene.gd` `FakeTransport` :31-48, `cases()` :50-51, `_online` :53-63, RP8 :1586-1605, `test_sb4_foreign_note_ends_match` :1829, comment "Lockstep.take trusts its caller's tick" :1783 | |
-| `test_skirmish_scene.gd` OD1 recorder :1169, `test_sb3_match_log_equals_recorder` recorder :1479; `test_lockstep.gd` L19 `finish_tick` :607 | |
-| `run_profile.gd` `_run` :22-47, `_team_match` :129-147; marker `run_benchmark.sh:31`, `run_profile.sh:17`, `perf_record.py:37`, `test_perf_charts.py:50` | |
-| `relay/room.go` `forward` :254-262, `refuse` :362-365, `onOver` :367-379, `onAgain` :405-420, `rematch` :427-430 | |
+| `sim_pump.gd` `Job` :12-18, `Note` :20-33, `Slot` :35-37, fields :39-47, `start` :53-63, `post` :65-69, `drain` :71-75, `query` :83-84, `record` :86-91, `recorder` :102-103, `_warm_and_freeze` :105-113, `_publish` :115-119, `_rotate` :121-126, `run_job` :128-156 (sequence stamp :133) | `Job` :12, `Note` :20, `Slot` :35, `start` :53, `post` :65, `drain` :71, `query` :83, `record` :86, `recorder` :102, `_warm_and_freeze` :105, `_publish` :115, `_rotate` :121, `run_job` :128 (sequence stamp :133); all as at `6ae89cd` |
+| `offline_driver.gd` `adopt` :27-37, `step` :42-51, `drain` :53-63, `flush` :73-80, `record` :85-86, `leave` :143-144, shortcut comment :149, `match_log` :150-151 | `adopt` :27, `step` :42, `drain` :53, `flush` :73, `record` :85, `leave` :143, shortcut comment :149, `match_log` :150; as at `6ae89cd` |
+| `online_driver.gd` `adopt` :74-83, `step` :104-122, `_tick_job` :124-129, `drain` :132-140, `_finish_job` :142-154 (end guard :153-154), `match_log` :263-265 | `adopt` :74, `step` :104, `_tick_job` :124, `drain` :132, `_finish_job` :142 (end guard `if not _ended()` :154, `if note.over and note.tick <= tick: return` :147), `match_log` :263; as at `6ae89cd` |
+| `match_screen.gd` quit wiring :84-87, `_exit_tree` :117-118, `playtest_match` :145-147, `playtest_header` :149-151, `_match_record` :156-158, `_leave` :175-181 | in `scripts/match/match_screen.gd`: `quit` var :49, quit wiring :84-87, `_exit_tree` :117, `playtest_match` :145, `playtest_header` :149, `_match_record` :156, `_leave` :175; as at `6ae89cd` |
+| `playtest_overlay.gd` `close_out` :81-86, `_notification` :91-92 | in `scripts/playtest/playtest_overlay.gd`: `close_out` :81, `_notification` :91; as at `6ae89cd` |
+| `lockstep.gd` `start` :61-63, `take` :107-123, `finish_tick` :148-169 | `start` :61, `take` :108 (quiet comment :107), `finish_tick` :148; as at `6ae89cd` |
+| `definitions.gd` freeze comments :119-120, `freeze_caches` :121-122, `_named_caches` :134-135, `_reset` :137-143 | freeze comment :120, `freeze_caches` :121, `_named_caches` :134, `_reset` :137; as at `6ae89cd` |
+| `tools/test_sim_boundary.py` `LIVE_READ` :45, `LIVE_ALLOWLIST` :46-50, `screen_files` :93-94, `test_screen_reads_no_live_sim` :156-159 | `LIVE_READ` :45, `LIVE_ALLOWLIST` :46, `screen_files` :93, `test_screen_reads_no_live_sim` :156, `recorder()` string fixture :146; as at `6ae89cd` |
+| `test_sim_pump.gd` `PairTransport` :22-37, `cases()` :39-40, `_job` :50-54, `pump.recorder()` :137, `test_sb3_slot_invariant` :150-171 (four-slot check :171), `test_sb4_finish_tick_uses_given_digest` :566-579 (calls :570, :573) | `PairTransport` :22, `cases()` :39, `_job` :50, `pump.recorder()` :137, `test_sb3_slot_invariant` :150 (`seen.size() <= 4` :171), `test_sb4_finish_tick_uses_given_digest` :566 (calls :570, :573); as at `6ae89cd` |
+| `test_online_scene.gd` `FakeTransport` :31-48, `cases()` :50-51, `_online` :53-63, RP8 :1586-1605, `test_sb4_foreign_note_ends_match` :1829, comment "Lockstep.take trusts its caller's tick" :1783 | `FakeTransport` :31, `cases()` :50, `_online` :53, RP8 fixtures :1594-1603, `test_sb4_foreign_note_ends_match` :1829, comment :1783; as at `6ae89cd` |
+| `test_skirmish_scene.gd` OD1 recorder :1169, `test_sb3_match_log_equals_recorder` recorder :1479; `test_lockstep.gd` L19 `finish_tick` :607 | OD1 `recorder()` :1169, `test_sb3_match_log_equals_recorder` :1471 (`recorder()` :1479); `test_lockstep.gd` L19 `finish_tick` :607; as at `6ae89cd` |
+| `run_profile.gd` `_run` :22-47, `_team_match` :129-147; marker `run_benchmark.sh:31`, `run_profile.sh:17`, `perf_record.py:37`, `test_perf_charts.py:50` | `_run` :22, `_team_match` :129; marker `PROFILE COMPLETE 10` at `run_benchmark.sh:31`, `run_profile.sh:17`, `perf_record.py:37`, `test_perf_charts.py:50`; as at `6ae89cd` |
+| `relay/room.go` `forward` :254-262, `refuse` :362-365, `onOver` :367-379, `onAgain` :405-420, `rematch` :427-430 | `forward` :254, `refuse` :362, `onOver` :367, `onAgain` :406, `rematch` :427; `relay/` unchanged since `6ae89cd` |
