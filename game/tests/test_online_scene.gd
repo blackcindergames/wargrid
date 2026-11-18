@@ -20,6 +20,7 @@ const Profiler = preload("res://scripts/debug/profiler.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
 const PEER_TICKS: int = 60
+const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
 
 # Records the ticks the world view consumed, after the real director stored them.
 class VisualSpy extends "res://scripts/presentation/visual_director.gd":
@@ -35,11 +36,18 @@ class FakeTransport extends RefCounted:
 	var is_closed: bool = false
 	var is_silent: bool = false
 	var close_calls: int = 0
+	var order := RelayFrameOrder.new()
 	func poll() -> PackedStringArray:
 		var out := frames
 		frames = PackedStringArray()
+		for text in out:
+			if Wire.decode(text).message.get("type", "") == "start": order.rematch()
 		return out
-	func send_text(text: String) -> void: sent.append(text)
+	func send_text(text: String) -> void:
+		sent.append(text)
+		if order.accepts(text): return
+		frames.append(Wire.encode({"type": "error", "reason": "invalid message"}))
+		is_closed = true
 	func closed() -> bool: return is_closed
 	func silent(_now: int) -> bool: return is_silent
 	func close() -> void:
@@ -48,7 +56,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_ph_peer_command_without_sequence_refused]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -1879,4 +1887,80 @@ func test_ph_peer_command_without_sequence_refused(runner) -> bool:
 	_run(main, 12)
 	runner.check(main.driver.pump.live().last_sequence(1) == 0 and online.lockstep.status() == "running", "PH a peer command without a sequence is refused, as the headless client refuses it, got %d and %s" % [main.driver.pump.live().last_sequence(1), online.lockstep.status()])
 	main.free()
+	return true
+
+func _tick_text(tick: int) -> String:
+	return Wire.encode(Wire.tick_message(2, tick, [], null))
+
+func test_ph_fake_relay_frame_order(runner) -> bool:
+	var order := RelayFrameOrder.new()
+	runner.check(order.accepts(_tick_text(4)) and order.accepts(_tick_text(5)), "PH relay rule: ticks 4 and 5 are accepted")
+	runner.check(not order.accepts(_tick_text(5)), "PH relay rule: tick 5 again is refused")
+	runner.check(order.accepts(Wire.encode({"type": "over"})), "PH relay rule: over after a tick is accepted")
+	runner.check(not order.accepts(_tick_text(6)), "PH relay rule: a tick after over is refused")
+	runner.check(order.refusals == ["tick 5 refused", "tick 6 refused"], "PH relay rule: refusals are recorded, got %s" % [order.refusals])
+	runner.check(not order.accepts(Wire.encode({"type": "over"})), "PH relay rule: over twice is refused")
+	runner.check(order.accepts(Wire.encode({"type": "again"})), "PH relay rule: again after over is accepted")
+	runner.check(not order.accepts(Wire.encode({"type": "again"})), "PH relay rule: again twice is refused")
+	order.rematch()
+	runner.check(order.accepts(_tick_text(4)), "PH relay rule: a rematch resets the last tick and over")
+	runner.check(order.accepts(Wire.encode({"type": "over"})) and order.accepts(Wire.encode({"type": "again"})), "PH relay rule: a rematch resets again")
+	var transport := FakeTransport.new()
+	transport.send_text(Wire.encode({"type": "over"}))
+	var replies: Array = Array(transport.poll()).map(func(text: String) -> Dictionary: return Wire.decode(text).message)
+	runner.check(replies == [{"type": "error", "reason": "invalid message"}], "PH fake relay: an illegal frame queues the relay's error, got %s" % [replies])
+	runner.check(transport.closed(), "PH fake relay: and closes")
+	var fresh := RelayFrameOrder.new()
+	runner.check(not fresh.accepts(Wire.encode({"type": "over"})), "PH relay rule: over before any tick is refused")
+	runner.check(not fresh.accepts(Wire.encode({"type": "again"})), "PH relay rule: again before over is refused")
+	fresh.rematch()
+	runner.check(fresh.accepts(_tick_text(4)), "PH relay rule: tick 4 is accepted after a rematch")
+	return true
+
+func test_ph_receive_ends_lockstep_with_undrained_job(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	var driver = main.driver
+	var transport: FakeTransport = online.transport
+	_peer_packets(transport, 1, 4, 7)
+	_peer_stop(transport, 8)
+	_peer_packets(transport, 1, 9, PEER_TICKS)
+	_run(main, 8)
+	runner.check(driver.current().tick == 8, "PH fixture: steady at tick 8, got %d" % driver.current().tick)
+	var kept: Array[int] = _sent_ticks(transport)
+	main._physics_process(1.0 / 30.0)
+	runner.check(driver.get("_next_tick") == 9, "PH fixture: one callback takes tick 8 only, got %s" % driver.get("_next_tick"))
+	transport.frames.append(Wire.encode({"type": "error", "reason": "room closed"}))
+	main._physics_process(1.0 / 30.0)
+	main._drain_notes()
+	runner.check(online.lockstep.command_log().any(func(command: Dictionary) -> bool: return command.tick == 8 and command.type == "stop"), "PH a receive that ends the lockstep still records the undrained tick")
+	runner.check(_sent_ticks(transport) == kept, "PH nothing is sent for it, got %s from %s" % [_sent_ticks(transport), kept])
+	runner.check(_sent_types(transport, "over") == 0, "PH no over after the end")
+	runner.check(driver.notice() == "Relay: room closed", "PH the HUD names the end, got '%s'" % driver.notice())
+	runner.check(driver.over() and transport.closed(), "PH the same drain closes the room")
+	runner.check(transport.order.refusals.is_empty(), "PH legal frames only, got %s" % [transport.order.refusals])
+	main.free()
+	return true
+
+func test_ph_frame_order_through_end_and_rematch(runner) -> bool:
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	var transport: FakeTransport = online.transport
+	_end_in_catch_up(runner, online, PEER_TICKS, [])
+	runner.check(transport.order.refusals.is_empty(), "PH the catch-up end sends only legal frames, got %s" % [transport.order.refusals])
+	runner.check(_sent_types(transport, "over") == 1 and _contiguous(_sent_ticks(transport), 4) and online.lockstep.status() == "running", "PH the catch-up end sends one over after contiguous ticks")
+	transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	SkirmishMain.map_path = MatchSettings.map_path("dry_wells")
+	transport.frames.append(_rematch_start(99))
+	_peer_packets(transport, 1, 4, 4)
+	_run(main, 1)
+	var last: Dictionary = Wire.decode(transport.sent[-1]).message
+	runner.check(transport.order.refusals.is_empty() and _sent_types(transport, "again") == 1 and last.type == "tick" and last.tick == 4, "PH the rematch sends only legal frames, got %s and %s" % [transport.order.refusals, last])
+	main.free()
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
 	return true

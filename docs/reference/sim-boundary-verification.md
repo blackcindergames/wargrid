@@ -437,15 +437,15 @@ Findings that change later tasks: none. Every cited symbol exists; only `match_s
 Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`; `main` `6854ff5` merged in at `07f0c59` (user, 2026-11-18). Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-18, Task 5 green, uncommitted)
+Resume record (updated 2026-11-18, Task 7 green after review fixes, uncommitted; Task 6 parked)
 Branch / base commit / working-tree state: pump-hardening / code base 6ae89cd; HEAD 07f0c59 merges main (P2.3a lab, bot plans; user, 2026-11-18, handoff), so Task 1's "empty diff" gate is restated as: `git diff 6ae89cd -- game/scripts tools relay protocol`, minus `game/scripts/lab/`, is empty (checked, empty); the lab, `art_lab.tscn`, `test_lab_panel.gd`, `test_selection_lab.gd` and their two `run_tests.gd` entries are the only other differences / only this file changed
-Last green task / next incomplete task: Task 5 (awaiting the coordinator's commit; Tasks 1 to 4 committed) / Task 6
-Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/scripts/match/offline_driver.gd, game/scripts/match/online_driver.gd, game/scripts/match/match_screen.gd, game/scripts/playtest/playtest_overlay.gd, game/tests/test_playtest_overlay.gd
-Last command / cases / checks / failures / exit / marker: `SUITE(t5)`: exit 0, CASES 1130, CHECKS 148816, FAILURES 0, `TESTS PASSED 148816`; `TRACES(t5)`: replay, economy, combat `REPLAYS MATCHED 1200`, team `REPLAYS MATCHED 100`; lint, warnings (182 files), python tests exit 0; mutation proof t5m1 red (7 named PH checks), revert exit 0. Netplay and team match not rerun (online `match_log` composes the same lines; run at Task 14)
-Known red case or blocker: none
+Last green task / next incomplete task: Task 7 (awaiting the coordinator's commit; Tasks 1 to 5 committed) / Task 8 (Task 6 parked; Task 9 needs it and Task 7)
+Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/tests/relay_frame_order.gd, game/tests/relay_frame_order.gd.uid, game/tests/test_online_scene.gd, game/tests/test_sim_pump.gd
+Last command / cases / checks / failures / exit / marker: review fixes (P2-1 to P2-3): `SUITE(t7fix)`: exit 0, CASES 1134, CHECKS 148846, FAILURES 0, `TESTS PASSED 148846`; `TRACES(t7fix)`: replay, economy, combat `REPLAYS MATCHED 1200`, team `REPLAYS MATCHED 100`; `ONLY(t7fix, test_ph_)` 12/60 exit 0; lint, warnings (183 files), python tests, `check_public.sh` exit 0; mutation proofs t7fixm1 to t7fixm7 red, reverts `cmp` exit 0. Netplay not rerun (Task 7 names none; the rule only sits in test transports)
+Known red case or blocker: none; Task 6 parked (stop condition: lockstep benchmark stalls; owner decision; stash park-t6-pump)
 Approved decisions, pre-authorizations used, deferred gates: six plan choices answered (user, 2026-11-18; plan "Owner answers"); one local commit per green task pre-authorized, never push or merge (user, 2026-11-18); hybrid start in an attended session, owner approves prompts by phone; benchmarks above load 2.5 run, tagged "host under load", evening rerun listed (user, 2026-11-18)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: coordinator commits Task 5; Task 6 (lockstep refuses out-of-order `take` and `finish_tick`); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
+Next exact action: coordinator commits Task 7 (with `relay_frame_order.gd.uid`); Task 8 (online preview on one job per step call); Task 6 stays parked; every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
 ```
 
 | Task | What | Status |
@@ -454,9 +454,9 @@ Next exact action: coordinator commits Task 5; Task 6 (lockstep refuses out-of-o
 | 2 | Fresh slot per job; a null job fails the pump | green, committed |
 | 3 | Offline job flow: stamp on request (F35), refused post keeps queue and preview (F32) | green, committed |
 | 4 | `record()` returns the command log; `recorder()` goes; header without log | green, committed |
-| 5 | One `close_match` call on every exit path | green, uncommitted |
-| 6 | Lockstep refuses out-of-order `take` and `finish_tick` | not started |
-| 7 | Relay frame-order rule in the fake transport; receive that ends the lockstep | not started |
+| 5 | One `close_match` call on every exit path | green, committed |
+| 6 | Lockstep refuses out-of-order `take` and `finish_tick` | parked (stop condition: lockstep benchmark stalls; owner decision; stash park-t6-pump) |
+| 7 | Relay frame-order rule in the fake transport; receive that ends the lockstep | green after review fixes (P2-1 to P2-3), uncommitted |
 | 8 | Online preview on one job per step call | not started |
 | 9 | Reference test against a plain `advance(sim)` peer | not started |
 | 10 | Nested cache freeze, warm-up from the freeze list | not started |
@@ -485,6 +485,12 @@ Next exact action: coordinator commits Task 5; Task 6 (lockstep refuses out-of-o
 | 2026-11-18 | Task 5 Step 2: red `ONLY(t5red, test_ph_every_exit)` | exit 1: 7 named PH checks fail (CASES 1 CHECKS 7), no SCRIPT ERROR; load 1.43 | pump-hardening, HEAD after Task 4 |
 | 2026-11-18 | Task 5 Step 3/4: `ONLY(t5g, test_ph_)`, `ONLY(t5g-overlay, test_playtest_overlay)`, `SUITE(t5)`, `TRACES(t5)`, lint, warnings, python tests, `check_public.sh` | `test_ph_` CASES 8 CHECKS 30 FAILURES 0; overlay CASES 50 CHECKS 230 (PO7, PO13, PO14, NB9 to NB11, NB14 unchanged); suite exit 0, CASES 1130, CHECKS 148816, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); lint clean, `WARNINGS CHECKED 182 FILES`, `PYTHON TESTS PASSED`, `PUBLIC CHECK PASSED`; load 1.60 before | same tree plus Task 5 changes |
 | 2026-11-18 | Task 5 Step 5: mutation `driver.stop()` deleted from `close_match`; `ONLY(t5m1, test_ph_every_exit)`; revert `git diff --exit-code` | exit 1, all 7 named PH checks fail (three exits with and without the helper, online leave); revert exit 0 | same tree |
+| 2026-11-18 | Task 7 Step 2: `ONLY(t7, test_ph_)`, `ONLY(t7o, test_online_scene)`, `ONLY(t7p, test_sim_pump)`, `ONLY(t7l, test_launcher)`, `ONLY(t7v, test_order_voice)`, `ONLY(t7s, test_sound)` | all exit 0; 11/50, 76/3155, 21/104, 64/5727, 14/98, 24/177 (cases/checks), FAILURES 0; no existing case red under the rule; the new cases passed at once (they test existing behaviour); load 1.07 | pump-hardening, HEAD after Task 5, Task 6 parked |
+| 2026-11-18 | Task 7 Step 3: mutation 1 second `over` in `online_driver.gd` `_finish`; mutation 2 `packet_tick = tick + _delay + 1` in `Lockstep.finish_tick`; `ONLY(t7m1/t7m2, test_ph_frame_order)`; reverts `git diff --exit-code` | m1 exit 1: `PH the catch-up end sends only legal frames`, `PH the rematch sends only legal frames`; m2 exit 1: 4 fails incl. the same two; both reverts exit 0 | same tree |
+| 2026-11-18 | Task 7 Step 4: `SUITE(t7)`, `TRACES(t7)`, lint, warnings, python tests, `check_public.sh` | suite exit 0, CASES 1133, CHECKS 148836, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); lint clean, `WARNINGS CHECKED 183 FILES`, `PYTHON TESTS PASSED`, `PUBLIC CHECK PASSED`; load 1.47 before | same tree plus Task 7 changes |
+| 2026-11-18 | Task 7 review fixes: P2-1 `FakeTransport` probe (error frame, close) in `test_ph_fake_relay_frame_order` and the catch-up refusals check split out; P2-2 over twice, again after over, again twice, rematch reset on a used rule; P2-3 new `test_ph_pair_drivers_send_legal_frames` (`PairTransport` refusals read); `ONLY(t7fix, test_ph_)` | exit 0, CASES 12 CHECKS 60 FAILURES 0 | same tree plus Task 7 changes and fixes |
+| 2026-11-18 | Task 7 review-fix mutations, `ONLY(t7fixm<n>, ...)`, reverts by `cp` backup and `cmp`: m1 `send_text` skips `order.accepts`; m2 empty `rematch()`; m3 `over` without `not _over`; m4 `again` without `not _again`; m5 `rematch()` keeps `_again`; m6 second `over` in `_finish` (t7m1 rerun); m7 `packet_tick = tick + _delay + 1` | all exit 1 on the named checks: m1 "PH fake relay: an illegal frame queues the relay's error" and "and closes"; m2 both "a rematch resets" checks; m3 "over twice is refused"; m4 "again twice is refused"; m5 "a rematch resets again"; m6 the split "PH the catch-up end sends only legal frames, got [\"over  refused\"]"; m7 "PH both seats send only frames the relay accepts" (`tick 5 refused` both seats); every revert `cmp` exit 0 | same tree |
+| 2026-11-18 | Task 7 review fixes: `SUITE(t7fix)`, `TRACES(t7fix)`, lint, warnings, python tests, `check_public.sh` | suite exit 0, CASES 1134, CHECKS 148846, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); lint clean, `WARNINGS CHECKED 183 FILES`, `PYTHON TESTS PASSED`, `PUBLIC CHECK PASSED`; load 1.67 before | same tree plus fixes |
 
 ### Base counts (Task 1)
 
