@@ -269,7 +269,7 @@ func match_header() -> Dictionary:
 	return {"mode": "online", "factions": seats}
 
 func match_log() -> Dictionary:
-	return match_header().merged({"commands": Lockstep.log_lines(_lockstep.command_log())})
+	return match_header().merged({"commands": Lockstep.log_lines(_lockstep.command_log()), "end": (_lockstep.status() + " " + _lockstep.end_reason()).strip_edges()})
 
 func _finish() -> void:
 	_finished = true
@@ -336,5 +336,5 @@ func notice() -> String:
 		"ended_left": return "Opponent left before the start (a different map or version, or their game tab was hidden)" if _lockstep.left_before_start() else "Player %d disconnected" % _lockstep.left_seat()
 		"ended_relay": return "Connection to relay lost" if _lockstep.end_reason() == "connection to relay lost" else "Relay: " + _lockstep.end_reason()
 		"ended_desync": return ("Desync — report downloaded as %s" if web else "Desync — report saved to %s") % _report_path
-		"ended_protocol": return "Protocol error: " + _lockstep.end_reason()
+		"ended_protocol": return "Match stopped: game error. Please report it."
 	return ""

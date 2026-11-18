@@ -29,6 +29,11 @@ class VisualSpy extends "res://scripts/presentation/visual_director.gd":
 		super(step)
 		ticks.append(step.tick)
 
+class ErrorLog extends Logger:
+	var lines := PackedStringArray()
+	func _log_message(message: String, error: bool) -> void:
+		if error: lines.append(message)
+
 class FakeTransport extends RefCounted:
 	var patient: bool = false
 	var frames := PackedStringArray()
@@ -58,7 +63,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -1859,7 +1864,7 @@ func test_sb4_foreign_note_ends_match(runner) -> bool:
 	var ticks: Array[int] = _sent_ticks(online.transport)
 	runner.check(ticks.size() == kept.size() + 1 and ticks.slice(0, kept.size()) == kept and ticks[-1] == kept[-1] + 1, "SB4 only tick %d's packet is sent, got %s from %s" % [t, ticks, kept])
 	runner.check(_sent_types(online.transport, "over") == 0, "SB4 no over after a protocol error, got %d" % _sent_types(online.transport, "over"))
-	runner.check(driver.notice().begins_with("Protocol error"), "SB4 the HUD names the protocol error, got '%s'" % driver.notice())
+	runner.check(driver.notice() == "Match stopped: game error. Please report it.", "SB4 the HUD shows the plain game error, got '%s'" % driver.notice())
 	runner.check(driver.over() and online.transport.closed(), "SB4 the same drain finishes and closes the room")
 	main.free()
 	return true
@@ -1871,14 +1876,35 @@ func test_sb4_refused_post_ends_match(runner) -> bool:
 	_peer_packets(online.transport, 1, 4, PEER_TICKS)
 	_run(main, 8)
 	var kept: Array[int] = _sent_ticks(online.transport)
+	var errors := ErrorLog.new()
+	OS.add_logger(errors)
 	driver.pump.stop()
 	var kept_tick: int = driver.pump.live().tick()
 	var kept_sequence: int = driver.pump.live().last_sequence(2)
 	_run(main, 1)
 	runner.check(driver.pump.live().tick() == kept_tick and driver.pump.live().last_sequence(2) == kept_sequence, "PH a refused online post issues and steps nothing, got tick %d" % driver.pump.live().tick())
 	runner.check(online.lockstep.status() == "ended_protocol" and online.lockstep.end_reason() == "sim pump refused tick 8", "SB4 a refused job ends the match, got %s '%s'" % [online.lockstep.status(), online.lockstep.end_reason()])
-	runner.check(driver.over() and online.transport.closed() and driver.notice().begins_with("Protocol error"), "SB4 the refusal closes the room and names it, got '%s'" % driver.notice())
+	_run(main, 3)
+	OS.remove_logger(errors)
+	runner.check(driver.over() and online.transport.closed() and driver.notice() == "Match stopped: game error. Please report it.", "SB4 the refusal closes the room with the plain game error, got '%s'" % driver.notice())
+	runner.check(errors.lines.size() == 1 and errors.lines[0].contains("NETPLAY PROTOCOL END sim pump refused tick 8"), "SB4 the technical reason reaches the error log once, got %s" % errors.lines)
+	runner.check(main.playtest_match().get("end") == "ended_protocol sim pump refused tick 8", "SB4 the playtest record carries the end reason, got %s" % main.playtest_match().get("end"))
 	runner.check(_sent_ticks(online.transport) == kept and _sent_types(online.transport, "over") == 0, "SB4 nothing is sent for the refused tick, got %s from %s" % [_sent_ticks(online.transport), kept])
+	main.free()
+	return true
+
+func test_sb4_protocol_end_after_win_logs_once(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_end_match(online)
+	runner.check(main.driver.over() and online.lockstep.status() == "running", "SB4 the match is won before the late frame, got %s" % online.lockstep.status())
+	var errors := ErrorLog.new()
+	OS.add_logger(errors)
+	online.transport.frames.append(Wire.encode(_start_message("dry_wells", 3)))
+	_run(main, 4)
+	OS.remove_logger(errors)
+	runner.check(online.lockstep.status() == "ended_protocol" and main.driver.notice() == "Match stopped: game error. Please report it.", "SB4 a start on the result panel ends the lockstep, got %s '%s'" % [online.lockstep.status(), main.driver.notice()])
+	runner.check(errors.lines.size() == 1 and errors.lines[0].contains("NETPLAY PROTOCOL END unexpected start"), "SB4 a protocol end after the win is logged once, got %s" % errors.lines)
 	main.free()
 	return true
 

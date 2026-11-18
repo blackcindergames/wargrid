@@ -239,6 +239,7 @@ func _ended() -> bool:
 func _end(final_status: String, reason: String) -> bool:
 	_status = final_status
 	_end_reason = reason
+	if final_status == "ended_protocol": printerr("NETPLAY PROTOCOL END ", reason) # the HUD shows plain text, so the reason lives only here and in the playtest record
 	return false
 
 func _receive_tick(message: Dictionary) -> void:

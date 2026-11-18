@@ -25,10 +25,10 @@ Controls are the same as offline. Restart is hidden online.
 | `Waiting for player N` | Their input for the next tick has not arrived. The game resumes by itself. |
 | `Player N disconnected` | The other player left or lost connection. The match stops. |
 | `Connection to relay lost` | No data from the relay for 5 s, the socket closed, or the game could not send a frame. The match stops. When joining, a wrong code can also show this while the relay is flooded with bad codes; check the code and try again. |
-| `Relay: <reason>` | The relay ended a running match with an error (for example `too far ahead`, listed below the table). Refusals at join time appear in the launcher's status line instead, in the relay's own words. |
+| `Relay: <reason>` | The relay ended a running match with an error (for example `too far ahead`, listed below the table). Refusals at join time appear in the launcher's status line instead, in the relay's own words; a malformed frame at join time shows there as `Protocol error: <reason>`. |
 | `Rejected: Too many orders at once; wait a moment` | A note, not an end: so many orders piled up in one tick that they would not fit one network packet, so every order past that point was dropped. Give them again a moment later. |
 | `Desync — report saved to <path>` | The two games disagreed. The match stops and the report is written. |
-| `Protocol error: <reason>` | A malformed frame arrived. The match stops. |
+| `Match stopped: game error. Please report it.` | The game hit an internal error or a malformed frame arrived. The match stops. The technical reason goes into the playtest helper's match record (`end`) and the game's log as `NETPLAY PROTOCOL END <reason>`: `logs/godot.log` in the user data directory on desktop, the browser console on the web. With the helper on, send the session file. |
 
 The reasons the relay added with Relay guards (on `main`, not deployed yet; the game shows them in the relay's words, as `Relay: <reason>` during a match and without the prefix in the launcher's status line at join; the plain wording here is for the host to pass on). The first two per-address reasons only appear once the relay is set to count addresses, which the hosted relay is not yet:
 
