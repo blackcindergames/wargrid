@@ -13,6 +13,7 @@ const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const MarkerCapture = preload("res://scripts/playtest/marker_capture.gd")
 const PlaytestOverlay = preload("res://scripts/playtest/playtest_overlay.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 const LAUNCHER: String = "res://scenes/launcher.tscn"
 const CARD_ECONOMY := "p1-frc-economy"
 const CARD_TUNNELS := "p1-frc-tunnels-online"
@@ -48,7 +49,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_only, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states, test_match_end_keeps_field_focus, test_new_scene_starts_new_entry, test_resumed_sitting_lists_markers, test_match_end_keeps_marker_draft, test_mute_key_stays_in_field, test_match_end_scrolls_to_markers, test_ph_header_builds_no_log]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_only, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states, test_match_end_keeps_field_focus, test_new_scene_starts_new_entry, test_resumed_sitting_lists_markers, test_match_end_keeps_marker_draft, test_mute_key_stays_in_field, test_match_end_scrolls_to_markers, test_ph_header_builds_no_log, test_ph_every_exit_stops_pump_before_record]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -1055,6 +1056,48 @@ func test_ph_header_builds_no_log(runner) -> bool:
 	main.playtest_match()
 	runner.check(spy.logs == 1, "PH playtest_match builds it once, got %d" % spy.logs)
 	main.free()
+	_end(saved)
+	return true
+
+func _pump_refuses(main) -> bool:
+	var job := SimPump.Job.new()
+	job.step = false
+	return not main.driver.pump.post(job)
+
+func _exit_match(main, exit_name: String) -> void:
+	if exit_name == "leave": main.get_node("HUD/PauseMenu").leave_requested.emit()
+	elif exit_name == "pause quit": main.get_node("HUD/PauseMenu").quit_requested.emit()
+	else: _close_window(main)
+
+func test_ph_every_exit_stops_pump_before_record(runner) -> bool:
+	for exit_name: String in ["leave", "pause quit", "window close"]:
+		var saved: String = _begin()
+		var main = await _scene(runner)
+		_scenes(main)
+		main.quit = func() -> void: pass
+		var overlay = main.get_node("HUD/Playtest")
+		var stopped: Array[bool] = []
+		overlay.match_record = func() -> Dictionary:
+			stopped.append(_pump_refuses(main))
+			return main.playtest_match()
+		_exit_match(main, exit_name)
+		runner.check(stopped == [true], "PH %s: the pump is stopped before the match is recorded, got %s" % [exit_name, stopped])
+		main.free()
+		_end(saved)
+		saved = _begin(false)
+		main = await _scene(runner)
+		_scenes(main)
+		main.quit = func() -> void: pass
+		_exit_match(main, exit_name)
+		runner.check(_pump_refuses(main), "PH %s with the helper off stops the pump" % exit_name)
+		main.free()
+		_end(saved)
+	var saved: String = _begin()
+	var online: Dictionary = await _online(runner)
+	_scenes(online.main)
+	online.main.get_node("HUD/PauseMenu").leave_requested.emit()
+	runner.check(_pump_refuses(online.main), "PH online leave stops the pump")
+	online.main.free()
 	_end(saved)
 	return true
 

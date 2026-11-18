@@ -83,7 +83,7 @@ func _ready() -> void:
 	_pause.leave_requested.connect(_leave)
 	if not quit.is_valid(): quit = get_tree().quit
 	_pause.quit_requested.connect(func() -> void:
-		_playtest.close_out()
+		close_match(true)
 		quit.call())
 	_pause.quality_changed.connect(_view.set_quality)
 	_pause.neon_changed.connect(_view.set_bright_owners)
@@ -177,8 +177,16 @@ func _leave() -> void:
 	_leaving = true
 	driver.leave()
 	get_viewport().gui_release_focus()
-	_playtest.keep_match()
+	close_match(false)
 	change_scene.call(LAUNCHER_SCENE)
+
+func close_match(file_sitting: bool) -> void:
+	driver.stop()
+	if file_sitting: _playtest.close_out()
+	else: _playtest.keep_match()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and not _playtest.web: close_match(true) # web files at the next launcher open instead
 
 func _change_scene(path: String) -> void:
 	get_tree().change_scene_to_file(path)

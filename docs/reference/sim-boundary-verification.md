@@ -437,15 +437,15 @@ Findings that change later tasks: none. Every cited symbol exists; only `match_s
 Plan: [pump hardening](../superpowers/plans/2026-11-18-pump-hardening.md). Branch `pump-hardening` (worktree `~/projects/wargrid-wt-pump`) from local `main` `6ae89cd`; `main` `6854ff5` merged in at `07f0c59` (user, 2026-11-18). Logs are named by tag under `~/projects/wargrid-overnight-work/pump-hardening/logs/` (outside the repository). The resume record and the task table are overwritten at each checkpoint; ledger rows, base counts and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-18, Task 4 green, uncommitted)
+Resume record (updated 2026-11-18, Task 5 green, uncommitted)
 Branch / base commit / working-tree state: pump-hardening / code base 6ae89cd; HEAD 07f0c59 merges main (P2.3a lab, bot plans; user, 2026-11-18, handoff), so Task 1's "empty diff" gate is restated as: `git diff 6ae89cd -- game/scripts tools relay protocol`, minus `game/scripts/lab/`, is empty (checked, empty); the lab, `art_lab.tscn`, `test_lab_panel.gd`, `test_selection_lab.gd` and their two `run_tests.gd` entries are the only other differences / only this file changed
-Last green task / next incomplete task: Task 4 (awaiting the coordinator's commit; Tasks 1 to 3 committed) / Task 5
-Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/scripts/match/sim_pump.gd, game/scripts/match/offline_driver.gd, game/scripts/match/online_driver.gd, game/scripts/match/match_screen.gd, game/tests/test_sim_pump.gd, game/tests/test_skirmish_scene.gd, game/tests/test_playtest_overlay.gd
-Last command / cases / checks / failures / exit / marker: `SUITE(t4)`: exit 0, CASES 1129, CHECKS 148809, FAILURES 0, `TESTS PASSED 148809`; `TRACES(t4)`: replay, economy, combat `REPLAYS MATCHED 1200`, team `REPLAYS MATCHED 100`; lint, warnings (182 files), python tests exit 0; mutation proof t4m1 red (2 named PH checks), revert exit 0. Netplay and team match not rerun (online `match_log` composes the same lines; run at Task 14)
+Last green task / next incomplete task: Task 5 (awaiting the coordinator's commit; Tasks 1 to 4 committed) / Task 6
+Changed paths since last commit: docs/reference/sim-boundary-verification.md, game/scripts/match/offline_driver.gd, game/scripts/match/online_driver.gd, game/scripts/match/match_screen.gd, game/scripts/playtest/playtest_overlay.gd, game/tests/test_playtest_overlay.gd
+Last command / cases / checks / failures / exit / marker: `SUITE(t5)`: exit 0, CASES 1130, CHECKS 148816, FAILURES 0, `TESTS PASSED 148816`; `TRACES(t5)`: replay, economy, combat `REPLAYS MATCHED 1200`, team `REPLAYS MATCHED 100`; lint, warnings (182 files), python tests exit 0; mutation proof t5m1 red (7 named PH checks), revert exit 0. Netplay and team match not rerun (online `match_log` composes the same lines; run at Task 14)
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: six plan choices answered (user, 2026-11-18; plan "Owner answers"); one local commit per green task pre-authorized, never push or merge (user, 2026-11-18); hybrid start in an attended session, owner approves prompts by phone; benchmarks above load 2.5 run, tagged "host under load", evening rerun listed (user, 2026-11-18)
 Usage so far (python3 tools/session_usage.py <session files>): not recorded
-Next exact action: coordinator commits Task 4; Task 5 (one `close_match` call on every exit path); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
+Next exact action: coordinator commits Task 5; Task 6 (lockstep refuses out-of-order `take` and `finish_tick`); every later `TRACES`/`NETEQ` compares against the `base` logs (`replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv`, `base-np-match/s1.tsv`, `base-np-rematch/s1.tsv`, both `s1.cmd`)
 ```
 
 | Task | What | Status |
@@ -453,8 +453,8 @@ Next exact action: coordinator commits Task 4; Task 5 (one `close_match` call on
 | 1 | Base counts and line map | green, committed |
 | 2 | Fresh slot per job; a null job fails the pump | green, committed |
 | 3 | Offline job flow: stamp on request (F35), refused post keeps queue and preview (F32) | green, committed |
-| 4 | `record()` returns the command log; `recorder()` goes; header without log | green, uncommitted |
-| 5 | One `close_match` call on every exit path | not started |
+| 4 | `record()` returns the command log; `recorder()` goes; header without log | green, committed |
+| 5 | One `close_match` call on every exit path | green, uncommitted |
 | 6 | Lockstep refuses out-of-order `take` and `finish_tick` | not started |
 | 7 | Relay frame-order rule in the fake transport; receive that ends the lockstep | not started |
 | 8 | Online preview on one job per step call | not started |
@@ -482,6 +482,9 @@ Next exact action: coordinator commits Task 4; Task 5 (one `close_match` call on
 | 2026-11-18 | Task 4 Step 0/2: `ONLY(t4s0, test_sim_pump)`; red `ONLY(t4red, test_ph_)` | s0 exit 0, 100 checks (a `Note.log` field needs `@warning_ignore("shadowed_global_identifier")`: `log` shadows a built-in); red exit 1: 6 named PH checks fail (CASES 7 CHECKS 23), no SCRIPT ERROR | pump-hardening, HEAD after Task 3 |
 | 2026-11-18 | Task 4 Step 3/4: `ONLY(t4g, test_ph_)`, `SUITE(t4)`, `TRACES(t4)`, `rg 'recorder\(\)' game`, lint, warnings, python tests | `test_ph_` CASES 7 CHECKS 23 FAILURES 0; suite exit 0, CASES 1129, CHECKS 148809, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); `recorder()` only in the `has_method("recorder")` test message (the `test_sim_boundary.py` fixture is outside `game`); lint clean, `WARNINGS CHECKED 182 FILES`, `PYTHON TESTS PASSED`; load 2.24 before | same tree plus Task 4 changes |
 | 2026-11-18 | Task 4 Step 5: mutation `playtest_header` back to `driver.match_log()`; `ONLY(t4m1, test_ph_header)`; revert `git diff --exit-code` | exit 1, `PH playtest_header builds no command log`, `PH playtest_match builds it once` fail; revert exit 0 | same tree |
+| 2026-11-18 | Task 5 Step 2: red `ONLY(t5red, test_ph_every_exit)` | exit 1: 7 named PH checks fail (CASES 1 CHECKS 7), no SCRIPT ERROR; load 1.43 | pump-hardening, HEAD after Task 4 |
+| 2026-11-18 | Task 5 Step 3/4: `ONLY(t5g, test_ph_)`, `ONLY(t5g-overlay, test_playtest_overlay)`, `SUITE(t5)`, `TRACES(t5)`, lint, warnings, python tests, `check_public.sh` | `test_ph_` CASES 8 CHECKS 30 FAILURES 0; overlay CASES 50 CHECKS 230 (PO7, PO13, PO14, NB9 to NB11, NB14 unchanged); suite exit 0, CASES 1130, CHECKS 148816, FAILURES 0; four traces `REPLAYS MATCHED` (1200, 1200, 1200, 100); lint clean, `WARNINGS CHECKED 182 FILES`, `PYTHON TESTS PASSED`, `PUBLIC CHECK PASSED`; load 1.60 before | same tree plus Task 5 changes |
+| 2026-11-18 | Task 5 Step 5: mutation `driver.stop()` deleted from `close_match`; `ONLY(t5m1, test_ph_every_exit)`; revert `git diff --exit-code` | exit 1, all 7 named PH checks fail (three exits with and without the helper, online leave); revert exit 0 | same tree |
 
 ### Base counts (Task 1)
 

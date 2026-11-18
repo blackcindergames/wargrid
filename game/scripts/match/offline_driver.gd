@@ -145,6 +145,9 @@ func over() -> bool:
 func leave() -> void:
 	pass
 
+func stop() -> void:
+	pump.stop()
+
 func detach() -> void:
 	pass
 

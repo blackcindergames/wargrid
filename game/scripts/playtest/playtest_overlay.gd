@@ -88,9 +88,6 @@ func close_out() -> void:
 func _save_draft() -> void:
 	if _dialog.visible and not _text.text.is_empty(): save_marker(_kind, _text.text)
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST and not web: close_out() # web files at the next launcher open instead
-
 func _record_match() -> int:
 	_reviewed = true
 	return _session.finish_match(match_record.call())

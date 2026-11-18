@@ -91,6 +91,9 @@ func start() -> void:
 	var note: SimPump.Note = pump.query(job)
 	_lockstep.start(note.snapshot, note.digest)
 
+func stop() -> void:
+	pump.stop()
+
 func detach() -> void:
 	if _lockstep != null: _lockstep.send = Callable()
 
