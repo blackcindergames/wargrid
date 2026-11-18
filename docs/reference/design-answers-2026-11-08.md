@@ -1123,7 +1123,7 @@ What the bots are for. The open questions it raises are in [next-bots-fair-human
 - **Purpose:** excellent bots for when friends are not available. Fair but challenging, not overwhelming.
 - **Human feel:** bots feel like human players, with the same information, resources and game mechanics. No cheating. Whether "same mechanics" also rules out bot-only automatic unit behaviour was settled on 2026-11-18: it does (Q7 b, Q8 b).
 - **Levels:** the highest level challenges a really competent human player; lower levels scale down the way some humans simply play worse. This differs from "the hardest should beat the user and friends regularly" (2026-11-05); the 2026-11-18 design replaced that bar. The user and friends expect to start on a medium level and work up; since 2026-11-18 that is Regular.
-- **Order of work:** quick, effective wins soon; advanced work later. How soon, given that bot changes wait for M8 except a launch rule that passes the Bot attack test (user, 2026-11-16), is Q5.
+- **Order of work:** quick, effective wins soon; advanced work later. How soon was Q5: one small bot package once two or more changes pass their test, before M8 (user, 2026-11-18, [bot plan round](#bot-plan-round-user-2026-11-18)).
 - **Later content (said separately the same day):** Supply Drop Zone, Hackers, the Black Market and oil derricks come later, and the bots must later make proper use of them, of general's powers and of the missing ground and air units.
 
 ## Bot difficulty design (user, 2026-11-18)
@@ -1151,3 +1151,23 @@ A difficulty design from the user, settled in one questionnaire. It replaces "ab
 - **First human data (Q1 a):** the user and one friend each play two short logged matches against today's bot with the playtest helper, with the one tap after each.
 - **Regular's bar (Q3 b):** about even against an average player of the user's group in their first matches, most matches close.
 - **Later, not in the first plan:** opponent modelling and adaptation beyond reacting to what was scouted (Elite and Nemesis, long term).
+
+## Bot plan round (user, 2026-11-18)
+
+Answers to the open questions of [next-bots-fair-human.md](../questions/next-bots-fair-human.md) (Q5, Q9 to Q15) and to four plan details, asked in three selector rounds while the incremental plan for the six levels was written ([plan](../superpowers/plans/2026-11-18-bot-difficulty-levels.md)). Every answer took the recommendation.
+
+- **Ship before M8 (Q5 b):** a bot improvement that passes its report card test ships before M8, as one small bot package once two or more have passed, so the recorded match traces move once per package. Replaces "all bot changes wait for M8, except a launch rule that passes the Bot attack test" (user, 2026-11-16).
+- **Openings (Q9 b):** at every level the bot picks one of two or three openings per faction each match, from the match seed, and its first attack time varies.
+- **"Feels human" (Q10 c):** both automatic checks on the bot's recorded orders (variety between matches, pace, delay before it acts, no fixed beat) and one question after each logged match (did it feel like playing a person: yes, partly, no; what gave it away).
+- **Ally defends your base (Q11 b):** from P7 on, an allied bot's army at home comes when your base is attacked. An exception to "P7 ships today's bot" (user, 2026-11-16).
+- **What the ally tells you (Q12 c):** in P7, a map mark and one line of text when the allied bot's army sets out, and a call when its base is under attack.
+- **Ally comes along (Q13 d):** with the later bot team-play package, the allied bot sets out with you, toward the enemy you attack.
+- **Asking the ally (Q14 b):** with the later bot team-play package, the map ping you would give a friend: the bot sends its next army there for a limited time and answers "coming" or "not ready".
+- **End-game income (Q15 a):** the 2026-11-09 answer stands: Supply Drop Zone, Internet Center and the Hacker's money ability land in ground batch A; the blueprint's "placement not decided" is corrected.
+- **Ladder bar:** a level clearly beats the one below when, over the ladder matrix (three maps, all faction pairs, both slots, five or more random start values per row), it wins at least 60 % of the decided matches, the low end of the 95 % interval of that share is above 50 %, and it is ahead in each slot on its own.
+- **Level control:** appears in the launcher as soon as Regular and one more level pass the ladder; it lists only levels that passed, default Regular.
+- **Bot report card:** placed as a night package in the free gap between P2.3b and P8 (the one Adaptive input delay does not take).
+- **Bot attack test:** moved from between P9 and P10 to the free gap between P13 and P14, so a winning launch rule can ship before P9's 3v3 gate on Ashfall; its rule is unchanged (a rule ships only if it wins both columns).
+- **Nemesis in the launcher:** until logged human matches give evidence (L3), the launcher shows a line that promises no skill tier, such as "The strongest fair bot we can build", instead of "For experts".
+- **Regular's human bar (Q3 b):** met when, of about ten logged matches, six or more are rated "Close match" and neither side wins more than seven.
+- **Levels before fog:** levels may ship before fog as profiles of today's bot (fair by symmetry: no side has fog yet); every level is re-measured on the ladder once fog and the bot's observation filter land. Fog still comes before the M8 bot.

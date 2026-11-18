@@ -1,6 +1,6 @@
 # Next: fair, human and challenging bots (what the M8 plan leaves open)
 
-Status: Q1, Q3, Q4, Q7 and Q8 answered 2026-11-18; Q2 and Q6 overtaken by the [six-level design](../reference/design-answers-2026-11-08.md#bot-difficulty-design-user-2026-11-18); Q5 and Q9 to Q15 open. Written on 2026-11-17 and 2026-11-18, before that design, so findings and questions below still speak of about five levels; read them as the record.
+Status: Q1, Q3, Q4, Q7 and Q8 answered 2026-11-18; Q2 and Q6 overtaken by the [six-level design](../reference/design-answers-2026-11-08.md#bot-difficulty-design-user-2026-11-18); Q5 and Q9 to Q15 answered 2026-11-18 in the [bot plan round](../reference/design-answers-2026-11-08.md#bot-plan-round-user-2026-11-18). Written on 2026-11-17 and 2026-11-18, before that design, so findings and questions below still speak of about five levels; read them as the record.
 
 Purpose: the questions on fair, human and challenging bots that the M8 plan leaves open, for P7, M8 and M8.1. Research detail and every source: the better bots research note (`better-bots/1-research-note.md`, private). Probe detail: `better-bots/probe/probe-report.md` (private); the probe ran the game headless, no window. Code citations are at `425aa44`; the cited files are unchanged at `d108b90`.
 
@@ -71,7 +71,7 @@ Q4. [answered b] How is that bar checked?
    a) By bot against bot (each level beats the one below) and one playtest at two or more levels with no bar (today's plan)   b) Also by about ten logged matches of your group at the middle and at the top level, each with the one tap of Q1   c) By logged matches at every level
    Recommendation: b, because bot against bot is cheap and repeatable but says nothing about people, and six levels times ten matches is more play than a group gives. Why it matters: ten matches cannot tell 5 of 10 from 7 of 10, so the tap ("close") carries as much as the score. No ZH default.
 
-Q5. Should a bot improvement that passes its test ship before M8?
+Q5. [answered b] Should a bot improvement that passes its test ship before M8?
    a) No, all bot changes wait for M8, except a launch rule that wins both columns of the Bot attack test (today's plan)   b) Yes, as one small bot package once two or more have passed   c) Only fixes for matches that never end
    Recommendation: b, because you asked for quick, effective wins soon, and one package moves the recorded match traces once. Why it matters: P7 and P9 put today's bot in front of your friends long before M8. No ZH default.
 
@@ -87,31 +87,31 @@ Q8. [answered b] From the M8 bot on, may a bot's units behave differently by the
    a) Yes, bot units get rules yours do not — ZH default (AIUpdate.cpp:4328-4345, AIStates.cpp:5964-5971)   b) No: one rule set, and where units should behave differently it is a stance you can set for your units and a bot sets by an ordinary order   c) No: one rule set and no stance; everything else is orders
    Recommendation: b, because the 2026-11-11 answer already leans toward a per-unit stance. Why it matters: with b you get a stance button for every unit, and M8's moods (Sleep, Alert, Aggressive) become that button's settings; with c they disappear.
 
-Q9. Should a bot open and first attack the same way in every match?
+Q9. [answered b] Should a bot open and first attack the same way in every match?
    a) Yes, as today — ZH default: its scripts are fixed per side and level with only a 0 to 2 s random offset (m7-verification-archive-research.md:83)   b) No: at every level it picks one of two or three openings per faction at random each match, and its first attack time varies   c) Only the higher levels vary
    Recommendation: b, because a fixed opening and a first attack at the same second are the first things a player learns to exploit, and StarCraft II's bots roll a weighted opening per match (SC2 data MeleeBuildAI.galaxy:319-404). Why it matters: it is the cheapest step toward a bot that feels like a player; the draw comes from the match seed every client already has, so nothing can go out of step.
 
-Q10. How do we test "feels human"?
+Q10. [answered c] How do we test "feels human"?
    a) By automatic checks on the bot's recorded orders: variety between matches, pace, and the delay before it acts   b) By asking after each logged match: did it feel like playing a person (yes, partly, no), and what gave it away   c) Both
    Recommendation: c, because the checks are automatic and the question is the only one that asks a person; the give-aways are counted like the "units just stood there" remarks. Why it matters: today "feels human" has no definition, so nothing can fail it. No ZH default.
 
-Q11. When your base is attacked, does your allied bot send help?
+Q11. [answered b] When your base is attacked, does your allied bot send help?
    a) No, as today (it defends only its own buildings)   b) Yes, from P7 on: its army at home comes   c) Yes, with the first later bot change
    Recommendation: b, because it is the one behaviour that most separates a teammate from a second army on your side. Why it matters: P7 was decided with today's bot (user, 2026-11-16), so b is an exception to approve: a few lines of bot logic, and the team match traces move once. ZH default: not found (the skirmish scripts decide it; the decode records no rule for helping an ally).
 
-Q12. In P7, what should your allied bot tell you without being asked?
+Q12. [answered c] In P7, what should your allied bot tell you without being asked?
    a) Nothing, as today — ZH default (no message to or from a computer player, Include/Common/MessageStream.h:486-608)   b) Where it attacks: a mark on the map and one line of text when its army sets out   c) b, and a call when its base is under attack
    Recommendation: c, because both can be drawn on every screen from what the game already shows, so neither needs a new kind of order. Why it matters: it is the difference between a second army and a teammate; P7 needs a place for that one line, because the alert feed comes later.
 
-Q13. When you attack, should your allied bot come along?
+Q13. [answered d] When you attack, should your allied bot come along?
    a) No, it keeps its own timing, as today   b) It attacks the same enemy as you   c) It sets out when your army sets out   d) Both: it sets out with you, toward the enemy you attack
    Recommendation: d, with the later package for bot team play, because two armies arriving at different bases, or at different times, lose to one that arrives together. Why it matters: no bot read follows a human's army without a mark or a request, so this is Wargrid's own work. No ZH default.
 
-Q14. With the later package for bot team play, should you be able to ask your allied bot for something?
+Q14. [answered b] With the later package for bot team play, should you be able to ask your allied bot for something?
    a) No — ZH default (no message to a computer player, Include/Common/MessageStream.h:486-608)   b) Yes, with the map ping you would give a human friend: the bot sends its next army there for a limited time and answers "coming" or "not ready" (Warzone 2100's Nexus, nexus_includes/help.js:7-216: 3 minutes plus travel; 0 A.D., attackManager.js:58-113: join or decline)   c) Yes, with a small menu: attack here, defend here, attack this enemy
    Recommendation: b, because you then learn one gesture for humans and bots, and the answer tells you whether the bot accepted. Why it matters: a request is a new kind of order that every client must replay the same way, which is why it is not P7 work.
 
-Q15. The 2026-11-09 answer puts Supply Drop Zone, Internet Center and the Hacker's money ability into ground batch A; the blueprint says their place is not decided. Does the 2026-11-09 answer stand?
+Q15. [answered a] The 2026-11-09 answer puts Supply Drop Zone, Internet Center and the Hacker's money ability into ground batch A; the blueprint says their place is not decided. Does the 2026-11-09 answer stand?
    a) Yes, and the blueprint is corrected   b) No, it stays open until ground batch A is planned   c) No, they get their own package before M8
    Recommendation: a, because it is the recorded answer. Why it matters: M8's economy package needs to know these exist before it; in the probe 15 of 45 matches had no winner at the cap, the seats at a median of 106 credits (highest 575), which a second income would change (inferred).
 
