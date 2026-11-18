@@ -260,6 +260,10 @@ Plan: [P2.3a A/B lab](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md); spec: [d
 | 2026-11-18 | Setup | worktree `~/projects/wargrid-wt-p23a-ab` from `main` `6ae89cd`; spec and plan committed | branch | done |
 | 2026-11-18 | 1 | `WARGRID_TEST_ONLY=test_selection_lab` 4 cases, 75 checks, 0 failures; lint and warnings exit 0 | `3e32e3a` | green, review clean |
 
+What was built (branch commit `ff26a6b`; guide: [chapter 5](../guide/05-presentation.md#the-four-p23a-questions), [chapter 13](../guide/13-testing-and-tooling.md#offscreen-captures)): four questions in the art lab (token set A against B side by side, health-bar rule, value size 14 against 13, drag box) on a frozen 120-unit army drawn in palette A through a lab-only `WorldView` subclass, with a lab-only HUD v5 panel and keys P, G, D, V. No file under `game/scripts/presentation/`, `game/scripts/match/` or `game/scripts/simulation/` changed.
+
+Offscreen run (2026-11-18, 1280x800 `SubViewport`): `lab_capture.gd` exit 0, `CAPTURE DONE 77 shots, 3 stacks at tick 46`, 80 PNGs; `lab_clips.gd` under `--fixed-fps 30` exit 0, `CLIPS DONE 8`, eight 180-frame MP4s. Movie Maker recorded 1280x720 and cut 40 px off the top and bottom, so it was not used. Health bars at zoom 0.5 are drawn in whole screen pixels and the capture checks every bar for a lost frame, track or fill. The owner has not yet answered the four questions.
+
 Last green task / next incomplete task: Task 6 / Task 8.
 
 Next exact action: Task 7 replacement (claude.ai page, fly lab), then Task 8 docs and gates.
