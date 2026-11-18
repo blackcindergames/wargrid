@@ -6,7 +6,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 
 const WARMUP: int = 300
 const SAMPLES: int = 1800
-# Regression ceilings for rows that exceed the budget: worst of 13 quiet runs + 5% (T3, 2026-11-08); raise only with user approval and a ledger line.
+# Drift alarms for rows over the budget, report only since the pair gate: worst of 13 quiet runs + 5% (T3, 2026-11-08); change only with user approval and a ledger line.
 # Deterministic counts measured on 12fd911 (Flatter worst ticks), rule in its plan: raise only with user approval and a ledger line.
 const HORDES_FULL_SCANS_CEILING: int = 4
 const STRESS_CEILING := {"open": [2.10, 2.59], "dense": [2.64, 3.95], "hordes300": [3.07, 4.05]}
@@ -161,8 +161,7 @@ func _measure(layout: String) -> bool:
 		return true
 	if layout == "hordes300":
 		print("COMBAT ", layout.to_upper(), " checks_window=", horde_checks, " level2_peak_window=", horde_peak, " reserved_window=", window_reserved, " full_scans_peak_window=", full_scans_peak)
-		if not _stress_ok(layout, summary):
-			return false
+		_stress_report(layout, summary)
 		if horde_checks == 0 or horde_peak == 0:
 			push_error("Combat benchmark: no horde checks or no horde of five inside the timed window")
 			return false
@@ -182,8 +181,9 @@ func _measure(layout: String) -> bool:
 			push_error("Combat benchmark: no deliveries, no queued trucks or stacked trucks inside the timed window")
 			return false
 		return true
-	var gate_ok: bool = _stress_ok(layout, summary) if STRESS_CEILING.has(layout) else _budget_ok(layout, summary)
-	if not gate_ok:
+	if STRESS_CEILING.has(layout):
+		_stress_report(layout, summary)
+	elif not _budget_ok(layout, summary):
 		return false
 	if window_chases == 0 and layout != "contact":
 		push_error("Combat benchmark never chased inside the timed window for " + layout)
@@ -203,16 +203,13 @@ func _budget_ok(layout: String, summary: Dictionary) -> bool:
 		push_error("Combat budget exceeded for " + layout)
 	return ok
 
-func _stress_ok(layout: String, summary: Dictionary) -> bool:
+func _stress_report(layout: String, summary: Dictionary) -> void:
 	var ceiling: Array = STRESS_CEILING[layout]
 	var over: String = Stats.over_budget_line(layout, summary)
 	if not over.is_empty():
 		print(over)
-	var ok: bool = Stats.within(summary, ceiling[0], ceiling[1])
-	print("COMBAT STRESS ", "PASS" if ok else "FAIL", " ", layout, " exceeds the ", Stats.BUDGET_P95_MS, "/", Stats.BUDGET_P99_MS, " budget, regression ceiling p95/p99 ", ceiling)
-	if not ok:
-		push_error("Combat stress ceiling exceeded for " + layout)
-	return ok
+	var held: bool = Stats.within(summary, ceiling[0], ceiling[1])
+	print("COMBAT STRESS ", "PASS" if held else "ALARM", " ", layout, " exceeds the ", Stats.BUDGET_P95_MS, "/", Stats.BUDGET_P99_MS, " budget, drift alarm p95/p99 ", ceiling, " (report only)")
 
 func _track_frc(state: Dictionary, frc: Dictionary) -> void:
 	for unit: Dictionary in state.entities:
