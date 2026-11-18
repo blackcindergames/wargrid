@@ -11,6 +11,11 @@ const LabMarks = preload("res://scripts/lab/lab_marks.gd")
 const LabDragBox = preload("res://scripts/lab/lab_drag_box.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.gd")
+const AbVariants = preload("res://scripts/lab/ab_variants.gd")
+const SelectionLab = preload("res://scripts/lab/selection_lab.gd")
+const LabPanel = preload("res://scripts/lab/lab_panel.gd")
+const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.gd")
+const SCENE = preload("res://scenes/art_lab.tscn")
 const PANEL_SLOTS: Array[Rect2] = [Rect2(0, 664, 408, 136), Rect2(416, 664, 408, 136)]
 
 const ROLES: Array[StringName] = [&"bg", &"btn", &"panel2", &"quiet", &"well", &"line", &"text", &"muted", &"hint", &"sel", &"amber", &"you", &"enemy", &"ally"]
@@ -19,7 +24,7 @@ const B_HEX := {"bg": "172731", "btn": "223640", "panel2": "2b4453", "quiet": "1
 const SLOT_ONE_HEX: Array[String] = ["628ffa", "d6120c", "4ad49b", "f8e425", "0e92a7", "7242fe", "ec8600", "f79cef"]
 
 func cases() -> Array[Callable]:
-	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules]
+	return [test_token_sets, test_palette_a, test_bar_rules, test_number_font, test_palette_a_view, test_frozen_army, test_view_copy, test_fixture_on_screen, test_mark_geometry, test_edge_faces, test_framed_bars, test_drag_rules, test_new_questions_switch, test_no_labels_in_window, test_held_boxes, test_session_only_as_main, test_round_trip_to_old_question, test_key_interactions, test_opponent_skips_ally]
 
 func test_token_sets(runner) -> bool:
 	var a: Dictionary = LabLook.tokens(&"a")
@@ -288,4 +293,263 @@ func test_drag_rules(runner) -> bool:
 	runner.check(up_left == drag.box and drag.box == Rect2(10, 20, 40, 20), "LB12 an up-left drag gives the same box as down-right")
 	runner.check(drag.mouse_filter == Control.MOUSE_FILTER_IGNORE, "LB12 the drag box ignores the mouse")
 	drag.free()
+	return true
+
+func _lab(runner):
+	var lab = SCENE.instantiate()
+	runner.root.add_child(lab)
+	await runner.process_frame
+	return lab
+
+func _go(lab, question: StringName) -> void:
+	while lab.current_question() != question: lab._unhandled_input(_key(KEY_BRACKETRIGHT))
+
+func _key(code: Key) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.pressed = true
+	return event
+
+func _press(lab, code: Key) -> void:
+	lab._unhandled_input(_key(code))
+
+func _button(at: Vector2, pressed: bool, shift: bool = false) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = at
+	event.pressed = pressed
+	event.shift_pressed = shift
+	return event
+
+func _motion(at: Vector2) -> InputEventMouseMotion:
+	var event := InputEventMouseMotion.new()
+	event.position = at
+	return event
+
+func _frames(runner, count: int = 2) -> void:
+	for i in count: await runner.process_frame
+
+func _marks(lab) -> Dictionary:
+	return lab.selection_lab._over.model
+
+func _panel_bg(panel) -> Color:
+	return panel.find_child("Panel", true, false).get_theme_stylebox("panel").bg_color
+
+func _screen_rect(lab, plane: Rect2) -> Rect2:
+	var xform: Transform2D = lab._view.get_global_transform_with_canvas()
+	return Rect2(xform * plane.position, xform * plane.end - xform * plane.position)
+
+func _own_rows(state: Dictionary) -> Array:
+	return state.entities.filter(func(row: Dictionary) -> bool: return row.owner == LabArmy.OWN)
+
+func test_new_questions_switch(runner) -> bool:
+	var lab = await _lab(runner)
+	var selection = lab.selection_lab
+	var counts := {&"token_set": 2, &"health_bar": 3, &"value_size": 2, &"drag_box": 3}
+	runner.check(AbVariants.P2_3A.size() == 4 and AbVariants.QUESTIONS.slice(4, 8) == AbVariants.P2_3A and AbVariants.QUESTIONS[-1] == &"sand_tone", "LB13 the four new questions sit before sand_tone")
+	for question: StringName in AbVariants.P2_3A:
+		runner.check(lab.variants.variant_count(question) == counts[question], "LB13 %s has %d variants" % [question, counts[question]])
+		_go(lab, question)
+		for choice in counts[question]:
+			lab.variants.set_variant(question, choice)
+			lab._show(lab._current)
+			await _frames(runner)
+			match question:
+				&"token_set":
+					for slot in 2:
+						var set_name: StringName = [&"a", &"b"][slot ^ choice]
+						var panel = selection._panels[slot]
+						runner.check(panel.visible and is_equal_approx(panel.panel_rect().position.x, LabPanel.PANEL_X[slot]), "LB13 token_set %d: panel %d shown in slot %d" % [choice, slot, slot])
+						runner.check(panel.labels()[0].text == String(set_name).to_upper() and _panel_bg(panel) == LabLook.tokens(set_name).bg, "LB13 token_set %d: slot %d shows set %s with its letter" % [choice, slot, set_name])
+						runner.check(panel.number_labels()[0].label_settings.font_size == 13, "LB13 token_set numbers at 13")
+				&"health_bar": runner.check(_marks(lab).rule == choice, "LB13 health_bar %d: the marks follow rule %d" % [choice, choice])
+				&"value_size":
+					runner.check(selection._panels[0].number_labels()[0].label_settings.font_size == LabLook.VALUE_SIZES[choice], "LB13 value_size %d: numbers at %d" % [choice, LabLook.VALUE_SIZES[choice]])
+					runner.check(not selection._panels[1].visible and selection._panels[0].labels()[0].text != "A" and _panel_bg(selection._panels[0]) == LabLook.tokens(&"a").bg, "LB13 value_size: one panel, set A, no letter")
+				&"drag_box":
+					runner.check(selection._drag.style == choice, "LB13 drag_box %d: the drag box style follows" % choice)
+					_press(lab, KEY_D)
+					runner.check(_marks(lab).preview.is_empty() == (choice == 2), "LB13 drag_box %d: preview ticks only off the green baseline" % choice)
+					for i in 3: _press(lab, KEY_D)
+	lab.free()
+	return true
+
+func test_no_labels_in_window(runner) -> bool:
+	var lab = await _lab(runner)
+	for question: StringName in AbVariants.P2_3A:
+		_go(lab, question)
+		for choice in lab.variants.variant_count(question):
+			lab.variants.set_variant(question, choice)
+			lab._show(lab._current)
+			var text: String = lab.status_text()
+			for label: String in AbVariants.LABELS[question]:
+				runner.check(not text.contains(label), "LB14 %s %d hides the label '%s'" % [question, choice, label])
+			runner.check(not text.contains("today") and not text.contains("Zero Hour"), "LB14 %s %d names no source" % [question, choice])
+			runner.check(text.contains("variant %s" % "ABC"[choice]) and text.contains(lab.selection_lab.status_line()), "LB14 %s %d shows the letter and the lab line" % [question, choice])
+	lab.free()
+	return true
+
+func test_held_boxes(runner) -> bool:
+	var lab = await _lab(runner)
+	var selection = lab.selection_lab
+	_go(lab, &"drag_box")
+	var army: Array = _own_rows(selection._army.state)
+	var points: Array = army.map(func(row: Dictionary) -> Vector2: return Iso.world_to_plane(Vector2(row.position[0], row.position[1])))
+	var hovered: int = selection._army.hovered
+	for zoom in 3:
+		var label := "zoom %s" % lab.ZOOMS[lab.zoom_index]
+		_press(lab, KEY_D)
+		await _frames(runner)
+		var box: Rect2 = SelectionLab.HELD_BOXES[1]
+		runner.check(points.filter(func(at: Vector2) -> bool: return box.has_point(at)).size() >= 5, "LB15 %s: box 1 holds at least 5 own units" % label)
+		runner.check(not _marks(lab).preview.is_empty() and _marks(lab).dragging and selection._drag.showing, "LB15 %s: box 1 shows its preview" % label)
+		runner.check(_marks(lab).hovered == hovered and not _marks(lab).preview.has(hovered), "LB15 %s: the hovered enemy gets no ticks while a box is held" % label)
+		runner.check(selection._drag.box.is_equal_approx(_screen_rect(lab, box)) and selection._drag.box.size.is_equal_approx(box.size * lab.ZOOMS[lab.zoom_index]), "LB15 %s: the held box stays on its plane rect" % label)
+		_press(lab, KEY_D)
+		box = SelectionLab.HELD_BOXES[2]
+		var off_map: bool = false
+		for corner: Vector2 in [box.position, box.end, Vector2(box.position.x, box.end.y), Vector2(box.end.x, box.position.y)]:
+			if not _on_map(Iso.plane_to_world(corner)): off_map = true
+		runner.check(off_map and selection._drag.showing, "LB15 %s: box 2 reaches off the map" % label)
+		_press(lab, KEY_D)
+		var preview: Array = _marks(lab).preview
+		runner.check(not preview.is_empty() and selection._army.selected.all(func(id: int) -> bool: return not preview.has(id)), "LB15 %s: box 3 (Shift) previews only units not yet selected" % label)
+		_press(lab, KEY_D)
+		runner.check(not selection._drag.showing and not _marks(lab).dragging, "LB15 %s: D wraps to no box" % label)
+		lab.cycle_zoom()
+	lab.free()
+	return true
+
+func test_session_only_as_main(runner) -> bool:
+	var window: Window = runner.root
+	var before := [window.size, window.content_scale_size, window.unresizable]
+	var lab = await _lab(runner)
+	runner.check([window.size, window.content_scale_size, window.unresizable] == before, "LB16 a lab inside the runner leaves the window alone")
+	for question: StringName in AbVariants.P2_3A:
+		runner.check(lab.variants.variant(question) == 0, "LB16 %s starts on variant A outside a session" % question)
+	runner.check(lab.current_question() == &"biome", "LB16 the lab starts on the first question")
+	lab._start_session()
+	# The headless display server always reports unresizable as false, so only size and scale are checked.
+	runner.check(lab.current_question() == &"token_set" and window.content_scale_size == Vector2i(1280, 800), "LB16 a session starts on token_set at a 1280x800 content scale")
+	window.size = before[0]
+	window.content_scale_size = before[1]
+	window.unresizable = before[2]
+	lab.free()
+	return true
+
+func test_round_trip_to_old_question(runner) -> bool:
+	var lab = await _lab(runner)
+	var selection = lab.selection_lab
+	var view = lab._view
+	var camera_before: Vector2 = lab._camera.position
+	var ground_before: Color = view._terrain._colors.ground
+	_go(lab, &"token_set")
+	_press(lab, KEY_G)
+	await _frames(runner)
+	runner.check(view.selected_unit_lines().is_empty() and _marks(lab).selected.size() == 10, "LB17 the lab holds 10 selected but the view draws no production diamond")
+	runner.check(view._batch.palette_a and not view._smooth and selection._canvas.visible and not lab._ground.visible and not lab._top.visible, "LB17 token_set shows palette A, the canvas and no ab overlays")
+	runner.check(view._terrain._colors.ground == LabLook.DARK_GROUND and view._visuals == null, "LB17 G gives the dark ground; the frozen army draws no fight effects")
+	_press(lab, KEY_BRACKETLEFT)
+	runner.check(lab.current_question() == &"owner_palette" and view._terrain._colors.ground == ground_before, "LB17 one step back the old question's ground returns")
+	for i in 3: _press(lab, KEY_BRACKETLEFT)
+	await _frames(runner)
+	runner.check(lab.current_question() == &"biome" and lab._ground.visible and lab._top.visible, "LB17 back on biome the ab overlays and fog show")
+	runner.check(not selection._canvas.visible and not selection._panels[0].visible and not selection._panels[1].visible and not selection._drag.visible and not selection._over.visible, "LB17 canvas, panels, drag box and marks are hidden")
+	runner.check(not view._batch.palette_a and view._smooth and view._visuals == lab._visuals, "LB17 today's owner colours, interpolation and effects are back")
+	runner.check(view._terrain._colors.ground == ground_before and lab._camera.position == camera_before, "LB17 the biome ground and the camera are back")
+	runner.check(view._state.tick == lab.fight.simulation.tick() and view._state.map.size[0] == 40, "LB17 the live fight is shown")
+	var quality: int = lab.quality
+	_press(lab, KEY_TAB)
+	_press(lab, KEY_Q)
+	_press(lab, KEY_O)
+	runner.check(lab.variants.is_b(&"biome") and lab.quality != quality and lab.variants.opponent_owner == 3, "LB17 AB7's Tab, Q and O behave as before")
+	lab.free()
+	return true
+
+func test_key_interactions(runner) -> bool:
+	var lab = await _lab(runner)
+	var selection = lab.selection_lab
+	var view = lab._view
+	_go(lab, &"token_set")
+	for code in [KEY_P, KEY_G, KEY_D]: _press(lab, code)
+	var line: String = selection.status_line()
+	runner.check(line == "panel many (P) | ground dark (G) | box 1 (D) | view frozen (V)", "LB18 P, G and D change the lab line: %s" % line)
+	_press(lab, KEY_BRACKETRIGHT)
+	runner.check(selection.status_line() == line, "LB18 ] into health_bar keeps panel, ground and box")
+	for i in 3: _press(lab, KEY_D)
+	selection.pointer(_button(Vector2(300, 300), true), view)
+	selection.pointer(_motion(Vector2(400, 380)), view)
+	runner.check(selection._drag.showing and selection._dragging, "LB18 a drag shows its box")
+	_press(lab, KEY_BRACKETRIGHT)
+	runner.check(not selection._dragging and not selection._drag.showing and lab.current_question() == &"value_size", "LB18 ] mid-drag ends the drag")
+	_go(lab, &"health_bar")
+	_press(lab, KEY_V)
+	line = selection.status_line()
+	runner.check(line.ends_with("view live (V)") and view._state.map.size[0] == 40 and _marks(lab).map_size == Vector2i(40, 40), "LB18 V in health_bar shows the live fight")
+	for question: StringName in AbVariants.P2_3A:
+		_go(lab, question)
+		line = selection.status_line()
+		var count: int = lab.variants.variant_count(question)
+		for i in count:
+			_press(lab, KEY_TAB)
+			runner.check(lab.variants.variant(question) == (i + 1) % count and selection.status_line() == line, "LB18 Tab %d in %s cycles the variant and keeps P, G, D, V" % [i + 1, question])
+	_go(lab, &"health_bar")
+	_press(lab, KEY_V)
+	_go(lab, &"value_size")
+	runner.check(not selection.key(KEY_V) and selection.status_line().ends_with("view frozen (V)"), "LB18 V outside health_bar does nothing")
+	var label: Label = selection._panels[0].labels()[0]
+	_press(lab, KEY_Q)
+	runner.check(lab.quality == GraphicsSettings.LOW and selection._panels[0].labels()[0] == label, "LB18 Q changes quality and leaves the panel")
+	_press(lab, KEY_Z)
+	await _frames(runner)
+	var zoom: float = lab.ZOOMS[lab.zoom_index]
+	runner.check(selection._over.get_global_transform_with_canvas().get_scale().is_equal_approx(Vector2.ONE * zoom), "LB18 Z scales the marks with the view")
+	runner.check(selection._drag.get_global_transform_with_canvas().get_scale().is_equal_approx(Vector2.ONE), "LB18 Z leaves the drag box in screen pixels")
+	_press(lab, KEY_SPACE)
+	var tick: int = lab.fight.simulation.tick()
+	await _frames(runner, 4)
+	runner.check(lab.paused and lab.fight.simulation.tick() == tick and _marks(lab).state.tick == selection._army.state.tick, "LB18 Space pauses the live fight; the frozen army stays")
+	_press(lab, KEY_SPACE)
+	_press(lab, KEY_D)
+	selection.pointer(_button(Vector2(10, 10), true), view)
+	selection.pointer(_button(Vector2(10, 10), false), view)
+	runner.check(_marks(lab).selected.is_empty(), "LB18 a click on empty ground clears the selection")
+	_press(lab, KEY_R)
+	runner.check(selection._held == 0 and _marks(lab).selected == selection._army.selected and lab.fight.simulation.tick() <= 1, "LB18 R restarts the fight, drops the box and brings the fixture selection back")
+	_go(lab, &"biome")
+	var before := [lab.question_index, lab.variants.variant(&"biome"), lab.quality, lab.zoom_index, lab.variants.opponent_owner, lab.paused, selection.status_line()]
+	for code in [KEY_P, KEY_G, KEY_D, KEY_V]: _press(lab, code)
+	runner.check([lab.question_index, lab.variants.variant(&"biome"), lab.quality, lab.zoom_index, lab.variants.opponent_owner, lab.paused, selection.status_line()] == before, "LB18 P, G, D and V do nothing in the old questions")
+	_go(lab, &"drag_box")
+	await _frames(runner)
+	var edge_box: Rect2 = _screen_rect(lab, SelectionLab.HELD_BOXES[2])
+	for corners: Array in [[edge_box.position, edge_box.end], [edge_box.end, edge_box.position]]:
+		selection.pointer(_button(corners[0], true), view)
+		selection.pointer(_motion(corners[1]), view)
+		var preview: Array = _marks(lab).preview
+		var owners: Array = _marks(lab).state.entities.filter(func(row: Dictionary) -> bool: return preview.has(row.id)).map(func(row: Dictionary) -> int: return row.owner)
+		runner.check(selection._drag.showing and not preview.is_empty() and owners.all(func(owner: int) -> bool: return owner == LabArmy.OWN), "LB18 a drag across the map edge previews own units only (from %s)" % corners[0])
+		selection.pointer(_button(corners[1], false), view)
+		runner.check(not selection._drag.showing and _marks(lab).selected == preview, "LB18 the release selects the previewed units")
+	var own: Dictionary = _own_rows(_marks(lab).state)[5]
+	var own_screen: Vector2 = view.get_global_transform_with_canvas() * (Iso.world_to_plane(Vector2(own.position[0], own.position[1])) + Vector2(0, -4))
+	selection.pointer(_button(own_screen, true), view)
+	selection.pointer(_button(own_screen + Vector2(3, 3), false), view)
+	runner.check(_marks(lab).selected == ([own.id] as Array[int]), "LB18 a click under 6 px selects the own unit under the pointer")
+	lab.free()
+	return true
+
+func test_opponent_skips_ally(runner) -> bool:
+	var lab = await _lab(runner)
+	_go(lab, &"health_bar")
+	_press(lab, KEY_O)
+	runner.check(lab.variants.opponent_owner == 4, "LB19 O steps from owner 2 past the ally to 4")
+	var owners := {}
+	for row: Dictionary in _marks(lab).state.entities: owners[row.id] = row.owner
+	var enemy: Array = LabMarks.bars(_marks(lab)).filter(func(bar: Dictionary) -> bool: return owners.get(bar.id) == 4)
+	runner.check(not enemy.is_empty() and enemy[0].frame == Color("f8e425"), "LB19 an enemy bar frame is owner 4's palette A yellow")
+	lab.variants.opponent_owner = 8
+	_press(lab, KEY_O)
+	runner.check(lab.variants.opponent_owner == 2, "LB19 O wraps from 8 to 2")
+	lab.free()
 	return true
