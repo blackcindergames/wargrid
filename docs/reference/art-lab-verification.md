@@ -252,7 +252,8 @@ Plan: [P2.3a A/B lab](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md); spec: [d
 | Date | Task | What ran | Tree | Result |
 |---|---|---|---|---|
 | 2026-11-18 | Setup | worktree `~/projects/wargrid-wt-p23a-ab` from `main` `6ae89cd`; spec and plan committed | branch | done |
+| 2026-11-18 | 1 | `WARGRID_TEST_ONLY=test_selection_lab` 4 cases, 75 checks, 0 failures; lint and warnings exit 0 | `3e32e3a` | green, review clean |
 
-Last green task / next incomplete task: Setup / Task 1.
+Last green task / next incomplete task: Task 1 / Task 2.
 
-Next exact action: dispatch Task 1 (lab look).
+Next exact action: dispatch Task 2 (palette A view, frozen army).
