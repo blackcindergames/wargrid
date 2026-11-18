@@ -2,13 +2,14 @@ Resume record (updated 2026-11-10, smooth movement toggle, destinations toggle, 
 Branch / base commit / working-tree state: spike-art-lab / fdf3e49 / uncommitted code and docs (game/scripts/{main.gd,debug/movement_benchmark.gd,presentation/{graphics_settings,pause_menu,world_view}.gd}, tests, performance.md, this file)
 | 2026-11-18 | 2 | test_selection_lab 8 cases, 305 checks, 0 failures; test_art_lab 5/121 green; lint, warnings, boundary check pass | `3274ee4` | green, review clean |
 | 2026-11-18 | 3 | test_selection_lab 12 cases, 355 checks, 0 failures; test_art_lab green; lint, warnings, boundary pass | `892f98c` | green, review clean |
+| 2026-11-18 | 4 | test_lab_panel 4 cases, 1495 checks, 0 failures; test_selection_lab 355/0; lint, warnings, boundary pass | `7de1041` | green, review clean |
 
-Last green task / next incomplete task: Task 3 / Task 4.
+Last green task / next incomplete task: Task 4 / Task 5.
 Changed paths since last commit: see Branch line
 Last command / cases / checks / failures / exit / marker: full suite / 728 cases, 139569 checks, 0 failures / exit 0 / TESTS PASSED 139569; lint 0; warnings 137 files 0; `sh tools/run_benchmark.sh` exit 0, 10 BUDGET PASS
 Known red case or blocker: none in tests; gated Ashfall frame p95 7.753 and 19.144 ms vs 3.3 guard EXCEEDED with interpolation off (machine-wide slowdown, cause not established); default config (interpolation on, High) exceeds the Ashfall guard
 Approved decisions, pre-authorizations used, deferred gates: as before; timed runs shortened by user request (2 gated + 1 report-only per layout)
-Next exact action: dispatch Task 4 (lab panel and layout test).
+Next exact action: dispatch Task 5 (wire questions, keys and pointer).
 
 ## Evidence rows (append-only)
 
@@ -257,6 +258,6 @@ Plan: [P2.3a A/B lab](../superpowers/plans/2026-11-18-p2-3a-ab-lab.md); spec: [d
 | 2026-11-18 | Setup | worktree `~/projects/wargrid-wt-p23a-ab` from `main` `6ae89cd`; spec and plan committed | branch | done |
 | 2026-11-18 | 1 | `WARGRID_TEST_ONLY=test_selection_lab` 4 cases, 75 checks, 0 failures; lint and warnings exit 0 | `3e32e3a` | green, review clean |
 
-Last green task / next incomplete task: Task 3 / Task 4.
+Last green task / next incomplete task: Task 4 / Task 5.
 
-Next exact action: dispatch Task 4 (lab panel and layout test).
+Next exact action: dispatch Task 5 (wire questions, keys and pointer).
