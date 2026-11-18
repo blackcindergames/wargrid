@@ -88,7 +88,7 @@ Step-size warning (research proposal, report-only): an adjacent pair where the u
 
 ## 5. Short-term work (today's bot to a solid Regular and a second level)
 
-Order in today's lanes: S2 before or at the start of P7, S3 with P7, S1 after P2.3b (P7 comes before P2.3b in the day lane), S4 and S5 before P9, S6 and S7 after P9. Because S1 lands after P7, S3's kill check uses the probe's unit-rule result (76 matches, bot rules 23, human rules 20, 95 % interval 0.39 to 0.67) and is re-checked in S1's first report; the earlier option of the evidence plan (scorer slice as night 8's backup task) would let P7 use the tracked tool instead.
+Order in today's lanes: S2 before or at the start of P7, S3 with P7, S1 after P2.3b (P7 comes before P2.3b in the day lane), S4 and S5 before P9, S6 and S7 after P9. Because S1 lands after P7, S3's kill check uses the probe's unit-rule result (76 matches, bot rules 23, human rules 20, 95 % interval 0.39 to 0.67) and is re-checked in S1's first report (user, 2026-11-18).
 
 ### S1: Bot report card (night, between P2.3b and P8; placed, user, 2026-11-18)
 
@@ -104,7 +104,7 @@ Added by this plan:
 
 Verify: `sh tools/run_checks.sh` and the full suite (`timeout: 600000`), exit 0 with the completion marker; RC1 green (scorer leaves the digest unchanged); no pinned trace moves; `PERF_LABEL="Bot report card" sh tools/run_benchmark.sh` row unchanged within the ledger's noise.
 
-### S2: Rate the bot (small; proposed as the backup task of night 8 Play on after a leave, else the first task of P7)
+### S2: Rate the bot (small; backup task of night 8 Play on after a leave, user, 2026-11-18)
 
 What a player notices: after every logged match with a bot opponent, two rows about the enemy bots: "The enemy bots were: Too easy · Close match · Too hard" and "Did they play like a person? Yes · Partly · No", with a field "What gave it away? (optional)". Both optional, never blocking leaving (finding F22: free text and ticks any time, nothing that blocks).
 
@@ -168,13 +168,13 @@ What a player notices: a Level control on the Play page next to the bot's factio
 
 1. **Fog of war** (Later item 5, before ground batch A): filters `bot_state()` (user, 2026-11-16), runs the observation mask spike. Until it lands, "respect fog" means nothing and F5 cannot run.
 2. **B1 Bots play by your rules:** observation entry point with last-seen memory; hidden-state invariance test written first; the decision trace line format. Every level is re-run on the ladder after B1, since the bot then knows less.
-3. **Veteran (if not short-term) and Elite:** B2 scouting, B4 counters from what was seen, B5 squads, combat estimate and retreat (with the Bot attack test's result and the new movement as default), B6 defences and rebuild (needs the Headquarters rule change for USA and China first), B3 economy (second depot, end-game income from ground batch A per Q15 a, derricks).
-4. **B7 Bots at a human pace:** the attention model: orders per minute, reaction delay and bursts per level inside a band set from the owner's logged orders per minute (S2) and the research ranges; higher levels get a larger budget (user, 2026-11-05) and better decisions, not just more orders.
+3. **Veteran (if not short-term) and Elite:** B5's first evidence uses Uriarte and Ontañón's test on the report card's fight records (predicted against actual winner of fights that end with one side destroyed; user, 2026-11-18). B2 scouting, B4 counters from what was seen, B5 squads, combat estimate and retreat (with the Bot attack test's result and the new movement as default), B6 defences and rebuild (needs the Headquarters rule change for USA and China first), B3 economy (second depot, end-game income from ground batch A per Q15 a, derricks).
+4. **B7 Bots at a human pace:** read the research still unread first (Pietikäinen's critique of AlphaStar's limits, the GDC talk videos; user, 2026-11-18); the attention model: orders per minute, reaction delay and bursts per level inside a band set from the owner's logged orders per minute (S2) and the research ranges; higher levels get a larger budget (user, 2026-11-05) and better decisions, not just more orders.
 5. **B8 and B9 team play:** allied waves on the same target at the same time; the ally sets out with you toward the enemy you attack (Q13 d); the map ping request with "coming" or "not ready" (Q14 b) as a new command with same-tick cases.
 6. **Cadet:** after Elite, by the design's order: little aggression and forgiving play as missing competences (late first attack, no raids, slow rebuilding), not idle workers.
 7. **Nemesis:** a continuous lane: the strongest profile, re-checked against Elite on every change; the hidden server seat for a much stronger bot (user idea, 2026-11-16) is evaluated here, under the same fairness rules.
 8. **L2 styles** (aggressive, economic, defensive, random): profiles layered on a level, each style of one level inside a strength band.
-9. **L3 levels on real players:** about ten logged matches at Regular and at the top level; win rates per level only once enough matches exist; testers of other skill levels when they exist.
+9. **L3 levels on real players:** about ten logged matches at Regular and at the top level, with a middle-skill player included on purpose (user, 2026-11-18); win rates per level only once enough matches exist; testers of other skill levels when they exist.
 10. **Adaptation and opponent modelling** beyond reacting to what was scouted: Elite and Nemesis, last.
 11. Content each package owes the bots (powers, batch A and B units, aircraft): the table in `5-m8-package-cut.md` (private) stands.
 

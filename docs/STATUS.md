@@ -87,6 +87,7 @@ Open items that order later packages. P1's blocking focus is card 1; the others 
 | Controls from a friend's playtest (camera, force-attack, queued orders) | [blueprint §7](blueprint.md#controls-small-task-after-converted-maps-user-2026-11-08-not-designed) | none | P3 and order controls |
 | Repeat friend match on the fixed online build; leash-driven return timing | [M5 verification](reference/m5-verification.md), [M5.1 verification](reference/m5.1-verification.md) | none | parked |
 | On Ashfall a seat can still end a match without hitting a building (M8) | [converted maps verification](reference/converted-maps-verification.md), [more maps](reference/more-maps.md#converted-maps-playable-2026-11-09) | none | night 12 Bot attack test, then a day package only if a rule wins both columns; else M8 (user, 2026-11-16) |
+| China loses in bot hands: in the 2026-11-17 probe China won 2 and lost 19 bot seat rows and never beat USA or FRC; bot or faction not yet told apart | better-bots probe report (private), [bot plan](superpowers/plans/2026-11-18-bot-difficulty-levels.md) | none | Bot report card baseline re-measures it, then the balance pass before the M9 gate |
 | Budget rows exceeded, not loosened (combat open, dense since the Sim quick wins hash ring, hordes300) | [performance ledger](reference/performance.md) | none | Sim quick wins (night 3), Flatter worst ticks (night 4) |
 
 ## Finished work

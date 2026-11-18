@@ -1171,3 +1171,7 @@ Answers to the open questions of [next-bots-fair-human.md](../questions/next-bot
 - **Nemesis in the launcher:** until logged human matches give evidence (L3), the launcher shows a line that promises no skill tier, such as "The strongest fair bot we can build", instead of "For experts".
 - **Regular's human bar (Q3 b):** met when, of about ten logged matches, six or more are rated "Close match" and neither side wins more than seven.
 - **Levels before fog:** levels may ship before fog as profiles of today's bot (fair by symmetry: no side has fog yet); every level is re-measured on the ladder once fog and the bot's observation filter land. Fog still comes before the M8 bot.
+- **Rate the bot:** the one-tap rating after bot matches is a backup task of night 8 Play on after a leave, so it exists before P7 changes the bot.
+- **P7's unit-rule evidence:** the 2026-11-17 probe's result (no measurable strength difference) is enough for P7; the Bot report card re-checks it in its first report.
+- **Research inputs kept:** Uriarte and Ontañón's fight test as B5's first evidence; a middle-skill player in the L3 human checks on purpose; the unread items (Pietikäinen's critique of AlphaStar's limits, GDC talk videos) are read when B7 is planned.
+- **Left for M8 planning (unchanged):** the Zero Hour bot data re-read and the fate of origin's `spike-bots` and `spike-native-sim`.
