@@ -164,6 +164,7 @@ func _take_answers() -> void:
 			_ensure_sound()
 			_sound.rejected(answer.error)
 			hud.note = "Rejected: " + answer.error
+			hud.refusal = answer.error
 		orders.answered(answer)
 
 func menu_open() -> bool:
@@ -334,6 +335,7 @@ func _submit(payload: Dictionary) -> void:
 	_show_hint(payload)
 	driver.submit(payload)
 	hud.note = ""
+	hud.refusal = ""
 	_reshow()
 	_sound.order(payload)
 
@@ -341,6 +343,7 @@ func refuse(error: String) -> void:
 	_ensure_sound()
 	_sound.rejected(error)
 	hud.note = "Rejected: " + error
+	hud.refusal = error
 	_reshow()
 
 func _ensure_sound() -> void:

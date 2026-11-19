@@ -138,19 +138,19 @@ func test_seat_two_controls_player_two(runner) -> bool:
 func test_status_lines_and_layout(runner) -> bool:
 	var waiting: Dictionary = await _online(runner, 2)
 	_run(waiting.main, 12)
-	runner.check(waiting.lockstep.status() == "waiting" and waiting.main.get_node("HUD/Status").text.contains("Waiting for player 1"), "N2 waiting line")
+	runner.check(waiting.lockstep.status() == "waiting" and BaseScene.hud_text(waiting.main).contains("Waiting for player 1"), "N2 waiting line")
 	_layout_ok(runner, waiting.main, "waiting")
 	waiting.main.free()
 	var left: Dictionary = await _online(runner, 2)
 	left.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": 4}))
 	_run(left.main, 12)
-	runner.check(left.main.get_node("HUD/Status").text.contains("Player 1 disconnected"), "N2 left line")
+	runner.check(BaseScene.hud_text(left.main).contains("Player 1 disconnected"), "N2 left line")
 	_layout_ok(runner, left.main, "left", true)
 	left.main.free()
 	var lost: Dictionary = await _online(runner, 2)
 	lost.transport.is_closed = true
 	_run(lost.main, 2)
-	runner.check(lost.main.get_node("HUD/Status").text.contains("Connection to relay lost"), "N2 relay lost line")
+	runner.check(BaseScene.hud_text(lost.main).contains("Connection to relay lost"), "N2 relay lost line")
 	_layout_ok(runner, lost.main, "relay lost")
 	lost.main.free()
 	var silent: Dictionary = await _online(runner, 2)
@@ -164,7 +164,7 @@ func test_status_lines_and_layout(runner) -> bool:
 	SkirmishMain.match_seed = before_seed
 	desync.transport.frames.append(Wire.encode(Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"})))
 	_run(desync.main, 12)
-	var text: String = desync.main.get_node("HUD/Status").text
+	var text: String = BaseScene.hud_text(desync.main)
 	runner.check(desync.lockstep.status() == "ended_desync" and text.contains("Desync — report saved to") and FileAccess.file_exists("user://desync/desync-seat2.json"), "N2 desync line and report file, got " + text)
 	var report = JSON.parse_string(FileAccess.get_file_as_string("user://desync/desync-seat2.json"))
 	runner.check(report is Dictionary and report.get("seed") == 7 and report.get("map") == SkirmishMain.map_path.get_file().get_basename() and report.get("starts") == SkirmishMain.starts and not report.get("hash_ring", []).is_empty(), "N2 desync report carries the screen's seed, map, starts and the sim's hash ring, got " + str(report))
@@ -178,7 +178,7 @@ func test_status_lines_and_layout(runner) -> bool:
 	web_desync.main.driver.download = func(buffer: PackedByteArray, file_name: String, mime: String) -> void: downloads.append([buffer.size(), file_name, mime])
 	web_desync.transport.frames.append(Wire.encode(Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"})))
 	_run(web_desync.main, 12)
-	var web_text: String = web_desync.main.get_node("HUD/Status").text
+	var web_text: String = BaseScene.hud_text(web_desync.main)
 	runner.check(downloads.size() == 1 and downloads[0][0] > 0 and downloads[0][1] == "desync-seat2.json" and web_text.contains("report downloaded as desync-seat2.json") and not FileAccess.file_exists("user://desync/desync-seat2.json"), "N2w web desync downloads the report and writes no file, got " + web_text)
 	web_desync.main.free()
 	return true
@@ -299,7 +299,7 @@ func test_friend_left_after_end(runner) -> bool:
 	_run(main, 3)
 	runner.check(_panel_line(main) == "Your friend left" and _play_again_button(main).disabled, "N16 friend left line, Play again disabled, got '%s'" % _panel_line(main))
 	runner.check(online.transport.close_calls == 1, "N16 the socket closes once, got %d" % online.transport.close_calls)
-	runner.check(main.driver.notice() == "" and not main.get_node("HUD/Status").text.contains("relay"), "N16 a friend leaving is no relay loss, got '%s'" % main.driver.notice())
+	runner.check(main.driver.notice() == "" and not BaseScene.hud_text(main).contains("relay"), "N16 a friend leaving is no relay loss, got '%s'" % main.driver.notice())
 	main.free()
 	return true
 
@@ -602,7 +602,7 @@ func test_two_tick_frame_keeps_earlier_results(runner) -> bool:
 	_double_build(control)
 	_peer_packets(control.transport, 2, 4, PEER_TICKS)
 	_run(control.main, 6)
-	runner.check(control.main.get_node("HUD/Status").text.contains(DUE_REJECTION), "N27 control: a one-tick frame shows the own due-time rejection")
+	runner.check(BaseScene.hud_text(control.main).contains(DUE_REJECTION), "N27 control: a one-tick frame shows the own due-time rejection")
 	control.main.free()
 	var online: Dictionary = await _online(runner, 1)
 	_double_build(online)
@@ -612,7 +612,7 @@ func test_two_tick_frame_keeps_earlier_results(runner) -> bool:
 	_peer_packets(online.transport, 2, 5, PEER_TICKS)
 	_run(online.main, 1)
 	runner.check(online.main.driver.pump.live().tick() == 7, "N27 fixture: the frame advanced ticks 5 and 6, got %d" % online.main.driver.pump.live().tick())
-	runner.check(online.main.get_node("HUD/Status").text.contains(DUE_REJECTION), "N27 a two-tick frame keeps the earlier tick's own rejection")
+	runner.check(BaseScene.hud_text(online.main).contains(DUE_REJECTION), "N27 a two-tick frame keeps the earlier tick's own rejection")
 	online.main.free()
 	return true
 
@@ -654,11 +654,11 @@ func test_notices_reach_the_hud_while_processing(runner) -> bool:
 	var waiting: Dictionary = await _online(runner, 2)
 	waiting.main.set_process(true)
 	_run(waiting.main, 6)
-	runner.check(waiting.main.get_node("HUD/Status").text.contains("Waiting for player 1"), "N2 waiting line shows while processing")
+	runner.check(BaseScene.hud_text(waiting.main).contains("Waiting for player 1"), "N2 waiting line shows while processing")
 	runner.check(waiting.main._clock.split_share() == 0.0, "N2 notice refresh leaves the clock alone")
 	waiting.transport.is_closed = true
 	_run(waiting.main, 3)
-	runner.check(waiting.main.get_node("HUD/Status").text.contains("Connection to relay lost"), "N2 ended match shows its message while processing")
+	runner.check(BaseScene.hud_text(waiting.main).contains("Connection to relay lost"), "N2 ended match shows its message while processing")
 	waiting.main.free()
 	return true
 
@@ -771,7 +771,7 @@ func test_rejection_line(runner) -> bool:
 	var main = online.main
 	online.lockstep._rejections.append({"tick": 5, "sequence": 0, "error": "No units left"})
 	_run(main, 1)
-	runner.check(main.get_node("HUD/Status").text.contains("Rejected: No units left"), "H5 online rejection line, got " + main.get_node("HUD/Status").text)
+	runner.check(BaseScene.hud_text(main).contains("No units left"), "H5 online rejection line, got " + BaseScene.hud_text(main))
 	_layout_ok(runner, main, "rejection")
 	main.free()
 	return true
@@ -961,7 +961,7 @@ func test_restart_drops_old_stepped_results(runner) -> bool:
 	await runner.process_frame
 	main.stepped_results.append({"ok": false, "error": "old match", "player": main.local_player, "tick": 50, "sequence": 0})
 	main._restart()
-	runner.check(not main.get_node("HUD/Status").text.contains("old match"), "N12 Restart drops the old match's stepped results")
+	runner.check(not BaseScene.hud_text(main).contains("old match"), "N12 Restart drops the old match's stepped results")
 	main.free()
 	return true
 
@@ -1080,7 +1080,7 @@ func test_host_told_opponent_left_before_start(runner) -> bool:
 	var early: Dictionary = await _online(runner, 1)
 	early.lockstep.receive('{"type":"left","seat":2,"after_tick":3}')
 	_run(early.main, 12)
-	runner.check(early.main.get_node("HUD/Status").text.contains(notice), "N16 left before the start is explained")
+	runner.check(BaseScene.hud_text(early.main).contains(notice), "N16 left before the start is explained")
 	_layout_ok(runner, early.main, "left before start")
 	runner.check(not early.main.get_node("HUD/ResultPanel").visible, "N16 left before the start shows no result panel")
 	early.main.free()
@@ -1088,7 +1088,7 @@ func test_host_told_opponent_left_before_start(runner) -> bool:
 	_peer_packets(late.transport, 2, 4, 40)
 	late.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
 	_run(late.main, 80)
-	var text: String = late.main.get_node("HUD/Status").text
+	var text: String = BaseScene.hud_text(late.main)
 	runner.check(text.contains("Player 2 disconnected") and not text.contains(notice), "N16 a later leave keeps the plain text, got " + text)
 	late.main.free()
 	return true
@@ -1105,7 +1105,7 @@ func test_opponent_left_mid_match(runner) -> bool:
 	runner.check(_panel_line(main) == "Your opponent left" and _play_again_button(main).disabled, "N29 the line says the opponent left, Play again disabled, got '%s'" % _panel_line(main))
 	runner.check(main.get_viewport().gui_get_focus_owner() == main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"), "N29 Back to menu has the focus")
 	runner.check(cells.size() == 12 and cells[4].text.ends_with("(you)") and not cells[8].text.contains("(you)"), "N29 the table shows both players, got %d cells" % cells.size())
-	runner.check(main.get_node("HUD/Status").text.contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
+	runner.check(BaseScene.hud_text(main).contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
 	var status: Label = main.get_node("HUD/Status")
 	runner.check(main.get_node("HUD/Economy").position.y >= status.position.y + status.get_minimum_size().y, "N29 buttons sit below every status line")
 	main.free()
@@ -1190,7 +1190,7 @@ func test_pause_leave_mid_match_with_the_helper_on(runner) -> bool:
 	main._pause.leave_requested.emit()
 	_run(main, 3)
 	main._refresh()
-	var status: String = main.get_node("HUD/Status").text
+	var status: String = BaseScene.hud_text(main)
 	runner.check(main._playtest._active, "N33 fixture: the playtest helper is on")
 	runner.check(scenes == ["res://scenes/launcher.tscn"], "N33 (F22) a deliberate leave reaches the launcher without waiting for the playtest form, got %s" % [scenes])
 	runner.check(not status.contains("relay") and main.driver.notice() == "", "N33 (F22) a deliberate leave shows no relay loss, got '%s'" % main.driver.notice())
@@ -1437,7 +1437,7 @@ func _ic_row(main, transport: FakeTransport, step: int, seen: Array, status: boo
 	for command: Dictionary in sent.slice(mini(seen[0], sent.size())): added.append(JSON.stringify(command))
 	seen[0] = sent.size()
 	var row: String = "%d|sel=%s|bld=%d|insp=%d|place=%s|pend=%s|am=%s|esc=%s|menu=%s|perf=%s|%s" % [step, main.orders.selected_ids, main.orders.selected_building_id, main.orders.inspected_id, main.orders._placement_kind, main.orders._pending_placement, main.orders._attack_move_mode, main._escape_pending(), main.menu_open(), main._perf.visible, ";".join(added)]
-	return row + "|" + main.get_node("HUD/Status").text if status else row
+	return row + "|refusal=" + main.hud.refusal if status else row
 
 func _ic_esc(main) -> void:
 	var event := InputEventKey.new()
@@ -1549,7 +1549,7 @@ func test_sb2_online_placement_closes_and_reopens(runner) -> bool:
 	helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
 	runner.check(not kind.is_empty() and main.orders._placement_kind.is_empty(), "RA8 a build click closes placement at once")
 	_run_until_answered(main, 30)
-	runner.check(main.orders._placement_kind == kind and main.hud.note.begins_with("Rejected: "), "RA8 a refusal reopens placement with the same kind, got '%s' '%s'" % [main.orders._placement_kind, main.hud.note])
+	runner.check(main.orders._placement_kind == kind and not main.hud.refusal.is_empty(), "RA8 a refusal reopens placement with the same kind, got '%s' '%s'" % [main.orders._placement_kind, main.hud.refusal])
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	runner.check(main.orders._placement_kind.is_empty(), "RA8 an accepted build click closes placement in the same frame")
 	helper.key(main, KEY_1)
@@ -1577,7 +1577,7 @@ func test_sb2_online_refusal_keeps_new_gesture(runner) -> bool:
 	_run_until_answered(main, 30)
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	_run(main, 3)
-	runner.check(main.hud.note.begins_with("Rejected: ") and count.call("build") == 1, "RA9 a refusal during a selection click does not turn its release into a build, builds %d" % count.call("build"))
+	runner.check(not main.hud.refusal.is_empty() and count.call("build") == 1, "RA9 a refusal during a selection click does not turn its release into a build, builds %d" % count.call("build"))
 	main.orders.selected_ids.assign([3])
 	main._refresh()
 	helper.key(main, KEY_1)
@@ -1702,8 +1702,8 @@ func test_too_many_orders_note(runner) -> bool:
 	var order := {"type": "move", "entity_ids": range(1, 301), "target": [10.5, 10.5]}
 	for i in 200: main._submit(order)
 	_run(main, 1)
-	var status: String = main.get_node("HUD/Status").text
-	runner.check(status.contains("Rejected: " + main.driver.TOO_MANY_ORDERS), "N-cap the HUD shows the refused order, got " + status)
+	var status: String = BaseScene.hud_text(main)
+	runner.check(status.contains(main.driver.TOO_MANY_ORDERS), "N-cap the HUD shows the refused order, got " + status)
 	_layout_ok(runner, main, "too many orders")
 	main.free()
 	return true
@@ -1766,7 +1766,7 @@ func test_sb4_no_waiting_after_end(runner) -> bool:
 	_end_in_catch_up(runner, online, 9, [])
 	_run(main, 3)
 	runner.check(online.lockstep.status() == "running" and main.driver.notice() == "", "SB4 no waiting after the end, got %s '%s'" % [online.lockstep.status(), main.driver.notice()])
-	runner.check(not main.get_node("HUD/Status").text.contains("Waiting"), "SB4 no waiting line, got " + main.get_node("HUD/Status").text)
+	runner.check(not BaseScene.hud_text(main).contains("Waiting"), "SB4 no waiting line, got " + BaseScene.hud_text(main))
 	main.free()
 	return true
 

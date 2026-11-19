@@ -91,7 +91,7 @@ func test_combat_context_input(runner) -> bool:
 	main.orders.selected_ids.assign([1, ids.infantry])
 	var pending: int = _pending(main)
 	helper.pointer(main, enemy_point, MOUSE_BUTTON_RIGHT, true)
-	runner.check(_pending(main) == pending + 1 and _pending(main, "move") == 0 and main.hud.note.is_empty(), "K3 an unarmed member no longer rejects the click")
+	runner.check(_pending(main) == pending + 1 and _pending(main, "move") == 0 and main.hud.refusal.is_empty(), "K3 an unarmed member no longer rejects the click")
 	main.orders.selected_ids.assign([ids.infantry, ids.tank])
 	pending = _pending(main)
 	helper.key(main, KEY_A)
@@ -151,10 +151,10 @@ func test_match_hud_and_restart(runner) -> bool:
 	main._unhandled_input(InputEventKey.new())
 	runner.check(main.driver.pump.live().snapshot().pending_commands == before, "K4 terminal match accepts no orders")
 	BaseScene.tick(main)
-	runner.check(main.hud.note == "Rejected: Match ended", "K4 terminal match accepts no orders, got '%s'" % main.hud.note)
+	runner.check(main.hud.refusal == "Match ended", "K4 terminal match accepts no orders, got '%s'" % main.hud.refusal)
 	main.orders._placement_kind = "usa_power_plant"
 	main.orders._attack_move_mode = true
-	main.hud.note = "old"
+	main.hud.refusal = "old"
 	main.hud._last_result_tick = 99
 	main.hud._last_result_sequence = 99
 	main.orders._selecting = true
@@ -162,10 +162,10 @@ func test_match_hud_and_restart(runner) -> bool:
 	main.get_node("Camera2D").position = Vector2(500, 500)
 	main.get_node("Camera2D").zoom = Vector2.ONE * 2.0
 	main.get_node(PLAY_AGAIN).pressed.emit()
-	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot() and main.orders.selected_ids.is_empty() and main.orders._placement_kind.is_empty() and not main.orders._attack_move_mode and main.hud.note.is_empty() and main.get_node("Camera2D").zoom == Vector2.ONE and not main.get_node("HUD/ResultPanel").visible and main.hud._last_result_tick == -1 and main.hud._last_result_sequence == -1 and not main.orders._selecting and not main.orders._dragged and main.get_node("Camera2D").position != Vector2(500, 500) and main.get_node("WorldView")._preview_cells.is_empty(), "K4 restart leaves nothing from the old match")
+	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot() and main.orders.selected_ids.is_empty() and main.orders._placement_kind.is_empty() and not main.orders._attack_move_mode and main.hud.refusal.is_empty() and main.get_node("Camera2D").zoom == Vector2.ONE and not main.get_node("HUD/ResultPanel").visible and main.hud._last_result_tick == -1 and main.hud._last_result_sequence == -1 and not main.orders._selecting and not main.orders._dragged and main.get_node("Camera2D").position != Vector2(500, 500) and main.get_node("WorldView")._preview_cells.is_empty(), "K4 restart leaves nothing from the old match")
 	main.orders.selected_ids.assign([1])
 	main._submit({"type": "move", "entity_ids": [1], "target": [6.5, 14.5]})
-	runner.check(main.hud.note.is_empty() and _pending(main, "move") == 1, "K4 first order after restart is valid")
+	runner.check(main.hud.refusal.is_empty() and _pending(main, "move") == 1, "K4 first order after restart is valid")
 	for loser in [[1, "Defeat"], [-1, "Draw"]]:
 		var other = await _setup(runner)
 		if loser[0] == 1:
@@ -248,11 +248,11 @@ func _pile_world(main) -> Dictionary:
 
 func test_hud_build_line(runner) -> bool:
 	var main = await _setup(runner)
-	var text: String = main.get_node("HUD/Status").text
+	var text: String = BaseScene.hud_text(main)
 	runner.check(text.contains("1-9: menu") and text.contains("U: unload") and not text.contains("1/2/3"), "H1 skirmish build line, got " + text)
 	var base_helper = BaseScene.new()
 	var base = await base_helper.setup(runner)
-	var base_text: String = base.get_node("HUD/Status").text
+	var base_text: String = BaseScene.hud_text(base)
 	runner.check(base_text.contains("1-9: menu") and base_text.contains("U: unload") and not base_text.contains("1/2/3"), "H1 base scene shares the menu hint")
 	base.free()
 	main.free()
@@ -726,11 +726,11 @@ func test_silent_keys_explain(runner) -> bool:
 	main.orders.selected_ids.assign([ids.infantry])
 	var before: Dictionary = main.driver.pump.live().snapshot()
 	helper.key(main, KEY_1)
-	runner.check(main.orders._placement_kind.is_empty() and main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.note == "Choose one builder", "P4 build key without a builder says why, got '%s'" % main.hud.note)
-	main.hud.note = ""
+	runner.check(main.orders._placement_kind.is_empty() and main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.refusal == "Choose one builder", "P4 build key without a builder says why, got '%s'" % main.hud.refusal)
+	main.hud.refusal = ""
 	main.orders.selected_ids.clear()
 	helper.key(main, KEY_E)
-	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.note == "Select a production building", "P4 E without a building says why, got '%s'" % main.hud.note)
+	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.refusal == "Select a production building", "P4 E without a building says why, got '%s'" % main.hud.refusal)
 	main.free()
 	return true
 
@@ -804,12 +804,12 @@ func test_defence_attack_scene(runner) -> bool:
 	main._refresh()
 	helper.pointer(main, Iso.world_to_plane(Vector2(15.5, 10.5)) + Vector2(0, -8), MOUSE_BUTTON_RIGHT, true)
 	var orders: Array = main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == "defence_attack")
-	runner.check(orders.size() == 1 and orders[0].building_id == defence and orders[0].target_id == enemy and main.hud.note.is_empty(), "DA5 right-click on an enemy in reach submits defence_attack")
+	runner.check(orders.size() == 1 and orders[0].building_id == defence and orders[0].target_id == enemy and main.hud.refusal.is_empty(), "DA5 right-click on an enemy in reach submits defence_attack")
 	helper.pointer(main, Iso.world_to_plane(Vector2(30.5, 30.5)) + Vector2(0, -8), MOUSE_BUTTON_RIGHT, true)
 	main.driver.flush()
 	var queued: int = sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "defence_attack").size()
 	BaseScene.tick(main)
-	runner.check(main.hud.note == "Rejected: Target out of range" and queued == 1, "DA5 out of reach shows Target out of range, got " + main.hud.note + " " + str(distant))
+	runner.check(main.hud.refusal == "Target out of range" and queued == 1, "DA5 out of reach shows Target out of range, got " + main.hud.refusal + " " + str(distant))
 	main.free()
 	return true
 
@@ -827,7 +827,7 @@ func test_enter_unload_scene(runner) -> bool:
 	var orders = func(type: String) -> Array: return main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == type)
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)) + Vector2(0, -8), MOUSE_BUTTON_RIGHT, true)
 	var enters: Array = orders.call("enter")
-	runner.check(enters.size() == 1 and enters[0].entity_ids == [rifle] and enters[0].target_id == hub and main.hud.note.is_empty(), "TU1 right-click on an own hub submits enter")
+	runner.check(enters.size() == 1 and enters[0].entity_ids == [rifle] and enters[0].target_id == hub and main.hud.refusal.is_empty(), "TU1 right-click on an own hub submits enter")
 	helper.pointer(main, Iso.world_to_plane(Vector2(20.5, 10.5)) + Vector2(0, -8), MOUSE_BUTTON_RIGHT, true)
 	var attacks: Array = orders.call("attack")
 	runner.check(attacks.size() == 1 and attacks[0].target_id == enemy_hub and orders.call("enter").size() == 1, "TU1 right-click on an enemy hub still attacks")
@@ -841,7 +841,7 @@ func test_enter_unload_scene(runner) -> bool:
 	main.orders.selected_ids.assign([rifle])
 	main._refresh()
 	helper.key(main, KEY_U)
-	runner.check(orders.call("unload").size() == 1 and main.hud.note == "Select a container", "TU1 U without a container says why, got '%s'" % main.hud.note)
+	runner.check(orders.call("unload").size() == 1 and main.hud.refusal == "Select a container", "TU1 U without a container says why, got '%s'" % main.hud.refusal)
 	var hub_point: Vector2 = Iso.world_to_plane(Vector2(10.5, 10.5)) + Vector2(0, -8)
 	sim._entities[rifle].container_id = hub
 	sim._entities[rifle].position = [10.5, 10.5]
@@ -886,7 +886,7 @@ func test_right_click_pile_in_launcher_flow(runner) -> bool:
 		var gathers: int = _pending(main, "gather")
 		BaseScene.publish(main)
 		helper.pointer(main, Iso.world_to_plane(centre) + Vector2(0, -26), MOUSE_BUTTON_RIGHT, true)
-		runner.check(_pending(main, "gather") == gathers + 1 and bystander > 0, "K12 %s right-click on a pile with an own helicopter hovering over it still gathers, pending %s err %s" % [faction, str(sim.snapshot().pending_commands.map(func(c: Dictionary) -> String: return c.type)), main.hud.note])
+		runner.check(_pending(main, "gather") == gathers + 1 and bystander > 0, "K12 %s right-click on a pile with an own helicopter hovering over it still gathers, pending %s err %s" % [faction, str(sim.snapshot().pending_commands.map(func(c: Dictionary) -> String: return c.type)), main.hud.refusal])
 		main.free()
 	return true
 
@@ -909,7 +909,7 @@ func test_frc_laborer_right_click_pile(runner) -> bool:
 	helper.pointer(main, click, MOUSE_BUTTON_RIGHT, true)
 	main.driver.flush()
 	var orders: Array = sim.snapshot().pending_commands.filter(func(c: Dictionary) -> bool: return c.type == "gather")
-	runner.check(orders.size() == 1 and orders[0].entity_ids == laborers and orders[0].source_id == pile.id, "K13 several laborers, one of them building, right-click the pile gathers, got %s err %s" % [str(sim.snapshot().pending_commands), main.hud.note])
+	runner.check(orders.size() == 1 and orders[0].entity_ids == laborers and orders[0].source_id == pile.id, "K13 several laborers, one of them building, right-click the pile gathers, got %s err %s" % [str(sim.snapshot().pending_commands), main.hud.refusal])
 	Fixture.steps(sim, 3)
 	runner.check(sim.snapshot().entities.filter(func(u: Dictionary) -> bool: return u.id in laborers and u.collection.enabled).size() == laborers.size(), "K13 every laborer, including the builder, starts collecting")
 	main.orders.selected_ids.assign([laborers[0]])
@@ -1014,7 +1014,7 @@ func _ic_row(main, step: int, seen: Array, status: bool = false) -> String:
 	for command: Dictionary in pending.slice(mini(seen[0], pending.size())): added.append(JSON.stringify(command))
 	seen[0] = pending.size()
 	var row: String = "%d|sel=%s|bld=%d|insp=%d|place=%s|pend=%s|am=%s|esc=%s|menu=%s|perf=%s|%s" % [step, main.orders.selected_ids, main.orders.selected_building_id, main.orders.inspected_id, main.orders._placement_kind, main.orders._pending_placement, main.orders._attack_move_mode, main._escape_pending(), main.menu_open(), main._perf.visible, ";".join(added)]
-	return row + "|" + main.get_node("HUD/Status").text if status else row
+	return row + "|refusal=" + main.hud.refusal if status else row
 
 func _ic_esc(main) -> void:
 	var event := InputEventKey.new()
@@ -1352,7 +1352,7 @@ func test_sb1_pick_of_unit_dead_since_shown(runner) -> bool:
 	main.orders.selected_ids.assign([ids.infantry])
 	helper.key(main, KEY_S)
 	BaseScene.tick(main)
-	runner.check(main.hud.note.contains("Missing entity or wrong owner"), "RB4 the simulation refuses it, got '%s'" % main.hud.note)
+	runner.check(main.hud.refusal.contains("Missing entity or wrong owner"), "RB4 the simulation refuses it, got '%s'" % main.hud.refusal)
 	main.orders.selected_ids.assign([ids.infantry, ids.tank])
 	var pending: int = _pending(main, "stop")
 	helper.key(main, KEY_S)
@@ -1403,9 +1403,9 @@ func test_sb2_refusal_next_step(runner) -> bool:
 	var moves: int = _pending(main, "move")
 	main._submit(_off_map_move(ids))
 	main.driver.flush()
-	runner.check(main.hud.note == "" and _pending(main, "move") == moves, "RA1 a refused move shows nothing at submit, got '%s'" % main.hud.note)
+	runner.check(main.hud.refusal == "" and _pending(main, "move") == moves, "RA1 a refused move shows nothing at submit, got '%s'" % main.hud.refusal)
 	BaseScene.tick(main)
-	runner.check(main.hud.note == "Rejected: Target outside map" and _error_cues(main) == 1, "RA1 the refusal and one beep arrive with the next step, got '%s' and %d" % [main.hud.note, _error_cues(main)])
+	runner.check(main.hud.refusal == "Target outside map" and _error_cues(main) == 1, "RA1 the refusal and one beep arrive with the next step, got '%s' and %d" % [main.hud.refusal, _error_cues(main)])
 	var status: Label = main.get_node("HUD/Status")
 	runner.check(main.get_node("HUD/Economy").position.y >= status.position.y + status.get_minimum_size().y, "RA1 buttons sit below every status line")
 	main.free()
@@ -1425,7 +1425,7 @@ func test_sb2_refusal_survives_accepted_result(runner) -> bool:
 			if processing:
 				await runner.process_frame
 				await runner.process_frame
-			runner.check(main.hud.note == "Rejected: Target outside map" and main.get_node("HUD/Status").text.contains("Rejected: Target outside map"), "RA3 an accepted result keeps the refusal (processing %s, refused first %s), got '%s'" % [processing, refused_first, main.hud.note])
+			runner.check(main.hud.refusal == "Target outside map" and BaseScene.hud_text(main).contains("Target outside map"), "RA3 an accepted result keeps the refusal (processing %s, refused first %s), got '%s'" % [processing, refused_first, main.hud.refusal])
 			main.free()
 	return true
 
@@ -1435,7 +1435,7 @@ func test_sb2_restart_drops_held_answer(runner) -> bool:
 	main._submit(_off_map_move(ids))
 	main._restart()
 	BaseScene.tick(main)
-	runner.check(main.hud.note.is_empty() and not main.get_node("HUD/Status").text.contains("Rejected:") and _error_cues(main) == 0, "RA4 a restart drops the held answer, got '%s'" % main.hud.note)
+	runner.check(main.hud.refusal.is_empty() and not BaseScene.hud_text(main).contains("Target outside map") and _error_cues(main) == 0, "RA4 a restart drops the held answer, got '%s'" % main.hud.refusal)
 	main.free()
 	return true
 
@@ -1447,11 +1447,11 @@ func test_sb2_answer_waits_for_unpause(runner) -> bool:
 	runner.check(main.menu_open(), "RA5 fixture: the menu holds the match")
 	BaseScene.tick(main)
 	BaseScene.tick(main)
-	runner.check(main.hud.note.is_empty(), "RA5 the answer waits behind the menu, got '%s'" % main.hud.note)
+	runner.check(main.hud.refusal.is_empty(), "RA5 the answer waits behind the menu, got '%s'" % main.hud.refusal)
 	main._pause.close()
 	BaseScene.tick(main)
 	var errors: int = _error_cues(main)
-	runner.check(main.hud.note == "Rejected: Target outside map" and main.get_node("HUD/Status").text.count("Rejected:") == 1 and errors == 1, "RA5 the answer arrives once on resume, got '%s' and %d beeps" % [main.hud.note, errors])
+	runner.check(main.hud.refusal == "Target outside map" and BaseScene.hud_text(main).count("Target outside map") == 1 and errors == 1, "RA5 the answer arrives once on resume, got '%s' and %d beeps" % [main.hud.refusal, errors])
 	BaseScene.tick(main)
 	errors += _error_cues(main)
 	runner.check(errors == 1, "RA5 one beep in total, got %d" % errors)
@@ -1500,7 +1500,7 @@ func test_sb3_restart_drops_old_notes(runner) -> bool:
 		if posted: main._physics_process(1.0 / 30.0)
 		main._restart()
 		BaseScene.tick(main)
-		runner.check(main.hud.note.is_empty() and not main.get_node("HUD/Status").text.contains("Rejected:") and _error_cues(main) == 0 and main.driver.queued().is_empty() and main.driver.current().tick == 1, "SB3 a restart shows nothing from the old match (posted %s), got '%s', %d beeps, tick %d" % [posted, main.hud.note, _error_cues(main), main.driver.current().tick])
+		runner.check(main.hud.refusal.is_empty() and not BaseScene.hud_text(main).contains("Target outside map") and _error_cues(main) == 0 and main.driver.queued().is_empty() and main.driver.current().tick == 1, "SB3 a restart shows nothing from the old match (posted %s), got '%s', %d beeps, tick %d" % [posted, main.hud.refusal, _error_cues(main), main.driver.current().tick])
 		main.free()
 	return true
 
@@ -1544,11 +1544,11 @@ func test_sb3_process_drains(runner) -> bool:
 	main._submit(_off_map_move(ids))
 	main._physics_process(1.0 / 30.0)
 	main._physics_process(1.0 / 30.0)
-	runner.check(main.driver.current().tick == tick and main.shown_state.tick == tick and main.hud.note.is_empty() and _error_cues(main) == 0 and main._sound.director.collected_ticks().size() == collected, "SB3 physics frames post but show nothing before a drain, got '%s'" % main.hud.note)
+	runner.check(main.driver.current().tick == tick and main.shown_state.tick == tick and main.hud.refusal.is_empty() and _error_cues(main) == 0 and main._sound.director.collected_ticks().size() == collected, "SB3 physics frames post but show nothing before a drain, got '%s'" % main.hud.refusal)
 	main._process(0.0)
 	var ticks: Array[int] = main._sound.director.consumed_ticks().slice(-2)
 	runner.check(ticks == [tick + 1, tick + 2] and main.driver.current().tick == tick + 2 and main.shown_state.tick == tick + 2, "SB3 _process drains both notes and shows the last tick, got %s and shown %d" % [ticks, main.shown_state.tick])
-	runner.check(main.hud.note == "Rejected: Target outside map" and main.get_node("HUD/Status").text.contains("Rejected: Target outside map") and _error_cues(main) == 1, "SB3 _process delivers the refusal to the HUD once, got '%s' and %d beeps" % [main.hud.note, _error_cues(main)])
+	runner.check(main.hud.refusal == "Target outside map" and BaseScene.hud_text(main).contains("Target outside map") and _error_cues(main) == 1, "SB3 _process delivers the refusal to the HUD once, got '%s' and %d beeps" % [main.hud.refusal, _error_cues(main)])
 	main.free()
 	return true
 
@@ -1558,12 +1558,12 @@ func test_sb3_refusal_waits_in_queue(runner) -> bool:
 	main._ensure_sound()
 	main._submit(_off_map_move(ids))
 	var queued: Array = main.driver.queued()
-	runner.check(queued.size() == 1 and queued[0].type == "move" and queued[0].target == [-5.0, -5.0] and not queued[0].has("sequence") and main.hud.note.is_empty() and _error_cues(main) == 0, "SB3 a refusable order waits unissued in the queue, got %s" % [queued])
+	runner.check(queued.size() == 1 and queued[0].type == "move" and queued[0].target == [-5.0, -5.0] and not queued[0].has("sequence") and main.hud.refusal.is_empty() and _error_cues(main) == 0, "SB3 a refusable order waits unissued in the queue, got %s" % [queued])
 	main._physics_process(1.0 / 30.0)
-	runner.check(main.hud.note.is_empty() and _error_cues(main) == 0, "SB3 the refusal stays silent until the drain, got '%s'" % main.hud.note)
+	runner.check(main.hud.refusal.is_empty() and _error_cues(main) == 0, "SB3 the refusal stays silent until the drain, got '%s'" % main.hud.refusal)
 	main._drain_notes()
 	var errors: int = _error_cues(main)
-	runner.check(main.hud.note == "Rejected: Target outside map" and main.driver.queued().is_empty() and errors == 1, "SB3 one tick and drain bring exactly one refusal and beep, got '%s' and %d" % [main.hud.note, errors])
+	runner.check(main.hud.refusal == "Target outside map" and main.driver.queued().is_empty() and errors == 1, "SB3 one tick and drain bring exactly one refusal and beep, got '%s' and %d" % [main.hud.refusal, errors])
 	BaseScene.tick(main)
 	errors += _error_cues(main)
 	runner.check(errors == 1, "SB3 one beep in total, got %d" % errors)

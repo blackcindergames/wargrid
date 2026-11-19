@@ -36,6 +36,12 @@ static func tick(main) -> void:
 	main._physics_process(1.0 / 30.0)
 	main._drain_notes()
 
+static func hud_text(main: Node) -> String:
+	var lines: PackedStringArray = []
+	for label: Node in main.get_node("HUD").find_children("*", "Label", true, false):
+		if (label as Label).is_visible_in_tree(): lines.append((label as Label).text)
+	return "\n".join(lines)
+
 # Shows a direct change to the live sim as a tick would, without stepping, sound or step results.
 static func publish(main) -> void:
 	var job := SimPump.Job.new()
@@ -104,7 +110,7 @@ func test_placement_input(runner) -> bool:
 	tick(main)
 	var refused: Dictionary = main.driver.pump.live().snapshot()
 	var credits = func(state: Dictionary) -> Array: return state.players.map(func(player: Dictionary) -> int: return player.credits)
-	runner.check(not main.orders._placement_kind.is_empty() and credits.call(refused) == credits.call(before) and refused.buildings == before.buildings and refused.pending_commands == before.pending_commands and main.hud.note.begins_with("Rejected: "),"Bs2 invalid remains mode reason")
+	runner.check(not main.orders._placement_kind.is_empty() and credits.call(refused) == credits.call(before) and refused.buildings == before.buildings and refused.pending_commands == before.pending_commands and not main.hud.refusal.is_empty(),"Bs2 invalid remains mode reason")
 	runner.check(refused.tick == before.tick + 1,"Bs2 the refusal arrives with one step")
 	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,true)
@@ -195,7 +201,7 @@ func test_context_orders(runner) -> bool:
 	main.orders.selected_ids.assign([1,air])
 	var before: Dictionary = main.driver.pump.live().snapshot()
 	pointer(main,Iso.world_to_plane(Vector2(25.5,5.5)),MOUSE_BUTTON_RIGHT,true)
-	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().size() == 1 and not main.hud.note.is_empty(),"Bs4 mixed context rejected")
+	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().size() == 1 and not main.hud.refusal.is_empty(),"Bs4 mixed context rejected")
 	pointer(main,Iso.world_to_plane(Vector2(6.5,10.5)),MOUSE_BUTTON_RIGHT,true)
 	runner.check(main.driver.queued().size() == 2 and main.driver.queued().back().type == "move","Bs4 mixed ordinary ground move")
 	main.driver.adopt(Fixture.make_world())
@@ -224,19 +230,19 @@ func test_execution_feedback(runner) -> bool:
 	main.driver.flush()
 	Fixture.steps(main.driver.pump.live(),3)
 	publish(main)
-	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"Bs5 due rejection visible")
+	runner.check(hud_text(main).contains("Insufficient credits") and main.hud.refusal == "Insufficient credits","Bs5 due rejection visible")
 	main._submit({"type":"stop","entity_ids":[999]})
 	tick(main)
-	var error: String = main.hud.note
+	var error: String = main.hud.refusal
 	main._refresh()
-	runner.check(not error.is_empty() and main.hud.note == error,"Bs5 immediate error persists refresh")
+	runner.check(not error.is_empty() and main.hud.refusal == error,"Bs5 immediate error persists refresh")
 	main.driver.pump.live().add_player(2,0)
 	var other: int = main.driver.pump.live().spawn(2,Vector2(2.5,2.5))
 	Fixture.send(main.driver.pump.live(),{"type":"stop","entity_ids":[other],"player":2})
 	tick(main)
-	runner.check(main.hud.note == error,"Bs5 unrelated player result preserves immediate error")
+	runner.check(main.hud.refusal == error,"Bs5 unrelated player result preserves immediate error")
 	main._submit({"type":"stop","entity_ids":[1]})
-	runner.check(main.hud.note.is_empty(),"Bs5 accepted clears immediate error")
+	runner.check(main.hud.refusal.is_empty(),"Bs5 accepted clears immediate error")
 	main.free()
 	return true
 
@@ -289,7 +295,7 @@ func test_sb2_red_ghost_click_refused_locally(runner) -> bool:
 	tick(main)
 	tick(main)
 	pointer(main,cell,MOUSE_BUTTON_LEFT,false)
-	runner.check(main.driver.queued().is_empty() and main.orders._placement_kind == "usa_power_plant" and main.hud.note.begins_with("Rejected: "),"RL1 a click on a red ghost sends nothing, says why and keeps placement, held %d note '%s'" % [main.driver.queued().size(), main.hud.note])
+	runner.check(main.driver.queued().is_empty() and main.orders._placement_kind == "usa_power_plant" and not main.hud.refusal.is_empty(),"RL1 a click on a red ghost sends nothing, says why and keeps placement, held %d note '%s'" % [main.driver.queued().size(), main.hud.refusal])
 	tick(main)
 	var errors: int = main._sound.last_requests().filter(func(request: Dictionary) -> bool: return request.cue == "error").size()
 	runner.check(errors == 1,"RL1 the local refusal beeps once at the next step, got %d" % errors)
@@ -358,12 +364,12 @@ func test_resume_status(runner) -> bool:
 	var status: Label = main.get_node("HUD/Status")
 	hover(main,Iso.world_to_plane(Vector2(8.5,4.5)))
 	main._refresh()
-	runner.check(status.text.contains("Right-click: resume"),"H6 resume hint shown while hovering")
+	runner.check(hud_text(main).contains("Right-click: resume"),"H6 resume hint shown while hovering")
 	var economy: Control = main.get_node("HUD/Economy")
 	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y,"H6 buttons below the resume line")
 	hover(main,Iso.world_to_plane(Vector2(20.5,20.5)))
 	main._refresh()
-	runner.check(not status.text.contains("Right-click: resume"),"H6 hint gone off the building")
+	runner.check(not hud_text(main).contains("Right-click: resume"),"H6 hint gone off the building")
 	main.free()
 	return true
 
@@ -426,7 +432,7 @@ func test_rejection_survives_two_steps(runner) -> bool:
 	tick(main)
 	await runner.process_frame
 	await runner.process_frame
-	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"RF8 a rejection from the first of two steps reaches the HUD")
+	runner.check(hud_text(main).contains("Insufficient credits"),"RF8 a rejection from the first of two steps reaches the HUD")
 	main.free()
 	return true
 
@@ -448,7 +454,7 @@ func test_sb1_repaint_keeps_step_pending(runner) -> bool:
 	runner.check(director.collected_ticks() == [1,2] and not director.consumed_ticks().has(1) and not director.consumed_ticks().has(2),"RB5 a repaint leaves the step's sound pending, got %s and %s" % [director.collected_ticks(),director.consumed_ticks()])
 	await runner.process_frame
 	await runner.process_frame
-	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"RB5 the rejection still reaches the HUD after a repaint")
+	runner.check(hud_text(main).contains("Insufficient credits"),"RB5 the rejection still reaches the HUD after a repaint")
 	runner.check(director.consumed_ticks().count(1) == 1 and director.consumed_ticks().count(2) == 1,"RB5 each step's sound plays once, got %s" % [director.consumed_ticks()])
 	runner.check(main._view._state.tick == main.driver.pump.live().tick(),"RB5 the deferred refresh shows the new tick")
 	main.free()
@@ -524,11 +530,11 @@ func test_sb2_placement_waits_for_build_answer(runner) -> bool:
 	key(main,KEY_1)
 	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
-	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.note.is_empty(),"RA6 a refused click keeps placement and says nothing yet, got '%s'" % main.hud.note)
+	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.refusal.is_empty(),"RA6 a refused click keeps placement and says nothing yet, got '%s'" % main.hud.refusal)
 	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
 	runner.check(main.driver.queued().size() == 1,"RA6 a second click while the answer is pending is ignored, held %d" % main.driver.queued().size())
 	tick(main)
-	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.note.begins_with("Rejected: "),"RA6 the refusal keeps placement, got '%s'" % main.hud.note)
+	runner.check(main.orders._placement_kind == "usa_power_plant" and not main.hud.refusal.is_empty(),"RA6 the refusal keeps placement, got '%s'" % main.hud.refusal)
 	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,false)
 	var builds: int = main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == "build").size()
