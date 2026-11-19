@@ -186,7 +186,7 @@ A milestone exit gate is not met until: `sh tools/run_benchmark.sh` passes, the 
 
 ## Pair gate (benchmark pair gate, 2026-11-19)
 
-**Status: proposed, needs the owner's decision.** A/A calibration of the pair gate ([plan](../superpowers/plans/2026-11-18-benchmark-pair-gate.md), Task 6): `PERF_REF=HEAD sh tools/run_bench_pairs.sh` on branch `benchmark-pair-gate`, so reference and branch are the same `game/` tree (`6fa910e`; the night gates ran at that commit, the day gates at `1a3527f`, which changes only `tools/` and docs). Host: the Mac mini (development machine). Two sessions: four gates in a quiet night slot (2026-11-18, 23:56-00:07), four in an ordinary day slot with the desktop in use (2026-11-19, 11:06-11:17). Each gate is 3 alternating pairs; the value is the median of the 3 pair ratios branch/reference.
+**Status: approved, `MAX_RATIO` p95 1.020, p99 1.025 (user, 2026-11-19).** A/A calibration of the pair gate ([plan](../superpowers/plans/2026-11-18-benchmark-pair-gate.md), Task 6): `PERF_REF=HEAD sh tools/run_bench_pairs.sh` on branch `benchmark-pair-gate`, so reference and branch are the same `game/` tree (`6fa910e`; the night gates ran at that commit, the day gates at `1a3527f`, which changes only `tools/` and docs). Host: the Mac mini (development machine). Two sessions: four gates in a quiet night slot (2026-11-18, 23:56-00:07), four in an ordinary day slot with the desktop in use (2026-11-19, 11:06-11:17). Each gate is 3 alternating pairs; the value is the median of the 3 pair ratios branch/reference.
 
 | Gate | 1-min load at the runs | open p95 / p99 | dense p95 / p99 | hordes300 p95 / p99 |
 |---|---|---|---|---|

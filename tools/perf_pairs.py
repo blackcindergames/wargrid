@@ -13,8 +13,8 @@ from perf_record import COMBAT
 MARKER = re.compile(r"^COMBAT BENCHMARK PASSED 10$", re.M)
 STRESS = re.compile(r"^COMBAT STRESS \S+ ([a-z0-9_]+) ", re.M)
 ERROR_LINE = re.compile(r"^.*ERROR: (.*)$", re.M)
-# Provisional until the A/A calibration and the owner's approval; raise only with user approval and a ledger line.
-MAX_RATIO: dict[str, float] = {"p95": 1.02, "p99": 1.02}
+# A/A calibration 2026-11-19 (performance ledger, pair gate), approved by the owner; raise only with user approval and a ledger line.
+MAX_RATIO: dict[str, float] = {"p95": 1.02, "p99": 1.025}
 
 
 def _rows(text: str) -> dict[str, dict[str, float]]:
