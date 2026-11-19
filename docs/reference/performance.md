@@ -9,29 +9,29 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | --- | --- | --- | --- | --- |
 | **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | ➖ same | 2026-11-19 |
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-19 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | ➖ same | 2026-11-19 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-19 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 3% worse | 2026-11-19 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-19 |
 | Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 3% worse | 2026-11-19 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | ➖ same | 2026-11-19 |
-| Unit movement, slowest moments | 🟢 OK | ████░░░░░░ 49% | 🔺 103% worse | 2026-11-19 |
-| Unit movement | 🟢 OK | ████░░░░░░ 48% | 🔺 14% worse | 2026-11-19 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 2% worse | 2026-11-19 |
+| Unit movement | 🟢 OK | ████░░░░░░ 40% | 🔻 16% better | 2026-11-19 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 23% | 🔻 52% better | 2026-11-19 |
 | Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-19 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 48% of budget (Pair gate + B3 rematch after quit merge, 2026-11-19), 14% slower than Benchmark pair gate (worst vs worst); run-to-run spread up to 50%
-- movement p99: 49% of budget (Pair gate + B3 rematch after quit merge, 2026-11-19), 103% slower than Benchmark pair gate (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 73% of budget (Pair gate + B3 rematch after quit merge, 2026-11-19), 1% faster than Benchmark pair gate (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 160% of budget, exceeded (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 143% of budget, exceeded (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 212% of budget, exceeded (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread not measured
+- movement p95: 40% of budget (P2.3a spec and plan merge, 2026-11-19), 16% faster than Pair gate + B3 rematch after quit merge (worst vs worst); run-to-run spread up to 50%
+- movement p99: 23% of budget (P2.3a spec and plan merge, 2026-11-19), 52% faster than Pair gate + B3 rematch after quit merge (worst vs worst); run-to-run spread up to 50%
+- combat gated p95: 73% of budget (P2.3a spec and plan merge, 2026-11-19), 1% faster than Pair gate + B3 rematch after quit merge (worst vs worst); run-to-run spread up to 58%
+- combat gated p99: 59% of budget (P2.3a spec and plan merge, 2026-11-19), 2% slower than Pair gate + B3 rematch after quit merge (worst vs worst); run-to-run spread up to 58%
+- combat stress p95: 160% of budget, exceeded (P2.3a spec and plan merge, 2026-11-19), unchanged vs Pair gate + B3 rematch after quit merge (worst vs worst); run-to-run spread up to 41%
+- plumbing, movement layouts: 142% of budget, exceeded (P2.3a spec and plan merge, 2026-11-19), unchanged vs Pair gate + B3 rematch after quit merge (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 212% of budget, exceeded (P2.3a spec and plan merge, 2026-11-19), unchanged vs Pair gate + B3 rematch after quit merge (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 72% of budget (B3 rematch after quit, 2026-11-19), 3% slower than Sim boundary SB4 + pump hardening merge rendered (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 74% of budget (B3 rematch after quit, 2026-11-19), 3% slower than Sim boundary SB4 + pump hardening merge rendered (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (P2.3a spec and plan merge, 2026-11-19), unchanged vs Pair gate + B3 rematch after quit merge (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)

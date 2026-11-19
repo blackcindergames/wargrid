@@ -1247,3 +1247,27 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-19,44ce9e0,B3 rematch after quit,dev,tick_frame,ashfall,1,2.251,2.365,,tick-frame,2.5,log sha256:e8285496f9fb
 2026-11-19,44ce9e0,B3 rematch after quit,dev,frame_interval,horde,1,1.609,4.199,,P1,2.5,log sha256:e8285496f9fb
 2026-11-19,44ce9e0,B3 rematch after quit,dev,tick_frame,horde,1,4.969,5.302,,tick-frame,2.5,log sha256:e8285496f9fb
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,movement_tick,open,1,0.74,0.831,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,movement_tick,dense,1,0.738,0.873,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,open,1,1.881,2.221,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,dense,1,1.828,2.129,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,contact,1,1.182,1.552,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,skirmish3v3,1,1.335,1.447,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,transports,1,1.126,1.223,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,defences,1,0.773,2.161,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,docks,1,0.585,0.604,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,hordes300,1,2.913,3.377,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,ramp,1,0.66,1.206,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,combat_tick,frc,1,0.881,1.068,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,lockstep_overhead,contact,1,0.016,0.067,,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,movement_open:profile,1,,,1.2957,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,movement_dense:profile,1,,,1.2952,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,combat_contact:profile,1,,,0.3303,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5306,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,combat_open:profile,1,,,0.8924,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,skirmish_match:profile,1,,,0.2441,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,large_196:profile,1,,,1.6943,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,combat_dense:profile,1,,,0.778,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,combat_hordes300:profile,1,,,1.931,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,team_match:profile,1,,,1.1219,P1,2.26,log sha256:4d074bfce1cf
+2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,team_match_pump:profile,1,,,1.1385,P1,2.26,log sha256:4d074bfce1cf
