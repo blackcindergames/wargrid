@@ -1,0 +1,346 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid HUD, P2.3a1 states</title>
+<link rel="stylesheet" href="hud.css">
+<style>
+body{margin:0;background:#0a0f14;color:#dfe7ec;font:15px/1.45 "Public Sans",Arial,sans-serif}
+#err{position:fixed;left:0;right:0;top:0;z-index:99;background:#b3261e;color:#fff;font:600 14px ui-monospace,Menlo,monospace;padding:8px 14px;white-space:pre-wrap}
+#err:empty{display:none}
+#app{padding:16px 24px 48px}
+#app h2{margin:24px 0 8px;font-size:18px}
+.frame{position:relative;width:1280px;height:720px;overflow:hidden}
+.stage{position:absolute;left:0;top:0;overflow:hidden;background:#a88e5c}
+/* P2.3a1 additions on top of hud.css */
+.hud .sw{display:block;width:8px;height:8px;flex:none}
+.hud .note{display:flex;align-items:center;height:28px;padding:0 7px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:13px;font-weight:600;line-height:16px;white-space:nowrap}
+.hud .centre{left:0;right:0;margin:0 auto;width:max-content}
+.hud .slab{display:flex;flex-direction:column;gap:4px}
+.hud .hints{display:flex;flex-direction:column}
+.hud .hints div{color:var(--muted);font-size:12px;font-weight:400;line-height:14px;white-space:pre}
+.hud .grid{display:grid;gap:4px}
+.hud .btn{display:flex;align-items:center;justify-content:center;height:32px;padding:0 8px;background:var(--btn);font-size:13px;font-weight:600;line-height:16px;white-space:nowrap;position:relative}
+.hud .btn.on{background:var(--panel2);box-shadow:inset 0 0 0 2px var(--sel)}
+.hud .krow.hover{background:var(--panel2)}
+.hud .krow.hover.ring{box-shadow:inset 0 0 0 1px var(--muted)}
+.hud .krow.held{background:var(--quiet);color:var(--muted)}
+.hud .cap{color:#2a2114;font-size:12px;font-weight:600;line-height:14px;white-space:nowrap}
+.hud .hand{position:absolute;width:18px;height:22px;z-index:6}
+/* Today's Godot default control look, 12 px, square corners (owner question 4, user 2026-11-19) */
+.hud .gd{color:#dfdfdf;font-size:12px;font-weight:400;line-height:15px;background:rgba(26,26,26,.6);overflow:hidden}
+.hud .gd .col{display:flex;flex-direction:column;gap:4px}
+.hud .gd .rowh{display:flex;gap:4px}
+.hud .gd .lbl{color:#fff;white-space:pre-wrap}
+.hud .gd .gbtn{flex:1;display:flex;align-items:center;justify-content:center;padding:4px;background:rgba(26,26,26,.6);white-space:nowrap}
+.hud .gd .gbtn.down{background:rgba(0,0,0,.6)}
+.hud .gd .gbtn.off{color:rgba(223,223,223,.5);background:rgba(26,26,26,.3)}
+.hud .gd .edit{padding:4px 4px 2px;background:rgba(26,26,26,.6);border-bottom:2px solid rgba(0,0,0,.6);color:rgba(223,223,223,.6)}
+.hud .gd .chk{display:flex;gap:4px;align-items:flex-start;padding:4px 0}
+.hud .gd .box{flex:none;width:16px;height:16px;border:1px solid rgba(223,223,223,.55);margin-top:0}
+.hud .gd .box svg{display:block}
+.hud .gd .scroll{position:relative;overflow:hidden}
+.hud .gd .vbar{position:absolute;right:0;top:0;bottom:0;width:8px;background:rgba(26,26,26,.6)}
+.hud .gd .vbar i{position:absolute;left:1px;right:1px;top:0;background:rgba(255,255,255,.35)}
+.hud .f3{color:#fff;font-size:12px;font-weight:400;line-height:15px;text-align:right;white-space:pre}
+</style>
+<div id="err"></div>
+<div id="app"></div>
+<script>
+addEventListener('error', e => { err.textContent += `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})\n`; });
+addEventListener('unhandledrejection', e => { err.textContent += `${e.reason}\n`; });
+
+// Values: docs/reference/hud-v5-layout.md and the P2.3a design (P2.3a1 sections); names, costs, health and power from game/scripts/simulation/definitions/.
+const W = 1280, H = 720;
+const TOKENS = {bg: '#121c24', btn: '#223241', panel2: '#26384a', quiet: '#16212a', well: '#0c141a', line: '#2e3f4b', text: '#eef3f5', muted: '#93a5b0',
+  sel: '#60e5ed', amber: '#f7c871', you: '#628ffa', enemy: '#d6120c', r: '0'};
+const SLAB_W = 432, SEL_W = 408, STACK_TOP = 88, CHECKLIST_W = 320, DIALOG_W = 360;
+const HINTS = ['1-9: menu  U: unload | Right: context/move | E: produce | Esc: cancel', 'A: attack-move click | S: stop'];
+const RESUME = 'Right-click: resume', ROWS_HINT = 'Rows: click narrows, Shift-click removes';
+// hud.gd menu_label "%d: %s $%d" with the cost in comma thousands, as the plan's Copy line asks (gate A question); builder builds per faction (usa.gd, china.gd, frc.gd).
+const MENUS = {
+  usa: ['Power Plant $800', 'Supply Depot $2,000', 'Barracks $600', 'Vehicle Factory $2,000', 'Missile Battery $1,000'],
+  china: ['Power Plant $1,000', 'Supply Depot $1,500', 'Barracks $500', 'Vehicle Factory $2,000', 'Rotary Gun Tower $1,200'],
+  frc: ['Supply Cache $1,500', 'Barracks $500', 'Vehicle Yard $2,500', 'Tunnel Hub $800']};
+const CHINA_FACTORY = ['Rotary Gun Tank $800', 'Medium Tank $800'];
+const BUTTON_PAD = 8, GAP = 4, SLAB_INNER = SLAB_W - 12 - 8;
+// Focus cards from game/data/playtest/focus.json (illustrative picks).
+const CARDS = {
+  again: {title: 'Play again', ticked: [0], try: ['Finish an online match and press Play again on both sides', 'Create a match, switch to another tab or app for a minute, then let your friend join', 'Press Cancel while connecting'],
+    questions: ['Starting a second match was quick', 'The result panel told me what was going on', 'Waiting for my friend felt safe']},
+  heard: {title: 'Every order heard', ticked: [0, 2], try: ['Move infantry, a vehicle and a worker with a right-click', 'Attack an enemy with a right-click', 'Send workers to collect supplies', 'Give orders in an online match',
+    'Start a second match and listen to the first track', 'Online: Copy the join link, open it in a second tab, and paste a code into the join field'],
+    questions: ['Every order I gave felt heard', 'The voices stayed out of the way when I clicked fast', 'The menu sections made it easy to find things', 'The match music felt varied between matches']}};
+const F3_TEXT = 'FPS 60\nFrame 16.7 / p95 17.9 / max 24.1 ms\nSim step 0.41 / p95 0.63 ms\nUnits 46 | Buildings 9 | Tick 5412 | split 0%';
+const FREEZE = 'Match stopped: game error. Please report it. Esc: leave the match.';
+
+const num = n => n.toLocaleString('en-US');
+const px = n => `${n}px`;
+const mixHex = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
+// world_view.gd health_color with palette.gd's three colours.
+function healthColor(f) {
+  if (f >= 1) return '#5cc85a';
+  if (f < .5) return mixHex('#d8453a', '#e0d060', f * 2);
+  return mixHex('#e0d060', '#5cc85a', (f - .5) * 2);
+}
+const key = k => `<span class="k">${k}</span>`;
+const bar = (frac, w, h, color) => `<i class="hp" style="width:${w}px;height:${h}px"><b style="width:${frac * 100}%;background:${color}"></b></i>`;
+
+function menuColumns() {
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = "600 13px 'Public Sans'";
+  const widest = Math.max(...Object.values(MENUS).flatMap(list => list.map((l, i) => ctx.measureText(`${i + 1}: ${l}`).width)));
+  let cols = 1;
+  for (let n = 4; n >= 1; n--) if (n * (widest + 2 * BUTTON_PAD) + (n - 1) * GAP <= SLAB_INNER) { cols = n; break; }
+  return {cols, widest};
+}
+
+function strip(s) {
+  const arr = '<span class="arr">→</span>';
+  let credits = num(s.credits);
+  if (s.short) credits += ` ${arr} <span class="amb">${num(s.short)} short</span>`;
+  else if (s.after != null) credits += ` ${arr} ${num(s.after)}`;
+  const parts = [`<span class="stat cr"><i class="sw" style="background:var(--you)"></i><span class="lab">Credits</span><b>${credits}</b></span>`];
+  if (s.power) {
+    const [u, a] = s.power, after = s.powerAfter;
+    const value = after ? `${u} / ${a} ${arr} ${after[0]} / ${after[1]}` : `${u} / ${a}`;
+    const low = after ? after[0] > after[1] : u > a;
+    parts.push(`<span class="stat"><span class="lab">Power</span><b>${value}</b>${low ? '<span class="lab amb">Low power</span>' : ''}</span>`);
+  }
+  return `<div class="strip" style="left:${s.x ?? 8}px;top:${s.y ?? 8}px;border-width:1px"><div class="g wide">${parts.join('')}</div></div>`;
+}
+
+function chips(c) {
+  const menu = `<div class="tc" data-id="menu" style="right:8px;top:8px;border-width:1px">Menu${c.esc ? key('Esc') : ''}</div>`;
+  const pt = c.playtest ? `<div class="tc" data-id="playtest" style="right:8px;top:48px;border-width:1px"><span class="lab">Playtest</span><b class="num">${c.playtest}</b></div>` : '';
+  return menu + pt;
+}
+
+const notice = text => `<div class="note centre" data-id="notice" style="top:48px">${text}</div>`;
+const refusal = text => `<div class="refuse amb centre" data-id="refusal" style="top:${H - 204}px;border-width:1px"><i class="sq"></i><span>${text}</span></div>`;
+
+function panelSlab(edge, body, place = 'left:0;bottom:0') {
+  return `<div class="slabbg sel" data-id="selection" style="${place};width:${SEL_W}px;border-width:1px 1px 0 0;padding:11px 15px 12px 16px;box-shadow:inset 4px 0 0 ${edge}"><div class="pn">${body}</div></div>`;
+}
+function identity(name, cur, max, side = '', extra = '') {
+  return `<div class="id"><div><div class="nr"><span class="nm">${name}</span>${side}</div>${extra}
+    <div class="hr">${bar(cur / max, 160, 6, healthColor(cur / max))}<span class="num">${num(cur)} / ${num(max)}</span></div></div></div>`;
+}
+const kv = (label, value) => `<div class="kv"><span class="lab">${label}</span><b class="num">${value}</b></div>`;
+const footer = text => `<div class="foot"><span class="muted">${text}</span></div>`;
+function siteBody(name, pct, cur, max, label, color) {
+  const progress = `<div class="hr">${bar(pct / 100, 160, 6, color)}<span class="num">${pct} %</span></div>`;
+  return identity(name, cur, max, `<span class="lab">${label}</span>`, progress);
+}
+function kindRow([name, count, frac], cls = '') {
+  const fill = count ? bar(frac, 0, 3, healthColor(frac)) : bar(0, 0, 3, 'transparent');
+  return `<span class="b krow ${cls}" data-name="${name}" data-count="${count}"><span class="kn">${name}</span><b class="num">${count}</b>${fill}</span>`;
+}
+function manyBody(header, rows) {
+  return `<div class="hd">${header}</div><div class="cards">${rows.map(r => kindRow(r, r[3] || '')).join('')}</div>`;
+}
+
+const PANELS = {
+  bulldozer: () => panelSlab('var(--you)', identity('Bulldozer', 250, 250)),
+  tank: () => panelSlab('var(--you)', identity('Medium Tank', 180, 400)),
+  factory: (place) => panelSlab('var(--you)', identity('Vehicle Factory', 2000, 2000) + footer('Right-click ground: rally point'), place),
+  plant: () => panelSlab('var(--you)', identity('Power Plant', 1500, 1500) + kv('Power', '+10')),
+  paused: () => panelSlab('var(--you)', siteBody('Vehicle Factory', 62, 1240, 2000, 'Paused · no builder', 'var(--you)')),
+  enemySite: (place) => panelSlab('var(--enemy)', siteBody('Vehicle Factory', 38, 760, 2000, 'Under construction', 'var(--enemy)'), place),
+  pile: (place, value = '10,650') => panelSlab('var(--line)', `<div class="nm">Supply Pile</div>${kv('Credits left', value)}`, place)};
+
+function slab(s) {
+  const hints = [...HINTS, ...(s.resume ? [RESUME] : []), ROWS_HINT].map(t => `<div>${t}</div>`).join('');
+  const grid = s.menu && s.menu.length ? `<div class="grid" style="grid-template-columns:repeat(${COLS},1fr)">${s.menu.map((l, i) => `<span class="btn ${s.armed === i ? 'on' : ''}">${i + 1}: ${l}</span>`).join('')}</div>` : '';
+  const produce = s.produce ? `<span class="btn">${s.produce}</span>` : '';
+  const cancel = s.cancel ? '<span class="btn">Cancel construction</span>' : '';
+  const queue = (s.queue || []).map(q => `<span class="btn">${q}</span>`).join('');
+  const place = s.place || `left:${W - SLAB_W}px;bottom:0`;
+  return `<div class="slabbg slab" data-id="economy" style="${place};width:${SLAB_W}px;border-width:1px 0 0 0;padding:7px 8px 8px 12px;box-shadow:inset 4px 0 0 var(--you)"><div class="hints">${hints}</div>${grid}${produce}${cancel}${queue}</div>`;
+}
+const builderSlab = (faction = 'china', armed = -1) => slab({menu: MENUS[faction], armed});
+const NINE = ['Cancel Rotary Gun Tank (42%)', ...['Medium Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank', 'Rotary Gun Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank'].map(n => `Cancel ${n} (queued)`)];
+
+const TICK = '<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7.5 6 10.5 11.5 4" fill="none" stroke="#dfdfdf" stroke-width="2"/></svg>';
+function checkRow(text, on) { return `<div class="chk"><i class="box">${on ? TICK : ''}</i><span>${text}</span></div>`; }
+function questionBlock(text) {
+  const buttons = [1, 2, 3, 4, 5].map(n => `<span class="gbtn">${n}</span>`).join('');
+  return `<div class="lbl">${text}</div><div class="rowh">${buttons}</div><div class="edit">Optional comment</div>`;
+}
+function checklist(card) {
+  const rows = [`<div class="lbl">${card.title}  (\`)</div>`, ...card.try.map((t, i) => checkRow(t, card.ticked.includes(i))), ...card.questions.map(questionBlock),
+    '<div class="lbl">1 strongly disagree … 5 strongly agree</div>', '<div class="lbl">This match</div>', '<div class="lbl">No markers yet (N adds one)</div>'];
+  return `<div class="gd" data-id="checklist" style="right:8px;top:${STACK_TOP}px;width:${CHECKLIST_W}px"><div class="scroll"><div class="col rows">${rows.join('')}</div></div></div>`;
+}
+function noteForm() {
+  return `<div class="gd" data-id="note_form" style="right:8px;top:${STACK_TOP}px;width:${DIALOG_W}px"><div class="col">
+    <div class="rowh"><span class="gbtn">Good</span><span class="gbtn">Bad</span><span class="gbtn">Confusing</span></div>
+    <div class="edit">Optional note</div>
+    <div class="rowh"><span class="gbtn off">Save</span><span class="gbtn">Cancel</span></div></div></div>`;
+}
+// rule 'a': the gate A proposal (F3 left of the stack when the space below it is too short); expect 'clash': drawn to show the meeting.
+const f3 = ({rule = '', expect = ''} = {}) => `<div class="f3" data-id="f3" data-rule="${rule}" data-expect="${expect}" style="right:8px;top:${STACK_TOP}px">${F3_TEXT}</div>`;
+const centreCap = (text, y) => `<div class="cap centre" style="top:${y}px">${text}</div>`;
+const cap = (text, x, y) => `<div class="cap" style="left:${x}px;top:${y}px">${text}</div>`;
+const hand = (x, y) => `<svg class="hand" viewBox="0 0 18 22" style="left:${x}px;top:${y}px"><path d="M6 1.5c.9 0 1.5.7 1.5 1.6V10h.4V7.6c0-.9.7-1.5 1.5-1.5s1.5.6 1.5 1.5V10h.4V8.6c0-.9.6-1.5 1.5-1.5s1.4.6 1.4 1.5v1.9h.4v-.6c0-.8.6-1.4 1.4-1.4.8 0 1.4.6 1.4 1.4v5.6c0 3.3-2.4 6-5.6 6H9.6c-1.7 0-3.2-.8-4.2-2.2L1.6 13.4c-.5-.7-.3-1.6.4-2 .6-.4 1.4-.3 1.9.2L4.5 13V3.1C4.5 2.2 5.1 1.5 6 1.5z" fill="#fff" stroke="#000" stroke-width="1"/></svg>`;
+
+const BASE_STRIP = {credits: 4800, power: [8, 10]};
+const CHINA_DEFENCE = {credits: 4800, after: 3600, power: [8, 10], powerAfter: [11, 10]};
+const STATES = {
+  slab: () => strip(CHINA_DEFENCE) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + builderSlab('china', 4) +
+    cap('Builder selected, pointer on a paused site: the resume hint joins the hints', 436, 300) + slab({menu: [], resume: true, place: 'left:436px;top:318px'}),
+  notice: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + notice('Waiting for player 2') + PANELS.tank() + builderSlab(),
+  freeze: () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + notice(FREEZE) + PANELS.bulldozer() + builderSlab() +
+    centreCap('Specimen (gate A question): the same line in the refusal look, amber square and amber text', 118) +
+    `<div class="refuse amb centre" style="top:136px;border-width:1px"><i class="sq"></i><span>${FREEZE}</span></div>`,
+  forecast: () => strip({credits: 4800, after: 4000, power: [8, 10], powerAfter: [8, 15]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + builderSlab('usa', 0) +
+    cap('In place: USA, Power Plant armed (makes 5 power)', 8, 46) +
+    cap('China, Rotary Gun Tower armed (uses 3 power)', 8, 82) + strip({...CHINA_DEFENCE, y: 100}) +
+    cap('China, Rotary Gun Tower armed, 500 credits', 8, 152) + strip({credits: 500, short: 700, power: [8, 10], powerAfter: [11, 10], y: 170}) +
+    cap('FRC, Barracks armed: no kind uses or makes power, so no POWER group', 8, 222) + strip({credits: 4800, after: 4300, y: 240}),
+  sites: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.paused() + slab({menu: [], cancel: true}) +
+    cap('Enemy site: owner colour, never the paused label', 436, 268) + PANELS.enemySite('left:436px;top:286px') +
+    cap('Own factory, interim: rally footer, no queue row until P2.3b', 436, 404) + PANELS.factory('left:436px;top:422px'),
+  chips: () => strip(BASE_STRIP) + chips({esc: false, playtest: '2 / 6'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', queue: NINE}) + checklist(CARDS.heard) + noteForm(),
+  'chips-f3': () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + builderSlab() + f3(),
+  'chips-f3-clash': () => strip(BASE_STRIP) + chips({esc: false, playtest: '2 / 6'}) + PANELS.bulldozer() + builderSlab() + checklist(CARDS.heard) + f3({expect: 'clash'}) +
+    cap('Plan rule: checklist capped above the slab, F3 below it, so F3 lands on the slab', 8, 46),
+  'chips-f3-rule': () => strip(BASE_STRIP) + chips({esc: false, playtest: '2 / 6'}) + PANELS.bulldozer() + builderSlab() + checklist(CARDS.heard) + f3({rule: 'a'}) +
+    cap('Proposal (gate A question): no room below, so F3 opens left of the checklist', 8, 46),
+  'chips-checklist': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.plant() + slab({menu: []}) + checklist(CARDS.again) + f3(),
+  'chips-form': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.plant() + slab({menu: []}) + checklist(CARDS.again) + noteForm() + f3(),
+  'chips-off': () => strip(BASE_STRIP) + chips({esc: true, playtest: null}) + builderSlab() + f3(),
+  refusal: () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)'}) + refusal('Insufficient credits'),
+  pile: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.pile() + builderSlab() +
+    cap('The same pile once its last box is taken', 436, 404) + PANELS.pile('left:436px;top:422px', 'Empty'),
+  rows: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) +
+    panelSlab('var(--you)', manyBody('96 selected · 5 kinds · 12 idle collectors', [['Medium Tank', 36, .82], ['Rotary Gun Tank', 24, .64, 'hover'], ['Militia', 0, 0, 'held'], ['Anti-Tank Trooper', 12, .45], ['Supply Truck', 12, 1], ['Bulldozer', 12, 1]])) +
+    builderSlab() + hand(330, 628) +
+    cap('Pointer on Rotary Gun Tank: panel2 fill, pointing hand. The last Militia died under the pointer: the row holds at 0 until the pointer leaves.', 16, 548) +
+    cap('Specimen (gate A question): hover with a 1 px muted inset as well', 436, 282) +
+    panelSlab('var(--you)', manyBody('36 selected · 2 kinds', [['Medium Tank', 12, .82], ['Rotary Gun Tank', 24, .64, 'hover ring']]), 'left:436px;top:300px') + hand(750, 344),
+  collector: collectorSheet};
+
+function collectorSheet() {
+  const one = (name, cur, max, label) => identity(name, cur, max, label ? `<span class="lab">${label}</span>` : '');
+  const items = [
+    ['collecting: flying_source or lead_source', 'Supply Truck', 'TO PILE'],
+    ['collecting: waiting_source; or idle while a pile in view holds boxes', 'Supply Truck', 'WAITING AT PILE'],
+    ['collecting: loading', 'Supply Truck', 'LOADING'],
+    ['collecting: flying_depot or lead_depot', 'Supply Truck', 'TO SUPPLY DEPOT'],
+    ['collecting: waiting_depot', 'Supply Truck', 'WAITING AT SUPPLY DEPOT'],
+    ['collecting: unloading', 'Supply Truck', 'UNLOADING'],
+    ['collecting, idle, no pile with boxes; or not collecting, nothing else', 'Supply Truck', 'IDLE'],
+    ['not collecting: moving or path pending', 'Supply Truck', 'MOVING'],
+    ['not collecting: named builder of an unfinished site (FRC)', 'Laborer', 'BUILDING'],
+    ['not collecting: inside a transport (no label)', 'Laborer', ''],
+    ['longest FRC label', 'Laborer', 'WAITING AT SUPPLY CACHE'],
+    ['longest name with the longest USA label', 'Supply Helicopter', 'WAITING AT SUPPLY DEPOT']];
+  const HP = {'Supply Truck': [255, 300], 'Laborer': [100, 100], 'Supply Helicopter': [300, 300]};
+  let html = cap('Collector status labels, P2.3a1: one own collector per published state (spec table); seeking holds the previous label. Many selected: the idle count in the header.', 16, 16);
+  items.forEach(([what, name, label], i) => {
+    const col = Math.floor(i / 5), row = i % 5, x = 16 + col * (SEL_W + 12), y = 48 + row * 96;
+    html += cap(what, x, y) + panelSlab('var(--you)', one(name, ...HP[name], label), `left:${x}px;top:${y + 18}px`);
+  });
+  const x = 16 + 2 * (SEL_W + 12), y = 48 + 2 * 96;
+  html += cap('many: idle collectors counted in the header', x, y) +
+    panelSlab('var(--you)', manyBody('9 selected · 2 kinds · 1 idle collector', [['Medium Tank', 4, .7], ['Supply Truck', 5, .92]]), `left:${x}px;top:${y + 18}px`);
+  return html;
+}
+
+const COLUMNS = menuColumns();
+let COLS = COLUMNS.cols;
+const flat = Object.entries(TOKENS).map(([k, v]) => `--${k}:${v}`).join(';');
+const hudHtml = (state, k) => `<div class="hud" data-state="${state}" style="--k:${k};--ff:'Public Sans',Arial,sans-serif;width:${W}px;height:${H}px;${flat}">${STATES[state]()}</div>`;
+
+function rectOf(hudEl, el) {
+  const hr = hudEl.getBoundingClientRect(), r = el.getBoundingClientRect(), s = hr.width / hudEl.offsetWidth;
+  return {x: (r.left - hr.left) / s, y: (r.top - hr.top) / s, w: r.width / s, h: r.height / s};
+}
+const hits = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+// Owner question 5 (user, 2026-11-19): the checklist is capped to the space above the slab; the note form goes left of it when there is no room below; F3 sits below whatever is open.
+function stackLayout(hudEl) {
+  const slabEl = hudEl.querySelector('[data-id=economy]:not([style*="top:"])');
+  const slabTop = slabEl ? rectOf(hudEl, slabEl).y : H;
+  const list = hudEl.querySelector('[data-id=checklist]'), form = hudEl.querySelector('[data-id=note_form]'), perf = hudEl.querySelector('[data-id=f3]');
+  const helper = hudEl.querySelector('[data-id=playtest]');
+  let bottom = helper ? 80 : 40;
+  if (list) {
+    const scroll = list.querySelector('.scroll'), rows = list.querySelector('.rows'), cap = slabTop - 8 - STACK_TOP;
+    scroll.style.height = '';
+    scroll.querySelectorAll('.vbar').forEach(e => e.remove());
+    if (rows.offsetHeight > cap) {
+      scroll.style.height = px(cap);
+      rows.style.paddingRight = '12px';
+      scroll.insertAdjacentHTML('beforeend', `<span class="vbar"><i style="height:${Math.round(cap * cap / rows.offsetHeight)}px"></i></span>`);
+    }
+    bottom = STACK_TOP + list.offsetHeight;
+  }
+  if (form) {
+    const below = slabTop - 8 - (bottom + 8);
+    if (list && below < form.offsetHeight) {
+      form.style.right = px(8 + CHECKLIST_W + 8);
+      form.style.top = px(STACK_TOP);
+    } else {
+      form.style.right = '8px';
+      form.style.top = px(list ? bottom + 8 : STACK_TOP);
+      bottom = list ? bottom + 8 + form.offsetHeight : STACK_TOP + form.offsetHeight;
+    }
+    if (list) bottom = Math.max(bottom, STACK_TOP + list.offsetHeight);
+  }
+  if (!perf) return;
+  perf.style.right = '8px';
+  perf.style.top = px(bottom + 8);
+  if (perf.dataset.rule === 'a' && (list || form) && bottom + 8 + perf.offsetHeight > slabTop - 8) {
+    const formLeft = form && form.style.right !== '8px';
+    perf.style.right = px(8 + (list ? CHECKLIST_W : DIALOG_W) + 8);
+    perf.style.top = px(formLeft ? STACK_TOP + form.offsetHeight + 8 : STACK_TOP);
+  }
+}
+function audit(hudEl) {
+  const problems = [];
+  const ids = ['selection', 'economy', 'refusal', 'notice'].flatMap(id => [...hudEl.querySelectorAll(`[data-id=${id}]`)]);
+  ids.forEach(el => { const r = rectOf(hudEl, el); if (r.x < -0.5 || r.y < -0.5 || r.x + r.w > W + 0.5 || r.y + r.h > H + 0.5) problems.push(`${el.dataset.id} outside the view`); });
+  const slabEl = hudEl.querySelector('[data-id=economy]:not([style*="top:"])');
+  ['checklist', 'note_form', 'f3'].forEach(id => {
+    const el = hudEl.querySelector(`[data-id=${id}]`);
+    if (el && slabEl && el.dataset.expect !== 'clash' && hits(rectOf(hudEl, el), rectOf(hudEl, slabEl))) problems.push(`${id} meets the slab`);
+  });
+  const perf = hudEl.querySelector('[data-id=f3]');
+  if (perf) {
+    const r = rectOf(hudEl, perf);
+    if (r.x < 0 || r.y < 0 || r.x + r.w > W || r.y + r.h > H) problems.push('f3 outside the view');
+    ['checklist', 'note_form', 'selection'].forEach(id => hudEl.querySelectorAll(`[data-id=${id}]`).forEach(el => { if (hits(r, rectOf(hudEl, el))) problems.push(`f3 meets ${id}`); }));
+  }
+  hudEl.querySelectorAll('.krow .kn, .nr, .sel .hd').forEach(el => { if (el.scrollWidth > el.clientWidth + 0.5) problems.push(`cut: ${el.textContent.trim()}`); });
+  hudEl.querySelectorAll('.hints div').forEach(el => { if (el.scrollWidth > el.parentElement.clientWidth + 0.5) problems.push(`hint wider than the slab: ${el.textContent}`); });
+  return problems;
+}
+function layoutAll() {
+  COLS = menuColumns().cols;
+  document.querySelectorAll('.hud').forEach(h => {
+    h.querySelectorAll('.grid').forEach(g => { g.style.gridTemplateColumns = `repeat(${COLS},1fr)`; });
+    stackLayout(h);
+  });
+}
+
+const H_ = new URLSearchParams(location.hash.slice(1));
+if (H_.has('shot')) {
+  const state = H_.get('shot'), scale = +(H_.get('scale') || 2), size = H_.get('size') || '720';
+  if (size !== '720') err.textContent += `size=${size}: this page draws the 1280x720 layout only (size=720)\n`;
+  if (!STATES[state]) err.textContent += `unknown state ${state}\n`;
+  document.body.style.cssText = 'overflow:hidden;background:#000';
+  app.style.padding = '0';
+  app.innerHTML = `<div class="stage" style="width:${W * scale}px;height:${H * scale}px">${hudHtml(state, scale)}</div>`;
+  layoutAll();
+  document.fonts.ready.then(() => { layoutAll(); audit(app.querySelector('.hud')).forEach(p => { err.textContent += `layout: ${p}\n`; }); });
+} else {
+  app.innerHTML = Object.keys(STATES).map(s => `<h2>${s} <a style="color:#60e5ed;font-size:13px" href="#shot=${s}&size=720&scale=2" onclick="setTimeout(()=>location.reload())">2x</a></h2><div class="frame"><div class="stage" style="width:${W}px;height:${H}px">${hudHtml(s, 1)}</div></div>`).join('');
+  layoutAll();
+  document.fonts.ready.then(() => {
+    layoutAll();
+    const m = menuColumns();
+    app.insertAdjacentHTML('afterbegin', `<p>Build menu: widest label ${m.widest.toFixed(1)} px at 13/600 plus ${2 * BUTTON_PAD} padding, ${m.cols} columns in ${SLAB_INNER} px.</p>`);
+    document.querySelectorAll('.hud').forEach(h => audit(h).forEach(p => { err.textContent += `${h.dataset.state}: ${p}\n`; }));
+  });
+}
+</script>
