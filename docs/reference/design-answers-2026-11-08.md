@@ -1351,9 +1351,24 @@ Asked at stop gate A over the [P2.3a1 state pictures](../images/hud-v5/notes.md#
   - **Forecast card:** the owner's `AFTER PURCHASE` card sits under the strip while a building is armed; the strip keeps the real numbers, no arrow, `−700` replaces `700 short` (U+2212 is in Public Sans; the arrow glyph is not).
   - **Warning colour `warn` = `#f47b6c`:** a stronger coral-red picked over the mock's `#dc948b`, which turns nearly grey under protanopia (18.2 from the label grey, under the bar of 20; `#f47b6c` stays 29.1 away). Warnings stop being amber: low power, the shortfall, the refusal line, the P2.3b cell card's reason line and the freeze card's warning mark all take `warn`; "no saturated red text" replaces "no red warning text". Amber keeps alerts, and the rule text now also names primary buttons, which are already amber (`game/ui/launcher_theme.tres:71-76`, `:357`). Zero Hour's power bar turns red too ("Red if consumption exceeds production", `GeneralsMD/Code/GameEngine/Include/Common/GlobalData.h:477` @ `afc2a103f`).
 
+- **Director round after gate A (owner's picks, 2026-11-19; report by the game director at the owner's request):**
+  - **No build click that can only fail:** the interim slab's build buttons show only while nothing or an own builder is selected (an army selection shows the order row alone), and a price the player cannot afford prints in `warn`, updated live as credits change. Task 9. A build click with nothing selected picking the nearest idle builder goes to Order controls, not P2.3a1.
+  - **Low power names its effect:** its only effect is that powered defences stop firing (`game/scripts/simulation/combat.gd`, dark defences); the strip and the forecast card read `LOW POWER · DEFENCES OFF`, and a selected or inspected powered building whose owner is short shows `OFFLINE · LOW POWER` in `warn` caps on its name row (an enemy's only if the view already carries its power; no new view fields). Tasks 6 and 10; answers F21's "nothing said why".
+  - **Riders recorded, none started:** map pings (decided 2026-11-09) on P7, a counter line per unit kind checked against the damage numbers on P2.3b, and a first-match hints package after P2.3b (packages.md).
+
 ### Decision app (user, 2026-11-19)
 
 - **One permanent decision page:** the A/B pages (HUD v5 `round1.html`, map art `round6.html`, the P2.3a1 gate page) become one reusable app in `tools/decision_page/`: steps as small data files, one stage with the old controls (flip A/B/C/D or side by side, game-world backdrops, window size, ground, zoom, HUD on and off, a phone button bar), clicks recorded through the guarded pick endpoint.
 - **Hosted on fly with a small volume,** so clicks survive restarts and redeploys.
 - **Prototype first:** a worktree branch ports the P2.3a1 gate rounds into the step format; the owner looks, then a short spec before it becomes the standard.
 - **Game scenes with movement for art rounds:** future art rounds should show real game scenes, tanks driving included: a lab step that embeds the in-game A/B lab's web build and sets its variant from the page, and short muted looping clips recorded from the game as the light option. The spec designs the page-to-game link. The owner liked the round 2 gate page (2026-11-19).
+
+### Low-end research decisions (user, 2026-11-19)
+
+From the low-end performance budget report (unattended run, 2026-11-19, private), section 12; each took the recommendation.
+
+- **D14, SB5a plan now:** the attended Steam Deck session no longer comes before the SB5a plan; its three settings were measured unattended (none helped). The attended look (visible judder, input feel, Game Mode, the 60 Hz panel, audio under load) moves to before SB6.
+- **D19, no extra hardware for now:** no laptop or LCD Deck; their numbers stay labelled unmeasured in the ledger, D2 and D15 stay on the OLED and the estimates.
+- **D2, target unchanged:** Deck Firefox, 10/20/5 ms, F 5.5.
+- **D6, honest no-threads sentence:** the ledger states the measured no-threads outcome at about 250 units on the Deck in Firefox (30 ticks per second, about 58 frames per second, per-frame CPU p95 31 ms, a quarter of frames over 25 ms; smooth with the worker) at the next docs pass.
+- **D1, D3-D5, D7-D13, D15-D18 deferred:** each is asked at the moment its row names (README change, SB6 plan, P3, P5, P6, night 13).
