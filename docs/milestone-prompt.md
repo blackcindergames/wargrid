@@ -30,7 +30,7 @@ Next exact action:
 Fresh context per task keeps the token saving of the old restart rule (retrospective item 1) without a manual `/clear` (user, 2026-11-06). Start and coordinator rules: [night run](night-run.md#start) and [coordinator rules](night-run.md#coordinator-rules). Milestone-specific:
 
 - **Stop gate.** Dispatch the gate reviewer (below), record its findings, notify the user and end the session (a night run takes its backups instead). Playtest, visible windows, push, PR, merge and outline expansion wait for the user.
-- **No per-task reviewer subagents.** One review per stop gate.
+- **Reviewers.** Per-task and gate reviewers: [coordinator rules](night-run.md#coordinator-rules) or the plan's gate line.
 - Push only as plain `git push`: the ask rule matches the command prefix, so `git -C … push` would bypass it.
 
 ## Pre-authorized actions
@@ -68,7 +68,7 @@ Still require explicit approval: push, PR, merge, visible game windows, design c
 
 ## Gate review
 
-At each stop gate, dispatch one fresh-context reviewer on the strongest available model. Give it a brief with:
+At each stop gate, dispatch one fresh-context Opus (high) whole-branch reviewer, plus the gate set in [night run](night-run.md#coordinator-rules). Give each a brief with:
 
 - the changed contracts and the diff scope since the last review;
 - the previous rulings and findings, which it must not re-raise unless a ruling is wrong;

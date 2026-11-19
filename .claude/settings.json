@@ -14,12 +14,36 @@
   },
   "permissions": {
     "ask": [
-      "Bash(gh pr:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh pr close:*)",
+      "Bash(gh pr reopen:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh pr review:*)",
+      "Bash(gh pr ready:*)",
+      "Bash(gh pr update-branch:*)",
       "Bash(git merge:*)",
       "Bash(sh tools/deploy_web.sh:*)",
       "Bash(fly:*)",
       "Bash(flyctl:*)",
-      "Bash(sh tools/run_game.sh:*)"
+      "Bash(sh tools/run_game.sh:*)",
+      "Bash(gh release:*)",
+      "Bash(git tag:*)",
+      "Bash(git commit --amend*)",
+      "Bash(git reset:*)"
+    ],
+    "deny": [
+      "Agent(pr-review-toolkit:code-reviewer)",
+      "Agent(pr-review-toolkit:code-simplifier)"
+    ],
+    "allow": [
+      "Bash(sh tools/run_lint.sh:*)",
+      "Bash(sh tools/run_warnings.sh:*)",
+      "Bash(sh tools/run_checks.sh:*)",
+      "Bash(sh tools/run_python_checks.sh:*)",
+      "Bash(sh tools/run_shell_checks.sh:*)",
+      "Bash(sh tools/check_public.sh:*)"
     ]
   }
 }

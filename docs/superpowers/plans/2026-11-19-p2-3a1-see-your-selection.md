@@ -84,7 +84,7 @@ Next exact action: Task 1 Step 1
 | 14 | `view_player` | Sonnet | fresh Opus + player-experience |
 | 15 | Palette A on the bodies (own commit) | Sonnet | fresh Opus + player-experience |
 | 16 | Benchmark `--hud` rows | Sonnet | fresh Opus |
-| 17 | Focus card and docs | Sonnet | Codex + Sonnet; player-experience on the card |
+| 17 | Focus card and docs | Sonnet | fresh Opus; player-experience on the card |
 
 ## Coverage: spec item to task
 
@@ -561,8 +561,8 @@ func blocking_rects() -> Array[Rect2]  # global rects of the visible slabs, pane
 
 ## Model routing
 
-- **Implementers:** Opus for the UI and HUD tasks (1, 3-7, 9-13; memory "UI/UX quality first"), Sonnet for 2, 8, 14, 15, 16, 17. The main session coordinates; if it still runs on the strongest model at execution, it says so once.
-- **Per code task:** one fresh reviewer (Opus; Codex where its quota allows) with the diff, the task text and the file paths, asked to name for each new test the production change that turns it red. Findings are checked against the source and fixed test-first before the commit. UI and player-facing diffs (3, 4, 6-15) also get the [player-experience reviewer](../../../.claude/agents/player-experience-reviewer.md). Task 1 gets the player-experience reviewer only. Task 17: Codex plus Sonnet, and the player-experience reviewer on the card.
+- **Implementers:** Opus for the UI and HUD tasks (1, 3-7, 9-13; memory "UI/UX quality first"), Sonnet for 2, 8, 14, 15, 16, 17. The main session coordinates on Opus.
+- **Per code task:** one fresh Opus (high) reviewer ([coordinator rules](../../night-run.md#coordinator-rules); no Codex per task, user 2026-11-19) with the diff, the task text and the file paths, asked to name for each new test the production change that turns it red. Findings are checked against the source and fixed test-first before the commit. UI and player-facing diffs (3, 4, 6-15) also get the [player-experience reviewer](../../../.claude/agents/player-experience-reviewer.md). Task 1 gets the player-experience reviewer only. Task 17: a fresh Opus (high) reviewer, and the player-experience reviewer on the card.
 - **Gate, in this order:** (1) Grok 4.7 high plus an Opus whole-branch pass (Opus alone if Grok is missing), whose brief asks about cap writes inside `size_changed`, input that reaches the map through the HUD, and the leave path on a failed pump; beside it, the player-experience reviewer on the whole UI diff; (2) `/ponytail-review` (Sonnet) on the branch diff and its cuts; (3) the suite and `sh tools/run_checks.sh` on that tree; (4) stop gate B on that same tree; (5) stop gate C. A change after gate B that touches `game/scripts/presentation/`, `game/scripts/match/` or the benchmark reruns gate B's benchmark steps.
 - Post the Task/What/Status table on every task state change.
 
