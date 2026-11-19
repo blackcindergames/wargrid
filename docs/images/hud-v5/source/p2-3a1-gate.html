@@ -1,0 +1,570 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P2.3a1 gate A</title>
+<style>
+@font-face{font-family:"Public Sans";font-weight:400;src:url(../../../../game/fonts/PublicSans-Regular.ttf) format("truetype")}
+@font-face{font-family:"Public Sans";font-weight:600;src:url(../../../../game/fonts/PublicSans-SemiBold.ttf) format("truetype")}
+@font-face{font-family:"Public Sans";font-weight:700;src:url(../../../../game/fonts/PublicSans-Bold.ttf) format("truetype")}
+@font-face{font-family:"Public Sans";font-weight:800;src:url(../../../../game/fonts/PublicSans-ExtraBold.ttf) format("truetype")}
+:root{--bg:#0a0f14;--panel:#121c24;--btn:#16212a;--line:#2e3f4b;--text:#dfe7ec;--muted:#93a5b0;--sel:#60e5ed;--amber:#f7c871}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 "Public Sans",Arial,sans-serif}
+#err{position:fixed;left:0;right:0;top:0;z-index:99;background:#b3261e;color:#fff;font:600 14px ui-monospace,Menlo,monospace;padding:8px 14px;white-space:pre-wrap}
+#err:empty{display:none}
+#app{max-width:1600px;margin:0 auto;padding:16px 24px 48px}
+[hidden]{display:none!important}
+kbd{font:12px ui-monospace,Menlo,monospace;border:1px solid currentColor;padding:0 5px;opacity:.75;margin:0 2px}
+.top .n{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--sel);font-weight:700}
+.top h2{margin:2px 0 4px;font-size:26px;font-weight:800}
+.top p{margin:0 0 8px;color:#b9c6ce;max-width:980px}
+.top p.look{color:var(--amber)}
+.rec{color:var(--muted);min-height:1.45em;margin:0 0 8px}
+.rec .fail{color:var(--amber);font-weight:700}
+.keys{color:var(--muted);font-size:13px}
+.intro{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+.ref figcaption{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.ref{margin:0}
+.opts{display:grid;gap:16px;margin-top:12px;align-items:stretch}
+.opt{background:var(--panel);border:2px solid var(--line);padding:12px 14px 14px;cursor:pointer;display:flex;flex-direction:column;gap:10px}
+.opt:hover{border-color:var(--muted)}
+.opt.sel{border-color:var(--sel)}
+.opt.done{border-color:var(--amber)}
+.opt .hd{display:flex;align-items:center;gap:8px;min-height:34px}
+.opt .hd button{flex:none;font-size:13px;padding:4px 8px}
+.opt .let{font-size:28px;font-weight:800;line-height:1;color:var(--sel);min-width:24px}
+.opt .nm{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.opt .notes{margin:0;color:#b9c6ce;font-size:14px}
+.tag{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;white-space:nowrap;flex:none}
+.tag.cp{background:var(--amber);color:#1a1408}
+.tag.got{background:var(--sel);color:#08131c}
+.opt .tag.got{display:none}
+.opt.done .tag.got{display:inline-block}
+.gap{margin-left:auto}
+button{font:inherit;font-weight:700;color:var(--muted);background:var(--btn);border:1px solid var(--line);padding:6px 12px;cursor:pointer}
+button:hover{color:var(--text)}
+.pic{position:relative;overflow:hidden;background:#000;width:100%}
+.pic .sc{position:absolute;left:0;top:0;overflow:hidden;transform-origin:0 0;transform:scale(var(--s,1))}
+.pic iframe{position:absolute;width:1280px;height:720px;border:0;pointer-events:none}
+.card{background:rgba(26,26,26,.85);color:#dfdfdf;font-size:14px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.card .q{padding:4px 6px}
+.card .q.hl{background:#26384a;color:#fff;font-weight:700;box-shadow:inset 3px 0 0 var(--sel)}
+.card .sc5{color:#9a9a9a;font-size:12px}
+textarea{width:100%;box-sizing:border-box;height:52px;background:var(--btn);color:inherit;border:1px solid var(--line);font:inherit;font-size:14px;padding:8px;resize:vertical}
+.notebox{margin-top:16px;max-width:980px}
+.notebox label{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.nav{display:flex;gap:8px;margin-top:16px;align-items:center}
+.gal{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;margin-top:8px}
+.main{width:min(100%,calc((100vh - 300px)*16/9));min-width:480px}
+.gal .side h3{margin:0 0 4px;font-size:18px}
+.gal .side .cnt{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.gal .side p{margin:6px 0 12px;color:#b9c6ce;font-size:14px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:8px;margin-top:12px}
+.th{cursor:pointer;border:2px solid transparent;background:var(--panel);padding:2px}
+.th.on{border-color:var(--sel)}
+.th.noted{border-bottom-color:var(--amber)}
+.th span{display:block;font-size:12px;color:var(--muted);padding:2px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.verdict{display:flex;gap:16px;margin-top:20px;align-items:stretch;flex-wrap:wrap}
+.verdict button{font-size:20px;font-weight:800;padding:18px 36px}
+.verdict #pass{background:var(--amber);color:#1a1408;border-color:var(--amber)}
+.verdict #changes{color:var(--text)}
+.verdict .vnote{flex:1;min-width:280px}
+.sum{border-collapse:collapse;margin:12px 0 20px;font-size:14px}
+.sum th,.sum td{text-align:left;padding:6px 12px;border-top:1px solid var(--line);vertical-align:top}
+.sum th{color:var(--muted);font-weight:600}
+#over{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:zoom-out}
+#over .pic{width:min(96vw,calc((96vh - 48px)*16/9))}
+#over .cap{color:var(--muted);font-size:14px}
+.w{color:var(--text);font-weight:700}
+.opt .sees{color:var(--text)}
+.opt .h{display:block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.r2 .opt .hd{flex-wrap:wrap}
+.r2 .opt .nm{order:5;flex:1 0 100%;white-space:normal;min-height:2.9em}
+.xt figcaption{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px}
+.xt figcaption button{margin-left:auto;font-size:12px;padding:2px 8px}
+.opt img.mock{display:block;width:100%;height:auto}
+.opt .chg{color:var(--text);font-size:13px}
+.verdict button.done{outline:3px solid var(--sel);outline-offset:3px}
+@media (max-width:900px){.intro,.gal{grid-template-columns:1fr}.opts{grid-template-columns:1fr!important}.main{min-width:0}}
+</style>
+<div id="err"></div>
+<div id="app"></div>
+<div id="over" hidden></div>
+<script>
+addEventListener('error', e => { err.textContent += `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})\n`; });
+addEventListener('unhandledrejection', e => { err.textContent += `${e.reason}\n`; });
+
+// Round 2 (#round=2): queue cap, forecast card, verdict; its picks go under p2-3a1-gate2: keys.
+const ROUND = new URLSearchParams(location.hash.slice(1)).get('round') === '2' ? 2 : 1;
+const PREFIX = ROUND === 2 ? 'p2-3a1-gate2:' : 'p2-3a1-gate:', SRC = 'p2-3a1-states.html', W = 1280, H = 720;
+const FULL = {x: 0, y: 0, w: W, h: H};
+const CARD_QS = ['I could always tell what I had selected', 'Clicking picked the unit, building or pile I meant', 'The HUD never swallowed a click I meant for the battlefield', null,
+  'On a wide or 16:10 screen, the game filled it well'];
+const STEPS1 = [
+  {key: 'unload', kind: 'pictures', q: 'When does Unload (F) show?', pick: 'A', crop: {x: 840, y: 410, w: 440, h: 310},
+    why: 'Gate A said Unload shows while an own loaded container is selected. The game knows exactly when a Tunnel Hub holds units; for a Scout Car or Armed Pickup it only knows that some own unit sits inside some container, not which one. An empty container accepts the click and nothing happens, with no refusal.',
+    look: 'Where to look: the bottom right, an empty Scout Car\'s order row and an empty Tunnel Hub above it. "Large" shows the whole screen.',
+    ref: {state: 'unload-loaded', label: 'Loaded, the same in A, B and C'},
+    A: {name: 'Hidden while empty', state: 'unload-empty-hidden', notes: 'Tunnel Hub: only while units are inside (exact). Scout Car or Armed Pickup: only while some own unit is inside any container, so with passengers in another container an empty car still shows it (a dead click in that rare case). No simulation change; the order row loses a line when the car empties.'},
+    B: {name: 'Greyed while empty', state: 'unload-empty-greyed', notes: 'The same rule, but the button stays: muted text on the quiet fill, key still printed. Zero Hour greys Evacuate on an empty container (ControlBarCommand.cpp:1375-1380 @ afc2a103f); matches "key chip on disabled commands too" and P2.3b\'s fixed cells. The row never changes height; an empty hub keeps a one-button slab.'},
+    C: {name: 'Always shown', state: 'unload-empty-always', notes: 'Every own completed container shows it, loaded or not (the plan before gate A). Least code; on an empty one the click is accepted and does nothing, with no refusal (containers.gd:39-41).'}},
+  {key: 'armed-hint', kind: 'pictures', q: 'What tells you attack-move is armed?', pick: 'A', crop: {x: 840, y: 504, w: 440, h: 216},
+    why: 'After the Attack move (A) button or the A key, the next left-click on ground attack-moves; a right-click or Esc cancels. The key list that said so is gone, the cursor does not change, and the Controls list comes with P2.3b. Zero Hour has no hint line; it changes the cursor instead.',
+    look: 'Where to look: the top of the slab, bottom right.',
+    A: {name: 'One line while armed', state: 'armed-hint', notes: 'A muted 12 px line at the slab top, only while armed: "Left-click: attack-move here · Right-click or Esc: cancel". Built like the "Right-click: resume" line gate A kept; the slab grows 18 px while armed.'},
+    B: {name: 'Nothing in the HUD', state: 'armed-none', notes: 'Only the button\'s armed look (panel2 fill, 2 px sel inset). The playtest card explains the mouse rules ("Esc or a right-click cancels a placement or an attack move"). Nothing to build; a player who pressed A by accident sees only an outlined button.'}},
+  {key: 'card-numbers', kind: 'text', q: 'The playtest card\'s numbers question', pick: 'A',
+    why: 'The new card ("See your selection") holds at most five questions, answered 1 to 5 plus free text. Today\'s fourth question asks two things at once: all numbers, and the five-digit credits gate A asked about.',
+    look: 'The card\'s five questions, the one that changes highlighted.',
+    A: {name: 'Five-digit credits only', text: 'Five-digit credits like 10650 read at a glance', notes: 'One question, one answer, on what gate A asked (plain digits, no separator). Health and power go to the free-text comment.'},
+    B: {name: 'Keep both in one', text: 'Credits, power and health read at a glance, five-digit credits too', notes: 'Today\'s wording (plan Task 17). Covers health and power too, but a low score does not say which number read badly.'}},
+  {key: 'look', kind: 'gallery', q: 'Gate A look: every P2.3a1 state',
+    why: 'The pictures after the gate A answers, one at a time. Flip with N and P or the thumbnails; write a note under any state you want changed (saved only when you write one). Then pass the gate or ask for changes.'}];
+const STEPS2 = [
+ {
+  "key": "queue-cap",
+  "kind": "pictures",
+  "q": "Build queue: how many entries show?",
+  "pick": "A",
+  "crop": {
+   "x": 840,
+   "y": 240,
+   "w": 440,
+   "h": 480
+  },
+  "why": "Take A, your capped list; your mock and what changed sit under A. What you pay: cancelling the newest entries takes two clicks from 6 queued, the expanded list is taller than today's, and it is about half a day for a slab P2.3b replaces with nine slots. If hidden entries bother you more than a busy list, pick B: same height, one click each, less code. A cancel refunds the full price (`$800` for either tank) and only the entry in production loses its progress (production.gd:15-21 @ 7b22ebc); a queued entry loses only its place. In A, B and D a click anywhere on a row cancels, as a click on a Zero Hour or P2.3b queue slot does, so the row's tooltip says it: `Cancel: refunds $800`.",
+  "look": "Where to look: the bottom right, a China Vehicle Factory with a full queue of nine (the worst case), with the playtest checklist, note form and F3 open. Under A, the same list expanded. \"Large\" shows the whole screen; the caption at the top left prints the slab's measured height.",
+  "ref": {
+   "state": "chips",
+   "label": "Today: nine Cancel rows, slab 408 px"
+  },
+  "A": {
+   "name": "Capped list with `Show N more queued` (the owner's mock, adapted)",
+   "sees": "Under Produce: a header line, `QUEUE` left (muted caps) and `8 waiting` right (muted, hidden at 0). Then full-width rows, 32 high, square, on `btn`: unit name left, a muted × right; no `Cancel` word and no `1.` numbering. The row in production also shows `42 %` and a 2 px own-colour line on a dark track along its bottom. Clicking anywhere on a row cancels it and refunds the price; hover is the kind-row hover, brightens the × and shows the tooltip `Cancel: refunds $800`. Up to 5 entries all show. From 6, the list shows the one in production plus 3 next, then a full-width row `Show N more queued` with a drawn down chevron (a full queue reads `Show 5 more queued`). A click opens all nine plus `Show fewer`; it closes again when the selection changes or the queue drops to 5. Worst case at 1280x720: 282 px collapsed (today 408), 462 px while expanded.",
+   "notes": "The owner's look, and the only option that shows fewer things. Costs: the last-queued entries, the likeliest cancel targets, take two clicks at 6 or more; the expanded state is 54 px taller than today and becomes SL2's worst case (checklist cap 162 px); about half a day of builder time for a slab P2.3b replaces. Numbering is dropped because `1.` under the `1: Rotary Gun Tank $800` button reads as a key.",
+   "state": "queue-a",
+   "changes": "Changed from your mock: header `QUEUE` (the first row is already in production); no `1.` numbers (they read as the `1:` build key); production plus 3 next, so a full queue reads `Show 5 more queued`; the chevron drawn (Public Sans has no glyph); the progress line on a dark track (red or purple fail 3:1 on the button).",
+   "extra": [
+    {
+     "img": "owner-mocks/queue.png",
+     "label": "Your mock (local, not committed)"
+    },
+    {
+     "state": "queue-a-open",
+     "label": "A expanded, after a click on `Show 5 more queued` (462 px)"
+    }
+   ]
+  },
+  "B": {
+   "name": "Two columns, all nine always visible",
+   "sees": "The same header. The entry in production is one full-width row (name, `42 %`, progress line, ×). The up to 8 waiting entries are half-width tiles in two columns (name plus ×), read left to right, then down. No toggle, nothing hidden; every entry cancels with one click and refunds its price, tooltip `Cancel: refunds $800` as in A. Worst case 282 px, constant.",
+   "notes": "Same height saving as A collapsed with no hidden state, no reset rule and less code, and the helper surfaces never jump. But nine names stay on screen, which is what the owner asked to reduce, and the tile grid can read as a command card it is not.",
+   "state": "queue-b"
+  },
+  "C": {
+   "name": "Slot row now (Zero Hour's and P2.3b's form)",
+   "sees": "The same header, then one row of nine 36 x 36 slots. A filled slot is a `btn` square showing the build key of its unit (`1 2 2 1 ...`, matching the `1: Rotary Gun Tank` buttons above); empty slots are dark wells. The first slot carries the progress bar. Clicking a slot cancels it. Worst case about 142 px, constant.",
+   "notes": "Closest to Zero Hour (nine icon slots, click cancels, clock on the first) and to P2.3b's decided queue, and by far the lowest slab. But digits instead of names are cryptic without glyphs, and it overrides 'no queue row until P2.3b' (user, 2026-11-17), pulling P2.3b work into this package.",
+   "state": "queue-c"
+  },
+  "D": {
+   "name": "Keep nine rows, shorter words only",
+   "sees": "Today's nine full-width rows, relabelled to name plus × (the first with `42 %` and the progress line), under the `QUEUE` header; a click anywhere on a row cancels and refunds, tooltip `Cancel: refunds $800` as in A. Nothing hidden, nothing new to learn. Worst case stays about 408 px (426 with the header).",
+   "notes": "Near-zero cost and it waits for P2.3b's slot row, but it does not answer the complaint: a full queue still fills more than half the screen height and squeezes the playtest checklist to about 200 px.",
+   "state": "queue-d"
+  }
+ },
+ {
+  "key": "forecast",
+  "kind": "pictures",
+  "q": "Purchase preview: card under the strip, which red, or on hover?",
+  "pick": "B",
+  "crop": {
+   "x": 0,
+   "y": 0,
+   "w": 448,
+   "h": 616
+  },
+  "why": "Take your card. It fixes three things at once: the strip keeps your real numbers, the label says the card is a preview, and the arrow goes (the game's font has no arrow glyph; it does have the minus sign). `−700` replaces `short`; that was your own earlier answer before `700 short` replaced it. Red is fine: Zero Hour's power bar turns red although red is a player colour there, and the old rule was only right about saturated red. A is your mock at the strip's size; B also swaps your sampled coral for a stronger one, #f0776a: yours passes contrast (7.1:1) but turns nearly grey for colour-blind players, close to the labels and the green player colour. I judged that by numbers, so compare the last swatch with the enemy red (second) and the health red (tenth), also in the simulated views, and pick A if B reads too close to the enemy red. One warning colour means low power, the shortfall, the refusal line, the cell card's reason line and the freeze card's warning mark all change together. Hover waits for P2.3b, which already plans it; pick C only if you want the warning before you click now.",
+  "look": "Where to look: the top left. In place: China, Rotary Gun Tower armed at 500 credits; below it the owner colours and the other cases. Under A and B, the top of the same picture as deuteranopia and protanopia see it (Machado 2009, severity 1). The card counts live while armed (−700, −200, then 300 in white) and goes on place or cancel. C is drawn in B's colour, bottom right.",
+  "ref": {
+   "state": "forecast",
+   "label": "Round 1 picture: arrow and `700 short` in the strip",
+   "crop": {
+    "x": 0,
+    "y": 0,
+    "w": 600,
+    "h": 290
+   }
+  },
+  "A": {
+   "name": "Your card and your coral: under the strip, while a building is armed",
+   "sees": "The top strip always shows your real numbers (`CREDITS 500  POWER 8 / 10`) and never grows. Arm a building and a second slab appears right under it at (8, 48): square corners, `bg` fill, 1 px line, padding 8, Public Sans, about 320 x 56. Line 1: muted `AFTER PURCHASE`. Line 2: `CREDITS −700   POWER 11 / 10  LOW POWER`, labels muted 12/600, values 16/700 with tabular digits (the strip's size; your mock drew about 24). Values with a problem and `LOW POWER` are coral #dc948b; fine values are white (`CREDITS 3600`, power plant `POWER 8 / 15`). It counts live: −700, −200, then white 300. Gone when you place or cancel. No arrow, no word `short`. The strip's own low power, the refusal line and the freeze card's warning mark turn coral too.",
+   "notes": "Coral: 7.11:1 on bg, 62.5 from the enemy red (42.5 deuteranopia). Weak spots: almost the green owner colour under deuteranopia (6.6) and almost the muted label grey under protanopia (18.2), so only the minus sign and the words carry the warning there. Rules changed: hud-v5-layout :36 and :47 (new token `warn`; \"no saturated red text\" replaces \"no red warning text\"), design answers :79, :109, :1272 and :1276, ART_DIRECTION :146, spec :28 and :131, plan Tasks 6, 8 and 12, focus card text; pictures forecast, refusal and freeze redrawn. No new input. Amber afterwards: alerts and the primary buttons (the freeze card's `Back to menu`, drawn whole bottom left) only; every warning text, the P2.3b cell card's reason line included, is the warning colour.",
+   "state": "forecast-a",
+   "changes": "Changed from your mock: values at the strip's 16 px, not about 24 (at 24 the card meets the longest online notice at 1280 wide); square corners, the HUD's `bg` fill and 1 px line.",
+   "extra": [
+    {
+     "img": "owner-mocks/forecast.png",
+     "label": "Your mock (local, not committed)"
+    },
+    {
+     "state": "forecast-a",
+     "cvd": "deut",
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 448,
+      "h": 156
+     },
+     "label": "The top of the same picture as deuteranopia sees it"
+    },
+    {
+     "state": "forecast-a",
+     "cvd": "prot",
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 448,
+      "h": 156
+     },
+     "label": "The same as protanopia sees it"
+    }
+   ]
+  },
+  "B": {
+   "name": "Same card, a stronger red: coral #f0776a",
+   "sees": "Exactly A, but the warning colour is a more saturated coral-red, #f0776a: clearly a red, still lighter and pinker than the enemy red #d6120c. Under simulated colour blindness it stays a warm olive (#b2a568 deuteranopia, #948b68 protanopia) that differs from the green owner colour and from the grey labels, where A's coral turns nearly grey (#a39e8a).",
+   "notes": "6.20:1 on bg, 4.72:1 on buttons. From the enemy red 39.8 / 28.3 / 31.9. Worst case against any owner colour, ally, muted or text is 21.2, above the project's bar of 20; A's coral is at 6.6. It sits near the health bar's red (16 to 20), which means the same thing. Same rule changes, amber rule and cost as A. Judged by numbers only: compare A and B side by side with the two simulated views; the last swatch is the warning colour.",
+   "state": "forecast-b",
+   "extra": [
+    {
+     "state": "forecast-b",
+     "cvd": "deut",
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 448,
+      "h": 156
+     },
+     "label": "The top of the same picture as deuteranopia sees it"
+    },
+    {
+     "state": "forecast-b",
+     "cvd": "prot",
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 448,
+      "h": 156
+     },
+     "label": "The same as protanopia sees it"
+    }
+   ]
+  },
+  "C": {
+   "name": "Card on hover above the build buttons, not under the strip",
+   "sees": "The same card (colour as A or B, say which) appears 8 px above the bottom-right slab, left-aligned with the build or Produce button under the pointer, after 250 ms, and stays while a building is armed. You see `−700` or `LOW POWER` before you click, and for units too, which have no armed state. Nothing under the strip. With the playtest checklist open, the checklist ends 8 px above the slab, exactly where the card goes: the card draws over the checklist while the pointer stays (third picture).",
+   "notes": "Closes the real gap: Wargrid lets you arm what you cannot afford, Zero Hour greys the button. Cost: new input (mouse_entered on buttons the menu refresh reuses and frees, hover against armed, keys 1-9 while hovering) on a slab P2.3b throws away; brings P2.3b's tooltip rules (design answers :774, :876) forward; about one more task and one more picture. P2.3b's cell card already plans exactly this.",
+   "state": "forecast-c",
+   "crop": {
+    "x": 840,
+    "y": 440,
+    "w": 440,
+    "h": 280
+   },
+   "extra": [
+    {
+     "state": "forecast-c-unit",
+     "label": "The same card on a unit: pointer on Produce at 500 credits"
+    },
+    {
+     "state": "forecast-c-list",
+     "label": "Checklist open: the card draws over it"
+    }
+   ]
+  }
+ },
+ {
+  "key": "look",
+  "kind": "gallery",
+  "q": "Gate A verdict: the states redrawn to your answers",
+  "why": "Round 1 closed without a verdict. These four states changed after your last answers: no order row for a Bulldozer, Unload hidden on an empty Scout Car, and the system crosshair while attack-move is armed. A pass covers your answers, these pictures and the two picks above. After it I redraw to your picks, with no new choices: the strip in forecast and slab, the refusal line and the freeze card's warning mark (A or B), and the queue in chips and chips-f3-rule. Flip with N and P; a note under any state is optional."
+ }
+];
+const STEPS = ROUND === 2 ? STEPS2 : STEPS1;
+const LETTERS = ['A', 'B', 'C', 'D'];
+const optsOf = s => LETTERS.filter(x => s[x]);
+const SLAB_CAP = 'Interim slab with a China Bulldozer selected: no order row (builders have no weapon), China\'s build menu in 2 columns, Rotary Gun Tower armed (panel2, 2 px sel inset); specimens: Medium Tanks with Attack move (A) armed in the same look (after the button or the key, until a ground click, a right-click or Esc; pointer: system crosshair; order row only, the build menu below it as in the main slab), and the Bulldozer\'s slab while the pointer is on a paused site, Right-click: resume as its top line';
+const UNLOAD_CAP = 'A USA Scout Car with infantry inside: Unload (F) joins the order row, second line of the 2-column grid; specimens: an empty Scout Car with no own unit in any container, Unload (F) hidden; an FRC Tunnel Hub with units inside, a building, so Unload (F) alone and no build menu';
+const FREEZE_CAP = 'Offline freeze as the result card: map and HUD dimmed (a Bulldozer selected: build menu, no order row), centred card with the warning mark and Match stopped, body, divider, footer with the report\'s version and map (Version 0.14.0-dev+75898c8 · Dry Wells, illustrative) and the code GAME ERROR, Copy report (secondary, focused) and Back to menu (primary); Esc opens the pause menu as on the Victory/Defeat card';
+const GALLERY1 = [
+  ['slab', SLAB_CAP],
+  ['notice', 'Online notice Waiting for player 2, top centre; a Medium Tank selected, so the order row shows and no Esc chip'],
+  ['freeze', FREEZE_CAP],
+  ['freeze-copied', 'The same card after a click on Copy report: the button reads Report copied and holds the focus'],
+  ['forecast', 'Strip in place with the USA Power Plant armed (8 / 10 → 8 / 15); specimens: China Rotary Gun Tower (→ 3600, LOW POWER), the same at 500 credits (→ 700 short), FRC with no POWER group (owner question 6)'],
+  ['sites', 'Own paused site (PAUSED · NO BUILDER, progress bar in muted), the slab with Cancel construction; specimens: enemy site with its percent in the owner colour, own factory with the rally footer (84)'],
+  ['chips', 'Owner question 5\'s worst case: China factory, nine-entry queue (slab top 313), checklist capped at 217 and scrolling, note form to its left'],
+  ['chips-f3', 'Stack closed, F3 at top 88'],
+  ['chips-f3-rule', 'F3 rule, worst case: the state above with F3 open; no room below the checklist and the note form already left of it, so F3 opens under the note form (x 699 to 944, top 173 to 233, above the slab top minus 8)'],
+  ['chips-checklist', 'Checklist open, F3 below it; Power Plant selected, so the slab has no button and is hidden'],
+  ['chips-form', 'Checklist and note form open, the form below the checklist, F3 below the form'],
+  ['chips-off', 'Playtest helper off: no chip, F3 at top 48'],
+  ['refusal', 'Amber line Insufficient credits at H - 204; factory selected at 500 credits'],
+  ['pile', 'Supply Pile, CREDITS LEFT 10650, 62 high, line edge; specimen Empty'],
+  ['rows-footer', 'Kind rows: Rotary Gun Tank hovered (panel2, 1 px muted inset, pointing hand), Militia held at 0, header 96 selected · 5 kinds · 12 idle collectors, the rule Click a kind: select only that kind · Shift-click: deselect it as the panel\'s last line (158 high, top 562); specimen: 12 selected · 1 kind with one row and no rule line'],
+  ['unload', UNLOAD_CAP],
+  ['collector', 'Collector labels per the spec table (no place numbers, TO SUPPLY DEPOT, BUILDING, MOVING, FRC\'s SUPPLY CACHE) and the header 9 selected · 2 kinds · 1 idle collector with the kind-row rule as its last line']];
+const GALLERY2 = [['slab', SLAB_CAP], ['freeze', FREEZE_CAP], ['freeze-copied', 'The same card after a click on Copy report: the button reads Report copied and holds the focus'], ['unload', UNLOAD_CAP]];
+const GALLERY = ROUND === 2 ? GALLERY2 : GALLERY1;
+const VERDICT = {pass: 'Pass gate A', changes: 'Changes needed'};
+
+const app = document.getElementById('app'), over = document.getElementById('over');
+const HS = new URLSearchParams(location.hash.slice(1));
+const picks = {}, notes = {}, sentNote = {}, look = {}, sentLook = {};
+let verdict = null, verdictNote = '';
+let step = Math.max(0, Math.min(STEPS.length, (+HS.get('step') || 1) - 1));
+let hl = null, g = Math.max(0, GALLERY.findIndex(([st]) => st === HS.get('state')));
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const fmt = t => esc(t).replace(/`([^`]+)`/g, '<span class="w">$1</span>');
+
+const unsent = new Map();
+let recorded = false;
+function recordHtml() {
+  if (unsent.size) return `<span class="fail">Not recorded: server not reachable. Kept on this page: ${[...unsent.keys()].map(k => esc(k.slice(PREFIX.length))).join(', ')}.</span>`;
+  return recorded ? 'Recorded.' : '';
+}
+const showRecord = () => document.querySelectorAll('.rec').forEach(e => { e.innerHTML = recordHtml(); });
+function post(k, pick, note) {
+  const key = PREFIX + k;
+  const done = ok => { if (ok) { unsent.delete(key); recorded = true; } else unsent.set(key, pick); showRecord(); };
+  return fetch('/pick', {method: 'POST', body: JSON.stringify({key, pick, note})}).then(r => done(r.status === 204), () => done(false));
+}
+
+function pic(state, crop = FULL, cvd = '') {
+  return `<div class="pic" data-cw="${crop.w}" style="aspect-ratio:${crop.w}/${crop.h}"><div class="sc" style="width:${crop.w}px;height:${crop.h}px">` +
+    `<iframe tabindex="-1" title="${state}" src="${SRC}#shot=${state}&size=720&scale=1${cvd ? `&cvd=${cvd}` : ''}" style="left:${-crop.x}px;top:${-crop.y}px"></iframe></div></div>`;
+}
+function fit() {
+  document.querySelectorAll('.pic').forEach(el => el.style.setProperty('--s', el.clientWidth / el.dataset.cw));
+}
+
+function header(s) {
+  const n = step + 1;
+  return `<div class="top"><span class="n">${ROUND === 2 ? 'Round 2 · ' : ''}Step ${n} of ${STEPS.length}</span><h2>${esc(s.q)}</h2><p>${fmt(s.why)}</p>${s.look ? `<p class="look">${fmt(s.look)}</p>` : ''}</div>`;
+}
+function keysLine(s) {
+  const pickKeys = optsOf(s).map((x, i) => `<kbd>${i + 1}</kbd>/<kbd>${x}</kbd>`).join(' ');
+  return `<p class="keys">Click a panel to pick it and go on, or ${pickKeys} then <kbd>Enter</kbd>. <kbd>←</kbd> <kbd>→</kbd> step without picking.</p>`;
+}
+function optBody(s, x) {
+  if (s.kind === 'text') {
+    const qs = CARD_QS.map(q => q ? `<div class="q">${esc(q)}</div>` : `<div class="q hl">${esc(s[x].text)}</div>`).join('');
+    return `<div class="card">${qs}<div class="sc5">1 strongly disagree … 5 strongly agree</div></div>`;
+  }
+  const crop = s[x].crop || s.crop;
+  const extra = (s[x].extra || []).map((e, i) => e.img ? `<figure class="ref xt"><figcaption><span>${fmt(e.label)}</span></figcaption><img class="mock" src="${e.img}" alt="${esc(e.label)}"></figure>` :
+    `<figure class="ref xt"><figcaption><span>${fmt(e.label)}</span><button data-xlarge="${x}:${i}">Large</button></figcaption>${pic(e.state, e.crop || crop, e.cvd)}</figure>`).join('');
+  const changes = s[x].changes ? `<p class="notes chg">${fmt(s[x].changes)}</p>` : '';
+  return pic(s[x].state, crop) + changes + extra;
+}
+function optPanel(s, x) {
+  const large = s.kind === 'pictures' ? `<button class="gap" data-large="${x}">Large</button>` : '';
+  return `<div class="opt" data-pick="${x}"><div class="hd"><span class="let">${x}</span><span class="nm">${fmt(s[x].name)}</span>` +
+    `${s.pick === x ? '<span class="tag cp">Claude\'s pick</span>' : ''}<span class="tag got">Picked</span>${large}</div>${optBody(s, x)}${optText(s[x])}</div>`;
+}
+function optText(o) {
+  if (!o.sees) return `<p class="notes">${esc(o.notes)}</p>`;
+  return `<p class="notes sees"><span class="h">What you see</span>${fmt(o.sees)}</p><p class="notes"><span class="h">Challenger</span>${fmt(o.notes)}</p>`;
+}
+function renderChoice(s) {
+  const opts = optsOf(s), ref = s.ref ? `<figure class="ref"><figcaption>${fmt(s.ref.label)}</figcaption>${pic(s.ref.state, s.ref.crop || s.crop)}</figure>` : '';
+  app.innerHTML = `<div class="intro"><div>${header(s)}${keysLine(s)}<p class="rec">${recordHtml()}</p></div>${ref}</div>
+    <div class="opts" style="grid-template-columns:repeat(${opts.length},minmax(0,1fr))">${opts.map(x => optPanel(s, x)).join('')}</div>
+    <div class="notebox"><label for="note">Optional note for Claude (saved with your pick)</label><textarea id="note" data-note="${s.key}">${esc(notes[s.key] || '')}</textarea></div>
+    ${nav()}`;
+}
+function nav() {
+  return `<div class="nav">${step ? '<button data-go="-1">← Back</button>' : ''}<button data-go="1">${step < STEPS.length - 1 ? 'Skip →' : 'Summary →'}</button></div>`;
+}
+function renderGallery(s) {
+  const [st, caption] = GALLERY[g];
+  const thumbs = GALLERY.map(([t], i) => `<div class="th ${i === g ? 'on' : ''} ${look[t] ? 'noted' : ''}" data-g="${i}">${pic(t)}<span>${t}</span></div>`).join('');
+  app.innerHTML = `${header(s)}<p class="keys"><kbd>N</kbd> next, <kbd>P</kbd> previous, or click a thumbnail; <kbd>←</kbd> <kbd>→</kbd> step.</p><p class="rec">${recordHtml()}</p>
+    <div class="gal"><div><div class="main" id="main">${pic(st)}</div></div>
+    <div class="side"><span class="cnt">${g + 1} of ${GALLERY.length}</span><h3>${st}</h3><p>${esc(caption)}</p>
+    <label class="cnt" for="lnote">Note on this state (optional)</label><textarea id="lnote" data-look="${st}" style="height:96px">${esc(look[st] || '')}</textarea>
+    <div class="nav"><button data-flip="-1">← P</button><button data-flip="1">N →</button></div></div></div>
+    <div class="thumbs">${thumbs}</div>
+    <div class="verdict"><button id="pass" data-verdict="pass">${VERDICT.pass}</button><button id="changes" data-verdict="changes">${VERDICT.changes}</button>
+    <div class="vnote"><textarea id="vnote" placeholder="Optional overall note (saved with the verdict)" style="height:100%">${esc(verdictNote)}</textarea></div></div>
+    ${nav()}`;
+}
+function renderVerdict(s) {
+  app.innerHTML = `${header(s)}<p class="keys">Click a verdict; the summary follows. <kbd>←</kbd> <kbd>→</kbd> step.</p><p class="rec">${recordHtml()}</p>
+    <div class="verdict"><button id="pass" data-verdict="pass">${VERDICT.pass}</button><button id="changes" data-verdict="changes">${VERDICT.changes}</button>
+    <div class="vnote"><textarea id="vnote" placeholder="Optional overall note (saved with the verdict)" style="height:100%">${esc(verdictNote)}</textarea></div></div>
+    ${nav()}`;
+}
+function rowLabel(k) {
+  if (k.startsWith('look:')) return `Note on ${k.slice(5)}`;
+  if (k === 'verdict') return 'Verdict';
+  const s = STEPS.find(x => x.key === k);
+  return s ? s.q : k;
+}
+function pickLabel(k, v) {
+  if (k === 'verdict') return VERDICT[v] || v;
+  const s = STEPS.find(x => x.key === k);
+  return s && s[v] ? `${v}: ${s[v].name.replace(/`/g, '')}` : (v || '');
+}
+function renderFinal() {
+  app.innerHTML = `<div class="top"><span class="n">Summary</span><h2>What the server recorded</h2><p class="rec">${recordHtml()}</p></div><div id="sum">Reading picks.json…</div>
+    <p style="font-size:20px;font-weight:700;margin-top:20px">You can close this tab.</p><div class="nav"><button data-go="-1">← Back to the steps</button></div>`;
+  fetch('picks.json', {cache: 'no-store'}).then(r => r.ok ? r.json() : {}, () => null).then(saved => {
+    const box = document.getElementById('sum');
+    if (!box) return;
+    if (!saved) { box.innerHTML = '<p class="rec"><span class="fail">picks.json not readable: server not reachable.</span></p>'; return; }
+    const rows = Object.entries(saved).filter(([k]) => k.startsWith(PREFIX)).map(([k, v]) => [k.slice(PREFIX.length), v]);
+    box.innerHTML = rows.length ? `<table class="sum"><tr><th>Question</th><th>Pick</th><th>Note</th></tr>${rows.map(([k, v]) =>
+      `<tr><td>${esc(rowLabel(k))}</td><td>${esc(pickLabel(k, v.pick))}</td><td>${esc(v.note || '')}</td></tr>`).join('')}</table>` : '<p>Nothing recorded yet.</p>';
+  });
+}
+function render() {
+  over.hidden = true;
+  hl = step < STEPS.length ? picks[STEPS[step].key] || null : null;
+  history.replaceState(null, '', `#${ROUND === 2 ? 'round=2&' : ''}step=${step + 1}${STEPS[step] && STEPS[step].kind === 'gallery' ? `&state=${GALLERY[g][0]}` : ''}`);
+  const s = STEPS[step];
+  if (!s) renderFinal();
+  else if (s.kind === 'gallery') renderGallery(s);
+  else if (s.kind === 'verdict') renderVerdict(s);
+  else renderChoice(s);
+  marks();
+  fit();
+  scrollTo(0, 0);
+}
+function marks() {
+  const s = STEPS[step], idle = el => el && document.activeElement !== el;
+  if (!s) return;
+  if (s.kind === 'verdict') {
+    const vn = document.getElementById('vnote');
+    if (idle(vn)) vn.value = verdictNote;
+    document.querySelectorAll('[data-verdict]').forEach(b => b.classList.toggle('done', b.dataset.verdict === verdict));
+    return;
+  }
+  if (s.kind === 'gallery') {
+    const ln = document.getElementById('lnote'), vn = document.getElementById('vnote');
+    if (idle(ln)) ln.value = look[ln.dataset.look] || '';
+    if (idle(vn)) vn.value = verdictNote;
+    document.querySelectorAll('.th').forEach(el => el.classList.toggle('noted', !!(look[GALLERY[+el.dataset.g][0]] || '').trim()));
+    document.querySelectorAll('[data-verdict]').forEach(b => b.classList.toggle('done', b.dataset.verdict === verdict));
+    return;
+  }
+  document.querySelectorAll('.opt').forEach(el => {
+    el.classList.toggle('sel', el.dataset.pick === hl);
+    el.classList.toggle('done', el.dataset.pick === picks[s.key]);
+  });
+  const box = document.getElementById('note');
+  if (box && document.activeElement !== box) box.value = notes[s.key] || '';
+}
+
+function flushNote() {
+  const s = STEPS[step];
+  if (s && picks[s.key] && (notes[s.key] || '') !== (sentNote[s.key] || '')) { sentNote[s.key] = notes[s.key] || ''; post(s.key, picks[s.key], sentNote[s.key]); }
+}
+function flushLook() {
+  Object.keys(look).forEach(st => {
+    const v = look[st].trim(), was = sentLook[st] || '';
+    if (v === was || (!v && !was)) return;
+    sentLook[st] = v;
+    post(`look:${st}`, null, v);
+  });
+}
+function go(d) {
+  flushNote();
+  flushLook();
+  step = Math.max(0, Math.min(STEPS.length, step + d));
+  render();
+}
+function choose(x) {
+  const s = STEPS[step];
+  picks[s.key] = x;
+  sentNote[s.key] = notes[s.key] || '';
+  post(s.key, x, sentNote[s.key]);
+  step++;
+  render();
+}
+function xlarge(ref) {
+  const [x, i] = ref.split(':'), e = STEPS[step][x].extra[+i];
+  over.innerHTML = `${pic(e.state, FULL, e.cvd)}<div class="cap">${x}: ${fmt(e.label)}. Esc or click to close.</div>`;
+  over.hidden = false;
+  fit();
+}
+function flip(d) {
+  flushLook();
+  g = (g + d + GALLERY.length) % GALLERY.length;
+  render();
+}
+function large(x) {
+  const s = STEPS[step];
+  over.innerHTML = `${pic(s[x].state)}<div class="cap">${x}: ${esc(s[x].name)}. Esc or click to close.</div>`;
+  over.hidden = false;
+  fit();
+}
+
+document.addEventListener('click', e => {
+  const t = e.target, hit = sel => t.closest(sel);
+  if (!over.hidden && hit('#over')) { over.hidden = true; return; }
+  if (hit('textarea')) return;
+  if (hit('[data-large]')) large(hit('[data-large]').dataset.large);
+  else if (hit('[data-xlarge]')) xlarge(hit('[data-xlarge]').dataset.xlarge);
+  else if (hit('[data-go]')) go(+hit('[data-go]').dataset.go);
+  else if (hit('[data-flip]')) flip(+hit('[data-flip]').dataset.flip);
+  else if (hit('[data-g]')) { flushLook(); g = +hit('[data-g]').dataset.g; render(); }
+  else if (hit('[data-verdict]')) {
+    flushLook();
+    verdict = hit('[data-verdict]').dataset.verdict;
+    post('verdict', verdict, verdictNote);
+    step = STEPS.length;
+    render();
+  } else if (hit('[data-pick]')) choose(hit('[data-pick]').dataset.pick);
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.note) notes[t.dataset.note] = t.value;
+  else if (t.dataset.look) { look[t.dataset.look] = t.value; }
+  else if (t.id === 'vnote') verdictNote = t.value;
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !over.hidden) { over.hidden = true; return; }
+  if (e.target.tagName === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase(), s = STEPS[step];
+  if (k === 'arrowleft') return go(-1);
+  if (k === 'arrowright') return go(1);
+  if (!s) return;
+  if (s.kind === 'gallery') {
+    if (k === 'n') flip(1);
+    else if (k === 'p') flip(-1);
+    return;
+  }
+  const opts = optsOf(s), i = ['1', '2', '3', '4'].indexOf(k) >= 0 ? +k - 1 : ['a', 'b', 'c', 'd'].indexOf(k);
+  if (i >= 0 && i < opts.length) { hl = opts[i]; marks(); }
+  else if (k === 'enter' && hl) choose(hl);
+});
+addEventListener('resize', fit);
+
+document.body.classList.toggle('r2', ROUND === 2);
+render();
+document.fonts.ready.then(fit);
+fetch('picks.json', {cache: 'no-store'}).then(r => r.ok ? r.json() : {}, () => ({})).then(saved => {
+  Object.entries(saved).forEach(([key, v]) => {
+    if (!key.startsWith(PREFIX)) return;
+    const k = key.slice(PREFIX.length);
+    if (k.startsWith('look:')) look[k.slice(5)] = sentLook[k.slice(5)] = v.note || '';
+    else if (k === 'verdict') { verdict = v.pick; verdictNote = v.note || ''; }
+    else { picks[k] = v.pick; notes[k] = sentNote[k] = v.note || ''; }
+  });
+  const s = STEPS[step];
+  if (s && s.kind !== 'gallery' && !hl) hl = picks[s.key] || null;
+  marks();
+});
+</script>
