@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Decision page demo scene</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+// Demo render target for the decision page's stage controls: draws boxes, not game art. Takes the hash parameters the controls send.
+const H = new URLSearchParams(location.hash.slice(1));
+const [LW, LH] = (H.get('size') || '1280x720').split('x').map(Number), K = +(H.get('scale') || 1), Z = +(H.get('zoom') || 1);
+const GROUND = H.get('ground') === 'dark' ? '#7b7566' : '#a88e5c', YOU = '#' + (H.get('you') || '376eac');
+const OTHERS = ['#b04a3a', '#3f8f4f', '#c9a227', '#d27a2c', '#7a4fa0', '#2f9c9c', '#c8628f'];
+const PAIRS = { 'usa-china': ['USA', 'China'], 'china-frc': ['China', 'FRC'], 'frc-usa': ['FRC', 'USA'] };
+const CAM = { middle: 0, west: -160, east: 160 }[H.get('cam') || 'middle'] || 0;
+const c = document.getElementById('c'), g = c.getContext('2d');
+c.width = LW * K; c.height = LH * K;
+g.scale(K, K);
+const shade = (hex, f) => '#' + [1, 3, 5].map((i) => Math.round(Math.min(255, parseInt(hex.slice(i, i + 2), 16) * f)).toString(16).padStart(2, '0')).join('');
+const iso = (x, y) => [LW / 2 + CAM * Z + (x - y) * 64 * Z, LH / 2 + (x + y) * 32 * Z];
+function poly(pts, fill) { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fillStyle = fill; g.fill(); }
+function ground() {
+  g.fillStyle = GROUND; g.fillRect(0, 0, LW, LH);
+  for (let x = -24; x < 24; x++) for (let y = -24; y < 24; y++) if ((x + y) & 1) poly([iso(x, y), iso(x + 1, y), iso(x + 1, y + 1), iso(x, y + 1)], shade(GROUND, 0.95));
+}
+function unit(x, y, colour, size, heading, name) {
+  const s = size, h = 28 * Z * s, [cx, cy] = iso(x, y), w = 44 * Z * s, d = 22 * Z * s;
+  const top = [[cx, cy - d - h], [cx + w, cy - h], [cx, cy + d - h], [cx - w, cy - h]];
+  poly([[cx - w, cy - h], [cx, cy + d - h], [cx, cy + d], [cx - w, cy]], shade('#3d515f', 1));
+  poly([[cx + w, cy - h], [cx, cy + d - h], [cx, cy + d], [cx + w, cy]], shade('#263842', 1));
+  poly(top, colour);
+  const a = (heading * Math.PI) / 4, gx = cx + Math.cos(a) * w * 0.55, gy = cy - h + Math.sin(a) * d * 0.55;
+  g.beginPath(); g.moveTo(cx, cy - h); g.lineTo(gx, gy); g.lineWidth = 3 * Z; g.strokeStyle = H.get('glyph') === 'two' ? '#11181d' : shade(colour, 0.6); g.stroke();
+  g.beginPath(); g.arc(gx, gy, 3.5 * Z, 0, 7); g.fillStyle = '#eef3f5'; g.fill();
+  if (H.get('glyph') === 'two') { g.lineWidth = 1.5; g.strokeStyle = '#11181d'; g.stroke(); }
+  if (name && H.get('names') !== 'off') { g.fillStyle = '#eef3f5'; g.font = '600 12px "Public Sans", Arial'; g.textAlign = 'center'; g.fillText(name, cx, cy + d + 18); }
+}
+function scene() {
+  const heading = +(H.get('heading') || 0), view = H.get('view') || 'base', [mine, theirs] = PAIRS[H.get('pair')] || PAIRS['usa-china'];
+  ground();
+  if (view === 'row') [YOU, ...OTHERS].forEach((col, i) => unit(i - 4, 4 - i, col, 1, heading, `P${i + 1}`));
+  else if (view === 'glyph') [0.6, 1, 1.6].forEach((s, i) => unit(i * 2 - 2, 2 - i * 2, YOU, s, heading, `${s} x`));
+  else {
+    unit(0, 0, YOU, 1.2, heading, mine);
+    unit(-3, 1, YOU, 1, heading, mine);
+    unit(3, -2, OTHERS[0], 1, (heading + 4) % 8, theirs);
+    unit(4, 0, OTHERS[0], 1, (heading + 4) % 8, theirs);
+  }
+  g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(8, 8, 330, 22);
+  g.fillStyle = '#eef3f5'; g.font = '600 13px Arial'; g.textAlign = 'left';
+  g.fillText(`Demo scene: control wiring, not game art · ${LW}x${LH} at ${K}`, 14, 23);
+}
+scene();
+</script>

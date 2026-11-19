@@ -1,0 +1,18 @@
+DP.step({
+  key: 'clips',
+  kind: 'pictures',
+  question: 'Which drag box reads better in motion?',
+  why: 'A clip step: each option is a short muted looping clip with its own controls; nothing plays until you press play (or Space). Fold-outs under an option hold more pictures. The clips are made locally (`build/decision_page/`, ignored by Git); without them each shows [picture missing].',
+  look: 'Where to look: the box while the pointer drags.',
+  checklist: ['Does the box read on sand and on the dark ground?', 'Is the Shift-drag (add) look clearly different?'],
+  rec: 'A',
+  recWhy: 'demo only.',
+  neutral: 'No difference',
+  options: {
+    A: {
+      name: 'Clip A', video: 'build/decision_page/demo-clip-a.webm', notes: 'A muted looping clip with controls, preload metadata.',
+      folds: [{ label: 'On the dark ground', text: 'A fold-out: more pictures, closed until clicked.', pics: [{ label: 'Pile backdrop', img: 'docs/images/hud-v5/source/worlds/w-pile.png' }] }],
+    },
+    B: { name: 'Clip B', video: 'build/decision_page/demo-clip-b.webm', notes: 'The other clip.' },
+  },
+});

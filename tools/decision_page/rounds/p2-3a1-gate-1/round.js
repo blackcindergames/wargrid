@@ -1,0 +1,9 @@
+DP.round({
+  id: 'p2-3a1-gate-1',
+  // Keeps the gate page's key namespace so its recorded picks read back here.
+  prefix: 'p2-3a1-gate',
+  title: 'P2.3a1 gate A, round 1',
+  steps: ['unload', 'armed-hint', 'card-numbers', 'look'],
+  render: { pass: { size: 'size', world: 'world', ground: 'ground' } },
+  controls: { size: true, fit: true, world: true, ground: true, cvd: true },
+});

@@ -1,0 +1,10 @@
+DP.step({
+  key: 'confirm',
+  kind: 'pictures',
+  question: 'Is the pile card right as drawn?',
+  why: 'A step with one option is a confirm step: Yes, as drawn, or Change with a note.',
+  rec: 'A',
+  crop: { x: 640, y: 360, w: 640, h: 360 },
+  uses: ['pictures'],
+  options: { A: { name: 'Pile card', render: { state: 'pile' }, notes: 'Drawn from the states page, cropped.' } },
+});

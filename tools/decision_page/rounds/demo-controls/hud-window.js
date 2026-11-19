@@ -1,0 +1,24 @@
+DP.step({
+  key: 'hud-window',
+  kind: 'pictures',
+  question: 'Does the slab hold at every window size and on every backdrop?',
+  why: 'A controls step on the HUD states page: S window size, F fit or true 100 %, G ground, Shift+G game-world backdrop, H HUD layer, O owner colour (Shift+O Neon), Shift+C colour vision, M the marker, K the numbers. Every control is also a button above the picture (on a phone: View).',
+  look: 'Where to look: the bottom right slab, ringed by the marker. 3440 x 1440 is the 1720 x 720 layout at scale 2; 1920 x 1080 is 1280 x 720 at 1.5.',
+  rec: 'A',
+  recWhy: 'demo only; any answer is fine.',
+  neutral: 'No difference',
+  crop: { x: 640, y: 300, w: 640, h: 420 },
+  controls: { size: true, fit: true, ground: true, world: true, hud: true, owner: true, set: true, cvd: true, marker: true },
+  mark: { x: 848, y: 596, w: 432, h: 124, label: 'The slab' },
+  pairs: [
+    ['HUD owner blue', '#628ffa', 'HUD bg', '#121c24'],
+    ['P1 (game)', '#376eac', 'sand', '#a88e5c'],
+    ['P1 (game)', '#376eac', 'dark ground', '#7b7566'],
+    ['P2 (game)', '#b04a3a', 'P8 (game)', '#c8628f'],
+  ],
+  options: {
+    A: { name: 'Bulldozer slab', render: { state: 'slab' }, notes: 'The live states page; the controls go to it as hash parameters (`world`, `ground`, `hud`, `you`, `size`, `scale`).' },
+    B: { name: 'Factory queue', render: { state: 'queue-a' }, notes: 'Another state on the same controls.' },
+    C: { name: 'Freeze card', render: { state: 'freeze', crop: { x: 360, y: 190, w: 560, h: 340 } }, mark: { x: 415, y: 230, w: 450, h: 260, label: 'The card' }, notes: 'An option can carry its own marker.' },
+  },
+});

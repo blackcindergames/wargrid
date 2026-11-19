@@ -1,0 +1,5 @@
+DP.round({
+  id: 'demo',
+  title: 'Demo: every step kind',
+  steps: ['pictures', 'confirm', 'text', 'audio', 'wording', 'lab', 'gallery', 'verdict'],
+});

@@ -1,0 +1,15 @@
+DP.step({
+  key: 'lab',
+  kind: 'lab',
+  question: 'Does the selection ring read in motion?',
+  why: 'A lab step: the web build of an in-game lab, started only on a click. Needs a local web build in web/site/ (git-ignored); without one the frame shows the server\'s 404.',
+  url: 'web/site/index.html',
+  w: 1280,
+  h: 800,
+  rec: 'A',
+  neutral: 'Could not tell',
+  options: {
+    A: { name: 'Reads well', notes: 'The ring is clear at zoom 1.' },
+    B: { name: 'Too faint', notes: 'Say where in the note.' },
+  },
+});
