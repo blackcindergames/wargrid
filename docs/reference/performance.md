@@ -184,6 +184,33 @@ A milestone exit gate is not met until: `sh tools/run_benchmark.sh` passes, the 
 - Batches: launch the batch script itself with `run_in_background` and wait for its completion notice; no `sleep` poll loops.
 - The exit gate above is unchanged.
 
+## Pair gate (benchmark pair gate, 2026-11-19)
+
+**Status: proposed, needs the owner's decision.** A/A calibration of the pair gate ([plan](../superpowers/plans/2026-11-18-benchmark-pair-gate.md), Task 6): `PERF_REF=HEAD sh tools/run_bench_pairs.sh` on branch `benchmark-pair-gate`, so reference and branch are the same `game/` tree (`6fa910e`; the night gates ran at that commit, the day gates at `1a3527f`, which changes only `tools/` and docs). Host: the Mac mini (development machine). Two sessions: four gates in a quiet night slot (2026-11-18, 23:56-00:07), four in an ordinary day slot with the desktop in use (2026-11-19, 11:06-11:17). Each gate is 3 alternating pairs; the value is the median of the 3 pair ratios branch/reference.
+
+| Gate | 1-min load at the runs | open p95 / p99 | dense p95 / p99 | hordes300 p95 / p99 |
+|---|---|---|---|---|
+| aa-s1-1 (night) | 1.13-1.45 | 1.0048 / 1.0081 | 1.0076 / 1.0046 | 1.0072 / 1.0039 |
+| aa-s1-2 (night) | 1.17-1.38 | 1.0016 / 1.0027 | 1.0027 / 1.0115 | 1.0020 / 1.0044 |
+| aa-s1-3 (night) | 1.14-1.35 | 0.9953 / 1.0040 | 0.9995 / 0.9891 | 0.9962 / 0.9927 |
+| aa-s1-4 (night) | 1.11-1.29 | 0.9984 / 1.0018 | 1.0011 / 1.0000 | 0.9997 / 0.9959 |
+| aa-s2-1 (day) | 1.41-1.96 | 0.9927 / 0.9956 | 0.9989 / 0.9941 | 0.9983 / 1.0032 |
+| aa-s2-2 (day) | 1.11-1.63 | 1.0058 / 0.9969 | 0.9951 / 0.9905 | 1.0041 / 1.0050 |
+| aa-s2-3 (day) | 1.29-1.75 | 0.9995 / 1.0009 | 1.0021 / 1.0018 | 1.0007 / 1.0015 |
+| aa-s2-4 (day) | 1.42-1.74 | 0.9968 / 1.0009 | 0.9978 / 0.9991 | 1.0000 / 0.9988 |
+
+Spread of the 24 single-pair ratios per row (sd, min-max): open p95 0.0069 (0.982-1.017), p99 0.0057 (0.988-1.010); dense p95 0.0068 (0.984-1.013), p99 0.0100 (0.977-1.015); hordes300 p95 0.0079 (0.978-1.012), p99 0.0059 (0.984-1.012).
+
+**Formula** (fixed in the plan): per metric, worst = the largest median over the 3 rows and 8 gates; proposal = worst + 0.01, rounded up to the next 0.005; for p95 at most 1.02 gives 1.02.
+- p95: worst 1.0076 (dense, aa-s1-1) → 1.0176 → **1.020** (the floor).
+- p99: worst 1.0115 (dense, aa-s1-2) → 1.0215 → **1.025**.
+- One shared value for comparison: 1.025 (the larger of the two).
+- Gates that fail at the proposal: 0 of 8 (by construction).
+
+**Sensitivity** (Task 5, 2026-11-18): a 90 µs busy-wait per hordes300 tick (+3.0 %, p95 median 1.0300, p99 1.0302) fails the gate on `hordes300:p95` and `hordes300:p99`; open and dense pass.
+
+**Host under load breaks A/A.** Runs with a busy second workload on the host are not in the table: one A/A gate went red at dense p95 median 1.0301 (2026-11-19 09:37), and two day attempts with 1-minute loads up to 8.4 gave single ratios of 0.58-0.82 on the reference side. Pairs cancel steady load but not bursts that land on one side; the gate needs a host without another heavy job, like every benchmark here.
+
 ## Machine-independent counters
 
 Wall-clock numbers vary with hardware; these do not, so they can gate in ordinary headless tests.
