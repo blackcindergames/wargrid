@@ -72,9 +72,11 @@ From the Pump hardening logs on this Mac (file times):
 | of which `run_profile.gd` | about 4.5 min | `gate-bench2-lockstep.log` 16:21:39 → `gate-bench2-profile.log` 16:26:06 |
 | one `run_combat.gd` run | 28-29 s | pair logs B1 16:19:11, A1 16:19:39, B2 16:20:07, A2 16:20:36 |
 | 3 pairs (6 combat runs) | about 2.9 min | 16:18:43 (B1 start) → 16:21:33 (A3 end) |
-| `git archive` + fresh `--import` of the reference | 2 s (exit 0, no `ERROR:`) | readiness review probe, 2026-11-18; Task 1 Step 3 re-measures |
+| `git archive` + fresh `--import` of the reference | 2 s (exit 0, no `ERROR:`) | Task 1 Step 3, 2026-11-18 (ledger) |
+| one pair step (3 pairs, 6 combat runs, import included) | about 3 min | Task 4 `t4-pairs.log` 23:42 → 23:45; Task 8a `PAIR ref-1` 11:22 → `PAIR GATE PASSED 3` after 11:25 |
+| full `run_benchmark.sh` on a branch that touches `game/` | about 7 min (11:22 to 11:29, 2026-11-19) | Task 8a, `gate-bench.log` |
 
-**Gate estimate:** about 8 min per `run_benchmark.sh` on a branch that touches `game/` (5 min today + about 3 min pairs + the reference import); unchanged about 5 min on `main` and on branches that do not touch `game/` (pairs skipped). One A/A gate (`run_bench_pairs.sh` alone) is about 3-4 min; the calibration (8 gates) about 30 min.
+**Gate estimate** (before Task 8a): about 8 min per `run_benchmark.sh` on a branch that touches `game/` (5 min today + about 3 min pairs + the reference import); measured at Task 8a: about 7 min. Unchanged about 5 min on `main` and on branches that do not touch `game/` (pairs skipped). One A/A gate (`run_bench_pairs.sh` alone) is about 3-4 min; the calibration (8 gates) about 30 min.
 
 ## Edge cases (rules the code and tests implement)
 

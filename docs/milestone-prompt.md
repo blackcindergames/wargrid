@@ -99,7 +99,8 @@ Stop and ask when:
 
 - a contract or phase order in the approved design would have to change;
 - a budget is exceeded (a row the user already accepted as exceeded is recorded with its numbers, not re-asked; `run_benchmark.sh` then exits 1, so name the failing line);
-- a pinned outcome changes (winner, a match no longer ending inside its window) or a stress ceiling would need a re-pin: record old and new values and ask for sign-off;
+- the pair gate fails or is inconclusive (`PAIR GATE FAILED` / `PAIR GATE INCONCLUSIVE`, `run_benchmark.sh` exits 1); a `CEILING ALARM` line alone is not a stop;
+- a pinned outcome changes (winner, a match no longer ending inside its window) or the pair threshold or a stress ceiling would need a change: record old and new values and ask for sign-off;
 - an assertion would have to be weakened;
 - calibration cannot meet a gate within its permitted parameters;
 - the resume record disagrees with the tree.
