@@ -51,6 +51,8 @@ func test_caps_on_the_root_window(runner) -> bool:
 		await _resize(runner, root, row[0])
 		runner.check(root.get_visible_rect().size == row[1] and root.content_scale_aspect == row[2], "ST2 a %s window shows %s with aspect %d, got %s aspect %d" % [row[0], row[1], row[2], root.get_visible_rect().size, root.content_scale_aspect])
 		runner.check(main.get_viewport().get_visible_rect().size == row[1], "ST2 the match lays out at %s in a %s window" % [row[1], row[0]])
+		var strip: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
+		runner.check(strip.position == Vector2(8, 8) and Rect2(Vector2.ZERO, row[1]).encloses(strip), "ST2 the top strip stays at (8, 8) inside a %s window, got %s" % [row[0], strip])
 	main.free()
 	runner.check(_layout(root) == [Vector2i(1280, 720), EXPAND], "ST2 freeing the match writes 1280x720 expand, got %s" % [_layout(root)])
 	var writes: int = ViewCaps.writes

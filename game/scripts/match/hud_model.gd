@@ -36,3 +36,21 @@ static func menu_kinds(view: Dictionary, chosen: Dictionary, ids: Array[int], fa
 static func menu_label(index: int, kind: String) -> String:
 	var quantity: int = Registry.kind(kind).get("quantity", 1)
 	return "%d: %s%s $%d" % [index + 1, Registry.kind(kind).display_name, " x%d" % quantity if quantity > 1 else "", Registry.kind(kind).cost]
+
+const LOW_POWER := "LOW POWER · DEFENCES OFF"
+static var _powered: Dictionary = {}
+
+static func strip(view: Dictionary, id: int, placement_kind: String) -> Dictionary:
+	var found: Dictionary = player(view, id)
+	var numbers: Dictionary = {"credits": found.credits, "used": found.power_demand, "available": found.power_supply}
+	if placement_kind.is_empty(): return numbers
+	var power: int = Registry.kind(placement_kind).get("power", 0)
+	return numbers.merged({"after_credits": found.credits - Registry.kind(placement_kind).cost, "after_used": numbers.used + maxi(0, -power), "after_available": numbers.available + maxi(0, power)})
+
+# FRC builds nothing that makes or uses power, so a 0 / 0 group would read like a bug.
+static func uses_power(faction: String) -> bool:
+	if not _powered.has(faction):
+		var row: Dictionary = Registry.faction(faction)
+		var kinds: Array = Registry.kind(row.get("start_unit", "")).get("builds", []) + [row.get("start_building", "")]
+		_powered[faction] = kinds.any(func(kind: String) -> bool: return Registry.kind(kind).get("power", 0) != 0)
+	return _powered[faction]

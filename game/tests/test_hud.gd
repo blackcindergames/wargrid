@@ -9,6 +9,12 @@ const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const BaseScene = preload("res://tests/test_base_scene.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const Hud = preload("res://scripts/match/hud.gd")
+const View = preload("res://scripts/presentation/world_view.gd")
+const SkirmishTests = preload("res://tests/test_skirmish_scene.gd")
+const Iso = preload("res://scripts/presentation/isometric.gd")
+const LOW: String = "LOW POWER · DEFENCES OFF"
+const MINUS: String = "\u2212"
 const THEME_PATH: String = "res://ui/launcher_theme.tres"
 const TOKENS: Dictionary = {"bg": "#121c24", "btn": "#223241", "panel2": "#26384a", "quiet": "#16212a", "well": "#0c141a", "line": "#2e3f4b", "text": "#eef3f5", "muted": "#93a5b0", "sel": "#60e5ed", "amber": "#f7c871", "warn": "#f47b6c"}
 const TYPE_SCALE: Array[int] = [12, 13, 14, 16, 24, 30]
@@ -16,7 +22,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values]
 
 # The match scene's economy column: the screen adds BuildMenu, skirmish.tscn the rest.
 static func _economy() -> VBoxContainer:
@@ -26,8 +32,7 @@ static func _economy() -> VBoxContainer:
 	return economy
 
 func test_hud_reads_only_its_input(runner) -> bool:
-	# Untyped load: at HEAD the two-argument _init would make a typed Hud.new() fail the whole runner.
-	var script: GDScript = load("res://scripts/match/hud.gd")
+	var script: GDScript = Hud
 	var named: bool = script.get_script_method_list().any(func(method: Dictionary) -> bool: return method.name == "update_hud")
 	runner.check(named, "HN1 hud.gd has update_hud")
 	if not named: return true
@@ -44,7 +49,7 @@ func test_hud_reads_only_its_input(runner) -> bool:
 	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false}
 	hud.update_hud(Fixture.make_world().view_state(), selection, 1, 1)
 	runner.check(hud.name == "Hud" and hud.mouse_filter == Control.MOUSE_FILTER_IGNORE and hud.anchor_right == 1.0 and hud.anchor_bottom == 1.0, "HN1 the Hud is a full-rect node that ignores the mouse")
-	runner.check(status.text.contains("Credits: 10000") and status.text.contains(Registry.kind("usa_builder").display_name + " #1"), "HN1 the Status fixture fills from the view and the selection alone, got '%s'" % status.text)
+	runner.check(_part(hud, "TopStrip", "Credits").text == "10000" and status.text.contains(Registry.kind("usa_builder").display_name + " #1"), "HN1 the strip and the Status fixture fill from the view and the selection alone, got '%s'" % status.text)
 	runner.check(hud.menu_kinds == Registry.kind("usa_builder").builds and economy.get_node("BuildMenu").get_child_count() == hud.menu_kinds.size(), "HN1 the builder's menu fills, got %s" % [hud.menu_kinds])
 	var sim = Fixture.make_world()
 	var tank: int = sim.spawn(1, Vector2(8.5, 8.5), "usa_tank")
@@ -274,4 +279,178 @@ func test_match_surfaces_keep_their_size(runner) -> bool:
 	runner.check(popup.get_theme_font_size("font_size") == SMALL, "TH5 the focus card picker's list is %d px, got %d" % [SMALL, popup.get_theme_font_size("font_size")])
 	card_port.free()
 	overlay._end(saved)
+	return true
+
+static func _part(hud: Node, box: String, part: String) -> Control:
+	return hud.get_node(box).find_child(part, true, false)
+
+static func _token(name: String) -> Color:
+	return ThemeDB.get_project_theme().get_color(name, &"Tokens")
+
+static func _colour(label: Label) -> Color:
+	return label.get_theme_color("font_color")
+
+static func _strip_view(credits: int, used: int, available: int, faction: String = "usa") -> Dictionary:
+	var view: Dictionary = Fixture.make_world(credits).view_state()
+	view.players[0].merge({"power_demand": used, "power_supply": available, "faction": faction}, true)
+	return view
+
+static func _armed(kind: String, bright: bool = false) -> Dictionary:
+	var ids: Array[int] = []
+	return {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": kind, "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": bright, "over": false}
+
+func _bare_hud(runner) -> Hud:
+	var port := SubViewport.new()
+	port.size = Vector2i(1280, 720)
+	runner.root.add_child(port)
+	var hud := Hud.new()
+	port.add_child(hud)
+	hud.setup(null, null)
+	return hud
+
+func _show(runner, hud: Hud, view: Dictionary, kind: String = "", player: int = 1, bright: bool = false) -> void:
+	hud.update_hud(view, _armed(kind, bright), player, player)
+	await runner.process_frame
+
+static func _texts(hud: Node, box: String) -> Array:
+	return ["Credits", "Power", "LowPower"].map(func(part: String) -> String: return _part(hud, box, part).text if _part(hud, box, part).is_visible_in_tree() else "")
+
+func test_power_reads_used_over_available(runner) -> bool:
+	var hud: Hud = _bare_hud(runner)
+	await _show(runner, hud, _strip_view(4800, 8, 10))
+	var power: Label = _part(hud, "TopStrip", "Power")
+	var low: Label = _part(hud, "TopStrip", "LowPower")
+	runner.check(power.text == "8 / 10" and _colour(power) == _token("text") and not low.is_visible_in_tree(), "TS1 8 used of 10 reads 8 / 10 in text, no low power, got '%s'" % power.text)
+	await _show(runner, hud, _strip_view(4800, 12, 10))
+	runner.check(power.text == "12 / 10" and _colour(power) == _token("warn"), "TS1 12 used of 10 reads 12 / 10 in warn, got '%s'" % power.text)
+	runner.check(low.is_visible_in_tree() and low.text == LOW and _colour(low) == _token("warn"), "TS1 low power names its effect in warn, got '%s'" % low.text)
+	await _show(runner, hud, _strip_view(4800, 8, 10))
+	var before: Array = _texts(hud, "TopStrip")
+	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
+	runner.check(_texts(hud, "TopStrip") == before, "TS1 arming a building never changes the strip, got %s" % [_texts(hud, "TopStrip")])
+	hud.get_parent().free()
+	return true
+
+func _no_arrow_or_short(runner, hud: Hud, label: String) -> void:
+	for found: Node in hud.find_children("*", "Label", true, false):
+		var text: String = (found as Label).text
+		if (found as Label).is_visible_in_tree(): runner.check(not text.contains("→") and not text.contains("short"), "TS2 %s: no arrow and no 'short' in '%s'" % [label, text])
+
+func test_forecast_forms(runner) -> bool:
+	var hud: Hud = _bare_hud(runner)
+	var card: Control = hud.get_node("Forecast")
+	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
+	var credits: Label = _part(hud, "Forecast", "Credits")
+	var power: Label = _part(hud, "Forecast", "Power")
+	var low: Label = _part(hud, "Forecast", "LowPower")
+	runner.check(_part(hud, "TopStrip", "Credits").text == "4800" and card.visible and _part(hud, "Forecast", "Title").text == "AFTER PURCHASE", "TS2 a Rotary Gun Tower armed: the strip keeps 4800 and the card shows")
+	runner.check(credits.text == "3600" and _colour(credits) == _token("text"), "TS2 credits after purchase 3600 in text, got '%s'" % credits.text)
+	runner.check(power.text == "11 / 10" and _colour(power) == _token("warn") and low.is_visible_in_tree() and low.text == LOW and _colour(low) == _token("warn"), "TS2 power after purchase 11 / 10 and low power in warn, got %s" % [_texts(hud, "Forecast")])
+	_no_arrow_or_short(runner, hud, "tower")
+	await _show(runner, hud, _strip_view(4800, 8, 10), "usa_power_plant")
+	runner.check(credits.text == "4000" and power.text == "8 / 15" and _colour(power) == _token("text") and not low.is_visible_in_tree(), "TS2 a Power Plant armed reads 4000 and 8 / 15, no low power, got %s" % [_texts(hud, "Forecast")])
+	await _show(runner, hud, _strip_view(10650, 8, 10))
+	runner.check(_part(hud, "TopStrip", "Credits").text == "10650" and not card.visible, "TS2 five-digit credits print plain, nothing armed hides the card, got '%s'" % _part(hud, "TopStrip", "Credits").text)
+	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
+	runner.check(credits.text == MINUS + "700" and _colour(credits) == _token("warn"), "TS2 the shortfall reads −700 with U+2212 in warn, got '%s'" % credits.text)
+	_no_arrow_or_short(runner, hud, "shortfall")
+	for armed: String in ["", "frc_barracks"]:
+		await _show(runner, hud, _strip_view(4800, 0, 0, "frc"), armed)
+		var shown: Array = ["PowerLabel", "Power", "LowPower"].filter(func(part: String) -> bool: return _part(hud, "TopStrip", part).is_visible_in_tree() or _part(hud, "Forecast", part).is_visible_in_tree())
+		runner.check(shown.is_empty() and _part(hud, "TopStrip", "Credits").is_visible_in_tree(), "TS2 FRC uses no power, so no power group (armed '%s'), shown %s" % [armed, shown])
+	runner.check(credits.text == "4300" and card.visible, "TS2 FRC's card keeps its credits, got '%s'" % credits.text)
+	hud.get_parent().free()
+	await _forecast_follows_the_placement(runner)
+	return true
+
+func _forecast_follows_the_placement(runner) -> void:
+	var helper = BaseScene.new()
+	var main = await helper.setup(runner)
+	main.driver.adopt(Fixture.make_world())
+	main.orders.selected_ids.assign([1])
+	main._refresh()
+	var card: Control = main.get_node("HUD/Hud/Forecast")
+	helper.key(main, KEY_1)
+	runner.check(card.visible, "TS2 arming a building shows the card")
+	helper.key(main, KEY_ESCAPE)
+	runner.check(not card.visible, "TS2 cancelling the placement hides the card")
+	helper.key(main, KEY_1)
+	helper.hover(main, Iso.world_to_plane(Vector2(8.25, 4.25)))
+	helper.pointer(main, Iso.world_to_plane(Vector2(8.25, 4.25)), MOUSE_BUTTON_LEFT, false)
+	BaseScene.tick(main)
+	runner.check(main.orders._placement_kind.is_empty() and not card.visible, "TS2 placing the building hides the card")
+	main.free()
+	var skirmish = SkirmishTests.new()
+	main = await skirmish._setup(runner)
+	skirmish._arena(main)
+	main.orders._placement_kind = "usa_power_plant"
+	main._refresh()
+	runner.check(main.get_node("HUD/Hud/Forecast").visible, "TS2 the arena shows the card while armed")
+	skirmish._victory(main)
+	runner.check(main.shown_over() and main.orders._placement_kind.is_empty() and not main.get_node("HUD/Hud/Forecast").visible, "TS2 the match ending clears the placement and hides the card")
+	main.free()
+	var online: Dictionary = await OverlayTests.new()._online(runner)
+	main = online.main
+	main.orders._placement_kind = "usa_power_plant"
+	main._refresh()
+	runner.check(main.get_node("HUD/Hud/Forecast").visible, "TS2 online: the card shows while armed")
+	main.driver._finished = true
+	main._refresh()
+	runner.check(main.orders._placement_kind.is_empty() and not main.get_node("HUD/Hud/Forecast").visible, "TS2 an online lockstep ending clears the placement and hides the card")
+	main.free()
+
+func test_swatch_slot_colour(runner) -> bool:
+	var hud: Hud = _bare_hud(runner)
+	var swatch: ColorRect = _part(hud, "TopStrip", "Swatch")
+	for row: Array in [[1, false], [2, false], [1, true]]:
+		var view: Dictionary = _strip_view(4800, 8, 10)
+		view.players[0].id = row[0]
+		await _show(runner, hud, view, "", row[0], row[1])
+		runner.check(swatch.color == View.owner_color(row[0], row[1]), "TS3 player %d (bright %s) gets its owner colour, got %s" % [row[0], row[1], swatch.color])
+	hud.update_hud(_strip_view(4800, 8, 10), _armed(""), 2, 1)
+	runner.check(swatch.color == View.owner_color(2), "TS3 the swatch follows the viewed player, not the seat, got %s" % swatch.color)
+	var box: Rect2 = swatch.get_global_rect()
+	var gap: float = _part(hud, "TopStrip", "CreditsLabel").get_global_rect().position.x - box.end.x
+	runner.check(box.size == Vector2(8, 8) and is_equal_approx(gap, 8.0), "TS3 the swatch is 8x8, 8 px left of CREDITS, got %s gap %.1f" % [box.size, gap])
+	hud.get_parent().free()
+	return true
+
+func test_strip_anchor_without_tick(runner) -> bool:
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view_rect := Rect2(Vector2.ZERO, Vector2(size))
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await OverlayTests.new()._scene(runner, Skirmish, port)
+		main.hud.update_hud(_strip_view(500, 8, 10), _armed("china_defence"), 1, 1)
+		await runner.process_frame
+		var strip: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
+		var card: Rect2 = main.get_node("HUD/Hud/Forecast").get_global_rect()
+		runner.check(strip.position == Vector2(8, 8) and strip.size.y == 32.0 and view_rect.encloses(strip), "TS4 the strip sits at (8, 8), 32 high, inside the view at %s, got %s" % [size, strip])
+		runner.check(card.position == Vector2(8, 48) and view_rect.encloses(card) and not card.intersects(strip), "TS4 the longest card sits at (8, 48) inside the view, clear of the strip at %s, got %s" % [size, card])
+		main.hud.update_hud(_strip_view(4800, 12, 10), _armed(""), 1, 1)
+		await runner.process_frame
+		strip = main.get_node("HUD/Hud/TopStrip").get_global_rect()
+		runner.check(view_rect.encloses(strip) and strip.size.y == 32.0, "TS4 the strip with low power stays 32 high inside the view at %s, got %s" % [size, strip])
+		var text: String = BaseScene.hud_text(main)
+		runner.check(not text.contains("Tick") and not text.contains("You are"), "TS4 no tick and no seat line in the HUD at %s" % size)
+		port.free()
+	return true
+
+func test_strip_patches_values(runner) -> bool:
+	var hud: Hud = _bare_hud(runner)
+	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
+	var credits: Label = _part(hud, "Forecast", "Credits")
+	var strip_credits: Label = _part(hud, "TopStrip", "Credits")
+	for row: Array in [[500, MINUS + "700", "warn"], [1000, MINUS + "200", "warn"], [1500, "300", "text"]]:
+		await _show(runner, hud, _strip_view(row[0], 8, 10), "china_defence")
+		runner.check(strip_credits.text == str(row[0]) and credits.text == row[1] and _colour(credits) == _token(row[2]), "TS5 %d credits patch the strip and the card to %s in %s, got '%s'" % [row[0], row[1], row[2], credits.text])
+	runner.check(_part(hud, "TopStrip", "Credits") == strip_credits and _part(hud, "Forecast", "Credits") == credits, "TS5 patching values keeps the same labels")
+	var changes: Array[int] = [0]
+	for box: String in ["TopStrip", "Forecast"]:
+		for part: String in ["Credits", "Power", "LowPower"]: _part(hud, box, part).theme_changed.connect(func() -> void: changes[0] += 1)
+	for i in 2: await _show(runner, hud, _strip_view(1500, 12, 10), "china_defence")
+	changes[0] = 0
+	await _show(runner, hud, _strip_view(1500, 12, 10), "china_defence")
+	runner.check(changes[0] == 0, "TS5 an unchanged update touches no label theme, got %d theme changes" % changes[0])
+	hud.get_parent().free()
 	return true

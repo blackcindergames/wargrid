@@ -88,7 +88,7 @@ func test_base_ready(runner) -> bool:
 	runner.check(main.driver.pump.live().snapshot().tick == state.tick + 1,"Bs1 one physics tick")
 	key(main,KEY_B)
 	runner.check(main.driver.pump.live().snapshot().terrain_cells.is_empty(),"Bs1 B cannot toggle terrain")
-	runner.check(main.get_node("HUD/Status").text.contains("Credits"),"Bs1 economy HUD")
+	runner.check(hud_text(main).contains("CREDITS") and main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false).text == str(main.shown_state.players[0].credits),"Bs1 economy HUD shows the player's credits")
 	main.free()
 	return true
 

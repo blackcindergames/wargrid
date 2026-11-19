@@ -132,7 +132,8 @@ func test_match_hud_and_restart(runner) -> bool:
 	main.orders.selected_ids.assign([ids.tank])
 	main._refresh()
 	var text: String = main.get_node("HUD/Status").text
-	runner.check(text.contains("Credits") and text.contains("Battle Tank #" + str(ids.tank)) and text.contains("HP 480/480") and text.contains("guard"), "K4 credits, kind, HP and order in the HUD")
+	var credits: String = str(main._local_state(main.shown_state).credits)
+	runner.check(main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false).text == credits and text.contains("Battle Tank #" + str(ids.tank)) and text.contains("HP 480/480") and text.contains("guard"), "K4 credits, kind, HP and order in the HUD")
 	var setup: Dictionary = main.driver.pump.live().view_state()
 	setup.match.status = "setup"
 	main._show_result(setup)

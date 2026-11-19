@@ -322,6 +322,8 @@ func _reshow() -> void:
 # Only a new view consumes step results and sound; a repaint on input must leave them for the next refresh.
 func _show(state: Dictionary, fresh: bool = true) -> void:
 	shown_state = state
+	# The forecast card must never show over a result card or an ended online match.
+	if (shown_over() or driver.over()) and not orders._placement_kind.is_empty(): orders._clear_placement()
 	_shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
