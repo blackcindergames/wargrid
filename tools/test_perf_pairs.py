@@ -1,3 +1,5 @@
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -14,13 +16,15 @@ BASE = {"open": (1.8, 2.2), "dense": (1.7, 2.1), "contact": (1.0, 1.4), "hordes3
 PASSED = "COMBAT BENCHMARK PASSED 10"
 
 
-def _log(rows: dict[str, tuple[float, float]], stress: tuple[str, ...] = GUARDED, end: str = PASSED) -> str:
+def _log(
+    rows: dict[str, tuple[float, float]], stress: tuple[str, ...] = GUARDED, end: str = PASSED, word: str = "PASS"
+) -> str:
     lines = [
         f'COMBAT {row} tick_ms={{"max":9.0,"n":1800,"p50":0.5,"p95":{p95},"p99":{p99}}} shots=1'
         for row, (p95, p99) in rows.items()
     ]
     lines += [
-        f"COMBAT STRESS PASS {row} exceeds the 1.82/3.64 budget, regression ceiling p95/p99 [3.0, 5.0]"
+        f"COMBAT STRESS {word} {row} exceeds the 1.82/3.64 budget, drift alarm p95/p99 [3.0, 5.0] (report only)"
         for row in stress
     ]
     return "\n".join([*lines, end])
@@ -179,6 +183,7 @@ class VerdictTest(unittest.TestCase):
             ("non-numeric", good.replace('"p95":1.8', '"p95":"x"', 1)),
             ("unparsable", good.replace('"max":9.0,"n":1800,"p50":0.5,"p95":1.8,"p99":2.2', '"p95":', 1)),
             ("not finite", good.replace('"p95":1.8', '"p95":NaN', 1)),
+            ("boolean", good.replace('"p95":1.8', '"p95":true', 1)),
         ):
             for side, refs, branches in (("ref", [bad] * 3, _same()), ("branch", _same(), [bad] * 3)):
                 with self.subTest(name=name, side=side):
@@ -192,6 +197,60 @@ class VerdictTest(unittest.TestCase):
         short = _log({k: v for k, v in BASE.items() if k != "hordes300"}, ("open", "dense"))
         slow = _log(_scaled({"open": 1.05}))
         self.assertFinal(_run([_log(BASE), short, _log(BASE)], [slow] * 3), 1, "PAIR GATE FAILED open:p95")
+
+    def test_branch_runs_without_any_stress_line_are_inconclusive(self) -> None:
+        self.assertFinal(_run(_same(), [_log(BASE, stress=())] * 3), 2, "PAIR GATE INCONCLUSIVE")
+
+    def test_stress_alarm_rows_are_still_gated(self) -> None:
+        slow = _log(_scaled({"hordes300": 1.03}, metrics=(0,)), word="ALARM")
+        self.assertFinal(_run(_same(), [slow] * 3), 1, "PAIR GATE FAILED hordes300:p95")
+
+    def test_old_reference_whose_failed_and_ceiling_rows_differ_is_inconclusive(self) -> None:
+        end = (
+            "ERROR: Combat stress ceiling exceeded for hordes300\n"
+            "ERROR: Combat benchmark failed for hordes300\nERROR: Combat benchmark failed for dense"
+        )
+        old = _log(BASE, end=end) + "\nCOMBAT STRESS FAIL hordes300 x\nCOMBAT STRESS FAIL dense x"
+        self.assertFinal(_run([old] * 3, _same()), 2, "PAIR GATE INCONCLUSIVE ref run 1 unusable")
+
+    def test_old_reference_ceiling_error_without_its_fail_row_is_inconclusive(self) -> None:
+        end = "ERROR: Combat stress ceiling exceeded for hordes300\nERROR: Combat benchmark failed for hordes300"
+        self.assertFinal(_run([_log(BASE, end=end)] * 3, _same()), 2, "PAIR GATE INCONCLUSIVE ref run 1 unusable")
+
+    def test_unusable_reference_names_run_and_reason(self) -> None:
+        good = _log(BASE)
+        for reason, bad in (
+            ("SCRIPT ERROR", good + "\nSCRIPT ERROR: Parse Error"),
+            ("no tick line", PASSED),
+            ("no completion line", _log(BASE, end="")),
+            ("Resource load failed", f"ERROR: Resource load failed\n{good}"),
+        ):
+            with self.subTest(reason=reason):
+                result = _run([good, bad, good], _same())
+                self.assertFinal(result, 2, f"PAIR GATE INCONCLUSIVE ref run 2 unusable: {reason}")
+                self.assertEqual(result[1][-1], f"PAIR GATE INCONCLUSIVE ref run 2 unusable: {reason}")
+
+    def test_malformed_summary_names_side_and_run(self) -> None:
+        good = _log(BASE)
+        bad = good.replace('"p95":1.8', '"p95":"x"', 1)
+        for side, refs, branches in (("ref", [good, bad, good], _same()), ("branch", _same(), [good, bad, good])):
+            with self.subTest(side=side):
+                lines = self.assertFinal(_run(refs, branches), 2, "PAIR GATE INCONCLUSIVE")
+                self.assertEqual(lines[-1], f"PAIR GATE INCONCLUSIVE malformed timing summary in {side} run 2")
+
+    def test_cli_survives_an_undecodable_byte_in_a_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            refs = [Path(tmp) / f"r{i}.log" for i in range(3)]
+            branches = [Path(tmp) / f"b{i}.log" for i in range(3)]
+            for path in branches:
+                path.write_text(_log(BASE))
+            for path in refs:
+                path.write_bytes(_log(BASE).encode() + b"\n\xff\n")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = perf_pairs.main(["--ref", *map(str, refs), "--branch", *map(str, branches)])
+        self.assertEqual(code, 0, out.getvalue())
+        self.assertEqual(len([x for x in out.getvalue().splitlines() if x.startswith("PAIR GATE ")]), 1)
 
     def test_cli_reads_files_and_returns_the_code(self) -> None:
         slow = _log(_scaled({"hordes300": 1.05}))

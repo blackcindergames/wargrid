@@ -577,8 +577,15 @@ case "$*" in
 *run_movement*) cat "$STUB_DIR/movement.out" ;;
 *run_combat*)
 	case "$*" in
-	*"$STUB_REPO/game"*) cat "$STUB_DIR/combat.out" ;;
-	*) cat "$STUB_DIR/${STUB_REF:-combat}.out" ;;
+	*"$STUB_REPO/game"*)
+		[ -z "${STUB_BRANCH_ERROR:-}" ] || echo "ERROR: stub"
+		cat "$STUB_DIR/combat.out"
+		[ -z "${STUB_BRANCH_EXIT:-}" ] || exit 1
+		;;
+	*)
+		cat "$STUB_DIR/${STUB_REF:-combat}.out"
+		[ -z "${STUB_REF_EXIT:-}" ] || exit 1
+		;;
 	esac
 	;;
 *run_lockstep*) cat "$STUB_DIR/lockstep.out" ;;
@@ -724,6 +731,8 @@ class RunBenchmarkTest(unittest.TestCase):
         result = self.run_script()
         self.assertEqual(result.returncode, 0)
         self.assertIn("PAIR GATE PASSED", result.stdout)
+        for side in ("ref", "branch"):
+            self.assertEqual(len(re.findall(rf"^PAIR {side}-\d ", result.stdout, re.M)), 3, side)
 
     def test_branch_slower_than_reference_fails_and_never_records(self) -> None:
         self.branch_with("game/x.gd")
@@ -790,6 +799,34 @@ class RunBenchmarkTest(unittest.TestCase):
         result = self.run_script("tools/run_bench_pairs.sh", PERF_REF="HEAD")
         self.assertEqual(result.returncode, 1)
         self.assertIn("PAIR GATE FAILED branch run 1", result.stdout)
+
+    def test_branch_run_with_an_error_line_fails_even_with_the_marker(self) -> None:
+        result = self.run_script("tools/run_bench_pairs.sh", PERF_REF="HEAD", STUB_BRANCH_ERROR="1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PAIR GATE FAILED branch run 1", result.stdout)
+
+    def test_branch_run_with_nonzero_exit_fails_even_with_the_marker(self) -> None:
+        result = self.run_script("tools/run_bench_pairs.sh", PERF_REF="HEAD", STUB_BRANCH_EXIT="1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PAIR GATE FAILED branch run 1", result.stdout)
+
+    def test_failing_old_reference_run_is_still_compared(self) -> None:
+        combat = (self.stub / "combat.out").read_text().replace("COMBAT BENCHMARK PASSED 10\n", "")
+        legacy_end = (
+            "COMBAT STRESS FAIL dense x\nERROR: Combat stress ceiling exceeded for dense\n"
+            "ERROR: Combat benchmark failed for dense\n"
+        )
+        (self.stub / "ref_legacy.out").write_text(combat + legacy_end)
+        result = self.run_script("tools/run_bench_pairs.sh", PERF_REF="HEAD", STUB_REF="ref_legacy", STUB_REF_EXIT="1")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("PAIR GATE PASSED", result.stdout)
+
+    def test_pair_run_leaves_no_temp_dir(self) -> None:
+        result = self.run_script("tools/run_bench_pairs.sh", PERF_REF="HEAD")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        work = re.search(r"^PAIR WORK (\S+)", result.stdout, re.M)
+        self.assertIsNotNone(work, result.stdout)
+        self.assertFalse(Path(work.group(1)).exists())  # type: ignore[union-attr]
 
     def test_untracked_game_file_counts_even_when_git_hides_untracked_files(self) -> None:
         _git(self.repo, "config", "status.showUntrackedFiles", "no")

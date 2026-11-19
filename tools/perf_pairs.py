@@ -27,17 +27,19 @@ def _rows(text: str) -> dict[str, dict[str, float]]:
     return rows
 
 
-def _complete(text: str) -> bool:
-    if "SCRIPT ERROR" in text or not COMBAT.search(text):
-        return False
+def _unusable(text: str) -> str:
+    if "SCRIPT ERROR" in text:
+        return "SCRIPT ERROR"
+    if not COMBAT.search(text):
+        return "no tick line"
     errors = ERROR_LINE.findall(text)
     other = [
         m for m in errors if not m.startswith(("Combat benchmark failed for ", "Combat stress ceiling exceeded for "))
     ]
     if other:
-        return False
+        return other[0].strip()
     if MARKER.search(text):
-        return True
+        return ""
     failed = {
         m.removeprefix("Combat benchmark failed for ") for m in errors if m.startswith("Combat benchmark failed for ")
     }
@@ -46,23 +48,28 @@ def _complete(text: str) -> bool:
         for m in errors
         if m.startswith("Combat stress ceiling exceeded for ")
     }
-    return bool(failed) and failed == ceiling and all(f"COMBAT STRESS FAIL {row} " in text for row in failed)
+    legacy = bool(failed) and failed == ceiling and all(f"COMBAT STRESS FAIL {row} " in text for row in failed)
+    return "" if legacy else "no completion line"
 
 
 def verdict(refs: list[str], branches: list[str]) -> tuple[int, list[str]]:
     for i, text in enumerate(refs, 1):
-        if not _complete(text):
-            return 2, [f"PAIR GATE INCONCLUSIVE ref run {i} unusable"]
+        if reason := _unusable(text):
+            return 2, [f"PAIR GATE INCONCLUSIVE ref run {i} unusable: {reason}"]
     for i, text in enumerate(branches, 1):
         if not MARKER.search(text):
             return 1, [f"PAIR GATE FAILED branch run {i}"]
     guarded = [set(STRESS.findall(t)) for t in branches]
     if not guarded[0] or any(g != guarded[0] for g in guarded):
         return 2, ["PAIR GATE INCONCLUSIVE guarded rows differ between branch runs"]
-    try:
-        ref_rows, branch_rows = [_rows(t) for t in refs], [_rows(t) for t in branches]
-    except (ValueError, KeyError, TypeError):
-        return 2, ["PAIR GATE INCONCLUSIVE malformed timing summary"]
+    ref_rows: list[dict[str, dict[str, float]]] = []
+    branch_rows: list[dict[str, dict[str, float]]] = []
+    for side, texts, parsed in (("ref", refs, ref_rows), ("branch", branches, branch_rows)):
+        for i, text in enumerate(texts, 1):
+            try:
+                parsed.append(_rows(text))
+            except (ValueError, KeyError, TypeError):
+                return 2, [f"PAIR GATE INCONCLUSIVE malformed timing summary in {side} run {i}"]
     lines: list[str] = []
     failed: list[str] = []
     inconclusive: list[str] = []
@@ -109,7 +116,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if len(args.ref) != len(args.branch):
         parser.error("--ref and --branch need the same number of logs")
-    code, lines = verdict([p.read_text() for p in args.ref], [p.read_text() for p in args.branch])
+    code, lines = verdict(
+        [p.read_text(errors="replace") for p in args.ref], [p.read_text(errors="replace") for p in args.branch]
+    )
     print("\n".join(lines))
     return code
 

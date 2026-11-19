@@ -96,12 +96,12 @@ From the Pump hardening logs on this Mac (file times):
 | reference import exits 0 but prints `ERROR:` or `SCRIPT ERROR` | cannot trust the reference | `PAIR GATE INCONCLUSIVE import of <ref> failed`, 1 |
 | reference run exits non-zero | its exit code is ignored; the log decides (next two rows) | |
 | reference log complete: no `ERROR:` line other than the two legacy kinds below (any other one makes it unusable, even with the marker), and either a whole `^COMBAT BENCHMARK PASSED 10$` line (text of it inside another line does not count), or the legacy ceiling-fail end (a merge base from before this change): one or more `ERROR: Combat benchmark failed for <L>` lines, each `<L>` with a `COMBAT STRESS FAIL <L>` row and `ERROR: Combat stress ceiling exceeded for <L>` | usable (transition) | verdict from its `COMBAT <row> tick_ms=` lines |
-| reference log not complete (neither ending above: killed, truncated, unrelated `ERROR:`), has `SCRIPT ERROR`, or no `COMBAT ... tick_ms=` line | crashed reference | `PAIR GATE INCONCLUSIVE ref run <i> unusable`, 2 (`run_benchmark.sh` exits 1) |
+| reference log not complete (neither ending above: killed, truncated, unrelated `ERROR:`), has `SCRIPT ERROR`, or no `COMBAT ... tick_ms=` line | crashed reference | `PAIR GATE INCONCLUSIVE ref run <i> unusable: <reason>`, 2 (`run_benchmark.sh` exits 1); `<reason>` is `SCRIPT ERROR`, `no tick line`, the first offending `ERROR:` text, or `no completion line` |
 | guarded row missing in every reference log | row new on the branch: nothing to compare | `PAIR NEW <row> no reference row, not gated (alarm only)`, 0 (Q4) |
 | guarded row missing in some reference logs | truncated reference run | `PAIR GATE INCONCLUSIVE ref run <i> lacks <row>`, 2 |
-| guarded row set differs between branch logs | branch output unstable | INCONCLUSIVE, 2 |
+| guarded row set differs between branch logs, or no `COMBAT STRESS <PASS or ALARM> <row>` line in them | branch output unstable, or nothing to guard | INCONCLUSIVE, 2 |
 | reference or branch value 0 or negative | no meaningful ratio | `PAIR GATE INCONCLUSIVE <row> <metric> not positive`, 2 |
-| malformed timing summary in a `COMBAT <row> tick_ms=` line (JSON that does not parse, `p95` or `p99` missing, not a finite number) in any log | cannot trust the numbers; never a traceback | `PAIR GATE INCONCLUSIVE malformed timing summary`, 2 |
+| malformed timing summary in a `COMBAT <row> tick_ms=` line (JSON that does not parse, `p95` or `p99` missing, not a finite number) in any log | cannot trust the numbers; never a traceback | `PAIR GATE INCONCLUSIVE malformed timing summary in ref run <i>` (or `branch run <i>`), 2 |
 | a row the reference has that the branch does not guard | not guarded (removed or promoted to a budget row, visible in the diff) | not printed |
 | one disturbed pair (burst on one run) | median of 3 absorbs one bad pair | normal verdict |
 | load above 2.5 at any pair start | no load-based verdict (load does not predict the swing; pairs cancel steady load). Reruns per "Pair-run outcomes" (Global Constraints) | `uptime` printed before each run |
