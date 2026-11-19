@@ -1311,3 +1311,16 @@ Questions from the builder check and the three spec reviews (player-experience, 
 - **Offline freeze signal through a pump `failure()` call, offline pin 9 to 10** (after research over the code and the sim boundary critique, the engines in `~/projects` and SB5, judged by Fable 5.2; reports private): the pump keeps the first failure reason (job kind and last published tick; the real cause is Godot's own script error line on stderr, which GDScript cannot catch) and returns it from one main-thread call, `""` while healthy or stopped; the offline driver logs it once with `printerr` and shows the freeze notice in the same frame; the pinned count in `tools/test_sim_boundary.py` changes in the same commit with its reason. SB5a reuses the same call for its own detectors, because there a refused post can mean a full queue. The leave path's null read on a failed pump (`record()`, `flush()`) is fixed in the same task.
 - **The match record names the failure:** the playtest match record's `end` field reads "sim pump failed: <reason>", so a friend's report keeps it when stderr is lost.
 - **The freeze notice stays in P2.3a1** although release builds may raise no script error, so in friends' builds it may first fire once SB5a's detectors (stall, dead thread, owner-thread check) exist; P2.3a1 delivers the tested channel.
+
+### P2.3a1 plan questions (user, 2026-11-19)
+
+Asked with the [P2.3a1 plan](../superpowers/plans/2026-11-19-p2-3a1-see-your-selection.md) after its three reviews; the owner took the recommendation each time.
+
+- **Launcher theme snapped whole:** Task 3 snaps all of `launcher_theme.tres` (radii 5 to 2, the focus ring, paddings onto 4, 8, 12, 16, 24, 36); `launcher.gd`, `launcher.tscn` and `result_panel.gd` snap only where edited.
+- **Match surfaces keep 12 px:** the pause menu, the playtest checklist and note form, the F3 overlay, the focus card and the slab buttons until the slab task keep 12 px and today's control styles, with square corners, through small type variations.
+- **Playtest helper beside the slab at 1280x720:** the checklist's height is capped to the space above the interim slab (it scrolls), and the note form opens left of the checklist when there is no room below, so the helper never covers a button.
+- **No power group without power:** a faction with no kind that uses or makes power (FRC today) shows no POWER group in the top strip, armed or not, read from the definitions. Zero Hour keeps GLA's empty power bar (`data\ini\controlbarscheme.ini:205-206`, GLA8x6, retail INI through `tools/zh_ini.py`); a `0 / 0` reads like a bug.
+- **HUD draw-call ceiling:** 1.5 times the higher scratch maximum of the two window sizes, rounded up to a multiple of 10, set once and never raised.
+- **Lab palette toggle removed:** once palette A is the game's owner palette, the selection lab's A/off toggle and its test parts go; both branches would draw the same colours.
+- **Double beep deferred:** one beep per frame across issue-time and due-time refusals is P2.3a2's, with F29; P2.3a1 leaves sound code untouched and records the rule as partly met.
+- **Rows hold at one unit:** when a hovered group drops to one unit, the kind rows stay until the pointer leaves; at zero selected the panel hides.
