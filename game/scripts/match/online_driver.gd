@@ -255,7 +255,7 @@ func play_again() -> void:
 func take_rematch() -> int:
 	var match_seed: int = _rematch_seed
 	_rematch_seed = -1
-	if match_seed < 0: return -1
+	if _stopped or match_seed < 0: return -1
 	if _room_gone():
 		_close_room()
 		return -1
