@@ -38,7 +38,7 @@ Traces go to `~/CnC/parity/traces/` unless `--out` is given (outside git): one `
 
 Speed (measured, M-series): the loop runs uncapped (`GEN_FPS_CAP=0`, the default), start-up is about 2 s, and a recorded frame costs about 5 ms instead of about 170 ms at the engine's 30 Hz cap. `move_crusader` takes 3.5 s end to end; a `collect_*` run takes about 20 s.
 
-Sweeps (`--repeats R` or `--lanes N`): one child process per job (`rep<r>/<scenario>.tsv`), each on its own port (`ZH_PARITY_PORT + 2 * lane`) and `GEN_USER_DATA`, niced. Finished traces are skipped on rerun (resume), failures and timeouts (`--timeout`, default 900 s) retry `--retries` times (default 1), and `runs.jsonl` gets one line per attempt. An uncapped paused game spins one core, so lanes are capped at 6 (default with repeats: cpus/2, at most 6); 3 lanes and 6 lanes gave about the same throughput on 12 cores (6 `collect_truck_6` jobs: 35 s on 3 lanes, 30 s on 6).
+Sweeps (`--repeats R` or `--lanes N`): one child process per job (`rep<r>/<scenario>.tsv`), each on its own port (`ZH_PARITY_PORT + 2 * lane`) and `GEN_USER_DATA`, niced. The game auto-records a replay of about 2 GB per run into `GEN_USER_DATA/Replays/`; `Game.close()` deletes it (user, 2026-11-19). Finished traces are skipped on rerun (resume), failures and timeouts (`--timeout`, default 900 s) retry `--retries` times (default 1), and `runs.jsonl` gets one line per attempt. An uncapped paused game spins one core, so lanes are capped at 6 (default with repeats: cpus/2, at most 6); 3 lanes and 6 lanes gave about the same throughput on 12 cores (6 `collect_truck_6` jobs: 35 s on 3 lanes, 30 s on 6).
 
 ## Scenarios
 

@@ -18,6 +18,7 @@ import json
 import math
 import os
 import queue
+import shutil
 import signal
 import socket
 import subprocess
@@ -61,6 +62,7 @@ class Game:
                 raise RuntimeError(f"port {p} is already bound; another game is running (ZH_PARITY_PORT)")
         userdata = Path(log_path).resolve().parent / "userdata" / str(PORT)
         userdata.mkdir(parents=True, exist_ok=True)
+        self.replays = userdata / "Replays"
         env = dict(
             os.environ,
             GEN_AUTO_SKIRMISH="1",
@@ -231,6 +233,7 @@ class Game:
         except (ProcessLookupError, PermissionError):  # macOS: EPERM for a group that is only a zombie
             pass
         finally:
+            shutil.rmtree(self.replays, ignore_errors=True)  # the game auto-records ~2 GB per run
             self.log.close()
             if self.pidfile:
                 self.pidfile.unlink(missing_ok=True)
