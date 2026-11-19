@@ -23,7 +23,6 @@ var _grab_pending: bool = false
 func _init() -> void:
 	name = "ResultPanel"
 	visible = false
-	theme = load("res://ui/launcher_theme.tres")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
@@ -47,7 +46,7 @@ func _init() -> void:
 	_outcome = _label(box, "Outcome")
 	_outcome.add_theme_font_size_override("font_size", 30)
 	_status = _label(box, "Status")
-	_status.add_theme_font_size_override("font_size", 15)
+	_status.add_theme_font_size_override("font_size", 16)
 	_status.add_theme_color_override("font_color", Color("#d4d4d4"))
 	# Reserved even when empty so the card never changes height (user, 2026-11-15).
 	_status.custom_minimum_size.y = 20.0
@@ -79,7 +78,7 @@ func _ready() -> void:
 	panel.bg_color = Color("#2a2a2a")
 	panel.border_color = Color("#808080")
 	panel.set_border_width_all(1)
-	panel.set_corner_radius_all(5)
+	panel.set_corner_radius_all(0)
 	_pad(panel, 24.0, 24.0)
 	card.add_theme_stylebox_override("panel", panel)
 	_outcome.add_theme_font_override("font", get_theme_font("font", "PrimaryButton"))
@@ -89,10 +88,11 @@ func _ready() -> void:
 		for state: String in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
 			var style: StyleBox = button.get_theme_stylebox(state).duplicate()
 			_pad(style, 12.0, 4.0)
+			if style is StyleBoxFlat: (style as StyleBoxFlat).set_corner_radius_all(0)
 			button.add_theme_stylebox_override(state, style)
 	var waiting := StyleBoxFlat.new()
 	waiting.bg_color = Color("#666a6c")
-	waiting.set_corner_radius_all(5)
+	waiting.set_corner_radius_all(0)
 	_pad(waiting, 12.0, 4.0)
 	_play_again.add_theme_stylebox_override("disabled", waiting)
 	_play_again.add_theme_color_override("font_disabled_color", Color.WHITE)

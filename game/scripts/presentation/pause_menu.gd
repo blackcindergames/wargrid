@@ -1,6 +1,5 @@
 extends Control
 
-const UiStyle = preload("res://scripts/presentation/ui_style.gd")
 const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.gd")
 const VolumeSliders = preload("res://scripts/presentation/volume_sliders.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
@@ -31,7 +30,6 @@ var _quality: int = GraphicsSettings.HIGH
 func _init(web: bool = OS.has_feature("web")) -> void:
 	name = "PauseMenu"
 	visible = false
-	theme = UiStyle.hud_theme()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
@@ -63,10 +61,15 @@ func _init(web: bool = OS.has_feature("web")) -> void:
 	_playtest_button = _button(_main_box, "", _toggle_playtest)
 	_playtest_button.name = "Playtest"
 	_show_playtest(PlaytestSettings.enabled())
-	_main_box.add_child(VolumeSliders.new())
+	var sliders := VolumeSliders.new()
+	for child: Node in sliders.get_children():
+		if child is Label: child.theme_type_variation = &"HudSmallLabel"
+		elif child is CheckButton: child.theme_type_variation = &"HudSmallCheck"
+	_main_box.add_child(sliders)
 	_confirm_box = _box(center)
 	_confirm_box.visible = false
 	var question := Label.new()
+	question.theme_type_variation = &"HudSmallLabel"
 	question.text = "Leave the match? Your opponent wins and the room closes."
 	question.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	question.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -102,6 +105,7 @@ func _box(parent: Control) -> VBoxContainer:
 
 func _button(parent: Control, text: String, action: Callable) -> Button:
 	var button := Button.new()
+	button.theme_type_variation = &"HudSmallButton"
 	button.text = text
 	button.pressed.connect(action)
 	parent.add_child(button)

@@ -20,6 +20,10 @@ window/size/viewport_height=720
 window/size/resizable=true
 window/stretch/mode="canvas_items"
 
+[gui]
+
+theme/custom="res://ui/launcher_theme.tres"
+
 [input]
 camera_left={
 "deadzone": 0.2,

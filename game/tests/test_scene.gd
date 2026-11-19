@@ -233,6 +233,11 @@ func test_boxes(runner) -> bool:
 			for reverse in [false, true]:
 				await _box(runner, main, Vector2(33, 81) if reverse else Vector2(-33, 47), Vector2(-33, 47) if reverse else Vector2(33, 81))
 				runner.check(main.orders.selected_ids == [1, 2, 6, 7], "S6 transformed/reverse box " + str([center, zoom, reverse]))
+	# The last zoom puts a box corner near the HUD's build menu; the Shift checks are about the world.
+	camera.position = Vector2(0, 128)
+	camera.zoom = Vector2.ONE
+	camera.force_update_scroll()
+	await runner.process_frame
 	await click(runner, main.get_node("WorldView"), Iso.world_to_plane(Vector2(5.5, 1.5)) + Vector2(0, -8), MOUSE_BUTTON_LEFT)
 	await _box(runner, main, Vector2(-33, 47), Vector2(33, 81), true)
 	await _box(runner, main, Vector2(-33, 47), Vector2(33, 81), true)

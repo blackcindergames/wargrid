@@ -109,6 +109,7 @@ func _refresh_menu(kinds: Array) -> void:
 		var button: Button = grid.get_child(i) if i < grid.get_child_count() else null
 		if button == null:
 			button = Button.new()
+			button.theme_type_variation = &"HudSmallButton"
 			button.pressed.connect(_screen.orders._menu_choose.bind(i,false))
 			grid.add_child(button)
 		button.text = menu_label(i,kinds[i])
@@ -121,6 +122,7 @@ func _refresh_queue(queue: Array) -> void:
 		var button: Button = _queue.get_node_or_null(str(entry.id))
 		if button == null:
 			button = Button.new()
+			button.theme_type_variation = &"HudSmallButton"
 			button.name = str(entry.id)
 			button.pressed.connect(_screen.orders._cancel_entry.bind(entry.id))
 			_queue.add_child(button)

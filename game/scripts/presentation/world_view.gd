@@ -6,8 +6,8 @@ const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.g
 const Combat = preload("res://scripts/simulation/combat.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
-const UiStyle = preload("res://scripts/presentation/ui_style.gd")
 const LABEL_WIDTH: float = 160.0
+const MAP_LABEL_SIZE: int = 12
 const Terrain = preload("res://scripts/presentation/terrain_view.gd")
 const StructureLayer = preload("res://scripts/presentation/structure_layer.gd")
 const WorldBatch = preload("res://scripts/presentation/world_batch.gd")
@@ -333,7 +333,7 @@ static func building_label(building: Dictionary) -> String:
 	return label + " paused" if building.builder_id == null else label
 
 static func text_height() -> float:
-	return ThemeDB.fallback_font.get_height(UiStyle.FONT_SIZE)
+	return ThemeDB.fallback_font.get_height(MAP_LABEL_SIZE)
 
 func pile_text_points(source: Dictionary) -> PackedVector2Array:
 	var top: Vector2 = Iso.world_to_plane(Vector2(source.origin[0], source.origin[1])) + Vector2(0, -8)
@@ -666,4 +666,4 @@ func _draw_footprint(origin: Array, size: Vector2i, color: Color, selected: bool
 		_canvas.draw_polyline(polygon,Color("8cff87"),2.0)
 
 func _draw_label(point: Vector2, text: String) -> void:
-	_canvas.draw_string(ThemeDB.fallback_font,point + Vector2(-LABEL_WIDTH / 2.0,0),text,HORIZONTAL_ALIGNMENT_CENTER,LABEL_WIDTH,UiStyle.FONT_SIZE,Color.WHITE)
+	_canvas.draw_string(ThemeDB.fallback_font,point + Vector2(-LABEL_WIDTH / 2.0,0),text,HORIZONTAL_ALIGNMENT_CENTER,LABEL_WIDTH,MAP_LABEL_SIZE,Color.WHITE)

@@ -16,6 +16,7 @@ position_smoothing_enabled = false
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="Status" type="Label" parent="HUD"]
+theme_type_variation = &"HudSmallNumber"
 offset_left = 16.0
 offset_top = 16.0
 mouse_filter = 2
@@ -34,10 +35,12 @@ offset_right = 340.0
 mouse_filter = 2
 
 [node name="Produce" type="Button" parent="HUD/Economy"]
+theme_type_variation = &"HudSmallButton"
 text = "Produce (E)"
 mouse_filter = 0
 
 [node name="CancelBuild" type="Button" parent="HUD/Economy"]
+theme_type_variation = &"HudSmallButton"
 text = "Cancel construction"
 mouse_filter = 0
 

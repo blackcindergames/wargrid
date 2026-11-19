@@ -14,7 +14,6 @@ const LAUNCHER_SCENE: String = "res://scenes/launcher.tscn"
 const ZOOMS: Array[float] = [0.5, 1.0, 2.0]
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
-const UiStyle = preload("res://scripts/presentation/ui_style.gd")
 const MENU_COLUMNS: int = 4
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const SoundPlayer = preload("res://scripts/presentation/sound_player.gd")
@@ -63,8 +62,6 @@ func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: Stri
 
 func _ready() -> void:
 	if driver == null: driver = OfflineDriver.new(local_player)
-	$HUD/Status.theme = UiStyle.hud_theme()
-	$HUD/Economy.theme = UiStyle.hud_theme()
 	var menu := GridContainer.new()
 	menu.name = "BuildMenu"
 	menu.columns = MENU_COLUMNS

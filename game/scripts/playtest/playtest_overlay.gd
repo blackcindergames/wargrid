@@ -1,6 +1,5 @@
 extends Control
 
-const UiStyle = preload("res://scripts/presentation/ui_style.gd")
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const MarkerCapture = preload("res://scripts/playtest/marker_capture.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
@@ -40,7 +39,6 @@ func setup(card: Dictionary, context: Callable, record: Callable, header: Callab
 	match_record = record
 	_header = header
 	name = "Playtest"
-	theme = UiStyle.hud_theme()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build_checklist()
@@ -179,6 +177,7 @@ func _build_checklist() -> void:
 	_rows.minimum_size_changed.connect(_fit)
 	_scroll.add_child(_rows)
 	_saved = Label.new()
+	_saved.theme_type_variation = &"HudSmallLabel"
 	_saved.name = "Saved"
 	_saved.hide()
 	box.add_child(_saved)
@@ -196,6 +195,7 @@ func _rebuild() -> void:
 	SessionForm.add_label(_rows, "%s  (%s)" % [_card.get("title", ""), _key_label(CHECKLIST_KEY)]).name = "Title"
 	for item: Dictionary in _card.get("try", []):
 		var check := CheckBox.new()
+		check.theme_type_variation = &"HudSmallCheck"
 		check.name = item.id
 		check.text = item.text
 		check.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -249,6 +249,7 @@ func _build_dialog() -> void:
 	box.add_child(kinds)
 	for kind in MarkerCapture.KINDS:
 		var button := Button.new()
+		button.theme_type_variation = &"HudSmallButton"
 		button.name = kind.capitalize()
 		button.text = kind.capitalize()
 		button.toggle_mode = true
@@ -258,6 +259,7 @@ func _build_dialog() -> void:
 		kinds.add_child(button)
 		_kinds[kind] = button
 	_text = LineEdit.new()
+	_text.theme_type_variation = &"HudSmallField"
 	_text.name = "Text"
 	_text.placeholder_text = "Optional note"
 	box.add_child(_text)
@@ -275,6 +277,7 @@ func _choose_kind(kind: String) -> void:
 # Both panels sit on the bottom edge and grow upward; `anchor_x` 1.0 is the right corner, 0.5 the centre.
 func _corner_panel(panel_name: String, width: float, anchor_x: float) -> PanelContainer:
 	var panel := PanelContainer.new()
+	panel.theme_type_variation = &"HudSmallPanel"
 	panel.name = panel_name
 	panel.anchor_left = anchor_x
 	panel.anchor_right = anchor_x
