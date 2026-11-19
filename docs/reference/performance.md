@@ -10,9 +10,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | ➖ same | 2026-11-19 |
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-19 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | ➖ same | 2026-11-19 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 3% worse | 2026-11-19 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-19 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔻 10% better | 2026-11-18 |
-| Drawing the screen | 🟢 OK | ██████░░░░ 69% | 🔻 16% better | 2026-11-18 |
+| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 3% worse | 2026-11-19 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | ➖ same | 2026-11-19 |
 | Unit movement, slowest moments | 🟢 OK | ████░░░░░░ 49% | 🔺 103% worse | 2026-11-19 |
 | Unit movement | 🟢 OK | ████░░░░░░ 48% | 🔺 14% worse | 2026-11-19 |
@@ -29,8 +29,8 @@ Details:
 - combat stress p95: 160% of budget, exceeded (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 143% of budget, exceeded (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 212% of budget, exceeded (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 69% of budget (Sim boundary SB4 + pump hardening merge rendered, 2026-11-18), 16% faster than Sim boundary SB4 (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 71% of budget (Sim boundary SB4 + pump hardening merge rendered, 2026-11-18), 10% faster than Sim boundary SB4 (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 72% of budget (B3 rematch after quit, 2026-11-19), 3% slower than Sim boundary SB4 + pump hardening merge rendered (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 74% of budget (B3 rematch after quit, 2026-11-19), 3% slower than Sim boundary SB4 + pump hardening merge rendered (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (Pair gate + B3 rematch after quit merge, 2026-11-19), unchanged vs Benchmark pair gate (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 

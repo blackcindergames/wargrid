@@ -1239,3 +1239,11 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,combat_hordes300:profile,1,,,1.9265,P1,1.21,log sha256:77bb564c20bb
 2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,team_match:profile,1,,,1.1201,P1,1.21,log sha256:77bb564c20bb
 2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,team_match_pump:profile,1,,,1.122,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,44ce9e0,B3 rematch after quit,dev,frame_interval,open,1,0.317,1.925,,P1,2.5,log sha256:e8285496f9fb
+2026-11-19,44ce9e0,B3 rematch after quit,dev,tick_frame,open,1,2.164,2.323,,tick-frame,2.5,log sha256:e8285496f9fb
+2026-11-19,44ce9e0,B3 rematch after quit,dev,frame_interval,dense,1,0.323,1.97,,P1,2.5,log sha256:e8285496f9fb
+2026-11-19,44ce9e0,B3 rematch after quit,dev,tick_frame,dense,1,2.194,2.359,,tick-frame,2.5,log sha256:e8285496f9fb
+2026-11-19,44ce9e0,B3 rematch after quit,dev,frame_interval,ashfall,1,0.667,2.62,,P1,2.5,log sha256:e8285496f9fb
+2026-11-19,44ce9e0,B3 rematch after quit,dev,tick_frame,ashfall,1,2.251,2.365,,tick-frame,2.5,log sha256:e8285496f9fb
+2026-11-19,44ce9e0,B3 rematch after quit,dev,frame_interval,horde,1,1.609,4.199,,P1,2.5,log sha256:e8285496f9fb
+2026-11-19,44ce9e0,B3 rematch after quit,dev,tick_frame,horde,1,4.969,5.302,,tick-frame,2.5,log sha256:e8285496f9fb
