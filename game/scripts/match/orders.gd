@@ -5,6 +5,7 @@ const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Construction = preload("res://scripts/simulation/construction.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
+const HudModel = preload("res://scripts/match/hud_model.gd")
 
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
@@ -68,7 +69,7 @@ func reset() -> void:
 func prune(state: Dictionary) -> void:
 	if selected_building_id != -1 and _screen._building(state, selected_building_id).is_empty(): selected_building_id = -1
 	selected_ids.assign(selected_ids.filter(func(id: int) -> bool: return state.units.index_of(id) != -1))
-	if _screen.hud._inspected(state).is_empty(): inspected_id = -1
+	if HudModel.inspected(state, inspected_id).is_empty(): inspected_id = -1
 
 func view_selection() -> Array[int]:
 	var ids: Array[int] = []
@@ -260,7 +261,7 @@ func _unit(id: int) -> Dictionary:
 	var rows: RefCounted = _screen.shown_state.units
 	var i: int = rows.index_of(id)
 	if i == -1: return {}
-	var record: Dictionary = _screen.hud._unit_record(rows, i)
+	var record: Dictionary = HudModel.unit_record(rows, i)
 	record["inside"] = (rows.flags[i] & ViewRows.CONTAINED) != 0
 	return record
 

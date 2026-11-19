@@ -119,6 +119,9 @@ func detail() -> int:
 func set_visuals(director: Director) -> void:
 	_visuals = director
 
+func bright_owners() -> bool:
+	return _bright
+
 # Neon mode: brighter owner hues on bodies, rings and structure footprints.
 func set_bright_owners(bright: bool) -> void:
 	_bright = bright

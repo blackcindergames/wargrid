@@ -150,6 +150,12 @@ func _cell(text: String, bold: bool, left: bool) -> void:
 	if bold: label.add_theme_font_override("font", get_theme_font("font", "PrimaryButton"))
 	_table.add_child(label)
 
+static func result_text(match_state: Variant, team: int) -> String:
+	if match_state == null: return ""
+	if match_state.status == "draw": return "Draw"
+	if match_state.status != "won": return ""
+	return "Victory" if match_state.winner == team else "Defeat"
+
 static func length_text(ticks: int, rate: int) -> String:
 	var seconds: int = floori(float(ticks) / rate)
 	return "Match length %d:%02d" % [floori(seconds / 60.0), seconds % 60]

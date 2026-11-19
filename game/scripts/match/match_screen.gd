@@ -9,6 +9,7 @@ const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const Orders = preload("res://scripts/match/orders.gd")
 const Hud = preload("res://scripts/match/hud.gd")
+const HudModel = preload("res://scripts/match/hud_model.gd")
 const ResultPanel = preload("res://scripts/match/result_panel.gd")
 const LAUNCHER_SCENE: String = "res://scenes/launcher.tscn"
 const ZOOMS: Array[float] = [0.5, 1.0, 2.0]
@@ -33,9 +34,11 @@ static var starts: Array[int] = []
 static var match_seed: int = 0
 var driver: RefCounted
 var orders: RefCounted = Orders.new(self)
-var hud: RefCounted
+var hud: Hud
 var local_player: int = 1
 var stepped_results: Array = []
+var _last_result_tick: int = -1
+var _last_result_sequence: int = -1
 var shown_state: Dictionary = {}
 var _shown_note: String = ""
 var _camera_bounds: Rect2
@@ -72,7 +75,14 @@ func _ready() -> void:
 	_result_panel.play_again_pressed.connect(_play_again)
 	_result_panel.change_setup_pressed.connect(_leave)
 	$HUD.add_child(_result_panel)
-	hud = Hud.new($HUD, self)
+	hud = Hud.new()
+	$HUD.add_child(hud)
+	$HUD.move_child(hud, $HUD/Status.get_index() + 1)
+	hud.setup($HUD/Economy, $HUD/Status)
+	hud.menu_chosen.connect(orders._menu_choose.bind(false))
+	hud.entry_cancelled.connect(orders._cancel_entry)
+	hud.produce_pressed.connect(orders._produce_selected)
+	hud.cancel_build_pressed.connect(orders._cancel_build)
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()
@@ -99,8 +109,6 @@ func _ready() -> void:
 	_clock = PresentationClock.new()
 	_reset_camera()
 	_refresh()
-	$HUD/Economy/Produce.pressed.connect(orders._produce_selected)
-	$HUD/Economy/CancelBuild.pressed.connect(orders._cancel_build)
 	_view.set_visuals(_visuals)
 	_start_auto_pick(GraphicsSettings.load_quality() == -1 and DisplayServer.get_name() != "headless")
 	var music := MusicPlayer.new()
@@ -157,7 +165,7 @@ func _header(mode: String, match_factions: Array) -> Dictionary:
 
 func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
 	var record: Dictionary = driver.record()
-	return _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": hud._result_text(record.match), "commands": lines})
+	return _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines})
 
 func _take_answers() -> void:
 	for answer: Dictionary in driver.take_answers():
@@ -300,7 +308,6 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _refresh() -> void:
 	_show(driver.current().view)
-	hud.place_economy()
 
 func _note() -> String:
 	# The rematch line changes without a tick, so a finished match still redraws its panel.
@@ -311,7 +318,6 @@ func shown_over() -> bool:
 
 func _reshow() -> void:
 	_show(shown_state, false)
-	hud.place_economy()
 
 # Only a new view consumes step results and sound; a repaint on input must leave them for the next refresh.
 func _show(state: Dictionary, fresh: bool = true) -> void:
@@ -325,9 +331,58 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	Profiler.end(&"refresh.selection", zone)
 	_view.set_view(state, orders.view_selection())
 	zone = Profiler.begin()
-	hud._refresh_hud(state, fresh)
+	_ensure_sound()
+	_take_results(state)
+	hud.update_hud(state, _hud_selection(state), local_player, local_player)
+	orders.menu = hud.menu_kinds
+	_view.set_inspected(orders.inspected_id)
+	_show_result(state)
+	if fresh: _sound.update(state)
 	Profiler.end(&"refresh.hud", zone)
 	if fresh: stepped_results.clear()
+
+func _take_results(state: Dictionary) -> void:
+	for result: Dictionary in stepped_results + state.command_results:
+		if result.player == local_player and (result.tick > _last_result_tick or (result.tick == _last_result_tick and result.sequence > _last_result_sequence)):
+			if not result.ok:
+				hud.note = result.error
+				hud.refusal = result.error
+			_last_result_tick = result.tick
+			_last_result_sequence = result.sequence
+
+func _hud_selection(state: Dictionary) -> Dictionary:
+	var building: Dictionary = _building(state, orders.selected_building_id)
+	var production: String = _production_kind(building, state) if not building.is_empty() else ""
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": driver.notice(), "production_kind": production, "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty()}
+
+func _result(state: Dictionary) -> String:
+	var result: String = "" if state.match == null else _result_text(state.match)
+	return "Victory" if result.is_empty() and driver.opponent_left() else result
+
+func _show_result(state: Dictionary) -> void:
+	var result: String = _result(state)
+	var rows: Array[Dictionary] = []
+	if not result.is_empty(): rows = _result_rows(state)
+	var length: String = ResultPanel.length_text(state.tick, Engine.physics_ticks_per_second) if not result.is_empty() else ""
+	_result_panel.show_result(result, driver.rematch_line(), driver.can_play_again(), rows, length, driver.rematch_pending(), driver.friend_wants_rematch())
+
+func _result_rows(state: Dictionary) -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var stats: Array[Dictionary] = driver.match_stats()
+	for player: Dictionary in state.players:
+		var row: Dictionary = stats.filter(func(entry: Dictionary) -> bool: return entry.player == player.id)[0]
+		var you: bool = player.id == local_player
+		var faction: String = Registry.faction(player.get("faction", Registry.Factions.DEFAULT_FACTION)).display_name
+		rows.append({"name": "P%d %s%s" % [player.id, faction, " (you)" if you else ""], "you": you, "built": row.units_built, "units_lost": row.units_lost, "buildings_lost": row.buildings_lost})
+	return rows
+
+func _result_text(match_state: Variant) -> String:
+	return ResultPanel.result_text(match_state, _local_team())
+
+func _local_team() -> int:
+	for player: Dictionary in shown_state.players:
+		if player.id == local_player: return player.team
+	return 0
 
 func _show_hint(payload: Dictionary) -> void:
 	var point: Variant = orders._hint_point(payload)
@@ -363,14 +418,10 @@ func _production_kind(building: Dictionary, state: Dictionary) -> String:
 	return kind if not kind.is_empty() else Definitions.building(building.kind).produces
 
 func _local_state(state: Dictionary) -> Dictionary:
-	for player: Dictionary in state.players:
-		if player.id == local_player: return player
-	return state.players[0]
+	return HudModel.player(state, local_player)
 
 func _building(state: Dictionary, id: int) -> Dictionary:
-	for building: Dictionary in state.buildings:
-		if building.id == id: return building
-	return {}
+	return HudModel.building(state, id)
 
 func _play_again() -> void:
 	if driver.can_restart(): _restart()
@@ -396,6 +447,8 @@ func _restart_world() -> void:
 	_visuals.reset()
 	orders.reset()
 	hud.reset()
+	_last_result_tick = -1
+	_last_result_sequence = -1
 	stepped_results.clear()
 	_selection_box.hide()
 	_camera.zoom = Vector2.ONE

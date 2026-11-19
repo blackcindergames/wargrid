@@ -13,7 +13,6 @@ const Profiler = preload("res://scripts/debug/profiler.gd")
 const ViewRows = preload("res://tests/test_view_rows.gd")
 const IcRows = preload("res://tests/input_script_rows.gd")
 const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
-const Hud = preload("res://scripts/match/hud.gd")
 const ResultPanel = preload("res://scripts/match/result_panel.gd")
 const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
@@ -136,15 +135,16 @@ func test_match_hud_and_restart(runner) -> bool:
 	runner.check(text.contains("Credits") and text.contains("Battle Tank #" + str(ids.tank)) and text.contains("HP 480/480") and text.contains("guard"), "K4 credits, kind, HP and order in the HUD")
 	var setup: Dictionary = main.driver.pump.live().view_state()
 	setup.match.status = "setup"
-	main.hud._refresh_hud(setup)
+	main._show_result(setup)
 	runner.check(main.get_node(OUTCOME).text.is_empty() and not main.get_node("HUD/ResultPanel").visible, "K4 the setup phase shows no result")
 	main.driver.pump.live().remove_object(3)
 	main.driver.pump.live().remove_object(4)
 	BaseScene.tick(main)
 	runner.check(main.get_node(OUTCOME).text == "Victory" and main.get_node(PLAY_AGAIN).visible and not main.get_node(PLAY_AGAIN).disabled, "K4 victory and restart button")
+	runner.check(not main.get_node("HUD/Status").text.contains("A: attack-move click"), "K4 the status line drops the order hints under a result")
 	main.driver.pump.live()._players[main.local_player].team = 7
 	BaseScene.publish(main)
-	runner.check(main.hud._result_text({"status": "won", "winner": 7}) == "Victory" and main.hud._result_text({"status": "won", "winner": main.local_player}) == "Defeat", "K4 result compares the winning team id with the local team")
+	runner.check(main._result_text({"status": "won", "winner": 7}) == "Victory" and main._result_text({"status": "won", "winner": main.local_player}) == "Defeat", "K4 result compares the winning team id with the local team")
 	var before: Array = main.driver.pump.live().snapshot().pending_commands
 	main._submit({"type": "move", "entity_ids": [ids.tank], "target": [12.5, 12.5]})
 	main._unhandled_input(InputEventKey.new())
@@ -154,14 +154,14 @@ func test_match_hud_and_restart(runner) -> bool:
 	main.orders._placement_kind = "usa_power_plant"
 	main.orders._attack_move_mode = true
 	main.hud.refusal = "old"
-	main.hud._last_result_tick = 99
-	main.hud._last_result_sequence = 99
+	main._last_result_tick = 99
+	main._last_result_sequence = 99
 	main.orders._selecting = true
 	main.orders._dragged = true
 	main.get_node("Camera2D").position = Vector2(500, 500)
 	main.get_node("Camera2D").zoom = Vector2.ONE * 2.0
 	main.get_node(PLAY_AGAIN).pressed.emit()
-	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot() and main.orders.selected_ids.is_empty() and main.orders._placement_kind.is_empty() and not main.orders._attack_move_mode and main.hud.refusal.is_empty() and main.get_node("Camera2D").zoom == Vector2.ONE and not main.get_node("HUD/ResultPanel").visible and main.hud._last_result_tick == -1 and main.hud._last_result_sequence == -1 and not main.orders._selecting and not main.orders._dragged and main.get_node("Camera2D").position != Vector2(500, 500) and main.get_node("WorldView")._preview_cells.is_empty(), "K4 restart leaves nothing from the old match")
+	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot() and main.orders.selected_ids.is_empty() and main.orders._placement_kind.is_empty() and not main.orders._attack_move_mode and main.hud.refusal.is_empty() and main.get_node("Camera2D").zoom == Vector2.ONE and not main.get_node("HUD/ResultPanel").visible and main._last_result_tick == -1 and main._last_result_sequence == -1 and not main.orders._selecting and not main.orders._dragged and main.get_node("Camera2D").position != Vector2(500, 500) and main.get_node("WorldView")._preview_cells.is_empty(), "K4 restart leaves nothing from the old match")
 	main.orders.selected_ids.assign([1])
 	main._submit({"type": "move", "entity_ids": [1], "target": [6.5, 14.5]})
 	runner.check(main.hud.refusal.is_empty() and _pending(main, "move") == 1, "K4 first order after restart is valid")
@@ -704,7 +704,7 @@ func test_play_again_routes_by_driver(runner) -> bool:
 	var online := StubDriver.new(false)
 	online.adopt(real.pump.live())
 	main.driver = online
-	main.hud._refresh_hud(real.pump.live().view_state())
+	main._show_result(real.pump.live().view_state())
 	var status: Label = main.get_node("HUD/ResultPanel/Center/Card/Box/Status")
 	runner.check(main.get_node(PLAY_AGAIN).disabled and status.text == "Your friend left", "R5 the panel shows the driver's line and can_play_again")
 	main._play_again()
@@ -999,11 +999,11 @@ func test_hud_summaries_are_pinned(runner) -> bool:
 	var texts: Array[String] = []
 	for id: int in [firing[0], waiting[-1], working[0], plain[0]]:
 		main.orders.selected_ids.assign([id])
-		texts.append(main.hud._selected_summary(view))
+		texts.append(main.hud._selected_summary(view, main.orders.selected_ids))
 	main.orders.selected_ids.clear()
 	for id: int in [enemy_unit[0], enemy_building[0]]:
 		main.orders.inspected_id = id
-		texts.append(main.hud._enemy_summary(view))
+		texts.append(main.hud._enemy_summary(view, main.orders.inspected_id))
 	runner.check(texts == HUD_TEXTS, "HUD1 pinned summary texts, got " + str(texts))
 	main.free()
 	return true
@@ -1251,12 +1251,14 @@ func test_hud_reads_only_state_and_orders(runner) -> bool:
 	main.orders.selected_building_id = barracks
 	var produce: Button = main.get_node("HUD/Economy/Produce")
 	produce.hide()
-	var hud = Hud.new(main.get_node("HUD"), main)
-	hud.note = "Choose one builder"
+	main.hud.note = "Choose one builder"
 	main.stepped_results.append({"ok": false, "error": "Not yours", "player": 2, "tick": 5, "sequence": 0})
-	hud._refresh_hud(sim.view_state())
+	var view: Dictionary = sim.view_state()
+	main._take_results(view)
+	main.hud.update_hud(view, main._hud_selection(view), main.local_player, main.local_player)
 	var status: String = main.get_node("HUD/Status").text
-	runner.check(produce.visible and status.contains("%s #%d" % [Registry.kind("usa_barracks").display_name, barracks]) and hud.note == "Choose one builder" and status.contains("Choose one builder"), "HU1 the HUD shows the selection and keeps the local note")
+	runner.check(produce.visible and status.contains("%s #%d" % [Registry.kind("usa_barracks").display_name, barracks]) and main.hud.note == "Choose one builder" and status.contains("Choose one builder"), "HU1 the HUD shows the selection and keeps the local note")
+	runner.check(main.hud.refusal != "Not yours" and not status.contains("Not yours"), "HU1 _take_results ignores player 2's stepped result, got '%s'" % main.hud.refusal)
 	main.free()
 	return true
 
@@ -1370,9 +1372,9 @@ func test_sb1_result_uses_shown_team(runner) -> bool:
 	main.driver.adopt(first)
 	main._refresh()
 	main.driver.adopt(second)
-	runner.check(main.hud._result_text({"status": "won", "winner": 7}) == "Defeat", "RB6 the result reads the shown team")
+	runner.check(main._result_text({"status": "won", "winner": 7}) == "Defeat", "RB6 the result reads the shown team")
 	main._refresh()
-	runner.check(main.hud._result_text({"status": "won", "winner": 7}) == "Victory", "RB6 a refresh shows the new team")
+	runner.check(main._result_text({"status": "won", "winner": 7}) == "Victory", "RB6 a refresh shows the new team")
 	main.free()
 	return true
 
@@ -1600,7 +1602,7 @@ func test_sb3_record_reads_live_without_queue(runner) -> bool:
 	var record: Dictionary = main.driver.record()
 	runner.check(record.tick == 20 and record.digest == StateHash.digest(state) and record.match == state.match, "SB3 record() is the live tick, digest and match, got %s" % [record])
 	var played: Dictionary = main.playtest_match()
-	runner.check(played.end_tick == record.tick and played.end_digest == record.digest and played.result == main.hud._result_text(state.match), "SB3 the playtest record takes driver.record(), got %d %s" % [played.end_tick, played.end_digest])
+	runner.check(played.end_tick == record.tick and played.end_digest == record.digest and played.result == main._result_text(state.match), "SB3 the playtest record takes driver.record(), got %d %s" % [played.end_tick, played.end_digest])
 	runner.check(main.driver.queued().size() == 1 and live.snapshot().pending_commands.is_empty() and played.commands.size() == main.driver.match_log().commands.size(), "SB3 a queued order stays out of the record and its log")
 	main.driver.step()
 	var stepped: Dictionary = main.playtest_match()

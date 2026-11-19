@@ -6,6 +6,9 @@ const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
 const ResultPanel = preload("res://scripts/match/result_panel.gd")
 const FocusCardView = preload("res://scripts/playtest/focus_card_view.gd")
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
+const BaseScene = preload("res://tests/test_base_scene.gd")
+const Fixture = preload("res://tests/economy_fixture.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const THEME_PATH: String = "res://ui/launcher_theme.tres"
 const TOKENS: Dictionary = {"bg": "#121c24", "btn": "#223241", "panel2": "#26384a", "quiet": "#16212a", "well": "#0c141a", "line": "#2e3f4b", "text": "#eef3f5", "muted": "#93a5b0", "sel": "#60e5ed", "amber": "#f7c871", "warn": "#f47b6c"}
 const TYPE_SCALE: Array[int] = [12, 13, 14, 16, 24, 30]
@@ -13,7 +16,89 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen]
+
+# The match scene's economy column: the screen adds BuildMenu, skirmish.tscn the rest.
+static func _economy() -> VBoxContainer:
+	var economy := VBoxContainer.new()
+	for part: Control in [GridContainer.new(), Button.new(), Button.new(), VBoxContainer.new()]: economy.add_child(part)
+	for i in 4: economy.get_child(i).name = ["BuildMenu", "Produce", "CancelBuild", "Queue"][i]
+	return economy
+
+func test_hud_reads_only_its_input(runner) -> bool:
+	# Untyped load: at HEAD the two-argument _init would make a typed Hud.new() fail the whole runner.
+	var script: GDScript = load("res://scripts/match/hud.gd")
+	var named: bool = script.get_script_method_list().any(func(method: Dictionary) -> bool: return method.name == "update_hud")
+	runner.check(named, "HN1 hud.gd has update_hud")
+	if not named: return true
+	var parent := Control.new()
+	runner.root.add_child(parent)
+	var hud = script.new()
+	parent.add_child(hud)
+	var status := Label.new()
+	parent.add_child(status)
+	var economy := _economy()
+	parent.add_child(economy)
+	hud.setup(economy, status)
+	var ids: Array[int] = [1]
+	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false}
+	hud.update_hud(Fixture.make_world().view_state(), selection, 1, 1)
+	runner.check(hud.name == "Hud" and hud.mouse_filter == Control.MOUSE_FILTER_IGNORE and hud.anchor_right == 1.0 and hud.anchor_bottom == 1.0, "HN1 the Hud is a full-rect node that ignores the mouse")
+	runner.check(status.text.contains("Credits: 10000") and status.text.contains(Registry.kind("usa_builder").display_name + " #1"), "HN1 the Status fixture fills from the view and the selection alone, got '%s'" % status.text)
+	runner.check(hud.menu_kinds == Registry.kind("usa_builder").builds and economy.get_node("BuildMenu").get_child_count() == hud.menu_kinds.size(), "HN1 the builder's menu fills, got %s" % [hud.menu_kinds])
+	var sim = Fixture.make_world()
+	var tank: int = sim.spawn(1, Vector2(8.5, 8.5), "usa_tank")
+	var other: int = sim.spawn(1, Vector2(10.5, 8.5), "china_builder")
+	for case: Array in [[tank, "usa_builder", "a tank keeps the start unit's menu"], [other, "china_builder", "another faction's builder brings its own menu"]]:
+		ids.assign([case[0]])
+		hud.update_hud(sim.view_state(), selection, 1, 1)
+		runner.check(hud.menu_kinds == Registry.kind(case[1]).builds, "HN1 %s, got %s" % [case[2], hud.menu_kinds])
+	parent.free()
+	return true
+
+func test_side_effects_live_in_the_screen(runner) -> bool:
+	var main = await BaseScene.new().setup(runner)
+	runner.check(main.hud.has_signal("menu_chosen") and main.hud.has_signal("produce_pressed") and main.hud.has_signal("cancel_build_pressed"), "HN2 the Hud speaks through its signals")
+	if not main.hud.has_signal("menu_chosen"):
+		main.free()
+		return true
+	main.driver.adopt(Fixture.make_world(50000))
+	var sim = main.driver.pump.live()
+	Fixture.build(runner, sim, "usa_power_plant", Vector2i(5, 5))
+	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 4))
+	BaseScene.publish(main)
+	main.orders.inspected_id = barracks
+	main._refresh()
+	runner.check(main.get_node("WorldView")._inspected_id == barracks, "HN2 the screen hands the inspected id to the view")
+	main.orders.selected_ids.assign([1])
+	main._refresh()
+	var builds: Array = Registry.kind("usa_builder").builds
+	runner.check(main.orders.menu == builds, "HN2 the screen copies the builder's menu to orders, got %s" % [main.orders.menu])
+	var chosen: Array[int] = []
+	main.hud.menu_chosen.connect(func(index: int) -> void: chosen.append(index))
+	main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()
+	runner.check(chosen == [0] and main.orders._placement_kind == builds[0], "HN2 build button 0 emits menu_chosen(0) and arms placement, got %s '%s'" % [chosen, main.orders._placement_kind])
+	main.orders.reset()
+	main.orders.selected_building_id = barracks
+	main._refresh()
+	var produced: Array[int] = [0]
+	main.hud.produce_pressed.connect(func() -> void: produced[0] += 1)
+	main.get_node("HUD/Economy/Produce").pressed.emit()
+	var queued: Array = main.driver.queued()
+	runner.check(produced[0] == 1 and queued.size() == 1 and queued[0].type == "produce" and queued[0].building_id == barracks, "HN2 Produce queues the barracks' unit through produce_pressed, got %s" % [queued])
+	BaseScene.tick(main)
+	Fixture.send(sim, {"type": "build", "builder_id": 1, "building_kind": "usa_power_plant", "origin": [8, 12]})
+	BaseScene.tick(main)
+	var site: int = sim.snapshot().buildings.back().id
+	main.orders.selected_building_id = site
+	main._refresh()
+	var cancelled: Array[int] = [0]
+	main.hud.cancel_build_pressed.connect(func() -> void: cancelled[0] += 1)
+	main.get_node("HUD/Economy/CancelBuild").pressed.emit()
+	queued = main.driver.queued()
+	runner.check(cancelled[0] == 1 and queued.size() == 1 and queued[0].type == "cancel_build" and queued[0].building_id == site, "HN2 Cancel construction cancels the site through cancel_build_pressed, got %s" % [queued])
+	main.free()
+	return true
 
 func _theme() -> Theme:
 	return ThemeDB.get_project_theme()
