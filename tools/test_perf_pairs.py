@@ -89,6 +89,12 @@ class VerdictTest(unittest.TestCase):
                 result = _run([_log(ref, ("open",))] * 3, [_log(branch, ("open",))] * 3)  # type: ignore[arg-type]
                 self.assertFinal(result, code, prefix)
 
+    def test_median_is_judged_as_printed_to_four_places(self) -> None:
+        ref = _log({"open": (2.050, 1.0)}, ("open",))
+        branch = _log({"open": (2.091, 1.0)}, ("open",))
+        lines = self.assertFinal(_run([ref] * 3, [branch] * 3), 0, "PAIR GATE PASSED 1")
+        self.assertTrue(any("median 1.0200 limit 1.020 PASS" in line for line in lines), lines)
+
     def test_p99_has_its_own_limit(self) -> None:
         slow = _log(_scaled({"open": 1.03}, metrics=(1,)))
         lines = self.assertFinal(_run(_same(), [slow] * 3), 1, "PAIR GATE FAILED open:p99")
@@ -149,6 +155,38 @@ class VerdictTest(unittest.TestCase):
     def test_zero_reference_value_is_inconclusive(self) -> None:
         zero = _log({**BASE, "open": (0.0, 2.2)})
         self.assertFinal(_run([zero] * 3, _same()), 2, "PAIR GATE INCONCLUSIVE")
+
+    def test_zero_or_negative_branch_value_is_inconclusive(self) -> None:
+        for value in (0.0, -1.0):
+            zero = _log({**BASE, "open": (value, value)})
+            with self.subTest(value=value):
+                lines = self.assertFinal(_run(_same(), [zero] * 3), 2, "PAIR GATE INCONCLUSIVE")
+                self.assertIn("open p95 not positive", lines[-1])
+
+    def test_reference_with_another_error_line_is_inconclusive_even_with_the_marker(self) -> None:
+        bad = f"ERROR: Resource load failed\n{_log(BASE)}"
+        self.assertFinal(_run([bad] * 3, _same()), 2, "PAIR GATE INCONCLUSIVE ref run 1 unusable")
+
+    def test_marker_text_inside_another_line_does_not_complete_a_reference(self) -> None:
+        end = "expected COMBAT BENCHMARK PASSED 10 but run aborted"
+        self.assertFinal(_run([_log(BASE, end=end)] * 3, _same()), 2, "PAIR GATE INCONCLUSIVE ref run 1 unusable")
+
+    def test_malformed_timing_summary_is_inconclusive_on_reference_and_branch(self) -> None:
+        good = _log(BASE)
+        for name, bad in (
+            ("missing p99", good.replace(',"p99":2.2}', "}", 1)),
+            ("missing p95", good.replace('"p95":1.8,', "", 1)),
+            ("non-numeric", good.replace('"p95":1.8', '"p95":"x"', 1)),
+            ("unparsable", good.replace('"max":9.0,"n":1800,"p50":0.5,"p95":1.8,"p99":2.2', '"p95":', 1)),
+            ("not finite", good.replace('"p95":1.8', '"p95":NaN', 1)),
+        ):
+            for side, refs, branches in (("ref", [bad] * 3, _same()), ("branch", _same(), [bad] * 3)):
+                with self.subTest(name=name, side=side):
+                    self.assertFinal(_run(refs, branches), 2, "PAIR GATE INCONCLUSIVE")
+
+    def test_branch_without_the_completion_marker_fails(self) -> None:
+        unfinished = _log(BASE, end="")
+        self.assertFinal(_run(_same(), [unfinished] * 3), 1, "PAIR GATE FAILED branch run 1")
 
     def test_fail_wins_over_inconclusive(self) -> None:
         short = _log({k: v for k, v in BASE.items() if k != "hordes300"}, ("open", "dense"))

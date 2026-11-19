@@ -81,24 +81,29 @@ From the Pump hardening logs on this Mac (file times):
 | Case | Rule | Output, exit |
 |---|---|---|
 | `game/` unchanged since the reference (main, docs-only branch), no `PERF_REF` | pairs skipped; combat timing can only change through `game/` | `PAIR GATE SKIPPED game/ unchanged since <ref>`, 0 |
-| uncommitted `game/` change on `main` | not skipped: the reference is `HEAD`, the branch is the working tree | normal verdict |
+| uncommitted `game/` change on `main` (untracked files count, whatever `status.showUntrackedFiles` says) | not skipped: the reference is `HEAD`, the branch is the working tree | normal verdict |
 | `PERF_REF` set | pairs always run (the A/A calibration path) | normal verdict |
 | no merge base (no local `main`) and no `PERF_REF` | cannot judge | `PAIR GATE INCONCLUSIVE no merge base with main (set PERF_REF)`, 1 |
 | archive or reference import fails | cannot judge | `PAIR GATE INCONCLUSIVE ...` plus the import log, 1 |
+| `git archive` of the reference fails (for example the reference has no `game/`), or its extraction fails | the archive goes to a file and each step is checked, not piped | `PAIR GATE INCONCLUSIVE archive of <ref> failed`, 1 |
+| `python3` cannot run `tools/perf_pairs.py` (checked with `--help` after the skip check, before the archive) | fail fast: no six runs wasted on a missing judge | `PAIR GATE INCONCLUSIVE python3 cannot run perf_pairs.py`, 1 |
+| TERM, INT or HUP to the wrapper | each Godot run leads its own process group and the trap kills the running group (as `run_tests.sh`); the `rm -rf` EXIT trap still runs | exit 1, no Godot left |
 | branch run exits non-zero or prints `ERROR:` | a real failure of the branch, as today | its log, `PAIR GATE FAILED branch run <i>`, 1 |
 | branch run exits 0 without `COMBAT BENCHMARK PASSED 10` | crashed or truncated branch run | `PAIR GATE FAILED branch run <i>`, 1 |
+| branch log given to `perf_pairs.py` without a whole `COMBAT BENCHMARK PASSED 10` line | the judge checks the marker too, so the CLI cannot pass an unfinished branch run | `PAIR GATE FAILED branch run <i>`, 1 |
 | reference import exits 0 but prints `ERROR:` or `SCRIPT ERROR` | cannot trust the reference | `PAIR GATE INCONCLUSIVE import of <ref> failed`, 1 |
 | reference run exits non-zero | its exit code is ignored; the log decides (next two rows) | |
-| reference log complete: `COMBAT BENCHMARK PASSED 10`, or the legacy ceiling-fail end (a merge base from before this change): one or more `ERROR: Combat benchmark failed for <L>` lines, each `<L>` with a `COMBAT STRESS FAIL <L>` row and `ERROR: Combat stress ceiling exceeded for <L>`, and no other `ERROR:` line | usable (transition) | verdict from its `COMBAT <row> tick_ms=` lines |
+| reference log complete: no `ERROR:` line other than the two legacy kinds below (any other one makes it unusable, even with the marker), and either a whole `^COMBAT BENCHMARK PASSED 10$` line (text of it inside another line does not count), or the legacy ceiling-fail end (a merge base from before this change): one or more `ERROR: Combat benchmark failed for <L>` lines, each `<L>` with a `COMBAT STRESS FAIL <L>` row and `ERROR: Combat stress ceiling exceeded for <L>` | usable (transition) | verdict from its `COMBAT <row> tick_ms=` lines |
 | reference log not complete (neither ending above: killed, truncated, unrelated `ERROR:`), has `SCRIPT ERROR`, or no `COMBAT ... tick_ms=` line | crashed reference | `PAIR GATE INCONCLUSIVE ref run <i> unusable`, 2 (`run_benchmark.sh` exits 1) |
 | guarded row missing in every reference log | row new on the branch: nothing to compare | `PAIR NEW <row> no reference row, not gated (alarm only)`, 0 (Q4) |
 | guarded row missing in some reference logs | truncated reference run | `PAIR GATE INCONCLUSIVE ref run <i> lacks <row>`, 2 |
 | guarded row set differs between branch logs | branch output unstable | INCONCLUSIVE, 2 |
-| reference value 0 or negative | no ratio | INCONCLUSIVE, 2 |
+| reference or branch value 0 or negative | no meaningful ratio | `PAIR GATE INCONCLUSIVE <row> <metric> not positive`, 2 |
+| malformed timing summary in a `COMBAT <row> tick_ms=` line (JSON that does not parse, `p95` or `p99` missing, not a finite number) in any log | cannot trust the numbers; never a traceback | `PAIR GATE INCONCLUSIVE malformed timing summary`, 2 |
 | a row the reference has that the branch does not guard | not guarded (removed or promoted to a budget row, visible in the diff) | not printed |
 | one disturbed pair (burst on one run) | median of 3 absorbs one bad pair | normal verdict |
 | load above 2.5 at any pair start | no load-based verdict (load does not predict the swing; pairs cancel steady load). Reruns per "Pair-run outcomes" (Global Constraints) | `uptime` printed before each run |
-| median exactly at the threshold | passes (`<=`, as `Stats.within`) | PASS |
+| median exactly at the threshold, or at it once rounded to 4 places as printed (ref 2.050, branch 2.091 prints `median 1.0200`) | passes: `round(median, 4) <= limit` (as `Stats.within`), so the verdict matches the printed line | PASS |
 | a FAIL and an INCONCLUSIVE row together | the measured regression wins | FAILED, 1 |
 
 Verdict lines (one per guarded row and metric, then one final line):

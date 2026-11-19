@@ -791,6 +791,39 @@ class RunBenchmarkTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("PAIR GATE FAILED branch run 1", result.stdout)
 
+    def test_untracked_game_file_counts_even_when_git_hides_untracked_files(self) -> None:
+        _git(self.repo, "config", "status.showUntrackedFiles", "no")
+        (self.repo / "game" / "y.gd").write_text("extends Node\n")
+        result = self.run_script("tools/run_bench_pairs.sh")
+        self.assertIn("PAIR REF", result.stdout)
+        self.assertNotIn("PAIR GATE SKIPPED", result.stdout)
+
+    def test_unrunnable_python_fails_fast_before_any_engine_call(self) -> None:
+        bin_dir = self.stub / "bin"
+        bin_dir.mkdir()
+        fake = bin_dir / "python3"
+        fake.write_text("#!/bin/sh\nexit 1\n")
+        fake.chmod(0o755)
+        engine = self.stub / "engine"
+        engine.write_text('#!/bin/sh\ntouch "$STUB_DIR/engine-called"\n')
+        engine.chmod(0o755)
+        result = self.run_script(
+            "tools/run_bench_pairs.sh",
+            PERF_REF="HEAD",
+            PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+            GODOT_BIN=str(engine),
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PAIR GATE INCONCLUSIVE python3 cannot run perf_pairs.py", result.stdout)
+        self.assertFalse((self.stub / "engine-called").exists())
+
+    def test_failed_reference_archive_is_inconclusive(self) -> None:
+        _git(self.repo, "rm", "-rq", "game")
+        _git(self.repo, "commit", "-qm", "no game")
+        result = self.run_script("tools/run_bench_pairs.sh", PERF_REF="HEAD")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PAIR GATE INCONCLUSIVE archive of", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

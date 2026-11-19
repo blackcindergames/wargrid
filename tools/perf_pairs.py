@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 import re
 import statistics
 import sys
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from perf_record import COMBAT
 
+MARKER = re.compile(r"^COMBAT BENCHMARK PASSED 10$", re.M)
 STRESS = re.compile(r"^COMBAT STRESS \S+ ([a-z0-9_]+) ", re.M)
 ERROR_LINE = re.compile(r"^.*ERROR: (.*)$", re.M)
 # Provisional until the A/A calibration and the owner's approval; raise only with user approval and a ledger line.
@@ -16,15 +18,26 @@ MAX_RATIO: dict[str, float] = {"p95": 1.02, "p99": 1.02}
 
 
 def _rows(text: str) -> dict[str, dict[str, float]]:
-    return {name: json.loads(raw) for name, raw in COMBAT.findall(text)}
+    rows = {name: json.loads(raw) for name, raw in COMBAT.findall(text)}
+    for row in rows.values():
+        for metric in MAX_RATIO:
+            value = row[metric]
+            if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value):
+                raise ValueError(metric)
+    return rows
 
 
 def _complete(text: str) -> bool:
     if "SCRIPT ERROR" in text or not COMBAT.search(text):
         return False
-    if "COMBAT BENCHMARK PASSED 10" in text:
-        return True
     errors = ERROR_LINE.findall(text)
+    other = [
+        m for m in errors if not m.startswith(("Combat benchmark failed for ", "Combat stress ceiling exceeded for "))
+    ]
+    if other:
+        return False
+    if MARKER.search(text):
+        return True
     failed = {
         m.removeprefix("Combat benchmark failed for ") for m in errors if m.startswith("Combat benchmark failed for ")
     }
@@ -33,22 +46,23 @@ def _complete(text: str) -> bool:
         for m in errors
         if m.startswith("Combat stress ceiling exceeded for ")
     }
-    other = [
-        m for m in errors if not m.startswith(("Combat benchmark failed for ", "Combat stress ceiling exceeded for "))
-    ]
-    return (
-        bool(failed) and failed == ceiling and not other and all(f"COMBAT STRESS FAIL {row} " in text for row in failed)
-    )
+    return bool(failed) and failed == ceiling and all(f"COMBAT STRESS FAIL {row} " in text for row in failed)
 
 
 def verdict(refs: list[str], branches: list[str]) -> tuple[int, list[str]]:
     for i, text in enumerate(refs, 1):
         if not _complete(text):
             return 2, [f"PAIR GATE INCONCLUSIVE ref run {i} unusable"]
+    for i, text in enumerate(branches, 1):
+        if not MARKER.search(text):
+            return 1, [f"PAIR GATE FAILED branch run {i}"]
     guarded = [set(STRESS.findall(t)) for t in branches]
     if not guarded[0] or any(g != guarded[0] for g in guarded):
         return 2, ["PAIR GATE INCONCLUSIVE guarded rows differ between branch runs"]
-    ref_rows, branch_rows = [_rows(t) for t in refs], [_rows(t) for t in branches]
+    try:
+        ref_rows, branch_rows = [_rows(t) for t in refs], [_rows(t) for t in branches]
+    except (ValueError, KeyError, TypeError):
+        return 2, ["PAIR GATE INCONCLUSIVE malformed timing summary"]
     lines: list[str] = []
     failed: list[str] = []
     inconclusive: list[str] = []
@@ -66,12 +80,12 @@ def verdict(refs: list[str], branches: list[str]) -> tuple[int, list[str]]:
             continue
         compared += 1
         for metric, limit in MAX_RATIO.items():
-            if any(r[row][metric] <= 0 for r in ref_rows):
-                inconclusive.append(f"ref {row} {metric} not positive")
+            if any(x[row][metric] <= 0 for x in (*ref_rows, *branch_rows)):
+                inconclusive.append(f"{row} {metric} not positive")
                 continue
             ratios = [b[row][metric] / a[row][metric] for a, b in zip(ref_rows, branch_rows, strict=True)]
             median = statistics.median(ratios)
-            ok = median <= limit
+            ok = round(median, 4) <= limit
             if not ok:
                 failed.append(f"{row}:{metric}")
             ref_text = "/".join(f"{r[row][metric]:.3f}" for r in ref_rows)
