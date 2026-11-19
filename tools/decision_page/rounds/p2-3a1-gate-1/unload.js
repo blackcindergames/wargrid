@@ -3,7 +3,7 @@ DP.step({
   "kind": "pictures",
   "question": "When does Unload (F) show?",
   "why": "Gate A said Unload shows while an own loaded container is selected. The game knows exactly when a Tunnel Hub holds units; for a Scout Car or Armed Pickup it only knows that some own unit sits inside some container, not which one. An empty container accepts the click and nothing happens, with no refusal.",
-  "look": "Where to look: the bottom right, an empty Scout Car's order row and an empty Tunnel Hub above it. A click on a picture (or L) shows the whole screen.",
+  "look": "Where to look: the bottom right, an empty Scout Car's order row and an empty Tunnel Hub above it. A click on a picture shows the whole screen (on a phone: View, Whole screen).",
   "rec": "A",
   "crop": {
     "x": 840,

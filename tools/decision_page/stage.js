@@ -125,8 +125,8 @@ function marksOf(s, src) {
   const marks = [].concat(src.mark || (s && s.mark) || []);
   return marks.length && ctl(s, 'marker') === 'on' ? marks : [];
 }
-// A label hangs toward the frame's middle, so one on a mark at the right edge is not cut off.
-const markEl = (style, m, frameW) => `<i class="mark" style="${style}">${m.label ? `<b class="${m.x + m.w / 2 > frameW / 2 ? 'r' : ''}">${esc(m.label)}</b>` : ''}</i>`;
+// A label hangs toward the frame's middle, so a right-edge one is not cut off; `below` keeps it off a caption above the ring.
+const markEl = (style, m, frameW) => `<i class="mark" style="${style}">${m.label ? `<b class="${m.x + m.w / 2 > frameW / 2 ? 'r' : ''}${m.below ? ' u' : ''}">${esc(m.label)}</b>` : ''}</i>`;
 function marksHtml(s, src, c, z, base) {
   return marksOf(s, src).map((m) => {
     const r = cropFor(m, base, z);

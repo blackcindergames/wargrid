@@ -1,10 +1,12 @@
 """Decision page server: serves a site root, records picks through a guarded POST /pick and reads them back."""
 
+import contextlib
 import http.server
 import json
 import os
 import pathlib
 import re
+import socket
 import tempfile
 import threading
 from typing import Any
@@ -14,6 +16,7 @@ MAX_BODY = 8192
 MAX_KEY = 160
 # Public URL: caps what an anonymous client can grow the volume to.
 MAX_KEYS = 500
+REQUEST_SECONDS = 15
 KEY_RE = re.compile(r"([a-z0-9-]+):[A-Za-z0-9._:-]+")
 PICK_RE = re.compile(r"[A-Za-z]{1,16}")
 PREFIX_RE = re.compile(r"^\s*prefix:\s*['\"]([a-z0-9-]+)['\"]", re.MULTILINE)
@@ -41,7 +44,10 @@ def read_picks(path: pathlib.Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     data = json.loads(path.read_text(encoding="utf-8"))
-    return data if isinstance(data, dict) else {}
+    # A hand-seeded file of another shape would be overwritten unseen on the next pick.
+    if not isinstance(data, dict) or not all(isinstance(v, dict) for v in data.values()):
+        raise ValueError(f"{path}: not an object of entries")
+    return data
 
 
 def write_atomic(path: pathlib.Path, data: dict[str, Any]) -> None:
@@ -95,6 +101,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(site_root()), **kwargs)
 
+    def setup(self) -> None:
+        super().setup()
+        # The per-read timeout restarts on every byte, so a trickling client needs a deadline for the whole request.
+        self.deadline = threading.Timer(REQUEST_SECONDS, self.cut)
+        self.deadline.daemon = True
+        self.deadline.start()
+
+    def cut(self) -> None:
+        with contextlib.suppress(OSError):
+            self.connection.shutdown(socket.SHUT_RDWR)
+
+    def finish(self) -> None:
+        self.deadline.cancel()
+        super().finish()
+
     def send_plain(self, code: int, body: bytes, kind: str = "text/plain") -> None:
         self.send_response(code)
         self.send_header("Content-Type", kind)
@@ -107,14 +128,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         with LOCK:
             return json.dumps(read_picks(picks_path())).encode()
 
+    def send_picks(self, script: bool) -> None:
+        try:
+            body = self.picks_json()
+        except (OSError, ValueError):
+            self.send_error(500)
+            return
+        if script:
+            # A script, not a fetch: it holds the load event, so headless screenshots see restored picks.
+            self.send_plain(200, b"DP.saved(" + body + b");\n", "text/javascript")
+        else:
+            self.send_plain(200, body, "application/json")
+
     def do_GET(self) -> None:
+        self.deadline.cancel()
         if self.path == "/health":
             self.send_plain(200, b"ok")
-        elif self.path == "/picks.json":
-            self.send_plain(200, self.picks_json(), "application/json")
-        elif self.path == "/picks.js":
-            # A script, not a fetch: it holds the load event, so headless screenshots see restored picks.
-            self.send_plain(200, b"DP.saved(" + self.picks_json() + b");\n", "text/javascript")
+        elif self.path in ("/picks.json", "/picks.js"):
+            self.send_picks(self.path == "/picks.js")
         elif self.path in ("/", "/index.html"):
             self.send_response(302)
             self.send_header("Location", APP_PATH)
@@ -130,13 +161,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path != "/pick" or not 0 < length <= MAX_BODY:
             self.send_error(400)
             return
-        parsed = parse_pick(self.rfile.read(length), round_prefixes(site_root() / APP_PATH.strip("/") / "rounds"))
+        raw = self.rfile.read(length)
+        self.deadline.cancel()
+        if len(raw) < length:
+            return
+        parsed = parse_pick(raw, round_prefixes(site_root() / APP_PATH.strip("/") / "rounds"))
         if not parsed:
             self.send_error(400)
             return
         try:
             stored = record(*parsed)
-        except OSError:
+        except (OSError, ValueError):
             self.send_error(500)
             return
         if not stored:

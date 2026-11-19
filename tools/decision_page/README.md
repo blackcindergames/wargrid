@@ -16,7 +16,7 @@ Then open `http://127.0.0.1:8770/tools/decision_page/` in Firefox (`/` redirects
 | `DECISION_ROOT` | the repository root | The folder that is served |
 | `DECISION_HOST`, `DECISION_PORT` | `127.0.0.1`, `8770` | Where the server listens |
 
-Endpoints: `POST /pick` takes `{key, pick, note}` and answers 204, 400 for a body over 8 KiB, a key of a round the site does not ship, a pick that is not 1 to 16 letters (or `null`) or a wrong type, 507 for a new key past 500 keys, 500 when the write fails; a client that stalls mid-body is dropped after 15 s. `GET /picks.json` and `GET /picks.js` (`DP.saved({...})`, a script so a headless screenshot waits for it) read the picks back; `GET /health` answers 200. Writes are atomic (temporary file, then rename).
+Endpoints: `POST /pick` takes `{key, pick, note}` and answers 204, 400 for a body over 8 KiB, a key of a round the site does not ship, a pick that is not 1 to 16 letters (or `null`) or a wrong type, 507 for a new key past 500 keys, 500 when the write fails or the picks file is not a JSON object of entries (the file is left as it is); a client that stalls for 15 s, or has not sent its whole request after 15 s, is dropped. `GET /picks.json` and `GET /picks.js` (`DP.saved({...})`, a script so a headless screenshot waits for it) read the picks back, or answer 500 on such a file; `GET /health` answers 200. Writes are atomic (temporary file, then rename); the page sends one key's posts one after another, so an older one cannot land last.
 
 Tests: `python3 tools/decision_page/test_server.py` (also run by `sh tools/run_python_tests.sh`).
 
@@ -42,7 +42,9 @@ Click to record; "Recorded: <step> <pick>." (the last 204; plain navigation clea
 
 Resolved clashes from the older pages: arrows move between steps (not flip), letters and digits only pick options, `N` `P` only step inside a step, `[` `]` are step aliases so heading moved to `R`, `C` is option C so colour vision is `⇧C` and the numbers panel `K`, no `Tab`, `Space` only plays.
 
-Keys do nothing while a note or a list has the focus or with Cmd, Ctrl or Alt. Below 900 px wide or on a touch screen a button bar at the bottom covers every key, its View button opens the stage controls; a swipe on the picture flips the option (gallery: the item). There a tap on the picture (or Large) shows the step's crop at 200 % of game pixels (a whole frame at 100 %) to pan, and Whole screen shows the whole frame as the desktop's Large does. The step's "Where to look" line and its reference picture (folded) come right under the question, then the stage; "Why this question" is folded.
+Keys do nothing while a note or a list has the focus or with Cmd, Ctrl or Alt. Below 900 px wide or on a touch screen a two-row button bar at the bottom covers every key; its View button opens a sheet with the stage controls, Whole screen and the key list, and scrolls the stage above the sheet so a change shows; a swipe on the picture flips the option (gallery: the item). There a tap on the picture shows the step's crop at 200 % of game pixels (a whole frame at 100 %) to pan, opened on the step's mark or the crop's middle, and Whole screen shows the whole frame as the desktop's Large does. The step's "Where to look" line and its reference picture (folded) come right under the question, then the stage; "Why this question" is folded.
+
+Side by side, "Why this question" is folded, the reference picture is the first tile at the options' scale and the step's other panels (checklist, numbers) follow the tiles. The summary lists the round's unanswered steps as links, and says the tab can be closed only when every step is answered.
 
 Hash: `#round=<id>&step=<n|summary>&show=<A-D>&view=side&item=<id>`, plus every stage control away from its first value (`size`, `fit`, `ground`, `world`, `zoom`, `hud`, `state`, `tier`, `owner`, `set`, `heading`, `cvd`, `marker`, `x-<id>`). The page keeps it current, so a reload returns to the same view. Read only: `sheet=1` opens the phone's View sheet, `keys=1` the key list, `shot=1` the shown option alone at its frame size on black (`crop=step` keeps the step's crop), for `shoot.sh`. Without `step` it opens the first unanswered step. Without `round` it lists the rounds of `rounds/index.js`; entries with `demo: true` only with `demo=1`.
 
@@ -74,11 +76,12 @@ Step file, common fields:
 | `blind` | Letters stay neutral; each option's `reveal` (`"today's look"`) shows after the step is picked |
 | `view` | `'side'` opens side by side instead of one at a time |
 | `crop` | Default crop `{x, y, w, h}` for the step's live renders |
+| `phoneCrop` | Optional crop for the stage and reference picture below 900 px wide, so the part to judge is on the first phone screen; extras keep `crop` |
 | `ref` | A reference picture beside the question: `{label, render}` or `{label, img}` |
 | `notesLabel` | Header over each option's `notes` (default `Notes`) |
 | `controls` | Stage controls, below; a round's `controls` apply to all its picture and gallery steps |
 | `render` | Step default live-render recipe, over the round's |
-| `mark` | Small-change marker `{x, y, w, h, label}` (or a list) in the 1280x720 frame; an option or gallery item may carry its own |
+| `mark` | Small-change marker `{x, y, w, h, label, below?}` (or a list) in the 1280x720 frame; `below: true` puts the label under the ring; an option or gallery item may carry its own |
 | `pairs` | Colour pairs for the numbers panel: `[[name, '#hex', name, '#hex', kind?]]`; kind `'vs'` (two colours that only need to differ) prints no contrast, the default is a colour on its background |
 | `interactive` | Live renders take the mouse (hover cards); a click no longer enlarges, `L` does |
 | `checklist` | "What to judge" lines |
@@ -143,6 +146,7 @@ The first deploy of this image replaces the old gate deploy on the same app. The
 ```sh
 curl -fsS https://wargrid-lab-test.fly.dev/docs/images/hud-v5/source/picks.json -o old-picks.json   # before the deploy
 fly deploy tools/decision_page/fly
+python3 -c "import json; d = json.load(open('old-picks.json')); assert isinstance(d, dict) and all(isinstance(v, dict) for v in d.values())"   # before the put
 fly ssh sftp shell -a wargrid-lab-test   # then: put old-picks.json /data/picks.json
 ```
 

@@ -2,7 +2,7 @@ DP.step({
   "key": "look",
   "kind": "gallery",
   "question": "Gate A look: every P2.3a1 state",
-  "why": "The pictures after the gate A answers, one at a time. Flip with N and P or the thumbnails; write a note under any state you want changed (saved only when you write one). Then pass the gate or ask for changes.",
+  "why": "The pictures after the gate A answers, one at a time. Flip with N and P (on a phone: the Item buttons) or the thumbnails; write a note under any state you want changed (saved only when you write one). Then pass the gate or ask for changes.",
   "items": [
     {
       "id": "slab",

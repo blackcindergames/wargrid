@@ -8,6 +8,7 @@ import socket
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from unittest import mock
 
@@ -152,6 +153,49 @@ class ServerTest(unittest.TestCase):
         ):
             sock.sendall(b"POST /pick HTTP/1.1\r\nHost: x\r\nContent-Length: 100\r\n\r\n{")
             self.assertEqual(sock.recv(1024), b"")
+
+    def test_trickled_request_is_cut_at_the_deadline(self) -> None:
+        with (
+            mock.patch.object(server, "REQUEST_SECONDS", 0.5),
+            socket.create_connection(("127.0.0.1", self.httpd.server_address[1]), timeout=0.1) as sock,
+        ):
+            sock.sendall(b"POST /pick HTTP/1.1\r\nHost: x\r\nContent-Length: 100\r\n\r\n")
+            start = time.monotonic()
+            closed = False
+            while not closed and time.monotonic() - start < 5:
+                try:
+                    sock.sendall(b" ")
+                    closed = sock.recv(1024) == b""
+                except TimeoutError:
+                    pass
+                except OSError:
+                    closed = True
+            self.assertTrue(closed)
+            self.assertLess(time.monotonic() - start, 3)
+        self.assertFalse(self.picks.exists())
+
+    def test_unreadable_picks_file_is_500_and_kept(self) -> None:
+        self.picks.parent.mkdir(parents=True)
+        pick = json.dumps({"key": "demo:a", "pick": "A"}).encode()
+        for text in ("{not json", '["demo:a"]', '{"demo:a": null}'):
+            self.picks.write_text(text)
+            for method, path, body in (
+                ("GET", "/picks.json", None),
+                ("GET", "/picks.js", None),
+                ("POST", "/pick", pick),
+            ):
+                with self.subTest(text=text, path=path):
+                    self.assertEqual(self.request(method, path, body)[0], 500)
+            self.assertEqual(self.picks.read_text(), text)
+
+    def test_shipped_rounds_keep_their_prefixes(self) -> None:
+        rounds = server.HERE / "rounds"
+        self.assertLessEqual({"p2-3a1-gate", "p2-3a1-gate2"}, server.round_prefixes(rounds))
+        for file in rounds.glob("*/round.js"):
+            text = file.read_text(encoding="utf-8")
+            if "prefix" in text:
+                with self.subTest(round=file.parent.name):
+                    self.assertRegex(text, server.PREFIX_RE)
 
     def test_oversize_body_is_400(self) -> None:
         note = "x" * server.MAX_BODY

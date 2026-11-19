@@ -3,7 +3,7 @@ DP.step({
   "kind": "gallery",
   "controls": { "marker": true },
   "question": "Gate A verdict: the states redrawn to your answers",
-  "why": "Round 1 closed without a verdict. These four states changed after your last answers: no order row for a Bulldozer, Unload hidden on an empty Scout Car, and the system crosshair while attack-move is armed. A pass covers your answers, these pictures and the two picks above. After it I redraw to your picks, with no new choices: the strip in forecast and slab, the refusal line and the freeze card's warning mark (A or B), and the queue in chips and chips-f3-rule. Flip with N and P; a note under any state is optional.",
+  "why": "Round 1 closed without a verdict. These four states changed after your last answers: no order row for a Bulldozer, Unload hidden on an empty Scout Car, and the system crosshair while attack-move is armed. A pass covers your answers, these pictures and the two picks above. After it I redraw to your picks, with no new choices: the strip in forecast and slab, the refusal line and the freeze card's warning mark (A or B), and the queue in chips and chips-f3-rule. Flip with N and P (on a phone: the Item buttons); a note under any state is optional.",
   "items": [
     {
       "id": "slab",
@@ -13,7 +13,7 @@ DP.step({
         "state": "slab"
       },
       "mark": [
-        { "x": 436, "y": 158, "w": 432, "h": 48, "label": "Attack move armed: system crosshair" },
+        { "x": 436, "y": 158, "w": 432, "h": 48, "label": "Attack move armed; crosshair not drawn", "below": true },
         { "x": 848, "y": 600, "w": 432, "h": 120, "label": "Bulldozer: no order row" }
       ]
     },

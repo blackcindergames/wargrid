@@ -35,7 +35,7 @@ const H = new URLSearchParams(location.hash.slice(1));
 const S = {
   round: null, earlier: [], steps: [], n: 0, show: {}, view: {}, item: {},
   saved: {}, local: {}, notes: {}, sentNote: {}, unsent: new Map(), lastRec: null, revealed: '',
-  inflight: new Set(), srcs: [], audio: null, playing: null, timer: 0, touchX: null, ctl: {}, numbers: true, sheet: false,
+  inflight: new Set(), chain: {}, srcs: [], audio: null, playing: null, timer: 0, touchX: null, ctl: {}, numbers: true, sheet: false,
 };
 const main = () => $('#main');
 const prefixOf = (r) => r.prefix || r.id;
@@ -46,6 +46,8 @@ const isConfirm = (s) => CHOICE.has(s.kind) && optsOf(s).length === 1;
 const pickOf = (k) => (S.local[k] || S.saved[k] || {}).pick ?? null;
 const shownOf = (s) => S.show[s.key] || (LETTERS.includes(pickOf(K(s.key))) && pickOf(K(s.key))) || (optsOf(s).includes(s.rec) && s.rec) || optsOf(s)[0];
 const viewOf = (s) => S.view[s.key] || s.view || 'flip';
+const sideOn = (s) => !!s && CHOICE.has(s.kind) && viewOf(s) === 'side' && optsOf(s).length > 1;
+const cropOf = (s) => (PHONE() && s.phoneCrop) || s.crop;
 const itemsOf = (s) => s.items || [];
 const itemOf = (s) => itemsOf(s)[Math.min(S.item[s.key] || 0, itemsOf(s).length - 1)];
 
@@ -94,11 +96,13 @@ async function fetchPicks() {
 // ---------- recording ----------
 async function post(key, pick, note) {
   S.local[key] = { pick, note };
-  let status = 0;
-  const sent = fetch('/pick', { method: 'POST', body: JSON.stringify({ key, pick, note }) });
+  // One key's posts go one after another: the server's threads would otherwise let an older body land last.
+  const sent = (S.chain[key] || Promise.resolve()).then(() => fetch('/pick', { method: 'POST', body: JSON.stringify({ key, pick, note }) })).then((r) => r.status, () => 0);
+  S.chain[key] = sent;
   S.inflight.add(sent);
-  try { status = (await sent).status; } catch (e) { status = 0; }
+  const status = await sent;
   S.inflight.delete(sent);
+  if (S.chain[key] === sent) delete S.chain[key];
   if (status === 204) {
     S.unsent.delete(key);
     S.saved[key] = { pick, note };
@@ -160,15 +164,23 @@ function wholeHtml(src, label) {
 function zoomHtml(src, label, crop) {
   const cropped = !!src.render && src.render.crop !== null && !!(src.render.crop || crop);
   const at = cropped ? '200 % of game pixels' : src.render ? '100 % of game pixels' : 'full size';
-  return { k: cropped ? 2 : 1, html: `<div class="ov zoom">${pic(src, crop, label, true)}</div><div class="cap">${fmt(label || '')} at ${at}: drag to pan, tap to close.</div>` };
+  return { k: cropped ? 2 : 1, html: `<div class="cap">${fmt(label || '')} at ${at}: drag to pan, tap to close.</div><div class="ov zoom">${pic(src, crop, label, true)}</div>` };
 }
 function large(i, whole = !PHONE()) {
   const { src, label, crop } = S.srcs[i], over = $('#over'), z = whole ? null : zoomHtml(src, label, crop);
   over.innerHTML = z ? z.html : wholeHtml(src, label);
   over.classList.toggle('zoom', !!z);
-  if (z) $$('#over .pic[data-cw]').forEach((el) => { el.style.width = `${el.dataset.cw * z.k}px`; });
+  if (z) $$('#over .pic[data-cw]').forEach((el) => { el.style.width = `${el.dataset.cw * z.k}px`; el.style.setProperty('--s', z.k); });
   over.hidden = false;
   observe();
+  if (z) { centreZoom(); $$('#over img').forEach((im) => im.addEventListener('load', centreZoom, { once: true })); }
+}
+// Opens on the step's mark, or the crop's middle, not on its top-left corner.
+function centreZoom() {
+  const over = $('#over'), at = $('#over .mark') || $('#over .pic');
+  if (!at) return;
+  const o = over.getBoundingClientRect(), r = at.getBoundingClientRect();
+  over.scrollBy(r.left + r.width / 2 - (o.left + o.width / 2), r.top + r.height / 2 - (o.top + o.height / 2));
 }
 function closeOver() {
   if ($('#over').hidden && $('#legend').hidden) return false;
@@ -206,7 +218,7 @@ function optBody(s, x) {
   if (s.kind === 'text') return textCard(s, x);
   if (s.kind === 'audio') return audioBody(s, x);
   if (s.kind === 'lab') return '';
-  return pic(o, s.crop, `${x}: ${optName(s, x)}`);
+  return pic(o, cropOf(s), `${x}: ${optName(s, x)}`);
 }
 function figuresHtml(list, crop, who) {
   return (list || []).length ? `<div class="extras">${list.map((e) => `<figure><figcaption>${fmt(e.label)}</figcaption>${pic(e, crop, `${who}: ${e.label}`)}</figure>`).join('')}</div>` : '';
@@ -243,15 +255,15 @@ function usesHtml(s) {
   });
   return lines.length ? `<div class="uses"><span class="h">Shown with your earlier picks</span><ul>${lines.join('')}</ul></div>` : '';
 }
-// Open on a desktop; closed on a phone so the stage stays near the top.
-const openAttr = () => (PHONE() ? '' : ' open');
+// Open on a desktop; closed on a phone and side by side so the pictures stay near the top.
+const openAttr = (s) => (PHONE() || sideOn(s) ? '' : ' open');
 function cueHtml(s) {
   const look = s.look ? `<p class="look">${fmt(s.look)}</p>` : '';
-  const ref = s.ref ? `<details class="ref"${openAttr()}><summary>${fmt(s.ref.label)}</summary>${pic(s.ref, s.crop, s.ref.label)}</details>` : '';
+  const ref = s.ref && !sideOn(s) ? `<details class="ref"${openAttr(s)}><summary>${fmt(s.ref.label)}</summary>${pic(s.ref, cropOf(s), s.ref.label)}</details>` : '';
   return look || ref ? `<section class="cue">${look}${ref}</section>` : '';
 }
 function infoHtml(s) {
-  const why = s.why ? `<details class="why"${openAttr()}><summary>Why this question</summary><p>${fmt(s.why)}</p></details>` : '';
+  const why = s.why ? `<details class="why"${openAttr(s)}><summary>Why this question</summary><p>${fmt(s.why)}</p></details>` : '';
   const check = s.checklist ? `<div class="check"><span class="h">What to judge</span><ul>${s.checklist.map((c) => `<li>${fmt(c)}</li>`).join('')}</ul></div>` : '';
   const rest = `${check}${usesHtml(s)}${numbersHtml(s)}${foldsHtml(s.folds, s.crop, 'Step')}`;
   return `${why}${cueHtml(s)}${rest ? `<section class="info">${rest}</section>` : ''}`;
@@ -296,8 +308,13 @@ function tileHtml(s, x) {
   return `<div class="tile" data-opt="${x}"><div class="ohd" data-pick="${x}"><span class="let">${x}</span><h2>${fmt(optName(s, x))}</h2>${tags(s, x)}</div>` +
     `${optBody(s, x)}${optText(s, x)}${more}<button class="pick" data-pick="${x}">Pick ${x}</button></div>`;
 }
+// The reference picture as the first tile, at the options' scale.
+function refTile(s) {
+  return s.ref ? `<div class="tile reft"><div class="ohd"><h2>${fmt(s.ref.label)}</h2></div>${pic(s.ref, cropOf(s), s.ref.label)}</div>` : '';
+}
 function tilesHtml(s, opts) {
-  return `<section class="stagecol">${flipBar(s, opts)}${ctlBarHtml(s)}<div class="tiles" style="--n:${opts.length}">${opts.map((x) => tileHtml(s, x)).join('')}</div><div class="act">${neutralBtn(s)}</div></section>`;
+  const n = opts.length + (s.ref ? 1 : 0);
+  return `<section class="stagecol">${flipBar(s, opts)}${ctlBarHtml(s)}<div class="tiles" style="--n:${n}">${refTile(s)}${opts.map((x) => tileHtml(s, x)).join('')}</div><div class="act">${neutralBtn(s)}</div></section>`;
 }
 
 // ---------- renderers ----------
@@ -307,7 +324,7 @@ function layout(cls, left, right) {
   m.innerHTML = `<div class="left">${left}</div><div class="right">${right}</div>`;
 }
 function renderChoice(s) {
-  const opts = optsOf(s), side = viewOf(s) === 'side' && opts.length > 1, k = K(s.key);
+  const opts = optsOf(s), side = sideOn(s), k = K(s.key);
   const note = noteHtml(k, isConfirm(s) ? 'Note (say what to change, or anything else)' : 'Optional note for Claude (saved with your pick)');
   const right = side ? tilesHtml(s, opts) : stageHtml(s, opts) + detailHtml(s, opts);
   layout(`k-${s.kind} ${side ? 'v-side' : 'v-flip'}`, headHtml(s) + infoHtml(s) + note + navHtml(), right);
@@ -375,11 +392,20 @@ function summaryRows(r, saved) {
     return { label, pick: pickLabel(s, v.pick), note: v.note || '', order };
   }).sort((a, b) => a.order - b.order);
 }
-function answered(r, saved) {
+function askedOf(r) {
+  return r.steps.map((k) => (REG.steps[r.id] || {})[k]).filter((s) => s && (CHOICE.has(s.kind) || s.kind === 'verdict' || (s.kind === 'gallery' && s.verdict)));
+}
+function openOf(r, saved) {
   const has = (k) => { const v = saved[`${prefixOf(r)}:${k}`]; return !!v && v.pick != null; };
-  const ask = r.steps.map((k) => (REG.steps[r.id] || {})[k]).filter((s) => s && (CHOICE.has(s.kind) || s.kind === 'verdict' || (s.kind === 'gallery' && s.verdict)));
-  const done = ask.filter((s) => (s.kind === 'gallery' ? has(s.verdict.key || 'verdict') : has(s.key)));
-  return `${done.length} of ${ask.length} answered`;
+  return askedOf(r).filter((s) => !(s.kind === 'gallery' ? has(s.verdict.key || 'verdict') : has(s.key)));
+}
+function answered(r, saved) {
+  const ask = askedOf(r).length;
+  return `${ask - openOf(r, saved).length} of ${ask} answered`;
+}
+function closeHtml(saved) {
+  const open = openOf(S.round, saved).map((s) => `<button data-step="${S.round.steps.indexOf(s.key)}">${esc(s.key)}</button>`);
+  return open.length ? `<p class="close">Not answered yet: ${open.join(' ')}</p>` : '<p class="close">You can close this tab.</p>';
 }
 function sumTable(rows) {
   if (!rows.length) return '<p>Nothing recorded yet.</p>';
@@ -389,7 +415,7 @@ function summaryText(saved) {
   return [S.round, ...S.earlier].map((r) => [`${r.title || r.id} (${answered(r, saved)})`, ...summaryRows(r, saved).map((x) => `- ${x.label.replace(/`/g, '')}: ${x.pick || '(note)'}${x.note ? ` | ${x.note}` : ''}`)].join('\n')).join('\n\n');
 }
 function renderSummary() {
-  layout('k-summary', headHtml(null) + '<div id="sum"></div><p class="close">You can close this tab.</p>' + navHtml(), '');
+  layout('k-summary', headHtml(null) + '<div id="sum"></div>' + navHtml(), '');
   fillSummary(S.saved);
   // Read back only after the last pick's POST settled, or the verdict just clicked is missing.
   Promise.allSettled([...S.inflight]).then(fetchPicks).then((saved) => {
@@ -402,7 +428,7 @@ function renderSummary() {
 function fillSummary(saved) {
   const box = $('#sum');
   const earlier = S.earlier.map((r) => `<h2>${esc(r.title || r.id)} <span class="cnt">${answered(r, saved)}</span></h2>${sumTable(summaryRows(r, saved))}`).join('');
-  box.innerHTML = `<h2>${esc(S.round.title || S.round.id)} <span class="cnt">${answered(S.round, saved)}</span></h2>${sumTable(summaryRows(S.round, saved))}` +
+  box.innerHTML = `<h2>${esc(S.round.title || S.round.id)} <span class="cnt">${answered(S.round, saved)}</span></h2>${sumTable(summaryRows(S.round, saved))}${closeHtml(saved)}` +
     `<p><button data-act="copy">Copy summary</button> <span class="copied"></span></p>${earlier ? `<h3 class="sec">Earlier rounds</h3>${earlier}` : ''}`;
   S.summaryText = summaryText(saved);
 }
@@ -422,27 +448,30 @@ function phoneHtml(s) {
   const b = (act, label, on = true) => (on ? `<button data-act="${act}">${label}</button>` : '');
   const row1 = ['<button class="arrow" data-act="prev" aria-label="Previous step">‹</button>'];
   const row2 = [];
+  let whole = '';
   if (s && CHOICE.has(s.kind)) {
     const opts = optsOf(s);
     if (!isConfirm(s)) row1.push(...opts.map((x) => `<button class="ob" data-show="${x}">${x}</button>`));
     row1.push(isConfirm(s) ? '<button class="pick" data-pick="yes">Yes</button>' : `<button class="pick" data-act="pick">Pick ${shownOf(s)}</button>`);
     const stills = s.kind === 'pictures' && opts.some((x) => !s.options[x].video);
     row2.push(b('view', viewOf(s) === 'side' ? 'One' : 'Side', opts.length > 1), isConfirm(s) ? '<button data-pick="change">Change</button>' : '',
-      s.neutral ? `<button data-pick="neither">${esc(s.neutral)}</button>` : '', b('large', 'Large', stills), b('whole', 'Whole screen', stills && !!s.crop), b('play', 'Play', s.kind === 'audio'));
+      s.neutral ? `<button data-pick="neither">${esc(s.neutral)}</button>` : '', b('play', 'Play', s.kind === 'audio'));
+    whole = b('whole', 'Whole screen', stills && !!s.crop);
   }
-  if (s && s.kind === 'gallery') { row1.push(b('iprev', '‹ Item'), b('inext', 'Item ›')); row2.push(b('large', 'Large')); }
+  if (s && s.kind === 'gallery') row1.push(b('iprev', '‹ Item'), b('inext', 'Item ›'));
   if (!s) row1.push(b('copy', 'Copy summary'));
   row1.push('<button class="arrow" data-act="next" aria-label="Next step">›</button>');
   const ctls = s ? ctlBarHtml(s) : '';
-  row2.push(ctls ? `<button data-act="sheet" class="${S.sheet ? 'on' : ''}">View</button>` : '', b('note', 'Note', !!$('[data-note]')), b('legend', '?'));
-  const sheet = ctls && S.sheet ? `<div class="sheet">${ctls}</div>` : '';
+  row2.push(`<button data-act="sheet" class="${S.sheet ? 'on' : ''}">View</button>`, b('note', 'Note', !!$('[data-note]')));
+  // Rare actions live in the View sheet, so the bar stays two rows.
+  const sheet = S.sheet ? `<div class="sheet">${ctls}<div class="ctlbar">${whole}${b('legend', 'Keys')}</div></div>` : '';
   return `${sheet}<div class="row">${row1.join('')}</div><div class="row">${row2.join('')}</div>`;
 }
 function legendHtml() {
   const rows = [['A B C D or 1 2 3 4', 'show that option (side by side: highlight it)'], ['Enter', 'pick the shown option, record it and go on'], ['W', 'one at a time / side by side'],
     ['← → (or [ ], Backspace)', 'previous / next step without picking'], ['N P', 'next / previous item inside a step (gallery)'], ['L or click a picture', 'large view'],
     ['Space', 'play / stop the shown option\'s sound (nothing plays on its own)'], ['Esc', 'close the large view or this list'], ['?', 'this list'],
-    ['', 'Keys do nothing while you type in a note. On a phone: the buttons at the bottom (View: the stage controls); swipe the picture to flip.']];
+    ['', 'Keys do nothing while you type in a note. On a phone: the buttons at the bottom (View: the stage controls, Whole screen and this list); tap the picture to zoom, swipe it to flip.']];
   const ctlRows = ctlLegendRows(cur()).map(([k, t, on]) => `<tr class="${on ? '' : 'off'}"><th>${esc(k)}</th><td>${esc(t)}${on ? '' : ' (not on this step)'}</td></tr>`).join('');
   return `<div class="lg"><h2>Keys</h2><table>${rows.map(([k, t]) => `<tr><th>${esc(k)}</th><td>${esc(t)}</td></tr>`).join('')}</table>` +
     `<h3>Stage controls</h3><table>${ctlRows}</table><p>Esc or click to close.</p></div>`;
@@ -462,6 +491,14 @@ function scaleNote() {
   if (document.body.classList.contains('true100')) out.textContent = `True 100 %: one picture pixel per screen pixel${dpr !== 1 ? ` (screen scale ${dpr}, so it looks ${dpr > 1 ? 'smaller' : 'larger'} than in a game window of that size)` : ''}.`;
   else out.textContent = Math.abs(sc - 1) > 0.02 ? `Shown at ${Math.round(sc * 100)} % of game pixels.` : '';
 }
+// Phone: with the View sheet open, keep the stage between the header and the bar, so a control's change shows.
+function keepStage() {
+  const st = $('.stagecol .stage, .stagecol .tiles');
+  if (!S.sheet || !PHONE() || !st) return;
+  const r = st.getBoundingClientRect(), lo = $('.top').getBoundingClientRect().bottom + 8, hi = $('#phone').getBoundingClientRect().top - 8;
+  if (r.bottom > hi) scrollBy(0, Math.min(r.bottom - hi, r.top - lo));
+  else if (r.top < lo) scrollBy(0, r.top - lo);
+}
 function update() {
   const s = cur();
   if (s && CHOICE.has(s.kind)) {
@@ -474,6 +511,7 @@ function update() {
   $('#phone').innerHTML = phoneHtml(s);
   $$('#phone [data-show]').forEach((b) => b.classList.toggle('on', s && b.dataset.show === shownOf(s)));
   document.body.style.paddingBottom = PHONE() ? `${$('#phone').offsetHeight + 12}px` : '';
+  keepStage();
   showRecord();
   setHash();
   requestAnimationFrame(scaleNote);
@@ -503,6 +541,7 @@ function go(n, keepReveal = false) {
   S.n = ((n % L) + L) % L;
   render();
   scrollTo(0, 0);
+  keepStage();
 }
 function choose(x) {
   const s = cur();
@@ -724,7 +763,7 @@ async function start() {
   S.sheet = H.get('sheet') === '1';
   render();
   if (H.get('keys') === '1') toggleLegend();
-  document.fonts.ready.then(scaleNote);
+  document.fonts.ready.then(() => { scaleNote(); keepStage(); });
 }
 document.addEventListener('click', onClick);
 document.addEventListener('input', onInput);

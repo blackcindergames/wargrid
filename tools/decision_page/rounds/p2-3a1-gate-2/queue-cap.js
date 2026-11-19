@@ -3,7 +3,7 @@ DP.step({
   "kind": "pictures",
   "question": "Build queue: how many entries show?",
   "why": "Take A, your capped list; your mock and what changed sit under A. What you pay: cancelling the newest entries takes two clicks from 6 queued, the expanded list is taller than today's, and it is about half a day for a slab P2.3b replaces with nine slots. If hidden entries bother you more than a busy list, pick B: same height, one click each, less code. A cancel refunds the full price (`$800` for either tank) and only the entry in production loses its progress (production.gd:15-21 @ 7b22ebc); a queued entry loses only its place. In A, B and D a click anywhere on a row cancels, as a click on a Zero Hour or P2.3b queue slot does, so the row's tooltip says it: `Cancel: refunds $800`.",
-  "look": "Where to look: the bottom right, a China Vehicle Factory with a full queue of nine (the worst case), with the playtest checklist, note form and F3 open. Under A, the same list expanded. A click on a picture (or L) shows the whole screen (on a phone: Whole screen); the caption at the top left prints the slab's measured height.",
+  "look": "Where to look: the bottom right, a China Vehicle Factory with a full queue of nine (the worst case), with the playtest checklist, note form and F3 open. Under A, the same list expanded. The whole screen (click the picture; on a phone: View, Whole screen) prints the slab's measured height at the top left.",
   "rec": "A",
   "recWhy": "your look with fewer things on screen; the cost is two clicks to cancel late entries from 6 queued.",
   "neutral": "None of these",
@@ -12,6 +12,12 @@ DP.step({
     "y": 240,
     "w": 440,
     "h": 480
+  },
+  "phoneCrop": {
+    "x": 840,
+    "y": 300,
+    "w": 440,
+    "h": 420
   },
   "ref": {
     "label": "Today: nine Cancel rows, slab 408 px",
