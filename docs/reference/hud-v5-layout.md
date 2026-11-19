@@ -20,7 +20,7 @@ The 1920 x 1080 rectangles are the 1280 x 720 ones (text-hugging widths differ b
 
 From `layout.json` `tokens` (measured on the page):
 
-Set A won the P2.3a A/B (user, 2026-11-18; [picks](design-answers-2026-11-08.md#p23a-ab-lab-picks-user-2026-11-18)); the table below is unchanged.
+Set A won the P2.3a A/B (user, 2026-11-18; [picks](design-answers-2026-11-08.md#p23a-ab-lab-picks-user-2026-11-18)); the table below is unchanged except `warn`, added at P2.3a1's stop gate A ([gate A](design-answers-2026-11-08.md#p23a1-gate-a-user-2026-11-19), user 2026-11-19).
 
 | Token | Value | Use |
 |---|---|---|
@@ -33,7 +33,8 @@ Set A won the P2.3a A/B (user, 2026-11-18; [picks](design-answers-2026-11-08.md#
 | `text` | `#eef3f5` | Text |
 | `muted` | `#93a5b0` | Labels, hints, key chip letters, blocked cell text |
 | `sel` | `#60e5ed` | Cyan: armed or selected control only |
-| `amber` | `#f7c871` | "Needs you now" only |
+| `amber` | `#f7c871` | Alerts and primary buttons only |
+| `warn` | `#f47b6c` | Warnings: low power, the shortfall, an unaffordable cost, the refusal line, the cell card's reason line, the freeze card's warning mark (gate A, user 2026-11-19) |
 | `you` | `#628ffa` | Own owner colour (palette A): panel edge, progress bars |
 | `enemy` | `#d6120c` | Enemy owner colour on the panel edge |
 | `ally` | `#69ceaa` | Teammate ping arrow and minimap dots (Full) |
@@ -44,7 +45,8 @@ Two fills are literals on the page, not tokens: empty card wells and empty queue
 Colour rules (design answers, "HUD v4 mock-ups" and "HUD v5 mock-ups"):
 
 - **Cyan** marks only an armed or selected control: fill `panel2` plus a 2 px inset `sel` outline. Buttons are flat otherwise.
-- **Amber** means "needs you now" only: a cost the player cannot afford, `LOW POWER`, the cell card's reason line, the refusal line, alerts. Money is plain text. No red warning text: red is an owner colour.
+- **Amber** marks alerts and primary buttons only (primary buttons are amber already, `game/ui/launcher_theme.tres:71-76`, `:357`).
+- **Warn** (`#f47b6c`, gate A, user 2026-11-19) marks warnings: a cost the player cannot afford and the shortfall, low power (`LOW POWER · DEFENCES OFF`, `OFFLINE · LOW POWER`), the cell card's reason line, the refusal line and the freeze card's warning mark. It was picked over the owner mock's `#dc948b`, which turns nearly grey under protanopia (18.2 from the label grey, under the bar of 20; `#f47b6c` stays 29.1 away). Money is plain text. No saturated red text: saturated red is an owner colour.
 - **Owner colour** on the panel edge and progress bars is the colour the game draws that owner's units in, lightened toward white in 5 % steps only until it reaches 3:1 against `bg`. None of the eight owner colours of palette A (round 6, user 2026-11-17) needs it; the lowest, purple `#7242fe`, is 3.23:1, red `#d6120c` 3.25:1 (computed from `source/hud.js` `OWNERS` and `BG`).
 - Own panels, the card included, carry a 4 px left edge in `you`; an enemy's panel in `enemy`; a supply pile's in `line` (grey, user, 2026-11-16).
 
@@ -91,9 +93,9 @@ Positions are for 1280 x 720 unless a formula is given. The mock-up follows the 
 
 ### Top strip
 
-Anchored top left at (8, 8), 32 high, width hugs its text (Core about 255 at `4,800` and `8 / 10`). 1 px `line` border, padding 0 8, groups 24 apart, label to value 8. Content: `CREDITS` + value at 16 / 700, `POWER` + `used / available` ("power as used / available", design answers), and the amber label `LOW POWER` when used exceeds available. Full adds muted `+1,350 −1,600 / min` after the credits, a 1 x 16 `line` separator and the production strip.
+Anchored top left at (8, 8), 32 high, width hugs its text (Core about 255 at `4,800` and `8 / 10`). 1 px `line` border, padding 0 8, groups 24 apart, label to value 8. Content: `CREDITS` + value at 16 / 700, `POWER` + `used / available` ("power as used / available", design answers), and, when used exceeds available, the value (`12 / 10`) and the label `LOW POWER · DEFENCES OFF` in `warn` (gate A, user 2026-11-19: it names low power's one effect, powered defences hold fire). The strip always shows the real numbers. Full adds muted `+1,350 −1,600 / min` after the credits, a 1 x 16 `line` separator and the production strip.
 
-**Forecast while a building is armed** (user, 2026-11-13): the figures show the values after the purchase, the arrow muted, the new values in `text`, the warning amber. Placing a Rotary Gun Tower: `CREDITS 4,800 → 3,600`, `POWER 8 → 11 / 10 LOW POWER`. Placing a Vehicle Factory: `4,800 → 2,800`, `8 → 9 / 10`.
+**Forecast while a building is armed** (user, 2026-11-13; moved out of the strip at P2.3a1's gate A, user 2026-11-19): the `AFTER PURCHASE` card under the strip at (8, 48), a `bg` slab with a 1 px `line`, padding 8, width hugs (about 490 x 56 at 1280 x 720 at its longest); line 1 a muted `AFTER PURCHASE`, line 2 the values after the purchase, muted 12 / 600 labels and 16 / 700 tabular values, fine values in `text`, values with a problem and the low-power words in `warn`, no arrow (Public Sans has none). Placing a Rotary Gun Tower at 4800 credits and power 8 / 10: `CREDITS 3600`, `POWER 11 / 10 LOW POWER · DEFENCES OFF`; at 500 credits: `CREDITS −700` (U+2212). Placing a Power Plant: `POWER 8 / 15`. Gone on place or cancel.
 
 ### Menu chip, Team chip, playtest chip
 
@@ -137,7 +139,7 @@ At 1280 x 720 the cells start at x 860, 964, 1068, 1172 and y 524, 588, 652.
 
 **Key chip**: at least 18 x 18, padding 0 4, fill `well`, `muted` 12 / 700, centred.
 
-**Looks**: ready is `btn`. Armed is `panel2` plus the 2 px `sel` inset. Blocked (cannot afford, missing prerequisite, queue full) is quiet but readable, no opacity: fill `quiet`, name and cost `muted`, an unaffordable cost amber at full strength, key chip unchanged (user, 2026-11-16; name 6.4:1, amber cost 10.5:1 by page arithmetic).
+**Looks**: ready is `btn`. Armed is `panel2` plus the 2 px `sel` inset. Blocked (cannot afford, missing prerequisite, queue full) is quiet but readable, no opacity: fill `quiet`, name and cost `muted`, an unaffordable cost in `warn` at full strength (gate A, user 2026-11-19; amber before), key chip unchanged (user, 2026-11-16; name 6.4:1 by page arithmetic; `warn` cost 6.1:1 on `quiet`, 4.9:1 on `btn`, WCAG 2.x, agent arithmetic 2026-11-19).
 
 Cards per state (China figures from `china.gd`). Decided (user, 2026-11-16): Build on `Q`, Back on `V`, Attack Move on `A`, Stop on `S`, Guard on `D`, Unload on `F`. Which item sits on which slot in the build menu and in a factory is a proposal (agent, design answers):
 
@@ -154,11 +156,11 @@ Other factions and undrawn buildings: see "Not covered".
 
 ### Cell card
 
-A hover card for item cells: 248 wide, padding 8, fill `bg`, 1 px `line` border, 13 px, lines of 20. Placed 8 above the card slab's top, left-aligned with the hovered cell, clamped 8 from the screen edges. Two lines are 56 high, three 76. First line: name (600) and muted `cost · build time`. Then one of: amber `Needs Power Plant`; amber `Queue full`; the forecast (a muted `CREDITS` or `POWER` label with the value before and after, as in the top strip, `LOW POWER` amber); amber `150 credits short`, with Full adding muted `about 7 s at current income`. Its timing and behaviour follow the decided tooltip rules ([second pass](design-answers-2026-11-08.md#visual-and-ux-proposal-second-pass-user-2026-11-15), [review](design-answers-2026-11-08.md#visual-and-ux-proposal-review-user-2026-11-15)); this note does not restate them. It is not counted as coverage.
+A hover card for item cells: 248 wide, padding 8, fill `bg`, 1 px `line` border, 13 px, lines of 20. Placed 8 above the card slab's top, left-aligned with the hovered cell, clamped 8 from the screen edges. Two lines are 56 high, three 76. First line: name (600) and muted `cost · build time`. Then one reason line, in `warn` (gate A, user 2026-11-19; amber before): `Needs Power Plant`; `Queue full`; the forecast (a muted `CREDITS` or `POWER` label with the value before and after, low power in `warn`; P2.3b settles the form, since the strip no longer forecasts and Public Sans has no arrow); `150 credits short`, with Full adding muted `about 7 s at current income`. Its timing and behaviour follow the decided tooltip rules ([second pass](design-answers-2026-11-08.md#visual-and-ux-proposal-second-pass-user-2026-11-15), [review](design-answers-2026-11-08.md#visual-and-ux-proposal-review-user-2026-11-15)); this note does not restate them. It is not counted as coverage.
 
 ### Refusal line
 
-Bottom centre (user, 2026-11-16): centred on `W`, 28 high, bottom edge 8 above the dock line (top = `H - 204`; 516 at 720, 596 at 800), in every state and tier. Fill `bg`, 1 px `line` border, padding 0 8, an 8 x 8 amber square, 8 gap, amber text 13 / 600. Width hugs the text (140 for `Cannot build here`, a proposal; x 570 at 1280). Shows for about 3 s (user, 2026-11-13, "Refused orders") after the refused click, not while hovering (agent call). The page lifts it 8 above any slab it would overlap; with the card on the right that never happens at 1280. Not counted as coverage.
+Bottom centre (user, 2026-11-16): centred on `W`, 28 high, bottom edge 8 above the dock line (top = `H - 204`; 516 at 720, 596 at 800), in every state and tier. Fill `bg`, 1 px `line` border, padding 0 8, an 8 x 8 `warn` square, 8 gap, `warn` text 13 / 600 (gate A, user 2026-11-19; amber before). Width hugs the text (140 for `Cannot build here`, a proposal; x 570 at 1280). Shows for about 3 s (user, 2026-11-13, "Refused orders") after the refused click, not while hovering (agent call). The page lifts it 8 above any slab it would overlap; with the card on the right that never happens at 1280. Not counted as coverage.
 
 ### Full set additions (later packages)
 
@@ -168,7 +170,7 @@ These come with their own features, after P2.3b ([packages](../packages.md)). Ge
 - **Minimap**: bottom left, 168 x 168, padding 8 around a 152 map, borders top and right. Drawn as a sketch; at low power it reads `RADAR OFFLINE`.
 - **Ledge**: x 0, top `H - 208`, 32 high, about 310 wide: idle builder chip (glyph, count, key `.`) and control-group chips (key, count), chips 24 high with padding 0 8, 12 apart.
 - **Production strip**: in the top strip after the separator, one chip per factory with a glyph and a 40 x 4 progress bar.
-- **Alert feed**: (8, 48), 28 high, amber square, `Base under attack`, key `Space`. Edge arrows 28 x 28: amber at the left edge at y = 0.4 `H`, ally at the top edge.
+- **Alert feed**: (8, 48), 28 high (the spot P2.3a1's `AFTER PURCHASE` card takes while a building is armed: a clash for the package that adds alerts), amber square, `Base under attack`, key `Space`. Edge arrows 28 x 28: amber at the left edge at y = 0.4 `H`, ally at the top edge.
 - **Team** chip beside Menu.
 - **Pinned factory**: a click-only placeholder (user, 2026-11-16) 220 wide, 8 right of the selection panel (x 592), height hugs (154), padding 12 8: title with muted `×`, two item cells without key chips, five queue slots, and a muted `+N` when more than five are queued (described, not drawn: the drawn queue holds four). Settled in its own package.
 
@@ -177,7 +179,7 @@ These come with their own features, after P2.3b ([packages](../packages.md)). Ge
 - **Esc** backs out innermost first: an armed placement, then the build menu, then the game menu (user, 2026-11-16).
 - **Mixed selection** shows shared commands only: Attack Move shows when any selected unit can attack; a unit without a weapon just moves (user, 2026-11-16).
 - **No card** for a selection without commands, such as a Power Plant (user, 2026-11-16), nor for an enemy, a supply pile, a construction site or nothing (as drawn).
-- **Core against Full**: Core is words only and only what the game can feed today: top strip with credits, power and forecast; selection panel; command card with Attack Move, Stop, Build, the build menu and production; queue; cell card with the credits shortfall, a missing prerequisite, `Queue full` and the forecast, all HUD arithmetic (user, 2026-11-16); refusal line; playtest chip. Full adds glyphs, minimap, ledge, production strip, income per minute, time until affordable, alert feed and edge arrows, Team, Guard, Sell and the pinned factory.
+- **Core against Full**: Core is words only and only what the game can feed today: top strip with credits and power, the forecast on the card under it (P2.3a1 gate A); selection panel; command card with Attack Move, Stop, Build, the build menu and production; queue; cell card with the credits shortfall, a missing prerequisite, `Queue full` and the forecast, all HUD arithmetic (user, 2026-11-16); refusal line; playtest chip. Full adds glyphs, minimap, ledge, production strip, income per minute, time until affordable, alert feed and edge arrows, Team, Guard, Sell and the pinned factory.
 
 ## States
 

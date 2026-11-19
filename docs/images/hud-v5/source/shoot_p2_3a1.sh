@@ -26,7 +26,8 @@ shoot() { # state
 }
 
 if [ "$#" -eq 0 ]; then
-  set -- slab notice freeze freeze-copied forecast sites chips chips-f3 chips-f3-rule chips-checklist chips-form chips-off refusal pile rows-footer unload collector
+  set -- slab notice freeze freeze-copied sites chips chips-f3 chips-f3-rule chips-checklist chips-form chips-off refusal pile rows-footer unload collector \
+    queue queue-open forecast-card slab-army slab-poor slab-builder low-power offline
 fi
 for state in "$@"; do
   shoot "$state"

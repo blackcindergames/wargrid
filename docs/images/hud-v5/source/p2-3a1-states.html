@@ -61,6 +61,8 @@ body{margin:0;background:#0a0f14;color:#dfe7ec;font:15px/1.45 "Public Sans",Aria
 .hud .f3{color:#fff;font-size:12px;font-weight:400;line-height:15px;text-align:right;white-space:pre}
 /* Gate A round 2 (p2-3a1-gate.html#round=2): queue forms and the after-purchase card, gate-only states. */
 .hud .warn{color:var(--warn)}
+/* Director round (user, 2026-11-19): the price is its own right-aligned Label on every build button; only its colour flips, so nothing moves. */
+.hud .btn.priced{justify-content:space-between}
 .hud .qhd{display:flex;align-items:center;justify-content:space-between;height:14px}
 .hud .qr{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;background:var(--btn);font-size:13px;font-weight:600;line-height:16px;white-space:nowrap;position:relative;overflow:hidden}
 .hud .qr .qn{flex:1;min-width:0;overflow:hidden}
@@ -98,11 +100,12 @@ addEventListener('unhandledrejection', e => { err.textContent += `${e.reason}\n`
 // Values: docs/reference/hud-v5-layout.md and the P2.3a design (P2.3a1 sections); names, costs, health and power from game/scripts/simulation/definitions/.
 const W = 1280, H = 720;
 const TOKENS = {bg: '#121c24', btn: '#223241', panel2: '#26384a', quiet: '#16212a', well: '#0c141a', line: '#2e3f4b', text: '#eef3f5', muted: '#93a5b0',
-  sel: '#60e5ed', amber: '#f7c871', you: '#628ffa', enemy: '#d6120c', r: '0'};
+  sel: '#60e5ed', amber: '#f7c871', warn: '#f47b6c', you: '#628ffa', enemy: '#d6120c', r: '0'};
 const SLAB_W = 432, SEL_W = 408, STACK_TOP = 88, CHECKLIST_W = 320, DIALOG_W = 360;
 // Gate A (user, 2026-11-19): no key-hint block; the resume line only in its context; the kind-row rule as the panel's last line.
 const RESUME = 'Right-click: resume', ROWS_RULE = 'Click a kind: select only that kind · Shift-click: deselect it';
 const ORDERS = ['Attack move (A)', 'Stop (S)'], UNLOAD = 'Unload (F)';
+const LOW_POWER = 'Low power · defences off', OFFLINE = 'Offline · low power';
 // hud.gd menu_label "%d: %s $%d", today's plain digits (gate A); builder builds per faction (usa.gd, china.gd, frc.gd).
 const MENUS = {
   usa: ['Power Plant $800', 'Supply Depot $2000', 'Barracks $600', 'Vehicle Factory $2000', 'Missile Battery $1000'],
@@ -152,7 +155,7 @@ function strip(s) {
     const [u, a] = s.power, after = s.powerAfter;
     const value = after ? `${u} / ${a} ${arr} ${after[0]} / ${after[1]}` : `${u} / ${a}`;
     const low = after ? after[0] > after[1] : u > a;
-    parts.push(`<span class="stat"><span class="lab">Power</span><b>${value}</b>${low ? `<span class="lab ${s.warn ? 'warn' : 'amb'}">Low power</span>` : ''}</span>`);
+    parts.push(`<span class="stat"><span class="lab">Power</span><b class="${low ? 'warn' : ''}">${value}</b>${low ? `<span class="lab warn">${s.low || 'Low power'}</span>` : ''}</span>`);
   }
   return `<div class="strip" style="left:${s.x ?? 8}px;top:${s.y ?? 8}px;border-width:1px"><div class="g wide">${parts.join('')}</div></div>`;
 }
@@ -164,7 +167,7 @@ function chips(c) {
 }
 
 const notice = text => `<div class="note centre" data-id="notice" style="top:48px">${text}</div>`;
-const refusal = text => `<div class="refuse amb centre" data-id="refusal" style="top:${H - 204}px;border-width:1px"><i class="sq"></i><span>${text}</span></div>`;
+const refusal = text => `<div class="refuse warn centre" data-id="refusal" style="top:${H - 204}px;border-width:1px"><i class="sq" style="background:var(--warn)"></i><span>${text}</span></div>`;
 
 function panelSlab(edge, body, place = 'left:0;bottom:0') {
   return `<div class="slabbg sel" data-id="selection" style="${place};width:${SEL_W}px;border-width:1px 1px 0 0;padding:11px 15px 12px 16px;box-shadow:inset 4px 0 0 ${edge}"><div class="pn">${body}</div></div>`;
@@ -204,7 +207,9 @@ function slab(s) {
   const look = i => s.ordersArmed === i ? 'on' : (s.ordersOff || []).includes(i) ? 'off' : '';
   const orders = s.orders ? `<div class="grid orders" style="grid-template-columns:repeat(${COLS},1fr)">${s.orders.map((o, i) => `<span class="btn ${look(i)}">${o}</span>`).join('')}</div>` : '';
   const hov = i => s.hover === i ? 'hov' : '';
-  const grid = s.menu && s.menu.length ? `<div class="grid" style="grid-template-columns:repeat(${COLS},1fr)">${s.menu.map((l, i) => `<span class="btn ${s.armed === i ? 'on' : ''} ${hov(i)}">${i + 1}: ${l}</span>`).join('')}</div>` : '';
+  const priced = l => l.match(/^(.*) \$(\d+)$/), poor = l => s.credits != null && priced(l) && +priced(l)[2] > s.credits;
+  const label = (l, i) => priced(l) ? `${i + 1}: ${priced(l)[1]}<span class="${poor(l) ? 'warn' : ''}">$${priced(l)[2]}</span>` : `${i + 1}: ${l}`;
+  const grid = s.menu && s.menu.length ? `<div class="grid" style="grid-template-columns:repeat(${COLS},1fr)">${s.menu.map((l, i) => `<span class="btn ${s.armed === i ? 'on' : ''} ${hov(i)} ${priced(l) ? 'priced' : ''}">${label(l, i)}</span>`).join('')}</div>` : '';
   const produce = s.produce ? `<span class="btn ${hov('produce')}">${s.produce}</span>` : '';
   const cancel = s.cancel ? '<span class="btn">Cancel construction</span>' : '';
   const queue = (s.queue || []).map(q => `<span class="btn">${q}</span>`).join('');
@@ -214,7 +219,6 @@ function slab(s) {
   return `<div class="slabbg slab" data-id="economy" style="${place};width:${SLAB_W}px;border-width:1px 0 0 0;padding:7px 8px 8px 12px;box-shadow:inset 4px 0 0 var(--you)">${inner}</div>`;
 }
 const menuSlab = (faction = 'china') => slab({menu: MENUS[faction]});
-const unitSlab = (faction = 'china', armed = -1, more = []) => slab({orders: [...ORDERS, ...more], menu: MENUS[faction], armed});
 const NINE = ['Cancel Rotary Gun Tank (42%)', ...['Medium Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank', 'Rotary Gun Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank'].map(n => `Cancel ${n} (queued)`)];
 
 const TICK = '<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7.5 6 10.5 11.5 4" fill="none" stroke="#dfdfdf" stroke-width="2"/></svg>';
@@ -251,17 +255,17 @@ const crosshair = (x, y) => `<svg class="hand" viewBox="0 0 17 17" style="left:$
 const BASE_STRIP = {credits: 4800, power: [8, 10]};
 const CHINA_DEFENCE = {credits: 4800, after: 3600, power: [8, 10], powerAfter: [11, 10]};
 const STATES = {
-  slab: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, armed: 4}) +
-    cap('Strip: real numbers only, no arrow; the purchase preview is redrawn to the round 2 pick', 8, 46) +
+  slab: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, armed: 4, credits: 4800}) +
+    afterCard({credits: 3600, power: [11, 10], low: LOW_POWER}) +
     cap('Specimen, order row only: Medium Tanks after Attack move or A, armed until a ground click, a right-click or Esc', 436, 140) +
     slab({orders: ORDERS, ordersArmed: 0, place: 'left:436px;top:158px'}) +
     crosshair(452, 222) + cap('Pointer over the ground while armed: the system crosshair', 478, 226) +
     cap('Specimen: the same Bulldozer, pointer on its paused site: the resume line tops the slab while the pointer stays there', 436, 290) +
     slab({resume: true, menu: MENUS.china, place: 'left:436px;top:308px'}),
-  notice: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + notice('Waiting for player 2') + PANELS.tank() + unitSlab(),
-  freeze: () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + PANELS.bulldozer() + menuSlab() + freezeCard(false) +
+  notice: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + notice('Waiting for player 2') + PANELS.tank() + slab({orders: ORDERS}),
+  freeze: () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + PANELS.bulldozer() + menuSlab() + freezeCard(false, WARN_MARK) +
     `<div class="cap lt" style="left:16px;top:48px">Offline freeze: Copy report holds the focus, so Enter copies; Back to menu leaves on a click or Tab then Enter; Esc opens the pause menu, as on the Victory/Defeat card</div>`,
-  'freeze-copied': () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + PANELS.bulldozer() + menuSlab() + freezeCard(true) +
+  'freeze-copied': () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + PANELS.bulldozer() + menuSlab() + freezeCard(true, WARN_MARK) +
     `<div class="cap lt" style="left:16px;top:48px">After a click on Copy report: the clipboard holds the report, the button keeps the focus and reads Report copied</div>`,
   forecast: () => strip({credits: 4800, after: 4000, power: [8, 10], powerAfter: [8, 15]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.usa, armed: 0}) +
     cap('In place: USA, Power Plant armed (makes 5 power)', 8, 46) +
@@ -270,7 +274,7 @@ const STATES = {
     cap('FRC, Barracks armed: no kind uses or makes power, so no POWER group', 8, 222) + strip({credits: 4800, after: 4300, y: 240}),
   sites: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.paused() + slab({menu: [], cancel: true}) +
     cap('Enemy site: owner colour, never the paused label', 436, 268) + PANELS.enemySite('left:436px;top:286px') +
-    cap('Own factory, interim: rally footer, no queue row until P2.3b', 436, 404) + PANELS.factory('left:436px;top:422px'),
+    cap('Own factory, nothing queued: rally footer; a queue shows in its slab (queue picture)', 436, 404) + PANELS.factory('left:436px;top:422px'),
   chips: () => strip(BASE_STRIP) + chips({esc: false, playtest: '2 / 6'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', queue: NINE}) + checklist(CARDS.heard) + noteForm(),
   'chips-f3': () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + menuSlab() + f3(),
   'chips-f3-rule': () => strip(BASE_STRIP) + chips({esc: false, playtest: '2 / 6'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', queue: NINE}) +
@@ -279,17 +283,49 @@ const STATES = {
   'chips-checklist': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.plant() + checklist(CARDS.again) + f3(),
   'chips-form': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.plant() + checklist(CARDS.again) + noteForm() + f3(),
   'chips-off': () => strip(BASE_STRIP) + chips({esc: true, playtest: null}) + menuSlab() + f3(),
-  refusal: () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)'}) + refusal('Insufficient credits'),
+  refusal: () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', credits: 500}) + refusal('Insufficient credits'),
   pile: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.pile() + menuSlab() +
     cap('The same pile once its last box is taken', 436, 404) + PANELS.pile('left:436px;top:422px', 'Empty'),
   'rows-footer': rowsFooter,
-  unload: () => strip({credits: 4800, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.scoutCar() + unitSlab('usa', -1, [UNLOAD]) +
-    cap('USA Scout Car with infantry inside: Unload joins the orders', 16, 618) +
-    cap('Specimen, order row only: an empty Scout Car, no own unit in any container: Unload (F) hidden', 436, 290) +
+  unload: () => strip({credits: 4800, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.scoutCar() + slab({orders: [...ORDERS, UNLOAD]}) +
+    cap('USA Scout Car with infantry inside: Unload joins the orders; no builder selected, so no build menu', 16, 618) +
+    cap('Specimen: an empty Scout Car, no own unit inside any container: Unload (F) hidden', 436, 272) +
+    cap('(a vehicle shows it while some own unit is inside any container: the view has no container id)', 436, 290) +
     slab({orders: ORDERS, place: 'left:436px;top:308px'}) +
     cap('Specimen: FRC Tunnel Hub with units inside: a building, so Unload alone and no build menu', 436, 404) +
     slab({orders: [UNLOAD], place: 'left:436px;top:422px'}),
   collector: collectorSheet,
+  // Gate A round 2 and the director round (user, 2026-11-19), shot as pictures.
+  queue: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() +
+    slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', credits: 4800, list: queueList('hover')}) +
+    hand(0, 0).replace('class="hand"', 'class="hand" data-at="qrow"') + '<div class="tip" data-id="tip">Cancel: refunds $800</div>' +
+    cap('China Vehicle Factory, nine queued: the one in production with its percent and line, 3 next, then Show 5 more queued (from 6 entries; up to 5 all show)', 8, 46) +
+    cap('Pointer on a waiting row: the whole row cancels, the × is its sign', 8, 64),
+  'queue-open': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() +
+    slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', credits: 4800, list: queueList('open')}) +
+    cap('After a click on Show 5 more queued: all nine, then Show fewer; the list collapses again on a selection change or at 5 or fewer', 8, 46),
+  'forecast-card': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, armed: 4, credits: 4800}) +
+    afterCard({credits: 3600, power: [11, 10], low: LOW_POWER}) +
+    cap('China, Rotary Gun Tower armed at 4800 credits: the strip keeps the real numbers, the card under it shows the purchase', 8, 116) +
+    cap('Specimen: the same at 500 credits; right, its slab: the armed button with its price in warn', 8, 140) + strip({credits: 500, power: [8, 10], y: 158}) + afterCard({credits: -700, power: [11, 10], low: LOW_POWER}, 'strip', 198) +
+    slab({menu: MENUS.china, armed: 4, credits: 500, place: 'left:560px;top:158px'}) +
+    cap('Specimen: USA, Power Plant armed (makes 5 power): nothing to warn about', 8, 266) + strip({credits: 4800, power: [8, 10], y: 284}) + afterCard({credits: 4000, power: [8, 15]}, 'strip', 324) +
+    cap('Specimen: FRC, Barracks armed: no kind uses or makes power, so no POWER group', 8, 392) + strip({credits: 4800, y: 410}) + afterCard({credits: 4300}, 'strip', 450),
+  'slab-army': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.tank() + slab({orders: ORDERS}) +
+    cap('Medium Tank selected: the order row alone, no build menu (no builder selected)', 16, 618) +
+    cap('A Supply Truck alone (no weapon, no builder) gets no button, so no slab', 436, 404),
+  'slab-builder': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, credits: 4800}) +
+    cap('China Bulldozer selected: the build menu alone, no order row (no weapon)', 16, 618) +
+    cap('Specimen: a Bulldozer and Medium Tanks together: the order row only; build buttons need one own builder alone', 436, 272) +
+    slab({orders: ORDERS, place: 'left:436px;top:290px'}),
+  'slab-poor': () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, credits: 500}) +
+    cap('China Bulldozer at 500 credits: each price it cannot afford in warn, updated live; labels never move; Barracks ($500) stays in text', 16, 600),
+  'low-power': () => strip({credits: 4800, power: [12, 10], warn: true, low: LOW_POWER}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, credits: 4800}) +
+    cap('Power used above power made: the strip names the one effect, powered defences stop firing', 8, 46),
+  offline: () => strip({credits: 4800, power: [12, 10], warn: true, low: LOW_POWER}) + chips({esc: false, playtest: '1 / 3'}) +
+    panelSlab('var(--you)', identity('Rotary Gun Tower', 1000, 1000, `<span class="lab warn">${OFFLINE}</span>`)) +
+    cap('Own Rotary Gun Tower selected while its owner is short: OFFLINE · LOW POWER on its name row; no button, so no slab', 16, 600) +
+    cap('An enemy defence reads the same only where the view already carries that player\'s power', 16, 618),
   // Gate A second look (owner questions 9 and 10): drawn for p2-3a1-gate.html, not shot as pictures.
   'unload-loaded': () => unloadSheet('loaded'),
   'unload-empty-hidden': () => unloadSheet('hidden'),
@@ -353,12 +389,12 @@ function queueSheet(form) {
 }
 
 // Gate A round 2: the strip keeps the real numbers; the card under it previews the purchase.
-function afterCard({credits, power}, place = 'strip', y = 48) {
+function afterCard({credits, power, low = 'Low power'}, place = 'strip', y = 48) {
   const value = (text, bad) => `<b class="${bad ? 'warn' : ''}">${text}</b>`;
   const parts = [`<span class="lab">Credits</span>${value(credits < 0 ? `−${-credits}` : credits, credits < 0)}`];
   if (power) {
-    const low = power[0] > power[1];
-    parts.push(`<span class="gp"></span><span class="lab">Power</span>${value(`${power[0]} / ${power[1]}`, low)}${low ? '<span class="lab warn">Low power</span>' : ''}`);
+    const short = power[0] > power[1];
+    parts.push(`<span class="gp"></span><span class="lab">Power</span>${value(`${power[0]} / ${power[1]}`, short)}${short ? `<span class="lab warn">${low}</span>` : ''}`);
   }
   const at = place === 'hover' ? 'left:0;top:0' : `left:8px;top:${y}px`;
   return `<div class="after" data-id="after" data-at="${place}" style="${at}"><span class="lab">After purchase</span><div class="ar">${parts.join('')}</div></div>`;
@@ -400,7 +436,7 @@ function armedSheet(hint) {
 function rowsFooter() {
   const rows = [['Medium Tank', 36, .82], ['Rotary Gun Tank', 24, .64, 'hover'], ['Militia', 0, 0, 'held'], ['Anti-Tank Trooper', 12, .45], ['Supply Truck', 12, 1], ['Bulldozer', 12, 1]];
   return strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + panelSlab('var(--you)', manyBody('96 selected · 5 kinds · 12 idle collectors', rows) + footer(ROWS_RULE)) +
-    unitSlab() + hand(0, 0).replace('class="hand"', 'class="hand" data-at="hover"') +
+    slab({orders: ORDERS}) + hand(0, 0).replace('class="hand"', 'class="hand" data-at="hover"') +
     cap('Pointer on Rotary Gun Tank: panel2 fill, 1 px muted inset, pointing hand. The last Militia died under the pointer: the row holds at 0 until the pointer leaves.', 16, 48) +
     cap('The rule line closes the panel while two or more kinds show: six kinds, the largest roster, make the panel 158 high.', 16, 66) +
     cap('Specimen: one kind keeps its row, no rule line (a click there changes nothing)', 436, 404) +
