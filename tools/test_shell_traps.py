@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -44,13 +45,14 @@ class TrapsKillGrandchildren(unittest.TestCase):
 
     def run_and_term(self, script: str, expected: int, env: dict[str, str]):
         shutil.copy(TOOLS / script, self.root / "tools" / script)
-        proc = subprocess.Popen(
-            ["sh", f"tools/{script}"],
-            cwd=self.root,
-            env={**os.environ, "PIDS": str(self.pids), **env},
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        with (self.root / "out.log").open("w") as out:
+            proc = subprocess.Popen(
+                ["sh", f"tools/{script}"],
+                cwd=self.root,
+                env={**os.environ, "PIDS": str(self.pids), **env},
+                stdout=out,
+                stderr=subprocess.DEVNULL,
+            )
         self.addCleanup(proc.kill)
         deadline = time.monotonic() + 10
         while len(list(self.pids.glob("*.pid"))) < expected and time.monotonic() < deadline:
@@ -70,6 +72,26 @@ class TrapsKillGrandchildren(unittest.TestCase):
         for gate in GATES[1:]:
             self.stub(f"{gate}.sh")
         self.run_and_term("run_checks.sh", len(GATES) - 1, {})
+
+    def test_run_bench_pairs(self):
+        engine = self.stub("fake_godot")
+        for rel in ("perf_pairs.py", "perf_record.py"):
+            shutil.copy(TOOLS / rel, self.root / "tools" / rel)
+        (self.root / "game").mkdir()
+        (self.root / "game" / ".keep").write_text("")
+        git_env = {
+            **os.environ,
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+        }
+        for args in (("init", "-q"), ("add", "game"), ("commit", "-qm", "init")):
+            subprocess.run(["git", *args], cwd=self.root, env=git_env, capture_output=True, check=True)
+        self.run_and_term("run_bench_pairs.sh", 1, {"PERF_REF": "HEAD", "GODOT_BIN": str(engine)})
+        work = re.search(r"^PAIR WORK (\S+)", (self.root / "out.log").read_text(), re.M)
+        self.assertIsNotNone(work)
+        self.assertFalse(Path(work.group(1)).exists(), "the work directory outlived the trap")  # type: ignore[union-attr]
 
     def test_run_tests(self):
         engine = self.stub("fake_tests")

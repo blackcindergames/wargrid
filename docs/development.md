@@ -78,7 +78,7 @@ sh tools/run_shell_checks.sh   # ShellCheck on every tracked *.sh (shellcheck-py
 python3 tools/roadmap.py   # regenerate the README roadmap from docs/packages.md and docs/STATUS.md (--check only verifies)
 actionlint   # GitHub workflows, with shellcheck on run: blocks; needs: brew install actionlint shellcheck
 sh tools/check_public.sh   # no home paths, hostnames, LAN addresses, session ids or working files in tracked files (AGENTS.md, public repository rule)
-mkdir -p build && sh tools/run_benchmark.sh > build/bench.log 2>&1   # on a clean main it records itself in docs/reference/perf-history.csv (PERF_LABEL="…" forces a record on any branch, PERF_RECORD=0 disables); the status table in the ledger and README is regenerated after every passing run whose record step succeeds, unless PERF_RECORD=0
+mkdir -p build && sh tools/run_benchmark.sh > build/bench.log 2>&1   # on a clean main it records itself in docs/reference/perf-history.csv (PERF_LABEL="…" forces a record on any branch, PERF_RECORD=0 disables; PERF_REF=<rev> forces the pair step against <rev>; without it the reference is the merge base with main and the step is skipped when game/ is unchanged against it; the step takes about 3 min); the status table in the ledger and README is regenerated after every passing run whose record step succeeds, unless PERF_RECORD=0
 sh tools/run_team_match.sh   # three-faction 3v3 bots-only match on Ashfall, pinned cap line at tick 45000, about 2 min
 ```
 
