@@ -1215,3 +1215,27 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-19,3597713,Benchmark pair gate,dev,plumbing,combat_hordes300:profile,1,,,1.9272,P1,1.21,log sha256:13050d1a510e
 2026-11-19,3597713,Benchmark pair gate,dev,plumbing,team_match:profile,1,,,1.1167,P1,1.21,log sha256:13050d1a510e
 2026-11-19,3597713,Benchmark pair gate,dev,plumbing,team_match_pump:profile,1,,,1.1177,P1,1.21,log sha256:13050d1a510e
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,movement_tick,open,1,0.768,0.846,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,movement_tick,dense,1,0.883,1.811,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,open,1,1.896,2.251,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,dense,1,1.913,2.306,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,contact,1,1.196,1.559,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,skirmish3v3,1,1.343,1.453,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,transports,1,1.124,1.225,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,defences,1,0.774,2.126,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,docks,1,0.588,0.608,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,hordes300,1,2.921,3.411,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,ramp,1,0.669,1.218,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,combat_tick,frc,1,0.894,1.107,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,lockstep_overhead,contact,1,0.017,0.067,,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,movement_open:profile,1,,,1.2984,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,movement_dense:profile,1,,,1.2998,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,combat_contact:profile,1,,,0.3314,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5311,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,combat_open:profile,1,,,0.8938,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,skirmish_match:profile,1,,,0.2439,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,large_196:profile,1,,,1.7014,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,combat_dense:profile,1,,,0.7744,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,combat_hordes300:profile,1,,,1.9265,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,team_match:profile,1,,,1.1201,P1,1.21,log sha256:77bb564c20bb
+2026-11-19,9adcc65,Pair gate + B3 rematch after quit merge,dev,plumbing,team_match_pump:profile,1,,,1.122,P1,1.21,log sha256:77bb564c20bb
