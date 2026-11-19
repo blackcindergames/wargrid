@@ -11,6 +11,16 @@ const SimPump = preload("res://scripts/match/sim_pump.gd")
 # [window, logical]: what the match's stretch caps lay each window out at
 const HUD_SIZES: Array[Array] = [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)]]
 
+const HUD_PANELS: Array[String] = ["HUD/Status", "HUD/Economy", "HUD/Hud/TopStrip", "HUD/Hud/Forecast", "HUD/MenuChip", "HUD/Hud/Notice"]
+
+# The no-overlap lists: each shown HUD panel by path, sized as the layout tests always read them.
+static func hud_panels(main) -> Dictionary:
+	var rects: Dictionary = {}
+	for path: String in HUD_PANELS:
+		var control: Control = main.get_node(path)
+		if control.is_visible_in_tree(): rects[path] = Rect2(control.global_position, control.get_combined_minimum_size())
+	return rects
+
 static func sized_port(runner, window: Vector2i, logical: Vector2i) -> SubViewport:
 	var port := SubViewport.new()
 	port.size = window

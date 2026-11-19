@@ -4,6 +4,10 @@ signal menu_chosen(index: int)
 signal entry_cancelled(entry_id: int)
 signal produce_pressed()
 signal cancel_build_pressed()
+signal menu_pressed()
+
+# Wider notices wrap, so a long desync path grows down, clear of the chips at 1280.
+const NOTICE_WIDTH: float = 600.0
 
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -22,6 +26,10 @@ var _produce: Button
 var _cancel_build: Button
 var _top_strip: PanelContainer
 var _forecast: PanelContainer
+var _menu: Button
+var _notice: PanelContainer
+var _notice_text: Label
+var _esc: Label
 
 func _init() -> void:
 	name = "Hud"
@@ -31,6 +39,8 @@ func _init() -> void:
 	_forecast = _slab("Forecast", Vector2(8, 48))
 	_build_strip()
 	_build_forecast()
+	_build_menu_chip()
+	_build_notice()
 
 # Mouse-transparent until the HUD routing task decides what the panels catch.
 func _slab(slab_name: String, at: Vector2) -> PanelContainer:
@@ -69,12 +79,16 @@ func _groups(parent: Control, value: StringName) -> void:
 	_label(power, "Power", value)
 	_label(power, "LowPower", &"HudLabel", HudModel.LOW_POWER).add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 
-func _build_strip() -> void:
+# A one-line slab: no vertical padding, a fixed height that centres its line.
+func _flat(slab: PanelContainer, height: float) -> void:
 	var style := get_theme_stylebox("panel", &"HudSlab").duplicate() as StyleBoxFlat
 	style.content_margin_top = 0
 	style.content_margin_bottom = 0
-	_top_strip.add_theme_stylebox_override("panel", style)
-	_top_strip.custom_minimum_size.y = 32
+	slab.add_theme_stylebox_override("panel", style)
+	slab.custom_minimum_size.y = height
+
+func _build_strip() -> void:
+	_flat(_top_strip, 32)
 	_groups(_top_strip, &"HudNumber")
 	var swatch := ColorRect.new()
 	swatch.name = "Swatch"
@@ -89,6 +103,61 @@ func _build_forecast() -> void:
 	_label(box, "Title", &"HudLabel", "AFTER PURCHASE")
 	_groups(box, &"HudCredits")
 	_forecast.visible = false
+
+# A top-right chip that hugs its row of labels (hud-v5-layout "Menu chip, Team chip, playtest chip").
+static func chip(chip_name: String, top: float, parts: Array) -> Button:
+	var button := Button.new()
+	button.name = chip_name
+	button.theme_type_variation = &"HudChip"
+	button.focus_mode = FOCUS_NONE
+	button.custom_minimum_size.y = 32
+	button.set_anchors_preset(PRESET_TOP_RIGHT)
+	button.grow_horizontal = GROW_DIRECTION_BEGIN
+	button.offset_left = -8
+	button.offset_right = -8
+	button.offset_top = top
+	button.offset_bottom = top
+	var row: BoxContainer = _box(button, "Row", HBoxContainer.new(), 8)
+	row.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	row.offset_left = 8
+	row.offset_right = -8
+	row.minimum_size_changed.connect(func() -> void: button.custom_minimum_size.x = row.get_combined_minimum_size().x + 16)
+	for part: Array in parts: _label(row, part[0], part[1], part[2])
+	return button
+
+func _build_menu_chip() -> void:
+	_menu = chip("MenuChip", 8, [["Label", &"HudRow", "Menu"], ["EscChip", &"HudKey", "Esc"]])
+	add_child(_menu)
+	_esc = _menu.get_node("Row/EscChip")
+	_esc.custom_minimum_size = Vector2(18, 18)
+	_esc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_esc.size_flags_vertical = SIZE_SHRINK_CENTER
+	_menu.pressed.connect(menu_pressed.emit)
+
+func _build_notice() -> void:
+	_notice = _slab("Notice", Vector2.ZERO)
+	_flat(_notice, 28)
+	_notice.set_anchors_preset(PRESET_CENTER_TOP)
+	_notice.grow_horizontal = GROW_DIRECTION_BOTH
+	_notice.offset_top = 48
+	_notice.offset_bottom = 48
+	_notice_text = _label(_notice, "Text", &"HudRow")
+	_notice_text.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	_notice_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_notice.visible = false
+
+# A wrapping label has no width of its own: give it its text's width, capped.
+func _show_notice(text: String) -> void:
+	_notice.visible = not text.is_empty()
+	if _notice_text.text == text: return
+	_notice_text.text = text
+	var width: float = _notice_text.get_theme_font("font").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, _notice_text.get_theme_font_size("font_size")).x
+	var padding: float = _notice.get_theme_stylebox("panel").get_minimum_size().x
+	_notice_text.custom_minimum_size.x = minf(ceilf(width) + 1.0, NOTICE_WIDTH - padding)
+
+# Esc's first job is to back out of a selection, placement or form; the chip says so only when it opens the menu.
+func set_esc_chip(shown: bool) -> void:
+	_esc.visible = shown
 
 func setup(economy: VBoxContainer, status: Label) -> void:
 	_status = status
@@ -110,6 +179,8 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	var faction: String = HudModel.player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)
 	var kinds: Array = HudModel.menu_kinds(view, building, selection.ids, faction)
 	_show_strip(view, selection, view_player)
+	set_esc_chip(selection.esc_opens_menu)
+	_show_notice(selection.notice)
 	if _economy == null: menu_kinds = kinds
 	else: _economy_controls(building, selection, kinds)
 	if _status == null: return
@@ -156,7 +227,6 @@ func _status_text(view: Dictionary, selection: Dictionary, building: Dictionary)
 	var text: String = "%s | Place: %s\n1-9: menu  U: unload | Right: context/move | E: produce | Esc: cancel\n%s%s" % [detail, placing, resume, note]
 	text += "\n" + _selected_summary(view, selection.ids) + _enemy_summary(view, selection.inspected_id)
 	if not selection.over: text += "A: attack-move click | S: stop"
-	if not selection.notice.is_empty(): text += "\n" + selection.notice
 	return text
 
 func _refresh_menu(kinds: Array) -> void:

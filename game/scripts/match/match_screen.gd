@@ -79,6 +79,10 @@ func _ready() -> void:
 	$HUD.add_child(hud)
 	$HUD.move_child(hud, $HUD/Status.get_index() + 1)
 	hud.setup($HUD/Economy, $HUD/Status)
+	# Above the result card's dim and click catcher, so Menu stays live after the match, as the Playtest chip does.
+	var menu_chip: Control = hud.get_node("MenuChip")
+	menu_chip.reparent($HUD, false)
+	$HUD.move_child(menu_chip, _result_panel.get_index() + 1)
 	hud.menu_chosen.connect(orders._menu_choose.bind(false))
 	hud.entry_cancelled.connect(orders._cancel_entry)
 	hud.produce_pressed.connect(orders._produce_selected)
@@ -88,6 +92,7 @@ func _ready() -> void:
 	_pause = PauseMenu.new()
 	_pause.confirm_leave = driver.confirm_leave()
 	_pause.resume_requested.connect(_pause.close)
+	hud.menu_pressed.connect(_pause.open)
 	_pause.leave_requested.connect(_leave)
 	if not quit.is_valid(): quit = get_tree().quit
 	_pause.quit_requested.connect(func() -> void:
@@ -108,6 +113,7 @@ func _ready() -> void:
 	_create_world()
 	_clock = PresentationClock.new()
 	_reset_camera()
+	_add_playtest()
 	_refresh()
 	_view.set_visuals(_visuals)
 	_start_auto_pick(GraphicsSettings.load_quality() == -1 and DisplayServer.get_name() != "headless")
@@ -116,7 +122,6 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	music.play_match(rng, MusicPlayer.GAP_SECONDS)
-	_add_playtest()
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
 	driver.start()
 
@@ -135,6 +140,12 @@ func _add_playtest() -> void:
 	_pause.opened.connect(_playtest.observe_menu)
 	_pause.playtest_changed.connect(_playtest.set_active)
 	_playtest.set_active(PlaytestSettings.enabled())
+	_playtest.stack_changed.connect(_place_perf)
+	_perf.resized.connect(_place_perf)
+	_place_perf()
+
+func _place_perf() -> void:
+	_perf.place(_playtest.slot_for(_perf.size))
 
 func _reset_camera() -> void:
 	var size: Array = driver.current().view.map.size
@@ -215,6 +226,13 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_accept"): return
 	get_viewport().set_input_as_handled()
 
+func esc_opens_menu() -> bool:
+	return not _escape_pending() and not _playtest.holds_match() and not _typing() and not _pause.visible
+
+# Focus and the note form change without a new view, so the chip follows every frame.
+func _show_esc_chip() -> void:
+	hud.set_esc_chip(esc_opens_menu())
+
 func _typing() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
 	return focus is LineEdit or focus is TextEdit
@@ -256,6 +274,7 @@ func _present_if_due() -> bool:
 	return true
 
 func _process(delta: float) -> void:
+	_show_esc_chip()
 	var drained_at: int = Time.get_ticks_usec()
 	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
 	var presented_at: int = Time.get_ticks_usec()
@@ -325,6 +344,7 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	# The forecast card must never show over a result card or an ended online match.
 	if (shown_over() or driver.over()) and not orders._placement_kind.is_empty(): orders._clear_placement()
 	_shown_note = _note()
+	_playtest.set_floor(get_viewport().get_visible_rect().size.y)
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()
@@ -355,7 +375,7 @@ func _take_results(state: Dictionary) -> void:
 func _hud_selection(state: Dictionary) -> Dictionary:
 	var building: Dictionary = _building(state, orders.selected_building_id)
 	var production: String = _production_kind(building, state) if not building.is_empty() else ""
-	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": driver.notice(), "production_kind": production, "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty()}
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() else driver.notice(), "production_kind": production, "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty(), "esc_opens_menu": esc_opens_menu()}
 
 func _result(state: Dictionary) -> String:
 	var result: String = "" if state.match == null else _result_text(state.match)

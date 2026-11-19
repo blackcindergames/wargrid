@@ -59,10 +59,9 @@ func test_layout_clear_of_hud(runner) -> bool:
 		var rect: Rect2 = overlay.get_global_rect()
 		var viewport: Rect2 = main.get_viewport().get_visible_rect()
 		runner.check(viewport.size == Vector2(size) and viewport.encloses(rect), "PO3 overlay inside the %s viewport, got %s, rect %s" % [size, viewport.size, rect])
-		for path in ["HUD/Status", "HUD/Economy"]:
-			var other: Control = main.get_node(path)
-			var other_rect := Rect2(other.global_position, other.get_combined_minimum_size())
-			runner.check(not rect.intersects(other_rect), "PO3 overlay clear of %s at %s" % [path, size])
+		var hud: Dictionary = BaseScene.hud_panels(main)
+		runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip"), "PO3 the list holds the Menu chip and the strip at %s, got %s" % [size, hud.keys()])
+		for path: String in hud: runner.check(not rect.intersects(hud[path]), "PO3 overlay clear of %s at %s" % [path, size])
 		port.free()
 	return true
 

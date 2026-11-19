@@ -232,10 +232,9 @@ func test_menu_layout(runner) -> bool:
 		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size), "E8 the viewport really is %s, got %s" % [size, main.get_viewport().get_visible_rect().size])
 		var menu: Control = main.get_node("HUD/PauseMenu")
 		var buttons: Array = menu.find_children("*", "Button", true, false).filter(func(button: Button) -> bool: return button.is_visible_in_tree())
-		var hud: Array[Rect2] = []
-		for path in ["HUD/Status", "HUD/Economy"]:
-			var control: Control = main.get_node(path)
-			hud.append(Rect2(control.global_position, control.get_combined_minimum_size()))
+		var panels: Dictionary = BaseScene.hud_panels(main)
+		runner.check(panels.has("HUD/MenuChip") and panels.has("HUD/Hud/TopStrip"), "E8 the list holds the Menu chip and the strip at %s, got %s" % [size, panels.keys()])
+		var hud: Array = panels.values()
 		var quality: Button = menu.find_child("Quality", true, false)
 		runner.check(quality != null and quality.is_visible_in_tree() and buttons.has(quality), "E8 quality toggle is visible")
 		var neon: Button = menu.find_child("Neon", true, false)

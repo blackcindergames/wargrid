@@ -1,6 +1,8 @@
 extends Control
 
+signal stack_changed
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
+const Hud = preload("res://scripts/match/hud.gd")
 const MarkerCapture = preload("res://scripts/playtest/marker_capture.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const SessionForm = preload("res://scripts/playtest/session_form.gd")
@@ -9,7 +11,10 @@ const MARKER_KEY: Key = KEY_N
 const CHECKLIST_WIDTH: float = 320.0
 const PANEL_SHARE: float = 0.6
 const DIALOG_WIDTH: float = 360.0
-const MARGIN: float = 16.0
+const EDGE: float = 8.0
+const CHIP_TOP: float = 48.0
+const STACK_TOP: float = 88.0
+const MENU_BOTTOM: float = 40.0
 var image_source: Callable = _viewport_image
 var web: bool = OS.has_feature("web")
 var download: Callable = JavaScriptBridge.download_buffer
@@ -19,6 +24,8 @@ var _context: Callable
 var _header: Callable
 var _active: bool = false
 var _session: PlaytestSession
+var _chip: Button
+var _count: Label
 var _checklist: PanelContainer
 var _scroll: ScrollContainer
 var _rows: VBoxContainer
@@ -32,6 +39,7 @@ var _kinds: Dictionary = {}
 var _kind: String = ""
 var _captured: Dictionary = {}
 var _jpg: String = ""
+var _floor: float = INF
 
 func setup(card: Dictionary, context: Callable, record: Callable, header: Callable) -> void:
 	_card = card
@@ -41,8 +49,12 @@ func setup(card: Dictionary, context: Callable, record: Callable, header: Callab
 	name = "Playtest"
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build_chip()
 	_build_checklist()
 	_build_dialog()
+	for surface: Control in [_chip, _checklist, _dialog]: surface.visibility_changed.connect(_place)
+	# `Saved` appearing grows the checklist without touching its rows.
+	_checklist.minimum_size_changed.connect(_place)
 
 func _ready() -> void:
 	get_viewport().size_changed.connect(_fit)
@@ -51,6 +63,7 @@ func _ready() -> void:
 func set_active(on: bool) -> void:
 	if on == _active: return
 	_active = on
+	_chip.visible = on
 	if not on:
 		_checklist.hide()
 		cancel_marker()
@@ -142,12 +155,15 @@ func _input(event: InputEvent) -> void:
 	elif _typed_field() != null:
 		if key != KEY_ESCAPE: return
 		get_viewport().gui_release_focus()
-	elif key == CHECKLIST_KEY: _checklist.visible = not _checklist.visible
+	elif key == CHECKLIST_KEY: toggle_checklist()
 	elif key == MARKER_KEY: open_marker()
 	else:
 		_tick_triggers(func(trigger: String) -> bool: return trigger.begins_with("key:") and OS.find_keycode_from_string(trigger.substr(4)) == key)
 		return
 	get_viewport().set_input_as_handled()
+
+func toggle_checklist() -> void:
+	_checklist.visible = not _checklist.visible
 
 func _typed_field() -> LineEdit:
 	var focus: Control = get_viewport().gui_get_focus_owner()
@@ -163,9 +179,10 @@ func _tick_triggers(matches: Callable) -> void:
 		if item.has("trigger") and not checked(id) and matches.call(item.trigger):
 			_boxes[id].set_pressed_no_signal(true)
 			_session.set_checked(id, true, false)
+	_show_count()
 
 func _build_checklist() -> void:
-	_checklist = _corner_panel("Checklist", CHECKLIST_WIDTH, 1.0)
+	_checklist = _corner_panel("Checklist", CHECKLIST_WIDTH)
 	var box := VBoxContainer.new()
 	_checklist.add_child(box)
 	_scroll = ScrollContainer.new()
@@ -184,6 +201,17 @@ func _build_checklist() -> void:
 	_rebuild()
 	_checklist.hide()
 
+func _build_chip() -> void:
+	_chip = Hud.chip("Chip", CHIP_TOP, [["Label", &"HudLabel", "PLAYTEST"], ["Count", &"HudNumber", ""]])
+	_chip.pressed.connect(toggle_checklist)
+	_count = _chip.get_node("Row/Count")
+	add_child(_chip)
+	_chip.hide()
+
+func _show_count() -> void:
+	var items: Array = _card.get("try", [])
+	_count.text = "%d / %d" % [items.filter(func(item: Dictionary) -> bool: return checked(item.id)).size(), items.size()]
+
 func _rebuild() -> void:
 	var typed: LineEdit = _typed_field() if is_inside_tree() else null
 	var typed_name: String = typed.name if typed != null else ""
@@ -192,6 +220,7 @@ func _rebuild() -> void:
 		_rows.remove_child(child)
 		child.queue_free()
 	_boxes.clear()
+	_show_count()
 	SessionForm.add_label(_rows, "%s  (%s)" % [_card.get("title", ""), _key_label(CHECKLIST_KEY)]).name = "Title"
 	for item: Dictionary in _card.get("try", []):
 		var check := CheckBox.new()
@@ -201,7 +230,9 @@ func _rebuild() -> void:
 		check.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		check.focus_mode = Control.FOCUS_NONE
 		check.set_pressed_no_signal(checked(item.id))
-		check.toggled.connect(func(on: bool) -> void: _session.set_checked(item.id, on, true))
+		check.toggled.connect(func(on: bool) -> void:
+			_session.set_checked(item.id, on, true)
+			_show_count())
 		_rows.add_child(check)
 		_boxes[item.id] = check
 	if _session == null: return
@@ -239,10 +270,54 @@ func _show_saved() -> void:
 func _fit() -> void:
 	if not is_inside_tree(): return
 	var spare: float = _checklist.get_theme_stylebox("panel").get_minimum_size().y + _saved.get_combined_minimum_size().y + _scroll.get_parent().get_theme_constant("separation")
-	_scroll.custom_minimum_size.y = minf(_rows.get_combined_minimum_size().y, PANEL_SHARE * get_viewport_rect().size.y - spare)
+	var room: float = minf(PANEL_SHARE * get_viewport_rect().size.y, _bottom() - STACK_TOP)
+	_scroll.custom_minimum_size.y = minf(_rows.get_combined_minimum_size().y, room - spare)
+	_place()
+
+# The slab's top, handed in by the screen so the overlay reads no HUD node.
+func set_floor(y: float) -> void:
+	if y == _floor: return
+	_floor = y
+	_fit()
+
+# The lowest y a right-edge surface may reach: the floor minus its gap, never past the view.
+func _bottom() -> float:
+	return minf(_floor, get_viewport_rect().size.y) - EDGE
+
+# The note form drops below the checklist when it fits above the floor, else opens left of it.
+func _place() -> void:
+	if not is_inside_tree(): return
+	var below: float = _rect(_checklist).end.y + EDGE
+	var beside: bool = _checklist.visible and below + _dialog.get_combined_minimum_size().y > _bottom()
+	_dialog.offset_top = STACK_TOP if beside or not _checklist.visible else below
+	_dialog.offset_bottom = _dialog.offset_top
+	_dialog.offset_right = -EDGE - (CHECKLIST_WIDTH + EDGE if beside else 0.0)
+	_dialog.offset_left = _dialog.offset_right
+	stack_changed.emit()
+
+# From offsets and minimum size: a container's own size catches up only on the next frame.
+func _rect(surface: Control) -> Rect2:
+	var extent: Vector2 = surface.get_combined_minimum_size()
+	return Rect2(Vector2(get_viewport_rect().size.x + surface.offset_right - extent.x, surface.offset_top), extent)
+
+func stack_bottom() -> float:
+	var bottom: float = MENU_BOTTOM
+	for surface: Control in [_chip, _checklist, _dialog]:
+		if surface.visible: bottom = maxf(bottom, _rect(surface).end.y)
+	return bottom
+
+# Top-left for a right-edge surface such as F3: below the stack, else beside the helper's panels.
+func slot_for(extent: Vector2) -> Vector2:
+	var right: float = get_viewport_rect().size.x - EDGE
+	var top: float = stack_bottom() + EDGE
+	if top + extent.y <= _bottom() or not _dialog.visible and not _checklist.visible: return Vector2(right - extent.x, top)
+	var form: Rect2 = _rect(_dialog)
+	if _checklist.visible and _dialog.visible and form.end.x < _rect(_checklist).position.x: return Vector2(form.end.x - extent.x, form.end.y + EDGE)
+	var left: float = _rect(_checklist if _checklist.visible else _dialog).position.x
+	return Vector2(left - EDGE - extent.x, STACK_TOP)
 
 func _build_dialog() -> void:
-	_dialog = _corner_panel("MarkerDialog", DIALOG_WIDTH, 0.5)
+	_dialog = _corner_panel("MarkerDialog", DIALOG_WIDTH)
 	var box := VBoxContainer.new()
 	_dialog.add_child(box)
 	var kinds := HBoxContainer.new()
@@ -274,20 +349,17 @@ func _choose_kind(kind: String) -> void:
 	for id: String in _kinds: _kinds[id].set_pressed_no_signal(id == kind)
 	_save.disabled = kind.is_empty()
 
-# Both panels sit on the bottom edge and grow upward; `anchor_x` 1.0 is the right corner, 0.5 the centre.
-func _corner_panel(panel_name: String, width: float, anchor_x: float) -> PanelContainer:
+# Anchored top right, growing left and down; `_place` moves the note form.
+func _corner_panel(panel_name: String, width: float) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.theme_type_variation = &"HudSmallPanel"
 	panel.name = panel_name
-	panel.anchor_left = anchor_x
-	panel.anchor_right = anchor_x
-	panel.anchor_top = 1.0
-	panel.anchor_bottom = 1.0
-	var right: float = -MARGIN if anchor_x == 1.0 else width / 2.0
-	panel.offset_left = right - width
-	panel.offset_right = right
-	panel.offset_top = -MARGIN
-	panel.offset_bottom = -MARGIN
-	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.custom_minimum_size.x = width
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.offset_left = -EDGE
+	panel.offset_right = -EDGE
+	panel.offset_top = STACK_TOP
+	panel.offset_bottom = STACK_TOP
 	add_child(panel)
 	return panel

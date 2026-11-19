@@ -12,6 +12,7 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Hud = preload("res://scripts/match/hud.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
 const SkirmishTests = preload("res://tests/test_skirmish_scene.gd")
+const OnlineTests = preload("res://tests/test_online_scene.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const LOW: String = "LOW POWER · DEFENCES OFF"
 const MINUS: String = "\u2212"
@@ -22,7 +23,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes]
 
 # The match scene's economy column: the screen adds BuildMenu, skirmish.tscn the rest.
 static func _economy() -> VBoxContainer:
@@ -46,7 +47,7 @@ func test_hud_reads_only_its_input(runner) -> bool:
 	parent.add_child(economy)
 	hud.setup(economy, status)
 	var ids: Array[int] = [1]
-	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false}
+	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false, "esc_opens_menu": true}
 	hud.update_hud(Fixture.make_world().view_state(), selection, 1, 1)
 	runner.check(hud.name == "Hud" and hud.mouse_filter == Control.MOUSE_FILTER_IGNORE and hud.anchor_right == 1.0 and hud.anchor_bottom == 1.0, "HN1 the Hud is a full-rect node that ignores the mouse")
 	runner.check(_part(hud, "TopStrip", "Credits").text == "10000" and status.text.contains(Registry.kind("usa_builder").display_name + " #1"), "HN1 the strip and the Status fixture fill from the view and the selection alone, got '%s'" % status.text)
@@ -295,9 +296,9 @@ static func _strip_view(credits: int, used: int, available: int, faction: String
 	view.players[0].merge({"power_demand": used, "power_supply": available, "faction": faction}, true)
 	return view
 
-static func _armed(kind: String, bright: bool = false) -> Dictionary:
+static func _armed(kind: String, bright: bool = false, notice: String = "") -> Dictionary:
 	var ids: Array[int] = []
-	return {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": kind, "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": bright, "over": false}
+	return {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": kind, "resume_id": -1, "notice": notice, "production_kind": "", "bright_owners": bright, "over": false, "esc_opens_menu": true}
 
 func _bare_hud(runner) -> Hud:
 	var port := SubViewport.new()
@@ -453,4 +454,293 @@ func test_strip_patches_values(runner) -> bool:
 	await _show(runner, hud, _strip_view(1500, 12, 10), "china_defence")
 	runner.check(changes[0] == 0, "TS5 an unchanged update touches no label theme, got %d theme changes" % changes[0])
 	hud.get_parent().free()
+	return true
+
+static func _longest_card() -> Dictionary:
+	var longest: Dictionary = {}
+	for card: Dictionary in FocusCards.load_cards():
+		if JSON.stringify(card).length() > JSON.stringify(longest).length(): longest = card
+	return longest
+
+static func _frames(runner) -> void:
+	for i in 3: await runner.process_frame
+
+static func _rect(main, path: String) -> Rect2:
+	return main.get_node(path).get_global_rect()
+
+static func _right_edge(runner, rect: Rect2, right: float, top: float, label: String) -> void:
+	runner.check(is_equal_approx(rect.end.x, right) and is_equal_approx(rect.position.y, top), "%s: right edge %.1f, top %.1f, got %s" % [label, right, top, rect])
+
+# F3 against every open helper surface and the slab top minus 8 (gate A, user 2026-11-19).
+static func _f3_clear(runner, main, view: Rect2, floor_y: float, label: String) -> void:
+	var f3: Rect2 = _rect(main, "HUD/PerfOverlay")
+	runner.check(view.encloses(f3) and f3.end.y <= floor_y - 8.0, "CH1 %s: F3 inside the view and above the slab top minus 8 (%.0f), got %s" % [label, floor_y - 8.0, f3])
+	for path: String in ["HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog"]:
+		if main.get_node(path).visible: runner.check(not f3.intersects(_rect(main, path)), "CH1 %s: F3 clear of %s, F3 %s, panel %s" % [label, path.get_file(), f3, _rect(main, path)])
+
+func test_chip_stack(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin(true, _longest_card().id)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var right: float = size.x - 8.0
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await overlays._scene(runner, Skirmish, port)
+		overlays._camera(main)
+		var overlay = main.get_node("HUD/Playtest")
+		var chip: Button = overlay.get_node("Chip")
+		main.get_node("HUD/PerfOverlay").toggle()
+		await _frames(runner)
+		var at: String = " at %s" % size
+		var menu: Rect2 = _rect(main, "HUD/MenuChip")
+		_right_edge(runner, menu, right, 8.0, "CH1 Menu" + at)
+		runner.check(menu.size.y == 32.0 and chip.visible and chip.get_global_rect().size.y == 32.0, "CH1 Menu and Playtest are 32 high%s, got %s and %s" % [at, menu, chip.get_global_rect()])
+		_right_edge(runner, chip.get_global_rect(), right, 48.0, "CH1 Playtest" + at)
+		runner.check(chip.find_child("Label", true, false).text == "PLAYTEST" and chip.find_child("Count", true, false).text == "0 / %d" % _longest_card().try.size(), "CH1 the chip reads PLAYTEST and ticked over total%s" % at)
+		var checklist: Rect2 = _rect(main, "HUD/Playtest/Checklist")
+		runner.check(overlay.get_node("Checklist").visible, "CH1 the helper opens the checklist at the start%s" % at)
+		_right_edge(runner, checklist, right, 88.0, "CH1 checklist" + at)
+		_right_edge(runner, _rect(main, "HUD/PerfOverlay"), right, checklist.end.y + 8.0, "CH1 F3 below the checklist" + at)
+		chip.pressed.emit()
+		await _frames(runner)
+		runner.check(not overlay.get_node("Checklist").visible, "CH1 a press on the chip closes the checklist%s" % at)
+		_right_edge(runner, _rect(main, "HUD/PerfOverlay"), right, 88.0, "CH1 F3 with nothing open" + at)
+		chip.pressed.emit()
+		await _frames(runner)
+		runner.check(overlay.get_node("Checklist").visible, "CH1 a second press opens it again%s" % at)
+		overlay.open_marker()
+		await _frames(runner)
+		var form: Rect2 = _rect(main, "HUD/Playtest/MarkerDialog")
+		runner.check(overlay.get_node("MarkerDialog").visible and not form.intersects(checklist) and view.encloses(form), "CH1 checklist and note form both shown, disjoint, the form inside the view%s, form %s checklist %s" % [at, form, checklist])
+		_right_edge(runner, form, right, checklist.end.y + 8.0, "CH1 the form below the checklist" + at)
+		_right_edge(runner, _rect(main, "HUD/PerfOverlay"), right, form.end.y + 8.0, "CH1 F3 below the form" + at)
+		_f3_clear(runner, main, view, size.y, "no slab" + at)
+		overlay.cancel_marker()
+		for slab: Array in [[204, "China builder"], [282, "nine queued, collapsed"], [462, "nine queued, open"]]:
+			await _f3_rule(runner, main, view, size.y - slab[0], slab[1] + at)
+		overlay.set_floor(size.y)
+		overlay.set_active(false)
+		await _frames(runner)
+		runner.check(not chip.visible and not overlay.get_node("Checklist").visible, "CH1 helper off: no chip, no checklist%s" % at)
+		_right_edge(runner, _rect(main, "HUD/PerfOverlay"), right, 48.0, "CH1 helper off: F3 under Menu" + at)
+		port.free()
+	overlays._end(saved)
+	return true
+
+# The stack does not fit above these slab tops, so F3 and the form go beside the panels.
+func _f3_rule(runner, main, view: Rect2, floor_y: float, label: String) -> void:
+	var overlay = main.get_node("HUD/Playtest")
+	overlay.set_floor(floor_y)
+	await _frames(runner)
+	var checklist: Rect2 = _rect(main, "HUD/Playtest/Checklist")
+	runner.check(checklist.end.y <= floor_y - 8.0 and checklist.position.y == 88.0, "CH1 %s: the checklist stops 8 above the slab top %.0f, got %s" % [label, floor_y, checklist])
+	_right_edge(runner, _rect(main, "HUD/PerfOverlay"), checklist.position.x - 8.0, 88.0, "CH1 %s: F3 left of the checklist" % label)
+	_f3_clear(runner, main, view, floor_y, label)
+	overlay.open_marker()
+	await _frames(runner)
+	var form: Rect2 = _rect(main, "HUD/Playtest/MarkerDialog")
+	_right_edge(runner, form, checklist.position.x - 8.0, 88.0, "CH1 %s: the form left of the checklist" % label)
+	_right_edge(runner, _rect(main, "HUD/PerfOverlay"), form.end.x, form.end.y + 8.0, "CH1 %s: F3 under the form" % label)
+	_f3_clear(runner, main, view, floor_y, label + ", form left")
+	overlay.toggle_checklist()
+	await _frames(runner)
+	form = _rect(main, "HUD/Playtest/MarkerDialog")
+	var f3: Rect2 = _rect(main, "HUD/PerfOverlay")
+	_right_edge(runner, form, view.size.x - 8.0, 88.0, "CH1 %s, checklist closed: the form under the chip" % label)
+	if form.end.y + 8.0 + f3.size.y <= floor_y - 8.0: _right_edge(runner, f3, view.size.x - 8.0, form.end.y + 8.0, "CH1 %s, checklist closed: F3 below the form" % label)
+	_f3_clear(runner, main, view, floor_y, label + ", checklist closed, form open")
+	overlay.set_floor(form.end.y + 8.0 + f3.size.y + 7.0)
+	await _frames(runner)
+	_right_edge(runner, _rect(main, "HUD/PerfOverlay"), form.position.x - 8.0, 88.0, "CH1 %s, checklist closed: F3 left of the form when it does not fit below" % label)
+	_f3_clear(runner, main, view, form.end.y + 8.0 + f3.size.y + 7.0, label + ", F3 left of the form")
+	overlay.set_floor(form.end.y + f3.size.y + 16.0)
+	await _frames(runner)
+	_right_edge(runner, _rect(main, "HUD/PerfOverlay"), view.size.x - 8.0, form.end.y + 8.0, "CH1 %s, checklist closed: F3 below the form when it just fits" % label)
+	overlay.set_floor(floor_y)
+	overlay.cancel_marker()
+	await _frames(runner)
+	_right_edge(runner, _rect(main, "HUD/PerfOverlay"), view.size.x - 8.0, 88.0, "CH1 %s, nothing open: F3 under the chip" % label)
+	overlay.toggle_checklist()
+	await _frames(runner)
+
+# `frame`: a real frame runs the screen's `_process`, which keeps the chip current between views.
+func _esc_matches_chip(runner, main, label: String, shown: bool, frame: bool = false) -> void:
+	if frame:
+		main.set_process(true)
+		await runner.process_frame
+		main.set_process(false)
+	else: main._show_esc_chip()
+	var esc: Control = main.get_node("HUD/MenuChip").find_child("EscChip", true, false)
+	var promised: bool = esc.visible
+	runner.check(promised == shown, "CH2 %s: the Esc chip %s" % [label, "shows" if shown else "hides"])
+	OverlayTests.new()._key(runner, KEY_ESCAPE)
+	var pause: Control = main.get_node("HUD/PauseMenu")
+	runner.check(pause.visible == promised, "CH2 %s: Esc %s the menu, as the chip said" % [label, "opened" if pause.visible else "did not open"])
+	if pause.visible: pause.close()
+	main._show_esc_chip()
+
+func test_esc_chip_only_when_esc_opens_the_menu(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var helper = BaseScene.new()
+	var saved: String = overlays._begin(true, _longest_card().id)
+	var main = await overlays._scene(runner, Skirmish)
+	overlays._camera(main)
+	var own: int = overlays._own_unit(main)
+	var enemy: int = main.driver.pump.live().snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 2)[0].id
+	await _esc_matches_chip(runner, main, "nothing pending", true)
+	main.orders.selected_ids.assign([own])
+	main._refresh()
+	await _esc_matches_chip(runner, main, "a selection", false)
+	await _esc_matches_chip(runner, main, "after Esc backed out of the selection", true)
+	main.orders._placement_kind = "usa_power_plant"
+	main._refresh()
+	await _esc_matches_chip(runner, main, "an armed placement", false)
+	main.orders.inspected_id = enemy
+	main._refresh()
+	await _esc_matches_chip(runner, main, "an inspected enemy", false)
+	helper.pointer(main, Vector2.ZERO, MOUSE_BUTTON_LEFT, true)
+	await _esc_matches_chip(runner, main, "a drag", false)
+	main.get_node("HUD/Playtest").open_marker()
+	await _esc_matches_chip(runner, main, "the note form open, after a frame", false, true)
+	await _frames(runner)
+	var field: LineEdit = main.get_node("HUD/Playtest/Checklist").find_children("*", "LineEdit", true, false)[0]
+	runner.check(field.is_visible_in_tree(), "CH2 fixture: the checklist and its field are shown")
+	field.grab_focus()
+	await _esc_matches_chip(runner, main, "focus in a checklist field, after a frame", false, true)
+	await _esc_matches_chip(runner, main, "the field let go", true)
+	main.orders.selected_ids.assign([own])
+	overlays._end_offline(main)
+	main.get_viewport().gui_release_focus()
+	await _esc_matches_chip(runner, main, "the match ended with a selection held", true)
+	main.free()
+	overlays._end(saved)
+	return true
+
+static func _click(runner, at: Vector2) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = pressed
+		event.position = at
+		event.global_position = at
+		runner.root.push_input(event)
+
+func test_menu_chip_opens_the_menu(runner) -> bool:
+	var skirmish = SkirmishTests.new()
+	var main = await skirmish._setup(runner)
+	skirmish._arena(main)
+	var chip: Button = main.get_node("HUD/MenuChip")
+	var pause: Control = main.get_node("HUD/PauseMenu")
+	runner.check(chip.theme_type_variation == &"HudChip" and chip.focus_mode == Control.FOCUS_NONE and chip.find_child("Label", true, false).text == "Menu", "CH3 Menu is a HudChip that takes no focus")
+	_click(runner, chip.get_global_rect().get_center())
+	runner.check(pause.visible, "CH3 a click on Menu opens the pause menu")
+	pause.close()
+	skirmish._victory(main)
+	await runner.process_frame
+	runner.check(main.shown_over() and main.get_node("HUD/ResultPanel").visible, "CH3 fixture: the Victory card is up")
+	_click(runner, chip.get_global_rect().get_center())
+	runner.check(pause.visible, "CH3 a click on Menu over the Victory card opens the pause menu")
+	main.free()
+	return true
+
+# A notice wider than the cap wraps, so it grows down instead of across the chips.
+func _notice_clear(runner, main, label: String, others: Array, lines: int = 1) -> Rect2:
+	var notice: Rect2 = _rect(main, "HUD/Hud/Notice")
+	var view: Rect2 = main.get_viewport().get_visible_rect()
+	var text: Rect2 = _rect(main, "HUD/Hud/Notice/Text")
+	runner.check(absf(notice.get_center().x - view.size.x / 2.0) <= 1.0 and notice.position.y == 48.0 and view.encloses(notice) and notice.size.x <= 600.0 and notice.encloses(text), "CH4 %s: the notice is centred at top 48, at most 600 wide, its text inside, got %s" % [label, notice])
+	var one_line: bool = notice.size.y == 28.0
+	runner.check(one_line == (lines == 1) and (main.get_node("HUD/Hud/Notice/Text") as Label).get_line_count() == lines, "CH4 %s: %d line(s), 28 high for one, got %s" % [label, lines, notice])
+	for path: String in others:
+		var node: Control = main.get_node(path)
+		runner.check(node.is_visible_in_tree() and not notice.intersects(node.get_global_rect()), "CH4 %s: the notice clears %s, notice %s, other %s" % [label, path.get_file(), notice, node.get_global_rect()])
+	return notice
+
+func test_online_notice_top_centre(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var online = OnlineTests.new()
+	var saved: String = overlays._begin()
+	var bare: Hud = _bare_hud(runner)
+	await _show(runner, bare, _strip_view(4800, 8, 10))
+	var quiet: Control = bare.get_node("Notice")
+	runner.check(not quiet.visible and quiet.mouse_filter == Control.MOUSE_FILTER_IGNORE and quiet.get_node("Text").mouse_filter == Control.MOUSE_FILTER_IGNORE, "CH4 no notice: hidden, and it never catches the mouse")
+	bare.get_parent().free()
+	var waiting: Dictionary = await online._online(runner, 2)
+	var main = waiting.main
+	main.orders._placement_kind = "usa_power_plant"
+	online._run(main, 12)
+	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)
+	runner.check(main.driver.notice() == "Waiting for player 1" and label.is_visible_in_tree() and label.text == "Waiting for player 1" and _colour(label) == _token("muted"), "CH4 the waiting notice shows in muted, got '%s'" % label.text)
+	runner.check(main.get_node("HUD/Hud/Forecast").visible and main.orders.busy(), "CH4 fixture: a building armed while the notice shows")
+	runner.check(not main.get_node("HUD/Status").text.contains("Waiting") and BaseScene.hud_text(main).contains("Waiting for player 1"), "CH4 the notice left HUD/Status")
+	var chips: Array = ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip"]
+	for strip: Array in [[8, "the longest card"], [12, "low power in the strip"]]:
+		main.hud.update_hud(_strip_view(500, strip[0], 10), _armed("china_defence", false, main.driver.notice()), 1, 1)
+		await _frames(runner)
+		_notice_clear(runner, main, strip[1], chips + ["HUD/Hud/Forecast"])
+	runner.check(_part(main.hud, "Forecast", "Credits").text == MINUS + "700" and _part(main.hud, "TopStrip", "LowPower").is_visible_in_tree(), "CH4 fixture: the card's longest form and the strip's low power")
+	main.free()
+	await _ended_notice(runner, online, 1, func(lockstep, _transport) -> void: lockstep.receive('{"type":"left","seat":2,"after_tick":3}'), "Opponent left before the start (a different map or version, or their game tab was hidden)")
+	await _ended_notice(runner, online, 2, func(_lockstep, transport) -> void: transport.frames.append(OnlineTests.Wire.encode(OnlineTests.Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"}))), "Desync", 2)
+	DirAccess.remove_absolute("user://desync/desync-seat2.json")
+	var closed: Dictionary = await online._online(runner, 2)
+	online._end_match(closed)
+	closed.transport.is_closed = true
+	online._run(closed.main, 2)
+	runner.check(closed.main.shown_over() and closed.main.driver.notice() == "Connection to relay lost", "CH4 fixture: a won match, then the relay is lost")
+	runner.check(not closed.main.get_node("HUD/Hud/Notice").visible and not BaseScene.hud_text(closed.main).contains("Connection to relay lost"), "CH4 under the result card the notice hides (the card says why)")
+	closed.main.free()
+	overlays._end(saved)
+	return true
+
+# The match ending clears an armed building, so an ended match's notice meets only the strip and the chips.
+func _ended_notice(runner, online, seat: int, end: Callable, words: String, lines: int = 1) -> void:
+	var ended: Dictionary = await online._online(runner, seat)
+	var main = ended.main
+	main.orders._placement_kind = "usa_power_plant"
+	end.call(ended.lockstep, ended.transport)
+	online._run(main, 12)
+	await _frames(runner)
+	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)
+	runner.check(main.driver.over() and label.is_visible_in_tree() and label.text.begins_with(words), "CH4 %s: the ended match shows its notice, got '%s'" % [words, label.text])
+	runner.check(not main.get_node("HUD/Hud/Forecast").visible and not main.orders.busy(), "CH4 %s: the ending cleared the armed building" % words)
+	runner.check(not main.get_node("HUD/Status").text.contains(words) and BaseScene.hud_text(main).contains(words), "CH4 %s: the notice left HUD/Status" % words)
+	_notice_clear(runner, main, words, ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip", "HUD/Playtest/Checklist"], lines)
+	main.free()
+
+func test_stack_follows_size_changes(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await overlays._scene(runner, Skirmish)
+	overlays._camera(main)
+	var overlay = main.get_node("HUD/Playtest")
+	var perf: Label = main.get_node("HUD/PerfOverlay")
+	var list: Control = overlay.get_node("Checklist")
+	perf.toggle()
+	overlay.open_marker()
+	await _frames(runner)
+	var before: Rect2 = list.get_global_rect()
+	runner.check(list.visible and not list.find_child("Saved", true, false).visible, "CH1 fixture: the checklist open, nothing saved yet")
+	(list.find_children("*", "CheckBox", true, false)[0] as CheckBox).button_pressed = true
+	await _frames(runner)
+	var grown: Rect2 = list.get_global_rect()
+	var form: Rect2 = _rect(main, "HUD/Playtest/MarkerDialog")
+	runner.check(list.find_child("Saved", true, false).visible and grown.size.y > before.size.y, "CH1 fixture: the first tick shows Saved and the checklist grows, %s to %s" % [before, grown])
+	_right_edge(runner, form, 1272.0, grown.end.y + 8.0, "CH1 the form follows the grown checklist")
+	_right_edge(runner, _rect(main, "HUD/PerfOverlay"), 1272.0, form.end.y + 8.0, "CH1 F3 follows the form")
+	overlay.cancel_marker()
+	await _frames(runner)
+	var f3: Rect2 = _rect(main, "HUD/PerfOverlay")
+	overlay.set_floor(grown.end.y + f3.size.y + 24.0)
+	await _frames(runner)
+	_right_edge(runner, _rect(main, "HUD/PerfOverlay"), 1272.0, grown.end.y + 8.0, "CH1 F3 just fits below the checklist")
+	perf.extra = func() -> String: return "Cmd latency p95 0 ms | RTT p95 0 ms"
+	perf.refresh_text()
+	await _frames(runner)
+	var taller: Rect2 = _rect(main, "HUD/PerfOverlay")
+	runner.check(taller.size.y > f3.size.y, "CH1 fixture: the net line makes F3 taller, %s to %s" % [f3, taller])
+	_right_edge(runner, taller, grown.position.x - 8.0, 88.0, "CH1 F3 grown past the floor moves beside the checklist")
+	main.free()
+	overlays._end(saved)
 	return true

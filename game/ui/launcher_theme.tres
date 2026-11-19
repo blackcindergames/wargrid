@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=56 format=3]
+[gd_resource type="Theme" load_steps=57 format=3]
 
 [ext_resource type="FontFile" path="res://fonts/PublicSans-Regular.ttf" id="font_regular"]
 [ext_resource type="FontFile" path="res://fonts/PublicSans-SemiBold.ttf" id="font_semibold"]
@@ -361,6 +361,11 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.18039216, 0.24705882, 0.29411765, 1)
 
+[sub_resource type="StyleBoxFlat" id="hud_key"]
+content_margin_left = 4.0
+content_margin_right = 4.0
+bg_color = Color(0.047058824, 0.078431373, 0.10196078, 1)
+
 [sub_resource type="StyleBoxFlat" id="hud_slab"]
 content_margin_left = 8.0
 content_margin_top = 8.0
@@ -628,6 +633,7 @@ HudKey/base_type = &"Label"
 HudKey/colors/font_color = Color(0.57647059, 0.64705882, 0.69019608, 1)
 HudKey/fonts/font = ExtResource("font_bold")
 HudKey/font_sizes/font_size = 12
+HudKey/styles/normal = SubResource("hud_key")
 HudButton/base_type = &"Button"
 HudButton/colors/font_color = Color(0.93333333, 0.95294118, 0.96078431, 1)
 HudButton/colors/font_focus_color = Color(0.93333333, 0.95294118, 0.96078431, 1)
