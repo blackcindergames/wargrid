@@ -9,9 +9,9 @@ const Fixture = preload("res://tests/economy_fixture.gd")
 func cases() -> Array[Callable]:
 	return [test_summary_math, test_f3_toggles_hidden_default, test_layout_clear_of_hud, test_step_and_counts_shown, test_skirmish_wired, test_split_share_shown, test_f3_toggles_during_placement]
 
-func _scene(runner, packed):
+func _scene(runner, packed, parent = null):
 	var main = packed.instantiate()
-	runner.root.add_child(main)
+	(parent if parent != null else runner.root).add_child(main)
 	main.set_physics_process(false)
 	main.set_process(false)
 	await runner.process_frame
@@ -48,19 +48,22 @@ func test_f3_toggles_hidden_default(runner) -> bool:
 	return true
 
 func test_layout_clear_of_hud(runner) -> bool:
-	var main = await _scene(runner, Skirmish)
-	main.get_node("HUD/PerfOverlay").set_counts(300, 12, 123456)
-	_f3(main)
-	await runner.process_frame
-	var overlay: Label = main.get_node("HUD/PerfOverlay")
-	var rect: Rect2 = overlay.get_global_rect()
-	var viewport: Rect2 = main.get_viewport().get_visible_rect()
-	runner.check(viewport.encloses(rect), "PO3 overlay inside the viewport")
-	for path in ["HUD/Status", "HUD/Economy"]:
-		var other: Control = main.get_node(path)
-		var other_rect := Rect2(other.global_position, other.get_combined_minimum_size())
-		runner.check(not rect.intersects(other_rect), "PO3 overlay clear of " + path)
-	main.free()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
+		var main = await _scene(runner, Skirmish, port)
+		main.get_node("HUD/PerfOverlay").set_counts(300, 12, 123456)
+		_f3(main)
+		await runner.process_frame
+		var overlay: Label = main.get_node("HUD/PerfOverlay")
+		var rect: Rect2 = overlay.get_global_rect()
+		var viewport: Rect2 = main.get_viewport().get_visible_rect()
+		runner.check(viewport.size == Vector2(size) and viewport.encloses(rect), "PO3 overlay inside the %s viewport, got %s, rect %s" % [size, viewport.size, rect])
+		for path in ["HUD/Status", "HUD/Economy"]:
+			var other: Control = main.get_node(path)
+			var other_rect := Rect2(other.global_position, other.get_combined_minimum_size())
+			runner.check(not rect.intersects(other_rect), "PO3 overlay clear of %s at %s" % [path, size])
+		port.free()
 	return true
 
 func test_step_and_counts_shown(runner) -> bool:

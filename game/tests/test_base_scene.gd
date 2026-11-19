@@ -8,6 +8,16 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+# [window, logical]: what the match's stretch caps lay each window out at
+const HUD_SIZES: Array[Array] = [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)]]
+
+static func sized_port(runner, window: Vector2i, logical: Vector2i) -> SubViewport:
+	var port := SubViewport.new()
+	port.size = window
+	port.size_2d_override = logical
+	port.size_2d_override_stretch = true
+	runner.root.add_child(port)
+	return port
 
 func cases() -> Array[Callable]:
 	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_red_answer_elsewhere_does_not_block,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]

@@ -179,10 +179,9 @@ func test_online_leave_cancel(runner) -> bool:
 	return true
 
 func test_online_leave_text_and_focus(runner) -> bool:
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var transport := FakeTransport.new()
 		var seats: Array[int] = [1, 2]
 		var lockstep = Lockstep.new(1, seats)
@@ -223,10 +222,9 @@ func test_quit_hidden_on_web(runner) -> bool:
 	return true
 
 func test_menu_layout(runner) -> bool:
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		_esc(main)
 		await runner.process_frame

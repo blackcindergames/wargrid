@@ -408,10 +408,9 @@ func _enter(code: Key) -> InputEventKey:
 
 func test_result_panel_layout(runner) -> bool:
 	var no_rows: Array[Dictionary] = []
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = Scene.instantiate()
 		port.add_child(main)
 		main.set_physics_process(false)

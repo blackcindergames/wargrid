@@ -121,12 +121,13 @@ func test_sidebar_switches_pages(runner) -> bool:
 
 func test_aspect_expand_and_restore(runner) -> bool:
 	var root: Window = runner.root.get_tree().root
-	runner.check(root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "L7 fixture: aspect starts on keep")
+	var base := [Vector2i(1280, 720), Window.CONTENT_SCALE_ASPECT_EXPAND]
+	runner.check([root.content_scale_size, root.content_scale_aspect] == base, "L7 fixture: the root starts on 1280x720 expand, got %s %d" % [root.content_scale_size, root.content_scale_aspect])
 	var launcher = Launcher.instantiate()
 	runner.root.add_child(launcher)
-	runner.check(root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_EXPAND, "L7 the launcher sets expand")
+	runner.check([root.content_scale_size, root.content_scale_aspect] == base, "L7 the launcher keeps 1280x720 expand")
 	launcher.free()
-	runner.check(root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "L7 leaving the tree restores keep")
+	runner.check([root.content_scale_size, root.content_scale_aspect] == base, "L7 leaving the tree keeps 1280x720 expand, got %s %d" % [root.content_scale_size, root.content_scale_aspect])
 	return true
 
 func _visible_controls(node: Node, found: Array[Control]) -> void:

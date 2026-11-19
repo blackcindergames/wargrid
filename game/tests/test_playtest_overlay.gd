@@ -302,10 +302,9 @@ func test_helper_off_changes_nothing(runner) -> bool:
 
 func test_overlay_layout(runner) -> bool:
 	var saved: String = _begin()
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		_camera(main)
 		main.orders.selected_ids.assign([_own_unit(main)])
@@ -711,12 +710,11 @@ func test_form_layout(runner) -> bool:
 	for card: Dictionary in FocusCards.load_cards():
 		if JSON.stringify(card).length() > JSON.stringify(longest).length(): longest = card
 	var saved: String = _begin(true, longest.id)
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
 		PlaytestSession.current = null
 		DirAccess.remove_absolute(sessions.path_join(PlaytestSession.CURRENT))
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		var overlay = main.get_node("HUD/Playtest")
 		_camera(main)

@@ -19,6 +19,7 @@ const MapData = preload("res://scripts/simulation/map_data.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const PEER_TICKS: int = 60
 const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
 
@@ -799,7 +800,11 @@ func _faction_row_controls(page: Control) -> Array[Control]:
 
 func test_launcher_faction_rows(runner) -> bool:
 	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+	var window: Window = runner.root
+	var saved := [window.size, window.content_scale_size, window.content_scale_aspect]
+	for row: Array in [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(1280, 720), Vector2i(3840, 1080)]]:
+		var size: Vector2i = row[0]
+		window.size = row[1]
 		var port := SubViewport.new()
 		port.size = size
 		runner.root.add_child(port)
@@ -846,13 +851,18 @@ func test_launcher_faction_rows(runner) -> bool:
 		launcher._transport = FakeTransport.new()
 		launcher._seat = 1
 		launcher._start(_start_message("dry_wells", 3))
-		runner.check(runner.root.get_tree().root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "N25 the match scene is added under keep, before any frame, at %s" % size)
+		var root: Window = runner.root.get_tree().root
+		var layout: Dictionary = ViewCaps.layout_for(root.size)
+		runner.check([root.content_scale_size, root.content_scale_aspect] == [layout.size, layout.aspect], "N25 the match scene is added under its caps for the %s window, before any frame, at %s, got %s %d" % [root.size, size, root.content_scale_size, root.content_scale_aspect])
 		var main = runner.root.get_tree().current_scene
 		runner.check(main.driver._own_faction == third, "N25 online match carries Own's faction at %s, got %s" % [size, main.driver._own_faction])
 		main.free()
 		await runner.process_frame
-		runner.check(runner.root.get_tree().root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "N25 a match start restores keep at %s" % size)
+		runner.check([root.content_scale_size, root.content_scale_aspect] == [ViewCaps.BASE, Window.CONTENT_SCALE_ASPECT_EXPAND], "N25 leaving the match writes 1280x720 expand at %s, got %s %d" % [size, root.content_scale_size, root.content_scale_aspect])
 		port.free()
+	window.size = saved[0]
+	window.content_scale_size = saved[1]
+	window.content_scale_aspect = saved[2]
 	SkirmishMain.factions = before[0]
 	SkirmishMain.map_path = before[1]
 	SkirmishMain.starts = before[2]

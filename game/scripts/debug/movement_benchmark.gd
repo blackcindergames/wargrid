@@ -15,6 +15,7 @@ const ASHFALL_FRAME_P95_MS: float = 3.3
 const DRAW_CALL_CEILINGS: Dictionary = {"open": 50, "dense": 50, "horde": 50, "ashfall": 60}
 const LAYOUTS: Array[String] = ["open", "dense", "ashfall", "horde"]
 const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.gd")
+const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 # `-- --profile` adds profiling zones and a third, 196x196 combat leg (spike-performance only).
 var _profile: bool = OS.get_cmdline_user_args().has("--profile")
 # `-- --sound` runs only the horde layout with a SoundPlayer and reports its cost.
@@ -59,7 +60,11 @@ var _horde_marked_ticks: int = 0
 @onready var _view: Node2D = $WorldView
 @onready var _status: Label = $HUD/Status
 
+func _exit_tree() -> void:
+	ViewCaps.release(get_tree().root)
+
 func _ready() -> void:
+	ViewCaps.apply(get_tree().root)
 	# Vsync would quantize frame intervals to display refresh and hide render cost.
 	if not _web: DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	var zoom: float = _zoom()

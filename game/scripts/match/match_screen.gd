@@ -24,6 +24,7 @@ const PlaytestOverlay = preload("res://scripts/playtest/playtest_overlay.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
@@ -111,8 +112,12 @@ func _ready() -> void:
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
 	driver.start()
 
+func _enter_tree() -> void:
+	ViewCaps.apply(get_tree().root)
+
 func _exit_tree() -> void:
 	driver.detach()
+	ViewCaps.release(get_tree().root)
 
 func _add_playtest() -> void:
 	_playtest = PlaytestOverlay.new()
