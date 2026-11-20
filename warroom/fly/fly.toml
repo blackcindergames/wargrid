@@ -1,4 +1,4 @@
-app = 'wargrid-lab-test'
+app = 'warroom'
 primary_region = 'fra'
 
 [env]
