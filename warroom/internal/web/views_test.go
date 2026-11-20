@@ -21,6 +21,14 @@ func newShippedApp(t *testing.T) *testApp {
 	return &testApp{Server: srv, h: srv.Routes(), picks: picks}
 }
 
+// newGateApp serves the retired P2.3a1 gate rounds, kept as fixtures for what the demos lack: earlier rounds, marks, pairs.
+func newGateApp(t *testing.T) *testApp {
+	t.Helper()
+	picks := filepath.Join(t.TempDir(), "picks.json")
+	srv := NewServer(&Config{Root: "../../..", Picks: picks, Rounds: "../../testdata/rounds"})
+	return &testApp{Server: srv, h: srv.Routes(), picks: picks}
+}
+
 func (a *testApp) fragment(method, target string, form url.Values) *httptest.ResponseRecorder {
 	var req *http.Request
 	if method == http.MethodPost {
@@ -79,7 +87,7 @@ func TestEveryShippedStepRendersWithItsQuestionOptionsAndEndpoints(t *testing.T)
 			t.Errorf("summary of %s = %d", id, rec.Code)
 		}
 	}
-	if steps < 20 {
+	if steps < 15 {
 		t.Fatalf("only %d steps rendered", steps)
 	}
 }
@@ -107,7 +115,7 @@ func TestHtmxGetsTheFragmentAndABrowserGetsTheDocument(t *testing.T) {
 }
 
 func TestPickRoundTripWritesTheGateKeyAndMovesOn(t *testing.T) {
-	a := newShippedApp(t)
+	a := newGateApp(t)
 	rec := a.post("/r/p2-3a1-gate-1/unload/pick", url.Values{"pick": {"B"}})
 	wantStatus(t, rec, http.StatusSeeOther)
 	if loc := rec.Header().Get("Location"); loc != "/r/p2-3a1-gate-1/2" {
@@ -236,9 +244,9 @@ func TestSummaryListsRowsOpenStepsAndClosesWhenDone(t *testing.T) {
 }
 
 func TestSummaryShowsEarlierRounds(t *testing.T) {
-	a := newShippedApp(t)
+	a := newGateApp(t)
 	wantStatus(t, a.post("/r/p2-3a1-gate-1/unload/pick", url.Values{"pick": {"A"}}), 303)
-	if c := rounds.LoadCatalog("../../rounds"); len(c.Rounds["p2-3a1-gate-2"].Earlier) == 0 {
+	if c := rounds.LoadCatalog("../../testdata/rounds"); len(c.Rounds["p2-3a1-gate-2"].Earlier) == 0 {
 		t.Skip("the second gate round lists no earlier round")
 	}
 	body := a.get("/r/p2-3a1-gate-2/summary").Body.String()
@@ -353,7 +361,7 @@ func TestUnreadablePicksShowABannerNotAnEmptyPage(t *testing.T) {
 }
 
 func TestPhoneCropAppliesWithThePhoneFlag(t *testing.T) {
-	a := newShippedApp(t)
+	a := newGateApp(t)
 	desktop := a.get("/r/p2-3a1-gate-2/1").Body.String()
 	phone := a.get("/r/p2-3a1-gate-2/1?phone=1").Body.String()
 	if desktop == phone || !strings.Contains(phone, "phone=1") {
@@ -393,7 +401,7 @@ func TestQueryKeepsOnlyKnownControlsAndCarriesThem(t *testing.T) {
 }
 
 func TestGalleryChipKeyIsOnItsFormAndItemNotes(t *testing.T) {
-	a := newShippedApp(t)
+	a := newGateApp(t)
 	body := a.get("/r/p2-3a1-gate-1/4").Body.String()
 	mustContain(t, "gallery", body, `data-step="verdict" hidden`, `data-note="look:`, `data-chip="verdict"`)
 	if n := strings.Count(body, `data-step="verdict"`); n != 2 {

@@ -31,6 +31,8 @@ type testApp struct {
 	*Server
 	h     http.Handler
 	picks string
+	// cookie, when set, rides every request as the gate cookie.
+	cookie string
 }
 
 func newApp(t *testing.T) *testApp { return newAppWith(t, fixtureRounds) }
@@ -76,6 +78,9 @@ func (a *testApp) do(method, target string, body io.Reader, contentType string) 
 	req := httptest.NewRequest(method, target, body)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
+	}
+	if a.cookie != "" {
+		req.Header.Set("Cookie", cookieName+"="+a.cookie)
 	}
 	rec := httptest.NewRecorder()
 	a.h.ServeHTTP(rec, req)

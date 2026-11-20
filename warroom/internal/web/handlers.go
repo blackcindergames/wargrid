@@ -35,8 +35,10 @@ type Config struct {
 	Root   string
 	Picks  string
 	Rounds string
-	// Secret signs the write tokens; empty leaves writes and read-back open, for local use.
+	// Secret signs the tokens; empty leaves every route, writes and read-back open, for local use.
 	Secret string
+	// Viewers are the friends whose viewer tokens pass the gate.
+	Viewers []string
 }
 
 type Server struct {
@@ -70,7 +72,7 @@ func (s *Server) Routes() http.Handler {
 		mux.HandleFunc("GET /"+tree+"/{path...}", func(w http.ResponseWriter, r *http.Request) { s.serveTree(w, r, tree) })
 	}
 	// Without a secret any page the owner visits could post picks to a local War Room.
-	return http.NewCrossOriginProtection().Handler(mux)
+	return s.gate(http.NewCrossOriginProtection().Handler(mux))
 }
 
 // Handler is Routes with the request log and panic recovery, which tests leave out.

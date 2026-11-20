@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -19,12 +21,12 @@ import (
 func TestConfigFromEnv(t *testing.T) {
 	cfg := configFromEnv(func(string) string { return "" })
 	want := config{Config: web.Config{Root: "..", Picks: "picks.json", Rounds: "rounds"}, Host: "127.0.0.1", Port: "8780"}
-	if cfg != want {
+	if !reflect.DeepEqual(cfg, want) {
 		t.Fatalf("defaults = %+v", cfg)
 	}
-	env := map[string]string{"WARROOM_PORT": "9000", "WARROOM_PICKS": "/data/picks.json", "WARROOM_SECRET": "s", "WARROOM_RUN_AS": "65534"}
+	env := map[string]string{"WARROOM_PORT": "9000", "WARROOM_PICKS": "/data/picks.json", "WARROOM_SECRET": "s", "WARROOM_RUN_AS": "65534", "WARROOM_VIEWERS": " friend , ,bob"}
 	cfg = configFromEnv(func(k string) string { return env[k] })
-	if cfg.Port != "9000" || cfg.Picks != "/data/picks.json" || cfg.Root != ".." || cfg.Secret != "s" || cfg.RunAs != "65534" {
+	if cfg.Port != "9000" || cfg.Picks != "/data/picks.json" || cfg.Root != ".." || cfg.Secret != "s" || cfg.RunAs != "65534" || !slices.Equal(cfg.Viewers, []string{"friend", "bob"}) {
 		t.Fatalf("overrides = %+v", cfg)
 	}
 }
@@ -131,10 +133,14 @@ func TestTokenCommandPrintsTheTokenTheServerAccepts(t *testing.T) {
 	if err := printToken(&out, "s", []string{"admin"}); err != nil || strings.TrimSpace(out.String()) != web.Token("s", web.AdminScope) {
 		t.Errorf("admin token %q, %v", out.String(), err)
 	}
+	out.Reset()
+	if err := printToken(&out, "s", []string{"viewer:friend"}); err != nil || strings.TrimSpace(out.String()) != web.Token("s", web.ViewerScope("friend")) {
+		t.Errorf("viewer token %q, %v", out.String(), err)
+	}
 	for _, bad := range []struct {
 		secret string
 		args   []string
-	}{{"", []string{"demo"}}, {"s", nil}, {"s", []string{"a", "b"}}} {
+	}{{"", []string{"demo"}}, {"s", nil}, {"s", []string{"a", "b"}}, {"s", []string{"viewer:"}}, {"s", []string{"viewer:Bob"}}, {"s", []string{"viewer:" + strings.Repeat("a", 33)}}} {
 		if printToken(io.Discard, bad.secret, bad.args) == nil {
 			t.Errorf("printToken(%q, %v) succeeded", bad.secret, bad.args)
 		}
@@ -171,6 +177,15 @@ func TestContainerModeRefusesAShortSecret(t *testing.T) {
 	}
 }
 
+func TestRunRefusesBadViewerNames(t *testing.T) {
+	t.Setenv("WARROOM_VIEWERS", "friend,Bob")
+	t.Setenv("WARROOM_HOST", "256.0.0.1")
+	t.Setenv("WARROOM_PORT", "0")
+	if err := run(); err == nil || !strings.Contains(err.Error(), `WARROOM_VIEWERS: "Bob"`) {
+		t.Errorf("run() = %v", err)
+	}
+}
+
 func TestUnknownCommandIsAnError(t *testing.T) {
 	if runCommand([]string{"nope"}) == nil {
 		t.Error("an unknown command succeeded")
@@ -179,8 +194,8 @@ func TestUnknownCommandIsAnError(t *testing.T) {
 
 func TestOpenCommandListsRoundsWithUnansweredSteps(t *testing.T) {
 	picks := filepath.Join(t.TempDir(), "picks.json")
-	cfg := web.Config{Picks: picks, Rounds: "rounds"}
-	round := rounds.LoadCatalog("rounds").Rounds["p2-3a1-gate-1"]
+	cfg := web.Config{Picks: picks, Rounds: "testdata/rounds"}
+	round := rounds.LoadCatalog("testdata/rounds").Rounds["p2-3a1-gate-1"]
 	st := store.NewStore(picks)
 	for _, i := range round.Open(nil) {
 		pick := "A"
@@ -189,7 +204,7 @@ func TestOpenCommandListsRoundsWithUnansweredSteps(t *testing.T) {
 		}
 	}
 	var out bytes.Buffer
-	if err := printOpen(&out, cfg); err != nil {
+	if err := printOpen(&out, &cfg); err != nil {
 		t.Fatal(err)
 	}
 	got := out.String()
@@ -212,7 +227,7 @@ func TestOpenCommandMarksAdvisoryRounds(t *testing.T) {
 		}
 	}
 	var out bytes.Buffer
-	if err := printOpen(&out, web.Config{Picks: filepath.Join(dir, "picks.json"), Rounds: dir}); err != nil {
+	if err := printOpen(&out, &web.Config{Picks: filepath.Join(dir, "picks.json"), Rounds: dir}); err != nil {
 		t.Fatal(err)
 	}
 	want := "a\t0 of 1 answered\tadvisory: answer when you like\nb\t0 of 1 answered\n"
@@ -234,7 +249,7 @@ func TestOpenCommandListsWarningsAsWarnings(t *testing.T) {
 		}
 	}
 	var out bytes.Buffer
-	if err := printOpen(&out, web.Config{Picks: filepath.Join(dir, "picks.json"), Rounds: dir}); err != nil {
+	if err := printOpen(&out, &web.Config{Picks: filepath.Join(dir, "picks.json"), Rounds: dir}); err != nil {
 		t.Fatal(err)
 	}
 	if got := out.String(); !strings.Contains(got, "warning: b: every blind step") || strings.Contains(got, "load error") {

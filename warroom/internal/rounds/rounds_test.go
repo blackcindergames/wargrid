@@ -50,14 +50,14 @@ func TestShippedRoundsLoadClean(t *testing.T) {
 	if len(c.Errors) > 0 {
 		t.Fatalf("errors:\n%s", strings.Join(c.Errors, "\n"))
 	}
-	if len(c.Index) != 4 || len(c.Rounds) != 4 {
-		t.Fatalf("index %d, rounds %d, want 4 and 4", len(c.Index), len(c.Rounds))
+	if len(c.Index) != 2 || len(c.Rounds) != 2 {
+		t.Fatalf("index %d, rounds %d, want 2 and 2", len(c.Index), len(c.Rounds))
 	}
 }
 
 func TestShippedRoundsKeepTheirKeyPrefixes(t *testing.T) {
-	c := LoadCatalog("../../rounds")
-	want := map[string]string{"p2-3a1-gate-1": "p2-3a1-gate", "p2-3a1-gate-2": "p2-3a1-gate2", "demo": "demo", "demo-controls": "demo-controls"}
+	c := LoadCatalog("../../testdata/rounds")
+	want := map[string]string{"p2-3a1-gate-1": "p2-3a1-gate", "p2-3a1-gate-2": "p2-3a1-gate2", "mini-demo": "mini-demo"}
 	for id, prefix := range want {
 		if got := c.Round(id).Prefix; got != prefix {
 			t.Errorf("round %s prefix %q, want %q", id, got, prefix)
@@ -66,7 +66,7 @@ func TestShippedRoundsKeepTheirKeyPrefixes(t *testing.T) {
 }
 
 func TestShippedRoundsKeepTheirContent(t *testing.T) {
-	c := LoadCatalog("../../rounds")
+	c, shipped := LoadCatalog("../../testdata/rounds"), LoadCatalog("../../rounds")
 	forecast := c.Round("p2-3a1-gate-2").Step("forecast")
 	if len(forecast.Pairs) != 9 || forecast.Pairs[1].Kind != "vs" || forecast.Pairs[0].AHex != "#dc948b" {
 		t.Errorf("forecast pairs = %+v", forecast.Pairs)
@@ -81,31 +81,31 @@ func TestShippedRoundsKeepTheirContent(t *testing.T) {
 	if got := c.Round("p2-3a1-gate-2").Earlier; !slices.Equal(got, []string{"p2-3a1-gate-1"}) {
 		t.Errorf("earlier = %v", got)
 	}
-	text := c.Round("demo").Step("text")
+	text := shipped.Round("demo").Step("text")
 	if len(text.Card.Lines) != 3 || text.Card.Lines[1] != nil || *text.Card.Lines[0] == "" {
 		t.Errorf("card lines = %v", text.Card.Lines)
 	}
-	scene := c.Round("demo-controls").Step("scene")
+	scene := shipped.Round("demo-controls").Step("scene")
 	if len(scene.Controls.Extra) != 4 || !slices.Equal(scene.Controls.Zoom.Values, []string{"1", "2", "0.5"}) || scene.Controls.Ground.Values != nil {
 		t.Errorf("scene controls = %+v", scene.Controls)
 	}
 	if v := scene.Controls.Extra[3].Values[0].V; v != "on" {
 		t.Errorf("an extra value 'on' became %q", v)
 	}
-	if w := c.Round("demo-controls").Step("hud-window"); len(w.Options["C"].Mark) != 1 || w.Options["C"].Render.Crop.W != 560 {
+	if w := shipped.Round("demo-controls").Step("hud-window"); len(w.Options["C"].Mark) != 1 || w.Options["C"].Render.Crop.W != 560 {
 		t.Errorf("hud-window option C = %+v", w.Options["C"])
 	}
 }
 
 func TestIndexFlagsDemoRounds(t *testing.T) {
-	c := LoadCatalog("../../rounds")
+	c := LoadCatalog("../../testdata/rounds")
 	demos := 0
 	for _, e := range c.Index {
 		if e.Demo {
 			demos++
 		}
 	}
-	if demos != 2 || c.Index[0].ID != "p2-3a1-gate-2" {
+	if demos != 1 || c.Index[0].ID != "p2-3a1-gate-2" {
 		t.Fatalf("demos %d, first %q", demos, c.Index[0].ID)
 	}
 }

@@ -825,3 +825,41 @@ func TestSideViewClickOnAnotherTilesClipSelectsItAndKeepsItPlaying(t *testing.T)
 		t.Errorf("B's clip paused = %v after the click that selected it, want playing", paused)
 	}
 }
+
+func TestCookieCarriesRequestsWithoutTheQuery(t *testing.T) {
+	s := newSite(t, siteOpts{secret: testSecret})
+	if err := s.Page.Context().ClearCookies(); err != nil {
+		t.Fatal(err)
+	}
+	s.open(t, "/r/demo/1?t="+viewerToken)
+	const probe = `(async () => {
+		const img = document.querySelector('#stage img, img');
+		const status = async (u, h) => (await fetch(u, {headers: h || {}})).status;
+		return {
+			img: img ? img.getAttribute('src') : '',
+			imgStatus: img ? await status(img.src) : 0,
+			css: await status('/static/app.css'),
+			step: await status('/r/demo/2', {'HX-Request': 'true'}),
+			script: document.cookie.includes('wr='),
+		};
+	})()`
+	got := eval(t, s.Page, probe).(map[string]any)
+	if src, _ := got["img"].(string); src == "" || strings.Contains(src, "t=") {
+		t.Fatalf("picture src %q: want one without the token", src)
+	}
+	for _, k := range []string{"imgStatus", "css", "step"} {
+		if got[k] != 200 {
+			t.Errorf("%s: status %v, want 200 by the cookie", k, got[k])
+		}
+	}
+	if got["script"] != false {
+		t.Error("page script can read the wr cookie; want HttpOnly")
+	}
+	if err := s.Page.Context().ClearCookies(); err != nil {
+		t.Fatal(err)
+	}
+	refused := eval(t, s.Page, `fetch('/r/demo/2', {headers: {'HX-Request': 'true'}}).then(async r => r.status + ' ' + await r.text())`)
+	if refused != "403 "+gateText {
+		t.Errorf("without the cookie: %q, want 403 %q", refused, gateText)
+	}
+}
