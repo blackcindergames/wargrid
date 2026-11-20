@@ -9,6 +9,7 @@ golangci-lint run --build-tags browser
 go test -race ./...
 go tool govulncheck ./...
 sh tools/check_generated.sh
+sh tools/test_check_generated.sh
 
 cd islands
 npm ci
