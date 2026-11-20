@@ -101,16 +101,16 @@ Performance against the low-end budget (generated):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | ➖ same | 2026-11-19 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-19 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-19 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 3% worse | 2026-11-19 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-19 |
-| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 3% worse | 2026-11-19 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 2% worse | 2026-11-19 |
-| Unit movement | 🟢 OK | ████░░░░░░ 40% | 🔻 16% better | 2026-11-19 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 23% | 🔻 52% better | 2026-11-19 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-19 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 213% | ➖ same | 2026-11-20 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 164% | 🔺 3% worse | 2026-11-20 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 144% | 🔺 1% worse | 2026-11-20 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 75% | 🔺 2% worse | 2026-11-20 |
+| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 1% worse | 2026-11-20 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 70% | 🔻 5% better | 2026-11-20 |
+| Combat, normal fights, slowest moments | 🟢 OK | ██████░░░░ 63% | 🔺 7% worse | 2026-11-20 |
+| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 10% worse | 2026-11-20 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔺 6% worse | 2026-11-20 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-20 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 

@@ -1271,3 +1271,39 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,combat_hordes300:profile,1,,,1.931,P1,2.26,log sha256:4d074bfce1cf
 2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,team_match:profile,1,,,1.1219,P1,2.26,log sha256:4d074bfce1cf
 2026-11-19,9375c24+dirty,P2.3a spec and plan merge,dev,plumbing,team_match_pump:profile,1,,,1.1385,P1,2.26,log sha256:4d074bfce1cf
+2026-11-20,1f07d455,P2.3a1,dev,movement_tick,open,1,0.813,0.898,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,movement_tick,dense,1,0.805,0.926,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,open,1,1.952,2.312,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,dense,1,1.879,2.241,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,contact,1,1.219,1.635,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,skirmish3v3,1,1.368,1.519,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,transports,1,1.155,1.267,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,defences,1,0.843,2.311,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,docks,1,0.605,0.641,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,hordes300,1,2.986,3.462,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,ramp,1,0.671,1.224,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,combat_tick,frc,1,0.901,1.101,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,lockstep_overhead,contact,1,0.016,0.067,,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,movement_open:profile,1,,,1.309,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,movement_dense:profile,1,,,1.3088,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,combat_contact:profile,1,,,0.3323,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5333,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,combat_open:profile,1,,,0.9047,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,skirmish_match:profile,1,,,0.2465,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,large_196:profile,1,,,1.7063,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,combat_dense:profile,1,,,0.7807,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,combat_hordes300:profile,1,,,1.9338,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,team_match:profile,1,,,1.1177,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,plumbing,team_match_pump:profile,1,,,1.1208,P1,1.68,log sha256:722c3a06cddb
+2026-11-20,1f07d455,P2.3a1,dev,frame_interval,open,2,0.333,2.003,,P1,2.33,log sha256:d431c185c3fc
+2026-11-20,1f07d455,P2.3a1,dev,tick_frame,open,2,2.205,2.354,,tick-frame,2.33,log sha256:d431c185c3fc
+2026-11-20,1f07d455,P2.3a1,dev,frame_interval,dense,2,0.733,2.593,,P1,2.33,log sha256:d431c185c3fc
+2026-11-20,1f07d455,P2.3a1,dev,tick_frame,dense,2,2.045,2.184,,tick-frame,2.33,log sha256:d431c185c3fc
+2026-11-20,1f07d455,P2.3a1,dev,frame_interval,ashfall,2,0.857,4.153,,P1,2.33,log sha256:d431c185c3fc
+2026-11-20,1f07d455,P2.3a1,dev,tick_frame,ashfall,2,2.135,2.281,,tick-frame,2.33,log sha256:d431c185c3fc
+2026-11-20,1f07d455,P2.3a1,dev,frame_interval,horde,2,0.52,3.977,,P1,2.33,log sha256:d431c185c3fc
+2026-11-20,1f07d455,P2.3a1,dev,tick_frame,horde,2,5.042,5.402,,tick-frame,2.33,log sha256:d431c185c3fc
+2026-11-20,1f07d455,P2.3a1,dev,frame_interval,hud_select_1280x720,3,1.538,2.562,,P1,2.33,log sha256:6a6710aeff71
+2026-11-20,1f07d455,P2.3a1,dev,tick_frame,hud_select_1280x720,3,1.544,1.617,,tick-frame,2.33,log sha256:6a6710aeff71
+2026-11-20,1f07d455,P2.3a1,dev,frame_interval,hud_select_2560x1080,4,3.06,3.812,,P1,2.33,log sha256:4c45fd870810
+2026-11-20,1f07d455,P2.3a1,dev,tick_frame,hud_select_2560x1080,4,1.508,1.588,,tick-frame,2.33,log sha256:4c45fd870810
