@@ -33,8 +33,8 @@ func cases() -> Array[Callable]:
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
 	var economy := VBoxContainer.new()
-	for part: Control in [Button.new(), Button.new(), VBoxContainer.new()]: economy.add_child(part)
-	for i in 3: economy.get_child(i).name = ["Produce", "CancelBuild", "Queue"][i]
+	for part: Control in [Button.new(), VBoxContainer.new()]: economy.add_child(part)
+	for i in 2: economy.get_child(i).name = ["CancelBuild", "Queue"][i]
 	return economy
 
 func test_hud_reads_only_its_input(runner) -> bool:
@@ -50,7 +50,7 @@ func test_hud_reads_only_its_input(runner) -> bool:
 	parent.add_child(economy)
 	hud.setup(economy)
 	var ids: Array[int] = [1]
-	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false, "esc_opens_menu": true, "attack_move": false}
+	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "bright_owners": false, "over": false, "esc_opens_menu": true, "attack_move": false}
 	hud.update_hud(Fixture.make_world().view_state(), selection, 1, 1)
 	runner.check(hud.name == "Hud" and hud.mouse_filter == Control.MOUSE_FILTER_IGNORE and hud.anchor_right == 1.0 and hud.anchor_bottom == 1.0, "HN1 the Hud is a full-rect node that ignores the mouse")
 	var panel_name: String = _part(hud, "SelectionPanel", "Name").text
@@ -68,7 +68,7 @@ func test_hud_reads_only_its_input(runner) -> bool:
 
 func test_side_effects_live_in_the_screen(runner) -> bool:
 	var main = await BaseScene.new().setup(runner)
-	runner.check(main.hud.has_signal("menu_chosen") and main.hud.has_signal("produce_pressed") and main.hud.has_signal("cancel_build_pressed"), "HN2 the Hud speaks through its signals")
+	runner.check(main.hud.has_signal("menu_chosen") and main.hud.has_signal("cancel_build_pressed"), "HN2 the Hud speaks through its signals")
 	if not main.hud.has_signal("menu_chosen"):
 		main.free()
 		return true
@@ -91,11 +91,11 @@ func test_side_effects_live_in_the_screen(runner) -> bool:
 	main.orders.reset()
 	main.orders.selected_building_id = barracks
 	main._refresh()
-	var produced: Array[int] = [0]
-	main.hud.produce_pressed.connect(func() -> void: produced[0] += 1)
-	main.get_node("HUD/Economy/Produce").pressed.emit()
+	BaseScene.new().key(main, KEY_E)
+	runner.check(main.driver.queued().is_empty() and not main.has_node("HUD/Economy/Produce"), "HN2 no Produce button and E produces nothing (dropped, user 2026-11-20), got %s" % [main.driver.queued()])
+	main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()
 	var queued: Array = main.driver.queued()
-	runner.check(produced[0] == 1 and queued.size() == 1 and queued[0].type == "produce" and queued[0].building_id == barracks, "HN2 Produce queues the barracks' unit through produce_pressed, got %s" % [queued])
+	runner.check(chosen == [0, 0] and queued.size() == 1 and queued[0].type == "produce" and queued[0].building_id == barracks and queued[0].unit_kind == Registry.kind("usa_barracks").produces[0], "HN2 the barracks' first menu button queues its first unit through menu_chosen, got %s" % [queued])
 	BaseScene.tick(main)
 	Fixture.send(sim, {"type": "build", "builder_id": 1, "building_kind": "usa_power_plant", "origin": [8, 12]})
 	BaseScene.tick(main)
@@ -272,7 +272,7 @@ func test_match_surfaces_keep_their_size(runner) -> bool:
 	for control: Control in _text_controls(main.get_node("HUD/Economy")):
 		runner.check(control.get_theme_font_size("font_size") in TYPE_SCALE, "TH5 HUD/Economy %s is on the type scale, got %d" % [control.name, control.get_theme_font_size("font_size")])
 		if control.is_visible_in_tree(): runner.check(view.encloses(_clip(control).get_global_rect()), "TH5 HUD/Economy %s inside the view" % control.name)
-	_square_rows(runner, ["Produce", "CancelBuild", "QueueMore"].map(func(path: String) -> Button: return main.get_node("HUD/Economy/" + path)), "TH5")
+	_square_rows(runner, ["CancelBuild", "QueueMore"].map(func(path: String) -> Button: return main.get_node("HUD/Economy/" + path)), "TH5")
 	main.get_node("HUD/PauseMenu").open()
 	await runner.process_frame
 	_check_small(runner, main.get_node("HUD/PauseMenu"), view, "HUD/PauseMenu")
@@ -307,7 +307,7 @@ static func _strip_view(credits: int, used: int, available: int, faction: String
 
 static func _armed(kind: String, bright: bool = false, notice: String = "") -> Dictionary:
 	var ids: Array[int] = []
-	return {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": kind, "resume_id": -1, "notice": notice, "production_kind": "", "bright_owners": bright, "over": false, "esc_opens_menu": true, "attack_move": false}
+	return {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": kind, "resume_id": -1, "notice": notice, "bright_owners": bright, "over": false, "esc_opens_menu": true, "attack_move": false}
 
 func _bare_hud(runner) -> Hud:
 	var port := SubViewport.new()
@@ -334,10 +334,6 @@ func test_power_reads_used_over_available(runner) -> bool:
 	await _show(runner, hud, _strip_view(4800, 12, 10))
 	runner.check(power.text == "12 / 10" and _colour(power) == _token("warn"), "TS1 12 used of 10 reads 12 / 10 in warn, got '%s'" % power.text)
 	runner.check(low.is_visible_in_tree() and low.text == LOW and _colour(low) == _token("warn"), "TS1 low power names its effect in warn, got '%s'" % low.text)
-	await _show(runner, hud, _strip_view(4800, 8, 10))
-	var before: Array = _texts(hud, "TopStrip")
-	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
-	runner.check(_texts(hud, "TopStrip") == before, "TS1 arming a building never changes the strip, got %s" % [_texts(hud, "TopStrip")])
 	hud.get_parent().free()
 	return true
 
@@ -346,29 +342,38 @@ func _no_arrow_or_short(runner, hud: Hud, label: String) -> void:
 		var text: String = (found as Label).text
 		if (found as Label).is_visible_in_tree(): runner.check(not text.contains("→") and not text.contains("short"), "TS2 %s: no arrow and no 'short' in '%s'" % [label, text])
 
+static func _previewing(hud: Node) -> bool:
+	return _part(hud, "TopStrip", "Preview").is_visible_in_tree()
+
+static func _border(slab: Control) -> Color:
+	return (slab.get_theme_stylebox("panel") as StyleBoxFlat).border_color
+
+# Gate B window feedback (user 2026-11-20): the strip itself forecasts, no card under it.
 func test_forecast_forms(runner) -> bool:
 	var hud: Hud = _bare_hud(runner)
-	var card: Control = hud.get_node("Forecast")
+	var strip: Control = hud.get_node("TopStrip")
 	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
-	var credits: Label = _part(hud, "Forecast", "Credits")
-	var power: Label = _part(hud, "Forecast", "Power")
-	var low: Label = _part(hud, "Forecast", "LowPower")
-	runner.check(_part(hud, "TopStrip", "Credits").text == "4800" and card.visible and _part(hud, "Forecast", "Title").text == "AFTER PURCHASE", "TS2 a Rotary Gun Tower armed: the strip keeps 4800 and the card shows")
-	runner.check(credits.text == "3600" and _colour(credits) == _token("text"), "TS2 credits after purchase 3600 in text, got '%s'" % credits.text)
-	runner.check(power.text == "11 / 10" and _colour(power) == _token("warn") and low.is_visible_in_tree() and low.text == LOW and _colour(low) == _token("warn"), "TS2 power after purchase 11 / 10 and low power in warn, got %s" % [_texts(hud, "Forecast")])
+	var credits: Label = _part(hud, "TopStrip", "Credits")
+	var delta: Label = _part(hud, "TopStrip", "Delta")
+	var power: Label = _part(hud, "TopStrip", "Power")
+	var low: Label = _part(hud, "TopStrip", "LowPower")
+	var preview: Label = _part(hud, "TopStrip", "Preview")
+	runner.check(hud.get_node_or_null("Forecast") == null and _previewing(hud) and preview.text == "PREVIEW" and _colour(preview) == _token("sel") and _border(strip) == _token("sel"), "TS2 a Rotary Gun Tower armed: the strip shows PREVIEW and its border in sel, no card")
+	runner.check(credits.text == "3600" and _colour(credits) == _token("text") and delta.is_visible_in_tree() and delta.text == MINUS + "1200" and _colour(delta) == _token("muted"), "TS2 credits after purchase 3600 in text, a muted −1200 beside, got '%s' '%s'" % [credits.text, delta.text])
+	runner.check(power.text == "11 / 10" and _colour(power) == _token("warn") and low.is_visible_in_tree() and low.text == LOW and _colour(low) == _token("warn"), "TS2 power after purchase 11 / 10 and low power in warn, got %s" % [_texts(hud, "TopStrip")])
 	_no_arrow_or_short(runner, hud, "tower")
 	await _show(runner, hud, _strip_view(4800, 8, 10), "usa_power_plant")
-	runner.check(credits.text == "4000" and power.text == "8 / 15" and _colour(power) == _token("text") and not low.is_visible_in_tree(), "TS2 a Power Plant armed reads 4000 and 8 / 15, no low power, got %s" % [_texts(hud, "Forecast")])
+	runner.check(credits.text == "4000" and delta.text == MINUS + "800" and power.text == "8 / 15" and _colour(power) == _token("text") and not low.is_visible_in_tree(), "TS2 a Power Plant armed reads 4000 −800 and 8 / 15, no low power, got %s" % [_texts(hud, "TopStrip")])
 	await _show(runner, hud, _strip_view(10650, 8, 10))
-	runner.check(_part(hud, "TopStrip", "Credits").text == "10650" and not card.visible, "TS2 five-digit credits print plain, nothing armed hides the card, got '%s'" % _part(hud, "TopStrip", "Credits").text)
+	runner.check(credits.text == "10650" and power.text == "8 / 10" and not _previewing(hud) and not delta.is_visible_in_tree() and _border(strip) == _token("line"), "TS2 nothing armed: today's 10650 and 8 / 10, no PREVIEW, no delta, the line border, got '%s'" % credits.text)
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
-	runner.check(credits.text == MINUS + "700" and _colour(credits) == _token("warn"), "TS2 the shortfall reads −700 with U+2212 in warn, got '%s'" % credits.text)
+	runner.check(credits.text == MINUS + "700" and _colour(credits) == _token("warn") and delta.text == MINUS + "1200", "TS2 the shortfall reads −700 with U+2212 in warn, got '%s'" % credits.text)
 	_no_arrow_or_short(runner, hud, "shortfall")
 	for armed: String in ["", "frc_barracks"]:
 		await _show(runner, hud, _strip_view(4800, 0, 0, "frc"), armed)
-		var shown: Array = ["PowerLabel", "Power", "LowPower"].filter(func(part: String) -> bool: return _part(hud, "TopStrip", part).is_visible_in_tree() or _part(hud, "Forecast", part).is_visible_in_tree())
-		runner.check(shown.is_empty() and _part(hud, "TopStrip", "Credits").is_visible_in_tree(), "TS2 FRC uses no power, so no power group (armed '%s'), shown %s" % [armed, shown])
-	runner.check(credits.text == "4300" and card.visible, "TS2 FRC's card keeps its credits, got '%s'" % credits.text)
+		var shown: Array = ["PowerLabel", "Power", "LowPower"].filter(func(part: String) -> bool: return _part(hud, "TopStrip", part).is_visible_in_tree())
+		runner.check(shown.is_empty() and credits.is_visible_in_tree() and _previewing(hud) != armed.is_empty(), "TS2 FRC uses no power, so no power group (armed '%s'), shown %s" % [armed, shown])
+	runner.check(credits.text == "4300" and delta.text == MINUS + "500", "TS2 FRC's preview keeps its credits, got '%s' '%s'" % [credits.text, delta.text])
 	hud.get_parent().free()
 	await _forecast_follows_the_placement(runner)
 	return true
@@ -379,34 +384,33 @@ func _forecast_follows_the_placement(runner) -> void:
 	main.driver.adopt(Fixture.make_world())
 	main.orders.selected_ids.assign([1])
 	main._refresh()
-	var card: Control = main.get_node("HUD/Hud/Forecast")
 	helper.key(main, KEY_1)
-	runner.check(card.visible, "TS2 arming a building shows the card")
+	runner.check(_previewing(main.hud), "TS2 arming a building shows the preview")
 	helper.key(main, KEY_ESCAPE)
-	runner.check(not card.visible, "TS2 cancelling the placement hides the card")
+	runner.check(not _previewing(main.hud), "TS2 cancelling the placement ends the preview")
 	helper.key(main, KEY_1)
 	helper.hover(main, Iso.world_to_plane(Vector2(8.25, 4.25)))
 	helper.pointer(main, Iso.world_to_plane(Vector2(8.25, 4.25)), MOUSE_BUTTON_LEFT, false)
 	BaseScene.tick(main)
-	runner.check(main.orders._placement_kind.is_empty() and not card.visible, "TS2 placing the building hides the card")
+	runner.check(main.orders._placement_kind.is_empty() and not _previewing(main.hud), "TS2 placing the building ends the preview")
 	main.free()
 	var skirmish = SkirmishTests.new()
 	main = await skirmish._setup(runner)
 	skirmish._arena(main)
 	main.orders._placement_kind = "usa_power_plant"
 	main._refresh()
-	runner.check(main.get_node("HUD/Hud/Forecast").visible, "TS2 the arena shows the card while armed")
+	runner.check(_previewing(main.hud), "TS2 the arena previews while armed")
 	skirmish._victory(main)
-	runner.check(main.shown_over() and main.orders._placement_kind.is_empty() and not main.get_node("HUD/Hud/Forecast").visible, "TS2 the match ending clears the placement and hides the card")
+	runner.check(main.shown_over() and main.orders._placement_kind.is_empty() and not _previewing(main.hud), "TS2 the match ending clears the placement and ends the preview")
 	main.free()
 	var online: Dictionary = await OverlayTests.new()._online(runner)
 	main = online.main
 	main.orders._placement_kind = "usa_power_plant"
 	main._refresh()
-	runner.check(main.get_node("HUD/Hud/Forecast").visible, "TS2 online: the card shows while armed")
+	runner.check(_previewing(main.hud), "TS2 online: the strip previews while armed")
 	main.driver._finished = true
 	main._refresh()
-	runner.check(main.orders._placement_kind.is_empty() and not main.get_node("HUD/Hud/Forecast").visible, "TS2 an online lockstep ending clears the placement and hides the card")
+	runner.check(main.orders._placement_kind.is_empty() and not _previewing(main.hud), "TS2 an online lockstep ending clears the placement and ends the preview")
 	main.free()
 
 func test_swatch_slot_colour(runner) -> bool:
@@ -431,16 +435,15 @@ func test_strip_anchor_without_tick(runner) -> bool:
 		var view_rect := Rect2(Vector2.ZERO, Vector2(size))
 		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
 		var main = await OverlayTests.new()._scene(runner, Skirmish, port)
-		main.hud.update_hud(_strip_view(500, 8, 10), _armed("china_defence"), 1, 1)
+		main.hud.update_hud(_strip_view(500, 8, 10), _armed(""), 1, 1)
 		await runner.process_frame
 		var strip: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
-		var card: Rect2 = main.get_node("HUD/Hud/Forecast").get_global_rect()
 		runner.check(strip.position == Vector2(8, 8) and strip.size.y == 32.0 and view_rect.encloses(strip), "TS4 the strip sits at (8, 8), 32 high, inside the view at %s, got %s" % [size, strip])
-		runner.check(card.position == Vector2(8, 48) and view_rect.encloses(card) and not card.intersects(strip), "TS4 the longest card sits at (8, 48) inside the view, clear of the strip at %s, got %s" % [size, card])
-		main.hud.update_hud(_strip_view(4800, 12, 10), _armed(""), 1, 1)
-		await runner.process_frame
-		strip = main.get_node("HUD/Hud/TopStrip").get_global_rect()
-		runner.check(view_rect.encloses(strip) and strip.size.y == 32.0, "TS4 the strip with low power stays 32 high inside the view at %s, got %s" % [size, strip])
+		for state: Array in [["the longest preview", _strip_view(500, 8, 10), "china_defence"], ["low power", _strip_view(4800, 12, 10), ""], ["a five-digit preview", _strip_view(10650, 12, 10), "china_defence"]]:
+			main.hud.update_hud(state[1], _armed(state[2]), 1, 1)
+			await runner.process_frame
+			var now: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
+			runner.check(now == strip, "TS4 %s keeps the strip's rect %s at %s, got %s" % [state[0], strip, size, now])
 		var text: String = BaseScene.hud_text(main)
 		runner.check(not text.contains("Tick") and not text.contains("You are"), "TS4 no tick and no seat line in the HUD at %s" % size)
 		port.free()
@@ -449,15 +452,13 @@ func test_strip_anchor_without_tick(runner) -> bool:
 func test_strip_patches_values(runner) -> bool:
 	var hud: Hud = _bare_hud(runner)
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
-	var credits: Label = _part(hud, "Forecast", "Credits")
-	var strip_credits: Label = _part(hud, "TopStrip", "Credits")
+	var credits: Label = _part(hud, "TopStrip", "Credits")
 	for row: Array in [[500, MINUS + "700", "warn"], [1000, MINUS + "200", "warn"], [1500, "300", "text"]]:
 		await _show(runner, hud, _strip_view(row[0], 8, 10), "china_defence")
-		runner.check(strip_credits.text == str(row[0]) and credits.text == row[1] and _colour(credits) == _token(row[2]), "TS5 %d credits patch the strip and the card to %s in %s, got '%s'" % [row[0], row[1], row[2], credits.text])
-	runner.check(_part(hud, "TopStrip", "Credits") == strip_credits and _part(hud, "Forecast", "Credits") == credits, "TS5 patching values keeps the same labels")
+		runner.check(credits.text == row[1] and _colour(credits) == _token(row[2]), "TS5 %d credits patch the previewing strip to %s in %s, got '%s'" % [row[0], row[1], row[2], credits.text])
+	runner.check(_part(hud, "TopStrip", "Credits") == credits, "TS5 patching values keeps the same labels")
 	var changes: Array[int] = [0]
-	for box: String in ["TopStrip", "Forecast"]:
-		for part: String in ["Credits", "Power", "LowPower"]: _part(hud, box, part).theme_changed.connect(func() -> void: changes[0] += 1)
+	for part: String in ["Credits", "Delta", "Power", "LowPower", "Preview"]: _part(hud, "TopStrip", part).theme_changed.connect(func() -> void: changes[0] += 1)
 	for i in 2: await _show(runner, hud, _strip_view(1500, 12, 10), "china_defence")
 	changes[0] = 0
 	await _show(runner, hud, _strip_view(1500, 12, 10), "china_defence")
@@ -707,14 +708,14 @@ func test_online_notice_top_centre(runner) -> bool:
 	online._run(main, 12)
 	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)
 	runner.check(main.driver.notice() == "Waiting for player 1" and label.is_visible_in_tree() and label.text == "Waiting for player 1" and _colour(label) == _token("muted"), "CH4 the waiting notice shows in muted, got '%s'" % label.text)
-	runner.check(main.get_node("HUD/Hud/Forecast").visible and main.orders.busy(), "CH4 fixture: a building armed while the notice shows")
+	runner.check(_previewing(main.hud) and main.orders.busy(), "CH4 fixture: a building armed while the notice shows")
 	runner.check(BaseScene.hud_text(main).count("Waiting for player 1") == 1, "CH4 the notice shows once")
 	var chips: Array = ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip"]
-	for strip: Array in [[8, "the longest card"], [12, "low power in the strip"]]:
+	for strip: Array in [[8, "the longest preview"], [12, "low power in the strip"]]:
 		main.hud.update_hud(_strip_view(500, strip[0], 10), _armed("china_defence", false, main.driver.notice()), 1, 1)
 		await _frames(runner)
-		_notice_clear(runner, main, strip[1], chips + ["HUD/Hud/Forecast"])
-	runner.check(_part(main.hud, "Forecast", "Credits").text == MINUS + "700" and _part(main.hud, "TopStrip", "LowPower").is_visible_in_tree(), "CH4 fixture: the card's longest form and the strip's low power")
+		_notice_clear(runner, main, strip[1], chips)
+	runner.check(_part(main.hud, "TopStrip", "Credits").text == MINUS + "700" and _part(main.hud, "TopStrip", "LowPower").is_visible_in_tree(), "CH4 fixture: the preview's longest form with low power")
 	main.free()
 	await _ended_notice(runner, online, 1, func(lockstep, _transport) -> void: lockstep.receive('{"type":"left","seat":2,"after_tick":3}'), "Opponent left before the start (a different map or version, or their game tab was hidden)")
 	await _ended_notice(runner, online, 2, func(_lockstep, transport) -> void: transport.frames.append(OnlineTests.Wire.encode(OnlineTests.Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"}))), "Desync", 2)
@@ -739,7 +740,7 @@ func _ended_notice(runner, online, seat: int, end: Callable, words: String, line
 	await _frames(runner)
 	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)
 	runner.check(main.driver.over() and label.is_visible_in_tree() and label.text.begins_with(words), "CH4 %s: the ended match shows its notice, got '%s'" % [words, label.text])
-	runner.check(not main.get_node("HUD/Hud/Forecast").visible and not main.orders.busy(), "CH4 %s: the ending cleared the armed building" % words)
+	runner.check(not _previewing(main.hud) and not main.orders.busy(), "CH4 %s: the ending cleared the armed building" % words)
 	runner.check(BaseScene.hud_text(main).count(words) == 1, "CH4 %s: the notice shows once" % words)
 	_notice_clear(runner, main, words, ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip", "HUD/Playtest/Checklist"], lines)
 	main.free()
@@ -1222,12 +1223,11 @@ func test_slab_queue_cap(runner) -> bool:
 	main.free()
 	return true
 
-# Every queue row top down: the newer rows that fold above the toggle, then the rest.
 static func _queue_rows(main) -> Array:
-	return main.get_node("HUD/Economy/QueueNewer").get_children() + main.get_node("HUD/Economy/Queue").get_children()
+	return main.get_node("HUD/Economy/Queue").get_children()
 
 static func _slab_buttons(main) -> Array:
-	return [main.get_node("HUD/Economy/Produce")] + main.get_node("HUD/Economy/BuildMenu").get_children()
+	return main.get_node("HUD/Economy/BuildMenu").get_children()
 
 static func _rects(controls: Array) -> Array:
 	return controls.map(func(control: Control) -> Rect2: return control.get_global_rect())
@@ -1249,31 +1249,33 @@ func test_slab_buttons_hold_still(runner) -> bool:
 	var ids: Dictionary = _slab_world(runner, main, false)
 	_select(main, [], ids.factory)
 	await _frames(runner)
-	var at: Vector2 = (main.get_node("HUD/Economy/Produce") as Control).get_global_rect().get_center()
+	var at: Vector2 = (main.get_node("HUD/Economy/BuildMenu").get_child(0) as Control).get_global_rect().get_center()
 	var cancelled: Array[int] = []
 	main.hud.entry_cancelled.connect(func(id: int) -> void: cancelled.append(id))
 	_click(runner, at)
 	_queue_of(main, ids.factory, 1, 0)
 	await _frames(runner)
 	_click(runner, at)
-	runner.check(_queued(main, "produce").size() == 2 and cancelled.is_empty(), "SL8 two clicks on Produce at %s queue twice and cancel nothing, got %d produce, cancelled %s" % [at, _queued(main, "produce").size(), cancelled])
+	runner.check(_queued(main, "produce").size() == 2 and cancelled.is_empty(), "SL8 two clicks on the first menu button at %s queue twice and cancel nothing, got %d produce, cancelled %s" % [at, _queued(main, "produce").size(), cancelled])
 	_queue_of(main, ids.factory, 0)
 	await _frames(runner)
 	var buttons: Array = _slab_buttons(main)
 	var still: Array = _rects(buttons)
-	runner.check(buttons.size() > 1 and _all_shown(buttons), "SL8 fixture: Produce and the factory's menu shown")
+	runner.check(buttons.size() > 1 and _all_shown(buttons), "SL8 fixture: the factory's menu shown")
 	for step: Array in [[1, "one queued"], [5, "five queued"], [6, "six queued, Show more"], [9, "nine queued, opened"], [1, "back to one"], [0, "the unit finished, 1 to 0"]]:
 		_queue_of(main, ids.factory, step[0])
 		if step[1].ends_with("opened"): main.get_node("HUD/Economy/QueueMore").pressed.emit()
 		await _frames(runner)
-		runner.check(_all_shown(buttons) and _rects(buttons) == still, "SL8 %s: Produce and the menu buttons shown and holding their rects %s, got %s" % [step[1], still, _rects(buttons)])
+		runner.check(_all_shown(buttons) and _rects(buttons) == still, "SL8 %s: the menu buttons shown and holding their rects %s, got %s" % [step[1], still, _rects(buttons)])
 		if step[0] == 0: continue
-		var gap: float = _rect(main, "HUD/Economy/BuildMenu").position.y - _queue_row(main, 900).get_global_rect().end.y
-		runner.check(is_equal_approx(gap, 12.0), "SL8 %s: 12 px from the entry in production to the menu, got %.1f" % [step[1], gap])
+		var more: Control = main.get_node("HUD/Economy/QueueMore")
+		var lowest: Control = more if more.is_visible_in_tree() else _queue_row(main, 900)
+		var gap: float = _rect(main, "HUD/Economy/BuildMenu").position.y - lowest.get_global_rect().end.y
+		runner.check(is_equal_approx(gap, 12.0), "SL8 %s: 12 px from %s to the menu, got %.1f" % [step[1], lowest.name, gap])
 	main.free()
 	return true
 
-# Gate B (user 2026-11-20): the toggle and the four oldest rows hold still; newer rows open above the toggle.
+# Gate B (user 2026-11-20): the toggle sits under the rows; opening adds the newer rows on top, so the toggle and the four oldest hold still.
 func test_slab_queue_toggle_holds_still(runner) -> bool:
 	var main = await SkirmishTests.new()._setup(runner)
 	var ids: Dictionary = _slab_world(runner, main, false)
@@ -1284,15 +1286,15 @@ func test_slab_queue_toggle_holds_still(runner) -> bool:
 	var more: Button = main.get_node("HUD/Economy/QueueMore")
 	var oldest: Array = [903, 902, 901, 900].map(func(id: int) -> Control: return _queue_row(main, id))
 	var newer: Array = [908, 907, 906, 905, 904].map(func(id: int) -> Control: return _queue_row(main, id))
-	var held: Array = [more] + oldest
+	var held: Array = oldest + [more]
 	var still: Array = _rects(held)
-	runner.check(_all_shown(held) and not newer.any(func(row: Control) -> bool: return row.is_visible_in_tree()) and _top_down([header] + held), "SL8 collapsed: QUEUE, Show more, then 903 to 900 top down, newer rows hidden")
+	runner.check(_all_shown(held) and not newer.any(func(row: Control) -> bool: return row.is_visible_in_tree()) and _top_down([header] + held), "SL8 collapsed: QUEUE, 903 to 900, then Show more top down, newer rows hidden")
 	var at: Vector2 = more.get_global_rect().get_center()
 	var cancelled: Array[int] = []
 	main.hud.entry_cancelled.connect(func(id: int) -> void: cancelled.append(id))
 	_click(runner, at)
 	await _frames(runner)
-	runner.check(more.text == "Show fewer" and _all_shown(newer) and _top_down([header] + newer + held), "SL8 opened: QUEUE, 908 to 904, Show fewer, 903 to 900 top down")
+	runner.check(more.text == "Show fewer" and _all_shown(newer) and _top_down([header] + newer + held), "SL8 opened: QUEUE, 908 to 904, 903 to 900, then Show fewer top down")
 	runner.check(_rects(held) == still, "SL8 opened: the toggle and the four oldest rows hold their rects %s, got %s" % [still, _rects(held)])
 	_click(runner, at)
 	await _frames(runner)
@@ -1410,18 +1412,16 @@ func test_right_labels_on_the_name_line(runner) -> bool:
 
 func test_key_labels(runner) -> bool:
 	var headless: Array = HudModel.ORDER_KEYS.values().map(func(code: Key) -> String: return HudModel.key_label(code))
-	runner.check(headless == ["A", "S", "F", "E"], "KL1 headless labels are the physical keys, got %s" % [headless])
+	runner.check(headless == ["A", "S", "F"], "KL1 headless labels are the physical keys, got %s" % [headless])
 	var main = await SkirmishTests.new()._setup(runner)
 	var ids: Dictionary = _slab_world(runner, main, true)
-	HudModel.layout_label = func(physical: Key) -> Key: return {KEY_A: KEY_Q, KEY_F: KEY_G, KEY_E: KEY_R}.get(physical, physical)
+	HudModel.layout_label = func(physical: Key) -> Key: return {KEY_A: KEY_Q, KEY_F: KEY_G}.get(physical, physical)
 	main.hud.reset()
 	_select(main, [ids.car])
 	var texts: Array = [main.get_node("HUD/Economy/Orders/AttackMove").text, main.get_node("HUD/Economy/Orders/Stop").text, main.get_node("HUD/Economy/Orders/Unload").text]
-	_select(main, [], ids.barracks)
-	texts.append(main.get_node("HUD/Economy/Produce").text)
 	HudModel.layout_label = HudModel._platform_label
 	main.free()
-	runner.check(texts.slice(0, 3) == ["Attack move (Q)", "Stop (S)", "Unload (G)"] and texts[3].ends_with("(R)"), "KL1 the buttons print the layout's labels, got %s" % [texts])
+	runner.check(texts == ["Attack move (Q)", "Stop (S)", "Unload (G)"], "KL1 the buttons print the layout's labels, got %s" % [texts])
 	return true
 
 const SITE_PERCENT: int = 62
@@ -2296,7 +2296,7 @@ func test_accepted_answer_clears(runner) -> bool:
 	main._submit(skirmish._off_map_move(ids))
 	main._restart()
 	ids = skirmish._arena(main)
-	main.orders._produce_selected()
+	main.orders._unload_selected()
 	main._submit({"type": "stop", "entity_ids": [ids.tank]})
 	BaseScene.tick(main)
 	runner.check(main.hud.refusal == "" and not _line_shown(main), "RN3 after a restart dropped an unanswered order, the next accepted answer still clears a hint, got '%s'" % main.hud.refusal)

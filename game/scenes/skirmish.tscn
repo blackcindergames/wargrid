@@ -33,11 +33,6 @@ grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
 
-[node name="Produce" type="Button" parent="HUD/Economy"]
-theme_type_variation = &"HudButton"
-text = "Produce (E)"
-mouse_filter = 0
-
 [node name="CancelBuild" type="Button" parent="HUD/Economy"]
 theme_type_variation = &"HudButton"
 text = "Cancel construction"

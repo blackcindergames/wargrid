@@ -2,7 +2,6 @@ extends Control
 
 signal menu_chosen(index: int)
 signal entry_cancelled(entry_id: int)
-signal produce_pressed()
 signal cancel_build_pressed()
 signal menu_pressed()
 signal attack_move_pressed()
@@ -17,6 +16,8 @@ const PAD_Y: float = 8.0
 const GAP: int = 4
 const ROW: float = 32.0
 const QUEUE_GAP: float = 12.0
+# Fits the longest five-digit preview with low power (666 at 1280 x 720); longer numbers still widen the strip.
+const STRIP_WIDTH: float = 704.0
 
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -30,10 +31,10 @@ var menu_kinds: Array = []
 var _economy: VBoxContainer
 var _build_menu: GridContainer
 var _queue: Control
-var _produce: Button
 var _cancel_build: Button
 var _top_strip: PanelContainer
-var _forecast: PanelContainer
+var _strip_style: StyleBoxFlat
+var _preview_style: StyleBoxFlat
 var _menu: Button
 var _notice: PanelContainer
 var _notice_text: Label
@@ -45,7 +46,6 @@ var _resume: Label
 var _commands: GridContainer
 var _queue_header: HBoxContainer
 var _queue_more: Button
-var _queue_newer: VBoxContainer
 var _queue_gap: Control
 var _queue_open: bool = false
 var _queue_for: int = -1
@@ -67,14 +67,12 @@ func _init() -> void:
 	mouse_filter = MOUSE_FILTER_IGNORE
 	set_anchors_preset(PRESET_FULL_RECT)
 	_top_strip = _slab("TopStrip", Vector2(8, 8))
-	_forecast = _slab("Forecast", Vector2(8, 48))
 	_build_strip()
-	_build_forecast()
 	_build_menu_chip()
 	_build_notice()
 	_build_refusal_line()
 	_build_panel()
-	for surface: Control in [_top_strip, _forecast, _menu, _panel]: block(surface)
+	for surface: Control in [_top_strip, _menu, _panel]: block(surface)
 
 # The spec's HUD blocks: a click, drag release or wheel on a panel never reaches the map.
 func block(surface: Control) -> void:
@@ -117,15 +115,21 @@ static func _label(parent: Control, label_name: String, variation: StringName, t
 	parent.add_child(label)
 	return label
 
-# Groups 24 apart, label to value 8 (hud-v5-layout "Top strip").
-func _groups(parent: Control, value: StringName) -> void:
+# Groups 24 apart, label to value 8 (hud-v5-layout "Top strip"); a fixed width, so the preview never moves the strip.
+func _groups(parent: Control) -> void:
 	var row: BoxContainer = _box(parent, "Row", HBoxContainer.new(), 24)
 	var credits: BoxContainer = _box(row, "CreditsGroup", HBoxContainer.new(), 8)
 	_label(credits, "CreditsLabel", &"HudLabel", "CREDITS")
 	_label(credits, "Credits", &"HudCredits")
+	_label(credits, "Delta", &"HudNumber").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	_spacer(row, "Gap", Vector2.ZERO).size_flags_horizontal = SIZE_EXPAND_FILL
+	var preview: Label = _label(row, "Preview", &"HudLabel", "PREVIEW")
+	preview.add_theme_color_override("font_color", get_theme_color("sel", &"Tokens"))
+	preview.visible = false
+	_spacer(row, "GapRight", Vector2.ZERO).size_flags_horizontal = SIZE_EXPAND_FILL
 	var power: BoxContainer = _box(row, "PowerGroup", HBoxContainer.new(), 8)
 	_label(power, "PowerLabel", &"HudLabel", "POWER")
-	_label(power, "Power", value)
+	_label(power, "Power", &"HudNumber")
 	_label(power, "LowPower", &"HudLabel", HudModel.LOW_POWER).add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 
 # A one-line slab: no vertical padding, a fixed height that centres its line.
@@ -138,7 +142,11 @@ func _flat(slab: PanelContainer, height: float) -> void:
 
 func _build_strip() -> void:
 	_flat(_top_strip, 32)
-	_groups(_top_strip, &"HudNumber")
+	_top_strip.custom_minimum_size.x = STRIP_WIDTH
+	_strip_style = _top_strip.get_theme_stylebox("panel") as StyleBoxFlat
+	_preview_style = _strip_style.duplicate() as StyleBoxFlat
+	_preview_style.border_color = get_theme_color("sel", &"Tokens")
+	_groups(_top_strip)
 	var swatch := ColorRect.new()
 	swatch.name = "Swatch"
 	swatch.custom_minimum_size = Vector2(8, 8)
@@ -146,12 +154,6 @@ func _build_strip() -> void:
 	swatch.mouse_filter = MOUSE_FILTER_IGNORE
 	_top_strip.get_node("Row/CreditsGroup").add_child(swatch)
 	_top_strip.get_node("Row/CreditsGroup").move_child(swatch, 0)
-
-func _build_forecast() -> void:
-	var box: BoxContainer = _box(_forecast, "Box", VBoxContainer.new(), 4)
-	_label(box, "Title", &"HudLabel", "AFTER PURCHASE")
-	_groups(box, &"HudCredits")
-	_forecast.visible = false
 
 # A top-right chip that hugs its row of labels (hud-v5-layout "Menu chip, Team chip, playtest chip").
 static func chip(chip_name: String, top: float, parts: Array) -> Button:
@@ -246,9 +248,7 @@ func setup(economy: VBoxContainer) -> void:
 	_economy = economy
 	if economy == null: return
 	_queue = economy.get_node("Queue")
-	_produce = economy.get_node("Produce")
 	_cancel_build = economy.get_node("CancelBuild")
-	_produce.pressed.connect(produce_pressed.emit)
 	_cancel_build.pressed.connect(cancel_build_pressed.emit)
 	_build_slab()
 	_read_keys()
@@ -277,20 +277,19 @@ func _build_slab() -> void:
 	_commands.move_child(pad, 1)
 	var font: Font = get_theme_font("font", &"HudButton")
 	_build_menu = _grid("BuildMenu", HudModel.menu_columns(font, get_theme_font_size("font_size", &"HudButton")))
-	for row: Button in [_produce, _cancel_build]: _square(row)
+	_square(_cancel_build)
 	_queue_header = _box(_economy, "QueueHeader", HBoxContainer.new(), 8) as HBoxContainer
 	_label(_queue_header, "Title", &"HudLabel", "QUEUE").size_flags_horizontal = SIZE_EXPAND_FILL
 	_label(_queue_header, "Waiting", &"HudHint")
 	(_queue as BoxContainer).add_theme_constant_override("separation", GAP)
-	_queue_newer = _box(_economy, "QueueNewer", VBoxContainer.new(), GAP) as VBoxContainer
 	_queue_gap = _spacer(_economy, "QueueGap", Vector2(0.0, QUEUE_GAP - 2 * GAP))
 	_queue_more = _button(_economy, "QueueMore", 0.0)
 	_queue_more.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
 	_queue_more.add_theme_color_override("font_hover_color", get_theme_color("muted", &"Tokens"))
 	_queue_more.draw.connect(_draw_chevron)
 	_queue_more.pressed.connect(_toggle_queue)
-	# The slab grows upward from the screen edge, so the queue sits above the buttons and the newer rows fold above the toggle: nothing under the pointer moves (gate B, user 2026-11-20).
-	var rows: Array[Control] = [_queue_header, _queue_newer, _queue_more, _queue, _queue_gap, _resume, _commands, _build_menu, _produce, _cancel_build]
+	# The slab grows upward from the screen edge, so the queue and its toggle sit above the buttons and opening adds rows on top: nothing under the pointer moves (gate B, user 2026-11-20).
+	var rows: Array[Control] = [_queue_header, _queue, _queue_more, _queue_gap, _resume, _commands, _build_menu, _cancel_build]
 	for i in rows.size(): _economy.move_child(rows[i], i)
 
 func _read_keys() -> void:
@@ -390,15 +389,13 @@ func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictio
 	var edge: Color = View.owner_color(seat, selection.bright_owners)
 	_resume.visible = selection.resume_id != -1
 	_show_commands(view, selection, seat)
-	_produce.visible = not building.is_empty() and building.completed and not selection.production_kind.is_empty()
-	_produce.text = "Produce %s (%s)" % [Registry.kind(selection.production_kind).get("display_name", ""), _keys.produce] if not building.is_empty() else "Produce (%s)" % _keys.produce
 	_cancel_build.visible = not building.is_empty() and not building.completed
 	_refresh_menu(kinds, HudModel.shows_build_menu(view, selection, seat), HudModel.player(view, seat).get("credits", 0), selection.placement_kind)
 	if edge != _edge:
 		_edge = edge
-		for row: Node in _queue_newer.get_children() + _queue.get_children(): (row.get_node("Track/Bar") as ColorRect).color = edge
+		for row: Node in _queue.get_children(): (row.get_node("Track/Bar") as ColorRect).color = edge
 	_refresh_queue(building, edge)
-	_queue_gap.visible = _queue.visible and (_resume.visible or _commands.visible or _build_menu.visible or _produce.visible or _cancel_build.visible)
+	_queue_gap.visible = _queue.visible and (_resume.visible or _commands.visible or _build_menu.visible or _cancel_build.visible)
 	_fit_slab()
 
 # The keys keep today's paths for any own selection; only the buttons follow the row rule.
@@ -420,11 +417,16 @@ func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> v
 	var numbers: Dictionary = HudModel.strip(view, view_player, selection.placement_kind)
 	var powered: bool = HudModel.uses_power(HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
 	(_top_strip.get_node("Row/CreditsGroup/Swatch") as ColorRect).color = View.owner_color(view_player, selection.bright_owners)
-	_fill(_top_strip, str(numbers.credits), false, numbers.used, numbers.available, powered)
-	_forecast.visible = numbers.has("after_credits")
-	if _forecast.visible:
-		var credits: int = numbers.after_credits
-		_fill(_forecast, str(credits) if credits >= 0 else "\u2212%d" % -credits, credits < 0, numbers.after_used, numbers.after_available, powered)
+	var preview: bool = numbers.has("after_credits")
+	var delta: Label = _top_strip.find_child("Delta", true, false)
+	delta.visible = preview
+	if preview: delta.text = "\u2212%d" % (numbers.credits - numbers.after_credits)
+	var label: Label = _top_strip.find_child("Preview", true, false)
+	if label.visible != preview:
+		label.visible = preview
+		_top_strip.add_theme_stylebox_override("panel", _preview_style if preview else _strip_style)
+	var credits: int = numbers.after_credits if preview else numbers.credits
+	_fill(_top_strip, str(credits) if credits >= 0 else "\u2212%d" % -credits, credits < 0, numbers.after_used if preview else numbers.used, numbers.after_available if preview else numbers.available, powered)
 
 func _fill(slab: PanelContainer, credits: String, short: bool, used: int, available: int, powered: bool) -> void:
 	var low: bool = used > available
@@ -463,20 +465,15 @@ func _refresh_queue(building: Dictionary, edge: Color) -> void:
 	if building.get("id", -1) != _queue_for or queue.size() <= HudModel.QUEUE_SHOWN: _queue_open = false
 	_queue_for = building.get("id", -1)
 	var ids: Array = queue.map(func(entry: Dictionary) -> String: return str(entry.id))
-	for child in _queue_newer.get_children() + _queue.get_children():
+	for child in _queue.get_children():
 		if not ids.has(str(child.name)): child.free()
 	# The entry in production sits lowest, nearest the buttons; cancelling one moves only the newer rows above it.
-	var folded: int = queue.size() - HudModel.QUEUE_COLLAPSED if queue.size() > HudModel.QUEUE_SHOWN else 0
 	for row in queue.size():
 		var i: int = queue.size() - 1 - row
 		var entry: Dictionary = queue[i]
-		var box: Control = _queue_newer if row < folded else _queue
-		# A row changing box is made anew: re-entering the tree would hook its click sound twice.
-		var moved: Node = (_queue if row < folded else _queue_newer).get_node_or_null(str(entry.id))
-		if moved != null: moved.free()
-		var button: Button = box.get_node_or_null(str(entry.id))
-		if button == null: button = _queue_row(box, entry.id, edge)
-		box.move_child(button, row if row < folded else row - folded)
+		var button: Button = _queue.get_node_or_null(str(entry.id))
+		if button == null: button = _queue_row(entry.id, edge)
+		_queue.move_child(button, row)
 		var parts: PackedStringArray = queue_parts(entry)
 		button.text = parts[0]
 		var percent: Label = button.get_node("Percent")
@@ -493,8 +490,8 @@ func _refresh_queue(building: Dictionary, edge: Color) -> void:
 	_show_queue_rows()
 
 # The whole row cancels, as Zero Hour's queue button does; the × is only its sign.
-func _queue_row(box: Control, entry_id: int, edge: Color) -> Button:
-	var button: Button = _button(box, str(entry_id), 0.0)
+func _queue_row(entry_id: int, edge: Color) -> Button:
+	var button: Button = _button(_queue, str(entry_id), 0.0)
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.pressed.connect(entry_cancelled.emit.bind(entry_id))
 	var hover := get_theme_stylebox("hover", &"HudButton").duplicate() as StyleBoxFlat
@@ -526,8 +523,9 @@ func _hover_queue_row(row: Button, hovered: bool) -> void:
 	(row.get_node("Cancel") as Label).add_theme_color_override("font_color", get_theme_color("text" if hovered else "muted", &"Tokens"))
 
 func _show_queue_rows() -> void:
-	var rows: Dictionary = HudModel.queue_rows(_queue_newer.get_child_count() + _queue.get_child_count(), _queue_open)
-	_queue_newer.visible = _queue_open and rows.more > 0
+	var count: int = _queue.get_child_count()
+	var rows: Dictionary = HudModel.queue_rows(count, _queue_open)
+	for i in count: (_queue.get_child(i) as Control).visible = count - 1 - i < rows.shown
 	_queue_more.visible = rows.more > 0
 	_queue_more.text = "Show fewer" if _queue_open else "Show %d more queued" % rows.more
 

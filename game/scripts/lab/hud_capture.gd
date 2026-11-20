@@ -30,7 +30,7 @@ var _problems: PackedStringArray = []
 func shots() -> Array[Dictionary]:
 	var one: Array = [BaseScene.HUD_SIZES[0]]
 	return [
-		_shot("slab", _slab_armed.bind(4800, "china_defence"), "AFTER PURCHASE"),
+		_shot("slab", _slab_armed.bind(4800, "china_defence"), "PREVIEW"),
 		_shot("slab-attack-armed", _slab_attack, ""),
 		_shot("slab-army", _slab_army, ""),
 		_shot("slab-builder", _slab_pick.bind("builder", 50000), "$1200"),
@@ -60,9 +60,9 @@ func shots() -> Array[Dictionary]:
 		_shot("refusal-longest", _refusal_longest, LONGEST),
 		_shot("strip", _strip.bind(8), "4800"),
 		_shot("low-power", _strip.bind(12), "LOW POWER · DEFENCES OFF"),
-		_shot("forecast-short", _slab_armed.bind(500, "china_defence"), HudTests.MINUS + "700"),
-		_shot("forecast-plant", _slab_armed.bind(4800, "usa_power_plant"), "8 / 15"),
-		_shot("forecast-frc", _slab_armed.bind(4800, "frc_barracks", "frc"), "AFTER PURCHASE"),
+		_shot("preview-short", _slab_armed.bind(500, "china_defence"), HudTests.MINUS + "700"),
+		_shot("preview-plant", _slab_armed.bind(4800, "usa_power_plant"), "8 / 15"),
+		_shot("preview-frc", _slab_armed.bind(4800, "frc_barracks", "frc"), "PREVIEW"),
 		_shot("chips-menu-free", _menu_chip.bind(false), "Esc"),
 		_shot("chips-menu-held", _menu_chip.bind(true), ""),
 		_shot("chips", _chips_worst.bind(false), "PLAYTEST"),

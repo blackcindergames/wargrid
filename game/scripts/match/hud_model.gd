@@ -60,7 +60,7 @@ static func uses_power(faction: String) -> bool:
 	return _powered[faction]
 
 # Physical keycodes: orders read their keys here and the buttons print them, so a label never names an unused key.
-const ORDER_KEYS := {"attack_move": KEY_A, "stop": KEY_S, "unload": KEY_F, "produce": KEY_E}
+const ORDER_KEYS := {"attack_move": KEY_A, "stop": KEY_S, "unload": KEY_F}
 const SLAB_WIDTH: float = 432.0
 const SLAB_CONTENT: float = SLAB_WIDTH - 20.0
 const MENU_PADDING: float = 24.0

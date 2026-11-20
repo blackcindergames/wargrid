@@ -13,7 +13,6 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const ResultPanel = preload("res://scripts/match/result_panel.gd")
 const LAUNCHER_SCENE: String = "res://scenes/launcher.tscn"
 const ZOOMS: Array[float] = [0.5, 1.0, 2.0]
-const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const SoundPlayer = preload("res://scripts/presentation/sound_player.gd")
@@ -86,7 +85,6 @@ func _ready() -> void:
 	$HUD.move_child(menu_chip, _result_panel.get_index() + 1)
 	hud.menu_chosen.connect(orders._menu_choose.bind(false))
 	hud.entry_cancelled.connect(orders._cancel_entry)
-	hud.produce_pressed.connect(orders._produce_selected)
 	hud.cancel_build_pressed.connect(orders._cancel_build)
 	hud.attack_move_pressed.connect(orders.arm_attack_move)
 	hud.stop_pressed.connect(orders.stop_selected)
@@ -436,9 +434,7 @@ func _select_kind(kind: String, shift: bool) -> void:
 	_reshow()
 
 func _hud_selection(state: Dictionary) -> Dictionary:
-	var building: Dictionary = _building(state, orders.selected_building_id)
-	var production: String = _production_kind(building, state) if not building.is_empty() else ""
-	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "production_kind": production, "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
 
 func _result(state: Dictionary) -> String:
 	var result: String = "" if state.match == null else _result_text(state.match)
@@ -503,13 +499,6 @@ func _collect_note(note: SimPump.Note) -> void:
 	_ensure_sound()
 	_sound.collect_step(note.tick, note.events, note.results)
 	_visuals.collect_step(note.tick, note.events, note.results)
-
-func _production_kind(building: Dictionary, state: Dictionary) -> String:
-	var kind: String = Skirmish.unit_for(_local_state(state).get("faction", Skirmish.default_faction()), building.kind)
-	return kind if not kind.is_empty() else Definitions.building(building.kind).produces
-
-func _local_state(state: Dictionary) -> Dictionary:
-	return HudModel.player(state, local_player)
 
 func _building(state: Dictionary, id: int) -> Dictionary:
 	return HudModel.building(state, id)

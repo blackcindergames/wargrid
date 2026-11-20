@@ -61,7 +61,7 @@ func _arena(main) -> Dictionary:
 
 func test_skirmish_ready_and_tick(runner) -> bool:
 	var main = await _setup(runner)
-	for path in ["WorldView", "Camera2D", "HUD/ResultPanel", "HUD/Economy/Produce"]:
+	for path in ["WorldView", "Camera2D", "HUD/ResultPanel", "HUD/Economy/Queue"]:
 		runner.check(main.has_node(path), "K2 node " + path)
 	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot(), "K2 exact scenario")
 	BaseScene.tick(main)
@@ -143,7 +143,7 @@ func test_match_hud_and_restart(runner) -> bool:
 	var ids: Dictionary = _arena(main)
 	main.orders.selected_ids.assign([ids.tank])
 	main._refresh()
-	var credits: String = str(main._local_state(main.shown_state).credits)
+	var credits: String = str(HudModel.player(main.shown_state, main.local_player).credits)
 	runner.check(main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false).text == credits and _panel_text(main, "Name") == "Battle Tank" and _panel_text(main, "Health") == "480 / 480", "K4 credits, kind and health in the HUD")
 	var setup: Dictionary = main.driver.pump.live().view_state()
 	setup.match.status = "setup"
@@ -750,12 +750,12 @@ func test_silent_keys_explain(runner) -> bool:
 	main.hud.refusal = ""
 	main.orders.selected_ids.clear()
 	helper.key(main, KEY_E)
-	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.refusal == "Select a production building", "P4 E without a building says why, got '%s'" % main.hud.refusal)
+	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.refusal == "", "P4 E is no longer bound (user, 2026-11-20): nothing sent, no hint, got '%s'" % main.hud.refusal)
 	main.free()
 	return true
 
 func _hud_texts(main) -> Array[String]:
-	var texts: Array[String] = [BaseScene.hud_text(main), main.get_node("HUD/Economy/Produce").text, main.get_node("HUD/Economy/CancelBuild").text]
+	var texts: Array[String] = [BaseScene.hud_text(main), main.get_node("HUD/Economy/CancelBuild").text]
 	for group: String in ["BuildMenu", "Queue"]:
 		for button in main.get_node("HUD/Economy/" + group).get_children(): texts.append(button.text)
 	return texts
@@ -767,11 +767,10 @@ func test_hud_strings_use_display_names(runner) -> bool:
 	main.driver.adopt(sim)
 	main.orders.selected_building_id = barracks
 	main._refresh()
-	main.orders._produce_selected()
-	main.orders._produce_selected()
+	main.orders._menu_choose(0, false)
+	main.orders._menu_choose(0, false)
 	BaseScene.tick(main)
 	await runner.process_frame
-	runner.check(main.get_node("HUD/Economy/Produce").text == "Produce Rifleman (E)", "N1 produce button names the unit, got " + main.get_node("HUD/Economy/Produce").text)
 	runner.check(main.get_node("HUD/Economy/Queue").get_child_count() == 2, "N1 fixture: two queue entries")
 	var shown: Array[String] = _hud_texts(main)
 	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1 and unit.kind == "usa_builder")[0].id
@@ -799,7 +798,8 @@ func test_hud_font_size_is_shared(runner) -> bool:
 	var barracks: int = Fixture.build(runner, main.driver.pump.live(), "usa_barracks", Vector2i(12, 12))
 	BaseScene.publish(main)
 	main.orders.selected_building_id = barracks
-	main.orders._produce_selected()
+	main._refresh()
+	main.orders._menu_choose(0, false)
 	BaseScene.tick(main)
 	await runner.process_frame
 	runner.check(main.get_node("HUD/Economy/Queue").get_child_count() == 1, "FS1 fixture: a queue entry, got %d" % main.get_node("HUD/Economy/Queue").get_child_count())
@@ -957,7 +957,7 @@ func test_one_snapshot_per_refresh(runner) -> bool:
 	Profiler.enabled = false
 	Profiler.reset()
 	runner.check(snapshots == 0 and views == 0, "RF2 a skirmish refresh with a production building selected takes no snapshot and no view state, got %d and %d" % [snapshots, views])
-	runner.check(main.get_node("HUD/Economy/Produce").text == "Produce Rifleman (E)", "RF2 produce label unchanged")
+	runner.check(main.get_node("HUD/Economy/BuildMenu").get_child(0).text == "1: Rifleman", "RF2 the barracks' menu still names its unit, got '%s'" % main.get_node("HUD/Economy/BuildMenu").get_child(0).text)
 	main.free()
 	return true
 
@@ -1136,7 +1136,7 @@ func test_input_script_offline(runner) -> bool:
 	BaseScene.tick(main)
 	seen[0] = 0
 	_ic_click(helper, main, at.call(21.0, 21.0))
-	helper.key(main, KEY_E)
+	helper.key(main, KEY_1)
 	runner.check(sim_orders.call("produce") == 1, "IC1 step 12 took effect")
 	rows.append(_ic_row(main, 12, seen, true))
 	helper.pointer(main, Iso.world_to_plane(Vector2(26.5, 16.5)), MOUSE_BUTTON_RIGHT, true)
@@ -1272,7 +1272,7 @@ func test_hud_reads_only_state_and_orders(runner) -> bool:
 	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
 	main.driver.adopt(sim)
 	main.orders.selected_building_id = barracks
-	var produce: Button = main.get_node("HUD/Economy/Produce")
+	var produce: Control = main.get_node("HUD/Economy/BuildMenu")
 	produce.hide()
 	main.hud.refuse("Choose one builder")
 	main.stepped_results.append({"ok": false, "error": "Not yours", "player": 2, "tick": 5, "sequence": 0})
@@ -1315,7 +1315,7 @@ func test_sb1_economy_input_reads_shown(runner) -> bool:
 	var click: Vector2 = Iso.world_to_plane(Vector2(13.5, 13.5))
 	helper.pointer(main, click, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, click, MOUSE_BUTTON_LEFT, false)
-	helper.key(main, KEY_E)
+	helper.key(main, KEY_1)
 	helper.pointer(main, Iso.world_to_plane(Vector2(20.5, 14.5)), MOUSE_BUTTON_RIGHT, true)
 	var snapshots: int = Profiler.calls(&"snapshot")
 	var views: int = Profiler.calls(&"view_state")
@@ -1945,7 +1945,6 @@ func test_freeze_card_keeps_the_focus(runner) -> bool:
 	(menu.get_child(0) as Button).pressed.emit()
 	# The freeze card's own hook would clear an armed ghost at once, so the arm count is what shows it.
 	runner.check(main.orders.gestures == gestures, "FN5 a build button pressed behind the card arms nothing")
-	main.orders._produce_selected()
 	main.orders._cancel_entry(1)
 	main.orders._cancel_build()
 	runner.check(main.driver.queued().is_empty() and not main.orders.busy() and main.hud.refusal == refusal, "FN5 build and queue buttons behind the card order nothing, got %s busy %s refusal '%s'" % [main.driver.queued(), main.orders.busy(), main.hud.refusal])
@@ -2294,8 +2293,8 @@ func test_releases_on_a_panel_are_the_huds(runner) -> bool:
 	main._refresh()
 	main.orders._menu_choose(0, false)
 	await _frames(runner)
-	var forecast: Control = main.get_node("HUD/Hud/Forecast")
-	runner.check(not main.orders._placement_kind.is_empty() and forecast.is_visible_in_tree(), "MR5 fixture: a placement is armed and the forecast card shows")
+	var forecast: Control = main.get_node("HUD/Hud/TopStrip")
+	runner.check(not main.orders._placement_kind.is_empty() and forecast.find_child("Preview", true, false).is_visible_in_tree(), "MR5 fixture: a placement is armed and the strip previews it")
 	_push_move(port, map)
 	var ghost: Array = main.get_node("WorldView")._preview_cells.duplicate()
 	_push_move(port, panel)
@@ -2304,7 +2303,7 @@ func test_releases_on_a_panel_are_the_huds(runner) -> bool:
 	_push_button(port, panel, MOUSE_BUTTON_LEFT, false)
 	_push_click(port, forecast.get_global_rect().get_center())
 	await _frames(runner)
-	runner.check(_pending(main, "build") == 0 and not main.orders._placement_kind.is_empty(), "MR5 a placement released on the panel or clicked on the forecast card builds nothing, got %d" % _pending(main, "build"))
+	runner.check(_pending(main, "build") == 0 and not main.orders._placement_kind.is_empty(), "MR5 a placement released on the panel or clicked on the previewing strip builds nothing, got %d" % _pending(main, "build"))
 	port.free()
 	overlays._end(saved)
 	return true
@@ -2402,10 +2401,10 @@ func test_slab_buttons_take_no_focus(runner) -> bool:
 	main._refresh()
 	await runner.process_frame
 	var count = func(type: String) -> int: return main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == type).size()
-	_click_control(main, main.get_node("HUD/Economy/Produce"))
-	runner.check(count.call("produce") == 1, "SF1 fixture: a click on Produce queues one unit")
-	_accept_keys(runner, main, "Produce")
-	runner.check(count.call("produce") == 1, "SF1 Space and Enter after a click on Produce queue nothing more, got %d" % count.call("produce"))
+	_click_control(main, main.get_node("HUD/Economy/BuildMenu").get_child(0))
+	runner.check(count.call("produce") == 1, "SF1 fixture: a click on a produce button queues one unit")
+	_accept_keys(runner, main, "a produce button")
+	runner.check(count.call("produce") == 1, "SF1 Space and Enter after a click on a produce button queue nothing more, got %d" % count.call("produce"))
 	BaseScene.tick(main)
 	await runner.process_frame
 	var queue: Control = main.get_node("HUD/Economy/Queue")

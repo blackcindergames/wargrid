@@ -11,7 +11,7 @@ const SimPump = preload("res://scripts/match/sim_pump.gd")
 # [window, logical]: what the match's stretch caps lay each window out at
 const HUD_SIZES: Array[Array] = [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)]]
 
-const HUD_PANELS: Array[String] = ["HUD/Economy", "HUD/Hud/TopStrip", "HUD/Hud/Forecast", "HUD/MenuChip", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/Hud/SelectionPanel"]
+const HUD_PANELS: Array[String] = ["HUD/Economy", "HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/Hud/SelectionPanel"]
 
 # The no-overlap lists: each shown HUD panel by path, sized as the layout tests always read them.
 static func hud_panels(main) -> Dictionary:
@@ -176,8 +176,8 @@ func test_production_ui(runner) -> bool:
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,false)
 	runner.check(main.orders.selected_building_id == depot and main.orders.selected_ids.is_empty() and main.get_node("WorldView")._selection.keys() == [depot],"Bs3 building selection outline")
 	main.orders.selected_building_id = depot
-	main.get_node("HUD/Economy/Produce").pressed.emit()
-	key(main,KEY_E)
+	main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()
+	key(main,KEY_1)
 	runner.check(main.driver.queued().size() == 2,"Bs3 one command per produce")
 	tick(main)
 	var queue: Array = Fixture.object(main.driver.pump.live(),depot).queue
@@ -205,7 +205,7 @@ func test_production_ui(runner) -> bool:
 		tick(main)
 		runner.check(Fixture.object(main.driver.pump.live(),depot).queue.size() == 1 and Fixture.object(main.driver.pump.live(),depot).queue[0].id == queue[0].id,"Bs3 stable cancel entry ID")
 	else: runner.check(false,"Bs3 queue populated")
-	runner.check(main.has_node("HUD/Economy/Produce") and main.get_node("HUD/Economy/Produce").mouse_filter == Control.MOUSE_FILTER_STOP,"Bs3 GUI consumes mouse")
+	runner.check(main.has_node("HUD/Economy/CancelBuild") and main.get_node("HUD/Economy/CancelBuild").mouse_filter == Control.MOUSE_FILTER_STOP,"Bs3 GUI consumes mouse")
 	main.driver.pump.live().remove_object(depot)
 	publish(main)
 	runner.check(main.orders.selected_building_id == -1,"Bs3 removed selection cleared")

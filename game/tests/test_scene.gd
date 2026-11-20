@@ -64,9 +64,9 @@ func test_ready(runner) -> bool:
 	runner.check(main.has_node("Camera2D") and main.has_node("WorldView") and main.has_node("HUD/Hud"), "S1 scene nodes")
 	runner.check(main.orders.selected_ids == [], "S1 no selection")
 	runner.check(main.get_node("Camera2D").position == Iso.world_to_plane(Vector2(8, 8)), "S1 camera center")
-	var stops: Array = ["HUD/Hud/TopStrip", "HUD/Hud/Forecast", "HUD/Hud/SelectionPanel", "HUD/Economy", "HUD/MenuChip", "HUD/Playtest/Chip", "HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog"].filter(func(path: String) -> bool: return main.get_node(path).mouse_filter == Control.MOUSE_FILTER_STOP and not main.get_node(path).mouse_force_pass_scroll_events)
+	var stops: Array = ["HUD/Hud/TopStrip", "HUD/Hud/SelectionPanel", "HUD/Economy", "HUD/MenuChip", "HUD/Playtest/Chip", "HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog"].filter(func(path: String) -> bool: return main.get_node(path).mouse_filter == Control.MOUSE_FILTER_STOP and not main.get_node(path).mouse_force_pass_scroll_events)
 	var passes: Array = ["HUD/Hud", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/SelectionBox"].filter(func(path: String) -> bool: return main.get_node(path).mouse_filter == Control.MOUSE_FILTER_IGNORE)
-	runner.check(stops.size() == 8 and passes.size() == 4, "S1 panels stop clicks and the wheel, the rest passes, got %s %s" % [stops, passes])
+	runner.check(stops.size() == 7 and passes.size() == 4, "S1 panels stop clicks and the wheel, the rest passes, got %s %s" % [stops, passes])
 	runner.check(ProjectSettings.get_setting("physics/common/physics_ticks_per_second") == 30, "S1 tick rate")
 	runner.check(ProjectSettings.get_setting("rendering/renderer/rendering_method") == "gl_compatibility", "S1 renderer")
 	for binding in [["camera_left", KEY_A, KEY_LEFT], ["camera_right", KEY_D, KEY_RIGHT], ["camera_up", KEY_W, KEY_UP], ["camera_down", KEY_S, KEY_DOWN], ["deselect", KEY_ESCAPE]]:

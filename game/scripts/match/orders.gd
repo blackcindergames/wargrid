@@ -150,9 +150,6 @@ func _economy_keys(event: InputEvent) -> bool:
 	if index >= 0 and index < menu.size():
 		_menu_choose(index,true)
 		return true
-	if event.physical_keycode == HudModel.ORDER_KEYS.produce:
-		if not is_selecting() and _placement_kind.is_empty(): _produce_selected()
-		return true
 	if event.physical_keycode == HudModel.ORDER_KEYS.unload:
 		_unload_selected()
 		return true
@@ -406,16 +403,6 @@ func _set_rally(plane: Vector2) -> bool:
 	var cell: Vector2 = Iso.plane_to_world(plane).floor() + Vector2(.5,.5)
 	_screen._submit({"type":"set_rally","building_id":building.id,"target":[cell.x,cell.y]})
 	return true
-
-func _produce_selected() -> void:
-	if not takes_orders(): return
-	var state: Dictionary = _screen.shown_state
-	var building: Dictionary = _screen._building(state,selected_building_id)
-	if building.is_empty():
-		_screen.refuse("Select a production building", false)
-		_screen._reshow()
-		return
-	_screen._submit({"type":"produce","building_id":building.id,"unit_kind":_screen._production_kind(building, state)})
 
 func _cancel_entry(id: int) -> void:
 	if not takes_orders(): return
