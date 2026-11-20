@@ -1,0 +1,55 @@
+name: War Room
+on:
+  push:
+    branches: ['**', '!dependabot/**'] # Dependabot branches run once, as pull requests
+    paths: &paths
+      - 'warroom/**'
+      - '.github/workflows/warroom.yml'
+  pull_request:
+    paths: *paths
+permissions:
+  contents: read
+concurrency:
+  group: warroom-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality:
+    name: War Room / Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
+        with:
+          go-version-file: warroom/go.mod
+          cache-dependency-path: warroom/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: warroom/islands/.nvmrc
+          cache: npm
+          cache-dependency-path: warroom/islands/package-lock.json
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: v2.15.0
+          install-mode: goinstall # builds via proxy.golang.org instead of a GitHub release download
+          install-only: true
+      - run: npm ci
+        working-directory: warroom/islands
+      - run: sh tools/quality.sh
+        working-directory: warroom
+  browser:
+    name: War Room / Browser tests (Firefox)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: warroom
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7
+        with:
+          go-version-file: warroom/go.mod
+          cache-dependency-path: warroom/go.sum
+      - run: go run github.com/mxschmitt/playwright-go/cmd/playwright install --with-deps firefox
+      - run: go test -tags browser ./...

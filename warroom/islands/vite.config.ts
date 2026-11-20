@@ -4,7 +4,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 export default defineConfig({
 	plugins: [svelte({ compilerOptions: { customElement: true } })],
 	build: {
-		lib: { entry: 'main.js', formats: ['es'], fileName: () => 'islands.js' },
+		lib: { entry: 'main.ts', formats: ['es'], fileName: () => 'islands.js' },
 		outDir: '../internal/web/static',
 		// The static folder holds the rest of the site; only islands.js is ours.
 		emptyOutDir: false,

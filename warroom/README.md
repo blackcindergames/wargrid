@@ -163,7 +163,7 @@ How it hangs together:
 
 ## Islands build
 
-`islands/` holds the Svelte sources, `package.json` with exact versions and `package-lock.json`. `npm run build` (Vite library mode, one minified ES module) writes `internal/web/static/islands.js`, which is committed and embedded like `app.css`, so `go build`, `go test` and the Docker build need no Node. `go generate ./...` runs `npm ci` and the build; `tools/check_generated.sh` rebuilds in a temporary copy and fails when `internal/web/static/islands.js` differs.
+`islands/` holds the Svelte sources, `package.json` with exact versions and `package-lock.json`. `npm run build` (Vite library mode, one minified ES module) writes `internal/web/static/islands.js` and copies `node_modules/htmx.org/dist/htmx.min.js` to `internal/web/static/htmx.min.js`; both are committed and embedded like `app.css`, so `go build`, `go test` and the Docker build need no Node. `go generate ./...` runs `npm ci` and the build; `tools/check_generated.sh` rebuilds in a temporary copy and fails when `internal/web/static/islands.js` or `htmx.min.js` differs. To update htmx, change the exact version in `islands/package.json`, run `npm install` and `go generate ./...`.
 
 ## Styles
 
@@ -190,15 +190,18 @@ Own classes, no utility classes: `.btn` with `.sm` `.lg` `.xs` sizes and the sta
 | invopop/jsonschema | v0.14.0 (2026-04-23) |
 | templ | v0.3.1100 (CLI as a `go.mod` tool: `go tool templ`) |
 | YAML | goccy/go-yaml v1.19.2 |
-| htmx | 4.0.1, vendored as `static/htmx.min.js` |
+| htmx | 4.0.1 (2026-11-01), npm `htmx.org` in `islands/`; the build copies `dist/htmx.min.js` to the committed `static/htmx.min.js` |
 | Svelte | 5.57.3 (islands) |
 | Vite | 8.3.6 |
 | @sveltejs/vite-plugin-svelte | 7.3.1 |
-| Tweakpane | 4.0.5 |
+| Tweakpane | 4.0.5 (types from `@tweakpane/core` 2.0.5) |
 | mxschmitt/playwright-go | v0.6201.1 (2026-08-17), Playwright 1.62.1; browser tests only (`-tags browser`) |
-| Node, npm | only for `islands/`; built with Node 24, npm 12 |
+| TypeScript | 6.0.3 (typescript-eslint 8.72.1 does not support 7 yet) |
+| svelte-check, ESLint, Prettier | 4.7.8, 10.14.0 (with `eslint-plugin-svelte` 3.24.0), 3.9.10 (with `prettier-plugin-svelte` 4.1.1) |
+| govulncheck | v1.9.0 (`go tool govulncheck`) |
+| Node, npm | only for `islands/`; Node 24 (`islands/.nvmrc`, `engines`) |
 
-The generated files are committed (`internal/web/*_templ.go`, `internal/web/static/islands.js`, `rounds/round.schema.json`, `rounds/step.schema.json`), so `go build` and `go test` need no templ or Node. `internal/web/static/app.css` is hand-written (see Styles) and needs no build step. After changing a `.templ` file or `islands/`:
+The generated files are committed (`internal/web/*_templ.go`, `internal/web/static/islands.js`, `internal/web/static/htmx.min.js`, `rounds/round.schema.json`, `rounds/step.schema.json`), so `go build` and `go test` need no templ or Node. `internal/web/static/app.css` is hand-written (see Styles) and needs no build step. After changing a `.templ` file or `islands/`:
 
 ```sh
 go generate ./...     # templ generate, the schemas, npm ci and the islands build
@@ -211,12 +214,17 @@ Dev loop: `sh tools/dev.sh` runs `go tool templ generate --watch --open-browser=
 Checks, in `warroom/`:
 
 ```sh
-go vet ./... && go test -race ./...
-golangci-lint run                 # config .golangci.yml, a copy of relay's
-sh tools/check_generated.sh       # regenerates into a temp copy; fails when the committed output differs
+sh tools/quality.sh               # the whole gate, in this order:
+#   go vet -tags browser ./... ; golangci-lint run --build-tags browser   (config .golangci.yml, a copy of relay's)
+#   go test -race ./... ; go tool govulncheck ./...
+#   sh tools/check_generated.sh   (regenerates into a temp copy; fails when the committed output differs)
+#   node --check internal/web/static/warroom.js
+#   npm run quality in islands/   (format:check, lint, check, build)
 ```
 
-These are not in CI or `tools/run_checks.sh` yet. The browser tests (next section) run apart.
+`.github/workflows/warroom.yml` runs `sh tools/quality.sh` as job `quality` and then the browser tests in Firefox as job `browser`, on pushes and pull requests that touch `warroom/**`. The browser tests (next section) run apart from `quality.sh`; `tools/run_checks.sh` does not call it.
+
+The island is TypeScript (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`). `internal/web/static/warroom.js` stays plain JavaScript with no build: it starts with `// @ts-check` and `tsc` checks it in place with JSDoc types (`islands/tsconfig.json` includes it; htmx event types come from the `htmx.org` package). ESLint (`islands/eslint.config.js`: typescript-eslint strict type-checked, `eslint-plugin-svelte` recommended, `eslint-config-prettier`, `--max-warnings 0`, unused disable directives are errors) and Prettier cover both. In `islands/`: `npm run format`, `format:check`, `lint`, `lint:fix`, `check`, `build`, `quality`. `lint` runs from `warroom/` because ESLint only lints files under its base path and `warroom.js` is outside `islands/`. Agent rules: [AGENTS.md](AGENTS.md).
 
 ## Browser tests
 
@@ -231,7 +239,7 @@ go vet -tags browser ./... && golangci-lint run --build-tags browser
 
 Without the browser the tagged run fails at once with an install line; it never skips. The browser is Firefox; on macOS the helper points `MOZ_APP_DATA` at a temporary folder first, because macOS 27 denies a terminal-started Firefox its app data (see Learning notes). `WARROOM_BROWSER=chromium` (after `install chromium-headless-shell`) swaps the browser.
 
-Covered: a flip keeps every iframe document; a stage control replaces the frame with the new hash; a pick round trip writes `picks.json` and moves on; a failed pick shows Retry and Retry records the failed letter; a note survives leaving the step after a failure; the phone View sheet opens (a 390 px same-origin frame, since headless Firefox cannot go below 500 px); a tune slider redraws without reload and records `value`; the read-only link has no pick controls; a held Enter picks once; keys `5`, `f` and `e` on a step with options E and F; a `wr:measure` from a foreign origin or a non-frame is ignored; measurement rows render as text; the error banner for a thrown error and an unhandled rejection; a measurement that arrived before the script listened; a table that survives a control which keeps the frame; the table under its own option in flip and side views; the Large button; a tune element connected and disconnected twice leaves one pane, then none. Each was proven by breaking the code it guards once and seeing it fail.
+Covered: a flip keeps every iframe document; a stage control replaces the frame with the new hash; a pick round trip writes `picks.json` and moves on; a failed pick shows Retry and Retry records the failed letter; a note survives leaving the step after a failure; the phone View sheet opens (a 390 px same-origin frame, since headless Firefox cannot go below 500 px); a tune slider redraws without reload and records `value`; the read-only link has no pick controls; a held Enter picks once; keys `5`, `f` and `e` on a step with options E and F; a `wr:measure` from a foreign origin or a non-frame is ignored; measurement rows render as text; the error banner for a thrown error and an unhandled rejection; a measurement that arrived before the script listened; a table that survives a control which keeps the frame; the table under its own option in flip and side views; the Large button; a tune element connected and disconnected twice leaves one pane, then none (red when `pane.dispose()` is removed from the `$effect` cleanup in `islands/Tune.svelte`). Each was proven by breaking the code it guards once and seeing it fail.
 
 ## Fly
 
