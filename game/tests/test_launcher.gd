@@ -9,6 +9,7 @@ const LauncherScript = preload("res://scripts/launcher.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const RelayTransport = preload("res://scripts/net/relay_transport.gd")
+const SkirmishMain = preload("res://scripts/match/match_screen.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
 const LOOPBACK := "wss://127.0.0.1:9/ws"
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
@@ -274,6 +275,7 @@ func test_own_faction_shared(runner) -> bool:
 
 func test_start_saves_picks(runner) -> bool:
 	var saved: String = AudioSettings.path
+	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
 	var launcher = await _launcher_with(runner, "saves", {"faction": "usa", "bot_faction": "usa", "map": "dry_wells"})
 	launcher._set_own("china")
 	launcher._select_id(launcher.get_node("Pages/Play/Body/Bot"), "frc")
@@ -281,6 +283,11 @@ func test_start_saves_picks(runner) -> bool:
 	launcher._offline_setup()
 	var stored: Dictionary = LauncherSettings.load_picks()
 	_restore(saved)
+	# The next case's match must not start on this case's picks.
+	SkirmishMain.factions = before[0]
+	SkirmishMain.map_path = before[1]
+	SkirmishMain.starts = before[2]
+	SkirmishMain.match_seed = before[3]
 	runner.check(stored == {"faction": "china", "bot_faction": "frc", "map": "ashfall"}, "L9e a bot start saves all three, got %s" % [stored])
 	launcher.free()
 	return true

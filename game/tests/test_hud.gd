@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -584,8 +584,8 @@ func _esc_matches_chip(runner, main, label: String, shown: bool, frame: bool = f
 		main.set_process(false)
 	else: main._show_esc_chip()
 	var esc: Control = main.get_node("HUD/MenuChip").find_child("EscChip", true, false)
-	var promised: bool = esc.visible
-	runner.check(promised == shown, "CH2 %s: the Esc chip %s" % [label, "shows" if shown else "hides"])
+	var promised: bool = esc.modulate.a == 1.0
+	runner.check(esc.visible and promised == shown and (promised or esc.modulate.a == 0.0), "CH2 %s: the Esc chip %s" % [label, "shows" if shown else "fades out"])
 	OverlayTests.new()._key(runner, KEY_ESCAPE)
 	var pause: Control = main.get_node("HUD/PauseMenu")
 	runner.check(pause.visible == promised, "CH2 %s: Esc %s the menu, as the chip said" % [label, "opened" if pause.visible else "did not open"])
@@ -625,6 +625,29 @@ func test_esc_chip_only_when_esc_opens_the_menu(runner) -> bool:
 	overlays._end_offline(main)
 	main.get_viewport().gui_release_focus()
 	await _esc_matches_chip(runner, main, "the match ended with a selection held", true)
+	main.free()
+	overlays._end(saved)
+	return true
+
+# The Esc key chip fades, so Menu neither shifts nor shrinks when a selection takes Esc's first job.
+func test_menu_chip_keeps_its_width(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin(true, _longest_card().id)
+	var main = await overlays._scene(runner, Skirmish)
+	var chip: Control = main.get_node("HUD/MenuChip")
+	var esc: Label = chip.find_child("EscChip", true, false)
+	await _frames(runner)
+	var free_rect: Rect2 = chip.get_global_rect()
+	var free_x: float = chip.find_child("Label", true, false).get_global_rect().position.x
+	runner.check(is_equal_approx(esc.modulate.a, 1.0) and BaseScene.hud_text(main).contains("Esc"), "MW1 fixture: nothing pending, the Esc chip is drawn and read")
+	main.orders.selected_ids.assign([overlays._own_unit(main)])
+	main._refresh()
+	await _frames(runner)
+	var held_rect: Rect2 = chip.get_global_rect()
+	var held_x: float = chip.find_child("Label", true, false).get_global_rect().position.x
+	runner.check(held_rect == free_rect and is_equal_approx(held_x, free_x), "MW1 Menu keeps its rect and label x with a selection, got %s x %.2f, without %s x %.2f" % [held_rect, held_x, free_rect, free_x])
+	runner.check(free_rect.size.x == 88.0, "MW1 Menu is 88 wide (the drawn 86.75 on whole pixels), got %.2f" % free_rect.size.x)
+	runner.check(esc.modulate.a == 0.0 and esc.mouse_filter == Control.MOUSE_FILTER_IGNORE and not BaseScene.hud_text(main).contains("Esc"), "MW1 with a selection the Esc chip is transparent, takes no clicks and is not read")
 	main.free()
 	overlays._end(saved)
 	return true

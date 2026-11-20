@@ -1821,7 +1821,7 @@ func test_freeze_leave_reaches_the_launcher(runner) -> bool:
 		if way == "Back to menu": main.get_node(CHANGE_SETUP).pressed.emit()
 		else:
 			main._show_esc_chip()
-			runner.check(main.get_node("HUD/MenuChip").find_child("EscChip", true, false).visible, "FN2 the Esc chip shows under the freeze card")
+			runner.check(main.get_node("HUD/MenuChip").find_child("EscChip", true, false).modulate.a == 1.0, "FN2 the Esc chip shows under the freeze card")
 			_push_key(main, KEY_ESCAPE)
 			runner.check(main._pause.visible, "FN2 one Esc opens the pause menu over the freeze card")
 			main._pause.leave_requested.emit()

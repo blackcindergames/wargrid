@@ -99,7 +99,7 @@ Anchored top left at (8, 8), 32 high, width hugs its text (Core about 255 at `48
 
 ### Menu chip, Team chip, playtest chip
 
-- **Menu**: anchored top right, right edge 8 from the screen edge, top 8, 32 high, padding 0 8, fill `btn`, 1 px `line` border, 13 / 600, then an `Esc` key chip. 86.75 wide with the chip, 50.3 without. It shows `Esc` only while a press of Esc would open the menu: nothing pending for Esc to clear (a placement, an armed attack move, a selection), no open note form or focused text field, and the menu closed (states build, place, blocked; user, 2026-11-16; `match_screen.esc_opens_menu`).
+- **Menu**: anchored top right, right edge 8 from the screen edge, top 8, 32 high, padding 0 8, fill `btn`, 1 px `line` border, 13 / 600, then an `Esc` key chip. 86.75 wide with the chip, 50.3 without. It shows `Esc` only while a press of Esc would open the menu: nothing pending for Esc to clear (a placement, an armed attack move, a selection), no open note form or focused text field, and the menu closed (states build, place, blocked; user, 2026-11-16; `match_screen.esc_opens_menu`). As built (P2.3a1 gate fix, user 2026-11-20): 88 wide both ways (Godot's laid-out width; the mock-up draws 86.75); the `Esc` chip fades to alpha 0 instead of hiding, so neither the chip nor its `Menu` label moves when a selection takes Esc (`test_hud.gd` MW1).
 - **Team** (Full): same chip, 8 left of Menu.
 - **Playtest** (the checklist chip, user, 2026-11-16): under Menu, right-aligned at right 8, top 48: label `PLAYTEST` and number `2 / 5`, 32 high, about 124 wide. Drawn in Core only; where it sits beside the Full set's alert feed and Team chip is not drawn.
 

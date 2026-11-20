@@ -73,7 +73,7 @@ static func tick(main) -> void:
 static func hud_text(main: Node) -> String:
 	var lines: PackedStringArray = []
 	for label: Node in main.get_node("HUD").find_children("*", "Label", true, false):
-		if (label as Label).is_visible_in_tree(): lines.append((label as Label).text)
+		if (label as Label).is_visible_in_tree() and (label as Label).modulate.a > 0.0: lines.append((label as Label).text)
 	return "\n".join(lines)
 
 # Shows a direct change to the live sim as a tick would, without stepping, sound or step results.

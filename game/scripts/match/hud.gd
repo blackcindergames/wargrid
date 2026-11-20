@@ -235,9 +235,9 @@ func clear_refusal() -> void:
 func _process(_delta: float) -> void:
 	if _refusal_line.visible and now_msec.call() - _refused_at >= 3000: _refusal_line.visible = false
 
-# Esc's first job is to back out of a selection, placement or form; the chip says so only when it opens the menu.
+# Esc's first job is to back out of a selection, placement or form; the chip shows only when Esc opens the menu, and fades so Menu keeps its width.
 func set_esc_chip(shown: bool) -> void:
-	_esc.visible = shown
+	_esc.modulate.a = 1.0 if shown else 0.0
 
 func setup(economy: VBoxContainer) -> void:
 	_economy = economy
