@@ -16,6 +16,7 @@ const PAD_LEFT: float = 12.0
 const PAD_Y: float = 8.0
 const GAP: int = 4
 const ROW: float = 32.0
+const QUEUE_GAP: float = 12.0
 
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -44,6 +45,8 @@ var _resume: Label
 var _commands: GridContainer
 var _queue_header: HBoxContainer
 var _queue_more: Button
+var _queue_newer: VBoxContainer
+var _queue_gap: Control
 var _queue_open: bool = false
 var _queue_for: int = -1
 var _edge: Color = Color.WHITE
@@ -266,9 +269,12 @@ func _build_slab() -> void:
 	_economy.sort_children.connect(_pad_slab)
 	_resume = _label(_economy, "ResumeHint", &"HudHint", "Right-click: resume")
 	_commands = _grid("Orders", 2)
-	for part: Array in [["AttackMove", attack_move_pressed], ["Stop", stop_pressed], ["Unload", unload_pressed]]:
+	for part: Array in [["Unload", unload_pressed], ["AttackMove", attack_move_pressed], ["Stop", stop_pressed]]:
 		var button: Button = _button(_commands, part[0], _cell_width(2))
 		button.pressed.connect((part[1] as Signal).emit)
+	# Fills Unload's row, so Attack move and Stop keep the bottom row whether Unload shows or not.
+	var pad: Control = _spacer(_commands, "UnloadPad", Vector2(_cell_width(2), ROW))
+	_commands.move_child(pad, 1)
 	var font: Font = get_theme_font("font", &"HudButton")
 	_build_menu = _grid("BuildMenu", HudModel.menu_columns(font, get_theme_font_size("font_size", &"HudButton")))
 	for row: Button in [_produce, _cancel_build]: _square(row)
@@ -276,12 +282,15 @@ func _build_slab() -> void:
 	_label(_queue_header, "Title", &"HudLabel", "QUEUE").size_flags_horizontal = SIZE_EXPAND_FILL
 	_label(_queue_header, "Waiting", &"HudHint")
 	(_queue as BoxContainer).add_theme_constant_override("separation", GAP)
+	_queue_newer = _box(_economy, "QueueNewer", VBoxContainer.new(), GAP) as VBoxContainer
+	_queue_gap = _spacer(_economy, "QueueGap", Vector2(0.0, QUEUE_GAP - 2 * GAP))
 	_queue_more = _button(_economy, "QueueMore", 0.0)
 	_queue_more.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
 	_queue_more.add_theme_color_override("font_hover_color", get_theme_color("muted", &"Tokens"))
 	_queue_more.draw.connect(_draw_chevron)
 	_queue_more.pressed.connect(_toggle_queue)
-	var rows: Array[Control] = [_resume, _commands, _build_menu, _produce, _cancel_build, _queue_header, _queue, _queue_more]
+	# The slab grows upward from the screen edge, so the queue sits above the buttons and the newer rows fold above the toggle: nothing under the pointer moves (gate B, user 2026-11-20).
+	var rows: Array[Control] = [_queue_header, _queue_newer, _queue_more, _queue, _queue_gap, _resume, _commands, _build_menu, _produce, _cancel_build]
 	for i in rows.size(): _economy.move_child(rows[i], i)
 
 func _read_keys() -> void:
@@ -299,6 +308,14 @@ func _grid(grid_name: String, columns: int) -> GridContainer:
 	grid.add_theme_constant_override("v_separation", GAP)
 	_economy.add_child(grid)
 	return grid
+
+static func _spacer(parent: Control, spacer_name: String, minimum: Vector2) -> Control:
+	var spacer := Control.new()
+	spacer.name = spacer_name
+	spacer.mouse_filter = MOUSE_FILTER_IGNORE
+	spacer.custom_minimum_size = minimum
+	parent.add_child(spacer)
+	return spacer
 
 func _cell_width(columns: int) -> float:
 	return (HudModel.SLAB_CONTENT - (columns - 1) * GAP) / columns
@@ -379,8 +396,9 @@ func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictio
 	_refresh_menu(kinds, HudModel.shows_build_menu(view, selection, seat), HudModel.player(view, seat).get("credits", 0), selection.placement_kind)
 	if edge != _edge:
 		_edge = edge
-		for row: Node in _queue.get_children(): (row.get_node("Track/Bar") as ColorRect).color = edge
+		for row: Node in _queue_newer.get_children() + _queue.get_children(): (row.get_node("Track/Bar") as ColorRect).color = edge
 	_refresh_queue(building, edge)
+	_queue_gap.visible = _queue.visible and (_resume.visible or _commands.visible or _build_menu.visible or _produce.visible or _cancel_build.visible)
 	_fit_slab()
 
 # The keys keep today's paths for any own selection; only the buttons follow the row rule.
@@ -390,6 +408,7 @@ func _show_commands(view: Dictionary, selection: Dictionary, seat: int) -> void:
 	_commands.get_node("AttackMove").visible = armed
 	_commands.get_node("Stop").visible = armed
 	_commands.get_node("Unload").visible = unload
+	_commands.get_node("UnloadPad").visible = unload and armed
 	_commands.visible = armed or unload
 	_look(_commands.get_node("AttackMove"), selection.attack_move)
 
@@ -444,12 +463,20 @@ func _refresh_queue(building: Dictionary, edge: Color) -> void:
 	if building.get("id", -1) != _queue_for or queue.size() <= HudModel.QUEUE_SHOWN: _queue_open = false
 	_queue_for = building.get("id", -1)
 	var ids: Array = queue.map(func(entry: Dictionary) -> String: return str(entry.id))
-	for child in _queue.get_children():
+	for child in _queue_newer.get_children() + _queue.get_children():
 		if not ids.has(str(child.name)): child.free()
-	for i in queue.size():
+	# The entry in production sits lowest, nearest the buttons; cancelling one moves only the newer rows above it.
+	var folded: int = queue.size() - HudModel.QUEUE_COLLAPSED if queue.size() > HudModel.QUEUE_SHOWN else 0
+	for row in queue.size():
+		var i: int = queue.size() - 1 - row
 		var entry: Dictionary = queue[i]
-		var button: Button = _queue.get_node_or_null(str(entry.id))
-		if button == null: button = _queue_row(entry.id, edge)
+		var box: Control = _queue_newer if row < folded else _queue
+		# A row changing box is made anew: re-entering the tree would hook its click sound twice.
+		var moved: Node = (_queue if row < folded else _queue_newer).get_node_or_null(str(entry.id))
+		if moved != null: moved.free()
+		var button: Button = box.get_node_or_null(str(entry.id))
+		if button == null: button = _queue_row(box, entry.id, edge)
+		box.move_child(button, row if row < folded else row - folded)
 		var parts: PackedStringArray = queue_parts(entry)
 		button.text = parts[0]
 		var percent: Label = button.get_node("Percent")
@@ -466,8 +493,8 @@ func _refresh_queue(building: Dictionary, edge: Color) -> void:
 	_show_queue_rows()
 
 # The whole row cancels, as Zero Hour's queue button does; the × is only its sign.
-func _queue_row(entry_id: int, edge: Color) -> Button:
-	var button: Button = _button(_queue, str(entry_id), 0.0)
+func _queue_row(box: Control, entry_id: int, edge: Color) -> Button:
+	var button: Button = _button(box, str(entry_id), 0.0)
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.pressed.connect(entry_cancelled.emit.bind(entry_id))
 	var hover := get_theme_stylebox("hover", &"HudButton").duplicate() as StyleBoxFlat
@@ -499,8 +526,8 @@ func _hover_queue_row(row: Button, hovered: bool) -> void:
 	(row.get_node("Cancel") as Label).add_theme_color_override("font_color", get_theme_color("text" if hovered else "muted", &"Tokens"))
 
 func _show_queue_rows() -> void:
-	var rows: Dictionary = HudModel.queue_rows(_queue.get_child_count(), _queue_open)
-	for i in _queue.get_child_count(): (_queue.get_child(i) as Control).visible = i < rows.shown
+	var rows: Dictionary = HudModel.queue_rows(_queue_newer.get_child_count() + _queue.get_child_count(), _queue_open)
+	_queue_newer.visible = _queue_open and rows.more > 0
 	_queue_more.visible = rows.more > 0
 	_queue_more.text = "Show fewer" if _queue_open else "Show %d more queued" % rows.more
 
@@ -515,7 +542,7 @@ func _draw_chevron() -> void:
 	var font_size: int = _queue_more.get_theme_font_size("font_size")
 	var x: float = (_queue_more.size.x + font.get_string_size(_queue_more.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) / 2.0 + 8.0
 	var y: float = _queue_more.size.y / 2.0
-	var tip: float = -3.0 if _queue_open else 3.0
+	var tip: float = 3.0 if _queue_open else -3.0
 	_queue_more.draw_polyline([Vector2(x, y - tip), Vector2(x + 4.0, y + tip), Vector2(x + 8.0, y - tip)], get_theme_color("muted", &"Tokens"), 1.5, true)
 
 static func queue_parts(entry: Dictionary) -> PackedStringArray:

@@ -37,6 +37,7 @@ func shots() -> Array[Dictionary]:
 		_shot("slab-poor", _slab_pick.bind("builder", 500), "$500"),
 		_shot("queue", _queue.bind(false), "QUEUE"),
 		_shot("queue-open", _queue.bind(true), "QUEUE"),
+		_shot("queue-rest", _queue.bind(false, false), "QUEUE", one),
 		_shot("unload", _unload, ""),
 		_shot("offline", _offline, "OFFLINE · LOW POWER"),
 		_shot("sites", _panel.bind("", "paused", ""), "PAUSED · NO BUILDER"),
@@ -185,13 +186,14 @@ func _slab_army() -> void:
 	await _slab_pick("tanks", 50000)
 	check(HudTests._shown(_main, "Orders/AttackMove") and not HudTests._shown(_main, "BuildMenu"), "the order row alone, no build menu")
 
-func _queue(open: bool) -> void:
+func _queue(open: bool, hovered: bool = true) -> void:
 	var ids: Dictionary = await _slab_world(50000)
 	HudTests._select(_main, [], ids.factory)
 	HudTests._nine(_main, ids.factory)
 	if open: _main.get_node("HUD/Economy/QueueMore").pressed.emit()
 	await _settle()
-	var row: Button = _main.get_node("HUD/Economy/Queue").get_child(0)
+	if not hovered: return
+	var row: Button = _main.get_node("HUD/Economy/Queue/900")
 	HudTests._move(_port, row.get_global_rect().get_center())
 	await _settle()
 	check(row.is_hovered(), "the pointer is on the first queue row")

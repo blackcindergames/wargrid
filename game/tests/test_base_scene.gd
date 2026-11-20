@@ -183,7 +183,7 @@ func test_production_ui(runner) -> bool:
 	var queue: Array = Fixture.object(main.driver.pump.live(),depot).queue
 	if queue.size() == 2:
 		await runner.process_frame
-		var button: Button = main.get_node("HUD/Economy/Queue").get_child(1)
+		var button: Button = main.get_node("HUD/Economy/Queue").get_node(str(queue[1].id))
 		var viewport_point: Vector2 = button.get_global_rect().get_center()
 		var press := InputEventMouseButton.new()
 		press.position = runner.root.get_final_transform() * viewport_point

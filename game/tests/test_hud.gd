@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_build_buttons_by_selection_and_price, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1189,17 +1189,20 @@ func test_slab_queue_cap(runner) -> bool:
 		runner.check(rows.size() == count and rows.all(func(row: Control) -> bool: return row.visible) and not more.visible, "SL5 %d entries: all shown, no Show more" % count)
 		runner.check(header.visible and header.get_node("Title").text == "QUEUE" and header.get_node("Waiting").visible == (count > 1) and header.get_node("Waiting").text == "%d waiting" % (count - 1), "SL5 %d entries: QUEUE and %d waiting" % [count, count - 1])
 		runner.check(digits.is_empty(), "SL5 %d entries: no numbered row, got %s" % [count, digits])
-		runner.check(rows[0].get_node("Percent").visible and rows[0].get_node("Track").visible and rows.slice(1).all(func(row: Control) -> bool: return not row.get_node("Percent").visible and not row.get_node("Track").visible), "SL5 %d entries: only the first shows its percent and line" % count)
-		runner.check(rows[0].get_node("Track/Bar").color == View.owner_color(1, main._view.bright_owners()) and rows[0].get_node("Cancel").text == "×", "SL5 the line is the own colour and the × is the cancel sign")
+		var names: Array = rows.map(func(row: Control) -> String: return str(row.name))
+		var first: Control = queue.get_node("900")
+		runner.check(names == range(count - 1, -1, -1).map(func(i: int) -> String: return str(900 + i)), "SL5 %d entries: the first entry lowest, nearest the buttons, newer above, got %s" % [count, names])
+		runner.check(first.get_node("Percent").visible and first.get_node("Track").visible and rows.filter(func(row: Control) -> bool: return row != first).all(func(row: Control) -> bool: return not row.get_node("Percent").visible and not row.get_node("Track").visible), "SL5 %d entries: only the first shows its percent and line" % count)
+		runner.check(first.get_node("Track/Bar").color == View.owner_color(1, main._view.bright_owners()) and first.get_node("Cancel").text == "×", "SL5 the line is the own colour and the × is the cancel sign")
 	for count: int in [6, 9]:
 		_queue_of(main, ids.factory, count)
-		var shown: int = queue.get_children().filter(func(row: Control) -> bool: return row.visible).size()
-		runner.check(shown == 4 and queue.get_child_count() == count and more.visible and more.text == "Show %d more queued" % (count - 4), "SL5 %d entries: 4 shown and '%s'" % [count, more.text])
-	_square_rows(runner, queue.get_children() + [more], "SL5")
+		var shown: Array = _queue_rows(main).filter(func(row: Control) -> bool: return row.is_visible_in_tree()).map(func(row: Control) -> String: return str(row.name))
+		runner.check(shown == ["903", "902", "901", "900"] and _queue_rows(main).size() == count and more.visible and more.text == "Show %d more queued" % (count - 4), "SL5 %d entries: the first 4 shown and '%s', got %s" % [count, more.text, shown])
+	_square_rows(runner, _queue_rows(main) + [more], "SL5")
 	more.pressed.emit()
-	runner.check(queue.get_children().all(func(row: Control) -> bool: return row.visible) and more.text == "Show fewer" and queue.get_child_count() == 9, "SL5 a press shows all nine and Show fewer")
+	runner.check(_queue_rows(main).all(func(row: Control) -> bool: return row.is_visible_in_tree()) and more.text == "Show fewer" and _queue_rows(main).size() == 9, "SL5 a press shows all nine and Show fewer")
 	more.pressed.emit()
-	runner.check(queue.get_children().filter(func(row: Control) -> bool: return row.visible).size() == 4 and more.text == "Show 5 more queued", "SL5 a second press collapses")
+	runner.check(_queue_rows(main).filter(func(row: Control) -> bool: return row.is_visible_in_tree()).size() == 4 and more.text == "Show 5 more queued", "SL5 a second press collapses")
 	more.pressed.emit()
 	main.orders.selected_building_id = ids.barracks
 	_queue_of(main, ids.barracks, 9)
@@ -1209,13 +1212,115 @@ func test_slab_queue_cap(runner) -> bool:
 	more.pressed.emit()
 	_queue_of(main, ids.factory, 5)
 	_queue_of(main, ids.factory, 7)
-	runner.check(more.text == "Show 3 more queued" and queue.get_child_count() == 7, "SL5 open, then down to 5: collapsed")
+	runner.check(more.text == "Show 3 more queued" and _queue_rows(main).size() == 7, "SL5 open, then down to 5: collapsed")
 	await _frames(runner)
 	var cancelled: Array[int] = []
 	main.hud.entry_cancelled.connect(func(id: int) -> void: cancelled.append(id))
-	var row: Control = queue.get_child(2)
+	var row: Control = queue.get_node("902")
 	_click(runner, row.get_global_rect().get_center())
 	runner.check(cancelled == [902], "SL5 a press on the middle of a row cancels that entry, got %s" % [cancelled])
+	main.free()
+	return true
+
+# Every queue row top down: the newer rows that fold above the toggle, then the rest.
+static func _queue_rows(main) -> Array:
+	return main.get_node("HUD/Economy/QueueNewer").get_children() + main.get_node("HUD/Economy/Queue").get_children()
+
+static func _slab_buttons(main) -> Array:
+	return [main.get_node("HUD/Economy/Produce")] + main.get_node("HUD/Economy/BuildMenu").get_children()
+
+static func _rects(controls: Array) -> Array:
+	return controls.map(func(control: Control) -> Rect2: return control.get_global_rect())
+
+static func _all_shown(controls: Array) -> bool:
+	return controls.all(func(control: Control) -> bool: return control.is_visible_in_tree())
+
+static func _queue_row(main, id: int) -> Control:
+	return main.get_node("HUD/Economy").find_child(str(id), true, false)
+
+static func _top_down(controls: Array) -> bool:
+	for i in controls.size() - 1:
+		if (controls[i] as Control).get_global_rect().end.y > (controls[i + 1] as Control).get_global_rect().position.y: return false
+	return true
+
+# Gate B (user 2026-11-20): a queue change never moves a slab button under the pointer.
+func test_slab_buttons_hold_still(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, false)
+	_select(main, [], ids.factory)
+	await _frames(runner)
+	var at: Vector2 = (main.get_node("HUD/Economy/Produce") as Control).get_global_rect().get_center()
+	var cancelled: Array[int] = []
+	main.hud.entry_cancelled.connect(func(id: int) -> void: cancelled.append(id))
+	_click(runner, at)
+	_queue_of(main, ids.factory, 1, 0)
+	await _frames(runner)
+	_click(runner, at)
+	runner.check(_queued(main, "produce").size() == 2 and cancelled.is_empty(), "SL8 two clicks on Produce at %s queue twice and cancel nothing, got %d produce, cancelled %s" % [at, _queued(main, "produce").size(), cancelled])
+	_queue_of(main, ids.factory, 0)
+	await _frames(runner)
+	var buttons: Array = _slab_buttons(main)
+	var still: Array = _rects(buttons)
+	runner.check(buttons.size() > 1 and _all_shown(buttons), "SL8 fixture: Produce and the factory's menu shown")
+	for step: Array in [[1, "one queued"], [5, "five queued"], [6, "six queued, Show more"], [9, "nine queued, opened"], [1, "back to one"], [0, "the unit finished, 1 to 0"]]:
+		_queue_of(main, ids.factory, step[0])
+		if step[1].ends_with("opened"): main.get_node("HUD/Economy/QueueMore").pressed.emit()
+		await _frames(runner)
+		runner.check(_all_shown(buttons) and _rects(buttons) == still, "SL8 %s: Produce and the menu buttons shown and holding their rects %s, got %s" % [step[1], still, _rects(buttons)])
+		if step[0] == 0: continue
+		var gap: float = _rect(main, "HUD/Economy/BuildMenu").position.y - _queue_row(main, 900).get_global_rect().end.y
+		runner.check(is_equal_approx(gap, 12.0), "SL8 %s: 12 px from the entry in production to the menu, got %.1f" % [step[1], gap])
+	main.free()
+	return true
+
+# Gate B (user 2026-11-20): the toggle and the four oldest rows hold still; newer rows open above the toggle.
+func test_slab_queue_toggle_holds_still(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, false)
+	_select(main, [], ids.factory)
+	_queue_of(main, ids.factory, 9)
+	await _frames(runner)
+	var header: Control = main.get_node("HUD/Economy/QueueHeader")
+	var more: Button = main.get_node("HUD/Economy/QueueMore")
+	var oldest: Array = [903, 902, 901, 900].map(func(id: int) -> Control: return _queue_row(main, id))
+	var newer: Array = [908, 907, 906, 905, 904].map(func(id: int) -> Control: return _queue_row(main, id))
+	var held: Array = [more] + oldest
+	var still: Array = _rects(held)
+	runner.check(_all_shown(held) and not newer.any(func(row: Control) -> bool: return row.is_visible_in_tree()) and _top_down([header] + held), "SL8 collapsed: QUEUE, Show more, then 903 to 900 top down, newer rows hidden")
+	var at: Vector2 = more.get_global_rect().get_center()
+	var cancelled: Array[int] = []
+	main.hud.entry_cancelled.connect(func(id: int) -> void: cancelled.append(id))
+	_click(runner, at)
+	await _frames(runner)
+	runner.check(more.text == "Show fewer" and _all_shown(newer) and _top_down([header] + newer + held), "SL8 opened: QUEUE, 908 to 904, Show fewer, 903 to 900 top down")
+	runner.check(_rects(held) == still, "SL8 opened: the toggle and the four oldest rows hold their rects %s, got %s" % [still, _rects(held)])
+	_click(runner, at)
+	await _frames(runner)
+	runner.check(more.text == "Show 5 more queued" and cancelled.is_empty() and _rects(held) == still, "SL8 a second click at %s collapses again and cancels nothing, got '%s', cancelled %s" % [at, more.text, cancelled])
+	main.free()
+	return true
+
+# Gate B (user 2026-11-20): Unload takes its own row above Attack move and Stop, which never move.
+func test_unload_row_above_the_orders(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, false)
+	_select(main, [ids.car])
+	await _frames(runner)
+	var pair: Array = [main.get_node("HUD/Economy/Orders/AttackMove"), main.get_node("HUD/Economy/Orders/Stop")]
+	var unload: Control = main.get_node("HUD/Economy/Orders/Unload")
+	var still: Array = _rects(pair)
+	runner.check(_all_shown(pair) and not unload.is_visible_in_tree(), "SL8 fixture: an empty Scout Car shows Attack move and Stop, no Unload")
+	var sim = main.driver.pump.live()
+	var rider: int = sim.spawn(1, Vector2(12.5, 5.5), "usa_rifle_infantry")
+	Fixture.load_unit(runner, sim, rider, ids.car)
+	BaseScene.publish(main)
+	await _frames(runner)
+	runner.check(unload.is_visible_in_tree() and unload.get_global_rect().end.y <= (pair[0] as Control).get_global_rect().position.y, "SL8 a rider boards: Unload shown in its own row above Attack move, got %s over %s" % [unload.get_global_rect(), (pair[0] as Control).get_global_rect()])
+	runner.check(_all_shown(pair) and _rects(pair) == still, "SL8 a rider boards: Attack move and Stop hold their rects %s, got %s" % [still, _rects(pair)])
+	sim.remove_object(rider)
+	BaseScene.publish(main)
+	await _frames(runner)
+	runner.check(not unload.is_visible_in_tree() and _all_shown(pair) and _rects(pair) == still, "SL8 the rider gone: no Unload, Attack move and Stop hold their rects %s, got %s" % [still, _rects(pair)])
 	main.free()
 	return true
 
@@ -1283,7 +1388,7 @@ func test_right_labels_on_the_name_line(runner) -> bool:
 	_select(main, [], ids.factory)
 	_queue_of(main, ids.factory, 3)
 	await _frames(runner)
-	var row: Button = main.get_node("HUD/Economy/Queue").get_child(0)
+	var row: Button = main.get_node("HUD/Economy/Queue/900")
 	for part: String in ["Percent", "Cancel"]: _on_the_name_line(runner, row, part, "the queue's first row")
 	for part: String in ["Cancel", "Percent"]:
 		var mark: Label = row.get_node(part)
