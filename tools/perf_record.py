@@ -96,6 +96,9 @@ def parse_log(text: str) -> list[Sample]:
     error = re.search(r"^.*ERROR:.*$", text, re.M)
     if error:
         raise ValueError(error.group(0))
+    calibration = re.search(r"^RENDERED HUD CALIBRATION.*$", text, re.M)
+    if calibration:
+        raise ValueError(f"calibration log, not a gated run: {calibration.group(0)}")
     samples: list[Sample] = []
     found: set[str] = set()
     for name, raw in HEADLESS.findall(text):
@@ -108,8 +111,12 @@ def parse_log(text: str) -> list[Sample]:
         found.add("lockstep")
         samples.append(_percentiles("lockstep_overhead", "contact", raw))
     profile, profiled = _profile_samples(text)
+    hud_markers: list[str] = []
     for layout, tick_raw, frame_raw in RENDERED.findall(text):
-        found.add("rendered")
+        if layout.startswith("hud_"):
+            hud_markers.append(f"RENDERED HUD PASSED {layout.rsplit('_', 1)[1]}")
+        else:
+            found.add("rendered")
         suffix = ":profile" if layout in profiled else ""
         samples.append(_percentiles("frame_interval", layout + suffix, frame_raw))
         samples.append(_percentiles(TICK_FRAME, layout + suffix, tick_raw))
@@ -118,11 +125,11 @@ def parse_log(text: str) -> list[Sample]:
     if handoff:
         found.add("profile")
         samples += handoff
-    if not found:
+    if not found and not hud_markers:
         raise ValueError("no benchmark samples found")
-    for family in sorted(found):
-        if not re.search(rf"^{re.escape(MARKERS[family])}\b", text, re.M):
-            raise ValueError(f"missing marker: {MARKERS[family]}")
+    for marker in [MARKERS[family] for family in sorted(found)] + sorted(set(hud_markers)):
+        if not re.search(rf"^{re.escape(marker)}\b", text, re.M):
+            raise ValueError(f"missing marker: {marker}")
     return samples
 
 

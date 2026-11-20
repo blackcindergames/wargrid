@@ -6,8 +6,8 @@ const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.g
 const Combat = preload("res://scripts/simulation/combat.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
-const UiStyle = preload("res://scripts/presentation/ui_style.gd")
 const LABEL_WIDTH: float = 160.0
+const MAP_LABEL_SIZE: int = 12
 const Terrain = preload("res://scripts/presentation/terrain_view.gd")
 const StructureLayer = preload("res://scripts/presentation/structure_layer.gd")
 const WorldBatch = preload("res://scripts/presentation/world_batch.gd")
@@ -26,6 +26,7 @@ var _last_points: Dictionary = {}
 var _selection := {}
 var _inspected_id: int = -1
 var local_player: int = 1
+var view_player: int = 1
 var _hints: Array[Dictionary] = []
 var _hovered_id: int = -1
 var _biome: int = Palette.DEFAULT_BIOME
@@ -39,6 +40,7 @@ var _visual_tick: int = -1
 var _waiting: Dictionary = {}
 var _canvas: CanvasItem
 var draw_usec: int = 0
+var drawn_selection_lines: int = -1
 var _items: Array[Dictionary] = []
 var time_draws: bool = false
 var _quality: int = GraphicsSettings.HIGH
@@ -118,6 +120,9 @@ func detail() -> int:
 
 func set_visuals(director: Director) -> void:
 	_visuals = director
+
+func bright_owners() -> bool:
+	return _bright
 
 # Neon mode: brighter owner hues on bodies, rings and structure footprints.
 func set_bright_owners(bright: bool) -> void:
@@ -333,7 +338,7 @@ static func building_label(building: Dictionary) -> String:
 	return label + " paused" if building.builder_id == null else label
 
 static func text_height() -> float:
-	return ThemeDB.fallback_font.get_height(UiStyle.FONT_SIZE)
+	return ThemeDB.fallback_font.get_height(MAP_LABEL_SIZE)
 
 func pile_text_points(source: Dictionary) -> PackedVector2Array:
 	var top: Vector2 = Iso.world_to_plane(Vector2(source.origin[0], source.origin[1])) + Vector2(0, -8)
@@ -372,7 +377,7 @@ func order_marks() -> Array[Vector2]:
 	var marks: Array[Vector2] = []
 	if not _show_destinations: return marks
 	for i in _order:
-		if _rows.owner[i] == local_player and (_rows.flags[i] & ViewRows.ORDERED) != 0: marks.append(Iso.world_to_plane(Vector2(_rows.order_x[i], _rows.order_y[i])))
+		if _rows.owner[i] == view_player and (_rows.flags[i] & ViewRows.ORDERED) != 0: marks.append(Iso.world_to_plane(Vector2(_rows.order_x[i], _rows.order_y[i])))
 	return marks
 
 # Above the focus box's outer stroke (grow 4 + half of 3 px), so the bar stays readable under a target box.
@@ -386,7 +391,7 @@ func horde_count() -> int:
 func crate_marks() -> Array[Vector2]:
 	var marks: Array[Vector2] = []
 	for player: Dictionary in _state.get("players", []):
-		if player.id != local_player or not Registry.kind(Registry.faction(player.get("faction", "")).get("start_unit", "")).has("salvage"): continue
+		if player.id != view_player or not Registry.kind(Registry.faction(player.get("faction", "")).get("start_unit", "")).has("salvage"): continue
 		for crate: Dictionary in _state.get("crates", []): marks.append(Iso.world_to_plane(Vector2(crate.cell[0] + 0.5, crate.cell[1] + 0.5)))
 	return marks
 
@@ -446,6 +451,7 @@ func _draw_lines() -> void:
 	var grid: PackedVector2Array = grid_lines()
 	if not grid.is_empty(): draw_multiline(grid, GRID_COLOR, 1.0)
 	var green: PackedVector2Array = selected_unit_lines()
+	drawn_selection_lines = green.size()
 	for point in order_marks():
 		green.append_array([point - Vector2(6, 0), point + Vector2(6, 0), point - Vector2(0, 6), point + Vector2(0, 6)])
 	if not green.is_empty(): draw_multiline(green, SELECT_COLOR, 2.0)
@@ -553,7 +559,7 @@ func _draw_hints() -> void:
 
 func rally_marker() -> Array:
 	for building: Dictionary in _state.get("buildings", []):
-		if _selection.has(building.id) and building.owner == local_player and Registry.can_rally(building.kind) and building.has("rally"): return building.rally
+		if _selection.has(building.id) and building.owner == view_player and Registry.can_rally(building.kind) and building.has("rally"): return building.rally
 	return []
 
 func _draw_rally() -> void:
@@ -574,12 +580,6 @@ func _waiting_counts() -> Dictionary:
 	for i in _rows.size():
 		if (_rows.flags[i] & ViewRows.WAITING_SOURCE) != 0: counts[_rows.queue[i]] = counts.get(_rows.queue[i], 0) + 1
 	return counts
-
-static func line_position(units: RefCounted, i: int) -> int:
-	var place: int = 1
-	for other: int in range(i):
-		if units.queue[other] == units.queue[i]: place += 1
-	return place
 
 func _draw_cues() -> void:
 	for line: Dictionary in battery_target_lines(): draw_line(line.from, line.to, Color("ff3b30"), 1.5)
@@ -618,15 +618,43 @@ func _cell_polygon(origin: Vector2, size: Vector2) -> PackedVector2Array:
 	return PackedVector2Array([Iso.world_to_plane(origin), Iso.world_to_plane(origin + Vector2(size.x, 0)),
 		Iso.world_to_plane(origin + size), Iso.world_to_plane(origin + Vector2(0, size.y))])
 
-func pick_entities(plane_rect: Rect2) -> Array[int]:
+func pick_entities(plane_rect: Rect2, blocked: Array[Rect2] = []) -> Array[int]:
 	var rect := plane_rect.abs()
 	var ids: Array[int] = []
+	# A view outside the tree has no canvas, so only a filtered pick reads it.
+	var to_screen: Transform2D = get_global_transform_with_canvas() if not blocked.is_empty() else Transform2D.IDENTITY
 	for i in _rows.size():
 		var point: Vector2 = Iso.world_to_plane(_drawn_position(i))
 		if _rows.owner[i] == local_player and (_rows.flags[i] & (ViewRows.HOLE | ViewRows.CONTAINED)) == 0 and point.x >= rect.position.x and point.y >= rect.position.y and point.x <= rect.end.x and point.y <= rect.end.y:
-			ids.append(_rows.id[i])
+			var screen: Vector2 = to_screen * point
+			if not blocked.any(func(panel: Rect2) -> bool: return panel.has_point(screen)): ids.append(_rows.id[i])
 	ids.sort()
 	return ids
+
+# Click and hover share it: tier, then the local player's before others, then front-most as drawn (air above ground).
+func resolve_pick(plane_point: Vector2) -> Dictionary:
+	var best: int = -1
+	var best_key: Array = []
+	for i in _rows.size():
+		if (_rows.flags[i] & (ViewRows.HOLE | ViewRows.CONTAINED)) != 0 or not _pick_bounds(i).has_point(plane_point): continue
+		var key: Array = [_rows.owner[i] == local_player, WorldBatch.sort_key(WorldBatch.kind_info(_kind_of(i))[1], _drawn_position(i), _rows.id[i])]
+		if best == -1 or key > best_key:
+			best = _rows.id[i]
+			best_key = key
+	if best != -1: return {"tier": "unit", "id": best}
+	var point: Vector2 = Iso.plane_to_world(plane_point)
+	var building: int = -1
+	for object: Dictionary in _state.get("buildings", []):
+		var definition: Dictionary = Definitions.building(object.kind)
+		if definition.is_empty() or not _covers(object.origin, definition.footprint, point): continue
+		if building == -1 or object.owner == local_player: building = object.id
+	if building != -1: return {"tier": "building", "id": building}
+	for source: Dictionary in _state.get("sources", []):
+		if _covers(source.origin, Registry.source_footprint(source), point): return {"tier": "pile", "id": source.id}
+	return {"tier": "ground", "id": -1}
+
+func _covers(origin: Array, size: Vector2i, point: Vector2) -> bool:
+	return point.x >= origin[0] and point.y >= origin[1] and point.x <= origin[0] + size.x and point.y <= origin[1] + size.y
 
 func pick_source(plane_point: Vector2) -> int:
 	var point: Vector2 = Iso.plane_to_world(plane_point)
@@ -666,4 +694,4 @@ func _draw_footprint(origin: Array, size: Vector2i, color: Color, selected: bool
 		_canvas.draw_polyline(polygon,Color("8cff87"),2.0)
 
 func _draw_label(point: Vector2, text: String) -> void:
-	_canvas.draw_string(ThemeDB.fallback_font,point + Vector2(-LABEL_WIDTH / 2.0,0),text,HORIZONTAL_ALIGNMENT_CENTER,LABEL_WIDTH,UiStyle.FONT_SIZE,Color.WHITE)
+	_canvas.draw_string(ThemeDB.fallback_font,point + Vector2(-LABEL_WIDTH / 2.0,0),text,HORIZONTAL_ALIGNMENT_CENTER,LABEL_WIDTH,MAP_LABEL_SIZE,Color.WHITE)

@@ -29,7 +29,7 @@ Planning record, not an implementation plan. It splits blueprint [§7 M9](../../
 | Id | Name | Lane | Position | Gives players |
 |---|---|---|---|---|
 | night 7 | Play on after a leave | night | between P2.3a and P7 | a defeated seat that leaves no longer stops the others |
-| P7 | Team up against bots | day | after P2.3a | you and a friend against two bots online; offline team matches with an allied bot |
+| P7 | Team up against bots | day | after P2.3a (after P2.3b since the [fun-first reorder](2026-11-20-fun-first-reorder-design.md), user, 2026-11-20) | you and a friend against two bots online; offline team matches with an allied bot |
 | night 8 | Relay guards | night | between P7 and P2.3b (contents unchanged) | abuse limits; its fault proxy runs P8's scenarios |
 | night 9 | Adaptive input delay | night | between P2.3b and P8 (contents unchanged) | one agreed delay, adopted only on a measured gain |
 | P8 | Reconnect after a drop | day | after P2.3b | a dropped player no longer ends the match |

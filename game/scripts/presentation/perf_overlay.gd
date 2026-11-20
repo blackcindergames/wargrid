@@ -1,7 +1,6 @@
 extends Label
 
 const TimingStats = preload("res://scripts/debug/timing_stats.gd")
-const UiStyle = preload("res://scripts/presentation/ui_style.gd")
 const WINDOW: int = 120
 const REFRESH_SECONDS: float = 0.25
 var extra: Callable = Callable()
@@ -19,15 +18,15 @@ func _init() -> void:
 	name = "PerfOverlay"
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	theme = UiStyle.hud_theme()
+	theme_type_variation = &"HudSmallNumber"
 	horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	# The screen places it by its right edge, so longer text grows left.
 	grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	offset_left = -16.0
-	offset_right = -16.0
-	offset_top = 16.0
 	_frames.resize(WINDOW)
 	_steps.resize(WINDOW)
+
+func place(top_left: Vector2) -> void:
+	position = top_left
 
 func toggle() -> void:
 	visible = not visible

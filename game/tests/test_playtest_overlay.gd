@@ -302,10 +302,9 @@ func test_helper_off_changes_nothing(runner) -> bool:
 
 func test_overlay_layout(runner) -> bool:
 	var saved: String = _begin()
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		_camera(main)
 		main.orders.selected_ids.assign([_own_unit(main)])
@@ -320,9 +319,9 @@ func test_overlay_layout(runner) -> bool:
 			var panel: Control = main.get_node(path)
 			runner.check(panel.visible and screen.encloses(panel.get_global_rect()), "PO8 %s inside %s, rect %s" % [path, size, panel.get_global_rect()])
 			panels.append(panel.get_global_rect())
-			for other in ["HUD/Status", "HUD/Economy"]:
-				var control: Control = main.get_node(other)
-				runner.check(not panel.get_global_rect().intersects(Rect2(control.global_position, control.get_combined_minimum_size())), "PO8 %s clear of %s at %s" % [path, other, size])
+			var hud: Dictionary = BaseScene.hud_panels(main)
+			runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip") and hud.has("HUD/Hud/SelectionPanel"), "PO8 the list holds the Menu chip, the strip and the selection panel at %s, got %s" % [size, hud.keys()])
+			for other: String in hud: runner.check(not panel.get_global_rect().intersects(hud[other]), "PO8 %s clear of %s at %s" % [path, other, size])
 		runner.check(not panels[0].intersects(panels[1]), "PO8 checklist and note apart at %s" % size)
 		port.free()
 	_end(saved)
@@ -711,12 +710,11 @@ func test_form_layout(runner) -> bool:
 	for card: Dictionary in FocusCards.load_cards():
 		if JSON.stringify(card).length() > JSON.stringify(longest).length(): longest = card
 	var saved: String = _begin(true, longest.id)
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
 		PlaytestSession.current = null
 		DirAccess.remove_absolute(sessions.path_join(PlaytestSession.CURRENT))
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		var overlay = main.get_node("HUD/Playtest")
 		_camera(main)
@@ -731,9 +729,9 @@ func test_form_layout(runner) -> bool:
 		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size) and PlaytestSession.current.data.focus == longest.id, "PO15 fixture: a real %s viewport and the longest card" % size)
 		runner.check(panel.visible and rect.size.y <= 0.6 * size.y + 0.5, "PO15 the panel is at most 60 %% of %s high, got %s" % [size, rect.size])
 		runner.check(screen.encloses(rect), "PO15 the panel is inside %s, rect %s" % [size, rect])
-		for other in ["HUD/Status", "HUD/Economy"]:
-			var control: Control = main.get_node(other)
-			runner.check(not rect.intersects(Rect2(control.global_position, control.get_combined_minimum_size())), "PO15 the panel is clear of %s at %s" % [other, size])
+		var hud: Dictionary = BaseScene.hud_panels(main)
+		runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip"), "PO15 the list holds the Menu chip and the strip at %s, got %s" % [size, hud.keys()])
+		for other: String in hud: runner.check(not rect.intersects(hud[other]), "PO15 the panel is clear of %s at %s" % [other, size])
 		var card: Control = main.get_node("HUD/ResultPanel/Center/Card")
 		runner.check(card.is_visible_in_tree() and not rect.intersects(card.get_global_rect()), "PO15 the panel is clear of the result card at %s, card %s panel %s" % [size, card.get_global_rect(), rect])
 		var scrolls: Array[Node] = panel.find_children("*", "ScrollContainer", true, false)

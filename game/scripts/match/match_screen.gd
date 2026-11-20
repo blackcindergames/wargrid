@@ -9,13 +9,11 @@ const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const Orders = preload("res://scripts/match/orders.gd")
 const Hud = preload("res://scripts/match/hud.gd")
+const HudModel = preload("res://scripts/match/hud_model.gd")
 const ResultPanel = preload("res://scripts/match/result_panel.gd")
 const LAUNCHER_SCENE: String = "res://scenes/launcher.tscn"
 const ZOOMS: Array[float] = [0.5, 1.0, 2.0]
-const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
-const UiStyle = preload("res://scripts/presentation/ui_style.gd")
-const MENU_COLUMNS: int = 4
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const SoundPlayer = preload("res://scripts/presentation/sound_player.gd")
 const VisualDirector = preload("res://scripts/presentation/visual_director.gd")
@@ -25,6 +23,7 @@ const PlaytestOverlay = preload("res://scripts/playtest/playtest_overlay.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
@@ -33,9 +32,12 @@ static var starts: Array[int] = []
 static var match_seed: int = 0
 var driver: RefCounted
 var orders: RefCounted = Orders.new(self)
-var hud: RefCounted
+var hud: Hud
 var local_player: int = 1
+var view_player: int = 1
 var stepped_results: Array = []
+var _last_result_tick: int = -1
+var _last_result_sequence: int = -1
 var shown_state: Dictionary = {}
 var _shown_note: String = ""
 var _camera_bounds: Rect2
@@ -56,30 +58,44 @@ var _auto_tick_usec: int = 0
 var _visuals := VisualDirector.new()
 var _playtest: PlaytestOverlay
 var _leaving: bool = false
+var _unanswered: int = 0
+var _stale: int = 0
+# Window events are sorted here in `_input`; tests that call `_unhandled_input` directly feed map logic points past the view.
+var _off_picture: InputEvent = null
 
 func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: String = Skirmish.default_faction()) -> void:
 	driver = OnlineDriver.new(transport, lockstep, faction, seat)
 	local_player = seat
+	view_player = seat
 
 func _ready() -> void:
+	view_player = local_player
 	if driver == null: driver = OfflineDriver.new(local_player)
-	$HUD/Status.theme = UiStyle.hud_theme()
-	$HUD/Economy.theme = UiStyle.hud_theme()
-	var menu := GridContainer.new()
-	menu.name = "BuildMenu"
-	menu.columns = MENU_COLUMNS
-	$HUD/Economy.add_child(menu)
-	$HUD/Economy.move_child(menu,0)
 	_result_panel = ResultPanel.new()
 	_result_panel.play_again_pressed.connect(_play_again)
 	_result_panel.change_setup_pressed.connect(_leave)
 	$HUD.add_child(_result_panel)
-	hud = Hud.new($HUD, self)
+	hud = Hud.new()
+	$HUD.add_child(hud)
+	$HUD.move_child(hud, 0)
+	hud.setup($HUD/Economy)
+	# Above the result card's dim and click catcher, so Menu stays live after the match, as the Playtest chip does.
+	var menu_chip: Control = hud.get_node("MenuChip")
+	menu_chip.reparent($HUD, false)
+	$HUD.move_child(menu_chip, _result_panel.get_index() + 1)
+	hud.menu_chosen.connect(orders._menu_choose.bind(false))
+	hud.entry_cancelled.connect(orders._cancel_entry)
+	hud.cancel_build_pressed.connect(orders._cancel_build)
+	hud.attack_move_pressed.connect(orders.arm_attack_move)
+	hud.stop_pressed.connect(orders.stop_selected)
+	hud.unload_pressed.connect(orders._unload_selected)
+	hud.row_clicked.connect(_select_kind)
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()
 	_pause.confirm_leave = driver.confirm_leave()
 	_pause.resume_requested.connect(_pause.close)
+	hud.menu_pressed.connect(_pause.open)
 	_pause.leave_requested.connect(_leave)
 	if not quit.is_valid(): quit = get_tree().quit
 	_pause.quit_requested.connect(func() -> void:
@@ -87,6 +103,7 @@ func _ready() -> void:
 		quit.call())
 	_pause.quality_changed.connect(_view.set_quality)
 	_pause.neon_changed.connect(_view.set_bright_owners)
+	_pause.neon_changed.connect(func(_bright: bool) -> void: _reshow())
 	_pause.smooth_changed.connect(_view.set_smooth)
 	_pause.destinations_changed.connect(_view.set_show_destinations)
 	$HUD.add_child(_pause)
@@ -100,9 +117,8 @@ func _ready() -> void:
 	_create_world()
 	_clock = PresentationClock.new()
 	_reset_camera()
+	_add_playtest()
 	_refresh()
-	$HUD/Economy/Produce.pressed.connect(orders._produce_selected)
-	$HUD/Economy/CancelBuild.pressed.connect(orders._cancel_build)
 	_view.set_visuals(_visuals)
 	_start_auto_pick(GraphicsSettings.load_quality() == -1 and DisplayServer.get_name() != "headless")
 	var music := MusicPlayer.new()
@@ -110,12 +126,16 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	music.play_match(rng, MusicPlayer.GAP_SECONDS)
-	_add_playtest()
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
 	driver.start()
 
+func _enter_tree() -> void:
+	ViewCaps.apply(get_tree().root)
+
 func _exit_tree() -> void:
+	orders._set_attack_move(false)
 	driver.detach()
+	ViewCaps.release(get_tree().root)
 
 func _add_playtest() -> void:
 	_playtest = PlaytestOverlay.new()
@@ -125,13 +145,26 @@ func _add_playtest() -> void:
 	_pause.opened.connect(_playtest.observe_menu)
 	_pause.playtest_changed.connect(_playtest.set_active)
 	_playtest.set_active(PlaytestSettings.enabled())
+	for surface: Control in _playtest.surfaces(): hud.block(surface)
+	_playtest.stack_changed.connect(_place_perf)
+	$HUD/Economy.item_rect_changed.connect(_place_floor)
+	$HUD/Economy.visibility_changed.connect(_place_floor)
+	_perf.resized.connect(_place_perf)
+	_place_perf()
+
+# Show more and window resizes move the slab between views, so the helper stack follows the slab itself.
+func _place_floor() -> void:
+	_playtest.set_floor(hud.slab_top())
+
+func _place_perf() -> void:
+	_perf.place(_playtest.slot_for(_perf.size))
 
 func _reset_camera() -> void:
 	var size: Array = driver.current().view.map.size
 	_camera_bounds = Rect2(Vector2.ZERO, Vector2.ZERO)
 	for corner: Variant in [Vector2(size[0], 0), Vector2(0, size[1]), Vector2(size[0], size[1])]:
 		_camera_bounds = _camera_bounds.expand(Iso.world_to_plane(corner))
-	var start: Vector2i = driver.first_note.starts.get(local_player, Vector2i(-1, -1))
+	var start: Vector2i = driver.first_note.starts.get(view_player, Vector2i(-1, -1))
 	var focus := Vector2(start) + Vector2(0.5, 0.5) if start.x >= 0 else Vector2(size[0], size[1]) / 2.0
 	_camera.position = Iso.world_to_plane(focus)
 
@@ -151,27 +184,42 @@ func playtest_header() -> Dictionary:
 	return _header(played.mode, played.factions)
 
 func _header(mode: String, match_factions: Array) -> Dictionary:
-	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "build": PlaytestSettings.build_id()}
+	return {"mode": mode, "map": _map_id(), "seed": match_seed, "factions": match_factions, "seat": local_player, "build": PlaytestSettings.build_id()}
+
+func _map_id() -> String:
+	return map_path.get_file().get_basename()
 
 func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
 	var record: Dictionary = driver.record()
-	return _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": hud._result_text(record.match), "commands": lines})
+	return _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines})
 
+# Only an answer to an order sent after the refusal clears it, so an earlier order in flight cannot wipe a hint.
+# shortcut: answers are counted, not matched; an order that never gets one leaves the line to its timer; match by sequence if that shows up.
 func _take_answers() -> void:
-	for answer: Dictionary in driver.take_answers():
+	var answers: Array[Dictionary] = driver.take_answers()
+	var refused: Dictionary = {}
+	var fresh: bool = false
+	for answer: Dictionary in answers:
+		if not answer.ok: refused = answer
+		if answer.command.is_empty(): continue
+		_unanswered = maxi(_unanswered - 1, 0)
+		if _stale > 0: _stale -= 1
+		elif answer.ok: fresh = true
+	if not refused.is_empty(): refuse(refused.error)
+	elif fresh: hud.clear_refusal()
+	for answer: Dictionary in answers:
 		if answer.ok: _playtest.observe_command(answer.command)
-		else:
-			_ensure_sound()
-			_sound.rejected(answer.error)
-			hud.note = "Rejected: " + answer.error
-			hud.refusal = answer.error
 		orders.answered(answer)
 
 func menu_open() -> bool:
 	return _pause.visible or _playtest.holds_match()
 
 func _escape_pending() -> bool:
-	return not shown_over() and orders.escape_pending()
+	return not shown_over() and not frozen() and orders.escape_pending()
+
+# Only the offline driver ever returns the freeze notice, so failure() is read only then.
+func frozen() -> bool:
+	return driver.notice() == OfflineDriver.FREEZE_NOTICE
 
 func _leave() -> void:
 	if _leaving: return
@@ -193,6 +241,8 @@ func _change_scene(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouse and not get_viewport().get_visible_rect().has_point(event.position): _off_picture = event
+	elif event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event) # a STOP panel takes motion before `_unhandled_input`: the drag box keeps up and the hover clears
 	if not (event is InputEventKey and event.pressed and not event.echo): return
 	if event.physical_keycode == KEY_F3: return
 	if event.is_action_pressed("deselect"):
@@ -204,6 +254,27 @@ func _input(event: InputEvent) -> void:
 		else: return
 	elif event.is_action_pressed("ui_accept"): return
 	get_viewport().set_input_as_handled()
+
+# The bars past a stretch cap show no map: a click there is nobody's, a drag ending there stops at the picture's edge.
+# Dropped after the GUI, so a control that took the press still gets its release in a bar.
+func _drop_off_picture(event: InputEventMouse) -> void:
+	_off_picture = null
+	if not orders.is_selecting(): return
+	var view: Rect2 = get_viewport().get_visible_rect()
+	var clamped := event.duplicate() as InputEventMouse
+	clamped.position = event.position.clamp(view.position, view.end)
+	orders.handle(clamped)
+
+func esc_opens_menu() -> bool:
+	return not _escape_pending() and not _playtest.holds_match() and not _typing() and not _pause.visible
+
+# Focus and the note form change without a new view, so the chip follows every frame.
+func _show_esc_chip() -> void:
+	hud.set_esc_chip(esc_opens_menu())
+
+# The pause menu and the note form open without a new view, so this runs every frame too.
+func _drop_stale_attack_move() -> void:
+	if orders._attack_move_mode and (not orders.takes_orders() or _pause.visible or orders.selected_ids.is_empty()): orders._set_attack_move(false)
 
 func _typing() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
@@ -246,6 +317,8 @@ func _present_if_due() -> bool:
 	return true
 
 func _process(delta: float) -> void:
+	_show_esc_chip()
+	_drop_stale_attack_move()
 	var drained_at: int = Time.get_ticks_usec()
 	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
 	var presented_at: int = Time.get_ticks_usec()
@@ -292,59 +365,131 @@ func change_zoom(direction: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# A field passes on shortcuts it does not use (Cmd+S, Ctrl+1); orders ignore modifiers, so they would fire.
 	if event is InputEventKey and _typing(): return
+	if event == _off_picture:
+		_drop_off_picture(event)
+		return
 	var click := event as InputEventMouseButton
 	if click != null and click.pressed and click.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT] and _typing() and not _playtest.holds_match(): get_viewport().gui_release_focus()
 	orders.handle(event)
 
 func _refresh() -> void:
 	_show(driver.current().view)
-	hud.place_economy()
 
 func _note() -> String:
 	# The rematch line changes without a tick, so a finished match still redraws its panel.
-	return hud.note + driver.notice() + driver.rematch_line()
+	return hud.refusal + driver.notice() + driver.rematch_line()
 
 func shown_over() -> bool:
 	return shown_state.get("match") != null and shown_state.match.status in ["won", "draw"]
 
 func _reshow() -> void:
 	_show(shown_state, false)
-	hud.place_economy()
 
 # Only a new view consumes step results and sound; a repaint on input must leave them for the next refresh.
 func _show(state: Dictionary, fresh: bool = true) -> void:
 	shown_state = state
+	# An armed placement (and its strip preview) and a drag box must never show over a result or freeze card or an ended online match.
+	if shown_over() or driver.over() or frozen():
+		if not orders._placement_kind.is_empty(): orders._clear_placement()
+		hud.end_hover()
+		orders._selecting = false
+		_selection_box.hide()
 	_shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()
 	orders.prune(state)
+	_drop_stale_attack_move()
 	orders.show_preview(driver.preview_answer())
 	Profiler.end(&"refresh.selection", zone)
+	_view.view_player = view_player
 	_view.set_view(state, orders.view_selection())
 	zone = Profiler.begin()
-	hud._refresh_hud(state, fresh)
+	_ensure_sound()
+	_take_results(state)
+	hud.update_hud(state, _hud_selection(), view_player, local_player)
+	_place_floor()
+	orders.menu = hud.menu_kinds
+	_view.set_inspected(orders.inspected_id)
+	if frozen(): _show_freeze()
+	else: _show_result(state)
+	if fresh: _sound.update(state)
 	Profiler.end(&"refresh.hud", zone)
 	if fresh: stepped_results.clear()
+
+func _take_results(state: Dictionary) -> void:
+	for result: Dictionary in stepped_results + state.command_results:
+		if result.player == local_player and (result.tick > _last_result_tick or (result.tick == _last_result_tick and result.sequence > _last_result_sequence)):
+			# The sound director already beeps for a due-time failure.
+			if not result.ok: refuse(result.error, false)
+			_last_result_tick = result.tick
+			_last_result_sequence = result.sequence
+
+# A kind row narrows the selection to its kind; with Shift it drops that kind.
+func _select_kind(kind: String, shift: bool) -> void:
+	if not orders.takes_orders(): return
+	var units: RefCounted = shown_state.units
+	orders.selected_ids.assign(orders.selected_ids.filter(func(id: int) -> bool:
+		var i: int = units.index_of(id)
+		return (i != -1 and units.kinds[units.kind[i]] == kind) != shift))
+	_reshow()
+
+func _hud_selection() -> Dictionary:
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": shown_over() or driver.over() or frozen(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
+
+func _result(state: Dictionary) -> String:
+	var result: String = _result_text(state.match)
+	return "Victory" if result.is_empty() and driver.opponent_left() else result
+
+func _show_result(state: Dictionary) -> void:
+	var result: String = _result(state)
+	var rows: Array[Dictionary] = []
+	if not result.is_empty(): rows = _result_rows(state)
+	var length: String = ResultPanel.length_text(state.tick, Engine.physics_ticks_per_second) if not result.is_empty() else ""
+	_result_panel.show_result(result, driver.rematch_line(), driver.can_play_again(), rows, length, driver.rematch_pending(), driver.friend_wants_rematch())
+
+func _show_freeze() -> void:
+	var build: String = PlaytestSettings.build_id()
+	_result_panel.show_freeze(ResultPanel.report_text(driver.failure(), build, _map_id(), driver.current().tick), ResultPanel.footer_text(build, _map_id()))
+
+func _result_rows(state: Dictionary) -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	var stats: Array[Dictionary] = driver.match_stats()
+	for player: Dictionary in state.players:
+		var row: Dictionary = stats.filter(func(entry: Dictionary) -> bool: return entry.player == player.id)[0]
+		var you: bool = player.id == local_player
+		var faction: String = Registry.faction(player.get("faction", Registry.Factions.DEFAULT_FACTION)).display_name
+		rows.append({"name": "P%d %s%s" % [player.id, faction, " (you)" if you else ""], "you": you, "built": row.units_built, "units_lost": row.units_lost, "buildings_lost": row.buildings_lost})
+	return rows
+
+func _result_text(match_state: Variant) -> String:
+	return ResultPanel.result_text(match_state, _local_team())
+
+func _local_team() -> int:
+	for player: Dictionary in shown_state.players:
+		if player.id == local_player: return player.team
+	return 0
 
 func _show_hint(payload: Dictionary) -> void:
 	var point: Variant = orders._hint_point(payload)
 	if point != null: _view.add_hint(point, shown_state.tick)
 
 func _submit(payload: Dictionary) -> void:
+	orders.gestures += 1
 	_show_hint(payload)
 	driver.submit(payload)
-	hud.note = ""
-	hud.refusal = ""
+	_unanswered += 1
 	_reshow()
 	_sound.order(payload)
 
-func refuse(error: String) -> void:
-	_ensure_sound()
-	_sound.rejected(error)
-	hud.note = "Rejected: " + error
-	hud.refusal = error
-	_reshow()
+# The result and freeze cards already say why nothing is taken, as with the notice.
+func refuse(raw_error: String, sound: bool = true) -> void:
+	if shown_over() or frozen(): return
+	_stale = _unanswered
+	if sound:
+		_ensure_sound()
+		_sound.rejected(raw_error)
+	hud.refuse(raw_error)
 
 func _ensure_sound() -> void:
 	if _sound != null: return
@@ -355,20 +500,6 @@ func _collect_note(note: SimPump.Note) -> void:
 	_ensure_sound()
 	_sound.collect_step(note.tick, note.events, note.results)
 	_visuals.collect_step(note.tick, note.events, note.results)
-
-func _production_kind(building: Dictionary, state: Dictionary) -> String:
-	var kind: String = Skirmish.unit_for(_local_state(state).get("faction", Skirmish.default_faction()), building.kind)
-	return kind if not kind.is_empty() else Definitions.building(building.kind).produces
-
-func _local_state(state: Dictionary) -> Dictionary:
-	for player: Dictionary in state.players:
-		if player.id == local_player: return player
-	return state.players[0]
-
-func _building(state: Dictionary, id: int) -> Dictionary:
-	for building: Dictionary in state.buildings:
-		if building.id == id: return building
-	return {}
 
 func _play_again() -> void:
 	if driver.can_restart(): _restart()
@@ -386,6 +517,7 @@ func _rematch(match_seed_value: int) -> void:
 	_restart_world()
 
 func _restart_world() -> void:
+	view_player = local_player
 	_playtest.begin_match()
 	_create_world()
 	_clock = PresentationClock.new()
@@ -394,6 +526,10 @@ func _restart_world() -> void:
 	_visuals.reset()
 	orders.reset()
 	hud.reset()
+	_unanswered = 0
+	_stale = 0
+	_last_result_tick = -1
+	_last_result_sequence = -1
 	stepped_results.clear()
 	_selection_box.hide()
 	_camera.zoom = Vector2.ONE

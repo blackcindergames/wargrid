@@ -11,7 +11,7 @@ A playtester with competitive RTS experience said units "move strangely, probabl
 - Units path on a finer grid than buildings and drive at any angle, as Zero Hour does, "unless there is very good reason not to".
 - Wargrid may use its own method, closer to what modern RTS games do, as long as it feels similar to Zero Hour.
 - The brainstorm must investigate a navmesh and flow fields, not only a finer grid with smoothing.
-- Unchanged: deterministic lockstep, the browser build as the main target, the performance budgets, the user's avoidance rules (rounds 1 to 4 of the avoidance spike, on branch `spike-avoidance`).
+- Unchanged: deterministic lockstep, the browser build as the main target, the performance budgets, the user's avoidance rules (rounds 1 to 4 of the avoidance spike, on tag `archive/spike-avoidance`).
 
 ## How it works today
 

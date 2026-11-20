@@ -19,6 +19,12 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/size/resizable=true
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[gui]
+
+theme/custom="res://ui/launcher_theme.tres"
+theme/custom.editor_hint=""
 
 [input]
 camera_left={

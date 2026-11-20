@@ -9,6 +9,7 @@ const LauncherScript = preload("res://scripts/launcher.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const RelayTransport = preload("res://scripts/net/relay_transport.gd")
+const SkirmishMain = preload("res://scripts/match/match_screen.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
 const LOOPBACK := "wss://127.0.0.1:9/ws"
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
@@ -29,7 +30,7 @@ const SIZES: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1920, 1080), Vecto
 const STRETCHED: Array[Array] = [[Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(2576, 1145), Vector2i(1620, 720)]]
 
 func cases() -> Array[Callable]:
-	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_type_matches_mockups, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits]
+	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_launcher_effective_sizes, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits]
 
 func _picked(selector: OptionButton) -> String:
 	return selector.get_item_metadata(selector.selected)
@@ -121,12 +122,13 @@ func test_sidebar_switches_pages(runner) -> bool:
 
 func test_aspect_expand_and_restore(runner) -> bool:
 	var root: Window = runner.root.get_tree().root
-	runner.check(root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "L7 fixture: aspect starts on keep")
+	var base := [Vector2i(1280, 720), Window.CONTENT_SCALE_ASPECT_EXPAND]
+	runner.check([root.content_scale_size, root.content_scale_aspect] == base, "L7 fixture: the root starts on 1280x720 expand, got %s %d" % [root.content_scale_size, root.content_scale_aspect])
 	var launcher = Launcher.instantiate()
 	runner.root.add_child(launcher)
-	runner.check(root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_EXPAND, "L7 the launcher sets expand")
+	runner.check([root.content_scale_size, root.content_scale_aspect] == base, "L7 the launcher keeps 1280x720 expand")
 	launcher.free()
-	runner.check(root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "L7 leaving the tree restores keep")
+	runner.check([root.content_scale_size, root.content_scale_aspect] == base, "L7 leaving the tree keeps 1280x720 expand, got %s %d" % [root.content_scale_size, root.content_scale_aspect])
 	return true
 
 func _visible_controls(node: Node, found: Array[Control]) -> void:
@@ -273,6 +275,7 @@ func test_own_faction_shared(runner) -> bool:
 
 func test_start_saves_picks(runner) -> bool:
 	var saved: String = AudioSettings.path
+	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
 	var launcher = await _launcher_with(runner, "saves", {"faction": "usa", "bot_faction": "usa", "map": "dry_wells"})
 	launcher._set_own("china")
 	launcher._select_id(launcher.get_node("Pages/Play/Body/Bot"), "frc")
@@ -280,6 +283,11 @@ func test_start_saves_picks(runner) -> bool:
 	launcher._offline_setup()
 	var stored: Dictionary = LauncherSettings.load_picks()
 	_restore(saved)
+	# The next case's match must not start on this case's picks.
+	SkirmishMain.factions = before[0]
+	SkirmishMain.map_path = before[1]
+	SkirmishMain.starts = before[2]
+	SkirmishMain.match_seed = before[3]
 	runner.check(stored == {"faction": "china", "bot_faction": "frc", "map": "ashfall"}, "L9e a bot start saves all three, got %s" % [stored])
 	launcher.free()
 	return true
@@ -514,7 +522,7 @@ func test_this_build_line(runner) -> bool:
 	toggle.button_pressed = true
 	for page_name: String in ["Play", "Join"]:
 		var build: Button = launcher.get_node("Pages/%s/ThisBuild" % page_name)
-		runner.check(build.visible and build.text == "This build: " + title and title == "Notes that never block", "L15b %s ThisBuild names the first card when on, got %s" % [page_name, build.text])
+		runner.check(build.visible and build.text == "This build: " + title and title == "See your selection", "L15b %s ThisBuild names the first card when on, got %s" % [page_name, build.text])
 	toggle.button_pressed = false
 	for page_name: String in ["Play", "Join"]:
 		runner.check(not launcher.get_node("Pages/%s/ThisBuild" % page_name).visible, "L15b %s ThisBuild hides again when switched off" % page_name)
@@ -684,9 +692,9 @@ func test_footer_status_style(runner) -> bool:
 	var launcher = await _launcher_with(runner, "footer-style", {})
 	_restore(saved)
 	var info_size: int = launcher.get_node("Pages/Join/Footer/Status").get_theme_font_size("font_size")
-	runner.check(info_size <= 15, "L19c the footer text is at most 15 px, got %s" % info_size)
+	runner.check(info_size == 16, "L19c the footer text is 16 px, got %s" % info_size)
 	var waiting_size: int = launcher.get_node("Pages/Waiting/Footer/Status").get_theme_font_size("normal_font_size")
-	runner.check(waiting_size <= 15, "L19c the Waiting footer text is at most 15 px, got %s" % waiting_size)
+	runner.check(waiting_size == 16, "L19c the Waiting footer text is 16 px, got %s" % waiting_size)
 	var seen: Dictionary = {}
 	for page_name: String in ["Play", "Join"]:
 		launcher.show_page(page_name)
@@ -850,11 +858,13 @@ const MUTED := Color(0.831, 0.831, 0.831)
 func _font_path(font: Font) -> String:
 	return font.base_font.resource_path if font is FontVariation else font.resource_path
 
-func test_type_matches_mockups(runner) -> bool:
+func test_launcher_effective_sizes(runner) -> bool:
 	var saved: String = AudioSettings.path
 	var launcher = await _launcher_with(runner, "type", {})
 	_restore(saved)
-	runner.check(launcher.theme.default_font_size == 15, "T1 the base size is the CSS 15 px, got %s" % launcher.theme.default_font_size)
+	var theme: Theme = ThemeDB.get_project_theme()
+	runner.check(launcher.theme == null, "TH4 the launcher carries no theme of its own")
+	runner.check(theme.default_font_size == 16, "T1 the base size is 16 px on the type scale, got %s" % theme.default_font_size)
 	for path: String in ["Pages/Play/Body/Own", "Pages/Play/Body/Map", "Pages/Play/Body/Bot", "Pages/Join/Body/Own"]:
 		var dropdown: OptionButton = launcher.get_node(path)
 		runner.check(_font_path(dropdown.get_theme_font("font")) == SEMIBOLD, "T1 %s value is SemiBold, got %s" % [path, _font_path(dropdown.get_theme_font("font"))])
@@ -865,16 +875,27 @@ func test_type_matches_mockups(runner) -> bool:
 		runner.check(toggle.get_theme_color("font_color") == MUTED and toggle.get_theme_color("font_pressed_color") == Color.WHITE, "T1 %s is muted off and white on" % side)
 	for nav: Button in launcher.get_node("Sidebar/Nav").get_children().filter(func(each: Node) -> bool: return each is Button):
 		runner.check(_font_path(nav.get_theme_font("font")) == SEMIBOLD and nav.get_theme_color("font_color") == MUTED and nav.get_theme_color("font_pressed_color") == Color.WHITE, "T1 nav %s is SemiBold, muted off and white on" % nav.name)
-	var weights: Dictionary = {"PageTitle": [EXTRABOLD, 30], "FieldLabel": [BOLD, 15], "PanelTitle": [BOLD, 15], "Logo": [EXTRABOLD, 23], "PrimaryButton": [EXTRABOLD, 17]}
+	var weights: Dictionary = {"PageTitle": [EXTRABOLD, 30], "FieldLabel": [BOLD, 16], "PanelTitle": [BOLD, 16], "Logo": [EXTRABOLD, 24], "PrimaryButton": [EXTRABOLD, 16]}
 	for type: String in weights:
-		var font: Font = launcher.theme.get_font("font", type)
-		runner.check(_font_path(font) == weights[type][0] and launcher.theme.get_font_size("font_size", type) == weights[type][1], "T1 %s is Public Sans %s at %s px" % [type, "ExtraBold" if weights[type][0] == EXTRABOLD else "Bold", weights[type][1]])
-	var logo: Font = launcher.theme.get_font("font", "Logo")
+		var font: Font = theme.get_font("font", type)
+		runner.check(_font_path(font) == weights[type][0] and theme.get_font_size("font_size", type) == weights[type][1], "T1 %s is Public Sans %s at %s px" % [type, "ExtraBold" if weights[type][0] == EXTRABOLD else "Bold", weights[type][1]])
+		var controls: Array = launcher.find_children("*", "Control", true, false).filter(func(each: Control) -> bool: return each.theme_type_variation == type)
+		runner.check(not controls.is_empty(), "TH4 the launcher has %s controls" % type)
+		for control: Control in controls: runner.check(control.get_theme_font_size("font_size") == weights[type][1], "TH4 %s %s reports %s px, got %s" % [type, control.name, weights[type][1], control.get_theme_font_size("font_size")])
+	var code: LineEdit = launcher.get_node("Pages/Join/Body/Code")
+	var code_size: int = code.get_theme_font_size("font_size")
+	var code_style: StyleBox = code.get_theme_stylebox("normal")
+	var text_height: float = code.get_theme_font("font").get_height(code_size)
+	runner.check(code_size in [16, 24], "TH4 the join code is 16 or 24 px, got %s" % code_size)
+	runner.check(code_style.get_margin(SIDE_TOP) + text_height + code_style.get_margin(SIDE_BOTTOM) <= code.custom_minimum_size.y, "TH4 the join code's text fits the %.0f px field, text %.1f" % [code.custom_minimum_size.y, text_height])
+	var text_width: float = code.get_theme_font("font").get_string_size("W".repeat(code.max_length), HORIZONTAL_ALIGNMENT_LEFT, -1, code_size).x
+	runner.check(code_style.get_margin(SIDE_LEFT) + text_width + code_style.get_margin(SIDE_RIGHT) <= code.custom_minimum_size.x, "TH4 the widest join code fits the %.0f px field across, text %.1f" % [code.custom_minimum_size.x, text_width])
+	var logo: Font = theme.get_font("font", "Logo")
 	runner.check(logo is FontVariation and logo.spacing_glyph >= 1, "T1 the logo has letter spacing like .wm")
-	runner.check(_font_path(launcher.theme.get_font("font", "CheckButton")) == REGULAR, "T1 switch labels stay Regular")
-	runner.check(launcher.theme.get_font_size("font_size", "Tag") == 12, "L27 the tag is 12 px, got %s" % launcher.theme.get_font_size("font_size", "Tag"))
+	runner.check(_font_path(theme.get_font("font", "CheckButton")) == REGULAR, "T1 switch labels stay Regular")
+	runner.check(theme.get_font_size("font_size", "Tag") == 12, "L27 the tag is 12 px, got %s" % theme.get_font_size("font_size", "Tag"))
 	runner.check(launcher.get_node("Pages/Play/Body/Advanced/Toggle/Tag").get_theme_font_size("font_size") == 12, "L27 the advanced fold's tag reports 12 px")
-	var muted: Color = launcher.theme.get_color("font_color", "Subtitle")
+	var muted: Color = theme.get_color("font_color", "Subtitle")
 	runner.check(muted == MUTED, "T1 muted text is #d4d4d4 like --muted, got %s" % muted)
 	launcher.free()
 	return true
@@ -895,7 +916,7 @@ func test_dropdown_arrow(runner) -> bool:
 		var dropdown: OptionButton = launcher.get_node(path)
 		var arrow: Texture2D = dropdown.get_theme_icon("arrow")
 		runner.check(arrow.resource_path == "res://ui/dropdown_arrow.svg" and arrow.get_size() == Vector2(10, 5), "T3 %s uses the 10x5 solid triangle, got %s %s" % [path, arrow.resource_path, arrow.get_size()])
-		runner.check(dropdown.get_theme_constant("arrow_margin") == 15, "T3 %s leaves the CSS 14 px padding plus 1 px border right of the arrow, got %s" % [path, dropdown.get_theme_constant("arrow_margin")])
+		runner.check(dropdown.get_theme_constant("arrow_margin") == 16, "T3 %s leaves 16 px right of the arrow, on the spacing scale, got %s" % [path, dropdown.get_theme_constant("arrow_margin")])
 	var image: Image = load("res://ui/dropdown_arrow.svg").get_image()
 	runner.check(image.get_pixel(5, 0).a > 0.9 and image.get_pixel(5, 4).a > 0.5 and image.get_pixel(0, 4).a < 0.1, "T3 the arrow points down: wide on top, a point at the bottom")
 	launcher.free()
@@ -1374,7 +1395,7 @@ func test_focus_differs_from_hover(runner) -> bool:
 		runner.check(not ring.draw_center and ring.border_color == FOCUS_RING, "L30 %s focus is an unfilled #e6e6e6 ring" % type)
 		runner.check(ring.border_width_left == 2 and ring.border_width_top == 2 and ring.border_width_right == 2 and ring.border_width_bottom == 2, "L30 %s focus ring is 2 px on every side" % type)
 		runner.check(ring.expand_margin_left == 4.0 and ring.expand_margin_top == 4.0 and ring.expand_margin_right == 4.0 and ring.expand_margin_bottom == 4.0, "L30 %s focus ring floats 4 px outside the button" % type)
-		runner.check(ring.corner_radius_top_left == 9 and ring.corner_radius_bottom_right == 9, "L30 %s focus ring radius is the button's 5 plus 4" % type)
+		runner.check(ring.corner_radius_top_left <= 2 and ring.corner_radius_bottom_right <= 2, "L30 %s focus ring radius is at most 2, like the button" % type)
 		var fill: Variant = HOVER_FILLS[type]
 		var unchanged: bool = not hover is StyleBoxFlat if fill == null else hover is StyleBoxFlat and hover.bg_color.is_equal_approx(fill)
 		runner.check(unchanged, "L30 %s hover style is unchanged" % type)

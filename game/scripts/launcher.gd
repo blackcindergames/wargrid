@@ -18,6 +18,7 @@ const JoinLink = preload("res://scripts/join_link.gd")
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const FocusCardView = preload("res://scripts/playtest/focus_card_view.gd")
 const PasteShim = preload("res://scripts/presentation/paste_shim.gd")
+const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const OFFLINE_SCENE: String = "res://scenes/skirmish.tscn"
 const HEADLESS_FLAGS: Array[String] = ["--netclient", "--relay", "--replay-log", "--probe-relay"]
 const PAGES: Array[String] = ["Play", "Join", "Settings", "Credits", "Waiting"]
@@ -55,10 +56,7 @@ var page: String = _page_value("location.origin + location.pathname")
 var search: String = _page_value("location.search")
 
 func _enter_tree() -> void:
-	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
-
-func _exit_tree() -> void:
-	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+	ViewCaps.release(get_tree().root)
 
 func _ready() -> void:
 	# Release exports reject a scene path argument, so CI and Task 10 reach the headless client through these flags.
@@ -532,7 +530,6 @@ func _start(message: Dictionary) -> bool:
 	SkirmishMain.starts = MatchSettings.starts(id, message.seed)
 	var game: Node = OnlineScene.instantiate()
 	game.setup(_transport, _lockstep, _seat, _faction($Pages/Play/Body/Own))
-	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
 	get_tree().root.add_child(game)
 	get_tree().current_scene = game
 	queue_free()

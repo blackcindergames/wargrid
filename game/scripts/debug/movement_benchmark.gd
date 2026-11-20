@@ -9,12 +9,19 @@ const SoundPlayer = preload("res://scripts/presentation/sound_player.gd")
 const VisualDirector = preload("res://scripts/presentation/visual_director.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
+const Hud = preload("res://scripts/match/hud.gd")
 # New with the ashfall layout (R2): worst of six rendered runs 3.02 ms plus about 50%. No ceiling exists for the other layouts.
 const ASHFALL_FRAME_P95_MS: float = 3.3
 # Fixed ceilings on max draw calls per frame in the sample window; never raised to pass.
-const DRAW_CALL_CEILINGS: Dictionary = {"open": 50, "dense": 50, "horde": 50, "ashfall": 60}
+# hud_select: 1.5 x the stop gate B scratch maximum of 20 (both window sizes), rounded up to 10.
+const DRAW_CALL_CEILINGS: Dictionary = {"open": 50, "dense": 50, "horde": 50, "ashfall": 60, "hud_select": 30}
 const LAYOUTS: Array[String] = ["open", "dense", "ashfall", "horde"]
+const HUD_LAYOUT: String = "hud_select"
+const HUD_SELECTED: int = 120
+const SELECTION_LINE_POINTS: int = 8
+const DEFAULT_WINDOW := Vector2i(1280, 720)
 const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.gd")
+const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 # `-- --profile` adds profiling zones and a third, 196x196 combat leg (spike-performance only).
 var _profile: bool = OS.get_cmdline_user_args().has("--profile")
 # `-- --sound` runs only the horde layout with a SoundPlayer and reports its cost.
@@ -27,7 +34,16 @@ var _sound_times := PackedFloat64Array()
 var _large: bool = false
 var _simulation: Simulation
 var _web: bool = OS.has_feature("wargrid_render_bench")
-var _sequence: Array[String] = _layouts_to_run()
+# `-- --hud` runs only hud_select: 120 units selected under the live Hud; `--expect-window=WxH` names the size the row is for.
+var _hud_mode: bool = _hud_from(OS.get_cmdline_user_args())
+var _expected_window: Vector2i = _expect_window_from(OS.get_cmdline_user_args())
+var _hud: Hud
+var _hud_ids: Array[int] = []
+var _hud_drawn_ticks: int = 0
+# The last failure, kept so a test can read it with `_quit_on_failure` off.
+var last_failure: String = ""
+var _quit_on_failure: bool = true
+var _sequence: Array[String] = _layouts_from(OS.get_cmdline_user_args())
 var _layout_index: int = 0
 var _lines := PackedStringArray()
 var _script_usec: int = 0
@@ -59,7 +75,11 @@ var _horde_marked_ticks: int = 0
 @onready var _view: Node2D = $WorldView
 @onready var _status: Label = $HUD/Status
 
+func _exit_tree() -> void:
+	ViewCaps.release(get_tree().root)
+
 func _ready() -> void:
+	ViewCaps.apply(get_tree().root)
 	# Vsync would quantize frame intervals to display refresh and hide render cost.
 	if not _web: DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	var zoom: float = _zoom()
@@ -74,21 +94,30 @@ func _ready() -> void:
 		+ " cpu=" + OS.get_processor_name() + " resolution=" + str(get_viewport().get_visible_rect().size)
 		+ " zoom=" + str(zoom) + " quality=" + ("high" if _quality() == GraphicsSettings.HIGH else "low")
 		+ " interpolation=" + ("on" if _interpolation_from(OS.get_cmdline_user_args()) else "off")
+		+ (" window=" + _size_text(DisplayServer.window_get_size()) if _hud_mode else "")
 		+ " layouts=" + ",".join(_sequence) + " map=64x64 (ashfall layout 194x187) units=" + str(units_run(_units(), _sequence))
 		+ " seed=none vsync=" + ("browser" if _web else "off") + " warmup_wall_seconds=10 sample_wall_seconds=60")
+	var mismatch: String = window_failure(_expected_window, DisplayServer.window_get_size()) if _hud_mode else ""
+	if mismatch != "":
+		_fail(mismatch)
+		return
 	_begin_layout()
 
 func _arg(flag: String, fallback: String) -> String:
-	for arg: String in OS.get_cmdline_user_args():
+	return _arg_of(OS.get_cmdline_user_args(), flag, fallback)
+
+func _arg_of(args: Array, flag: String, fallback: String) -> String:
+	for arg: String in args:
 		if arg.begins_with(flag + "="): return arg.trim_prefix(flag + "=")
 	return fallback
 
-func _layouts_to_run() -> Array[String]:
-	var only: String = _arg("--layout", "")
+func _layouts_from(args: Array) -> Array[String]:
+	if _hud_from(args): return [HUD_LAYOUT] as Array[String]
+	var only: String = _arg_of(args, "--layout", "")
 	if only != "":
 		assert(LAYOUTS.has(only), "unknown layout " + only)
 		return [only] as Array[String]
-	if _units() == 500 or OS.get_cmdline_user_args().has("--sound"): return ["horde"] as Array[String]
+	if int(_arg_of(args, "--units", "300")) == 500 or args.has("--sound"): return ["horde"] as Array[String]
 	var all: Array[String] = LAYOUTS.duplicate()
 	if _web: all = ["horde", "ashfall"]
 	return all
@@ -120,7 +149,9 @@ func _begin_layout() -> void:
 	_horde_start.clear()
 	_horde_peak = 0
 	_horde_marked_ticks = 0
-	if _layout_name() == "horde":
+	if _layout_name() == HUD_LAYOUT:
+		_begin_hud()
+	elif _layout_name() == "horde":
 		_simulation = CombatWorkload.create("horde_render_500" if _units() == 500 else "horde_render")
 		if _sound_mode and _sound == null:
 			_sound = SoundPlayer.new(1)
@@ -151,6 +182,9 @@ func _begin_layout() -> void:
 func _physics_process(_delta: float) -> void:
 	if _large:
 		_large_tick()
+		return
+	if _layout_name() == HUD_LAYOUT:
+		_hud_tick()
 		return
 	if _layout_name() == "horde":
 		_horde_tick()
@@ -225,7 +259,7 @@ func _process(_delta: float) -> void:
 			_window_ticks = 0
 		if now - _sample_started >= 60000000:
 			_sampling_done = true
-			_emit("RENDERED SAMPLE " + _layout_name() + " wall_seconds=" + str((now - _sample_started) / 1000000.0)
+			_emit("RENDERED SAMPLE " + _sample_name() + " wall_seconds=" + str((now - _sample_started) / 1000000.0)
 				+ " physics_ticks=" + str(_sample_ticks) + " tick_ms=" + JSON.stringify(Stats.summary(_tick_times))
 				+ " frame_interval_ms=" + JSON.stringify(Stats.summary(_frame_times))
 				+ " command_tick_ms=" + JSON.stringify(Stats.summary(_command_times))
@@ -261,6 +295,21 @@ func _script_ms() -> float:
 static func units_run(requested: int, layouts: Array[String]) -> int:
 	return 500 if requested == 500 and layouts.has("horde") else 300
 
+static func hud_failure(header: String, drawn_lines: int, selected: int, match_started: bool) -> String:
+	if not header.begins_with("%d selected" % selected):
+		return "hud_select panel header reads '%s', not %d selected" % [header, selected]
+	if drawn_lines >= 0 and drawn_lines != selected * SELECTION_LINE_POINTS:
+		return "hud_select drew %d selection line points, not %d" % [drawn_lines, selected * SELECTION_LINE_POINTS]
+	if match_started: return "hud_select started a match"
+	return ""
+
+static func window_failure(expected: Vector2i, actual: Vector2i) -> String:
+	if expected == actual: return ""
+	return "Window is %s, the run expects %s" % [_size_text(actual), _size_text(expected)]
+
+static func _size_text(size: Vector2i) -> String:
+	return "%dx%d" % [size.x, size.y]
+
 static func draw_call_failure(layout: String, max_calls: float) -> String:
 	if not DRAW_CALL_CEILINGS.has(layout):
 		return "No draw-call ceiling for layout %s" % layout
@@ -271,6 +320,13 @@ static func draw_call_failure(layout: String, max_calls: float) -> String:
 # Gated rows run without interpolation so they stay comparable to every earlier row.
 func _interpolation_from(args: Array) -> bool:
 	return args.has("--interpolation=on")
+
+func _hud_from(args: Array) -> bool:
+	return args.has("--hud")
+
+func _expect_window_from(args: Array) -> Vector2i:
+	var parts: PackedStringArray = _arg_of(args, "--expect-window", "").split("x")
+	return Vector2i(int(parts[0]), int(parts[1])) if parts.size() == 2 else DEFAULT_WINDOW
 
 func _report_only_from(args: Array) -> bool:
 	for arg: String in args:
@@ -317,7 +373,10 @@ func _advance() -> void:
 	if _layout_index < _sequence.size():
 		_begin_layout()
 		return
-	_emit("RENDERED BENCHMARK PASSED " + str(_sequence.size()))
+	if _hud_mode:
+		_emit("RENDERED HUD " + ("CALIBRATION " if _report_only() else "PASSED ") + _size_text(_expected_window))
+	else:
+		_emit("RENDERED BENCHMARK PASSED " + str(_sequence.size()))
 	if _profile:
 		_begin_large()
 	elif _web:
@@ -389,7 +448,57 @@ func _finish_horde(state: Dictionary) -> void:
 		print("RENDERED SOUND cues=", _sound_cues, " update_p95_ms=", Stats.summary(_sound_times).p95)
 	_advance()
 
+func _begin_hud() -> void:
+	_simulation = Workload.create("open")
+	_simulation.add_player(1, 10000)
+	_hud_ids.clear()
+	var rows: ViewRows = _simulation.view_state().units
+	for i in rows.size():
+		if rows.owner[i] == 1 and _hud_ids.size() < HUD_SELECTED: _hud_ids.append(rows.id[i])
+	_hud_drawn_ticks = 0
+	if _hud_ids.size() != HUD_SELECTED:
+		_fail("hud_select found %d owner-1 units, not %d" % [_hud_ids.size(), HUD_SELECTED])
+		return
+	if _hud != null: return
+	_hud = Hud.new()
+	$HUD.add_child(_hud)
+	_hud.setup(null)
+
+func _hud_tick() -> void:
+	var started: int = Time.get_ticks_usec()
+	_simulation.step()
+	var state: Dictionary = _simulation.view_state()
+	_view.set_view(state, _hud_ids)
+	_hud.update_hud(state, {"ids": _hud_ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "bright_owners": false, "over": false, "esc_opens_menu": false, "attack_move": false}, 1, 1)
+	var elapsed: float = (Time.get_ticks_usec() - started) / 1000.0
+	_status.text = "hud_select | %s | tick %d | Esc: quit" % ["draining" if _sampling_done else ("sampling" if _sample_started > 0 else "warmup"), state.tick]
+	if _sample_started > 0 and not _sampling_done:
+		_sample_ticks += 1
+		_window_ticks += 1
+		_tick_times.append(elapsed)
+		_script_usec += Time.get_ticks_usec() - started
+		var failure: String = hud_failure((_hud.get_node("SelectionPanel/Box/Many/Header") as Label).text, _view.drawn_selection_lines, _hud_ids.size(), state.match != null)
+		if failure != "":
+			_fail(failure)
+			return
+		_hud_drawn_ticks += 1 if _view.drawn_selection_lines >= 0 else 0
+	Profiler.end_tick()
+	if _sampling_done: _finish_hud()
+
+func _finish_hud() -> void:
+	if _hud_drawn_ticks == 0 or _tick_times.is_empty() or _frame_times.is_empty():
+		_fail("Rendered hud_select drew no selection lines in the sample window")
+		return
+	if not _report_draw_calls(HUD_LAYOUT): return
+	_emit("RENDERED COMPLETE hud_select selected=" + str(_hud_ids.size()) + " drawn_ticks=" + str(_hud_drawn_ticks) + " of " + str(_sample_ticks))
+	_advance()
+
 func _fail(message: String) -> void:
+	last_failure = message
+	if not _quit_on_failure:
+		set_physics_process(false)
+		set_process(false)
+		return
 	push_error(message)
 	if _web:
 		_emit("RENDERED FAILED " + message)
@@ -402,6 +511,10 @@ func _fail(message: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("deselect"):
 		get_tree().quit(1)
+
+# Only the HUD row is keyed by window size: the same layout at 1280x720 and 2560x1080 is two rows.
+func _sample_name() -> String:
+	return _layout_name() + "_" + _size_text(_expected_window) if _layout_name() == HUD_LAYOUT else _layout_name()
 
 func _layout_name() -> String:
 	return "large_196" if _large else _sequence[_layout_index]

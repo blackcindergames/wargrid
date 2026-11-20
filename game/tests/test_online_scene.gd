@@ -16,9 +16,11 @@ const Lockstep = preload("res://scripts/net/lockstep.gd")
 const Wire = preload("res://scripts/net/wire.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const MapData = preload("res://scripts/simulation/map_data.gd")
+const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const PEER_TICKS: int = 60
 const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
 
@@ -63,7 +65,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -74,6 +76,8 @@ func _online(runner, seat: int) -> Dictionary:
 	runner.root.add_child(main)
 	main.set_physics_process(false)
 	main.set_process(false)
+	# The open checklist covers the right of the view where these cases click, and it takes those clicks (Task 13).
+	main.get_node("HUD/Playtest/Checklist").hide()
 	await runner.process_frame
 	return {"main": main, "transport": transport, "lockstep": lockstep}
 
@@ -100,9 +104,7 @@ func _own_commands(transport: FakeTransport) -> Array:
 	return commands
 
 func _layout_ok(runner, main, label: String, panel_up: bool = false) -> void:
-	var status: Label = main.get_node("HUD/Status")
-	var economy: Control = main.get_node("HUD/Economy")
-	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y, "N3 buttons sit below every status line: " + label)
+	BaseScene.slab_clear(runner, main, "N3 " + label)
 	runner.check(main.get_node("HUD/ResultPanel").visible == panel_up, "N3 result panel %s: %s" % ["up" if panel_up else "hidden", label])
 
 func test_seat_two_controls_player_two(runner) -> bool:
@@ -799,7 +801,11 @@ func _faction_row_controls(page: Control) -> Array[Control]:
 
 func test_launcher_faction_rows(runner) -> bool:
 	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+	var window: Window = runner.root
+	var saved := [window.size, window.content_scale_size, window.content_scale_aspect]
+	for row: Array in [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(1280, 720), Vector2i(3840, 1080)]]:
+		var size: Vector2i = row[0]
+		window.size = row[1]
 		var port := SubViewport.new()
 		port.size = size
 		runner.root.add_child(port)
@@ -846,13 +852,18 @@ func test_launcher_faction_rows(runner) -> bool:
 		launcher._transport = FakeTransport.new()
 		launcher._seat = 1
 		launcher._start(_start_message("dry_wells", 3))
-		runner.check(runner.root.get_tree().root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "N25 the match scene is added under keep, before any frame, at %s" % size)
+		var root: Window = runner.root.get_tree().root
+		var layout: Dictionary = ViewCaps.layout_for(root.size)
+		runner.check([root.content_scale_size, root.content_scale_aspect] == [layout.size, layout.aspect], "N25 the match scene is added under its caps for the %s window, before any frame, at %s, got %s %d" % [root.size, size, root.content_scale_size, root.content_scale_aspect])
 		var main = runner.root.get_tree().current_scene
 		runner.check(main.driver._own_faction == third, "N25 online match carries Own's faction at %s, got %s" % [size, main.driver._own_faction])
 		main.free()
 		await runner.process_frame
-		runner.check(runner.root.get_tree().root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "N25 a match start restores keep at %s" % size)
+		runner.check([root.content_scale_size, root.content_scale_aspect] == [ViewCaps.BASE, Window.CONTENT_SCALE_ASPECT_EXPAND], "N25 leaving the match writes 1280x720 expand at %s, got %s %d" % [size, root.content_scale_size, root.content_scale_aspect])
 		port.free()
+	window.size = saved[0]
+	window.content_scale_size = saved[1]
+	window.content_scale_aspect = saved[2]
 	SkirmishMain.factions = before[0]
 	SkirmishMain.map_path = before[1]
 	SkirmishMain.starts = before[2]
@@ -1106,8 +1117,7 @@ func test_opponent_left_mid_match(runner) -> bool:
 	runner.check(main.get_viewport().gui_get_focus_owner() == main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"), "N29 Back to menu has the focus")
 	runner.check(cells.size() == 12 and cells[4].text.ends_with("(you)") and not cells[8].text.contains("(you)"), "N29 the table shows both players, got %d cells" % cells.size())
 	runner.check(BaseScene.hud_text(main).contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
-	var status: Label = main.get_node("HUD/Status")
-	runner.check(main.get_node("HUD/Economy").position.y >= status.position.y + status.get_minimum_size().y, "N29 buttons sit below every status line")
+	BaseScene.slab_clear(runner, main, "N29")
 	main.free()
 	return true
 
@@ -1534,6 +1544,25 @@ func _run_until_answered(main, frames: int) -> void:
 		if main.orders._awaiting_build.is_empty(): return
 		BaseScene.tick(main)
 
+func test_hint_outlives_an_earlier_order(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_peer_packets(online.transport, 2, 4, 200)
+	_run(main, 8)
+	main.orders.selected_ids.assign([3])
+	main._refresh()
+	var stops = func() -> int: return online.lockstep.command_log().filter(func(command: Dictionary) -> bool: return command.type == "stop" and command.player == 1).size()
+	main._submit({"type": "stop", "entity_ids": [3]})
+	main.orders._unload_selected()
+	_run(main, 30)
+	runner.check(stops.call() == 1, "RN3 online fixture: the earlier stop was played and answered, got %d" % stops.call())
+	runner.check(main.hud.refusal == "Select a container" and main.get_node("HUD/Hud/RefusalLine").visible, "RN3 online: the earlier order's answer leaves the later hint, got '%s'" % main.hud.refusal)
+	main._submit({"type": "stop", "entity_ids": [3]})
+	_run(main, 30)
+	runner.check(stops.call() == 2 and main.hud.refusal.is_empty() and not main.get_node("HUD/Hud/RefusalLine").visible, "RN3 online: an order sent after the hint clears it, got '%s'" % main.hud.refusal)
+	main.free()
+	return true
+
 func test_sb2_online_placement_closes_and_reopens(runner) -> bool:
 	var helper = BaseScene.new()
 	var online: Dictionary = await _online(runner, 1)
@@ -1587,6 +1616,50 @@ func test_sb2_online_refusal_keeps_new_gesture(runner) -> bool:
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	_run(main, 3)
 	runner.check(count.call("build") == 2 and count.call("attack_move") == 1, "RA9 a refusal in attack-move mode keeps the attack-move click, builds %d attack moves %d" % [count.call("build"), count.call("attack_move")])
+	main.free()
+	return true
+
+func test_sb2_online_refusal_after_a_later_gesture(runner) -> bool:
+	var helper = BaseScene.new()
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_peer_packets(online.transport, 2, 4, 200)
+	_run(main, 8)
+	main._refresh()
+	var rows = main.shown_state.units
+	var at: int = rows.index_of(3)
+	runner.check(at != -1, "RA10 fixture: builder 3 is shown")
+	if at == -1: return true
+	var second: int = main.driver.pump.live().spawn(1, Vector2(rows.x[at] + 1.0, rows.y[at]), "usa_builder")
+	_run(main, 1)
+	runner.check(second != -1, "RA10 fixture: a second own builder")
+	var ground: Vector2 = Iso.world_to_plane(Vector2(10.5, 10.5))
+	var gestures: Dictionary = {
+		"another builder selected": func() -> void:
+			main.orders.selected_ids.assign([second])
+			main._refresh(),
+		"A then a ground click": func() -> void:
+			helper.key(main, KEY_A)
+			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
+			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false),
+		"a right-click move": func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true),
+		"Esc, then the same builder again": func() -> void:
+			helper.key(main, KEY_ESCAPE)
+			main.orders.selected_ids.assign([3])
+			main._refresh(),
+		"nothing": func() -> void: pass,
+	}
+	for gesture: String in gestures:
+		main.orders.selected_ids.assign([3])
+		main._refresh()
+		helper.key(main, KEY_1)
+		var kind: String = main.orders._placement_kind
+		helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
+		gestures[gesture].call()
+		_run_until_answered(main, 30)
+		var reopened: bool = main.orders._placement_kind == kind
+		runner.check(not kind.is_empty() and main.orders._awaiting_build.is_empty() and not main.hud.refusal.is_empty() and reopened == (gesture == "nothing"), "RA10 %s before the refusal answer: placement reopened %s, got '%s'" % [gesture, gesture == "nothing", main.orders._placement_kind])
+		if not main.orders._placement_kind.is_empty(): main.orders._clear_placement()
 	main.free()
 	return true
 
@@ -2082,4 +2155,37 @@ func test_ph_preview_on_steady_step(runner) -> bool:
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	runner.check(notes.size() == 1 and not notes[0].preview.is_empty(), "PH a steady one-credit step call carries the preview, got %d notes" % notes.size())
 	main.free()
+	return true
+
+func _start_plane(main, seat: int) -> Vector2:
+	return Iso.world_to_plane(Vector2(main.driver.first_note.starts[seat]) + Vector2(0.5, 0.5))
+
+func test_view_player_after_the_online_seat(runner) -> bool:
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	var camera: Camera2D = main.get_node("Camera2D")
+	runner.check(main.local_player == 2 and main.view_player == 2, "VP1 a seat 2 join views player 2, got %d" % main.view_player)
+	runner.check(main.driver.first_note.starts[1] != main.driver.first_note.starts[2] and camera.position == _start_plane(main, 2), "VP1 the camera starts on seat 2's start, got %s" % camera.position)
+	var seats: Array[Dictionary] = [{"seat": 1, "team": 1, "controller": "human", "credits": 1111, "faction": "usa"}, {"seat": 2, "team": 2, "controller": "human", "credits": 2222, "faction": "usa"}]
+	var sim = MapData.create(MapData.load(Skirmish.MAP_PATH), seats)
+	sim.start_match([1, 2] as Array[int])
+	main.driver.adopt(sim)
+	BaseScene.publish(main)
+	var credits: Label = main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false)
+	runner.check(credits.text == "2222", "VP1 the strip shows seat 2's credits, got " + credits.text)
+	main.view_player = 1
+	_end_match(online)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	SkirmishMain.starts = [2, 1]
+	online.transport.frames.append(_rematch_start(99))
+	_peer_packets(online.transport, 1, 4, 4)
+	_run(main, 1)
+	runner.check(main.view_player == 2 and camera.position == _start_plane(main, 2), "VP1 after a rematch the view is player 2 again, got %d" % main.view_player)
+	main.free()
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
 	return true

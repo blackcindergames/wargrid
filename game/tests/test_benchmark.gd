@@ -14,9 +14,15 @@ const View = preload("res://scripts/presentation/world_view.gd")
 const Probe = preload("res://scenes/movement_benchmark.tscn")
 
 const MovementBenchmark = preload("res://scripts/debug/movement_benchmark.gd")
+const Hud = preload("res://scripts/match/hud.gd")
+
+class SlowHud extends Hud:
+	func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat: int) -> void:
+		OS.delay_msec(25)
+		super(view, selection, view_player, seat)
 
 func cases() -> Array[Callable]:
-	return [test_statistics, test_fixtures, test_progression, test_rendered_probe_ticks, test_snapshot_size_ceiling, test_combat_fixtures, test_transports_fixture, test_defences_fixture, test_skirmish3v3_fixture, test_combat_work_ceiling, test_volley_retaliation_work, test_horde_render_layout, test_horde_render_500_counts, test_workload_asserts_pure, test_settled_matches_snapshot_predicate, test_gate_values, test_draw_call_ceiling, test_cpu_frame_pairs_draw_with_its_tick, test_web_run_is_report_only, test_interpolation_arg, test_benchmark_runs_without_interpolation, test_units_reported_are_units_run, test_horde_camera_follows_army_when_zoomed, test_worst_tick, test_stats_mean, test_over_budget_line, test_late_game_layout]
+	return [test_statistics, test_fixtures, test_progression, test_rendered_probe_ticks, test_snapshot_size_ceiling, test_combat_fixtures, test_transports_fixture, test_defences_fixture, test_skirmish3v3_fixture, test_combat_work_ceiling, test_volley_retaliation_work, test_horde_render_layout, test_horde_render_500_counts, test_workload_asserts_pure, test_settled_matches_snapshot_predicate, test_gate_values, test_draw_call_ceiling, test_cpu_frame_pairs_draw_with_its_tick, test_web_run_is_report_only, test_interpolation_arg, test_benchmark_runs_without_interpolation, test_units_reported_are_units_run, test_horde_camera_follows_army_when_zoomed, test_worst_tick, test_stats_mean, test_over_budget_line, test_late_game_layout, test_hud_flag_runs_one_layout, test_hud_layout_in_the_window, test_hud_update_sits_inside_the_timed_tick, test_window_mismatch_fails]
 
 func test_statistics(runner) -> bool:
 	runner.check(Stats.summary(PackedFloat64Array()) == {"n": 0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0}, "BM1 empty")
@@ -307,6 +313,8 @@ func test_draw_call_ceiling(runner) -> bool:
 	runner.check(bench.draw_call_failure("ashfall", 60.0) == "", "BM12 ashfall at ceiling passes")
 	runner.check(bench.draw_call_failure("ashfall", 61.0) != "", "BM12 ashfall over ceiling fails")
 	runner.check(bench.draw_call_failure("nope", 1.0) != "", "BM12 layout without ceiling fails loudly")
+	runner.check(bench.draw_call_failure("hud_select", 30.0) == "", "BM12 hud_select at ceiling passes")
+	runner.check(bench.draw_call_failure("hud_select", 31.0) != "", "BM12 hud_select over ceiling fails")
 	return true
 
 func test_cpu_frame_pairs_draw_with_its_tick(runner) -> bool:
@@ -416,4 +424,90 @@ func test_late_game_layout(runner) -> bool:
 		TeamMatch.step(sim)
 		shots += sim.combat_events().filter(func(event: Dictionary) -> bool: return event.type == "shot").size()
 	runner.check(shots > 0, "BM22 shots land inside 60 ticks")
+	return true
+
+func test_hud_flag_runs_one_layout(runner) -> bool:
+	var bench = MovementBenchmark.new()
+	runner.check(bench._layouts_from(["--hud"]) == ["hud_select"], "BH1 --hud runs only hud_select")
+	runner.check(bench._hud_from(["--hud"]) and not bench._hud_from([]), "BH1 the flag is read from the args")
+	runner.check(not bench._report_only_from(["--hud"]) and not bench._report_only_from(["--hud", "--expect-window=2560x1080"]), "BH1 --hud alone, with or without --expect-window, is not report-only")
+	runner.check(bench._report_only_from(["--hud", "--zoom=1.0"]), "BH1 --hud with another option is report-only")
+	runner.check(bench._layouts_from([]) == ["open", "dense", "ashfall", "horde"], "BH1 without the flag the four standard layouts")
+	runner.check(bench._layouts_from(["--layout=dense"]) == ["dense"] and bench._layouts_from(["--units=500"]) == ["horde"], "BH1 the other options still pick their layouts")
+	bench.free()
+	return true
+
+func test_hud_layout_in_the_window(runner) -> bool:
+	var probe = Probe.instantiate()
+	probe._hud_mode = true
+	probe._sequence = ["hud_select"] as Array[String]
+	probe._expected_window = DisplayServer.window_get_size()
+	probe._quit_on_failure = false
+	runner.root.add_child(probe)
+	probe._sample_started = Time.get_ticks_usec()
+	Workload.issue_leg(probe._simulation, 0)
+	probe._view.set_show_destinations(true)
+	for i in 12: await runner.physics_frame
+	runner.check(probe._view.order_marks().size() > 0, "BH2 fixture: destination marks join the selection lines")
+	runner.check(probe.last_failure == "", "BH2 the guard passes a drawn selection, got '%s'" % probe.last_failure)
+	var header: String = probe.get_node("HUD/Hud/SelectionPanel/Box/Many/Header").text
+	runner.check(header.begins_with("120 selected"), "BH2 the panel header names the selection, got '%s'" % header)
+	runner.check(probe._view.drawn_selection_lines == 120 * 8, "BH2 the view drew 8 line points per selected unit, got %d" % probe._view.drawn_selection_lines)
+	runner.check(probe._sample_ticks > 0 and probe._hud_drawn_ticks > 0 and probe._hud_ids.size() == 120, "BH2 sampled ticks ran against a drawn frame")
+	runner.check(probe._simulation.view_state().match == null, "BH2 the match stays unstarted")
+	probe.set_physics_process(false)
+	probe._view.set_view(probe._simulation.view_state(), [] as Array[int])
+	await runner.process_frame
+	await runner.process_frame
+	runner.check(probe._view.drawn_selection_lines == 0, "BH2 a view without the selection submits no lines")
+	runner.check(MovementBenchmark.hud_failure(header, 0, 120, false) != "", "BH2 the guard fails when the lines are missing")
+	runner.check(MovementBenchmark.hud_failure("0 selected", 960, 120, false) != "", "BH2 the guard fails when the panel shows no selection")
+	runner.check(MovementBenchmark.hud_failure(header, 960, 120, true) != "", "BH2 the guard fails when a match started")
+	probe._hud_drawn_ticks = 0
+	probe._finish_hud()
+	runner.check(probe.last_failure.contains("no selection lines"), "BH2 a run with no drawn frame fails, got '%s'" % probe.last_failure)
+	probe.last_failure = ""
+	probe._hud_ids = [] as Array[int]
+	probe.set_physics_process(true)
+	for i in 3: await runner.physics_frame
+	runner.check(probe.last_failure.contains("not 0 selected"), "BH2 the tick fails when the panel header and the selection disagree, got '%s'" % probe.last_failure)
+	runner.check(MovementBenchmark.hud_failure(header, 960, 120, false) == "" and MovementBenchmark.hud_failure(header, -1, 120, false) == "", "BH2 the guard passes a drawn selection and a frame not yet drawn")
+	probe.free()
+	return true
+
+func test_hud_update_sits_inside_the_timed_tick(runner) -> bool:
+	var probe = Probe.instantiate()
+	probe._hud_mode = true
+	probe._sequence = ["hud_select"] as Array[String]
+	probe._expected_window = DisplayServer.window_get_size()
+	runner.root.add_child(probe)
+	probe._hud.free()
+	var slow := SlowHud.new()
+	probe.get_node("HUD").add_child(slow)
+	slow.setup(null)
+	probe._hud = slow
+	probe._sample_started = Time.get_ticks_usec()
+	for i in 6: await runner.physics_frame
+	runner.check(probe._tick_times.size() > 0 and Stats.summary(probe._tick_times).p50 >= 20.0, "BH2 a 25 ms update_hud shows in the sampled tick times")
+	probe.free()
+	return true
+
+func test_window_mismatch_fails(runner) -> bool:
+	var probe = Probe.instantiate()
+	probe._hud_mode = true
+	probe._sequence = ["hud_select"] as Array[String]
+	probe._expected_window = Vector2i(2560, 1080)
+	probe._quit_on_failure = false
+	runner.root.add_child(probe)
+	runner.check(probe.last_failure.contains("2560x1080") and probe._hud == null, "BH3 _ready fails before building the layout, got '%s'" % probe.last_failure)
+	probe.free()
+	var bench = MovementBenchmark.new()
+	var wide := Vector2i(2560, 1080)
+	var small := Vector2i(1280, 720)
+	var narrow: String = bench.window_failure(wide, small)
+	runner.check(narrow.contains("2560x1080") and narrow.contains("1280x720"), "BH3 a smaller window than expected fails and names both: '%s'" % narrow)
+	runner.check(bench.window_failure(small, wide) != "", "BH3 a larger window than expected fails too")
+	runner.check(bench.window_failure(wide, wide) == "", "BH3 the expected size passes")
+	runner.check(bench._expect_window_from([]) == small and bench._expect_window_from(["--hud", "--expect-window=2560x1080"]) == wide, "BH3 the expected size defaults to 1280x720 and reads --expect-window")
+	bench.free()
 	return true

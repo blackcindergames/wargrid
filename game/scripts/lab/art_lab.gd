@@ -105,7 +105,7 @@ func _show(state: Dictionary) -> void:
 		if _opponent_before == 0: _opponent_before = variants.opponent_owner
 		# Owner 3 is the frozen army's ally.
 		if variants.opponent_owner == LabArmy.ALLY: variants.opponent_owner += 1
-		# Neon reaches horde rings through the batch even under palette A; leaving re-applies it.
+		# The questions judge palette A, so Neon goes off here; leaving re-applies it.
 		if _view.bright_owners(): _view.set_bright_owners(false)
 		selection_lab.present(current_question(), variants, state)
 		return

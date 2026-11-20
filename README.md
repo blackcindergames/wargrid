@@ -48,7 +48,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**13 of 38 parts done**
+**14 of 42 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -65,9 +65,12 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | New launcher | Done |
 | ✅ | Quick rematch | Done |
 | ✅ | Notes that never block | Done |
-| ⏭ | See your selection | Next |
+| ✅ | See your selection | Done |
+| ⏭ | Build from the dock | Next |
 | 📋 | Team up against bots | Planned |
-| 📋 | Build from the dock | Planned |
+| 📋 | First new units | Planned |
+| 📋 | Know why an order failed | Planned |
+| 📋 | Read the battlefield | Planned |
 | 📋 | See the whole map | Planned |
 | 📋 | Reconnect after a drop | Planned |
 | 📋 | More maps | Planned |
@@ -89,6 +92,7 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 💡 | Ground batch A | Later |
 | 💡 | Wrecks | Later |
 | 💡 | Ground batch B | Later |
+| 💡 | Team up with a bot | Later |
 | 💡 | Bots worth playing | Later |
 <!-- roadmap:end -->
 
@@ -99,16 +103,16 @@ Performance against the low-end budget (generated):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | ➖ same | 2026-11-19 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-19 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | ➖ same | 2026-11-19 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 3% worse | 2026-11-19 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-19 |
-| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 3% worse | 2026-11-19 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 2% worse | 2026-11-19 |
-| Unit movement | 🟢 OK | ████░░░░░░ 40% | 🔻 16% better | 2026-11-19 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 23% | 🔻 52% better | 2026-11-19 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-19 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 211% | ➖ same | 2026-11-20 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-20 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | ➖ same | 2026-11-20 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 76% | 🔺 10% worse (busy host) | 2026-11-20 |
+| Drawing the screen | 🟢 OK | ███████░░░ 75% | 🔺 5% worse (busy host) | 2026-11-20 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-20 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 57% | 🔻 4% better | 2026-11-20 |
+| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 2% better | 2026-11-20 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 1% better | 2026-11-20 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 1% better | 2026-11-20 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 

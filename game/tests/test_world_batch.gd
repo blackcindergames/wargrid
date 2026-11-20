@@ -200,7 +200,7 @@ func test_top_lift_by_role(runner) -> bool:
 	runner.check(WorldBatch.top_lift("usa_power_plant") > WorldBatch.top_lift("usa_barracks"), "WB17 the power plant's drums rise above a barracks")
 	return true
 
-const GOLDEN_COLORS := "d9194cc1dd8caaaa9e9b9f24cb420b851fd2bcfe02790bd44128b35f29e1df5e"
+const GOLDEN_COLORS := "04ba388d1f91963e134d0c23b6c084623a02dbc41877d2dfee7c2176184bb17e"
 const GOLDEN_SHAPES: Array = [
 	[3606, 1924921.03890061, 4240275.69687653], [3620, 1929742.65306306, 4252157.39672852],
 	[3880, 2140575.43968797, 4500032.49620819], [3894, 2145397.05385041, 4511914.19606018],

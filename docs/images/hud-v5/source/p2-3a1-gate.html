@@ -84,6 +84,12 @@ textarea{width:100%;box-sizing:border-box;height:52px;background:var(--btn);colo
 .opt img.mock{display:block;width:100%;height:auto}
 .opt .chg{color:var(--text);font-size:13px}
 .verdict button.done{outline:3px solid var(--sel);outline-offset:3px}
+.top p.rule{max-width:980px;color:var(--text);background:var(--panel);border-left:3px solid var(--amber);padding:8px 12px}
+.top p.rule .h,.sub .h{display:block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:2px}
+.sub{margin-top:12px;border:1px solid var(--line);padding:12px 14px}
+.sub h3{margin:0 0 4px;font-size:18px}
+.sub>p{margin:0 0 8px;color:#b9c6ce;max-width:980px}
+.sopts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 @media (max-width:900px){.intro,.gal{grid-template-columns:1fr}.opts{grid-template-columns:1fr!important}.main{min-width:0}}
 </style>
 <div id="err"></div>
@@ -93,7 +99,7 @@ textarea{width:100%;box-sizing:border-box;height:52px;background:var(--btn);colo
 addEventListener('error', e => { err.textContent += `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})\n`; });
 addEventListener('unhandledrejection', e => { err.textContent += `${e.reason}\n`; });
 
-// Round 2 (#round=2): queue cap, forecast card, verdict; its picks go under p2-3a1-gate2: keys.
+// Round 2 (#round=2): queue cap, preview placement, warning colour, verdict; its picks go under p2-3a1-gate2: keys.
 const ROUND = new URLSearchParams(location.hash.slice(1)).get('round') === '2' ? 2 : 1;
 const PREFIX = ROUND === 2 ? 'p2-3a1-gate2:' : 'p2-3a1-gate:', SRC = 'p2-3a1-states.html', W = 1280, H = 720;
 const FULL = {x: 0, y: 0, w: W, h: H};
@@ -131,7 +137,7 @@ const STEPS2 = [
    "w": 440,
    "h": 480
   },
-  "why": "Take A, your capped list; your mock and what changed sit under A. What you pay: cancelling the newest entries takes two clicks from 6 queued, the expanded list is taller than today's, and it is about half a day for a slab P2.3b replaces with nine slots. If hidden entries bother you more than a busy list, pick B: same height, one click each, less code. A cancel refunds the full price (`$800` for either tank) and only the entry in production loses its progress (production.gd:15-21 @ 7b22ebc); a queued entry loses only its place. In A, B and D a click anywhere on a row cancels, as a click on a Zero Hour or P2.3b queue slot does, so the row's tooltip says it: `Cancel: refunds $800`.",
+  "why": "Take A, your capped list; your mock and what changed sit under A. What you pay: cancelling the newest entries takes two clicks from 6 queued, the expanded list is taller than today's, and it is about half a day for a slab P2.3b replaces with nine slots. If hidden entries bother you more than a busy list, pick B: same height, one click each, less code. A cancel refunds the full price (`$800` for either tank) and only the entry in production loses its progress (production.gd:15-21 @ 7b22ebc); a queued entry loses only its place. Answer the small question first: in A, B and D, does a click anywhere on a row cancel, or only a click on its ×? Your mock draws the × but does not say.",
   "look": "Where to look: the bottom right, a China Vehicle Factory with a full queue of nine (the worst case), with the playtest checklist, note form and F3 open. Under A, the same list expanded. \"Large\" shows the whole screen; the caption at the top left prints the slab's measured height.",
   "ref": {
    "state": "chips",
@@ -139,8 +145,8 @@ const STEPS2 = [
   },
   "A": {
    "name": "Capped list with `Show N more queued` (the owner's mock, adapted)",
-   "sees": "Under Produce: a header line, `QUEUE` left (muted caps) and `8 waiting` right (muted, hidden at 0). Then full-width rows, 32 high, square, on `btn`: unit name left, a muted × right; no `Cancel` word and no `1.` numbering. The row in production also shows `42 %` and a 2 px own-colour line on a dark track along its bottom. Clicking anywhere on a row cancels it and refunds the price; hover is the kind-row hover, brightens the × and shows the tooltip `Cancel: refunds $800`. Up to 5 entries all show. From 6, the list shows the one in production plus 3 next, then a full-width row `Show N more queued` with a drawn down chevron (a full queue reads `Show 5 more queued`). A click opens all nine plus `Show fewer`; it closes again when the selection changes or the queue drops to 5. Worst case at 1280x720: 282 px collapsed (today 408), 462 px while expanded.",
-   "notes": "The owner's look, and the only option that shows fewer things. Costs: the last-queued entries, the likeliest cancel targets, take two clicks at 6 or more; the expanded state is 54 px taller than today and becomes SL2's worst case (checklist cap 162 px); about half a day of builder time for a slab P2.3b replaces. Numbering is dropped because `1.` under the `1: Rotary Gun Tank $800` button reads as a key.",
+   "sees": "Under Produce: a header line, `QUEUE` left (muted caps) and `8 waiting` right (muted, hidden at 0). Then full-width rows, 32 high, square, on `btn`: unit name left, a muted × right; no `Cancel` word and no `1.` numbering. The row in production also shows `42 %` and a 2 px own-colour line on a dark track along its bottom. A click on the row or on its × (the small question) cancels it and refunds the price; the tooltip reads `Cancel: refunds $800`. Up to 5 entries all show. From 6, the list shows the one in production plus 3 next, then a full-width row with `Show N more queued` centred in `muted` and a drawn down chevron right after it, as in your mock, so it reads as a button and not as a tenth entry (a full queue reads `Show 5 more queued`). A click opens all nine plus `Show fewer` in the same look, chevron up; it closes again when the selection changes or the queue drops to 5. Worst case at 1280x720: 282 px collapsed (today 408), 462 px while expanded.",
+   "notes": "The owner's look, and the only option that shows fewer things. Costs: the last-queued entries, the likeliest cancel targets, take two clicks at 6 or more; Produce and the build buttons move up 180 px while expanded (top 446 to 266 at 1280x720) and back on collapse, where B, C and D never move; the expanded state is 54 px taller than today and becomes SL2's worst case (checklist cap 162 px); about half a day of builder time for a slab P2.3b replaces. Numbering is dropped because `1.` under the `1: Rotary Gun Tank $800` button reads as a key.",
    "state": "queue-a",
    "changes": "Changed from your mock: header `QUEUE` (the first row is already in production); no `1.` numbers (they read as the `1:` build key); production plus 3 next, so a full queue reads `Show 5 more queued`; the chevron drawn (Public Sans has no glyph); the progress line on a dark track (red or purple fail 3:1 on the button).",
    "extra": [
@@ -156,36 +162,60 @@ const STEPS2 = [
   },
   "B": {
    "name": "Two columns, all nine always visible",
-   "sees": "The same header. The entry in production is one full-width row (name, `42 %`, progress line, ×). The up to 8 waiting entries are half-width tiles in two columns (name plus ×), read left to right, then down. No toggle, nothing hidden; every entry cancels with one click and refunds its price, tooltip `Cancel: refunds $800` as in A. Worst case 282 px, constant.",
+   "sees": "The same header. The entry in production is one full-width row (name, `42 %`, progress line, ×). The up to 8 waiting entries are half-width tiles in two columns (name plus ×), read left to right, then down. No toggle, nothing hidden; every entry cancels with one click, on the tile or its × as the small question decides, and refunds its price. Worst case 282 px, constant.",
    "notes": "Same height saving as A collapsed with no hidden state, no reset rule and less code, and the helper surfaces never jump. But nine names stay on screen, which is what the owner asked to reduce, and the tile grid can read as a command card it is not.",
    "state": "queue-b"
   },
   "C": {
    "name": "Slot row now (Zero Hour's and P2.3b's form)",
-   "sees": "The same header, then one row of nine 36 x 36 slots. A filled slot is a `btn` square showing the build key of its unit (`1 2 2 1 ...`, matching the `1: Rotary Gun Tank` buttons above); empty slots are dark wells. The first slot carries the progress bar. Clicking a slot cancels it. Worst case about 142 px, constant.",
+   "sees": "The same header, then one row of nine 36 x 36 slots. A filled slot is a `btn` square showing the build key of its unit (`1 2 1 2 ...`, matching the `1: Rotary Gun Tank` buttons above); empty slots are dark wells. The first slot carries the progress bar. Clicking a slot cancels it; a slot is its own button, so the small question does not apply. Worst case about 142 px, constant.",
    "notes": "Closest to Zero Hour (nine icon slots, click cancels, clock on the first) and to P2.3b's decided queue, and by far the lowest slab. But digits instead of names are cryptic without glyphs, and it overrides 'no queue row until P2.3b' (user, 2026-11-17), pulling P2.3b work into this package.",
    "state": "queue-c"
   },
   "D": {
    "name": "Keep nine rows, shorter words only",
-   "sees": "Today's nine full-width rows, relabelled to name plus × (the first with `42 %` and the progress line), under the `QUEUE` header; a click anywhere on a row cancels and refunds, tooltip `Cancel: refunds $800` as in A. Nothing hidden, nothing new to learn. Worst case stays about 408 px (426 with the header).",
+   "sees": "Today's nine full-width rows, relabelled to name plus × (the first with `42 %` and the progress line), under the `QUEUE` header; a click cancels and refunds, on the row or its × as the small question decides. Nothing hidden, nothing new to learn. Worst case stays about 408 px (426 with the header).",
    "notes": "Near-zero cost and it waits for P2.3b's slot row, but it does not answer the complaint: a full queue still fills more than half the screen height and squeezes the playtest checklist to about 200 px.",
    "state": "queue-d"
+  },
+  "sub": {
+   "key": "queue-cancel",
+   "q": "First, for A, B and D: what cancels a queue entry?",
+   "pick": "row",
+   "why": "Your mock draws a × on each row and leaves open whether the rest of the row is a button too. At rest both look the same; they differ on hover (the pictures) and on what a click does. A click here records the answer and stays on this step; then pick A to D below.",
+   "crop": {
+    "x": 690,
+    "y": 508,
+    "w": 590,
+    "h": 100
+   },
+   "opts": {
+    "row": {
+     "name": "The whole row",
+     "state": "queue-a-hover",
+     "notes": "A 412 x 32 target instead of 24 x 24, and how Zero Hour's queue buttons work (a click on a slot cancels it, Core/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarCommandProcessing.cpp:456-463 @ afc2a103f) and how P2.3b's slots will (hud-v5-layout :114, \"Click cancels\"). The whole row lights up on hover, so it says what a click does. Risk: a click on a row just to see what it is cancels it; the price comes back, but the entry in production loses its progress."
+    },
+    "x": {
+     "name": "Only the ×",
+     "state": "queue-a-hover-x",
+     "notes": "Your mock taken literally: only the × lights up and cancels; the name is inert, so a stray click on a row does nothing. Costs: a 24 x 24 target at the slab's right edge, slower to hit than the row, and P2.3b's slots later cancel on a click anywhere on the slot. Same refund and tooltip."
+    }
+   }
   }
  },
  {
-  "key": "forecast",
+  "key": "forecast-place",
   "kind": "pictures",
-  "q": "Purchase preview: card under the strip, which red, or on hover?",
-  "pick": "B",
+  "q": "Purchase preview: under the strip while armed, or on hover?",
+  "pick": "A",
   "crop": {
    "x": 0,
    "y": 0,
    "w": 448,
    "h": 616
   },
-  "why": "Take your card. It fixes three things at once: the strip keeps your real numbers, the label says the card is a preview, and the arrow goes (the game's font has no arrow glyph; it does have the minus sign). `−700` replaces `short`; that was your own earlier answer before `700 short` replaced it. Red is fine: Zero Hour's power bar turns red although red is a player colour there, and the old rule was only right about saturated red. A is your mock at the strip's size; B also swaps your sampled coral for a stronger one, #f0776a: yours passes contrast (7.1:1) but turns nearly grey for colour-blind players, close to the labels and the green player colour. I judged that by numbers, so compare the last swatch with the enemy red (second) and the health red (tenth), also in the simulated views, and pick A if B reads too close to the enemy red. One warning colour means low power, the shortfall, the refusal line, the cell card's reason line and the freeze card's warning mark all change together. Hover waits for P2.3b, which already plans it; pick C only if you want the warning before you click now.",
-  "look": "Where to look: the top left. In place: China, Rotary Gun Tower armed at 500 credits; below it the owner colours and the other cases. Under A and B, the top of the same picture as deuteranopia and protanopia see it (Machado 2009, severity 1). The card counts live while armed (−700, −200, then 300 in white) and goes on place or cancel. C is drawn in B's colour, bottom right.",
+  "why": "Both options are yours: A is the card from your mock, under the strip while a building is armed; B is your round 1 idea, the same card on hover over a build or Produce button. Either way the strip keeps your real numbers, the label says the card is a preview, and the arrow goes (the game's font has no arrow glyph; it does have the minus sign); `−700` replaces `700 short`, as you asked in round 1. I pick A: it needs no new input, and P2.3b's cell card already plans the hover card, so B builds hover twice, once on a slab P2.3b replaces. B is better if you want the warning before the click that arms a building, and for units, where A shows nothing until Produce is refused. This step picks where the card goes; step 3 picks its colour.",
+  "look": "Where to look: A at the top left, China, Rotary Gun Tower armed at 500 credits, with the other cases below it. B at the bottom right: the pointer on the Rotary Gun Tower button with nothing armed; then the same tower armed with the pointer back on the map, its strip and its card cropped apart; a unit; and the checklist open. Every picture on this step is drawn in your coral, #dc948b, so only the place differs; step 3 sets it against a stronger coral.",
   "ref": {
    "state": "forecast",
    "label": "Round 1 picture: arrow and `700 short` in the strip",
@@ -197,16 +227,80 @@ const STEPS2 = [
    }
   },
   "A": {
-   "name": "Your card and your coral: under the strip, while a building is armed",
-   "sees": "The top strip always shows your real numbers (`CREDITS 500  POWER 8 / 10`) and never grows. Arm a building and a second slab appears right under it at (8, 48): square corners, `bg` fill, 1 px line, padding 8, Public Sans, about 320 x 56. Line 1: muted `AFTER PURCHASE`. Line 2: `CREDITS −700   POWER 11 / 10  LOW POWER`, labels muted 12/600, values 16/700 with tabular digits (the strip's size; your mock drew about 24). Values with a problem and `LOW POWER` are coral #dc948b; fine values are white (`CREDITS 3600`, power plant `POWER 8 / 15`). It counts live: −700, −200, then white 300. Gone when you place or cancel. No arrow, no word `short`. The strip's own low power, the refusal line and the freeze card's warning mark turn coral too.",
-   "notes": "Coral: 7.11:1 on bg, 62.5 from the enemy red (42.5 deuteranopia). Weak spots: almost the green owner colour under deuteranopia (6.6) and almost the muted label grey under protanopia (18.2), so only the minus sign and the words carry the warning there. Rules changed: hud-v5-layout :36 and :47 (new token `warn`; \"no saturated red text\" replaces \"no red warning text\"), design answers :79, :109, :1272 and :1276, ART_DIRECTION :146, spec :28 and :131, plan Tasks 6, 8 and 12, focus card text; pictures forecast, refusal and freeze redrawn. No new input. Amber afterwards: alerts and the primary buttons (the freeze card's `Back to menu`, drawn whole bottom left) only; every warning text, the P2.3b cell card's reason line included, is the warning colour.",
+   "name": "Your card under the strip, in your coral (#dc948b), while a building is armed",
+   "sees": "The top strip always shows your real numbers (`CREDITS 500  POWER 8 / 10`) and never grows. Arm a building and a second slab appears right under it at (8, 48): square corners, `bg` fill, 1 px line, padding 8, Public Sans, about 360 x 56 at 1280x720 (it hugs its text). Line 1: muted `AFTER PURCHASE`. Line 2: `CREDITS −700   POWER 11 / 10  LOW POWER`, labels muted 12/600, values 16/700 with tabular digits (the strip's size; your mock drew about 24). Values with a problem and `LOW POWER` take the warning colour (your coral here; step 3 decides); fine values are white (`CREDITS 3600`, power plant `POWER 8 / 15`). It counts live: −700, −200, then white 300. Gone when you place or cancel. No arrow, no word `short`.",
+   "notes": "No new input: the card follows the armed state the game already has. The warning comes after the click that arms the building, since Wargrid lets you arm what you cannot afford; a unit has no armed state, so an unaffordable unit shows no card and gets the refusal line (`Insufficient credits`) on Produce.",
    "state": "forecast-a",
    "changes": "Changed from your mock: values at the strip's 16 px, not about 24 (at 24 the card meets the longest online notice at 1280 wide); square corners, the HUD's `bg` fill and 1 px line.",
    "extra": [
     {
      "img": "owner-mocks/forecast.png",
      "label": "Your mock (local, not committed)"
+    }
+   ]
+  },
+  "B": {
+   "name": "Your round 1 idea: the same card on hover, above the build buttons",
+   "sees": "The same card appears 8 px above the bottom-right slab, left-aligned with the build or Produce button under the pointer, after 250 ms. Arm the building and the card stays over its button, also after the pointer goes back to the map, until you place or cancel. You see `−700` or `LOW POWER` before you click, and for units too, which have no armed state. Nothing under the strip: the strip keeps the real numbers, no arrow, no `700 short`, while armed (second picture). With the playtest checklist open, the checklist ends 8 px above the slab, exactly where the card goes: the card draws over the checklist while it shows (last picture).",
+   "notes": "Closes the real gap: Wargrid lets you arm what you cannot afford, Zero Hour greys the button. Cost: new input (mouse_entered on buttons the menu refresh reuses and frees, hover against armed, keys 1-9 while hovering) on a slab P2.3b throws away; brings P2.3b's tooltip rules (design answers :774, :876) forward; about one more task and one more picture. P2.3b's cell card already plans exactly this.",
+   "state": "forecast-c",
+   "crop": {
+    "x": 840,
+    "y": 440,
+    "w": 440,
+    "h": 280
+   },
+   "extra": [
+    {
+     "state": "forecast-c-armed",
+     "label": "B with the tower armed, pointer back on the map: the strip keeps your real numbers (top left)",
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 448,
+      "h": 72
+     }
     },
+    {
+     "state": "forecast-c-armed",
+     "label": "The same moment: the card stays over the armed button (bottom right)",
+     "crop": {
+      "x": 840,
+      "y": 440,
+      "w": 440,
+      "h": 280
+     }
+    },
+    {
+     "state": "forecast-c-unit",
+     "label": "The same card on a unit: pointer on Produce at 500 credits"
+    },
+    {
+     "state": "forecast-c-list",
+     "label": "Checklist open: the card draws over it"
+    }
+   ]
+  }
+ },
+ {
+  "key": "forecast-colour",
+  "kind": "pictures",
+  "q": "Warning colour: your coral or a stronger one?",
+  "pick": "B",
+  "crop": {
+   "x": 0,
+   "y": 0,
+   "w": 448,
+   "h": 616
+  },
+  "why": "Take the stronger coral. Both pass contrast; what decides it for text is whether a bad value still differs from the muted grey labels beside it and from the white good values. Under protanopia your coral is 18.2 from the label grey, below the project's bar of 20, so `−700` reads like a label and only the minus sign and the words carry the warning; B stays 29.1 away. Backup: under deuteranopia yours is also 6.6 from the green player colour, B 21.5. Red is fine: Zero Hour's power bar turns red although red is a player colour there (\"Red if consumption exceeds production\", GeneralsGameCode GeneralsMD/Code/GameEngine/Include/Common/GlobalData.h:477 @ afc2a103f), and the old rule was only right about saturated red. I judged by numbers, so compare the last swatch with the enemy red (second) and the health red (tenth), also in the simulated views, and pick A if B reads too close to the enemy red.",
+  "look": "Where to look: the top left, the same picture in each colour; under each, its top as deuteranopia and protanopia see it (Machado 2009, severity 1). The swatch row: owner colours, ally, health red, then the warning colour last. Distances are ΔE76 (normal / deuteranopia / protanopia).",
+  "A": {
+   "name": "Your coral, #dc948b",
+   "sees": "The card, the strip's own `LOW POWER`, the refusal line and the freeze card's warning mark in the coral sampled from your mock. Under simulated colour blindness it turns nearly grey (#b4ac8a deuteranopia, #a39e8a protanopia), close to the muted labels (#9ca1b0, #a0a4b1).",
+   "notes": "7.11:1 on bg, 5.41 on buttons, 4.95 on `panel2` (an armed button). From the muted labels 38.2 / 27.5 / 18.2, from the white values 42.4 / 32.4 / 33.1. Backup: from the green player colour 76.9 / 6.6 / 19.7, from the ally colour 65.0 / 13.5 / 13.9. From the enemy red 62.5 / 42.5 / 43.2.",
+   "state": "forecast-a",
+   "extra": [
     {
      "state": "forecast-a",
      "cvd": "deut",
@@ -232,9 +326,9 @@ const STEPS2 = [
    ]
   },
   "B": {
-   "name": "Same card, a stronger red: coral #f0776a",
-   "sees": "Exactly A, but the warning colour is a more saturated coral-red, #f0776a: clearly a red, still lighter and pinker than the enemy red #d6120c. Under simulated colour blindness it stays a warm olive (#b2a568 deuteranopia, #948b68 protanopia) that differs from the green owner colour and from the grey labels, where A's coral turns nearly grey (#a39e8a).",
-   "notes": "6.20:1 on bg, 4.72:1 on buttons. From the enemy red 39.8 / 28.3 / 31.9. Worst case against any owner colour, ally, muted or text is 21.2, above the project's bar of 20; A's coral is at 6.6. It sits near the health bar's red (16 to 20), which means the same thing. Same rule changes, amber rule and cost as A. Judged by numbers only: compare A and B side by side with the two simulated views; the last swatch is the warning colour.",
+   "name": "A stronger coral-red, #f47b6c",
+   "sees": "Exactly A, but in a more saturated coral-red: clearly a red, still lighter and pinker than the enemy red #d6120c. Under simulated colour blindness it stays a warm olive (#b6a86a deuteranopia, #988f6a protanopia), apart from the grey labels and from the green player colour.",
+   "notes": "6.49:1 on bg, 4.93 on buttons, 4.52 on `panel2`: Wargrid lets you arm what you cannot afford, so a cost on an armed P2.3b cell may sit there in this colour. That is why it is this light: 4.52 stays above 4.5:1. From the muted labels 61.7 / 43.0 / 29.1, from the white values 63.5 / 44.8 / 42.7. Worst case against any owner colour, ally, muted or text 20.4 (ally and green under protanopia), above the bar of 20; A's is 6.6. From the enemy red 40.2 / 28.6 / 32.3. It sits near the health bar's red (20.7 / 16.7 / 17.7), which means the same thing.",
    "state": "forecast-b",
    "extra": [
     {
@@ -261,40 +355,19 @@ const STEPS2 = [
     }
    ]
   },
-  "C": {
-   "name": "Card on hover above the build buttons, not under the strip",
-   "sees": "The same card (colour as A or B, say which) appears 8 px above the bottom-right slab, left-aligned with the build or Produce button under the pointer, after 250 ms, and stays while a building is armed. You see `−700` or `LOW POWER` before you click, and for units too, which have no armed state. Nothing under the strip. With the playtest checklist open, the checklist ends 8 px above the slab, exactly where the card goes: the card draws over the checklist while the pointer stays (third picture).",
-   "notes": "Closes the real gap: Wargrid lets you arm what you cannot afford, Zero Hour greys the button. Cost: new input (mouse_entered on buttons the menu refresh reuses and frees, hover against armed, keys 1-9 while hovering) on a slab P2.3b throws away; brings P2.3b's tooltip rules (design answers :774, :876) forward; about one more task and one more picture. P2.3b's cell card already plans exactly this.",
-   "state": "forecast-c",
-   "crop": {
-    "x": 840,
-    "y": 440,
-    "w": 440,
-    "h": 280
-   },
-   "extra": [
-    {
-     "state": "forecast-c-unit",
-     "label": "The same card on a unit: pointer on Produce at 500 credits"
-    },
-    {
-     "state": "forecast-c-list",
-     "label": "Checklist open: the card draws over it"
-    }
-   ]
-  }
+  "rules": "(1) Warnings stop being amber: a new token `warn` (A or B) colours every warning text, so low power, the shortfall, the refusal line, the P2.3b cell card's reason line and the freeze card's warning mark change together, wherever step 2 puts the card; \"no saturated red text\" replaces \"no red warning text\" (hud-v5-layout :36 and :47, design answers :79, :109, :1272 and :1276, ART_DIRECTION :146, spec :28 and :131, plan Tasks 6, 8 and 12, focus card text; pictures forecast, refusal and freeze redrawn). (2) Amber keeps alerts and gains primary buttons: hud-v5-layout :36 limits amber to \"needs you now\", yet the game's primary buttons, the freeze card's `Back to menu` included, are already amber (launcher theme `PrimaryButton`, game/ui/launcher_theme.tres:71-76 and :357), so the rule text catches up with the game; nothing new turns amber."
  },
  {
   "key": "look",
   "kind": "gallery",
   "q": "Gate A verdict: the states redrawn to your answers",
-  "why": "Round 1 closed without a verdict. These four states changed after your last answers: no order row for a Bulldozer, Unload hidden on an empty Scout Car, and the system crosshair while attack-move is armed. A pass covers your answers, these pictures and the two picks above. After it I redraw to your picks, with no new choices: the strip in forecast and slab, the refusal line and the freeze card's warning mark (A or B), and the queue in chips and chips-f3-rule. Flip with N and P; a note under any state is optional."
+  "why": "Round 1 closed without a verdict. These four states changed after your last answers: no order row for a Bulldozer, Unload hidden on an empty Scout Car, and the system crosshair while attack-move is armed (drawn beside the armed specimen in slab). In slab the strip already shows the real numbers, as every step 2 option does. A pass covers your answers, these pictures and the picks above (three steps and the small question on step 1). After it I redraw to your picks, with no new choices: the card in forecast and slab to step 2 (under the strip, or above the slab on hover); the card, the strip's low power, the refusal line and the freeze card's warning mark to step 3's colour; and the queue in chips and chips-f3-rule to step 1 and its cancel answer. Flip with N and P; a note under any state is optional."
  }
 ];
 const STEPS = ROUND === 2 ? STEPS2 : STEPS1;
 const LETTERS = ['A', 'B', 'C', 'D'];
 const optsOf = s => LETTERS.filter(x => s[x]);
-const SLAB_CAP = 'Interim slab with a China Bulldozer selected: no order row (builders have no weapon), China\'s build menu in 2 columns, Rotary Gun Tower armed (panel2, 2 px sel inset); specimens: Medium Tanks with Attack move (A) armed in the same look (after the button or the key, until a ground click, a right-click or Esc; pointer: system crosshair; order row only, the build menu below it as in the main slab), and the Bulldozer\'s slab while the pointer is on a paused site, Right-click: resume as its top line';
+const SLAB_CAP = 'Interim slab with a China Bulldozer selected, the strip with real numbers only (CREDITS 4800 POWER 8 / 10): no order row (builders have no weapon), China\'s build menu in 2 columns, Rotary Gun Tower armed (panel2, 2 px sel inset); specimens: Medium Tanks with Attack move (A) armed in the same look (after the button or the key, until a ground click, a right-click or Esc; pointer: the system crosshair, drawn beside it; a tank has no build menu, so its slab is the order row alone), and the Bulldozer\'s slab while the pointer is on a paused site, Right-click: resume as its top line';
 const UNLOAD_CAP = 'A USA Scout Car with infantry inside: Unload (F) joins the order row, second line of the 2-column grid; specimens: an empty Scout Car with no own unit in any container, Unload (F) hidden; an FRC Tunnel Hub with units inside, a building, so Unload (F) alone and no build menu';
 const FREEZE_CAP = 'Offline freeze as the result card: map and HUD dimmed (a Bulldozer selected: build menu, no order row), centred card with the warning mark and Match stopped, body, divider, footer with the report\'s version and map (Version 0.14.0-dev+75898c8 · Dry Wells, illustrative) and the code GAME ERROR, Copy report (secondary, focused) and Back to menu (primary); Esc opens the pause menu as on the Victory/Defeat card';
 const GALLERY1 = [
@@ -351,7 +424,7 @@ function fit() {
 
 function header(s) {
   const n = step + 1;
-  return `<div class="top"><span class="n">${ROUND === 2 ? 'Round 2 · ' : ''}Step ${n} of ${STEPS.length}</span><h2>${esc(s.q)}</h2><p>${fmt(s.why)}</p>${s.look ? `<p class="look">${fmt(s.look)}</p>` : ''}</div>`;
+  return `<div class="top"><span class="n">${ROUND === 2 ? 'Round 2 · ' : ''}Step ${n} of ${STEPS.length}</span><h2>${esc(s.q)}</h2><p>${fmt(s.why)}</p>${s.rules ? `<p class="rule"><span class="h">Rule changes with either pick</span>${fmt(s.rules)}</p>` : ''}${s.look ? `<p class="look">${fmt(s.look)}</p>` : ''}</div>`;
 }
 function keysLine(s) {
   const pickKeys = optsOf(s).map((x, i) => `<kbd>${i + 1}</kbd>/<kbd>${x}</kbd>`).join(' ');
@@ -377,10 +450,18 @@ function optText(o) {
   if (!o.sees) return `<p class="notes">${esc(o.notes)}</p>`;
   return `<p class="notes sees"><span class="h">What you see</span>${fmt(o.sees)}</p><p class="notes"><span class="h">Challenger</span>${fmt(o.notes)}</p>`;
 }
+function subBlock(s) {
+  const q = s.sub;
+  if (!q) return '';
+  const opts = Object.entries(q.opts).map(([k, o]) => `<div class="opt sopt" data-sub="${k}"><div class="hd"><span class="nm">${fmt(o.name)}</span>` +
+    `${q.pick === k ? '<span class="tag cp">Claude\'s pick</span>' : ''}<span class="tag got">Picked</span><button class="gap" data-slarge="${k}">Large</button></div>` +
+    `${pic(o.state, q.crop)}<p class="notes">${fmt(o.notes)}</p></div>`).join('');
+  return `<div class="sub"><span class="h">Small question</span><h3>${esc(q.q)}</h3><p>${fmt(q.why)}</p><div class="sopts">${opts}</div></div>`;
+}
 function renderChoice(s) {
   const opts = optsOf(s), ref = s.ref ? `<figure class="ref"><figcaption>${fmt(s.ref.label)}</figcaption>${pic(s.ref.state, s.ref.crop || s.crop)}</figure>` : '';
   app.innerHTML = `<div class="intro"><div>${header(s)}${keysLine(s)}<p class="rec">${recordHtml()}</p></div>${ref}</div>
-    <div class="opts" style="grid-template-columns:repeat(${opts.length},minmax(0,1fr))">${opts.map(x => optPanel(s, x)).join('')}</div>
+    ${subBlock(s)}<div class="opts" style="grid-template-columns:repeat(${opts.length},minmax(0,1fr))">${opts.map(x => optPanel(s, x)).join('')}</div>
     <div class="notebox"><label for="note">Optional note for Claude (saved with your pick)</label><textarea id="note" data-note="${s.key}">${esc(notes[s.key] || '')}</textarea></div>
     ${nav()}`;
 }
@@ -406,16 +487,17 @@ function renderVerdict(s) {
     <div class="vnote"><textarea id="vnote" placeholder="Optional overall note (saved with the verdict)" style="height:100%">${esc(verdictNote)}</textarea></div></div>
     ${nav()}`;
 }
+const findQ = k => STEPS.find(x => x.key === k) || STEPS.map(x => x.sub).find(x => x && x.key === k);
 function rowLabel(k) {
   if (k.startsWith('look:')) return `Note on ${k.slice(5)}`;
   if (k === 'verdict') return 'Verdict';
-  const s = STEPS.find(x => x.key === k);
+  const s = findQ(k);
   return s ? s.q : k;
 }
 function pickLabel(k, v) {
   if (k === 'verdict') return VERDICT[v] || v;
-  const s = STEPS.find(x => x.key === k);
-  return s && s[v] ? `${v}: ${s[v].name.replace(/`/g, '')}` : (v || '');
+  const s = findQ(k), o = s && (s.opts ? s.opts[v] : s[v]);
+  return o ? `${s.opts ? '' : `${v}: `}${o.name.replace(/`/g, '')}` : (v || '');
 }
 function renderFinal() {
   app.innerHTML = `<div class="top"><span class="n">Summary</span><h2>What the server recorded</h2><p class="rec">${recordHtml()}</p></div><div id="sum">Reading picks.json…</div>
@@ -459,7 +541,8 @@ function marks() {
     document.querySelectorAll('[data-verdict]').forEach(b => b.classList.toggle('done', b.dataset.verdict === verdict));
     return;
   }
-  document.querySelectorAll('.opt').forEach(el => {
+  if (s.sub) document.querySelectorAll('[data-sub]').forEach(el => el.classList.toggle('done', el.dataset.sub === picks[s.sub.key]));
+  document.querySelectorAll('.opt[data-pick]').forEach(el => {
     el.classList.toggle('sel', el.dataset.pick === hl);
     el.classList.toggle('done', el.dataset.pick === picks[s.key]);
   });
@@ -499,6 +582,18 @@ function xlarge(ref) {
   over.hidden = false;
   fit();
 }
+function chooseSub(k) {
+  const q = STEPS[step].sub;
+  picks[q.key] = k;
+  post(q.key, k, '');
+  marks();
+}
+function slarge(k) {
+  const o = STEPS[step].sub.opts[k];
+  over.innerHTML = `${pic(o.state)}<div class="cap">${fmt(o.name)}. Esc or click to close.</div>`;
+  over.hidden = false;
+  fit();
+}
 function flip(d) {
   flushLook();
   g = (g + d + GALLERY.length) % GALLERY.length;
@@ -517,6 +612,8 @@ document.addEventListener('click', e => {
   if (hit('textarea')) return;
   if (hit('[data-large]')) large(hit('[data-large]').dataset.large);
   else if (hit('[data-xlarge]')) xlarge(hit('[data-xlarge]').dataset.xlarge);
+  else if (hit('[data-slarge]')) slarge(hit('[data-slarge]').dataset.slarge);
+  else if (hit('[data-sub]')) chooseSub(hit('[data-sub]').dataset.sub);
   else if (hit('[data-go]')) go(+hit('[data-go]').dataset.go);
   else if (hit('[data-flip]')) flip(+hit('[data-flip]').dataset.flip);
   else if (hit('[data-g]')) { flushLook(); g = +hit('[data-g]').dataset.g; render(); }
