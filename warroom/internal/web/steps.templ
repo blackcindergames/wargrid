@@ -50,13 +50,13 @@ templ PickButton(value, class, key string) {
 
 templ Tags(o OptView) {
 	if o.Cp {
-		<span class="badge badge-warning badge-sm cp">Claude's pick</span>
+		<span class="tag cp">Claude's pick</span>
 	}
 	if o.Picked {
-		<span class="badge badge-primary badge-sm">Picked</span>
+		<span class="tag got">Picked</span>
 	}
 	if o.Reveal != "" {
-		<span class="badge badge-outline badge-sm">{ o.Reveal }</span>
+		<span class="tag rv">{ o.Reveal }</span>
 	}
 }
 
@@ -97,7 +97,7 @@ templ OptBody(o OptView) {
 				if o.Audio.Missing {
 					<span class="missing">[sound missing: { o.Audio.URL }]</span>
 				} else {
-					<button type="button" class="btn btn-lg" data-play={ o.Audio.Letter } data-audio={ o.Audio.URL }>@Kbd("Space")<span>Play</span></button>
+					<button type="button" class="btn lg" data-play={ o.Audio.Letter } data-audio={ o.Audio.URL }>@Kbd("Space")<span>Play</span></button>
 				}
 				<span class="lv">{ o.Audio.Level }</span>
 			</div>
@@ -110,13 +110,13 @@ templ FlipBar(v ChoiceView) {
 	if len(v.Flip) > 0 {
 		<div class="flipbar">
 			for _, f := range v.Flip {
-				<button type="button" class={ "ob btn btn-sm", templ.KV("btn-primary", f.On), templ.KV("done", f.Done) } data-show={ f.Letter } data-key={ strings.ToLower(f.Letter) }>
+				<button type="button" class={ "ob btn sm", templ.KV("on", f.On), templ.KV("done", f.Done) } data-show={ f.Letter } data-key={ strings.ToLower(f.Letter) }>
 					@Kbd(f.Letter)
 					<span>@Fmt(f.Name)</span>
 				</button>
 			}
 			if v.ViewHref != "" {
-				<a class="vt btn btn-sm" href={ templ.SafeURL(v.ViewHref) } data-key="w" data-keepview>
+				<a class="vt btn sm" href={ templ.SafeURL(v.ViewHref) } data-key="w" data-keepview>
 					@Kbd("W")
 					{ v.ViewLabel }
 				</a>
@@ -128,7 +128,7 @@ templ FlipBar(v ChoiceView) {
 templ Act(v ChoiceView) {
 	<div class="act">
 		if v.Act.Confirm {
-			@PickButton("yes", "pick btn btn-warning", "enter") {
+			@PickButton("yes", "pick btn", "enter") {
 				Yes, as drawn
 				@Kbd("Enter")
 			}
@@ -136,7 +136,7 @@ templ Act(v ChoiceView) {
 				Change (say what in the note)
 			}
 		} else if !isReadOnly(ctx) {
-			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn btn-warning" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")</button>
+			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")</button>
 		}
 		if v.Act.Neutral != "" {
 			@PickButton("neither", "neutral btn", "") {
@@ -153,8 +153,8 @@ templ LabBox(l LabView) {
 			<iframe class="labframe" src={ l.URL } title="lab" style={ templ.SafeCSS("aspect-ratio:" + strconv.Itoa(l.W) + "/" + strconv.Itoa(l.H)) }></iframe>
 		} else {
 			<p>@Fmt(l.Hint)</p>
-			<a class="pick btn btn-warning" href={ templ.SafeURL(l.Href) } hx-get={ l.Href } hx-push-url="true" hx-swap="innerMorph" data-keepview>Start the lab here</a>
-			<a class="lablink link" href={ templ.SafeURL(l.URL) } hx-boost="false">Open the lab in this tab</a>
+			<a class="pick btn" href={ templ.SafeURL(l.Href) } hx-get={ l.Href } hx-push-url="true" hx-swap="innerMorph" data-keepview>Start the lab here</a>
+			<a class="lablink" href={ templ.SafeURL(l.URL) } hx-boost="false">Open the lab in this tab</a>
 		}
 	</div>
 }
@@ -210,7 +210,7 @@ templ Tile(o OptView) {
 			</details>
 		}
 		if !isReadOnly(ctx) {
-			<button type="submit" form="answer" name="pick" value={ o.Letter } class="pick btn btn-warning">Pick { o.Letter }</button>
+			<button type="submit" form="answer" name="pick" value={ o.Letter } class="pick btn">Pick { o.Letter }</button>
 		}
 	</div>
 }
@@ -264,7 +264,7 @@ templ VerdictBox(v VerdictView) {
 	if !isReadOnly(ctx) {
 		<section class="verdict">
 			for _, b := range v.Buttons {
-				<button type="submit" form="answer" name="pick" value={ b.Value } class={ "vb btn btn-lg", templ.KV("btn-warning", b.Value == "pass"), templ.KV("done", b.Done) }>{ b.Label }</button>
+				<button type="submit" form="answer" name="pick" value={ b.Value } class={ "vb btn lg", templ.KV("pick", b.Value == "pass"), templ.KV("done", b.Done) }>{ b.Label }</button>
 			}
 			@NoteField(v.Note)
 		</section>
@@ -286,8 +286,8 @@ templ GalleryMain(v GalleryView) {
 						@NoteField(v.ItemNote)
 					}
 					<div class="inav">
-						<a class="btn btn-sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
-						<a class="btn btn-sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
+						<a class="btn sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
+						<a class="btn sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
 					</div>
 				</section>
 			}
@@ -350,7 +350,7 @@ templ TuneMain(v TuneView) {
 				</div>
 				<wr-tune data-params={ v.Params } data-target={ v.Pic.FrameID } data-field={ tuneField }></wr-tune>
 				<div class="act">
-					@PickButton("tuned", "pick btn btn-warning", "enter") {
+					@PickButton("tuned", "pick btn", "enter") {
 						Use these values
 						@Kbd("Enter")
 					}
@@ -415,8 +415,8 @@ templ SumTable(rows []SumRow) {
 	if len(rows) == 0 {
 		<p>Nothing recorded yet.</p>
 	} else {
-		<div class="overflow-x-auto">
-			<table class="sum table table-sm">
+		<div class="scroll">
+			<table class="sum">
 				<thead>
 					<tr><th>Question</th><th>Pick</th><th>Note</th></tr>
 				</thead>
@@ -483,7 +483,7 @@ templ RoundListMain(links []RoundLink) {
 			<span class="n">War Room</span>
 			<h1>Rounds</h1>
 		</section>
-		<ul class="menu rounds">
+		<ul class="rounds">
 			for _, l := range links {
 				<li><a href={ templ.SafeURL(l.Href) }>{ l.Title }</a></li>
 			}

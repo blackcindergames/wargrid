@@ -441,7 +441,7 @@ func TestStaticRefusesWhatItShouldNot(t *testing.T) {
 
 func TestEmbeddedStaticFiles(t *testing.T) {
 	a := newApp(t)
-	for target, marker := range map[string]string{"/static/app.css": "tailwindcss", "/static/htmx.min.js": "htmx", "/static/warroom.js": "htmx:error"} {
+	for target, marker := range map[string]string{"/static/app.css": "@layer reset", "/static/htmx.min.js": "htmx", "/static/warroom.js": "htmx:error"} {
 		rec := a.get(target)
 		if rec.Code != 200 || !strings.Contains(rec.Body.String(), marker) {
 			t.Errorf("GET %s = %d, missing %q", target, rec.Code, marker)

@@ -24,7 +24,7 @@ function renderFailures() {
   const list = [...failed.values()];
   if (rec && list.length) {
     rec.replaceChildren(Object.assign(document.createElement('span'), { className: 'fail', textContent: `Not recorded: ${why(list[0].status)}. Kept on this page: ${list.map((f) => f.key).join(', ')}.` }), ' ',
-      Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-xs', textContent: 'Retry' }));
+      Object.assign(document.createElement('button'), { type: 'button', className: 'btn sm pick', textContent: 'Retry' }));
     rec.querySelector('button').dataset.retry = '';
   } else if (rec?.querySelector('.fail')) {
     rec.replaceChildren();
@@ -126,7 +126,7 @@ function showOption(letter) {
   if (!flipLetters().includes(letter)) return;
   $$('.ostage[data-opt], .odetail[data-opt]').forEach((el) => { el.hidden = el.dataset.opt !== letter; });
   $$('.tile[data-opt]').forEach((el) => el.classList.toggle('sel', el.dataset.opt === letter));
-  $$('[data-show]').forEach((b) => b.classList.toggle('btn-primary', b.dataset.show === letter));
+  $$('[data-show]').forEach((b) => b.classList.toggle('on', b.dataset.show === letter));
   $$('[data-shown]').forEach((b) => { b.value = letter; });
   $$('.pl').forEach((el) => { el.textContent = letter; });
   stopMedia();
@@ -137,7 +137,7 @@ function showOption(letter) {
 function flipBy(d) {
   const letters = flipLetters();
   if (!letters.length) return;
-  const at = letters.indexOf($('.flipbar [data-show].btn-primary')?.dataset.show);
+  const at = letters.indexOf($('.flipbar [data-show].on')?.dataset.show);
   showOption(letters[(at + d + letters.length) % letters.length]);
 }
 

@@ -53,7 +53,7 @@ func TestSheetControlsHaveNoKeys(t *testing.T) {
 func TestKeyHooks(t *testing.T) {
 	a := newShippedApp(t)
 	confirm := a.get("/r/demo/2").Body.String()
-	mustContain(t, "confirm", confirm, `value="yes" class="pick btn btn-warning" data-key="enter"`)
+	mustContain(t, "confirm", confirm, `value="yes" class="pick btn" data-key="enter"`)
 	pictures := a.get("/r/demo/1").Body.String()
 	mustContain(t, "pictures", pictures, `data-key="enter"`, `data-key="w" data-keepview`, `data-show="A"`, `data-key="a"`)
 	mustContain(t, "legend", pictures, `id="legend" hidden`, "Stage controls")

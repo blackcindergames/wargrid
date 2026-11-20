@@ -12,7 +12,7 @@ templ Fmt(s string) {
 
 templ Kbd(label string) {
 	if label != "" {
-		<kbd class="kbd kbd-xs">{ label }</kbd>
+		<kbd>{ label }</kbd>
 	}
 }
 
@@ -108,7 +108,6 @@ templ NoteField(n NoteView) {
 	<textarea
 		id={ n.ID }
 		name="note"
-		class="textarea w-full"
 		data-note={ n.What }
 		data-chip={ n.Chip }
 		if n.InForm {
@@ -141,10 +140,9 @@ templ NoteBox(n NoteView) {
 
 templ StepNav(n NavView) {
 	<nav class="stepnav" aria-label="Steps">
-		<a class="btn btn-sm" href={ templ.SafeURL(n.Prev) } data-key="arrowleft">@Kbd("←") Back</a>
-		<a class="btn btn-sm" href={ templ.SafeURL(n.Next) } data-key="arrowright">{ n.NextLabel } @Kbd("→")</a>
-		<span class="flex-1"></span>
-		<button type="button" class="btn btn-sm" data-act="legend">@Kbd("?") Keys</button>
+		<a class="btn sm" href={ templ.SafeURL(n.Prev) } data-key="arrowleft">@Kbd("←") Back</a>
+		<a class="btn sm" href={ templ.SafeURL(n.Next) } data-key="arrowright">{ n.NextLabel } @Kbd("→")</a>
+		<button type="button" class="btn sm" data-act="legend">@Kbd("?") Keys</button>
 	</nav>
 }
 
@@ -154,7 +152,7 @@ templ Head(h HeadView) {
 		<h1>@Fmt(h.Question)</h1>
 		if h.ClaudePick != nil {
 			<p class="cpline">
-				<span class="badge badge-warning badge-sm cp">Claude's pick</span>
+				<span class="tag cp">Claude's pick</span>
 				<b>@Fmt(h.ClaudePick.Label)</b>
 				if h.ClaudePick.Why != "" {
 					· @Fmt(h.ClaudePick.Why)
@@ -169,8 +167,8 @@ templ NumbersPanel(rows []NumbersRow) {
 	if len(rows) > 0 {
 		<section class="numbers">
 			<span class="h">Numbers (K hides)</span>
-			<div class="overflow-x-auto">
-				<table class="table table-xs">
+			<div class="scroll">
+				<table>
 					<thead>
 						<tr><th></th><th>Contrast</th><th>ΔE</th><th>Deut.</th><th>Prot.</th></tr>
 					</thead>
@@ -280,7 +278,7 @@ templ CtlSelect(b CtlButton, sheet bool) {
 	<label class="ctlsel">
 		@Kbd(b.KeyLabel)
 		<span>{ b.Label }</span>
-		<select name={ b.Select.Name } class="select select-sm" { ctlHxAttrs(b.Select.Href)... }>
+		<select name={ b.Select.Name } { ctlHxAttrs(b.Select.Href)... }>
 			for _, o := range b.Select.Options {
 				<option value={ o.Value } selected?={ o.Selected }>{ o.Name }</option>
 			}
@@ -299,9 +297,9 @@ templ CtlControl(b CtlButton, sheet bool) {
 		case b.Select != nil:
 			@CtlSelect(b, sheet)
 		case b.Disabled || b.Href == "":
-			<span class="btn btn-sm btn-disabled" aria-disabled="true">@CtlLabel(b)</span>
+			<span class="btn sm" aria-disabled="true">@CtlLabel(b)</span>
 		default:
-			@CtlLink(b.Href, keyUnless(b.Key, sheet), "btn btn-sm") {
+			@CtlLink(b.Href, keyUnless(b.Key, sheet), "btn sm") {
 				@CtlLabel(b)
 			}
 			if b.BackHref != "" && !sheet {
@@ -334,24 +332,24 @@ templ PhoneBar(p PhoneView) {
 		@CtlBar(p.Ctl, true)
 		<div class="ctlbar">
 			if p.Whole {
-				<button type="button" class="btn btn-sm" data-act="whole">Whole screen</button>
+				<button type="button" class="btn sm" data-act="whole">Whole screen</button>
 			}
-			<button type="button" class="btn btn-sm" data-act="legend">Keys</button>
+			<button type="button" class="btn sm" data-act="legend">Keys</button>
 		</div>
 	</div>
 	<div class="row">
 		<a class="btn arrow" href={ templ.SafeURL(p.Prev) } aria-label="Previous step">‹</a>
 		for _, f := range p.Flip {
-			<button type="button" class={ "ob btn", templ.KV("btn-primary", f.On) } data-show={ f.Letter }>{ f.Letter }</button>
+			<button type="button" class={ "ob btn", templ.KV("on", f.On) } data-show={ f.Letter }>{ f.Letter }</button>
 		}
 		if p.Confirm {
-			<button type="submit" form="answer" name="pick" value="yes" class="pick btn btn-warning">Yes</button>
+			<button type="submit" form="answer" name="pick" value="yes" class="pick btn">Yes</button>
 		}
 		if p.Pick {
-			<button type="submit" form="answer" name="pick" value={ p.Shown } data-shown class="pick btn btn-warning">Pick <span class="pl">{ p.Shown }</span></button>
+			<button type="submit" form="answer" name="pick" value={ p.Shown } data-shown class="pick btn">Pick <span class="pl">{ p.Shown }</span></button>
 		}
 		if p.Tuned {
-			<button type="submit" form="answer" name="pick" value="tuned" class="pick btn btn-warning">Use these</button>
+			<button type="submit" form="answer" name="pick" value="tuned" class="pick btn">Use these</button>
 		}
 		if p.ItemPrev != "" {
 			<a class="btn" href={ templ.SafeURL(p.ItemPrev) }>‹ Item</a>
@@ -383,7 +381,7 @@ templ PhoneBar(p PhoneView) {
 }
 
 templ LegendBox(l LegendView) {
-	<div class="lg">
+	<div class="keys">
 		<h2>Keys</h2>
 		@legendTable(l.Keys)
 		<h3>Stage controls</h3>

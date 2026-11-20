@@ -20,8 +20,6 @@ import (
 
 //go:generate go tool templ generate
 //go:generate sh -c "go run . schema round > rounds/round.schema.json && go run . schema step > rounds/step.schema.json"
-//go:generate sh tools/fetch.sh
-//go:generate .bin/tailwindcss --input internal/web/static/input.css --output internal/web/static/app.css --minify
 //go:generate sh -c "cd islands && npm ci && npm run build"
 
 const (

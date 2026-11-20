@@ -133,7 +133,7 @@ func TestTuneSummaryShowsTheValueCompactly(t *testing.T) {
 
 func TestTuneStepPhoneBarPicksTheTunedValue(t *testing.T) {
 	a := newTuneApp(t)
-	mustContain(t, "phone", a.get("/r/t/1?phone=1").Body.String(), `value="tuned" class="pick btn btn-warning">Use these</button>`)
+	mustContain(t, "phone", a.get("/r/t/1?phone=1").Body.String(), `value="tuned" class="pick btn">Use these</button>`)
 }
 
 func TestIslandBundleIsServed(t *testing.T) {

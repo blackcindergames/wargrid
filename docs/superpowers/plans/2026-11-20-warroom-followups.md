@@ -2,7 +2,20 @@
 
 Owner answers (user, 2026-11-20): perform all suggested changes; the learning goal is Go and htmx, so chi and Tailwind/daisyUI go (stdlib `ServeMux`, one hand-written `app.css`); keep the Svelte island for now (owner checks its size); browser tests in Go with playwright-go; a link without a write token is read-only; War Room serves future packages (P2.3b, P3, P2.4, P2.5, P2.6), not historic rounds; the Python prototype `tools/decision_page/` is deleted at the end (git keeps it at `8e4bb7b`/`0be1d865`); a deploy (later, with approval) replaces the prototype on `wargrid-lab-test`; CI job later.
 
-Run order: strictly after `2026-11-20-warroom-tune-spike.md` is done, Task 0 then A to E, one task at a time (all touch the same files). Each task ends green: in `warroom/` `go test -race ./...`, `go vet ./...`, `golangci-lint run`, `sh tools/check_generated.sh`, `node --check static/warroom.js`. Ports 8767-8772 off limits. Never commit, push or run fly (the coordinator commits on approval).
+Sessions (user, 2026-11-20: split into several sessions with a handoff between them; the handoff file is `warroom-prompt.txt`, private, rewritten at each stop):
+
+| Session | Tasks | Ends when | Handoff names |
+|---|---|---|---|
+| 1 (2026-11-19/20) | port, tune spike, 0, A, B | B committed | branch tip, open findings, next session's first command |
+| 2 | C, D | D committed: features the next packages need, each guarded by a browser test | test list with the change that turns each red |
+| 3 | G, E | quality gate green locally and in a pushed-branch CI run only if the owner approves the push; prototype deleted; reviews and fix round done | review findings left open, CI status |
+| 4 | F, owner look | docs point at War Room; owner's questionnaire on the set-aside features answered; branch ready to merge | merge steps (squash, tag tip, AGENTS.md) |
+| 5 | Godot lab step: 15-minute checks, brainstorm, spec | spec approved | spec path, check results |
+| 6+ | lab step implementation | per its plan | per its plan |
+
+Each session starts by reading `warroom-prompt.txt`, this plan and `warroom/README.md`, and runs `sh warroom/tools/check_generated.sh` plus `go test ./...` in `warroom/` before new work. A session stops at its row even if time is left.
+
+Run order: strictly after `2026-11-20-warroom-tune-spike.md` is done: Task 0, A, B, C, D, G, E, F, one task at a time (all touch the same files). Each task ends green: in `warroom/` `go test -race ./...`, `go vet ./...`, `golangci-lint run`, `sh tools/check_generated.sh`, `node --check static/warroom.js`. Ports 8767-8772 off limits. Never commit, push or run fly (the coordinator commits on approval).
 
 ## Task 0: packages, shutdown, container (first, before A)
 
@@ -38,11 +51,28 @@ Read first: `docs/art-direction/ART_DIRECTION.md` (§12 interface mock-ups: the 
 5. A visible Large button on desktop.
 6. README: `V`, `X`, `⇧F` work only as a step's own `extra` controls.
 
+8. Caps that would stop all recording (architecture check, 2026-11-20): when `picks.jsonl` reaches its cap, rename it aside (`picks-<UTC timestamp>.jsonl`) and start a new file instead of refusing writes, and raise the cap to 64 MiB; `maxKeys` counts per round prefix (500 per round) instead of over all rounds. Tests.
+9. Picks record the picked option's name: optional `name` on the store entry, set by the pick handler for option letters, so a later edit of a step's options cannot silently change what an old "B" meant. Old entries stay valid.
+10. In container mode (`WARROOM_RUN_AS` set) refuse to start without `WARROOM_SECRET`, so a deploy can never go out fully open.
 7. Minify the island bundle (`build.minify` in `islands/vite.config.js`; it ships unminified at about 219 KB).
 
 ## Task D: browser tests (playwright-go)
 
 `github.com/playwright-community/playwright-go` (a version at least two weeks old), tests behind build tag `browser` (`go test -tags browser ./...`), Firefox only, the server started in-process with `httptest` on a temp picks file. Install step documented (`go run github.com/playwright-community/playwright-go/cmd/playwright install firefox`). Cases: a flip keeps every iframe document; a stage control reloads the frame with the new hash; pick round trip writes `picks.json` and moves on; a failed pick shows Retry and Retry records the failed letter; a note survives leaving the step after a failure; the phone View sheet opens; tune slider redraws without reload and records `value`; read-only link has no pick controls. Each test is proven by breaking the code it guards once (report which change made it red).
+
+## Task G: quality gate and CI (after D, before E)
+
+Owner (user, 2026-11-20): strict, low-friction quality checks for War Room, also in GitHub Actions; proportional to the code (one Svelte component, one page script), not the full JS tool list: Knip, Vitest and import-x are added when the JS grows; Playwright stays in Go (Task D). Supersedes "CI job later".
+- Go: keep `golangci-lint` (strict config), `go vet`, `go test -race`, `tools/check_generated.sh`; add `govulncheck` (`golang.org/x/vuln/cmd/govulncheck` as a Go tool dependency, a version at least two weeks old).
+- Island: TypeScript with `strict: true` plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`; `Tune.svelte` uses `lang="ts"`; `svelte-check` with zero errors and warnings.
+- Page script: `internal/web/static/warroom.js` stays plain JS without a build, type-checked in place by `tsc --checkJs` (JSDoc types where inference fails; `// @ts-check` header).
+- ESLint flat config: `typescript-eslint` strict-type-checked (type-aware) for the island and `warroom.js`, `eslint-plugin-svelte` recommended including its a11y rules; no stylistic rules (Prettier owns formatting, `eslint-config-prettier`); `--max-warnings 0`; a lint suppression needs a reason (`eslint-comments` or the core `reportUnusedDisableDirectives`).
+- Prettier with `prettier-plugin-svelte` for `islands/` and `warroom.js`.
+- Tweakpane lifecycle: the pane is disposed and listeners removed on element disconnect (already the `$effect` cleanup; a check in Task D's browser tests: connect/disconnect twice leaves no orphan pane).
+- npm scripts in `islands/package.json`: `format`, `format:check`, `lint`, `lint:fix`, `check` (tsc + svelte-check), `build`, `quality` (format:check, lint, check, build). One repo entry `warroom/tools/quality.sh` runs the Go and npm gates in order and is what agents run before reporting done.
+- GitHub Actions `.github/workflows/warroom.yml`, triggered on pull requests and pushes touching `warroom/**` or the workflow: job `quality` (setup-go from `warroom/go.mod`, setup-node with the pinned Node version in `islands/.nvmrc` or `package.json` `engines`, `npm ci`, `sh tools/quality.sh` without browser tests), job `browser` (needs `quality`; playwright-go Firefox install, `go test -tags browser ./...`). Actions pinned by commit SHA as the repo's other workflows do (check `ci.yml`). Do not change the other workflows.
+- `warroom/AGENTS.md` (short, agent-facing): inspect conventions first; run the relevant check after each change and `sh tools/quality.sh` before reporting done; fix causes, never suppress or loosen a rule to pass; add or update tests for changed behaviour; no unrelated refactors or new dependencies without a reason. Link it from the root `AGENTS.md` in one line.
+- Fix existing violations without behaviour change; list any justified exception in `warroom/AGENTS.md`.
 
 ## Task E: remove the prototype, docs, reviews
 
@@ -64,4 +94,4 @@ These files are also edited on `main` by other runs; keep each edit to a few lin
 
 Godot lab step (next, before P2.4), CI job, fly deploy, audio features.
 
-Godot lab step, owner answers (user, 2026-11-20), for its own brainstorm and spec after this batch: the game's web build in one persistent iframe (survives htmx step changes), driven over `postMessage`; options compared by flip only (A to H swap the variant live in one instance); the game forwards keys it does not use to War Room; on a phone, short muted clips recorded from the game by default plus a "Start the game anyway" button. The lab uses a single-threaded web preset (all presets have `variant/thread_support=false` today, `game/export_presets.cfg`); the threaded preset of SB5b is not needed for a lab scene (user, 2026-11-20). Settled without a spike (2026-11-20): the lab iframe lives in a fixed layout slot outside the htmx swap region `#page`, so it survives step changes in every browser (htmx 4's `hx-preserve` moves elements with `Element.moveBefore` where the browser has it and falls back to `insertBefore`, which reloads an iframe). Variants map onto the in-game lab's look sets (`game/scripts/lab/lab_look.gd`: palette token sets `SET_A`/`SET_B`, owner colours, bar rules, value sizes) via `{type: 'wr:params', variant, params}`; shape sets join as a look set when P2.4's design defines them.
+Godot lab step, owner answers (user, 2026-11-20), for its own brainstorm and spec after this batch: the game's web build in one persistent iframe (survives htmx step changes), driven over `postMessage`; options compared by flip only (A to H swap the variant live in one instance); the game forwards keys it does not use to War Room; on a phone, short muted clips recorded from the game by default plus a "Start the game anyway" button. The lab uses a single-threaded web preset (all presets have `variant/thread_support=false` today, `game/export_presets.cfg`); the threaded preset of SB5b is not needed for a lab scene (user, 2026-11-20). Settled without a spike (2026-11-20): the lab iframe lives in a fixed layout slot outside the htmx swap region `#page`, so it survives step changes in every browser (htmx 4's `hx-preserve` moves elements with `Element.moveBefore` where the browser has it and falls back to `insertBefore`, which reloads an iframe). Variants map onto the in-game lab's look sets (`game/scripts/lab/lab_look.gd`: palette token sets `SET_A`/`SET_B`, owner colours, bar rules, value sizes) via `{type: 'wr:params', variant, params}`; shape sets join as a look set when P2.4's design defines them. Decided (user, 2026-11-20, revised after the hosting research): War Room reverse-proxies `/lab/` to the game's deployed web build (`WARROOM_GAME_URL`, default the test app `wargrid-web-test.fly.dev`; `/game/` is taken by repo files), so the build keeps its own deploy but the browser sees one origin: today's same-origin `postMessage` checks stay, War Room reads the lab's keys directly, no storage partitioning. Cost: about 20 MB per cold load through War Room's machine. The game shows its `build_commit.txt` in a `wr:ready` message. Before the spec, the 15-minute checks: `addEventListener("message")` through `JavaScriptBridge`, and the proxy streaming wasm with `application/wasm` and brotli. Every `wr:*` message carries the step id, since the persistent lab iframe outlives step changes.

@@ -166,13 +166,13 @@ func TestChangeNeedsANote(t *testing.T) {
 func TestBlindStepRevealsAfterThePick(t *testing.T) {
 	a := newShippedApp(t)
 	before := a.get("/r/demo/1").Body.String()
-	if strings.Contains(before, "badge-outline") {
+	if strings.Contains(before, "tag rv") {
 		t.Fatal("the reveal shows before the pick")
 	}
 	rec := a.fragment("POST", "/r/demo/pictures/pick", url.Values{"pick": {"A"}})
 	mustContain(t, "pick line", rec.Body.String(), "Recorded: pictures A. A was today&#39;s look.")
 	after := a.get("/r/demo/1").Body.String()
-	mustContain(t, "revealed", after, `badge-outline badge-sm">today&#39;s look`, `badge-primary badge-sm">Picked`)
+	mustContain(t, "revealed", after, `tag rv">today&#39;s look`, `tag got">Picked`)
 }
 
 func TestNotePostAnswersWithTheRecordLine(t *testing.T) {
@@ -260,7 +260,7 @@ func TestSideBySideRendersTilesWithPickButtons(t *testing.T) {
 func TestFlipRendersEveryOptionAndHidesTheOthers(t *testing.T) {
 	a := newApp(t)
 	body := a.get("/r/r/1?show=B").Body.String()
-	mustContain(t, "stage", body, `data-opt="A" hidden`, `class="ostage" data-opt="B">`, `name="pick" value="B" data-shown class="pick btn btn-warning" data-key="enter"`, "Neither")
+	mustContain(t, "stage", body, `data-opt="A" hidden`, `class="ostage" data-opt="B">`, `name="pick" value="B" data-shown class="pick btn" data-key="enter"`, "Neither")
 	if def := a.get("/r/r/1").Body.String(); !strings.Contains(def, `class="ostage" data-opt="A">`) {
 		t.Error("the first option shows by default")
 	}

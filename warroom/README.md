@@ -151,7 +151,7 @@ A param is a number (`min`, `max`, `step`, `value`; the value must lie on the gr
 How it hangs together:
 
 - The page prints `<wr-tune data-params='[...]' data-target="<iframe id>" data-field="tune-value">` and a hidden `<input id="tune-value" name="value" form="answer">` holding the start values: the recorded ones when they still fit the params, else the step's own. The target frame's address carries the same start values as hash parameters, so the first draw is right before any script runs.
-- `islands/Tune.svelte` is compiled to a custom element (`shadow: 'none'`, so Tailwind and daisyUI styles reach it). On every change it writes the values as JSON into the hidden field and posts `{type: 'wr:params', params: {id: value}}` to the target frame with `postMessage(msg, location.origin)`; it posts again when the frame finishes loading.
+- `islands/Tune.svelte` is compiled to a custom element (`shadow: 'none'`, so `app.css` reaches it). On every change it writes the values as JSON into the hidden field and posts `{type: 'wr:params', params: {id: value}}` to the target frame with `postMessage(msg, location.origin)`; it posts again when the frame finishes loading.
 - The target listens for `wr:params` (`static/demo/scene.html` does), checks `event.origin === location.origin`, `event.source === parent` and the type, and redraws without a reload. Any render page can opt in the same way.
 - The pick button submits the answer form as before; htmx posts the hidden field with it, the server validates it (see Routes) and stores it with the pick. Enter picks, also from a focused slider; other keys inside the panel stay with Tweakpane (`warroom.js` skips them). `warroom.js` starts nothing: htmx swaps add and remove the element, and the custom element lifecycle starts and stops the pane.
 - The summary shows the value compactly: `outline 1.5 · unit 1.2 · you #376eac · ground dark`.
@@ -159,6 +159,23 @@ How it hangs together:
 ## Islands build
 
 `islands/` holds the Svelte sources, `package.json` with exact versions and `package-lock.json`. `npm run build` (Vite library mode, one ES module) writes `internal/web/static/islands.js`, which is committed and embedded like `app.css`, so `go build`, `go test` and the Docker build need no Node. `go generate ./...` runs `npm ci` and the build; `tools/check_generated.sh` rebuilds in a temporary copy and fails when `internal/web/static/islands.js` differs.
+
+## Styles
+
+`internal/web/static/app.css` is one hand-written file with native nesting and no build. Its first line fixes the cascade layers, and a later layer beats an earlier one whatever the selector weight:
+
+| Layer | What |
+|---|---|
+| `reset` | Margins, borders and form fonts zeroed, `[hidden]` always hides |
+| `tokens` | Public Sans from `/game/fonts/` and the custom properties below |
+| `base` | Body, links, `textarea`, `kbd` (the HUD key chip), `.sr-only` |
+| `components` | Buttons, tags, chips, the step grid, head, notes, tiles, gallery, verdict, tables, key list, the `wr-tune` theme |
+| `stage` | The black stage, pictures and frames, marks, the large view, colour-vision filters, true 100 %, `?shot=1` |
+| `phone` | Below 900 px or on a touch screen: one column, the fixed two-row bar and its View sheet |
+
+Colour tokens take the HUD v5 set A values (`docs/reference/hud-v5-layout.md`, `game/scripts/lab/lab_look.gd`), so the page frames art in the game's own quiet chrome: `--well` page, `--slab` panels, `--quiet` idle buttons, `--btn` hover, `--panel2` highlighted card line, `--line` borders, `--muted` labels, `--sel` cyan for the shown or current item (also the eyebrow, folds and links), `--amber` (the HUD `amber`, `lab_look.gd`) for the pick button and Retry, Claude's pick, look cues, marks, unsent or failed picks, low numbers and the loading bar. `--text` is `#dfe7ec`, softer than the HUD's, and `--soft` sits between it and `--muted`; `--stage` is black. Type: `--font` (Public Sans), `--label` 12 px (the HUD floor, uppercase labels), `--row` 13 px.
+
+Own classes, no utility classes: `.btn` with `.sm` `.lg` `.xs` sizes and the states `.on` (cyan) and `.pick` (amber); `.tag` with `.cp` `.got` `.rv`; `.chip`, `.scroll` (a table that may scroll sideways). `warroom.js` toggles `.on` on the option buttons and `.sel` on tiles; keys find elements by `data-key`, `data-show`, `data-act` and `data-pick`, never by a style class.
 
 ## Build and checks
 
@@ -169,24 +186,21 @@ How it hangs together:
 | templ | v0.3.1100 (CLI as a `go.mod` tool: `go tool templ`) |
 | YAML | goccy/go-yaml v1.19.2 |
 | htmx | 4.0.1, vendored as `static/htmx.min.js` |
-| Tailwind CSS | v4.3.4 standalone CLI |
-| daisyUI | 5.7.50 |
 | Svelte | 5.57.3 (islands) |
 | Vite | 8.3.6 |
 | @sveltejs/vite-plugin-svelte | 7.3.1 |
 | Tweakpane | 4.0.5 |
 | Node, npm | only for `islands/`; built with Node 24, npm 12 |
 
-The generated files are committed (`internal/web/*_templ.go`, `internal/web/static/app.css`, `internal/web/static/islands.js`, `rounds/round.schema.json`, `rounds/step.schema.json`), so `go build` and `go test` need no templ, Tailwind or Node. After changing a `.templ` file, `internal/web/static/input.css` or `islands/`:
+The generated files are committed (`internal/web/*_templ.go`, `internal/web/static/islands.js`, `rounds/round.schema.json`, `rounds/step.schema.json`), so `go build` and `go test` need no templ or Node. `internal/web/static/app.css` is hand-written (see Styles) and needs no build step. After changing a `.templ` file or `islands/`:
 
 ```sh
-sh tools/fetch.sh     # Tailwind CLI and daisyUI into .bin/ (git-ignored); checks each download's SHA-256
-go generate ./...     # templ generate, fetch, Tailwind build, npm ci and the islands build
+go generate ./...     # templ generate, the schemas, npm ci and the islands build
 ```
 
 The JSON Schemas come from the Go types (`go run . schema round|step`, run by `go generate`). Every round and step YAML starts with `# yaml-language-server: $schema=../round.schema.json` (`../step.schema.json` for steps), so an editor with the YAML language server completes fields and flags unknown ones; the strict decoder stays the authority. Two schemas, not one: `round.yaml` and a step file are different types. A new custom YAML type needs a case in `customTypes` (`internal/rounds/schema.go`).
 
-Dev loop: `sh tools/dev.sh` runs `go tool templ generate --watch --open-browser=false --proxy=http://127.0.0.1:8780 --cmd="go run ."`: templ regenerates on a `.templ` or `.go` save, restarts the server and reloads the browser through its proxy at `http://127.0.0.1:7331/`. Rounds are read per request, so a YAML edit needs only a reload. `WARROOM_PORT` changes the port the proxy forwards to. Tailwind and the island are not watched.
+Dev loop: `sh tools/dev.sh` runs `go tool templ generate --watch --open-browser=false --proxy=http://127.0.0.1:8780 --cmd="go run ."`: templ regenerates on a `.templ` or `.go` save, restarts the server and reloads the browser through its proxy at `http://127.0.0.1:7331/`. Rounds are read per request, so a YAML edit needs only a reload. `WARROOM_PORT` changes the port the proxy forwards to. The island is not watched, and `app.css` is embedded, so a CSS edit needs a restart (save a `.go` file).
 
 Checks, in `warroom/`:
 
@@ -238,11 +252,11 @@ Things that cost time with the pinned versions.
 - htmx 4 event names are `htmx:after:request`, `htmx:response:error`, `htmx:error`, `htmx:after:swap` and `htmx:config:request` (used in `warroom.js`), not the htmx 2 `htmx:afterRequest` family.
 - htmx 4's `innerMorph` keeps an iframe and only sets its new `src`; when the address differs only after `#`, that is a hash change and the render page does not redraw. Frames carry an id hashed from their address (`frameID` in `internal/web/pics.go`), so a changed frame is replaced and an unchanged one survives.
 - templ: `@Comp() { text }` on one line is a call with children (the literal text `text`), not a call followed by an expression.
-- daisyUI's `@layer daisyui` outranks Tailwind's `components` layer, so an override of a daisyUI class must sit outside every layer (the end of `internal/web/static/input.css`).
+- History (Tailwind and daisyUI, removed 2026-11-20): daisyUI's `@layer daisyui` outranked Tailwind's `components` layer, so every override of a daisyUI class had to sit outside all layers. With one hand-written file the layer order is declared once at its top and later layers win.
 - Svelte 5 custom elements (`customElement: true` in the plugin options, `<svelte:options customElement={{tag, shadow: 'none', props}} />`): with `shadow: 'none'` the component renders into the element itself and `$host()` is that element, which is what Tweakpane gets as its container (no template needed). Props come from attributes only when declared: `props: {params: {attribute: 'data-params', type: 'Array'}}`; the type does the `JSON.parse`, otherwise you get the string, and an undeclared prop looks for an attribute named like the prop in lower case.
 - A Svelte custom element builds its component one microtask after `connectedCallback` and destroys it one microtask after `disconnectedCallback` (so a DOM move does not rebuild). An `$effect` that creates the pane and returns `pane.dispose` is therefore enough to start and stop it on htmx swaps.
 - Runes: `$props()` values are reactive, so reading `params` inside the `$effect` rebuilds the pane when `data-params` changes; the values object handed to Tweakpane is a plain object, not `$state`, because Tweakpane writes into it.
 - Tweakpane 4.0.5 ships `.d.ts` files that import `@tweakpane/core`, which is not installed, so the editor has no types; the API (`new Pane({container})`, `addBinding`, `pane.on('change')`, `dispose`) was read from `dist/tweakpane.js`. Number steps count from the initial value, not from `min` (`StepConstraint(step, initialValue)`), which is why a loaded `value` must lie on the grid from `min` and the server snaps from `min`.
-- Tweakpane's slider is a focusable `div` with its own arrow-key handler that does not stop the event, so `warroom.js` would flip the step; it now ignores keys from inside `wr-tune` except Enter. Its text inputs are covered by the existing input rule. It injects its own `<style>` and is themed with `--tp-*` custom properties on `wr-tune` (`internal/web/static/input.css`); its list is a native `<select>` that stays light grey unless `--tp-button-*` is set.
+- Tweakpane's slider is a focusable `div` with its own arrow-key handler that does not stop the event, so `warroom.js` would flip the step; it now ignores keys from inside `wr-tune` except Enter. Its text inputs are covered by the existing input rule. It injects its own `<style>` and is themed with `--tp-*` custom properties on `wr-tune` (`internal/web/static/app.css`), set from the page's tokens; its list is a native `<select>` that stays light grey unless `--tp-button-*` is set.
 - Vite library mode: `build.emptyOutDir` must be `false` because `outDir` is `static/`, which holds the rest of the site. The output keeps whitespace and comments (about 220 KB, 47 KB gzipped). The Svelte plugin's "no Svelte config found" line is harmless; the compiler option sits in `vite.config.js`.
 - Headless Firefox through WebDriver cannot be made narrower than 500 px wide; for a 390 px layout load the page in a same-origin `<iframe>` of that width. In a WebDriver test, `clear` on a Tweakpane text input fires `change` and the pane reverts it; select the text and type instead.
