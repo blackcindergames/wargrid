@@ -247,16 +247,16 @@ Covered: a flip keeps every iframe document; a stage control replaces the frame 
 
 ## Fly
 
-`fly/` deploys War Room to the prototype's app, with the same volume, so picks survive restarts and redeploys. Every `fly` command needs the owner's approval.
+`fly/` deploys War Room to the fly app `warroom` at `warroom.pdstuber.dev`, with a volume, so picks survive restarts and redeploys. Every `fly` command needs the owner's approval.
 
 ```sh
-fly secrets set WARROOM_SECRET=... -a wargrid-lab-test   # once; the image sets WARROOM_RUN_AS, so without it the server refuses to start
+fly secrets set WARROOM_SECRET=... -a warroom   # once; the image sets WARROOM_RUN_AS, so without it the server refuses to start
 sh warroom/fly/sync.sh                                  # fly/site/: Go sources, rounds, referenced repository files
-fly volumes create decision_picks --region fra --size 1 -a wargrid-lab-test   # once; exists if the prototype was deployed
+fly volumes create decision_picks --region fra --size 1 -a warroom   # once
 fly deploy warroom/fly
 ```
 
-`sync.sh` copies the Go sources, the rounds not marked `demo: true` (so the public site has no demo rounds or keys) and every `docs/...` and `game/...` path their YAML and the Go sources name, plus the local files those HTML pages load, the backdrops, `layout.json` and the game font. It copies only files Git tracks: a file that exists only on disk, such as an owner mock, is reported as `skipped, not tracked by Git` and stays off the public site. The Dockerfile builds a static binary (`CGO_ENABLED=0 go build -trimpath`) and copies it into `gcr.io/distroless/static-debian12` (root variant, pinned by digest; no shell). Fly's volume and `[mounts]` docs say nothing about who owns a mount, and community reports say mounts arrive root-owned, so the binary chowns the picks directory to 65534 and drops root itself (`priv_linux.go`); the machine stops when idle and starts on the next request; the Dockerfile sets `WARROOM_RUN_AS=65534`, so a local run as root never chowns anything; `WARROOM_PICKS` is `/data/picks.json`, the prototype's file and format. It replaces the prototype's image on `wargrid-lab-test`: both cannot be live there.
+`sync.sh` copies the Go sources, the rounds not marked `demo: true` (so the public site has no demo rounds or keys) and every `docs/...` and `game/...` path their YAML and the Go sources name, plus the local files those HTML pages load, the backdrops, `layout.json` and the game font. It copies only files Git tracks: a file that exists only on disk, such as an owner mock, is reported as `skipped, not tracked by Git` and stays off the public site. The Dockerfile builds a static binary (`CGO_ENABLED=0 go build -trimpath`) and copies it into `gcr.io/distroless/static-debian12` (root variant, pinned by digest; no shell). Fly's volume and `[mounts]` docs say nothing about who owns a mount, and community reports say mounts arrive root-owned, so the binary chowns the picks directory to 65534 and drops root itself (`priv_linux.go`); the machine stops when idle and starts on the next request; the Dockerfile sets `WARROOM_RUN_AS=65534`, so a local run as root never chowns anything; `WARROOM_PICKS` is `/data/picks.json`, the prototype's file and format. The custom domain is a fly certificate (`fly certs add warroom.pdstuber.dev -a warroom`) plus the DNS records `fly certs show` names.
 
 Test the image without Fly with Apple's `container` CLI (`container system start` first). Use a named volume: a host directory cannot be chowned through the shared mount.
 
