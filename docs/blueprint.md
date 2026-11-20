@@ -12,7 +12,7 @@ Living design and milestone plan; current status lives in the [development notes
 
 ## 1. Vision and intent
 
-Wargrid is a passion/learning project: a modern, scriptable, testable recreation of the RTS mechanics that make *Generals: Zero Hour* enjoyable.
+Wargrid is a passion/learning project: a modern, scriptable, testable RTS with its own design, inspired by *Generals: Zero Hour* but not reproducing it (user, 2026-11-19). The guiding principle lives in the [player-experience bar](reference/player-experience-bar.md#seats).
 
 **Target: Zero Hour-inspired game design, with reliable behavior and responsive performance.** Preserve faction identity, strategic tradeoffs, economy and combat pacing. Original bugs, exploits, stuck units, command failures and slowdowns are not compatibility requirements. Reference measurements inform design; they do not override an explicitly chosen correction. Start with a constrained playable subset.
 
