@@ -195,6 +195,7 @@ Own classes, no utility classes: `.btn` with `.sm` `.lg` `.xs` sizes and the sta
 | Vite | 8.3.6 |
 | @sveltejs/vite-plugin-svelte | 7.3.1 |
 | Tweakpane | 4.0.5 |
+| mxschmitt/playwright-go | v0.6201.1 (2026-08-17), Playwright 1.62.1; browser tests only (`-tags browser`) |
 | Node, npm | only for `islands/`; built with Node 24, npm 12 |
 
 The generated files are committed (`internal/web/*_templ.go`, `internal/web/static/islands.js`, `rounds/round.schema.json`, `rounds/step.schema.json`), so `go build` and `go test` need no templ or Node. `internal/web/static/app.css` is hand-written (see Styles) and needs no build step. After changing a `.templ` file or `islands/`:
@@ -215,7 +216,22 @@ golangci-lint run                 # config .golangci.yml, a copy of relay's
 sh tools/check_generated.sh       # regenerates into a temp copy; fails when the committed output differs
 ```
 
-These are not in CI or `tools/run_checks.sh` yet.
+These are not in CI or `tools/run_checks.sh` yet. The browser tests (next section) run apart.
+
+## Browser tests
+
+`internal/web/browser_test.go` drives the real page in headless Firefox through playwright-go: keys, option flips, picks and Retry, the phone sheet, tune sliders, measurement tables, the error banner, the read-only link. They sit behind the build tag `browser`, so `go test ./...` needs neither playwright nor a browser, and `go.mod` carries the module only for the tagged files. Each test starts the whole server in-process (`httptest`, a temp picks file) and opens a fresh page on it; the shipped rounds (`demo`, `demo-controls`) are the fixtures.
+
+```sh
+cd warroom
+go run github.com/mxschmitt/playwright-go/cmd/playwright install firefox   # once; downloads the driver and the browser to ~/Library/Caches
+go test -tags browser ./...
+go vet -tags browser ./... && golangci-lint run --build-tags browser
+```
+
+Without the browser the tagged run fails at once with an install line; it never skips. The browser is Chromium on macOS (`install chromium-headless-shell`), because Playwright's Firefox does not start on macOS 27 (see Learning notes), and Firefox everywhere else, so the Linux CI job covers Firefox (user, 2026-11-20). `WARROOM_BROWSER=firefox|chromium` overrides it; switch the Mac back to Firefox once a Playwright release starts there.
+
+Covered: a flip keeps every iframe document; a stage control replaces the frame with the new hash; a pick round trip writes `picks.json` and moves on; a failed pick shows Retry and Retry records the failed letter; a note survives leaving the step after a failure; the phone View sheet opens (a 390 px same-origin frame, since headless Firefox cannot go below 500 px); a tune slider redraws without reload and records `value`; the read-only link has no pick controls; a held Enter picks once; keys `5`, `f` and `e` on a step with options E and F; a `wr:measure` from a foreign origin or a non-frame is ignored; measurement rows render as text; the error banner for a thrown error and an unhandled rejection; a measurement that arrived before the script listened; a table that survives a control which keeps the frame; the table under its own option in flip and side views; the Large button; a tune element connected and disconnected twice leaves one pane, then none. Each was proven by breaking the code it guards once and seeing it fail.
 
 ## Fly
 
@@ -264,4 +280,5 @@ Things that cost time with the pinned versions.
 - Tweakpane 4.0.5 ships `.d.ts` files that import `@tweakpane/core`, which is not installed, so the editor has no types; the API (`new Pane({container})`, `addBinding`, `pane.on('change')`, `dispose`) was read from `dist/tweakpane.js`. Number steps count from the initial value, not from `min` (`StepConstraint(step, initialValue)`), which is why a loaded `value` must lie on the grid from `min` and the server snaps from `min`.
 - Tweakpane's slider is a focusable `div` with its own arrow-key handler that does not stop the event, so `warroom.js` would flip the step; it now ignores keys from inside `wr-tune` except Enter. Its text inputs are covered by the existing input rule. It injects its own `<style>` and is themed with `--tp-*` custom properties on `wr-tune` (`internal/web/static/app.css`), set from the page's tokens; its list is a native `<select>` that stays light grey unless `--tp-button-*` is set.
 - Vite library mode: `build.emptyOutDir` must be `false` because `outDir` is `static/`, which holds the rest of the site. `build.minify` alone leaves whitespace in an ES library bundle (meant for another bundler), so `rolldownOptions.output.minify: true` forces full minification: 180 KB, 42 KB gzipped (was 219 KB, 47 KB); most of what is left is Tweakpane's injected stylesheet. The Svelte plugin's "no Svelte config found" line is harmless; the compiler option sits in `vite.config.js`.
+- playwright-go: the canonical module path is now `github.com/mxschmitt/playwright-go` (its `go.mod` says so from v0.6100.0; `github.com/playwright-community/playwright-go` still resolves up to v0.6000.0 only). v0.6000.0 downloads its driver from the retired `playwright.azureedge.net` and fails with 404; from v0.6100.0 the driver comes from npm. Playwright's Firefox 157 build (v0.6401.0, Playwright 1.64.1) answers `Could not find profile folder.` on macOS 27.2.1 for any `-profile`, and the 1.60 to 1.62 builds start but never answer the Juggler pipe (`RenderCompositorSWGL failed mapping default framebuffer`), the same with upstream Node Playwright, so it is the build, not the Go binding. Headless Chromium works there.
 - Headless Firefox through WebDriver cannot be made narrower than 500 px wide; for a 390 px layout load the page in a same-origin `<iframe>` of that width. In a WebDriver test, `clear` on a Tweakpane text input fires `change` and the pane reverts it; select the text and type instead.

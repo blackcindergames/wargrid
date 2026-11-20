@@ -68,6 +68,8 @@ Read first: `docs/art-direction/ART_DIRECTION.md` (§12 interface mock-ups: the 
 
 `github.com/playwright-community/playwright-go` (a version at least two weeks old), tests behind build tag `browser` (`go test -tags browser ./...`), Firefox only, the server started in-process with `httptest` on a temp picks file. Install step documented (`go run github.com/playwright-community/playwright-go/cmd/playwright install firefox`). Cases: a flip keeps every iframe document; a stage control reloads the frame with the new hash; pick round trip writes `picks.json` and moves on; a failed pick shows Retry and Retry records the failed letter; a note survives leaving the step after a failure; the phone View sheet opens; tune slider redraws without reload and records `value`; read-only link has no pick controls. Each test is proven by breaking the code it guards once (report which change made it red).
 
+Done 2026-11-20: 17 cases. Playwright's Firefox does not start on macOS 27, so the tests run headless Chromium on macOS and Firefox elsewhere; Task G's Linux CI job is where Firefox runs (user, 2026-11-20). A reload of the frames on `W` is accepted (user, 2026-11-20).
+
 ## Task G: quality gate and CI (after D, before E)
 
 Owner (user, 2026-11-20): strict, low-friction quality checks for War Room, also in GitHub Actions; proportional to the code (one Svelte component, one page script), not the full JS tool list: Knip, Vitest and import-x are added when the JS grows; Playwright stays in Go (Task D). Supersedes "CI job later".
