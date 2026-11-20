@@ -703,7 +703,7 @@ func _tick_hash() -> int:
 		words.append(player.credits)
 	return (hash(words) << 32) | hash(floats.to_byte_array().to_int64_array())
 
-# Off in offline matches: nobody compares hashes there, and the ring costs a full entity walk per tick.
+# Off in offline matches: the ring costs a full entity walk per tick; offline rows come every 30 ticks from tick_hash().
 func set_hash_ring(enabled: bool) -> void:
 	_ring_on = enabled
 
@@ -712,8 +712,14 @@ func hash_ring() -> PackedStringArray:
 	if not _ring_on: return rows
 	for t in range(maxi(1, _tick - HASH_RING_SIZE + 1), _tick + 1):
 		var h: int = _hash_ring[t % HASH_RING_SIZE]
-		rows.append("%d\t%08x%08x" % [t, (h >> 32) & StateHash.MASK, h & StateHash.MASK])
+		rows.append("%d\t%s" % [t, _hash_text(h)])
 	return rows
+
+func tick_hash() -> String:
+	return _hash_text(_tick_hash())
+
+func _hash_text(h: int) -> String:
+	return "%08x%08x" % [(h >> 32) & StateHash.MASK, h & StateHash.MASK]
 
 func _assign_route(unit: Dictionary) -> int:
 	var from := Vector2(unit.position[0], unit.position[1])

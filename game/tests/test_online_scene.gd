@@ -1288,6 +1288,7 @@ func test_online_playtest_record(runner) -> bool:
 	_run(main, 10)
 	var record: Dictionary = main.playtest_match()
 	runner.check(record.mode == "online" and record.build == PlaytestSettings.build_id(), "N-PT1 the online record names its mode and build")
+	runner.check(not record.has("tick_hashes"), "N-PT1 the online record carries no tick_hashes")
 	runner.check(record.commands == Lockstep.log_lines(online.lockstep.command_log()) and record.commands.size() >= 1, "N-PT1 the record holds the lockstep command lines")
 	runner.check(main.playtest_context().over == false, "N-PT1 a running online match is not over")
 	main.free()

@@ -21,7 +21,7 @@ class OracleClient extends Client:
 		pass
 
 func cases() -> Array[Callable]:
-	return [test_recorder_logs_accepted_commands, test_bot_through_recorder_keeps_memory, test_log_lines_format, test_offline_scene_replays_to_same_digest, test_restart_starts_new_record, test_oracle_factions_arg, test_oracle_state_rows, test_oracle_ring_log]
+	return [test_recorder_logs_accepted_commands, test_bot_through_recorder_keeps_memory, test_log_lines_format, test_offline_scene_replays_to_same_digest, test_offline_record_tick_hashes, test_restart_starts_new_record, test_oracle_factions_arg, test_oracle_state_rows, test_oracle_ring_log]
 
 func _stop(sim, sequence: int, tick: int = 0) -> Dictionary:
 	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1)[0].id
@@ -97,6 +97,26 @@ func _replay(lines: PackedStringArray, args: Dictionary):
 	client._replay_oracle()
 	DirAccess.remove_absolute(log_path)
 	return client
+
+func test_offline_record_tick_hashes(runner) -> bool:
+	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var main = await _scene(runner, {1: "frc", 2: "china"}, "dry_wells", 7)
+	_step_main(main, 20)
+	var early = main.playtest_match().get("tick_hashes", null)
+	runner.check(early != null and early.is_empty(), "TH3 a match recorded before tick 30 has an empty tick_hashes list, got %s" % [early])
+	_step_main(main, 75)
+	var rows = main.playtest_match().get("tick_hashes", null)
+	runner.check(rows != null and rows.size() == 3, "TH3 a match at tick 95 has three tick_hashes rows, got %s" % [rows])
+	if rows != null and rows.size() == 3:
+		var pattern := RegEx.create_from_string("^\\d+\t[0-9a-f]{16}$")
+		runner.check(Array(rows).map(func(row: String) -> String: return row.get_slice("\t", 0)) == ["30", "60", "90"], "TH3 the rows are at ticks 30, 60, 90, got %s" % [rows])
+		runner.check(Array(rows).all(func(row: String) -> bool: return pattern.search(row) != null), "TH3 every row is '<tick>\\t<16 hex>', got %s" % [rows])
+	main.free()
+	SkirmishMain.factions = before[0]
+	SkirmishMain.map_path = before[1]
+	SkirmishMain.starts = before[2]
+	SkirmishMain.match_seed = before[3]
+	return true
 
 func test_offline_scene_replays_to_same_digest(runner) -> bool:
 	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]

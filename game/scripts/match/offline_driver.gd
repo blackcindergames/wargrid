@@ -6,6 +6,7 @@ const Lockstep = preload("res://scripts/net/lockstep.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
 const BOTS: Array[int] = [2]
 const FREEZE_NOTICE := "Match stopped"
+const HASH_EVERY: int = 30
 
 var pump: SimPump
 var first_note: SimPump.Note
@@ -18,6 +19,8 @@ var _last: SimPump.Note
 var _preview_request: Dictionary = {}
 var _preview_answer: Dictionary = {}
 var _failure: String = ""
+var _next_tick: int = 0
+var _tick_hashes := PackedStringArray()
 # printerr, not push_error: the test runner fails the suite on ERROR lines.
 var log_error: Callable = func(line: String) -> void: printerr(line)
 
@@ -34,6 +37,8 @@ func adopt(value: Simulation) -> void:
 	pump = SimPump.new(value)
 	first_note = pump.start()
 	_last = first_note
+	_next_tick = first_note.tick
+	_tick_hashes = PackedStringArray()
 	_queue = []
 	_flushed = []
 	_answers = []
@@ -52,9 +57,11 @@ func step() -> void:
 	job.bots = BOTS
 	job.preview = _preview_request
 	job.stamp_sequence = true
+	job.want_tick_hash = (_next_tick + 1) % HASH_EVERY == 0
 	if not pump.post(job):
 		_read_failure()
 		return
+	_next_tick += 1
 	_queue = []
 	_preview_request = {}
 
@@ -67,7 +74,9 @@ func drain() -> Array[SimPump.Note]:
 	for note: SimPump.Note in notes:
 		_answers.append_array(note.issued)
 		if not note.preview.is_empty(): _preview_answer = note.preview
-	_last = notes[-1]
+		# A post after the end leaves the tick standing; only a note whose tick moved is a row.
+		if not note.tick_hash.is_empty() and note.tick > _last.tick: _tick_hashes.append("%d\t%s" % [note.tick, note.tick_hash])
+		_last = note
 	return notes
 
 func take_answers() -> Array[Dictionary]:
@@ -98,6 +107,7 @@ func current() -> SimPump.Slot:
 func record() -> Dictionary:
 	var played: Dictionary = pump.record()
 	_read_failure()
+	played.tick_hashes = _tick_hashes.duplicate()
 	return played
 
 func failure() -> String:

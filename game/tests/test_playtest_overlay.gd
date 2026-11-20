@@ -551,6 +551,8 @@ func test_two_match_session_file(runner) -> bool:
 		runner.check(int(matches[0].end_tick) == 60 and int(matches[1].end_tick) == 90, "PO12 end ticks are 60 and 90, got %s and %s" % [matches[0].end_tick, matches[1].end_tick])
 		runner.check(matches[1].markers.all(func(marker: Dictionary) -> bool: return int(marker.tick) <= 90), "PO12 match 2 marker ticks start from 0 again")
 		runner.check(matches[0].end_digest == digests[0] and matches[1].end_digest == digests[1], "PO12 each match keeps its own end digest")
+		var rows: Array = matches.map(func(match_record: Dictionary) -> Array: return Array(match_record.get("tick_hashes", [])).map(func(row: String) -> String: return row.get_slice("\t", 0)))
+		runner.check(rows == [["30", "60"], ["30", "60", "90"]], "PO12 each match carries its own tick_hashes rows, got %s" % [rows])
 		runner.check(Array(matches[0].commands) == Array(commands[0]) and Array(matches[1].commands) == Array(commands[1]) and not matches[1].commands.is_empty(), "PO12 each match keeps its own command log")
 	var answers: Dictionary = file.get("answers", {})
 	runner.check(card.questions.all(func(question: Dictionary) -> bool: return answers.has(question.id) and int(answers[question.id].score) == 4), "PO12 every question holds score 4, got %s" % [answers])
@@ -1032,6 +1034,7 @@ func test_header_has_no_digest(runner) -> bool:
 	var keys: Array = ["mode", "map", "seed", "factions", "seat", "build"]
 	var header: Dictionary = main.playtest_header()
 	runner.check(not header.has("end_digest") and header.has_all(keys), "PO28 the mid-match header has no digest and every header field, got %s" % [header.keys()])
+	runner.check(not header.has("tick_hashes"), "PO28 the mid-match header has no tick_hashes")
 	_mark(overlay, "bad", "cut short")
 	var stored: Variant = JSON.parse_string(_current_text())
 	var entry: Dictionary = stored.matches[0] if stored is Dictionary and not stored.matches.is_empty() else {}

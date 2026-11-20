@@ -191,7 +191,9 @@ func _map_id() -> String:
 
 func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
 	var record: Dictionary = driver.record()
-	return _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines})
+	var played: Dictionary = _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines})
+	if record.has("tick_hashes"): played.tick_hashes = record.tick_hashes
+	return played
 
 # Only an answer to an order sent after the refusal clears it, so an earlier order in flight cannot wipe a hint.
 # shortcut: answers are counted, not matched; an order that never gets one leaves the line to its timer; match by sequence if that shows up.
