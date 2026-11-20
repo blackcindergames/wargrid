@@ -23,9 +23,14 @@ const PLAY_AGAIN: String = "HUD/ResultPanel/Center/Card/Box/Buttons/PlayAgain"
 const CHANGE_SETUP: String = "HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"
 const TABLE: String = "HUD/ResultPanel/Center/Card/Box/Table"
 const LENGTH: String = "HUD/ResultPanel/Center/Card/Box/Length"
+const CARD: String = "HUD/ResultPanel/Center/Card"
+const COPY: String = "HUD/ResultPanel/Center/Card/Box/Buttons/Copy"
+const FREEZE_PARTS: Array[String] = ["HUD/ResultPanel/Center/Card/Box/Outcome/Mark", "HUD/ResultPanel/Center/Card/Box/Body", "HUD/ResultPanel/Center/Card/Box/Divider", "HUD/ResultPanel/Center/Card/Box/Footer", COPY]
+const FailingPump = preload("res://tests/failing_pump.gd")
+var freeze_sessions: String = "user://test-freeze-playtests-%d" % OS.get_process_id()
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -1621,6 +1626,8 @@ func test_ph_refused_post_keeps_queue_and_preview(runner) -> bool:
 	var builder: int = driver.pump.live().snapshot().entities.filter(func(u: Dictionary) -> bool: return u.owner == 1 and u.kind == "usa_builder")[0].id
 	var req := {"player": 1, "builder_id": builder, "kind": "usa_power_plant", "origin": Vector2i(10, 10)}
 	var other := {"player": 1, "builder_id": builder, "kind": "usa_power_plant", "origin": Vector2i(14, 10)}
+	var logs: Array[String] = []
+	driver.log_error = func(line: String) -> void: logs.append(line)
 	driver.submit({"type": "stop", "entity_ids": [1]})
 	driver.request_preview(req)
 	driver.pump.stop()
@@ -1631,6 +1638,7 @@ func test_ph_refused_post_keeps_queue_and_preview(runner) -> bool:
 	var types := func() -> Array: return driver.queued().map(func(c: Dictionary) -> String: return c.type)
 	runner.check(types.call() == ["stop"], "PH a refused post keeps the queued order, got %s" % [types.call()])
 	runner.check(driver.get("_preview_request") == req, "PH a refused post keeps the preview request")
+	runner.check(driver.notice() == "" and driver.failure() == "" and not main.get_node("HUD/ResultPanel").visible and logs.is_empty(), "PH a stop() from outside is no failure: no notice, no card, nothing logged, got '%s' %s" % [driver.failure(), logs])
 	driver.submit({"type": "move", "entity_ids": [1], "target": [12.5, 12.5]})
 	runner.check(types.call() == ["stop", "move"], "PH a submit after the refusal queues behind, got %s" % [types.call()])
 	driver.request_preview(other)
@@ -1638,5 +1646,242 @@ func test_ph_refused_post_keeps_queue_and_preview(runner) -> bool:
 	runner.check(driver.get("_preview_request") == other, "PH a newer request replaces the kept one")
 	driver.request_preview({})
 	runner.check(driver.get("_preview_request").is_empty() and driver.preview_answer().is_empty(), "PH an empty request clears request and answer")
+	main.free()
+	return true
+
+func _frozen_arena(main) -> Dictionary:
+	var sim = Skirmish.create(false)
+	var ids := {"infantry": sim.spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry"), "tank": sim.spawn(1, Vector2(11.5, 10.5), "usa_tank"), "builder": sim.spawn(1, Vector2(12.5, 12.5), "usa_builder"), "enemy": sim.spawn(2, Vector2(15.5, 10.5), "usa_tank")}
+	sim.start_match([1, 2] as Array[int])
+	main.driver.adopt(sim)
+	var pump = FailingPump.new(main.driver.pump.live())
+	main.driver.pump.stop()
+	main.driver._last = pump.start()
+	main.driver.pump = pump
+	var logs: Array[String] = []
+	main.driver.log_error = func(line: String) -> void: logs.append(line)
+	var copied: Array[String] = []
+	main.get_node("HUD/ResultPanel").copy_text = func(text: String) -> void: copied.append(text)
+	main.orders.selected_ids.assign([ids.infantry, ids.tank])
+	main._refresh()
+	return {"ids": ids, "pump": pump, "logs": logs, "copied": copied}
+
+func _freeze_shown(main) -> bool:
+	var parts: bool = FREEZE_PARTS.all(func(path: String) -> bool: return main.get_node(path).visible) and main.get_node(CHANGE_SETUP).visible
+	return main.get_node("HUD/ResultPanel").visible and main.get_node(OUTCOME).text == "Match stopped" and parts and not main.get_node(PLAY_AGAIN).visible
+
+func _push_key(main, code: Key) -> void:
+	for pressed: bool in [true, false]:
+		var event := _enter(code)
+		event.pressed = pressed
+		main.get_viewport().push_input(event)
+
+func _helper_on() -> Dictionary:
+	var saved := {"audio": AudioSettings.path, "dir": PlaytestSession.dir}
+	AudioSettings.path = "user://test-freeze-settings-%d.cfg" % OS.get_process_id()
+	DirAccess.remove_absolute(AudioSettings.path)
+	PlaytestSettings.save_enabled(true)
+	PlaytestSession.dir = freeze_sessions
+	PlaytestSession.current = null
+	PlaytestSession.last_filed = ""
+	return saved
+
+func _helper_off(saved: Dictionary) -> void:
+	DirAccess.remove_absolute(AudioSettings.path)
+	WargridTestRunner.remove_dir(freeze_sessions)
+	PlaytestSession.dir = saved.dir
+	PlaytestSession.current = null
+	PlaytestSession.last_filed = ""
+	AudioSettings.path = saved.audio
+
+func _filed_end(main) -> String:
+	return str(main._playtest._session.data.matches[-1].get("end", ""))
+
+func test_freeze_card_on_a_failed_pump(runner) -> bool:
+	var main = await _setup(runner)
+	var world: Dictionary = _frozen_arena(main)
+	var ids: Dictionary = world.ids
+	BaseScene.tick(main)
+	runner.check(not main.get_node("HUD/ResultPanel").visible and world.logs.is_empty(), "FN1 fixture: a healthy tick shows no card")
+	main.driver.submit({"type": "move", "entity_ids": [ids.tank], "target": [12.5, 12.5]})
+	world.pump.fail_next = true
+	BaseScene.tick(main)
+	runner.check(_freeze_shown(main), "FN1 the frame that meets the failure shows the freeze card")
+	runner.check(not main.get_node("HUD/Hud/Notice").visible, "FN1 the top-centre notice stays hidden")
+	runner.check(world.logs.size() == 1 and world.logs[0] == "SIM PUMP FAILED " + world.pump.failure(), "FN1 the failure is logged once, got %s" % [world.logs])
+	for i in 3: BaseScene.tick(main)
+	runner.check(world.logs.size() == 1, "FN1 later frames log nothing more, got %d" % world.logs.size())
+	var types := func() -> Array: return main.driver.queued().map(func(c: Dictionary) -> String: return c.type)
+	runner.check(types.call() == ["move"], "FN1 the refused post keeps the queued move, got %s" % [types.call()])
+	runner.check(main.driver.match_log().get("end", "") == "sim pump failed: " + world.pump.failure(), "FN1 the match log ends with the failure, got '%s'" % main.driver.match_log().get("end", ""))
+	main._reshow()
+	var refusal: String = main.hud.refusal
+	main.orders.selected_ids.assign([ids.infantry, ids.tank])
+	_push_key(main, KEY_S)
+	# U today, F once Task 9 moves Unload; either would refuse with several units selected.
+	for code: Key in [KEY_U, KEY_F]: _push_key(main, code)
+	main.orders.selected_ids.assign([ids.builder])
+	main._reshow()
+	_push_key(main, KEY_1)
+	runner.check(types.call() == ["move"] and not main.orders.busy() and main.hud.refusal == refusal, "FN1 keys behind the card reach no order, got %s busy %s refusal '%s'" % [types.call(), main.orders.busy(), main.hud.refusal])
+	runner.check(_freeze_shown(main) and _focus_owner(main) == main.get_node(COPY), "FN1 the card stays up with the focus on Copy report")
+	main.get_node(COPY).pressed.emit()
+	main._reshow()
+	runner.check(main.get_node(COPY).text == "Report copied" and _focus_owner(main) == main.get_node(COPY) and _freeze_shown(main), "FN1 a refresh after the copy keeps Report copied and the focus")
+	main.free()
+	return true
+
+func test_freeze_leave_reaches_the_launcher(runner) -> bool:
+	for way: String in ["Back to menu", "Esc then Back to main menu"]:
+		var saved: Dictionary = _helper_on()
+		var main = await _setup(runner)
+		var scenes: Array[String] = []
+		main.change_scene = func(path: String) -> void: scenes.append(path)
+		var world: Dictionary = _frozen_arena(main)
+		main.orders.selected_ids.assign([world.ids.builder])
+		main._reshow()
+		_push_key(main, KEY_1)
+		runner.check(main._playtest.is_active() and main.orders.busy() and not main.orders.selected_ids.is_empty(), "FN2 %s fixture: helper on, a unit selected, a placement armed" % way)
+		world.pump.fail_next = true
+		BaseScene.tick(main)
+		runner.check(_freeze_shown(main), "FN2 %s: the freeze card is up" % way)
+		if way == "Back to menu": main.get_node(CHANGE_SETUP).pressed.emit()
+		else:
+			main._show_esc_chip()
+			runner.check(main.get_node("HUD/MenuChip").find_child("EscChip", true, false).visible, "FN2 the Esc chip shows under the freeze card")
+			_push_key(main, KEY_ESCAPE)
+			runner.check(main._pause.visible, "FN2 one Esc opens the pause menu over the freeze card")
+			main._pause.leave_requested.emit()
+		runner.check(scenes == [main.LAUNCHER_SCENE], "FN2 %s reaches the launcher, got %s" % [way, scenes])
+		runner.check(_filed_end(main).begins_with("sim pump failed: post job returned no note"), "FN2 %s files the failure as the end, got '%s'" % [way, _filed_end(main)])
+		main.free()
+		_helper_off(saved)
+	return true
+
+func test_failure_first_met_while_leaving(runner) -> bool:
+	var saved: Dictionary = _helper_on()
+	var main = await _setup(runner)
+	main.change_scene = func(_path: String) -> void: pass
+	var world: Dictionary = _frozen_arena(main)
+	BaseScene.tick(main)
+	runner.check(main.driver.failure() == "" and not main.frozen(), "FN3 fixture: the pump is healthy before leaving")
+	world.pump.fail_next = true
+	main._pause.leave_requested.emit()
+	runner.check(main.driver.record().digest == "", "FN3 record() falls back once the query fails")
+	runner.check(_filed_end(main).begins_with("sim pump failed: query job returned no note"), "FN3 the failure met while filing is the filed end, got '%s'" % _filed_end(main))
+	runner.check(world.logs.size() == 1, "FN3 logged once, got %s" % [world.logs])
+	main.free()
+	_helper_off(saved)
+	return true
+
+func test_freeze_card_copy_and_layout(runner) -> bool:
+	var warn: Color = ThemeDB.get_project_theme().get_color(&"warn", &"Tokens")
+	var build: String = PlaytestSettings.build_id()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
+		var main = Scene.instantiate()
+		port.add_child(main)
+		main.set_physics_process(false)
+		main.set_process(false)
+		await runner.process_frame
+		var world: Dictionary = _frozen_arena(main)
+		world.pump.fail_next = true
+		BaseScene.tick(main)
+		await runner.process_frame
+		await runner.process_frame
+		runner.check(_freeze_shown(main), "FN4 the freeze card is up at %s" % size)
+		var screen := Rect2(Vector2.ZERO, Vector2(size))
+		var card_node: PanelContainer = main.get_node(CARD)
+		var card: Rect2 = card_node.get_global_rect()
+		runner.check(screen.encloses(card) and card.get_center().distance_to(screen.get_center()) <= 1.0, "FN4 the card is centred inside %s, got %s" % [size, card])
+		var styles: Array = [card_node.get_theme_stylebox("panel")]
+		for path: String in [COPY, CHANGE_SETUP]:
+			for state: String in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]: styles.append(main.get_node(path).get_theme_stylebox(state))
+		runner.check(styles.all(func(style: StyleBox) -> bool: return not style is StyleBoxFlat or [CORNER_TOP_LEFT, CORNER_TOP_RIGHT, CORNER_BOTTOM_LEFT, CORNER_BOTTOM_RIGHT].all(func(corner: int) -> bool: return (style as StyleBoxFlat).get_corner_radius(corner) == 0)), "FN4 square corners on the card and every button state at %s" % size)
+		var mark: Control = main.get_node(OUTCOME + "/Mark")
+		runner.check(mark.self_modulate == warn, "FN4 the mark is drawn in warn at %s, got %s" % [size, mark.self_modulate])
+		var content: Rect2 = card.grow(-24.0)
+		var copy: Rect2 = main.get_node(COPY).get_global_rect()
+		var setup: Rect2 = main.get_node(CHANGE_SETUP).get_global_rect()
+		runner.check(copy.end.x <= setup.position.x and absf(setup.end.x - content.end.x) <= 1.0 and content.encloses(copy) and content.encloses(setup), "FN4 Copy report left of Back to menu, both right-aligned in the card at %s, got %s %s in %s" % [size, copy, setup, content])
+		var cut: Array = main.get_node(CARD).find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree() and not content.encloses(label.get_global_rect()))
+		runner.check(cut.is_empty() and content.encloses(mark.get_global_rect()), "FN4 no label cut and the mark inside the card at %s, got %s" % [size, cut.map(func(label: Label) -> String: return label.name)])
+		runner.check(main.get_node(CHANGE_SETUP).theme_type_variation == &"PrimaryButton" and main.get_node(COPY).theme_type_variation == &"", "FN4 Back to menu is the primary button, Copy report the secondary at %s" % size)
+		runner.check(_focus_owner(main) == main.get_node(COPY), "FN4 Copy report holds the focus at %s" % size)
+		var above: float = main.get_node(CHANGE_SETUP).get_global_rect().position.y - main.get_node("HUD/ResultPanel/Center/Card/Box/Footer").get_global_rect().end.y
+		runner.check(absf(above - 24.0) <= 1.0, "FN4 24 px between the footer and the buttons at %s, got %.0f" % [size, above])
+		var footer: String = ResultPanel.footer_text(build, "skirmish")
+		runner.check(footer == "Version %s · skirmish" % build and main.get_node("HUD/ResultPanel/Center/Card/Box/Footer/Version").text == footer and main.get_node("HUD/ResultPanel/Center/Card/Box/Footer/Code").text == "GAME ERROR", "FN4 the footer reads the version and map at %s" % size)
+		main.get_node(COPY).pressed.emit()
+		var report: String = ResultPanel.report_text(world.pump.failure(), build, "skirmish", main.driver.current().tick)
+		var lines: PackedStringArray = report.split("\n")
+		runner.check(world.copied == [report] and lines.has("error: " + world.pump.failure()) and lines.has("version: " + build) and lines.has("map: skirmish") and lines.has("tick: %d" % main.driver.current().tick), "FN4 Copy report copies the report once at %s, got %s" % [size, world.copied])
+		runner.check(main.get_node(COPY).text == "Report copied" and main.get_node("HUD/ResultPanel/Center/Card/Box/Footer/Version").text == footer, "FN4 the button reads Report copied, the footer unchanged at %s" % size)
+		_push_enter(main)
+		runner.check(is_same(main.driver.pump, world.pump) and main.driver.failure() == world.pump.failure() and _freeze_shown(main) and world.copied.size() == 2, "FN4 Enter on Copy report copies again and never restarts at %s, copies %d" % [size, world.copied.size()])
+		main.driver.adopt(Skirmish.create(false))
+		runner.check(main.driver.failure() == "" and main.driver.notice() == "" and not main.frozen(), "FN4 a new world clears the failure at %s" % size)
+		port.queue_free()
+	runner.check(ResultPanel.footer_text("b", "dry_wells") == "Version b · Dry Wells", "FN4 the footer prints the launcher's map name, got '%s'" % ResultPanel.footer_text("b", "dry_wells"))
+	var won = await _setup(runner)
+	_arena(won)
+	_victory(won)
+	runner.check(won.get_node(OUTCOME).text == "Victory" and FREEZE_PARTS.all(func(path: String) -> bool: return not won.get_node(path).visible) and won.get_node(PLAY_AGAIN).visible, "FN4 the Victory card shows none of the freeze parts")
+	won.free()
+	return true
+
+func _push_shift_tab(main) -> void:
+	for pressed: bool in [true, false]:
+		var event := _enter(KEY_TAB)
+		event.shift_pressed = true
+		event.pressed = pressed
+		main.get_viewport().push_input(event)
+
+func _in_card(main) -> bool:
+	var focus: Control = _focus_owner(main)
+	return focus != null and main.get_node(CARD).is_ancestor_of(focus)
+
+func test_freeze_card_keeps_the_focus(runner) -> bool:
+	var main = await _setup(runner)
+	main.change_scene = func(_path: String) -> void: pass
+	var world: Dictionary = _frozen_arena(main)
+	main.orders.selected_ids.assign([world.ids.builder])
+	main._reshow()
+	var menu: GridContainer = main.find_child("BuildMenu", true, false)
+	runner.check(menu.get_child_count() > 0, "FN5 fixture: the builder's build buttons are up")
+	var field := LineEdit.new()
+	main.get_node("HUD").add_child(field)
+	field.grab_focus()
+	world.pump.fail_next = true
+	BaseScene.tick(main)
+	runner.check(_freeze_shown(main) and _focus_owner(main) == field, "FN5 fixture: a text field keeps the focus when the card comes up")
+	field.release_focus()
+	field.free()
+	main._reshow()
+	runner.check(_focus_owner(main) == main.get_node(COPY), "FN5 a refresh after the field lets go grabs Copy report")
+	for path: String in [COPY, CHANGE_SETUP]:
+		for code: Key in [KEY_TAB, KEY_BACKTAB, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]:
+			main.get_node(path).grab_focus()
+			if code == KEY_BACKTAB: _push_shift_tab(main)
+			else: _push_key(main, code)
+			runner.check(_in_card(main), "FN5 %s from %s stays in the card, got %s" % [OS.get_keycode_string(code), path.get_file(), _focus_owner(main)])
+	var refusal: String = main.hud.refusal
+	menu.get_child(0).grab_focus()
+	_push_enter(main)
+	main.orders._produce_selected()
+	main.orders._cancel_entry(1)
+	main.orders._cancel_build()
+	runner.check(main.driver.queued().is_empty() and not main.orders.busy() and main.hud.refusal == refusal, "FN5 build and queue buttons behind the card order nothing, got %s busy %s refusal '%s'" % [main.driver.queued(), main.orders.busy(), main.hud.refusal])
+	main.free()
+	return true
+
+func test_freeze_flush_keeps_the_queue(runner) -> bool:
+	var main = await _setup(runner)
+	var world: Dictionary = _frozen_arena(main)
+	main.driver.submit({"type": "stop", "entity_ids": [world.ids.tank]})
+	world.pump.fail_next = true
+	main.driver.flush()
+	runner.check(main.driver.queued().size() == 1 and main.driver.failure().begins_with("query job returned no note") and world.logs.size() == 1 and main.frozen(), "FN6 a failed flush keeps its order and reads the failure, got %s '%s' %s" % [main.driver.queued(), main.driver.failure(), world.logs])
 	main.free()
 	return true

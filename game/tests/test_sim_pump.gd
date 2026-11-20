@@ -7,6 +7,7 @@ const MapData = preload("res://scripts/simulation/map_data.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const CommandRecorder = preload("res://scripts/playtest/command_recorder.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const NullJobPump = preload("res://tests/failing_pump.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.gd")
 const Combat = preload("res://scripts/simulation/combat.gd")
@@ -38,12 +39,6 @@ class PairTransport extends RefCounted:
 	func silent(_now: int) -> bool: return false
 	func close() -> void: pass
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
-
-class NullJobPump extends SimPump:
-	var fail_next: bool = false
-	func _note_for(job: SimPump.Job, slot: SimPump.Slot) -> SimPump.Note:
-		if fail_next: return null
-		return super(job, slot)
 
 func cases() -> Array[Callable]:
 	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze]
@@ -200,12 +195,15 @@ func test_ph_fresh_slot_per_job(runner) -> bool:
 func test_ph_null_job_fails_pump(runner) -> bool:
 	var pump = NullJobPump.new(_sim())
 	pump.start()
-	pump.post(_job())
+	runner.check(pump.failure() == "", "PH a healthy pump reports no failure")
+	pump.post(_job([_move(_own_unit(pump.live()))]))
 	pump.drain()
 	var shown = pump.current()
 	runner.check(pump.post(_job()), "PH a good job before the failure is accepted")
 	pump.fail_next = true
 	runner.check(not pump.post(_job()), "PH a null job is refused")
+	var reason: String = pump.failure()
+	runner.check(reason.begins_with("post job returned no note after tick"), "PH the refused post names its failure, got '%s'" % reason)
 	runner.check(pump.drain().size() == 1, "PH notes filed before the failure still drain")
 	runner.check(pump.current().tick == shown.tick + 1, "PH a null job publishes nothing")
 	pump.fail_next = false
@@ -213,12 +211,27 @@ func test_ph_null_job_fails_pump(runner) -> bool:
 	var kept_tick: int = pump.live().tick()
 	runner.check(not pump.post(_job()) and pump.drain().is_empty(), "PH a failed pump refuses every later post")
 	runner.check(pump.live().tick() == kept_tick and is_same(pump.current(), shown_after), "PH a refused post on a failed pump steps nothing, got tick %d" % pump.live().tick())
+	pump.fail_next = true
+	pump.query(_job())
+	pump.fail_next = false
+	runner.check(pump.failure() == reason, "PH a later failure keeps the first reason, got '%s'" % pump.failure())
+	var record: Dictionary = pump.record()
+	runner.check(record.digest == "" and record.tick == pump.current().tick and record.commands.size() == 1 and record.commands[0].type == "move", "PH record() on a failed pump falls back to the shown tick and the kept commands, got %s" % [record])
+	runner.check(record.match == pump.current().view.match, "PH the fallback record carries the shown match")
 	var queried = NullJobPump.new(_sim())
 	queried.start()
 	queried.fail_next = true
 	var answer = queried.query(_job())
 	queried.fail_next = false
 	runner.check(answer == null and not queried.post(_job()), "PH a null query fails the pump")
+	runner.check(queried.failure().begins_with("query job returned no note after tick"), "PH the failed query names its failure, got '%s'" % queried.failure())
+	var stopped = NullJobPump.new(_sim())
+	stopped.start()
+	stopped.stop()
+	runner.check(stopped.failure() == "" and not stopped.post(_job()) and stopped.failure() == "", "PH stop() alone sets no failure")
+	stopped.fail_next = true
+	var filed: Dictionary = stopped.record()
+	runner.check(stopped.failure().begins_with("query job returned no note after tick") and filed.digest == "" and filed.tick == stopped.current().tick, "PH a failure first met by record() after stop() is kept and falls back, got '%s' %s" % [stopped.failure(), filed])
 	return true
 
 func test_sb3_sequence_stamp(runner) -> bool:

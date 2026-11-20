@@ -99,7 +99,8 @@ SCAN_EXCLUDED = (
 PUMP_ACCESS = re.compile(r"\.pump\b(?:\s*\.\s*\w+)?|\bpump\s*\.\s*\w+|\bget\(\s*[\"']pump[\"']\s*\)")
 PUMP_FILE = "game/scripts/match/sim_pump.gd"
 PUMP_COUNTS: dict[str, int] = {
-    "game/scripts/match/offline_driver.gd": 9,
+    # +1: _read_failure() reads pump.failure() for the freeze card (P2.3a1 Task 8).
+    "game/scripts/match/offline_driver.gd": 10,
     "game/scripts/match/online_driver.gd": 9,
 }
 

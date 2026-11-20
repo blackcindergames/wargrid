@@ -92,7 +92,7 @@ Drawn as the plan gives it:
 - The `Esc` chip shows only when Esc would open the menu: hidden with a selection, an inspection, a placement or the note form open; shown under the freeze card.
 - The checklist, the note form and F3 keep today's Godot control look at 12 px with square corners (owner question 4), approximated from Godot's default fills; Public Sans because the one theme sets it. The focus cards are shipped ones (`Play again`, and `Every order heard` for the worst case), not P2.3a1's own card; the F3 figures are illustrative.
 - A held kind row is drawn with the `quiet` fill and muted text and an empty bar (agent pick for "greyed"); the header counts the live selection while six rows hold.
-- The freeze card takes `result_panel.gd`'s card: dim black at 0.6, `#2a2a2a` fill, 1 px `#808080` border, padding 24, title 30 px ExtraBold, body 15 px `#d4d4d4`, buttons 15 px at least 144x36 with padding 12/4 and 12 apart, the primary in the launcher's amber `PrimaryButton` look, the secondary in its `Button` field look, the focus ring 2 px `#e6e6e6` 4 px out; corners square.
+- The freeze card takes `result_panel.gd`'s card: dim black at 0.6, `#2a2a2a` fill, 1 px `#808080` border, padding 24, title 30 px ExtraBold, body 16 px `#d4d4d4`, buttons 15 px at least 144x36 with padding 12/4 and 12 apart, the primary in the launcher's amber `PrimaryButton` look, the secondary in its `Button` field look, the focus ring 2 px `#e6e6e6` 4 px out; corners square.
 
 Agent picks (not in the answers; owner may change them):
 

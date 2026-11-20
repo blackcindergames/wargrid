@@ -32,7 +32,7 @@ func _init(screen: Node) -> void:
 	_screen = screen
 
 func handle(event: InputEvent) -> void:
-	if _screen.shown_over() or _screen._playtest.holds_match():
+	if _screen.shown_over() or _screen.frozen() or _screen._playtest.holds_match():
 		return
 	if event.is_action_pressed("deselect"): inspected_id = -1
 	if _placement_kind.is_empty() and _combat_input(event): return
@@ -277,6 +277,7 @@ func _hint_point(payload: Dictionary) -> Variant:
 	return Vector2(building.origin[0],building.origin[1]) + Vector2(Definitions.building(building.kind).footprint) / 2.0
 
 func _menu_choose(index: int, from_key: bool) -> void:
+	if _screen.frozen(): return
 	var kind: String = menu[index]
 	if selected_building_id != -1: _screen._submit({"type":"produce","building_id":selected_building_id,"unit_kind":kind})
 	elif from_key and is_selecting(): _pending_placement = kind
@@ -383,6 +384,7 @@ func _set_rally(plane: Vector2) -> bool:
 	return true
 
 func _produce_selected() -> void:
+	if _screen.frozen(): return
 	var state: Dictionary = _screen.shown_state
 	var building: Dictionary = _screen._building(state,selected_building_id)
 	if building.is_empty():
@@ -393,9 +395,11 @@ func _produce_selected() -> void:
 	_screen._submit({"type":"produce","building_id":building.id,"unit_kind":_screen._production_kind(building, state)})
 
 func _cancel_entry(id: int) -> void:
+	if _screen.frozen(): return
 	_screen._submit({"type":"cancel_production","building_id":selected_building_id,"production_id":id})
 
 func _cancel_build() -> void:
+	if _screen.frozen(): return
 	_screen._submit({"type":"cancel_build","building_id":selected_building_id})
 
 func _ground(event: InputEventMouseButton) -> Vector2:

@@ -172,7 +172,10 @@ func playtest_header() -> Dictionary:
 	return _header(played.mode, played.factions)
 
 func _header(mode: String, match_factions: Array) -> Dictionary:
-	return {"mode": mode, "map": map_path.get_file().get_basename(), "seed": match_seed, "factions": match_factions, "seat": local_player, "build": PlaytestSettings.build_id()}
+	return {"mode": mode, "map": _map_id(), "seed": match_seed, "factions": match_factions, "seat": local_player, "build": PlaytestSettings.build_id()}
+
+func _map_id() -> String:
+	return map_path.get_file().get_basename()
 
 func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
 	var record: Dictionary = driver.record()
@@ -192,7 +195,11 @@ func menu_open() -> bool:
 	return _pause.visible or _playtest.holds_match()
 
 func _escape_pending() -> bool:
-	return not shown_over() and orders.escape_pending()
+	return not shown_over() and not frozen() and orders.escape_pending()
+
+# Only the offline driver ever returns the freeze notice, so failure() is read only then.
+func frozen() -> bool:
+	return driver.notice() == OfflineDriver.FREEZE_NOTICE
 
 func _leave() -> void:
 	if _leaving: return
@@ -358,7 +365,8 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	hud.update_hud(state, _hud_selection(state), local_player, local_player)
 	orders.menu = hud.menu_kinds
 	_view.set_inspected(orders.inspected_id)
-	_show_result(state)
+	if frozen(): _show_freeze()
+	else: _show_result(state)
 	if fresh: _sound.update(state)
 	Profiler.end(&"refresh.hud", zone)
 	if fresh: stepped_results.clear()
@@ -375,7 +383,7 @@ func _take_results(state: Dictionary) -> void:
 func _hud_selection(state: Dictionary) -> Dictionary:
 	var building: Dictionary = _building(state, orders.selected_building_id)
 	var production: String = _production_kind(building, state) if not building.is_empty() else ""
-	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() else driver.notice(), "production_kind": production, "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty(), "esc_opens_menu": esc_opens_menu()}
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "production_kind": production, "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty(), "esc_opens_menu": esc_opens_menu()}
 
 func _result(state: Dictionary) -> String:
 	var result: String = "" if state.match == null else _result_text(state.match)
@@ -387,6 +395,10 @@ func _show_result(state: Dictionary) -> void:
 	if not result.is_empty(): rows = _result_rows(state)
 	var length: String = ResultPanel.length_text(state.tick, Engine.physics_ticks_per_second) if not result.is_empty() else ""
 	_result_panel.show_result(result, driver.rematch_line(), driver.can_play_again(), rows, length, driver.rematch_pending(), driver.friend_wants_rematch())
+
+func _show_freeze() -> void:
+	var build: String = PlaytestSettings.build_id()
+	_result_panel.show_freeze(ResultPanel.report_text(driver.failure(), build, _map_id(), driver.current().tick), ResultPanel.footer_text(build, _map_id()))
 
 func _result_rows(state: Dictionary) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
