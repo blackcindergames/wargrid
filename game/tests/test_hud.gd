@@ -886,7 +886,7 @@ func test_floor_follows_a_resize(runner) -> bool:
 # A nine-entry queue on the factory, set on the shown view only.
 static func _nine(main, factory: int) -> void:
 	var entries: Array = []
-	for i in 9: entries.append({"id": 900 + i, "kind": ["china_tank", "china_light_vehicle"][i % 2], "paid_cost": 800, "work": 336000 if i == 0 else 0})
+	for i in 9: entries.append({"id": 900 + i, "kind": ["china_tank", "china_light_vehicle"][i % 2], "paid_cost": 800, "work": 126000 if i == 0 else 0})
 	var view: Dictionary = main.driver.current().view
 	HudModel.building(view, factory).queue = entries
 	main._show(view)
@@ -1164,7 +1164,7 @@ func _crosshair(runner) -> void:
 		var expected: int = Input.CURSOR_CROSS if entry[3] else Input.CURSOR_ARROW
 		runner.check(entry[1] == expected and entry[2] == entry[3], "SL4 %s %s: cursor %d, armed %s, got %s" % ["armed before" if entry[3] else "after", entry[0], expected, entry[3], entry])
 
-static func _queue_of(main, factory: int, count: int, first_work: int = 336000) -> void:
+static func _queue_of(main, factory: int, count: int, first_work: int = 126000) -> void:
 	var entries: Array = []
 	for i in count: entries.append({"id": 900 + i, "kind": "china_tank", "paid_cost": 800, "work": first_work if i == 0 else 0})
 	var view: Dictionary = main.driver.current().view
