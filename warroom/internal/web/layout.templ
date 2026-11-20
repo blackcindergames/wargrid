@@ -1,0 +1,143 @@
+package web
+
+import (
+	"strings"
+
+	"wargrid/warroom/internal/stage"
+)
+
+// PageView is what one page puts inside #view: the problems found loading the rounds, the step chips and the page itself.
+type PageView struct {
+	Errors  []string
+	Cvd     string
+	True100 bool
+	Chips   []Chip
+	Body    templ.Component
+	Phone   *PhoneView
+	Legend  LegendView
+	Keys    bool
+	// ReadOnly shows the notice; the pick and note controls are left out by the templates (isReadOnly).
+	ReadOnly bool
+}
+
+// ShotView is the page of ?shot=1: one picture alone on black.
+type ShotView struct {
+	Cvd string
+	Pic PicView
+}
+
+func cvdMatrix(m *stage.Matrix) string {
+	f := func(a []float64) string {
+		parts := make([]string, len(a))
+		for i, v := range a {
+			parts[i] = num(v)
+		}
+		return strings.Join(parts, " ")
+	}
+	return f(m[0:3]) + " 0 0 " + f(m[3:6]) + " 0 0 " + f(m[6:9]) + " 0 0 0 0 0 1 0"
+}
+
+templ CvdFilters() {
+	<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+		<filter id="dp-deut" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values={ cvdMatrix(stage.Deuteranopia) }></feColorMatrix></filter>
+		<filter id="dp-prot" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values={ cvdMatrix(stage.Protanopia) }></feColorMatrix></filter>
+	</svg>
+}
+
+templ ChipLink(c Chip) {
+	<a
+		class={ "chip btn", templ.KV("on", c.On), templ.KV("done", c.Done), templ.KV("er", c.Earlier) }
+		href={ templ.SafeURL(c.Href) }
+		if c.StepKey != "" {
+			data-step={ c.StepKey }
+		}
+		if c.On {
+			aria-current="step"
+		}
+	>{ c.Label }</a>
+}
+
+templ pageHead(title string) {
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
+	<title>{ title }</title>
+	<link rel="stylesheet" href="/static/app.css"/>
+}
+
+templ Shell(p PageView) {
+	<div id="view" class={ "view", templ.KV("true100", p.True100) } data-cvd={ p.Cvd }>
+		if len(p.Errors) > 0 {
+			<div id="err" role="alert">{ strings.Join(p.Errors, "\n") }</div>
+		}
+		if p.ReadOnly {
+			<p id="readonly" role="status">{ readOnlyNotice }</p>
+		}
+		if len(p.Chips) > 0 {
+			<header class="top">
+				<nav id="chips" class="chips" aria-label="Steps">
+					for _, c := range p.Chips {
+						@ChipLink(c)
+					}
+				</nav>
+			</header>
+		}
+		@p.Body
+		<div id="phone" class="phone">
+			if p.Phone != nil {
+				@PhoneBar(*p.Phone)
+			}
+		</div>
+		<div id="legend" hidden?={ !p.Keys }>
+			@LegendBox(p.Legend)
+		</div>
+	</div>
+}
+
+// Fragment is what a htmx request for #page gets: the new title and the page's inside.
+templ Fragment(title string, p PageView) {
+	<title>{ title }</title>
+	@Shell(p)
+}
+
+// Document's inline script sends a phone-sized first load to the same page with phone=1, which the server answers with the phone crops.
+templ Document(title string, p PageView) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			@pageHead(title)
+			<script>if(matchMedia("(max-width:900px),(pointer:coarse)").matches&&!/[?&](phone|shot)=1/.test(location.search)){const u=new URL(location.href);u.searchParams.set("phone","1");location.replace(u)}</script>
+			<script src="/static/htmx.min.js" defer></script>
+			<script src="/static/warroom.js" defer></script>
+			<script type="module" src="/static/islands.js"></script>
+		</head>
+		<body
+			hx-boost:inherited="true"
+			hx-target:inherited="#page"
+			hx-status:4xx:inherited="swap:none"
+			hx-status:5xx:inherited="swap:none"
+		>
+			<div id="flash" role="alert" hidden></div>
+			<div id="toast" role="status" hidden></div>
+			<div id="page">
+				@Shell(p)
+			</div>
+			<div id="over" hidden></div>
+			@CvdFilters()
+		</body>
+	</html>
+}
+
+templ ShotDocument(v ShotView) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			@pageHead("shot")
+		</head>
+		<body class="shot">
+			<div id="view" data-cvd={ v.Cvd }>
+				@Picture(v.Pic)
+			</div>
+			@CvdFilters()
+		</body>
+	</html>
+}

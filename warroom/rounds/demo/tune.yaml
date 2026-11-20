@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: tune
+question: Which outline weight and unit size read best?
+why: >-
+  A tune step: move the sliders and the picture on the left redraws at once, without reloading. The values
+  you leave are recorded as a preset. The target is the demo scene (control wiring, not game art).
+look: 'Where to look: the unit boxes in the middle, at the edges where they meet the ground.'
+neutral: None of these
+target:
+  page: static/demo/scene.html
+  w: 1280
+  h: 720
+  hash: shot=1
+params:
+- {id: outline, label: Outline, min: 0, max: 4, step: 0.5, value: 1}
+- {id: unit, label: Unit size, min: 0.5, max: 2, step: 0.1, value: 1}
+- {id: you, label: Owner colour, color: '#376eac'}
+- {id: ground, label: Ground, values: [sand, dark], value: sand}

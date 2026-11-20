@@ -1,0 +1,344 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Controls": {
+      "properties": {
+        "size": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "fit": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "ground": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "world": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "zoom": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "hud": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "state": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "tier": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "owner": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "set": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "heading": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "cvd": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "marker": {
+          "oneOf": [
+            {
+              "const": true
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "extra": {
+          "items": {
+            "$ref": "#/$defs/ExtraControl"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Crop": {
+      "properties": {
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "w": {
+          "type": "integer"
+        },
+        "h": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ExtraControl": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "param": {
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/ExtraValue"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ExtraValue": {
+      "properties": {
+        "v": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Mark": {
+      "properties": {
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "w": {
+          "type": "integer"
+        },
+        "h": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        },
+        "below": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Render": {
+      "properties": {
+        "page": {
+          "type": "string"
+        },
+        "w": {
+          "type": "integer"
+        },
+        "h": {
+          "type": "integer"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "pass": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "state": {
+          "type": "string"
+        },
+        "crop": {
+          "$ref": "#/$defs/Crop"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  "properties": {
+    "prefix": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "intro": {
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "earlier": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "render": {
+      "$ref": "#/$defs/Render"
+    },
+    "controls": {
+      "$ref": "#/$defs/Controls"
+    },
+    "advisory": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object"
+}

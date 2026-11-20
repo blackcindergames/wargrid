@@ -98,7 +98,9 @@ addEventListener('error', e => { err.textContent += `${e.message} (${(e.filename
 addEventListener('unhandledrejection', e => { err.textContent += `${e.reason}\n`; });
 
 // Values: docs/reference/hud-v5-layout.md and the P2.3a design (P2.3a1 sections); names, costs, health and power from game/scripts/simulation/definitions/.
-const W = 1280, H = 720;
+// Decision page window sizes: #size=1280x800 or 1720x720 lays the HUD out at that logical size; anything else is 1280x720.
+const SIZE_ = /^(1280)x(800)$|^(1720)x(720)$/.exec(new URLSearchParams(location.hash.slice(1)).get('size') || '');
+const W = SIZE_ ? +(SIZE_[1] || SIZE_[3]) : 1280, H = SIZE_ ? +(SIZE_[2] || SIZE_[4]) : 720;
 const TOKENS = {bg: '#121c24', btn: '#223241', panel2: '#26384a', quiet: '#16212a', well: '#0c141a', line: '#2e3f4b', text: '#eef3f5', muted: '#93a5b0',
   sel: '#60e5ed', amber: '#f7c871', warn: '#f47b6c', you: '#628ffa', enemy: '#d6120c', r: '0'};
 const SLAB_W = 432, SEL_W = 408, STACK_TOP = 88, CHECKLIST_W = 320, DIALOG_W = 360;
@@ -580,13 +582,22 @@ function layoutAll() {
 }
 
 const H_ = new URLSearchParams(location.hash.slice(1));
+// Decision page stage controls, all optional: &world=<backdrop> (worlds/w-<name>.png), &ground=dark|none (none: transparent, for a HUD layer over another picture), &hud=0, &you=<hex> (owner colour).
+function shotExtras(stage, scale) {
+  const world = H_.get('world'), ground = H_.get('ground'), you = H_.get('you'), hudEl = stage.querySelector('.hud');
+  if (ground === 'dark') stage.style.background = '#7b7566';
+  if (ground === 'none') { stage.style.background = 'transparent'; document.body.style.background = 'transparent'; document.documentElement.style.background = 'transparent'; }
+  if (world && /^[a-z]+$/.test(world)) stage.insertAdjacentHTML('afterbegin', `<img alt="" src="worlds/w-${world}.png" style="position:absolute;left:0;top:0;width:${W * scale}px" onerror="err.textContent += 'no backdrop worlds/w-${world}.png\\n'; this.remove()">`);
+  if (you && /^[0-9a-f]{6}$/i.test(you) && hudEl) hudEl.style.setProperty('--you', '#' + you);
+}
 if (H_.has('shot')) {
   const state = H_.get('shot'), scale = +(H_.get('scale') || 2), size = H_.get('size') || '720';
-  if (size !== '720') err.textContent += `size=${size}: this page draws the 1280x720 layout only (size=720)\n`;
+  if (size !== '720' && !SIZE_) err.textContent += `size=${size}: this page draws 720 (1280x720), 1280x800 or 1720x720\n`;
   if (!STATES[state]) err.textContent += `unknown state ${state}\n`;
   document.body.style.cssText = 'overflow:hidden;background:#000';
   app.style.padding = '0';
-  app.innerHTML = `<div class="stage" style="width:${W * scale}px;height:${H * scale}px">${hudHtml(state, scale)}</div>`;
+  app.innerHTML = `<div class="stage" style="width:${W * scale}px;height:${H * scale}px">${H_.get('hud') === '0' ? '' : hudHtml(state, scale)}</div>`;
+  shotExtras(app.querySelector('.stage'), scale);
   // Round 2 gate page: #cvd=deut|prot shows the state as Machado 2009 (severity 1) deuteranopia or protanopia, on linear RGB.
   const cvd = {deut: '0.367322 0.860646 -0.227968 0 0 0.280085 0.672501 0.047413 0 0 -0.011820 0.042940 0.968881 0 0 0 0 0 1 0',
     prot: '0.152286 1.052583 -0.204868 0 0 0.114503 0.786281 0.099216 0 0 -0.003882 -0.048116 1.051998 0 0 0 0 0 1 0'}[H_.get('cvd')];
@@ -595,7 +606,7 @@ if (H_.has('shot')) {
     app.querySelector('.stage').style.filter = 'url(#cvd)';
   }
   layoutAll();
-  document.fonts.ready.then(() => { layoutAll(); audit(app.querySelector('.hud')).forEach(p => { err.textContent += `layout: ${p}\n`; }); });
+  document.fonts.ready.then(() => { layoutAll(); if (app.querySelector('.hud')) audit(app.querySelector('.hud')).forEach(p => { err.textContent += `layout: ${p}\n`; }); });
 } else {
   app.innerHTML = Object.keys(STATES).map(s => `<h2>${s} <a style="color:#60e5ed;font-size:13px" href="#shot=${s}&size=720&scale=2" onclick="setTimeout(()=>location.reload())">2x</a></h2><div class="frame"><div class="stage" style="width:${W}px;height:${H}px">${hudHtml(s, 1)}</div></div>`).join('');
   layoutAll();

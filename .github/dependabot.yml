@@ -28,3 +28,30 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+  - package-ecosystem: gomod
+    directory: /warroom
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      warroom-go:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /warroom/islands
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      warroom-npm:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /warroom/fly
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      warroom-docker:
+        patterns: ["*"]

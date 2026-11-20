@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: Which click sound?
+why: >-
+  An audio step: nothing plays on its own; Play or Space plays the shown option, and it stops when you
+  flip or leave.
+rec: A
+neutral: Can't tell them apart
+view: side
+options:
+  A:
+    name: Click
+    audio: game/audio/sfx/click.wav
+    level: short UI click
+    notes: The game's click.
+  B:
+    name: Error
+    audio: game/audio/sfx/error.wav
+    level: refusal tone
+    notes: The refusal sound, as a contrast.

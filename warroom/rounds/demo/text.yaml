@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: text
+question: Which wording for the card question?
+why: 'A text step: the options are words, shown in their frame.'
+rec: A
+neutral: Neither
+view: side
+card:
+  title: Playtest card
+  lines:
+  - I could always tell what I had selected
+  - null
+  - The HUD never swallowed a click
+  foot: 1 strongly disagree … 5 strongly agree
+options:
+  A:
+    name: Short
+    text: Numbers read at a glance
+    notes: One question, one answer.
+  B:
+    name: Long
+    text: Credits, power and health read at a glance
+    notes: Covers more, says less.

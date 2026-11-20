@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: When does Unload (F) show?
+why: >-
+  Gate A said Unload shows while an own loaded container is selected. The game knows exactly when a Tunnel
+  Hub holds units; for a Scout Car or Armed Pickup it only knows that some own unit sits inside some container,
+  not which one. An empty container accepts the click and nothing happens, with no refusal.
+look: >-
+  Where to look: the bottom right, an empty Scout Car's order row and an empty Tunnel Hub above it. A
+  click on a picture shows the whole screen (on a phone: View, Whole screen).
+rec: A
+crop: {x: 840, y: 410, w: 440, h: 310}
+ref:
+  label: Loaded, the same in A, B and C
+  render: {state: unload-loaded}
+options:
+  A:
+    name: Hidden while empty
+    render: {state: unload-empty-hidden}
+    notes: >-
+      Tunnel Hub: only while units are inside (exact). Scout Car or Armed Pickup: only while some own
+      unit is inside any container, so with passengers in another container an empty car still shows it
+      (a dead click in that rare case). No simulation change; the order row loses a line when the car
+      empties.
+  B:
+    name: Greyed while empty
+    render: {state: unload-empty-greyed}
+    notes: >-
+      The same rule, but the button stays: muted text on the quiet fill, key still printed. Zero Hour
+      greys Evacuate on an empty container (ControlBarCommand.cpp:1375-1380 @ afc2a103f); matches "key
+      chip on disabled commands too" and P2.3b's fixed cells. The row never changes height; an empty hub
+      keeps a one-button slab.
+  C:
+    name: Always shown
+    render: {state: unload-empty-always}
+    notes: >-
+      Every own completed container shows it, loaded or not (the plan before gate A). Least code; on an
+      empty one the click is accepted and does nothing, with no refusal (containers.gd:39-41).
