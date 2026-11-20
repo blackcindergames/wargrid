@@ -54,6 +54,14 @@ Read first: `docs/art-direction/ART_DIRECTION.md` (§12 interface mock-ups: the 
 8. Caps that would stop all recording (architecture check, 2026-11-20): when `picks.jsonl` reaches its cap, rename it aside (`picks-<UTC timestamp>.jsonl`) and start a new file instead of refusing writes, and raise the cap to 64 MiB; `maxKeys` counts per round prefix (500 per round) instead of over all rounds. Tests.
 9. Picks record the picked option's name: optional `name` on the store entry, set by the pick handler for option letters, so a later edit of a step's options cannot silently change what an old "B" meant. Old entries stay valid.
 10. In container mode (`WARROOM_RUN_AS` set) refuse to start without `WARROOM_SECRET`, so a deploy can never go out fully open.
+11. From the independent review of 76ca1840 (2026-11-20), each with a test:
+   - `warroom.js` `onKey`: ignore key-repeat for Enter (`e.repeat`), so a held Enter cannot chain picks across steps.
+   - Summary after the last pick over htmx shows "changed N times" (`answered` loads the history counts like `summary()`).
+   - `maxBody` 64 KiB, so a 4000-character note in any script fits; the 400 says which limit.
+   - `writeAtomic` syncs the directory after the rename.
+   - Load error when two rounds share a `prefix` (the write token is scoped per round, keys per prefix).
+   - The history cap item 8 above: when full, rotate (never block the state write); 507 messages name the limit hit.
+12. Reads without a token (user, 2026-11-20): a link without a valid token shows rounds, questions and pictures but no answers: picks, notes, wording texts, tune values and the summary's pick/note cells are left out (the summary lists questions only). README corrected ("reads of answers need a token"). Writer identity stays out: only the owner writes for now (user, 2026-11-20); a voter name in the token scope plus a `by` field in history come if friends ever vote.
 7. Minify the island bundle (`build.minify` in `islands/vite.config.js`; it ships unminified at about 219 KB).
 
 ## Task D: browser tests (playwright-go)
