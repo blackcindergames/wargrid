@@ -313,7 +313,8 @@ func test_draw_call_ceiling(runner) -> bool:
 	runner.check(bench.draw_call_failure("ashfall", 60.0) == "", "BM12 ashfall at ceiling passes")
 	runner.check(bench.draw_call_failure("ashfall", 61.0) != "", "BM12 ashfall over ceiling fails")
 	runner.check(bench.draw_call_failure("nope", 1.0) != "", "BM12 layout without ceiling fails loudly")
-	runner.check(bench.draw_call_failure("hud_select", 1.0) != "", "BM12 hud_select has no ceiling until stop gate B measures one")
+	runner.check(bench.draw_call_failure("hud_select", 30.0) == "", "BM12 hud_select at ceiling passes")
+	runner.check(bench.draw_call_failure("hud_select", 31.0) != "", "BM12 hud_select over ceiling fails")
 	return true
 
 func test_cpu_frame_pairs_draw_with_its_tick(runner) -> bool:

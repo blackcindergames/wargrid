@@ -13,7 +13,8 @@ const Hud = preload("res://scripts/match/hud.gd")
 # New with the ashfall layout (R2): worst of six rendered runs 3.02 ms plus about 50%. No ceiling exists for the other layouts.
 const ASHFALL_FRAME_P95_MS: float = 3.3
 # Fixed ceilings on max draw calls per frame in the sample window; never raised to pass.
-const DRAW_CALL_CEILINGS: Dictionary = {"open": 50, "dense": 50, "horde": 50, "ashfall": 60}
+# hud_select: 1.5 x the stop gate B scratch maximum of 20 (both window sizes), rounded up to 10.
+const DRAW_CALL_CEILINGS: Dictionary = {"open": 50, "dense": 50, "horde": 50, "ashfall": 60, "hud_select": 30}
 const LAYOUTS: Array[String] = ["open", "dense", "ashfall", "horde"]
 const HUD_LAYOUT: String = "hud_select"
 const HUD_SELECTED: int = 120
