@@ -33,8 +33,6 @@ jobs:
           version: v2.15.0
           install-mode: goinstall # builds via proxy.golang.org instead of a GitHub release download
           install-only: true
-      - run: npm ci
-        working-directory: warroom/islands
       - run: sh tools/quality.sh
         working-directory: warroom
   browser:

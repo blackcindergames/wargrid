@@ -219,8 +219,7 @@ sh tools/quality.sh               # the whole gate, in this order:
 #   go vet -tags browser ./... ; golangci-lint run --build-tags browser   (config .golangci.yml, a copy of relay's)
 #   go test -race ./... ; go tool govulncheck ./...
 #   sh tools/check_generated.sh   (regenerates into a temp copy; fails when the committed output differs)
-#   node --check internal/web/static/warroom.js
-#   npm run quality in islands/   (format:check, lint, check, build)
+#   npm ci; npm run quality in islands/   (format:check, lint, check: tsc also parses warroom.js)
 ```
 
 `.github/workflows/warroom.yml` runs `sh tools/quality.sh` as job `quality` and then the browser tests in Firefox as job `browser`, on pushes and pull requests that touch `warroom/**`. The browser tests (next section) run apart from `quality.sh`; `tools/run_checks.sh` does not call it.

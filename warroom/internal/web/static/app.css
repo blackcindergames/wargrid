@@ -193,8 +193,7 @@
     &.done { border-color: var(--amber); }
     &.sel { border-color: var(--sel); }
     > .pick { margin-top: auto; align-self: flex-start; }
-    /* Amber only on the pick Enter would press: the shown tile's. */
-    /* A muted edge, 6.8:1 on the tile: --btn (1.3:1) and --line (1.6:1) would leave the button without a visible boundary. */
+    /* Amber only on the pick Enter presses; the muted edge (6.8:1) keeps the others visible as buttons. */
     &:not(.sel) > .pick { color: var(--text); background: var(--quiet); border-color: var(--muted); font-weight: 600; &:hover { background: var(--btn); } }
     details summary { color: var(--muted); font-size: var(--row); }
     &.reft { border-style: dashed; }

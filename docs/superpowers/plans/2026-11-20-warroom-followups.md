@@ -15,7 +15,7 @@ Sessions (user, 2026-11-20: split into several sessions with a handoff between t
 
 Each session starts by reading `warroom-prompt.txt`, this plan and `warroom/README.md`, and runs `sh warroom/tools/check_generated.sh` plus `go test ./...` in `warroom/` before new work. A session stops at its row even if time is left.
 
-Run order: strictly after `2026-11-20-warroom-tune-spike.md` is done: Task 0, A, B, C, D, G, E, F, one task at a time (all touch the same files). Each task ends green: in `warroom/` `go test -race ./...`, `go vet ./...`, `golangci-lint run`, `sh tools/check_generated.sh`, `node --check internal/web/static/warroom.js`. Ports 8767-8772 off limits. Never commit, push or run fly (the coordinator commits on approval).
+Run order: strictly after `2026-11-20-warroom-tune-spike.md` is done: Task 0, A, B, C, D, G, E, F, one task at a time (all touch the same files). Each task ends green: in `warroom/` `go test -race ./...`, `go vet ./...`, `golangci-lint run`, `sh tools/check_generated.sh` (from Task G: `sh tools/quality.sh`). Ports 8767-8772 off limits. Never commit, push or run fly (the coordinator commits on approval).
 
 ## Task 0: packages, shutdown, container (first, before A)
 
@@ -91,6 +91,8 @@ Done 2026-11-20: `warroom/tools/quality.sh` and `.github/workflows/warroom.yml` 
 ## Task E: remove the prototype, docs, reviews
 
 Delete `tools/decision_page/` and its references (`tools/pyproject.toml` mypy path, `tools/run_python_checks.sh` if it lists it, `docs/images/hud-v5/source/README.md` pointer, `shoot.sh` mentions); `sh tools/run_python_checks.sh`, `sh tools/run_shell_checks.sh`, `sh tools/check_public.sh` exit 0. README brought current (routes, tokens, history, schema, dev loop, CSS layers, key map, learning notes on ServeMux patterns). Then one Opus correctness/security reviewer on the whole batch, the player-experience reviewer on the UI parts, one fix round, a lean pass.
+
+Done 2026-11-20: prototype deleted (064f8af4); Opus correctness review (4 should-fix, 7 nits) and PX review (ready with follow-ups) fixed in one round (8b548fc9), each behaviour fix with a test proven red; lean pass cut the second build and `npm ci` from the gate. Left open: summary reads the whole history under the store lock (fine below the 64 MiB cap), symlinks inside the served trees, the fix round had no second review; PX owner questions go to Task F's questionnaire.
 
 ## Task F: workflow docs point at War Room (after E)
 

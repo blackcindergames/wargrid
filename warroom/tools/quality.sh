@@ -9,7 +9,6 @@ golangci-lint run --build-tags browser
 go test -race ./...
 go tool govulncheck ./...
 sh tools/check_generated.sh
-node --check internal/web/static/warroom.js
 
 cd islands
 npm ci
