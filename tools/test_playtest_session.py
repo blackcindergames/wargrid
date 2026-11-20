@@ -157,12 +157,14 @@ class PlaytestSessionTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("unsupported session format", err.getvalue())
 
-    def _replay(self, client_exit, extra=""):
+    def _replay(self, client_exit, extra="", rows=None, final="aa"):
         one = session()
         one["matches"] = one["matches"][:1]
+        if rows is not None:
+            one["matches"][0]["tick_hashes"] = rows
         self.path.write_text(json.dumps(one))
         fake = Path(self._tmp.name) / "fake_client.sh"
-        fake.write_text(f"#!/bin/sh\necho 'ORACLE FINAL 60 aa'\n{extra}exit {client_exit}\n")
+        fake.write_text(f"#!/bin/sh\necho 'ORACLE FINAL 60 {final}'\n{extra}exit {client_exit}\n")
         fake.chmod(0o755)
         script = Path(__file__).resolve().parent / "replay_session.sh"
         env = {**os.environ, "WARGRID_CLIENT": str(fake), "PYTHON": sys.executable}
@@ -176,6 +178,92 @@ class PlaytestSessionTest(unittest.TestCase):
         self.assertNotIn("REPLAY MATCHED", crashed.stdout)
         errored = self._replay(0, "echo 'SCRIPT ERROR: boom'\n")
         self.assertEqual((errored.returncode, "REPLAY MATCHED" in errored.stdout), (1, False), errored.stdout)
+
+    def _hash_files(self, recorded, ring):
+        rec, rng = Path(self._tmp.name) / "rec.hashes", Path(self._tmp.name) / "ring.tsv"
+        rec.write_text("".join(f"{r}\n" for r in recorded))
+        rng.write_text("".join(f"{r}\n" for r in ring))
+        return rec, rng
+
+    def _compare(self, recorded, ring):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = ps.main(["--compare-hashes", *map(str, self._hash_files(recorded, ring))])
+        return code, out.getvalue()
+
+    @staticmethod
+    def _ring(changed_from=None, ticks=90):
+        return [f"{t}\t{'bad' if changed_from and t >= changed_from else 'h%d' % t}" for t in range(1, ticks + 1)]
+
+    RECORDED = ("30\th30", "60\th60", "90\th90")
+
+    def test_compare_hashes_equal_rows_print_nothing(self):
+        self.assertEqual(self._compare(self.RECORDED, self._ring()), (0, ""))
+        self.assertEqual(self._compare([], self._ring()), (0, ""), "a match under 30 ticks has no rows")
+
+    def test_compare_hashes_names_first_differing_row(self):
+        self.assertEqual(
+            self._compare(self.RECORDED, self._ring(changed_from=90)),
+            (1, "first differing row at tick 90, last equal row at tick 60\n"),
+        )
+
+    def test_compare_hashes_edge_rows(self):
+        malformed = self._compare(("30\th30", "oops"), self._ring())
+        self.assertEqual(malformed, (2, "malformed hash row 2 in rec.hashes\n"))
+        bad_ring = self._compare(self.RECORDED, ["1\th1", "2"])
+        self.assertEqual(bad_ring, (2, "malformed hash row 2 in ring.tsv\n"))
+        first = self._compare(self.RECORDED, self._ring(changed_from=30))
+        self.assertEqual(first, (1, "first differing row at tick 30, no earlier recorded row\n"))
+        later = self._compare(("60\th60", "90\th90"), self._ring(changed_from=60))
+        self.assertEqual(later, (1, "first differing row at tick 60, no earlier recorded row\n"))
+        gap = self._compare(("30\th30", "90\th90"), self._ring(changed_from=90))
+        self.assertEqual(gap, (1, "first differing row at tick 90, last equal row at tick 30\n"))
+        undecodable = Path(self._tmp.name) / "bin.hashes"
+        undecodable.write_bytes(b"\xff\xfe\n")
+        self.assertEqual(ps.compare_hashes(undecodable, self._hash_files((), ())[1])[0], 2)
+        early = self._compare(self.RECORDED, self._ring(ticks=75))
+        self.assertEqual(early, (1, "replay ended before tick 90\n"))
+
+    def test_replay_rows_write_and_delete_hashes_file(self):
+        data = session()
+        data["matches"][0]["tick_hashes"] = ["30\th30", "60\th60"]
+        data["matches"][1]["tick_hashes"] = []
+        path = self._write(data)
+        ps.replay_rows(ps.load_session(path), path)
+        self.assertEqual(path.with_name("plain-m1.hashes").read_text(), "30\th30\n60\th60\n")
+        self.assertEqual(path.with_name("plain-m2.hashes").read_text(), "", "empty rows still write the file")
+        path = self._write(session())
+        rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
+        self.assertEqual(
+            rows[0][:9],
+            ["1", str(path.parent / "plain-m1.cmd"), "offline", "skirmish", "7", "frc,china", "60", "aa", "30,60"],
+        )
+        self.assertFalse(path.with_name("plain-m1.hashes").exists(), "a stale file from an earlier run is deleted")
+        self.assertFalse(path.with_name("plain-m2.hashes").exists())
+
+    RING_WRITER = (
+        'while [ $# -gt 0 ]; do [ "$1" = --ring-log ] && ring=$2; shift; done\n'
+        'for t in $(seq 1 60); do echo "$t\th$t"; done > "$ring"\n'
+    )
+
+    def test_replay_wrapper_compares_hash_rows(self):
+        rows = ["30\th30", "60\th60"]
+        same = self._replay(0, self.RING_WRITER, rows=rows)
+        self.assertEqual((same.returncode, same.stdout), (0, "REPLAY MATCHED 1\n"), same.stdout)
+        changed = self._replay(0, self.RING_WRITER, rows=["30\th30", "60\tzz"])
+        self.assertEqual(changed.returncode, 1, changed.stdout)
+        self.assertIn("REPLAY DIFFERS 1 first differing row at tick 60, last equal row at tick 30", changed.stdout)
+        self.assertNotIn("REPLAY MATCHED", changed.stdout)
+        unhashed = self._replay(0, self.RING_WRITER, rows=rows, final="cc")
+        self.assertEqual(unhashed.returncode, 1, unhashed.stdout)
+        self.assertIn("REPLAY DIFFERS 1 recorded=aa replayed=cc", unhashed.stdout)
+        self.assertIn("hash rows all equal; difference is in unhashed state", unhashed.stdout)
+        norows = self._replay(0, final="cc")
+        self.assertEqual(norows.returncode, 1, norows.stdout)
+        self.assertNotIn("hash rows all equal", norows.stdout)
+        broken = self._replay(0, self.RING_WRITER, rows=["30\th30", "oops"])
+        self.assertEqual(broken.returncode, 1, broken.stdout)
+        self.assertIn("REPLAY FAILED 1: malformed hash row 2 in sess-m1.hashes", broken.stdout)
 
 
 if __name__ == "__main__":

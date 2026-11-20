@@ -1,6 +1,6 @@
 #!/bin/sh
 # usage: replay_session.sh SESSION_FILE [--tick N]
-# Replays each match of a playtest session headless; --tick N prints that tick's state and writes snapshots next to the file.
+# Replays each match of a playtest session headless, comparing recorded tick-hash rows when the session has them; --tick N prints that tick's state and writes snapshots next to the file.
 file=$1
 [ -f "$file" ] || { echo "usage: replay_session.sh SESSION_FILE [--tick N]"; exit 2; }
 tick=""
@@ -18,7 +18,8 @@ run_client() {
 	fi
 }
 log=$(mktemp) || exit 1
-trap 'rm -f "$log"' EXIT HUP INT TERM
+ring=$(mktemp) || exit 1
+trap 'rm -f "$log" "$ring"' EXIT HUP INT TERM
 rows=$(${PYTHON:-python3} "$repo_root/tools/playtest_session.py" --replay-args "$file") || exit 1
 [ -n "$rows" ] || { echo "REPLAY FAILED: the session holds no matches"; exit 1; }
 status=0
@@ -32,8 +33,12 @@ while IFS=$tab read -r k cmd mode map seed factions end_tick end_digest marker_t
 		set -- "$@" --snapshot-dir "$stem-m$k-snapshots"
 	fi
 	[ "$state_ticks" = "-" ] || set -- "$@" --state-ticks "$state_ticks"
+	hashes=${cmd%.cmd}.hashes
+	[ ! -f "$hashes" ] || set -- "$@" --ring-log "$ring"
 	run_client "$@" >"$log" 2>&1
 	client_status=$?
+	compare_status=0
+	[ ! -f "$hashes" ] || compare=$(${PYTHON:-python3} "$repo_root/tools/playtest_session.py" --compare-hashes "$hashes" "$ring") || compare_status=$?
 	grep '^ORACLE STATE' "$log"
 	replayed=$(sed -n 's/^ORACLE FINAL [0-9]* //p' "$log")
 	if [ "$client_status" -ne 0 ] || grep -q 'SCRIPT ERROR' "$log"; then
@@ -44,10 +49,17 @@ while IFS=$tab read -r k cmd mode map seed factions end_tick end_digest marker_t
 		echo "REPLAY FAILED $k ($mode): no ORACLE FINAL line"
 		grep -E 'ERROR|SCRIPT|Unknown|needs' "$log" | head -5
 		status=1
+	elif [ "$compare_status" -eq 1 ]; then
+		echo "REPLAY DIFFERS $k $compare (recorded on build $build)"
+		status=1
+	elif [ "$compare_status" -ne 0 ]; then
+		echo "REPLAY FAILED $k: $compare"
+		status=1
 	elif [ "$replayed" = "$end_digest" ]; then
 		echo "REPLAY MATCHED $k"
 	else
 		echo "REPLAY DIFFERS $k recorded=$end_digest replayed=$replayed (recorded on build $build)"
+		[ ! -f "$hashes" ] || echo "hash rows all equal; difference is in unhashed state"
 		status=1
 	fi
 done <<EOF2

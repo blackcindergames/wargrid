@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read a playtest session file: print answers and markers, extract JPGs, prepare replays.
+"""Read a playtest session file: print answers and markers, extract JPGs, prepare replays, compare recorded hash rows.
 
 Output files (JPGs, .cmd) go next to the session file, never into the repository.
 """
@@ -69,6 +69,42 @@ def _build(session: dict, match: dict) -> str:
     return match.get("build", session["build"])
 
 
+def _write_hashes(match: dict, hashes: Path) -> None:
+    rows = match.get("tick_hashes")
+    if rows is None:
+        hashes.unlink(missing_ok=True)
+    else:
+        hashes.write_text("".join(row + "\n" for row in rows))
+
+
+def _parse_hash_rows(path: Path) -> list[tuple[int, str]]:
+    rows = []
+    lines = path.read_text().splitlines() if path.exists() else []
+    for n, line in enumerate(lines, 1):
+        tick, sep, digest = line.partition("\t")
+        if not (sep and tick.isdigit() and digest):
+            raise ValueError(f"malformed hash row {n} in {path.name}")
+        rows.append((int(tick), digest))
+    return rows
+
+
+def compare_hashes(recorded: Path, ring: Path) -> tuple[int, str]:
+    """Exit code and one line: 0 all recorded rows equal, 1 first problem, 2 malformed row."""
+    try:
+        rows, replayed = _parse_hash_rows(recorded), dict(_parse_hash_rows(ring))
+    except (ValueError, OSError) as err:  # UnicodeError is a ValueError
+        return 2, str(err)
+    last_equal = None
+    for tick, digest in rows:
+        if tick not in replayed:
+            return 1, f"replay ended before tick {tick}"
+        if replayed[tick] != digest:
+            earlier = f"last equal row at tick {last_equal}" if last_equal is not None else "no earlier recorded row"
+            return 1, f"first differing row at tick {tick}, {earlier}"
+        last_equal = tick
+    return 0, ""
+
+
 def replay_rows(session: dict, path: Path) -> list[str]:
     rows = []
     for k, m in enumerate(session["matches"], 1):
@@ -77,6 +113,7 @@ def replay_rows(session: dict, path: Path) -> list[str]:
             continue
         cmd = path.with_name(f"{path.stem}-m{k}.cmd")
         cmd.write_text("".join(line + "\n" for line in m["commands"]))
+        _write_hashes(m, cmd.with_suffix(".hashes"))
         factions = "-" if m["mode"] == "online" else ",".join(m["factions"])
         ticks = ",".join(str(mk["tick"]) for mk in m["markers"]) or "-"
         row = [
@@ -97,11 +134,25 @@ def replay_rows(session: dict, path: Path) -> list[str]:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("file", type=Path)
+    parser.add_argument("file", type=Path, nargs="?")
     parser.add_argument(
         "--replay-args", action="store_true", help="write .cmd files and print one replay row per match"
     )
+    parser.add_argument(
+        "--compare-hashes",
+        nargs=2,
+        type=Path,
+        metavar=("RECORDED", "RING"),
+        help="compare recorded rows with ring rows",
+    )
     args = parser.parse_args(argv)
+    if args.compare_hashes:
+        code, line = compare_hashes(*args.compare_hashes)
+        if line:
+            print(line)
+        return code
+    if args.file is None:
+        parser.error("the session file is required")
     try:
         session = load_session(args.file)
     except SystemExit as err:
