@@ -6,7 +6,7 @@ Only the picked options are described (all eight picks were A: `two`, `right`, `
 
 ## Units and scaling
 
-All figures are HUD px, origin top left. The HUD scales with the screen ("HUD size: scaled with the screen" in the design answers) by `k = min(width / 1280, height / 720)` (`meta.scale` in the export), so `k` screen px = 1 HUD px, and the layout is `width / k` by `height / k`: a window wider or taller than 16:9 gives the layout the extra width or height. That this is what the stretch aspect `expand` planned for P2.3a does is an agent reading, not tested in Godot. The export has three sizes:
+All figures are HUD px, origin top left. The HUD scales with the screen ("HUD size: scaled with the screen" in the design answers) by `k = min(width / 1280, height / 720)` (`meta.scale` in the export), so `k` screen px = 1 HUD px, and the layout is `width / k` by `height / k`: a window wider or taller than 16:9 gives the layout the extra width or height. P2.3a1 builds it as `expand` between 1.6:1 and 2.4:1 and a capped view outside that range (see "As built in P2.3a1"); `test_view_caps.gd` and the headless layout tests check the layout, the rendered rows at 2560x1080 are owed to stop gate B. The export has three sizes:
 
 | Screen | k | Layout (HUD px) |
 |---|---|---|
@@ -93,13 +93,13 @@ Positions are for 1280 x 720 unless a formula is given. The mock-up follows the 
 
 ### Top strip
 
-Anchored top left at (8, 8), 32 high, width hugs its text (Core about 255 at `4,800` and `8 / 10`). 1 px `line` border, padding 0 8, groups 24 apart, label to value 8. Content: `CREDITS` + value at 16 / 700, `POWER` + `used / available` ("power as used / available", design answers), and, when used exceeds available, the value (`12 / 10`) and the label `LOW POWER · DEFENCES OFF` in `warn` (gate A, user 2026-11-19: it names low power's one effect, powered defences hold fire). The strip always shows the real numbers. Full adds muted `+1,350 −1,600 / min` after the credits, a 1 x 16 `line` separator and the production strip.
+Anchored top left at (8, 8), 32 high, width hugs its text (Core about 255 at `4800` and `8 / 10`; plain digits, no thousands separator anywhere, gate A, user 2026-11-19). 1 px `line` border, padding 0 8, groups 24 apart, label to value 8. Content: `CREDITS` + value at 16 / 700, `POWER` + `used / available` ("power as used / available", design answers), and, when used exceeds available, the value (`12 / 10`) and the label `LOW POWER · DEFENCES OFF` in `warn` (gate A, user 2026-11-19: it names low power's one effect, powered defences hold fire). The strip always shows the real numbers. Full adds muted `+1,350 −1,600 / min` after the credits, a 1 x 16 `line` separator and the production strip.
 
 **Forecast while a building is armed** (user, 2026-11-13; moved out of the strip at P2.3a1's gate A, user 2026-11-19): the `AFTER PURCHASE` card under the strip at (8, 48), a `bg` slab with a 1 px `line`, padding 8, width hugs (about 490 x 56 at 1280 x 720 at its longest); line 1 a muted `AFTER PURCHASE`, line 2 the values after the purchase, muted 12 / 600 labels and 16 / 700 tabular values, fine values in `text`, values with a problem and the low-power words in `warn`, no arrow (Public Sans has none). Placing a Rotary Gun Tower at 4800 credits and power 8 / 10: `CREDITS 3600`, `POWER 11 / 10 LOW POWER · DEFENCES OFF`; at 500 credits: `CREDITS −700` (U+2212). Placing a Power Plant: `POWER 8 / 15`. Gone on place or cancel.
 
 ### Menu chip, Team chip, playtest chip
 
-- **Menu**: anchored top right, right edge 8 from the screen edge, top 8, 32 high, padding 0 8, fill `btn`, 1 px `line` border, 13 / 600, then an `Esc` key chip. 86.75 wide with the chip, 50.3 without. It hides `Esc` while the build menu or a placement is open (states build, place, blocked; user, 2026-11-16).
+- **Menu**: anchored top right, right edge 8 from the screen edge, top 8, 32 high, padding 0 8, fill `btn`, 1 px `line` border, 13 / 600, then an `Esc` key chip. 86.75 wide with the chip, 50.3 without. It shows `Esc` only while a press of Esc would open the menu: nothing pending for Esc to clear (a placement, an armed attack move, a selection), no open note form or focused text field, and the menu closed (states build, place, blocked; user, 2026-11-16; `match_screen.esc_opens_menu`).
 - **Team** (Full): same chip, 8 left of Menu.
 - **Playtest** (the checklist chip, user, 2026-11-16): under Menu, right-aligned at right 8, top 48: label `PLAYTEST` and number `2 / 5`, 32 high, about 124 wide. Drawn in Core only; where it sits beside the Full set's alert feed and Team chip is not drawn.
 
@@ -113,7 +113,7 @@ Blocks:
 
 - **Identity**: name 14 / 700; then 8 below a 160 x 6 health bar and `cur / max`, 8 apart. A label can sit at the right end of the name row (`QUEUE 4 / 9`, `UNDER CONSTRUCTION`). Full puts a 64 px glyph 8 left of the block.
 - **Kind rows** (many): header row 18 high, then rows of 186 x 26 in two columns, 4 apart both ways. A row: padding 0 8 4, name 13 / 600 filling the row, count right-aligned in 28, a 3 px health bar along its bottom; Full adds a 22 px glyph. Click narrows the selection to that kind, shift-click removes that kind (user, 2026-11-17, [design answers](design-answers-2026-11-08.md#p23a-groundwork-questionnaire-user-2026-11-17)).
-- **Queue** (factory, user, 2026-11-16): nine 36 x 36 slots, 4 apart, 8 under the identity. A filled slot is a `btn` button showing, in Core, the key of the cell that made the item (`Q Q W Q`), in Full a 24 px glyph; the first has a 4 px `you` progress bar on its bottom edge. Click cancels.
+- **Queue** (factory, user, 2026-11-16; P2.3a1 builds it as capped rows in the slab, see "As built in P2.3a1"): nine 36 x 36 slots, 4 apart, 8 under the identity. A filled slot is a `btn` button showing, in Core, the key of the cell that made the item (`Q Q W Q`), in Full a 24 px glyph; the first has a 4 px `you` progress bar on its bottom edge. Click cancels.
 - **Footer** (factory): muted `Right-click ground: rally point` on the left; Full adds `Sell` (122 x 32, glyph 20, muted `+1,000`) on the right. The Full Power Plant panel ends in the same `Sell` button (`+500`).
 - **Key and value lines** (plant, pile): label column 112 wide, value 13 / 700.
 
@@ -174,6 +174,18 @@ These come with their own features, after P2.3b ([packages](../packages.md)). Ge
 - **Team** chip beside Menu.
 - **Pinned factory**: a click-only placeholder (user, 2026-11-16) 220 wide, 8 right of the selection panel (x 592), height hugs (154), padding 12 8: title with muted `×`, two item cells without key chips, five queue slots, and a muted `+N` when more than five are queued (described, not drawn: the drawn queue holds four). Settled in its own package.
 
+## As built in P2.3a1
+
+What the in-game HUD does where the pictures above are not enough (the [P2.3a1 plan](../superpowers/plans/2026-11-19-p2-3a1-see-your-selection.md), gate A answers user 2026-11-19; checks in the [verification](p2.3a1-verification.md)). The pictures stay the look; this list is the behaviour.
+
+- **Stretch.** The match content size is 1280x720 with `expand` from 1.6:1 to 2.4:1 window aspect, 1728x720 with `keep` wider than 2.4:1 and 1280x800 with `keep` taller than 1.6:1, so a very wide or tall window gets bars instead of a stretched map. Every HUD element is anchored to the screen edges.
+- **Top strip.** An 8 px swatch in the viewer's slot colour sits before `CREDITS`; the POWER group is hidden for a faction with no power kinds (FRC); low power turns the numbers `warn` and adds `LOW POWER · DEFENCES OFF`. The Menu chip is top right, the Playtest chip stacks under it, online notices sit at the top centre.
+- **Slab.** The old button column is one bottom-right slab, 432 wide. Build buttons show only with nothing or one own builder selected, and an unaffordable price reads in `warn`; the order buttons `Attack move (A)`, `Stop (S)` and `Unload (F)` show only with an own armed unit, and `Unload` only while a Tunnel Hub holds units or a loaded vehicle is selected. Keys print in the player's keyboard layout (QWERTY fallback). The armed button looks cyan. While attack move is armed the pointer is the system crosshair. The resume hint sits at the slab's top while exactly one own builder is selected and the pointer hovers a paused own site (`WorldView.resume_candidate`). The queue is capped: up to five rows show, more collapse to four under a `Show N more queued` button, a row cancels its entry.
+- **Selection panel.** Kind rows hold while the pointer is inside the panel so rows never reflow under it; the hovered row insets its health track by 1 px; the footer rule `Click a kind: select only that kind · Shift-click: deselect it` shows with two or more kinds. A paused construction site reads `PAUSED · NO BUILDER` with a muted bar. A powered building with its owner short of power reads `OFFLINE · LOW POWER` in `warn`. A selected own collector names what it is doing (`TO SUPPLY DEPOT`, `LOADING`, `WAITING AT PILE`, `IDLE`, `MOVING`, `BUILDING`), the drop-off name taken from the collector owner's faction. Heights: many 98, 128 and 158 for 2, 3-4 and 5-6 kinds, pinned by `test_hud.gd` within 1 px; Task 11 measured 99, 129 and 159 (the rule line's 12 px box is 15 high, as above).
+- **Refusal line.** Bottom centre, `warn`, three seconds, showing the simulation's own words until P2.3a2's table. A drain's last refusal wins; the next accepted order answered after the refusal clears it, otherwise the timer does.
+- **Freeze card.** If the offline pump fails, a card in the result card's style reads `Match stopped` with `GAME ERROR`, the report (reason, build, map, tick), `Copy report` (focused; then `Report copied`) and `Back to menu`, and the footer `Version <build> · <map name>`. Orders and placement are off behind it, and Enter never restarts.
+- **Playtest chip and note form.** `PLAYTEST n / m` counts ticked checklist items; the checklist and the note form drop from the chip, the form below the checklist when it fits above the slab and left of it otherwise; F3's overlay goes under the stack or left of the helper's panels.
+
 ## Behaviour without a rectangle
 
 - **Esc** backs out innermost first: an armed placement, then the build menu, then the game menu (user, 2026-11-16).
@@ -198,7 +210,7 @@ The 13 states drawn, both sets; pictures at 2560 x 1600 for a 1280 x 800 layout.
 | place | Rotary Gun Tower armed on `A`, `V` Cancel, forecast in the top strip | [core-place](../images/hud-v5/core-place.webp) | [full-place](../images/hud-v5/full-place.webp) |
 | blocked | Vehicle Factory armed on `R`, forecast, refusal line | [core-blocked](../images/hud-v5/core-blocked.webp) | [full-blocked](../images/hud-v5/full-blocked.webp) |
 | enemy | Battle Tank (a USA unit), `312 / 480`, enemy edge; no card | [core-enemy](../images/hud-v5/core-enemy.webp) | [full-enemy](../images/hud-v5/full-enemy.webp) |
-| pile | Supply Pile, `CREDITS LEFT 10,650` (`Empty` at zero), grey edge; no card. Drawn with `BOXES LEFT 142` and `COLLECTORS 2 docked · 1 waiting`, both replaced (user, 2026-11-17, [questionnaire](design-answers-2026-11-08.md#p23a-groundwork-questionnaire-user-2026-11-17)); the pictures and the 86 px height are redrawn with the P2.3a design | [core-pile](../images/hud-v5/core-pile.webp) | [full-pile](../images/hud-v5/full-pile.webp) |
+| pile | Supply Pile, `CREDITS LEFT 10650` (`Empty` at zero), grey edge; no card. Drawn with `BOXES LEFT 142` and `COLLECTORS 2 docked · 1 waiting`, both replaced (user, 2026-11-17, [questionnaire](design-answers-2026-11-08.md#p23a-groundwork-questionnaire-user-2026-11-17)); the pictures and the 86 px height were redrawn in P2.3a1's first task (62 px, one `CREDITS LEFT` line) | [core-pile](../images/hud-v5/core-pile.webp) | [full-pile](../images/hud-v5/full-pile.webp) |
 | site | Vehicle Factory, `UNDER CONSTRUCTION`, progress `62 %`, `1,240 / 2,000`; no card | [core-site](../images/hud-v5/core-site.webp) | [full-site](../images/hud-v5/full-site.webp) |
 
 Credits, income, group sizes and queue contents are illustrative; names, costs, build times, health and power come from `game/scripts/simulation/definitions/china.gd`, and for the enemy Battle Tank from `usa.gd` (`max_hp` 480000, shown as 480).
@@ -221,6 +233,6 @@ How layout tests should use it (proposal, agent): give each HUD control the matc
 - The grid table across factions (which item sits on which key for USA, China and FRC) is a proposal on the page for the P2.3b design; only China is drawn.
 - Cards for buildings not drawn (proposal, agent; from `produces` and `builds` in `usa.gd`, `china.gd`, `frc.gd`): Headquarters `Q` its builder (Bulldozer; FRC Laborer); Supply Depot `Q` its collector (USA Supply Helicopter, China Supply Truck); FRC's Supply Cache produces the Laborer instead of a collector, so its `Q` is the builder; Barracks `Q` rifle and `W` rocket infantry in all three. FRC builds no Power Plant, so its build menu's `Q` stays empty in the page's table. The key order is not the `produces` order: China's factory lists the tank first.
 - Player wording for refused orders needs a table from each simulation refusal text; `Cannot build here` is a proposal.
-- Not drawn: Barracks, Headquarters, Supply Depot, a building being sold, two factories selected, buildings and units selected together, a transport with Unload, the playtest note dialog, the playtest chip beside the Full set's top-right chips.
+- Not drawn: Barracks, Headquarters, Supply Depot, a building being sold, two factories selected, buildings and units selected together, a transport with Unload, the playtest chip beside the Full set's top-right chips.
 - The Full enemy panel has no glyph only because the page lacks a USA glyph.
 - On a touchscreen the cell card's reasons cannot be reached; input to the Steam Deck controls spike.

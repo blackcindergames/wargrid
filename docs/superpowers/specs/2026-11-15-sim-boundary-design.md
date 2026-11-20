@@ -110,6 +110,7 @@ func current() -> Slot                # worker: main only, never written after p
 func previous() -> Slot               # worker: main only; null until two ticks were taken
 func query(job: Job) -> Note          # worker: hands the job to the worker and waits, bounded by the stall limit (SB5a); inline: runs on the caller
 func record() -> Dictionary           # {tick, digest, match, commands} from a query job with want_digest and want_log; worker: through query
+func failure() -> String              # why the pump failed, "" while healthy or stopped (worker mode: also queue-full); main thread only (P2.3a1: the offline freeze card reads it)
 func busy() -> bool                   # worker: true while a job runs or is queued; inline: false
 func stop() -> void                   # inline: sets a flag, later posts return false; worker: never joins after a failure, otherwise a bounded wait
 func live() -> Simulation            # tests and pre-start setup; worker: asserts not busy()
@@ -221,6 +222,8 @@ Each line has its source: a change number of the sim boundary critique (private)
 - Profiler: one mutex when enabled, or the five ticking cases named as skipped under the flag (change 26, A6; the cases are `test_base_scene.gd:381,396` and `test_skirmish_scene.gd:934,1181,1206`).
 - The effective mode is: setting on, the build has threads, and no pump failed in this process (change 27, A7).
 - A pump failure online ends the lockstep and closes the transport; a loopback test checks the peer's `left`, and the peer sees "Your opponent left" (change 28, A8).
+- Every terminal cause (null result, owner-thread check, fault flag, stall, dead thread) writes the same main-side reason into `failure()`, never read across threads; queue-full and stopped keep `failure()` empty (P2.3a1; today only the null-note cause exists, inline).
+- The offline driver also checks `failure()` after `drain()`; the online driver reads `failure()` for change 28 instead of treating every refused post as terminal (`online_driver.gd:121-122`).
 - The running mode in the playtest header, the desync report and the F3 overlay (change 29, C4).
 - The suite runs under the flag in CI for as long as the flag exists (change 30, A6).
 - A bench scene running the real match screen on the pump in both modes, printing the go-rule metrics (change 31, D9).
