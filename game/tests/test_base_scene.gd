@@ -21,6 +21,12 @@ static func hud_panels(main) -> Dictionary:
 		if control.is_visible_in_tree(): rects[path] = Rect2(control.global_position, control.get_combined_minimum_size())
 	return rects
 
+# The slab replaced "below the status": inside the view and clear of the strip (P2.3a1 Task 9).
+static func slab_clear(runner, main, label: String) -> void:
+	var slab: Rect2 = main.get_node("HUD/Economy").get_global_rect()
+	var strip: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
+	runner.check(main.get_viewport().get_visible_rect().encloses(slab) and not slab.intersects(strip), "%s: the slab inside the view and clear of the strip, slab %s strip %s" % [label, slab, strip])
+
 static func sized_port(runner, window: Vector2i, logical: Vector2i) -> SubViewport:
 	var port := SubViewport.new()
 	port.size = window
@@ -381,22 +387,22 @@ func test_resume_status(runner) -> bool:
 	main.driver.pump.live().step()
 	main.orders.selected_ids.assign([1])
 	publish(main)
-	var status: Label = main.get_node("HUD/Status")
 	hover(main,Iso.world_to_plane(Vector2(8.5,4.5)))
 	main._refresh()
-	runner.check(hud_text(main).contains("Right-click: resume"),"H6 resume hint shown while hovering")
-	var economy: Control = main.get_node("HUD/Economy")
-	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y,"H6 buttons below the resume line")
+	var hint: Label = main.get_node("HUD/Economy/ResumeHint")
+	runner.check(hud_text(main).contains("Right-click: resume") and hint.is_visible_in_tree() and hint.text == "Right-click: resume","H6 resume hint shown in the slab while hovering")
+	runner.check(not main.get_node("HUD/Status").text.contains("Right-click: resume"),"H6 the resume hint left the status line")
+	slab_clear(runner,main,"H6")
 	hover(main,Iso.world_to_plane(Vector2(20.5,20.5)))
 	main._refresh()
-	runner.check(not hud_text(main).contains("Right-click: resume"),"H6 hint gone off the building")
+	runner.check(not hud_text(main).contains("Right-click: resume") and not hint.is_visible_in_tree(),"H6 hint gone off the building")
 	main.free()
 	return true
 
 func test_queue_label(runner) -> bool:
 	var BaseMain = load("res://scripts/match/hud.gd")
-	runner.check(BaseMain.queue_label({"id":10,"kind":"usa_tank","work":270000}) == "Cancel Battle Tank (90%)","Bs5 started entry shows percent, no id or raw work")
-	runner.check(BaseMain.queue_label({"id":12,"kind":"usa_tank","work":0}) == "Cancel Battle Tank (queued)","Bs5 unstarted entry shows queued")
+	runner.check(BaseMain.queue_parts({"id":10,"kind":"usa_tank","work":270000}) == PackedStringArray(["Battle Tank","90 %"]),"Bs5 a started entry's row shows its name and percent, no id or raw work")
+	runner.check(BaseMain.queue_parts({"id":12,"kind":"usa_tank","work":0}) == PackedStringArray(["Battle Tank",""]),"Bs5 an unstarted entry's row shows its name and no percent")
 	return true
 
 func test_one_snapshot_per_refresh(runner) -> bool:
@@ -481,7 +487,7 @@ func test_sb1_repaint_keeps_step_pending(runner) -> bool:
 	return true
 
 func _menu_texts(main) -> Array:
-	return main.get_node("HUD/Economy/BuildMenu").get_children().map(func(button: Button) -> String: return button.text)
+	return main.get_node("HUD/Economy/BuildMenu").get_children().map(func(button: Button) -> String: return button.text + " " + button.get_node("Price").text)
 
 func test_build_menu_from_capabilities(runner) -> bool:
 	var main = await setup(runner)
@@ -513,15 +519,14 @@ func test_build_menu_wraps_eleven(runner) -> bool:
 	for i in 11:
 		Registry.add_test_kind("test_k%d" % i,{"display_name":"Synthetic %d" % i,"cost":100 + i})
 		kinds.append("test_k%d" % i)
-	main.hud._refresh_menu(kinds)
+	main.hud._refresh_menu(kinds,true,0,"")
 	await runner.process_frame
 	await runner.process_frame
 	var buttons: Array = main.get_node("HUD/Economy/BuildMenu").get_children()
-	var status: Label = main.get_node("HUD/Status")
-	var status_rect := Rect2(status.global_position,status.get_minimum_size())
 	runner.check(buttons.size() == 11,"M5 eleven buttons")
+	slab_clear(runner,main,"M5")
 	for i in buttons.size():
-		runner.check(not buttons[i].get_global_rect().intersects(status_rect),"M5 button %d clear of status" % i)
+		runner.check(main.get_node("HUD/Economy").get_global_rect().encloses(buttons[i].get_global_rect()),"M5 button %d inside the slab" % i)
 		for j in range(i + 1,buttons.size()):
 			runner.check(not buttons[i].get_global_rect().intersects(buttons[j].get_global_rect()),"M5 buttons %d and %d do not overlap" % [i,j])
 	Registry.clear_test_kinds()
@@ -530,14 +535,13 @@ func test_build_menu_wraps_eleven(runner) -> bool:
 
 func test_build_menu_quantity_label(runner) -> bool:
 	var main = await setup(runner)
-	main.hud._refresh_menu(["china_rifle_infantry","china_rocket_infantry"])
+	main.hud._refresh_menu(["china_rifle_infantry","china_rocket_infantry"],true,0,"")
 	await runner.process_frame
 	await runner.process_frame
 	var buttons: Array = main.get_node("HUD/Economy/BuildMenu").get_children()
-	runner.check(buttons.size() == 2 and buttons[0].text == "1: Militia x2 $300" and buttons[1].text == "2: Anti-Tank Trooper $300","M6 militia button reads x2, got " + str(buttons.map(func(b: Button) -> String: return b.text)))
-	var status: Label = main.get_node("HUD/Status")
-	var status_rect := Rect2(status.global_position,status.get_minimum_size())
-	for button: Button in buttons: runner.check(not button.get_global_rect().intersects(status_rect),"M6 button clear of status")
+	runner.check(_menu_texts(main) == ["1: Militia x2 $300","2: Anti-Tank Trooper $300"],"M6 militia button reads x2, got " + str(_menu_texts(main)))
+	slab_clear(runner,main,"M6")
+	for button: Button in buttons: runner.check(main.get_node("HUD/Economy").get_global_rect().encloses(button.get_global_rect()),"M6 button inside the slab")
 	runner.check(not buttons[0].get_global_rect().intersects(buttons[1].get_global_rect()),"M6 buttons do not overlap")
 	main.free()
 	return true

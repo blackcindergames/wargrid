@@ -67,3 +67,12 @@ static func object(sim: RefCounted, id: int) -> Dictionary:
 
 static func steps(sim: RefCounted, count: int) -> void:
 	for index in range(count): sim.step()
+
+# Loads a unit through a real `enter` order, as a player's right-click would.
+static func load_unit(runner, sim: RefCounted, unit: int, host: int, max_ticks: int = 600) -> void:
+	var result: Dictionary = send(sim, {"type": "enter", "entity_ids": [unit], "target_id": host})
+	runner.check(result.ok, "fixture enter accepted: " + result.error)
+	for index in range(max_ticks):
+		sim.step()
+		if object(sim, unit).has("container_id"): return
+	runner.check(false, "fixture load timeout %d into %d" % [unit, host])

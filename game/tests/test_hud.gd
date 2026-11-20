@@ -14,6 +14,8 @@ const View = preload("res://scripts/presentation/world_view.gd")
 const SkirmishTests = preload("res://tests/test_skirmish_scene.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
+const Orders = preload("res://scripts/match/orders.gd")
+const HudModel = preload("res://scripts/match/hud_model.gd")
 const LOW: String = "LOW POWER · DEFENCES OFF"
 const MINUS: String = "\u2212"
 const THEME_PATH: String = "res://ui/launcher_theme.tres"
@@ -23,13 +25,13 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize]
 
-# The match scene's economy column: the screen adds BuildMenu, skirmish.tscn the rest.
+# The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
 	var economy := VBoxContainer.new()
-	for part: Control in [GridContainer.new(), Button.new(), Button.new(), VBoxContainer.new()]: economy.add_child(part)
-	for i in 4: economy.get_child(i).name = ["BuildMenu", "Produce", "CancelBuild", "Queue"][i]
+	for part: Control in [Button.new(), Button.new(), VBoxContainer.new()]: economy.add_child(part)
+	for i in 3: economy.get_child(i).name = ["Produce", "CancelBuild", "Queue"][i]
 	return economy
 
 func test_hud_reads_only_its_input(runner) -> bool:
@@ -47,7 +49,7 @@ func test_hud_reads_only_its_input(runner) -> bool:
 	parent.add_child(economy)
 	hud.setup(economy, status)
 	var ids: Array[int] = [1]
-	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false, "esc_opens_menu": true}
+	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false, "esc_opens_menu": true, "attack_move": false}
 	hud.update_hud(Fixture.make_world().view_state(), selection, 1, 1)
 	runner.check(hud.name == "Hud" and hud.mouse_filter == Control.MOUSE_FILTER_IGNORE and hud.anchor_right == 1.0 and hud.anchor_bottom == 1.0, "HN1 the Hud is a full-rect node that ignores the mouse")
 	runner.check(_part(hud, "TopStrip", "Credits").text == "10000" and status.text.contains(Registry.kind("usa_builder").display_name + " #1"), "HN1 the strip and the Status fixture fill from the view and the selection alone, got '%s'" % status.text)
@@ -260,10 +262,15 @@ func test_match_surfaces_keep_their_size(runner) -> bool:
 	await runner.process_frame
 	await runner.process_frame
 	runner.check(main.get_node("HUD/PerfOverlay").theme_type_variation == &"HudSmallNumber" and main.get_node("HUD/Status").theme_type_variation == &"HudSmallNumber", "TH5 the F3 overlay and the status line print tabular digits")
-	for path: String in ["HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog", "HUD/PerfOverlay", "HUD/Economy"]:
+	for path: String in ["HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog", "HUD/PerfOverlay"]:
 		var surface: Control = main.get_node(path)
-		runner.check(path == "HUD/Economy" or surface.is_visible_in_tree(), "TH5 %s is shown" % path)
+		runner.check(surface.is_visible_in_tree(), "TH5 %s is shown" % path)
 		_check_small(runner, surface, view, path)
+	# The slab left the 12 px surfaces at Task 9 (owner question 4): its sizes are the type scale's.
+	for control: Control in _text_controls(main.get_node("HUD/Economy")):
+		runner.check(control.get_theme_font_size("font_size") in TYPE_SCALE, "TH5 HUD/Economy %s is on the type scale, got %d" % [control.name, control.get_theme_font_size("font_size")])
+		if control.is_visible_in_tree(): runner.check(view.encloses(_clip(control).get_global_rect()), "TH5 HUD/Economy %s inside the view" % control.name)
+	_square_rows(runner, ["Produce", "CancelBuild", "QueueMore"].map(func(path: String) -> Button: return main.get_node("HUD/Economy/" + path)), "TH5")
 	main.get_node("HUD/PauseMenu").open()
 	await runner.process_frame
 	_check_small(runner, main.get_node("HUD/PauseMenu"), view, "HUD/PauseMenu")
@@ -298,7 +305,7 @@ static func _strip_view(credits: int, used: int, available: int, faction: String
 
 static func _armed(kind: String, bright: bool = false, notice: String = "") -> Dictionary:
 	var ids: Array[int] = []
-	return {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": kind, "resume_id": -1, "notice": notice, "production_kind": "", "bright_owners": bright, "over": false, "esc_opens_menu": true}
+	return {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": kind, "resume_id": -1, "notice": notice, "production_kind": "", "bright_owners": bright, "over": false, "esc_opens_menu": true, "attack_move": false}
 
 func _bare_hud(runner) -> Hud:
 	var port := SubViewport.new()
@@ -498,6 +505,9 @@ func test_chip_stack(runner) -> bool:
 		runner.check(menu.size.y == 32.0 and chip.visible and chip.get_global_rect().size.y == 32.0, "CH1 Menu and Playtest are 32 high%s, got %s and %s" % [at, menu, chip.get_global_rect()])
 		_right_edge(runner, chip.get_global_rect(), right, 48.0, "CH1 Playtest" + at)
 		runner.check(chip.find_child("Label", true, false).text == "PLAYTEST" and chip.find_child("Count", true, false).text == "0 / %d" % _longest_card().try.size(), "CH1 the chip reads PLAYTEST and ticked over total%s" % at)
+		# The slab now always hands its top; the stack's own rules below start from an empty floor.
+		overlay.set_floor(size.y)
+		await _frames(runner)
 		var checklist: Rect2 = _rect(main, "HUD/Playtest/Checklist")
 		runner.check(overlay.get_node("Checklist").visible, "CH1 the helper opens the checklist at the start%s" % at)
 		_right_edge(runner, checklist, right, 88.0, "CH1 checklist" + at)
@@ -719,6 +729,7 @@ func test_stack_follows_size_changes(runner) -> bool:
 	var list: Control = overlay.get_node("Checklist")
 	perf.toggle()
 	overlay.open_marker()
+	overlay.set_floor(720.0)
 	await _frames(runner)
 	var before: Rect2 = list.get_global_rect()
 	runner.check(list.visible and not list.find_child("Saved", true, false).visible, "CH1 fixture: the checklist open, nothing saved yet")
@@ -743,4 +754,496 @@ func test_stack_follows_size_changes(runner) -> bool:
 	_right_edge(runner, taller, grown.position.x - 8.0, 88.0, "CH1 F3 grown past the floor moves beside the checklist")
 	main.free()
 	overlays._end(saved)
+	return true
+
+static func _queued(main, type: String) -> Array:
+	return main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == type)
+
+static func _shown(main, path: String) -> bool:
+	var node: Node = main.get_node_or_null("HUD/Economy/" + path)
+	return node != null and (node as CanvasItem).is_visible_in_tree()
+
+static func _select(main, ids: Array, building: int = -1, inspected: int = -1) -> void:
+	main.orders.selected_ids.assign(ids)
+	main.orders.selected_building_id = building
+	main.orders.inspected_id = inspected
+	main._refresh()
+
+# Own China units and buildings beside the fixture's USA builder (id 1); `loaded` puts a rifleman in the hub and one in the car.
+func _slab_world(runner, main, loaded: bool, credits: int = 50000) -> Dictionary:
+	var sim = Fixture.make_world(credits)
+	sim.add_player(2, 1000)
+	var ids := {"usa_builder": 1}
+	ids.builder = sim.spawn(1, Vector2(6.5, 6.5), "china_builder")
+	ids.frc_builder = sim.spawn(1, Vector2(6.5, 8.5), "frc_builder")
+	ids.tanks = [sim.spawn(1, Vector2(8.5, 6.5), "china_tank"), sim.spawn(1, Vector2(9.5, 6.5), "china_tank")]
+	ids.infantry = sim.spawn(1, Vector2(10.5, 6.5), "china_rifle_infantry")
+	ids.collectors = [sim.spawn(1, Vector2(8.5, 9.5), "china_collector"), sim.spawn(1, Vector2(9.5, 9.5), "china_collector")]
+	ids.enemy = sim.spawn(2, Vector2(28.5, 28.5), "usa_tank")
+	ids.pile = sim.add_supply_source(Vector2i(26, 4), 10)
+	ids.factory = Fixture.add_completed(sim, 1, "china_factory", Vector2i(14, 14))
+	ids.barracks = Fixture.add_completed(sim, 1, "usa_barracks", Vector2i(20, 14))
+	ids.plant = Fixture.add_completed(sim, 1, "china_power_plant", Vector2i(24, 20))
+	ids.hub = Fixture.add_completed(sim, 1, "frc_defence", Vector2i(18, 4))
+	ids.car = sim.spawn(1, Vector2(12.5, 4.5), "usa_light_vehicle")
+	if loaded:
+		Fixture.load_unit(runner, sim, sim.spawn(1, Vector2(17.5, 4.5), "frc_rifle_infantry"), ids.hub)
+		Fixture.load_unit(runner, sim, sim.spawn(1, Vector2(12.5, 5.5), "usa_rifle_infantry"), ids.car)
+	main.driver.adopt(sim)
+	main._refresh()
+	return ids
+
+# The slab's content rect: padding 8, 12 on the left (hud-v5-layout "Command card").
+static func _content(main) -> Rect2:
+	return _rect(main, "HUD/Economy").grow_individual(-12.0, -8.0, -8.0, -8.0)
+
+# "No label cut": every shown label inside its row and the slab's content rect.
+func _contained(runner, main, view: Rect2, label: String) -> void:
+	var content: Rect2 = _content(main)
+	for control: Control in _controls(main.get_node("HUD/Economy")):
+		if not control.is_visible_in_tree() or control.name == "Economy": continue
+		var rect: Rect2 = control.get_global_rect()
+		runner.check(view.encloses(rect) and content.grow(0.5).encloses(rect), "SL2 %s: %s inside the slab content %s and the view, got %s" % [label, control.name, content, rect])
+		if control is Label and control.get_parent() is Button: runner.check(control.get_parent().get_global_rect().grow(0.5).encloses(rect), "SL2 %s: %s inside its row" % [label, control.name])
+	for button: Node in main.get_node("HUD/Economy/BuildMenu").get_children():
+		if (button as Button).is_visible_in_tree():
+			var name_end: float = button.get_global_rect().position.x + 12.0 + button.get_theme_font("font").get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, button.get_theme_font_size("font_size")).x
+			runner.check(name_end <= button.get_node("Price").get_global_rect().position.x, "SL2 %s: '%s' ends before its price" % [label, button.text])
+
+func test_slab_rect(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await overlays._scene(runner, Skirmish, port)
+		main.hud._show_notice("Waiting for player 1")
+		await _frames(runner)
+		var slab: Rect2 = _rect(main, "HUD/Economy")
+		var at: String = " at %s" % size
+		runner.check(absf(slab.position.x - (size.x - 432.0)) <= 1.0 and is_equal_approx(slab.size.x, 432.0) and is_equal_approx(slab.end.y, size.y) and view.encloses(slab), "SL1 the slab is x W-432, 432 wide, bottom on H, inside the view%s, got %s" % [at, slab])
+		var panels: Dictionary = BaseScene.hud_panels(main)
+		runner.check(panels.has("HUD/Hud/TopStrip") and panels.has("HUD/MenuChip") and panels.has("HUD/Hud/Notice"), "SL1 fixture: strip, Menu and a notice shown%s" % at)
+		for path: String in panels:
+			if path != "HUD/Economy" and path != "HUD/Status": runner.check(not slab.intersects(panels[path]), "SL1 the slab clears %s%s" % [path, at])
+		var chip: Control = main.get_node("HUD/Playtest/Chip")
+		runner.check(chip.is_visible_in_tree() and not slab.intersects(chip.get_global_rect()), "SL1 the Playtest chip shown and clear of the slab%s" % at)
+		var rows: Array = main.get_node("HUD/Economy").get_children().filter(func(row: Control) -> bool: return row.visible)
+		var first: Rect2 = (rows[0] as Control).get_global_rect()
+		var last: Rect2 = (rows.back() as Control).get_global_rect()
+		runner.check(is_equal_approx(first.position.x, slab.position.x + 12.0) and is_equal_approx(first.end.x, slab.end.x - 8.0) and is_equal_approx(first.position.y, slab.position.y + 8.0) and is_equal_approx(last.end.y, slab.end.y - 8.0), "SL1 rows sit inside 8 px padding, 12 on the left%s, first %s last %s slab %s" % [at, first, last, slab])
+		runner.check(is_equal_approx(main._playtest._floor, slab.position.y), "SL1 the helper's floor is the slab top%s, got %s" % [at, main._playtest._floor])
+		port.free()
+	overlays._end(saved)
+	return true
+
+# A window resize moves the bottom-anchored slab without resizing it and brings no new view.
+func test_floor_follows_a_resize(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin(true, _longest_card().id)
+	var port: SubViewport = BaseScene.sized_port(runner, Vector2i(1280, 800), Vector2i(1280, 800))
+	var main = await overlays._scene(runner, Skirmish, port)
+	overlays._camera(main)
+	main.get_node("HUD/PerfOverlay").toggle()
+	main.get_node("HUD/Playtest").open_marker()
+	for pair: Array in [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)]]:
+		port.size = pair[0]
+		port.size_2d_override = pair[1]
+		await _frames(runner)
+		var slab: Rect2 = _rect(main, "HUD/Economy")
+		runner.check(is_equal_approx(slab.end.y, pair[1].y) and is_equal_approx(main._playtest._floor, slab.position.y), "SL1 resized to %s with no new view: the floor follows the slab top %.0f, got %s" % [pair[1], slab.position.y, main._playtest._floor])
+		for path: String in ["HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog", "HUD/PerfOverlay"]: runner.check(not _rect(main, path).intersects(slab), "SL1 resized to %s: %s clear of the slab" % [pair[1], path.get_file()])
+	port.free()
+	overlays._end(saved)
+	return true
+
+# A nine-entry queue on the factory, set on the shown view only.
+static func _nine(main, factory: int) -> void:
+	var entries: Array = []
+	for i in 9: entries.append({"id": 900 + i, "kind": ["china_tank", "china_light_vehicle"][i % 2], "paid_cost": 800, "work": 336000 if i == 0 else 0})
+	var view: Dictionary = main.driver.current().view
+	HudModel.building(view, factory).queue = entries
+	main._show(view)
+
+func test_slab_china_with_overlays(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin(true, _longest_card().id)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await overlays._scene(runner, Skirmish, port)
+		overlays._camera(main)
+		var ids: Dictionary = _slab_world(runner, main, false)
+		var overlay = main.get_node("HUD/Playtest")
+		main.get_node("HUD/PerfOverlay").toggle()
+		overlay.open_marker()
+		var states: Array = [["a lone China builder", [ids.builder], -1, "BuildMenu"], ["own tanks", ids.tanks, -1, "Orders"], ["nine queued, collapsed", [], ids.factory, "QueueMore"], ["nine queued, open", [], ids.factory, "QueueMore"]]
+		for state: Array in states:
+			var label: String = "%s at %s" % [state[0], size]
+			_select(main, state[1], state[2])
+			if state[2] != -1: _nine(main, ids.factory)
+			if state[0].ends_with("open"): main.get_node("HUD/Economy/QueueMore").pressed.emit()
+			await _frames(runner)
+			runner.check(_shown(main, state[3]), "SL2 %s: %s shown" % [label, state[3]])
+			if state[0].ends_with("open"): runner.check(main.get_node("HUD/Economy/QueueMore").text == "Show fewer", "SL2 %s: Show fewer showing" % label)
+			_contained(runner, main, view, label)
+			var slab: Rect2 = _rect(main, "HUD/Economy")
+			var checklist: Rect2 = _rect(main, "HUD/Playtest/Checklist")
+			for path: String in ["HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog", "HUD/PerfOverlay"]:
+				var rect: Rect2 = _rect(main, path)
+				runner.check(main.get_node(path).is_visible_in_tree() and view.encloses(rect) and not rect.intersects(slab), "SL2 %s: %s shown, inside the view and clear of the slab, %s slab %s" % [label, path.get_file(), rect, slab])
+				if path != "HUD/Playtest/Checklist": runner.check(not rect.intersects(checklist), "SL2 %s: %s clear of the checklist" % [label, path.get_file()])
+			if state[2] == -1: continue
+			var boxes: Array[Node] = overlay.get_node("Checklist").find_children("*", "CheckBox", true, false)
+			var item: CheckBox = boxes.back()
+			var scroll: ScrollContainer = overlay.get_node("Checklist").find_children("*", "ScrollContainer", true, false)[0]
+			scroll.ensure_control_visible(item)
+			await _frames(runner)
+			var ticked: bool = item.button_pressed
+			_click_in(port, item.get_global_rect().get_center())
+			runner.check(item.button_pressed != ticked, "SL2 %s: the last checklist item takes a click" % label)
+			var cancelled: Array[int] = []
+			var record := func(id: int) -> void: cancelled.append(id)
+			main.hud.entry_cancelled.connect(record)
+			var rows: Array = main.get_node("HUD/Economy/Queue").get_children().filter(func(row: Control) -> bool: return row.visible)
+			_click_in(port, (rows.back() as Control).get_global_rect().get_center())
+			main.hud.entry_cancelled.disconnect(record)
+			runner.check(cancelled == [int(str(rows.back().name))], "SL2 %s: the last queue button takes a click, got %s" % [label, cancelled])
+		port.free()
+	overlays._end(saved)
+	return true
+
+static func _click_in(port: Viewport, at: Vector2) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = pressed
+		event.position = at
+		event.global_position = at
+		port.push_input(event, true)
+
+static func _square_rows(runner, buttons: Array, label: String) -> void:
+	for button: Button in buttons: runner.check(button.theme_type_variation == &"HudButton" and button.get_combined_minimum_size().y == 32.0, "%s %s is a 32 px HudButton, got %s %s" % [label, button.name, button.theme_type_variation, button.get_combined_minimum_size()])
+
+# Every menu a slab can show: each faction's builds, and what each of those and the start building produce.
+static func _every_menu() -> Array:
+	var menus: Array = []
+	for faction: String in Registry.Factions.FACTIONS:
+		var row: Dictionary = Registry.faction(faction)
+		var builds: Array = Registry.kind(row.start_unit).get("builds", [])
+		menus.append(builds)
+		for kind: String in builds + [row.start_building]: menus.append(Registry.kind(kind).get("produces", []))
+	return menus
+
+static func _look(main, path: String) -> StringName:
+	return (main.get_node("HUD/Economy/" + path) as Button).theme_type_variation
+
+func test_armed_button_look(runner) -> bool:
+	var helper = BaseScene.new()
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, true)
+	for builder: int in [ids.usa_builder, ids.builder, ids.frc_builder]:
+		_select(main, [builder])
+		var buttons: Array = main.get_node("HUD/Economy/BuildMenu").get_children()
+		runner.check(buttons.size() == main.hud.menu_kinds.size() and not buttons.is_empty(), "SL3 fixture: builder %d shows its menu" % builder)
+		for i in buttons.size():
+			(buttons[i] as Button).pressed.emit()
+			var looks: Array = buttons.map(func(button: Button) -> StringName: return button.theme_type_variation)
+			var expected: Array = range(buttons.size()).map(func(j: int) -> StringName: return &"HudButtonArmed" if j == i else &"HudButton")
+			runner.check(main.orders._placement_kind == main.hud.menu_kinds[i] and looks == expected, "SL3 builder %d arming %s: only its button armed, got %s" % [builder, main.hud.menu_kinds[i], looks])
+			main.orders._clear_placement()
+		runner.check(buttons.all(func(button: Button) -> bool: return button.theme_type_variation == &"HudButton"), "SL3 builder %d: cleared, every button plain" % builder)
+	var ground: Vector2 = Iso.world_to_plane(Vector2(12.5, 20.5))
+	_select(main, ids.tanks)
+	var arms: Array = [["the A key", func() -> void: helper.key(main, KEY_A)], ["the button", func() -> void: main.hud.attack_move_pressed.emit()]]
+	var disarms: Array = [["Esc", func() -> void: helper.key(main, KEY_ESCAPE)], ["a right-click", func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true)]]
+	for arm: Array in arms:
+		for disarm: Array in disarms:
+			(arm[1] as Callable).call()
+			var armed: StringName = _look(main, "Orders/AttackMove")
+			(disarm[1] as Callable).call()
+			runner.check(armed == &"HudButtonArmed" and _look(main, "Orders/AttackMove") == &"HudButton" and not main.orders._attack_move_mode, "SL3 armed by %s then %s: %s, then plain" % [arm[0], disarm[0], armed])
+			main.orders.selected_ids.assign(ids.tanks)
+	for stop: Array in [["the S key", func() -> void: helper.key(main, KEY_S)], ["the Stop button", func() -> void: main.hud.stop_pressed.emit()]]:
+		var before: int = _queued(main, "stop").size()
+		helper.key(main, KEY_A)
+		var armed: StringName = _look(main, "Orders/AttackMove")
+		(stop[1] as Callable).call()
+		runner.check(armed == &"HudButtonArmed" and _queued(main, "stop").size() == before + 1 and not main.orders._attack_move_mode and _look(main, "Orders/AttackMove") == &"HudButton", "SL3 armed, then %s: one stop, mode off, plain" % stop[0])
+	_select(main, [ids.car])
+	for unload: Array in [["the F key", func() -> void: helper.key(main, KEY_F)], ["the Unload button", func() -> void: main.hud.unload_pressed.emit()]]:
+		var before: int = _queued(main, "unload").size()
+		helper.key(main, KEY_A)
+		var armed: StringName = _look(main, "Orders/AttackMove")
+		(unload[1] as Callable).call()
+		runner.check(armed == &"HudButtonArmed" and _queued(main, "unload").size() == before + 1 and not main.orders._attack_move_mode and _look(main, "Orders/AttackMove") == &"HudButton", "SL3 a loaded car armed, then %s: one unload, mode off, plain" % unload[0])
+	main.free()
+	return true
+
+const HINTS: Array[String] = ["1-9: menu", "U: unload", "Right: context/move", "Esc: cancel", "A: attack-move click"]
+
+func test_slab_order_buttons(runner) -> bool:
+	var helper = BaseScene.new()
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, true)
+	var ground: Vector2 = Iso.world_to_plane(Vector2(12.5, 20.5))
+	_select(main, ids.tanks)
+	await _frames(runner)
+	var attack: Button = main.get_node("HUD/Economy/Orders/AttackMove")
+	var stop: Button = main.get_node("HUD/Economy/Orders/Stop")
+	var unload: Button = main.get_node("HUD/Economy/Orders/Unload")
+	runner.check(attack.is_visible_in_tree() and attack.text == "Attack move (%s)" % HudModel.key_label(KEY_A) and attack.text == "Attack move (A)" and stop.is_visible_in_tree() and stop.text == "Stop (S)", "SL4 tanks: Attack move (A) and Stop (S), got '%s' '%s'" % [attack.text, stop.text])
+	runner.check([attack, stop, unload].all(func(button: Button) -> bool: return button.focus_mode == Control.FOCUS_NONE), "SL4 the order buttons take no focus")
+	_click(runner, stop.get_global_rect().get_center())
+	var stops: Array = _queued(main, "stop")
+	runner.check(stops.size() == 1 and stops[0].entity_ids == ids.tanks, "SL4 a click on Stop submits one stop with the selection, got %s" % [stops])
+	for code: Key in [KEY_SPACE, KEY_ENTER]: SkirmishTests.new()._push_key(main, code)
+	runner.check(_queued(main, "stop").size() == 1, "SL4 Space and Enter after the click submit no second stop")
+	runner.check(attack.theme_type_variation == &"HudButton" and not main._hud_selection(main.shown_state).attack_move, "SL4 before the press: plain, not armed")
+	_click(runner, attack.get_global_rect().get_center())
+	runner.check(attack.theme_type_variation == &"HudButtonArmed" and main.orders._attack_move_mode and main._hud_selection(main.shown_state).attack_move, "SL4 a click on Attack move arms it")
+	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
+	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false)
+	var moves: Array = _queued(main, "attack_move")
+	runner.check(moves.size() == 1 and moves[0].entity_ids == ids.tanks, "SL4 the next ground click submits one attack_move, got %s" % [moves])
+	for host: Array in [["a loaded Tunnel Hub", [], ids.hub], ["a loaded Scout Car", [ids.car], -1]]:
+		_select(main, host[1], host[2])
+		await _frames(runner)
+		var before: int = _queued(main, "unload").size()
+		runner.check(unload.is_visible_in_tree() and unload.text == "Unload (F)", "SL4 %s: Unload (F) shown" % host[0])
+		_click(runner, unload.get_global_rect().get_center())
+		var unloads: Array = _queued(main, "unload")
+		var target: int = host[2] if host[2] != -1 else ids.car
+		runner.check(unloads.size() == before + 1 and unloads.back().target_id == target, "SL4 %s: a click on Unload submits one unload, got %s" % [host[0], unloads])
+	var none: Array = [["an inspected enemy", [], -1, ids.enemy], ["a pile", [], -1, ids.pile], ["an own Power Plant", [], ids.plant, -1], ["nothing", [], -1, -1], ["a lone builder", [ids.builder], -1, -1], ["collectors alone", ids.collectors, -1, -1], ["a builder with a collector", [ids.builder, ids.collectors[0]], -1, -1]]
+	for case: Array in none:
+		_select(main, case[1], case[2], case[3])
+		runner.check(not _shown(main, "Orders/AttackMove") and not _shown(main, "Orders/Stop"), "SL4 %s: no Attack move and no Stop" % case[0])
+	_select(main, [ids.builder, ids.infantry])
+	runner.check(_shown(main, "Orders/AttackMove") and _shown(main, "Orders/Stop") and not _shown(main, "BuildMenu"), "SL4 a builder with an armed unit: the order row, no build menu")
+	var both: Array = []
+	for case: Array in [[ids.tanks, -1], [[ids.car], -1], [[], ids.hub], [[], ids.factory], [[], ids.barracks], [[], ids.plant], [[], -1], [[ids.usa_builder], -1], [[ids.builder], -1], [[ids.frc_builder], -1], [[ids.builder, ids.infantry], -1], [ids.collectors, -1], [[ids.builder, ids.collectors[0]], -1]]:
+		_select(main, case[0], case[1])
+		if _shown(main, "Orders") and _shown(main, "BuildMenu"): both.append(case)
+	runner.check(both.is_empty(), "SL4 the order row and the build menu never show together (the 8 px gap between them is unreachable), got %s" % [both])
+	var text: String = BaseScene.hud_text(main)
+	runner.check(HINTS.all(func(hint: String) -> bool: return not text.contains(hint)) and main.find_child("Hints", true, false) == null, "SL4 no key-hint text and no Hints node, got " + text)
+	_select(main, [ids.builder])
+	main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()
+	main.orders.arm_attack_move()
+	runner.check(main.orders.busy() and not _shown(main, "Orders/AttackMove") and not _shown(main, "Orders/Stop") and not main.orders._attack_move_mode, "SL4 a placement armed: no order row, and a direct arm does nothing")
+	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
+	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false)
+	runner.check(_queued(main, "build").size() == 1 and _queued(main, "attack_move").size() == 1, "SL4 the next click places the building and submits no attack_move")
+	main.orders.reset()
+	main.free()
+	await _loaded_rule(runner)
+	await _note_form_holds(runner)
+	await _crosshair(runner)
+	return true
+
+func _loaded_rule(runner) -> void:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, false)
+	_select(main, [], ids.hub)
+	runner.check(not _shown(main, "Orders/Unload") and not _shown(main, "Orders"), "SL4 an empty Tunnel Hub: no Unload")
+	_select(main, [ids.car])
+	runner.check(not _shown(main, "Orders/Unload") and _shown(main, "Orders/AttackMove"), "SL4 an empty Scout Car with no own unit inside anything: no Unload")
+	main.free()
+
+func _note_form_holds(runner) -> void:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await overlays._scene(runner, Skirmish)
+	overlays._camera(main)
+	var ids: Dictionary = _slab_world(runner, main, false)
+	_select(main, ids.tanks)
+	main.get_node("HUD/Playtest").open_marker()
+	main.orders.stop_selected()
+	main.orders.arm_attack_move()
+	runner.check(main._playtest.holds_match() and _queued(main, "stop").is_empty() and not main.orders._attack_move_mode, "SL4 the note form holds the match: Stop and Attack move do nothing")
+	main.free()
+	overlays._end(saved)
+
+# Each step leaves the cursor it set last; no check runs while the recorder is in place.
+func _crosshair(runner) -> void:
+	var helper = BaseScene.new()
+	var skirmish = SkirmishTests.new()
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await overlays._scene(runner, Skirmish)
+	overlays._camera(main)
+	var ids: Dictionary = _slab_world(runner, main, true)
+	var ground: Vector2 = Iso.world_to_plane(Vector2(12.5, 20.5))
+	var shapes: Array[int] = []
+	var seen: Array = []
+	Orders.set_cursor = func(shape: int) -> void: shapes.append(shape)
+	var steps: Array = [
+		["left-click submit", ids.tanks, func() -> void:
+			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
+			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false)],
+		["Esc", ids.tanks, func() -> void: helper.key(main, KEY_ESCAPE)],
+		["a right-click", ids.tanks, func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true)],
+		["S", ids.tanks, func() -> void: helper.key(main, KEY_S)],
+		["F", [ids.car], func() -> void: helper.key(main, KEY_F)],
+		["the Stop button", ids.tanks, func() -> void: main.hud.stop_pressed.emit()],
+		["the Unload button", [ids.car], func() -> void: main.hud.unload_pressed.emit()],
+		["a placement armed", [ids.builder], func() -> void: main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()],
+		["orders.reset()", ids.tanks, func() -> void: main.orders.reset()],
+		["the pause menu opened by Menu, a frame later", ids.tanks, func() -> void:
+			main._pause.open()
+			main._process(0.0)],
+		["the note form, a frame later", ids.tanks, func() -> void:
+			main._playtest.open_marker()
+			main._process(0.0)],
+		["the whole selection dying", ids.tanks, func() -> void:
+			for id: int in ids.tanks: main.driver.pump.live().remove_object(id)
+			BaseScene.publish(main)]]
+	for step: Array in steps:
+		main.orders._clear_placement()
+		main._pause.close()
+		main._playtest.cancel_marker()
+		_select(main, step[1])
+		helper.key(main, KEY_A)
+		seen.append([step[0], shapes.back() if not shapes.is_empty() else -1, main.orders._attack_move_mode, true])
+		(step[2] as Callable).call()
+		seen.append([step[0], shapes.back(), main.orders._attack_move_mode, false])
+	_select(main, [ids.infantry])
+	helper.key(main, KEY_A)
+	main.free()
+	seen.append(["the match freed", shapes.back(), false, false])
+	var won = await skirmish._setup(runner)
+	skirmish._arena(won)
+	helper.key(won, KEY_A)
+	seen.append(["the match end", shapes.back(), won.orders._attack_move_mode, true])
+	skirmish._victory(won)
+	seen.append(["the match end", shapes.back(), won.orders._attack_move_mode, false])
+	won.free()
+	var frozen = await skirmish._setup(runner)
+	var world: Dictionary = skirmish._frozen_arena(frozen)
+	helper.key(frozen, KEY_A)
+	seen.append(["the freeze card", shapes.back(), frozen.orders._attack_move_mode, true])
+	world.pump.fail_next = true
+	BaseScene.tick(frozen)
+	seen.append(["the freeze card", shapes.back(), frozen.orders._attack_move_mode, false])
+	frozen.free()
+	Orders.set_cursor = Input.set_default_cursor_shape
+	overlays._end(saved)
+	for entry: Array in seen:
+		var expected: int = Input.CURSOR_CROSS if entry[3] else Input.CURSOR_ARROW
+		runner.check(entry[1] == expected and entry[2] == entry[3], "SL4 %s %s: cursor %d, armed %s, got %s" % ["armed before" if entry[3] else "after", entry[0], expected, entry[3], entry])
+
+static func _queue_of(main, factory: int, count: int, first_work: int = 336000) -> void:
+	var entries: Array = []
+	for i in count: entries.append({"id": 900 + i, "kind": "china_tank", "paid_cost": 800, "work": first_work if i == 0 else 0})
+	var view: Dictionary = main.driver.current().view
+	HudModel.building(view, factory).queue = entries
+	main._show(view)
+
+static func _visible_texts(root: Node) -> Array:
+	return root.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree()).map(func(label: Label) -> String: return label.text)
+
+func test_slab_queue_cap(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, false)
+	_select(main, [], ids.factory)
+	var queue: Control = main.get_node("HUD/Economy/Queue")
+	var header: Control = main.get_node("HUD/Economy/QueueHeader")
+	var more: Button = main.get_node("HUD/Economy/QueueMore")
+	runner.check(not header.visible and queue.get_child_count() == 0, "SL5 no entries: no QUEUE header")
+	for count in range(1, 6):
+		_queue_of(main, ids.factory, count)
+		var rows: Array = queue.get_children()
+		var digits: Array = _visible_texts(main.get_node("HUD/Economy")).filter(func(text: String) -> bool: return text.length() > 1 and text[0].is_valid_int() and text[1] == ".")
+		runner.check(rows.size() == count and rows.all(func(row: Control) -> bool: return row.visible) and not more.visible, "SL5 %d entries: all shown, no Show more" % count)
+		runner.check(header.visible and header.get_node("Title").text == "QUEUE" and header.get_node("Waiting").visible == (count > 1) and header.get_node("Waiting").text == "%d waiting" % (count - 1), "SL5 %d entries: QUEUE and %d waiting" % [count, count - 1])
+		runner.check(digits.is_empty(), "SL5 %d entries: no numbered row, got %s" % [count, digits])
+		runner.check(rows[0].get_node("Percent").visible and rows[0].get_node("Track").visible and rows.slice(1).all(func(row: Control) -> bool: return not row.get_node("Percent").visible and not row.get_node("Track").visible), "SL5 %d entries: only the first shows its percent and line" % count)
+		runner.check(rows[0].get_node("Track/Bar").color == View.owner_color(1, main._view.bright_owners()) and rows[0].get_node("Cancel").text == "×", "SL5 the line is the own colour and the × is the cancel sign")
+	for count: int in [6, 9]:
+		_queue_of(main, ids.factory, count)
+		var shown: int = queue.get_children().filter(func(row: Control) -> bool: return row.visible).size()
+		runner.check(shown == 4 and queue.get_child_count() == count and more.visible and more.text == "Show %d more queued" % (count - 4), "SL5 %d entries: 4 shown and '%s'" % [count, more.text])
+	_square_rows(runner, queue.get_children() + [more], "SL5")
+	more.pressed.emit()
+	runner.check(queue.get_children().all(func(row: Control) -> bool: return row.visible) and more.text == "Show fewer" and queue.get_child_count() == 9, "SL5 a press shows all nine and Show fewer")
+	more.pressed.emit()
+	runner.check(queue.get_children().filter(func(row: Control) -> bool: return row.visible).size() == 4 and more.text == "Show 5 more queued", "SL5 a second press collapses")
+	more.pressed.emit()
+	main.orders.selected_building_id = ids.barracks
+	_queue_of(main, ids.barracks, 9)
+	runner.check(more.text == "Show 5 more queued", "SL5 open, then another building with nine: collapsed")
+	_select(main, [], ids.factory)
+	_queue_of(main, ids.factory, 9)
+	more.pressed.emit()
+	_queue_of(main, ids.factory, 5)
+	_queue_of(main, ids.factory, 7)
+	runner.check(more.text == "Show 3 more queued" and queue.get_child_count() == 7, "SL5 open, then down to 5: collapsed")
+	await _frames(runner)
+	var cancelled: Array[int] = []
+	main.hud.entry_cancelled.connect(func(id: int) -> void: cancelled.append(id))
+	var row: Control = queue.get_child(2)
+	_click(runner, row.get_global_rect().get_center())
+	runner.check(cancelled == [902], "SL5 a press on the middle of a row cancels that entry, got %s" % [cancelled])
+	main.free()
+	return true
+
+func test_build_buttons_by_selection_and_price(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, false, 500)
+	for case: Array in [["nothing", [], true], ["a lone builder", [ids.builder], true], ["own tanks", ids.tanks, false], ["collectors alone", ids.collectors, false], ["a builder with a tank", [ids.builder, ids.tanks[0]], false], ["a builder with a collector", [ids.builder, ids.collectors[0]], false], ["two builders", [ids.builder, ids.frc_builder], false]]:
+		_select(main, case[1])
+		runner.check(_shown(main, "BuildMenu") == case[2], "SL6 %s: build menu %s" % [case[0], "shown" if case[2] else "hidden"])
+		if case[1].has(ids.tanks[0]): runner.check(_shown(main, "Orders/AttackMove"), "SL6 %s: the order row instead" % case[0])
+	for builder: int in [ids.usa_builder, ids.builder, ids.frc_builder]:
+		_select(main, [builder])
+		for button: Node in main.get_node("HUD/Economy/BuildMenu").get_children():
+			(button as Button).pressed.emit()
+			runner.check(main.orders.busy() and main.hud.refusal.is_empty(), "SL6 builder %d: %s arms its placement" % [builder, (button as Button).text])
+			main.orders._clear_placement()
+	_select(main, [], ids.factory)
+	runner.check(_shown(main, "BuildMenu") and main.hud.menu_kinds == Registry.kind("china_factory").produces, "SL6 a selected factory shows its produces")
+	var menu: GridContainer = main.get_node("HUD/Economy/BuildMenu")
+	var font: Font = menu.get_theme_font("font", &"HudButton")
+	var font_size: int = menu.get_theme_font_size("font_size", &"HudButton")
+	var widest: float = 0.0
+	for kinds: Array in _every_menu():
+		for i in kinds.size(): widest = maxf(widest, font.get_string_size(HudModel.menu_label(i, kinds[i]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x)
+	runner.check(menu.columns * (widest + 24.0) + (menu.columns - 1) * 4.0 <= 412.0, "SL6 %d columns fit the widest label of every build and produce menu (%.1f px)" % [menu.columns, widest])
+	_select(main, [ids.builder])
+	await _frames(runner)
+	var tower: Button = main.get_node("HUD/Economy/BuildMenu").get_child(4)
+	var cheap: Button = main.get_node("HUD/Economy/BuildMenu").get_child(2)
+	var price: Label = tower.get_node("Price")
+	var buttons: Array = main.get_node("HUD/Economy/BuildMenu").get_children()
+	runner.check(buttons.all(func(button: Button) -> bool: return button.alignment == HORIZONTAL_ALIGNMENT_LEFT and button.text == HudModel.menu_name(button.get_index(), main.hud.menu_kinds[button.get_index()]) and button.get_node("Price").horizontal_alignment == HORIZONTAL_ALIGNMENT_RIGHT), "SL6 every button: its menu name left, a right-aligned Price")
+	runner.check(tower.text == "5: Rotary Gun Tower" and price.text == "$1200" and _colour(price) == _token("warn"), "SL6 credits 500: the tower's $1200 in warn, got '%s' '%s'" % [tower.text, price.text])
+	runner.check(cheap.get_node("Price").text == "$500" and _colour(cheap.get_node("Price")) == _token("text"), "SL6 the affordable barracks' price in text")
+	runner.check(tower.get_global_rect().encloses(price.get_global_rect()), "SL6 the price sits inside its button")
+	var rebuilds: int = main.hud.rebuilds
+	var node_id: int = price.get_instance_id()
+	for credits: Array in [[1200, "text"], [499, "warn"]]:
+		var view: Dictionary = main.driver.current().view
+		HudModel.player(view, 1).credits = credits[0]
+		main._show(view)
+		runner.check(_colour(price) == _token(credits[1]) and main.hud.rebuilds == rebuilds and tower.get_node("Price").get_instance_id() == node_id, "SL6 credits %d: the price in %s, patched in place" % [credits[0], credits[1]])
+	main.free()
+	return true
+
+func test_key_labels(runner) -> bool:
+	var headless: Array = HudModel.ORDER_KEYS.values().map(func(code: Key) -> String: return HudModel.key_label(code))
+	runner.check(headless == ["A", "S", "F", "E"], "KL1 headless labels are the physical keys, got %s" % [headless])
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, true)
+	HudModel.layout_label = func(physical: Key) -> Key: return {KEY_A: KEY_Q, KEY_F: KEY_G, KEY_E: KEY_R}.get(physical, physical)
+	main.hud.reset()
+	_select(main, [ids.car])
+	var texts: Array = [main.get_node("HUD/Economy/Orders/AttackMove").text, main.get_node("HUD/Economy/Orders/Stop").text, main.get_node("HUD/Economy/Orders/Unload").text]
+	_select(main, [], ids.barracks)
+	texts.append(main.get_node("HUD/Economy/Produce").text)
+	HudModel.layout_label = HudModel._platform_label
+	main.free()
+	runner.check(texts.slice(0, 3) == ["Attack move (Q)", "Stop (S)", "Unload (G)"] and texts[3].ends_with("(R)"), "KL1 the buttons print the layout's labels, got %s" % [texts])
 	return true

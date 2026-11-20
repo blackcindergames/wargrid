@@ -27,13 +27,14 @@ var _preview_key: Array = []
 var _attack_move_mode: bool = false
 var _awaiting_build: String = ""
 var _answer: Dictionary = {}
+# Headless reads of the cursor shape stay at the arrow, so tests swap this for a recorder.
+static var set_cursor: Callable = Input.set_default_cursor_shape
 
 func _init(screen: Node) -> void:
 	_screen = screen
 
 func handle(event: InputEvent) -> void:
-	if _screen.shown_over() or _screen.frozen() or _screen._playtest.holds_match():
-		return
+	if not takes_orders(): return
 	if event.is_action_pressed("deselect"): inspected_id = -1
 	if _placement_kind.is_empty() and _combat_input(event): return
 	_hover(event)
@@ -48,6 +49,24 @@ func handle(event: InputEvent) -> void:
 		_pending_placement = ""
 		_enter_placement(pending)
 
+func takes_orders() -> bool:
+	return not _screen.shown_over() and not _screen.frozen() and not _screen._playtest.holds_match()
+
+# Every arm and disarm goes through here, so the crosshair never outlives the mode.
+func _set_attack_move(on: bool) -> void:
+	_attack_move_mode = on
+	set_cursor.call(Input.CURSOR_CROSS if on else Input.CURSOR_ARROW)
+
+func arm_attack_move() -> void:
+	if not takes_orders() or busy() or selected_ids.is_empty(): return
+	_set_attack_move(true)
+	_screen._reshow()
+
+func stop_selected() -> void:
+	if not takes_orders() or busy() or selected_ids.is_empty(): return
+	_set_attack_move(false)
+	_screen._submit({"type":"stop","entity_ids":selected_ids.duplicate()})
+
 func busy() -> bool:
 	return _selecting or not _placement_kind.is_empty()
 
@@ -60,7 +79,7 @@ func reset() -> void:
 	inspected_id = -1
 	_placement_kind = ""
 	_pending_placement = ""
-	_attack_move_mode = false
+	_set_attack_move(false)
 	_awaiting_build = ""
 	_answer = {}
 	_selecting = false
@@ -82,18 +101,19 @@ func is_selecting() -> bool:
 
 func _combat_input(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo and not is_selecting():
-		if event.physical_keycode == KEY_A and not selected_ids.is_empty():
-			_attack_move_mode = true
+		if event.physical_keycode == HudModel.ORDER_KEYS.attack_move and not selected_ids.is_empty():
+			arm_attack_move()
 			return true
-		if event.physical_keycode == KEY_S and not selected_ids.is_empty():
-			_screen._submit({"type":"stop","entity_ids":selected_ids.duplicate()})
+		if event.physical_keycode == HudModel.ORDER_KEYS.stop and not selected_ids.is_empty():
+			stop_selected()
 			return true
 	if _attack_move_mode and (event.is_action_pressed("deselect") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed)):
-		_attack_move_mode = false
+		_set_attack_move(false)
+		_screen._reshow()
 		return true
 	if _attack_move_mode and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if not event.pressed:
-			_attack_move_mode = false
+			_set_attack_move(false)
 			var target: Vector2 = _ground(event)
 			_screen._submit({"type":"attack_move","entity_ids":selected_ids.duplicate(),"target":[target.x,target.y]})
 		return true
@@ -120,11 +140,11 @@ func _economy_keys(event: InputEvent) -> bool:
 	if index >= 0 and index < menu.size():
 		_menu_choose(index,true)
 		return true
-	if event.physical_keycode == KEY_E:
+	if event.physical_keycode == HudModel.ORDER_KEYS.produce:
 		if not is_selecting() and _placement_kind.is_empty(): _produce_selected()
 		return true
-	if event.physical_keycode == KEY_U:
-		if not is_selecting() and _placement_kind.is_empty(): _unload_selected()
+	if event.physical_keycode == HudModel.ORDER_KEYS.unload:
+		_unload_selected()
 		return true
 	return false
 
@@ -277,7 +297,7 @@ func _hint_point(payload: Dictionary) -> Variant:
 	return Vector2(building.origin[0],building.origin[1]) + Vector2(Definitions.building(building.kind).footprint) / 2.0
 
 func _menu_choose(index: int, from_key: bool) -> void:
-	if _screen.frozen(): return
+	if not takes_orders(): return
 	var kind: String = menu[index]
 	if selected_building_id != -1: _screen._submit({"type":"produce","building_id":selected_building_id,"unit_kind":kind})
 	elif from_key and is_selecting(): _pending_placement = kind
@@ -289,7 +309,7 @@ func _builder() -> int:
 	return unit.id if not unit.is_empty() and Registry.is_builder(unit.kind) and unit.owner == _screen.local_player else -1
 
 func _enter_placement(kind: String) -> void:
-	_attack_move_mode = false
+	_set_attack_move(false)
 	if _builder() == -1:
 		_screen.hud.note = "Choose one builder"
 		_screen.hud.refusal = "Choose one builder"
@@ -347,7 +367,7 @@ func _context_order(id: int) -> bool:
 			_screen._reshow()
 		return true
 	var building: Dictionary = _screen._building(state,id)
-	if selected_ids != [id] and _container(id,building):
+	if selected_ids != [id] and HudModel.is_container(state, id, _screen.local_player):
 		_screen._submit({"type":"enter","entity_ids":selected_ids.filter(func(unit_id: int) -> bool: return unit_id != id),"target_id":id})
 		return true
 	if not building.is_empty() and building.owner == _screen.local_player and not building.completed:
@@ -359,17 +379,12 @@ func _context_order(id: int) -> bool:
 		return true
 	return false
 
-func _container(id: int, building: Dictionary) -> bool:
-	var host: Dictionary = building
-	if host.is_empty():
-		host = _unit(id)
-	return not host.is_empty() and host.owner == _screen.local_player and host.get("completed",true) and not Registry.kind(host.kind).get("contains",{}).is_empty()
-
 func _unload_selected() -> void:
+	if not takes_orders() or busy(): return
+	_set_attack_move(false)
 	var state: Dictionary = _screen.shown_state
 	var id: int = selected_building_id if selected_building_id != -1 else (selected_ids[0] if selected_ids.size() == 1 else -1)
-	var building: Dictionary = _screen._building(state,id)
-	if not _container(id,building):
+	if not HudModel.is_container(state, id, _screen.local_player):
 		_screen.hud.note = "Select a container"
 		_screen.hud.refusal = "Select a container"
 		_screen._reshow()
@@ -384,7 +399,7 @@ func _set_rally(plane: Vector2) -> bool:
 	return true
 
 func _produce_selected() -> void:
-	if _screen.frozen(): return
+	if not takes_orders(): return
 	var state: Dictionary = _screen.shown_state
 	var building: Dictionary = _screen._building(state,selected_building_id)
 	if building.is_empty():
@@ -395,11 +410,11 @@ func _produce_selected() -> void:
 	_screen._submit({"type":"produce","building_id":building.id,"unit_kind":_screen._production_kind(building, state)})
 
 func _cancel_entry(id: int) -> void:
-	if _screen.frozen(): return
+	if not takes_orders(): return
 	_screen._submit({"type":"cancel_production","building_id":selected_building_id,"production_id":id})
 
 func _cancel_build() -> void:
-	if _screen.frozen(): return
+	if not takes_orders(): return
 	_screen._submit({"type":"cancel_build","building_id":selected_building_id})
 
 func _ground(event: InputEventMouseButton) -> Vector2:

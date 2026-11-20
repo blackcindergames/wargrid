@@ -217,9 +217,7 @@ func test_hud_layout_and_focus(runner) -> bool:
 	var ids: Dictionary = _arena(main)
 	main.orders.selected_ids.assign([ids.tank])
 	main._refresh()
-	var status: Label = main.get_node("HUD/Status")
-	var economy: Control = main.get_node("HUD/Economy")
-	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y, "K5 buttons sit below every status line")
+	BaseScene.slab_clear(runner, main, "K5 tank selected")
 	var view = main.get_node("WorldView")
 	runner.check(view.focus_targets().is_empty(), "K5 no focus before an order")
 	main._unhandled_input(_right_click(main, Iso.world_to_plane(Vector2(15.5, 10.5)) + Vector2(0, -8)))
@@ -230,11 +228,11 @@ func test_hud_layout_and_focus(runner) -> bool:
 	runner.check(view.focus_targets().is_empty(), "K5 focus shows only for the selection")
 	main.orders.inspected_id = ids.enemy
 	main._refresh()
-	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y, "K5 buttons below an inspected enemy line")
+	BaseScene.slab_clear(runner, main, "K5 an inspected enemy")
 	var pile: Dictionary = _pile_world(main)
 	main.orders.selected_ids.assign([pile.waiting])
 	main._refresh()
-	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y, "K5 buttons below a queued collector line")
+	BaseScene.slab_clear(runner, main, "K5 a queued collector")
 	main.free()
 	return true
 
@@ -251,15 +249,30 @@ func _pile_world(main) -> Dictionary:
 	main._refresh()
 	return {"source": source, "docked": first, "waiting": second}
 
+func _build_labels(main) -> Array:
+	return main.get_node("HUD/Economy/BuildMenu").get_children().map(func(button: Button) -> String: return button.text)
+
 func test_hud_build_line(runner) -> bool:
 	var main = await _setup(runner)
+	var labels: Array = _build_labels(main)
 	var text: String = BaseScene.hud_text(main)
-	runner.check(text.contains("1-9: menu") and text.contains("U: unload") and not text.contains("1/2/3"), "H1 skirmish build line, got " + text)
+	runner.check(not labels.is_empty() and labels[0].begins_with("1: ") and not text.contains("1-9: menu") and not text.contains("U: unload"), "H1 the build buttons carry their keys and no key-hint line shows, got %s" % [labels])
 	var base_helper = BaseScene.new()
 	var base = await base_helper.setup(runner)
-	var base_text: String = BaseScene.hud_text(base)
-	runner.check(base_text.contains("1-9: menu") and base_text.contains("U: unload") and not base_text.contains("1/2/3"), "H1 base scene shares the menu hint")
+	runner.check(_build_labels(base) == labels, "H1 base scene shares the build buttons")
 	base.free()
+	var sim = Skirmish.create(false)
+	var hub: int = Fixture.add_completed(sim, 1, "frc_defence", Vector2i(10, 10))
+	var rifle: int = sim.spawn(1, Vector2(9.5, 10.5), "frc_rifle_infantry")
+	sim.start_match([1, 2] as Array[int])
+	main.driver.adopt(sim)
+	main.orders.selected_building_id = hub
+	main._refresh()
+	var unload: Button = main.get_node("HUD/Economy/Orders/Unload")
+	runner.check(not unload.is_visible_in_tree(), "H1 no Unload while the hub is empty")
+	Fixture.load_unit(runner, sim, rifle, hub)
+	BaseScene.publish(main)
+	runner.check(unload.is_visible_in_tree() and unload.text == "Unload (F)", "H1 a loaded hub shows Unload (F), got '%s'" % unload.text)
 	main.free()
 	return true
 
@@ -739,7 +752,7 @@ func test_silent_keys_explain(runner) -> bool:
 	return true
 
 func _hud_texts(main) -> Array[String]:
-	var texts: Array[String] = [main.get_node("HUD/Status").text, main.get_node("HUD/Economy/Produce").text, main.get_node("HUD/Economy/CancelBuild").text]
+	var texts: Array[String] = [BaseScene.hud_text(main), main.get_node("HUD/Economy/Produce").text, main.get_node("HUD/Economy/CancelBuild").text]
 	for group: String in ["BuildMenu", "Queue"]:
 		for button in main.get_node("HUD/Economy/" + group).get_children(): texts.append(button.text)
 	return texts
@@ -762,7 +775,8 @@ func test_hud_strings_use_display_names(runner) -> bool:
 	main.orders.selected_building_id = -1
 	main.orders.selected_ids.assign([builder])
 	main.orders._enter_placement("usa_power_plant")
-	runner.check(main.get_node("HUD/Status").text.contains("Place: Power Plant"), "N1 placement line names the building")
+	var armed: Array = main.get_node("HUD/Economy/BuildMenu").get_children().filter(func(button: Button) -> bool: return button.theme_type_variation == &"HudButtonArmed")
+	runner.check(armed.size() == 1 and armed[0].text.ends_with("Power Plant"), "N1 the armed button names the building, got %s" % [armed.map(func(button: Button) -> String: return button.text)])
 	shown.append_array(_hud_texts(main))
 	main.orders._clear_placement()
 	var enemy: Dictionary = sim.snapshot().buildings.filter(func(building: Dictionary) -> bool: return building.owner == 2)[0]
@@ -785,11 +799,8 @@ func test_hud_font_size_is_shared(runner) -> bool:
 	main.orders._produce_selected()
 	BaseScene.tick(main)
 	await runner.process_frame
-	var controls: Array = [main.get_node("HUD/Status"), main.get_node("HUD/Economy/Produce"), main.get_node("HUD/Economy/CancelBuild")]
-	controls.append_array(main.get_node("HUD/Economy/BuildMenu").get_children())
-	controls.append_array(main.get_node("HUD/Economy/Queue").get_children())
-	runner.check(controls.size() >= 4 and main.get_node("HUD/Economy/Queue").get_child_count() == 1, "FS1 fixture: status, buttons and a queue entry, got %d queue entries" % main.get_node("HUD/Economy/Queue").get_child_count())
-	for control in controls: runner.check(control.get_theme_font_size("font_size") == 12, "FS1 %s is 12 px until the slab redraw, got %d" % [control.name, control.get_theme_font_size("font_size")])
+	runner.check(main.get_node("HUD/Economy/Queue").get_child_count() == 1, "FS1 fixture: a queue entry, got %d" % main.get_node("HUD/Economy/Queue").get_child_count())
+	runner.check(main.get_node("HUD/Status").get_theme_font_size("font_size") == 12, "FS1 HUD/Status is 12 px")
 	var muted: Color = ThemeDB.get_project_theme().get_color(&"muted", &"Tokens")
 	runner.check(main.get_node("HUD/Status").get_theme_color("font_color") != muted, "FS1 the status line has no backdrop, so it is not muted")
 	for control: Control in main.get_node("HUD").find_children("*", "Control", true, false):
@@ -842,20 +853,21 @@ func test_enter_unload_scene(runner) -> bool:
 	main.orders.selected_building_id = hub
 	main._refresh()
 	helper.key(main, KEY_U)
+	runner.check(orders.call("unload").is_empty(), "TU1 U no longer unloads")
+	helper.key(main, KEY_F)
 	var unloads: Array = orders.call("unload")
-	runner.check(unloads.size() == 1 and unloads[0].target_id == hub, "TU1 U with the hub selected submits unload")
+	runner.check(unloads.size() == 1 and unloads[0].target_id == hub, "TU1 F with the hub selected submits unload")
 	main.orders.selected_building_id = -1
 	main.orders.selected_ids.assign([rifle])
 	main._refresh()
-	helper.key(main, KEY_U)
-	runner.check(orders.call("unload").size() == 1 and main.hud.refusal == "Select a container", "TU1 U without a container says why, got '%s'" % main.hud.refusal)
+	helper.key(main, KEY_F)
+	runner.check(orders.call("unload").size() == 1 and main.hud.refusal == "Select a container", "TU1 F without a container says why, got '%s'" % main.hud.refusal)
 	var hub_point: Vector2 = Iso.world_to_plane(Vector2(10.5, 10.5)) + Vector2(0, -8)
 	sim._entities[rifle].container_id = hub
 	sim._entities[rifle].position = [10.5, 10.5]
 	BaseScene.publish(main)
 	runner.check(main._view.pick_object(hub_point) == hub, "TU1 clicking an occupied hub picks the hub, not an occupant")
-	var status: Label = main.get_node("HUD/Status")
-	runner.check(Rect2(status.global_position, status.get_minimum_size()).end.x <= main.get_viewport().get_visible_rect().size.x, "TU1 the hint line keeps the status inside the viewport")
+	BaseScene.slab_clear(runner, main, "TU1")
 	main.free()
 	return true
 
@@ -1130,7 +1142,7 @@ func test_input_script_offline(runner) -> bool:
 	runner.check(sim_orders.call("resume_build") == 1, "IC1 step 14 took effect")
 	rows.append(_ic_row(main, 14, seen))
 	_ic_click(helper, main, at.call(30.5, 22.5))
-	helper.key(main, KEY_U)
+	helper.key(main, KEY_F)
 	runner.check(sim_orders.call("unload") == 1, "IC1 step 15 took effect")
 	rows.append(_ic_row(main, 15, seen))
 	_ic_click(helper, main, at.call(14.5, 14.5))
@@ -1294,7 +1306,7 @@ func test_sb1_economy_input_reads_shown(runner) -> bool:
 	helper.pointer(main, spot, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, spot, MOUSE_BUTTON_LEFT, false)
 	helper.pointer(main, Iso.world_to_plane(Vector2(pile.origin[0] + 2.0, pile.origin[1] + 2.5)), MOUSE_BUTTON_RIGHT, true)
-	helper.key(main, KEY_U)
+	helper.key(main, KEY_F)
 	var click: Vector2 = Iso.world_to_plane(Vector2(13.5, 13.5))
 	helper.pointer(main, click, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, click, MOUSE_BUTTON_LEFT, false)
@@ -1415,8 +1427,7 @@ func test_sb2_refusal_next_step(runner) -> bool:
 	runner.check(main.hud.refusal == "" and _pending(main, "move") == moves, "RA1 a refused move shows nothing at submit, got '%s'" % main.hud.refusal)
 	BaseScene.tick(main)
 	runner.check(main.hud.refusal == "Target outside map" and _error_cues(main) == 1, "RA1 the refusal and one beep arrive with the next step, got '%s' and %d" % [main.hud.refusal, _error_cues(main)])
-	var status: Label = main.get_node("HUD/Status")
-	runner.check(main.get_node("HUD/Economy").position.y >= status.position.y + status.get_minimum_size().y, "RA1 buttons sit below every status line")
+	BaseScene.slab_clear(runner, main, "RA1")
 	main.free()
 	return true
 

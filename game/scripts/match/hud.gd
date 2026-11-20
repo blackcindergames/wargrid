@@ -5,9 +5,16 @@ signal entry_cancelled(entry_id: int)
 signal produce_pressed()
 signal cancel_build_pressed()
 signal menu_pressed()
+signal attack_move_pressed()
+signal stop_pressed()
+signal unload_pressed()
 
 # Wider notices wrap, so a long desync path grows down, clear of the chips at 1280.
 const NOTICE_WIDTH: float = 600.0
+const PAD_LEFT: float = 12.0
+const PAD_Y: float = 8.0
+const GAP: int = 4
+const ROW: float = 32.0
 
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -30,6 +37,14 @@ var _menu: Button
 var _notice: PanelContainer
 var _notice_text: Label
 var _esc: Label
+var _resume: Label
+var _commands: GridContainer
+var _queue_header: HBoxContainer
+var _queue_more: Button
+var _queue_open: bool = false
+var _queue_for: int = -1
+var _edge: Color = Color.WHITE
+var _keys: Dictionary = {}
 
 func _init() -> void:
 	name = "Hud"
@@ -163,16 +178,109 @@ func setup(economy: VBoxContainer, status: Label) -> void:
 	_status = status
 	_economy = economy
 	if economy == null: return
-	_build_menu = economy.get_node("BuildMenu")
 	_queue = economy.get_node("Queue")
 	_produce = economy.get_node("Produce")
 	_cancel_build = economy.get_node("CancelBuild")
 	_produce.pressed.connect(produce_pressed.emit)
 	_cancel_build.pressed.connect(cancel_build_pressed.emit)
+	_build_slab()
+	_read_keys()
 
 func reset() -> void:
 	note = ""
 	refusal = ""
+	if _economy != null: _read_keys()
+
+# hud-v5-layout "Command card": the VBox lays out rows, the Hud pads, fills and edges it.
+func _build_slab() -> void:
+	_economy.alignment = BoxContainer.ALIGNMENT_CENTER
+	_economy.add_theme_constant_override("separation", GAP)
+	_economy.draw.connect(_draw_slab)
+	_economy.sort_children.connect(_pad_slab)
+	_resume = _label(_economy, "ResumeHint", &"HudHint", "Right-click: resume")
+	_commands = _grid("Orders", 2)
+	for part: Array in [["AttackMove", attack_move_pressed], ["Stop", stop_pressed], ["Unload", unload_pressed]]:
+		var button: Button = _button(_commands, part[0], _cell_width(2))
+		button.focus_mode = FOCUS_NONE
+		button.pressed.connect((part[1] as Signal).emit)
+	var font: Font = get_theme_font("font", &"HudButton")
+	_build_menu = _grid("BuildMenu", HudModel.menu_columns(font, get_theme_font_size("font_size", &"HudButton")))
+	for row: Button in [_produce, _cancel_build]: _square(row)
+	_queue_header = _box(_economy, "QueueHeader", HBoxContainer.new(), 8) as HBoxContainer
+	_label(_queue_header, "Title", &"HudLabel", "QUEUE").size_flags_horizontal = SIZE_EXPAND_FILL
+	_label(_queue_header, "Waiting", &"HudHint")
+	(_queue as BoxContainer).add_theme_constant_override("separation", GAP)
+	_queue_more = _button(_economy, "QueueMore", 0.0)
+	_queue_more.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	_queue_more.add_theme_color_override("font_hover_color", get_theme_color("muted", &"Tokens"))
+	_queue_more.draw.connect(_draw_chevron)
+	_queue_more.pressed.connect(_toggle_queue)
+	var rows: Array[Control] = [_resume, _commands, _build_menu, _produce, _cancel_build, _queue_header, _queue, _queue_more]
+	for i in rows.size(): _economy.move_child(rows[i], i)
+
+func _read_keys() -> void:
+	for action: String in HudModel.ORDER_KEYS: _keys[action] = HudModel.key_label(HudModel.ORDER_KEYS[action])
+	(_commands.get_node("AttackMove") as Button).text = "Attack move (%s)" % _keys.attack_move
+	(_commands.get_node("Stop") as Button).text = "Stop (%s)" % _keys.stop
+	(_commands.get_node("Unload") as Button).text = "Unload (%s)" % _keys.unload
+
+func _grid(grid_name: String, columns: int) -> GridContainer:
+	var grid := GridContainer.new()
+	grid.name = grid_name
+	grid.columns = columns
+	grid.mouse_filter = MOUSE_FILTER_IGNORE
+	grid.add_theme_constant_override("h_separation", GAP)
+	grid.add_theme_constant_override("v_separation", GAP)
+	_economy.add_child(grid)
+	return grid
+
+func _cell_width(columns: int) -> float:
+	return (HudModel.SLAB_CONTENT - (columns - 1) * GAP) / columns
+
+static func _square(button: Button) -> void:
+	button.theme_type_variation = &"HudButton"
+	button.custom_minimum_size.y = ROW
+
+func _button(parent: Control, button_name: String, width: float) -> Button:
+	var button := Button.new()
+	button.name = button_name
+	_square(button)
+	button.custom_minimum_size.x = width
+	parent.add_child(button)
+	return button
+
+# A label pinned inside a button's right padding; the button keeps the click.
+static func _right_label(button: Button, label_name: String, variation: StringName, right: float) -> Label:
+	var label: Label = _label(button, label_name, variation)
+	label.set_anchors_preset(PRESET_RIGHT_WIDE)
+	label.grow_horizontal = GROW_DIRECTION_BEGIN
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.offset_left = right
+	label.offset_right = right
+	return label
+
+func _draw_slab() -> void:
+	var area: Vector2 = _economy.size
+	_economy.draw_rect(Rect2(Vector2.ZERO, area), get_theme_color("bg", &"Tokens"))
+	_economy.draw_rect(Rect2(0, 0, area.x, 1), get_theme_color("line", &"Tokens"))
+	_economy.draw_rect(Rect2(0, 0, 4, area.y), _edge)
+
+# A VBox has no padding, so each row is moved inside it after every sort.
+func _pad_slab() -> void:
+	for child: Control in _economy.get_children():
+		child.position.x = PAD_LEFT
+		child.size.x = HudModel.SLAB_CONTENT
+
+func _fit_slab() -> void:
+	var height: float = _economy.get_combined_minimum_size().y
+	_economy.visible = height > 0.0
+	_economy.offset_top = -(height + 2.0 * PAD_Y)
+	_economy.queue_redraw()
+
+# The slab's top for the helper stack, read from offsets because the rect catches up a frame late.
+func slab_top() -> float:
+	var height: float = get_viewport_rect().size.y
+	return height + _economy.offset_top if _economy != null and _economy.visible else height
 
 func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat: int) -> void:
 	var building: Dictionary = HudModel.building(view, selection.building_id)
@@ -182,17 +290,37 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	set_esc_chip(selection.esc_opens_menu)
 	_show_notice(selection.notice)
 	if _economy == null: menu_kinds = kinds
-	else: _economy_controls(building, selection, kinds)
+	else: _economy_controls(view, building, selection, kinds, seat)
 	if _status == null: return
 	_status.text = _status_text(view, selection, building)
-	if _economy != null: _economy.position.y = maxf(116.0, _status.position.y + _status.get_minimum_size().y + 8.0)
 
-func _economy_controls(building: Dictionary, selection: Dictionary, kinds: Array) -> void:
+func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictionary, kinds: Array, seat: int) -> void:
+	var edge: Color = View.owner_color(seat, selection.bright_owners)
+	_resume.visible = selection.resume_id != -1
+	_show_commands(view, selection, seat)
 	_produce.visible = not building.is_empty() and building.completed and not selection.production_kind.is_empty()
-	_produce.text = "Produce %s (E)" % Registry.kind(selection.production_kind).get("display_name", "") if not building.is_empty() else "Produce (E)"
+	_produce.text = "Produce %s (%s)" % [Registry.kind(selection.production_kind).get("display_name", ""), _keys.produce] if not building.is_empty() else "Produce (%s)" % _keys.produce
 	_cancel_build.visible = not building.is_empty() and not building.completed
-	_refresh_menu(kinds)
-	_refresh_queue(building.get("queue", []))
+	_refresh_menu(kinds, HudModel.shows_build_menu(view, selection, seat), HudModel.player(view, seat).get("credits", 0), selection.placement_kind)
+	if edge != _edge:
+		_edge = edge
+		for row: Node in _queue.get_children(): (row.get_node("Track/Bar") as ColorRect).color = edge
+	_refresh_queue(building, edge)
+	_fit_slab()
+
+# The keys keep today's paths for any own selection; only the buttons follow the row rule.
+func _show_commands(view: Dictionary, selection: Dictionary, seat: int) -> void:
+	var armed: bool = HudModel.has_armed_unit(view, selection.ids, seat)
+	var unload: bool = HudModel.unload_target(view, selection, seat) != -1
+	_commands.get_node("AttackMove").visible = armed
+	_commands.get_node("Stop").visible = armed
+	_commands.get_node("Unload").visible = unload
+	_commands.visible = armed or unload
+	_look(_commands.get_node("AttackMove"), selection.attack_move)
+
+static func _look(button: Button, armed: bool) -> void:
+	var look: StringName = &"HudButtonArmed" if armed else &"HudButton"
+	if button.theme_type_variation != look: button.theme_type_variation = look
 
 func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> void:
 	var numbers: Dictionary = HudModel.strip(view, view_player, selection.placement_kind)
@@ -222,44 +350,97 @@ func _tint(label: Label, text: String, warn: bool) -> void:
 func _status_text(view: Dictionary, selection: Dictionary, building: Dictionary) -> String:
 	var detail: String = "Units: " + str(selection.ids)
 	if not building.is_empty(): detail = "%s #%d | Work %d/%d" % [Registry.kind(building.kind).display_name, building.id, building.work, Definitions.building(building.kind).ticks * 1000]
-	var resume: String = "Right-click: resume\n" if selection.resume_id != -1 else ""
-	var placing: String = Registry.kind(selection.placement_kind).get("display_name", "")
-	var text: String = "%s | Place: %s\n1-9: menu  U: unload | Right: context/move | E: produce | Esc: cancel\n%s%s" % [detail, placing, resume, note]
-	text += "\n" + _selected_summary(view, selection.ids) + _enemy_summary(view, selection.inspected_id)
-	if not selection.over: text += "A: attack-move click | S: stop"
-	return text
+	return "%s\n%s\n%s%s" % [detail, note, _selected_summary(view, selection.ids), _enemy_summary(view, selection.inspected_id)]
 
-func _refresh_menu(kinds: Array) -> void:
+func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: String) -> void:
 	menu_kinds = kinds
 	var grid: GridContainer = _build_menu
+	grid.visible = shown and not kinds.is_empty()
 	while grid.get_child_count() > kinds.size(): grid.get_child(grid.get_child_count() - 1).free()
 	for i in kinds.size():
 		var button: Button = grid.get_child(i) if i < grid.get_child_count() else null
 		if button == null:
-			button = Button.new()
-			button.theme_type_variation = &"HudSmallButton"
+			button = _button(grid, "Item%d" % i, _cell_width(grid.columns))
+			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			button.pressed.connect(menu_chosen.emit.bind(i))
-			grid.add_child(button)
-		button.text = HudModel.menu_label(i, kinds[i])
+			_right_label(button, "Price", &"HudRow", -12.0)
+		var cost: int = Registry.kind(kinds[i]).cost
+		button.text = HudModel.menu_name(i, kinds[i])
+		_tint(button.get_node("Price"), "$%d" % cost, cost > credits)
+		_look(button, kinds[i] == placement_kind)
 
-func _refresh_queue(queue: Array) -> void:
+func _refresh_queue(building: Dictionary, edge: Color) -> void:
+	var queue: Array = building.get("queue", [])
+	if building.get("id", -1) != _queue_for or queue.size() <= HudModel.QUEUE_SHOWN: _queue_open = false
+	_queue_for = building.get("id", -1)
 	var ids: Array = queue.map(func(entry: Dictionary) -> String: return str(entry.id))
 	for child in _queue.get_children():
 		if not ids.has(str(child.name)): child.free()
-	for entry: Variant in queue:
+	for i in queue.size():
+		var entry: Dictionary = queue[i]
 		var button: Button = _queue.get_node_or_null(str(entry.id))
-		if button == null:
-			button = Button.new()
-			button.theme_type_variation = &"HudSmallButton"
-			button.name = str(entry.id)
-			button.pressed.connect(entry_cancelled.emit.bind(entry.id))
-			_queue.add_child(button)
-		button.text = queue_label(entry)
+		if button == null: button = _queue_row(entry.id, edge)
+		var parts: PackedStringArray = queue_parts(entry)
+		button.text = parts[0]
+		var percent: Label = button.get_node("Percent")
+		percent.text = parts[1]
+		percent.visible = i == 0 and not parts[1].is_empty()
+		var track: ColorRect = button.get_node("Track")
+		track.visible = i == 0
+		(track.get_node("Bar") as ColorRect).set_anchor(SIDE_RIGHT, minf(1.0, float(entry.work) / (Definitions.unit(entry.kind).ticks * 1000)), true)
+	_queue.visible = not queue.is_empty()
+	_queue_header.visible = not queue.is_empty()
+	var waiting: Label = _queue_header.get_node("Waiting")
+	waiting.text = "%d waiting" % (queue.size() - 1)
+	waiting.visible = queue.size() > 1
+	_show_queue_rows()
 
-static func queue_label(entry: Dictionary) -> String:
-	var label: String = Registry.kind(entry.kind).display_name
-	if entry.work == 0: return "Cancel %s (queued)" % label
-	return "Cancel %s (%d%%)" % [label, entry.work * 100 / (Definitions.unit(entry.kind).ticks * 1000)]
+# The whole row cancels, as Zero Hour's queue button does; the × is only its sign.
+func _queue_row(entry_id: int, edge: Color) -> Button:
+	var button: Button = _button(_queue, str(entry_id), 0.0)
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.pressed.connect(entry_cancelled.emit.bind(entry_id))
+	var cancel: Label = _right_label(button, "Cancel", &"HudHint", -12.0)
+	cancel.text = "\u00d7"
+	_right_label(button, "Percent", &"HudHint", -12.0 - cancel.get_combined_minimum_size().x - 8.0)
+	var track := ColorRect.new()
+	track.name = "Track"
+	track.color = get_theme_color("well", &"Tokens")
+	track.mouse_filter = MOUSE_FILTER_IGNORE
+	track.set_anchors_and_offsets_preset(PRESET_BOTTOM_WIDE)
+	track.offset_top = -2
+	button.add_child(track)
+	var bar := ColorRect.new()
+	bar.name = "Bar"
+	bar.color = edge
+	bar.mouse_filter = MOUSE_FILTER_IGNORE
+	bar.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	track.add_child(bar)
+	return button
+
+func _show_queue_rows() -> void:
+	var rows: Dictionary = HudModel.queue_rows(_queue.get_child_count(), _queue_open)
+	for i in _queue.get_child_count(): (_queue.get_child(i) as Control).visible = i < rows.shown
+	_queue_more.visible = rows.more > 0
+	_queue_more.text = "Show fewer" if _queue_open else "Show %d more queued" % rows.more
+
+func _toggle_queue() -> void:
+	_queue_open = not _queue_open
+	_show_queue_rows()
+	_fit_slab()
+
+# Public Sans has no chevron glyph, so it is drawn after the centred text.
+func _draw_chevron() -> void:
+	var font: Font = _queue_more.get_theme_font("font")
+	var font_size: int = _queue_more.get_theme_font_size("font_size")
+	var x: float = (_queue_more.size.x + font.get_string_size(_queue_more.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) / 2.0 + 8.0
+	var y: float = _queue_more.size.y / 2.0
+	var tip: float = -3.0 if _queue_open else 3.0
+	_queue_more.draw_polyline([Vector2(x, y - tip), Vector2(x + 4.0, y + tip), Vector2(x + 8.0, y - tip)], get_theme_color("muted", &"Tokens"), 1.5, true)
+
+static func queue_parts(entry: Dictionary) -> PackedStringArray:
+	var percent: String = "" if entry.work == 0 else "%d %%" % (entry.work * 100 / (Definitions.unit(entry.kind).ticks * 1000))
+	return PackedStringArray([Registry.kind(entry.kind).display_name, percent])
 
 func _selected_summary(view: Dictionary, ids: Array[int]) -> String:
 	if ids.size() != 1: return ""

@@ -15,7 +15,6 @@ const LAUNCHER_SCENE: String = "res://scenes/launcher.tscn"
 const ZOOMS: Array[float] = [0.5, 1.0, 2.0]
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
-const MENU_COLUMNS: int = 4
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const SoundPlayer = preload("res://scripts/presentation/sound_player.gd")
 const VisualDirector = preload("res://scripts/presentation/visual_director.gd")
@@ -66,11 +65,6 @@ func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: Stri
 
 func _ready() -> void:
 	if driver == null: driver = OfflineDriver.new(local_player)
-	var menu := GridContainer.new()
-	menu.name = "BuildMenu"
-	menu.columns = MENU_COLUMNS
-	$HUD/Economy.add_child(menu)
-	$HUD/Economy.move_child(menu,0)
 	_result_panel = ResultPanel.new()
 	_result_panel.play_again_pressed.connect(_play_again)
 	_result_panel.change_setup_pressed.connect(_leave)
@@ -87,6 +81,9 @@ func _ready() -> void:
 	hud.entry_cancelled.connect(orders._cancel_entry)
 	hud.produce_pressed.connect(orders._produce_selected)
 	hud.cancel_build_pressed.connect(orders._cancel_build)
+	hud.attack_move_pressed.connect(orders.arm_attack_move)
+	hud.stop_pressed.connect(orders.stop_selected)
+	hud.unload_pressed.connect(orders._unload_selected)
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()
@@ -129,6 +126,7 @@ func _enter_tree() -> void:
 	ViewCaps.apply(get_tree().root)
 
 func _exit_tree() -> void:
+	orders._set_attack_move(false)
 	driver.detach()
 	ViewCaps.release(get_tree().root)
 
@@ -141,8 +139,14 @@ func _add_playtest() -> void:
 	_pause.playtest_changed.connect(_playtest.set_active)
 	_playtest.set_active(PlaytestSettings.enabled())
 	_playtest.stack_changed.connect(_place_perf)
+	$HUD/Economy.item_rect_changed.connect(_place_floor)
+	$HUD/Economy.visibility_changed.connect(_place_floor)
 	_perf.resized.connect(_place_perf)
 	_place_perf()
+
+# Show more and window resizes move the slab between views, so the helper stack follows the slab itself.
+func _place_floor() -> void:
+	_playtest.set_floor(hud.slab_top())
 
 func _place_perf() -> void:
 	_perf.place(_playtest.slot_for(_perf.size))
@@ -240,6 +244,10 @@ func esc_opens_menu() -> bool:
 func _show_esc_chip() -> void:
 	hud.set_esc_chip(esc_opens_menu())
 
+# The pause menu and the note form open without a new view, so this runs every frame too.
+func _drop_stale_attack_move() -> void:
+	if orders._attack_move_mode and (not orders.takes_orders() or _pause.visible or orders.selected_ids.is_empty()): orders._set_attack_move(false)
+
 func _typing() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
 	return focus is LineEdit or focus is TextEdit
@@ -282,6 +290,7 @@ func _present_if_due() -> bool:
 
 func _process(delta: float) -> void:
 	_show_esc_chip()
+	_drop_stale_attack_move()
 	var drained_at: int = Time.get_ticks_usec()
 	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
 	var presented_at: int = Time.get_ticks_usec()
@@ -351,11 +360,11 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	# The forecast card must never show over a result card or an ended online match.
 	if (shown_over() or driver.over()) and not orders._placement_kind.is_empty(): orders._clear_placement()
 	_shown_note = _note()
-	_playtest.set_floor(get_viewport().get_visible_rect().size.y)
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()
 	orders.prune(state)
+	_drop_stale_attack_move()
 	orders.show_preview(driver.preview_answer())
 	Profiler.end(&"refresh.selection", zone)
 	_view.set_view(state, orders.view_selection())
@@ -363,6 +372,7 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	_ensure_sound()
 	_take_results(state)
 	hud.update_hud(state, _hud_selection(state), local_player, local_player)
+	_place_floor()
 	orders.menu = hud.menu_kinds
 	_view.set_inspected(orders.inspected_id)
 	if frozen(): _show_freeze()
@@ -383,7 +393,7 @@ func _take_results(state: Dictionary) -> void:
 func _hud_selection(state: Dictionary) -> Dictionary:
 	var building: Dictionary = _building(state, orders.selected_building_id)
 	var production: String = _production_kind(building, state) if not building.is_empty() else ""
-	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "production_kind": production, "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty(), "esc_opens_menu": esc_opens_menu()}
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "production_kind": production, "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
 
 func _result(state: Dictionary) -> String:
 	var result: String = "" if state.match == null else _result_text(state.match)

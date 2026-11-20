@@ -54,3 +54,87 @@ static func uses_power(faction: String) -> bool:
 		var kinds: Array = Registry.kind(row.get("start_unit", "")).get("builds", []) + [row.get("start_building", "")]
 		_powered[faction] = kinds.any(func(kind: String) -> bool: return Registry.kind(kind).get("power", 0) != 0)
 	return _powered[faction]
+
+# Physical keycodes: orders read their keys here and the buttons print them, so a label never names an unused key.
+const ORDER_KEYS := {"attack_move": KEY_A, "stop": KEY_S, "unload": KEY_F, "produce": KEY_E}
+const SLAB_WIDTH: float = 432.0
+const SLAB_CONTENT: float = SLAB_WIDTH - 20.0
+const MENU_PADDING: float = 24.0
+const MENU_GAP: float = 4.0
+
+const QUEUE_SHOWN: int = 5
+const QUEUE_COLLAPSED: int = 4
+
+# A seam so the layout path runs headless; tests swap it and restore it on every path.
+static var layout_label: Callable = _platform_label
+
+# Headless and web report no layout, and the label call errors there.
+static func _platform_label(physical: Key) -> Key:
+	if DisplayServer.keyboard_get_layout_count() > 0: return DisplayServer.keyboard_get_label_from_physical(physical)
+	return physical
+
+static func key_text(label: Key) -> String:
+	return OS.get_keycode_string(label)
+
+static func key_label(physical: Key) -> String:
+	return key_text(layout_label.call(physical))
+
+static func menu_name(index: int, kind: String) -> String:
+	var quantity: int = Registry.kind(kind).get("quantity", 1)
+	return "%d: %s%s" % [index + 1, Registry.kind(kind).display_name, " x%d" % quantity if quantity > 1 else ""]
+
+# Each faction's builds, and what each of those and the start building produce.
+static func _every_menu() -> Array:
+	var menus: Array = []
+	for faction: String in Registry.Factions.FACTIONS:
+		var row: Dictionary = Registry.faction(faction)
+		var builds: Array = Registry.kind(row.get("start_unit", "")).get("builds", [])
+		menus.append(builds)
+		for kind: String in builds + [row.get("start_building", "")]: menus.append(Registry.kind(kind).get("produces", []))
+	return menus
+
+static func menu_columns(font: Font, size: int) -> int:
+	var widest: float = 0.0
+	for kinds: Array in _every_menu():
+		for i in kinds.size(): widest = maxf(widest, font.get_string_size(menu_label(i, kinds[i]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x)
+	for columns: int in [4, 3, 2]:
+		if columns * (widest + MENU_PADDING) + (columns - 1) * MENU_GAP <= SLAB_CONTENT: return columns
+	return 1
+
+static func _unit_index(view: Dictionary, id: int) -> int:
+	return view.units.index_of(id)
+
+static func is_container(view: Dictionary, id: int, seat: int) -> bool:
+	var host: Dictionary = building(view, id)
+	if host.is_empty():
+		var i: int = _unit_index(view, id)
+		if i == -1: return false
+		host = {"owner": view.units.owner[i], "kind": view.units.kinds[view.units.kind[i]]}
+	return host.owner == seat and host.get("completed", true) and not Registry.kind(host.kind).get("contains", {}).is_empty()
+
+# The view has no container id, so a vehicle counts as loaded while any own unit rides anything.
+static func unload_target(view: Dictionary, selection: Dictionary, seat: int) -> int:
+	var id: int = selection.building_id if selection.building_id != -1 else (selection.ids[0] if selection.ids.size() == 1 else -1)
+	if not is_container(view, id, seat): return -1
+	if not building(view, id).is_empty(): return id if not player(view, seat).get("tunnel", []).is_empty() else -1
+	var units: RefCounted = view.units
+	for i: int in units.size():
+		if units.owner[i] == seat and (units.flags[i] & ViewRows.CONTAINED) != 0: return id
+	return -1
+
+static func has_armed_unit(view: Dictionary, ids: Array[int], seat: int) -> bool:
+	for id: int in ids:
+		var i: int = _unit_index(view, id)
+		if i != -1 and view.units.owner[i] == seat and not Registry.kind(view.units.kinds[view.units.kind[i]]).get("weapon", "").is_empty(): return true
+	return false
+
+# Every build button shown with a selection is one placement accepts (orders' `_builder()` rule).
+static func shows_build_menu(view: Dictionary, selection: Dictionary, seat: int) -> bool:
+	if selection.building_id != -1 or selection.ids.is_empty(): return true
+	if selection.ids.size() != 1: return false
+	var i: int = _unit_index(view, selection.ids[0])
+	return i != -1 and view.units.owner[i] == seat and Registry.is_builder(view.units.kinds[view.units.kind[i]])
+
+static func queue_rows(count: int, open: bool) -> Dictionary:
+	var capped: bool = count > QUEUE_SHOWN
+	return {"shown": QUEUE_COLLAPSED if capped and not open else count, "more": count - QUEUE_COLLAPSED if capped else 0}

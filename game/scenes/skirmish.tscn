@@ -29,18 +29,23 @@ border_width = 1.0
 editor_only = false
 
 [node name="Economy" type="VBoxContainer" parent="HUD"]
-offset_left = 16.0
-offset_top = 116.0
-offset_right = 340.0
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -432.0
+grow_horizontal = 0
+grow_vertical = 0
 mouse_filter = 2
 
 [node name="Produce" type="Button" parent="HUD/Economy"]
-theme_type_variation = &"HudSmallButton"
+theme_type_variation = &"HudButton"
 text = "Produce (E)"
 mouse_filter = 0
 
 [node name="CancelBuild" type="Button" parent="HUD/Economy"]
-theme_type_variation = &"HudSmallButton"
+theme_type_variation = &"HudButton"
 text = "Cancel construction"
 mouse_filter = 0
 

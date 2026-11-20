@@ -71,7 +71,7 @@
   "try": [
    {"id": "tunnel", "text": "Build a Tunnel Hub", "trigger": "build:frc_defence"},
    {"id": "enter", "text": "Right-click a Tunnel Hub or pickup with infantry selected", "trigger": "enter"},
-   {"id": "unload", "text": "Unload with U", "trigger": "unload"},
+   {"id": "unload", "text": "Unload with F", "trigger": "unload"},
    {"id": "esc", "text": "Open the Esc menu and resume", "trigger": "esc_menu"},
    {"id": "online", "text": "Play FRC online against China or USA"}],
   "questions": [

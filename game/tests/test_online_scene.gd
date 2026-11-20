@@ -101,9 +101,7 @@ func _own_commands(transport: FakeTransport) -> Array:
 	return commands
 
 func _layout_ok(runner, main, label: String, panel_up: bool = false) -> void:
-	var status: Label = main.get_node("HUD/Status")
-	var economy: Control = main.get_node("HUD/Economy")
-	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y, "N3 buttons sit below every status line: " + label)
+	BaseScene.slab_clear(runner, main, "N3 " + label)
 	runner.check(main.get_node("HUD/ResultPanel").visible == panel_up, "N3 result panel %s: %s" % ["up" if panel_up else "hidden", label])
 
 func test_seat_two_controls_player_two(runner) -> bool:
@@ -1116,8 +1114,7 @@ func test_opponent_left_mid_match(runner) -> bool:
 	runner.check(main.get_viewport().gui_get_focus_owner() == main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"), "N29 Back to menu has the focus")
 	runner.check(cells.size() == 12 and cells[4].text.ends_with("(you)") and not cells[8].text.contains("(you)"), "N29 the table shows both players, got %d cells" % cells.size())
 	runner.check(BaseScene.hud_text(main).contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
-	var status: Label = main.get_node("HUD/Status")
-	runner.check(main.get_node("HUD/Economy").position.y >= status.position.y + status.get_minimum_size().y, "N29 buttons sit below every status line")
+	BaseScene.slab_clear(runner, main, "N29")
 	main.free()
 	return true
 
