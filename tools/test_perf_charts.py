@@ -367,6 +367,32 @@ class PerfRecordTest(unittest.TestCase):
         self.assertEqual(s["tick_frame", "open"], perf_record.Sample("tick_frame", "open", 2.9, 3.5, None))
         self.assertEqual(s["frame_interval", "open"].p95_ms, 0.6)
 
+    def test_hud_rows_need_their_own_size_marker(self) -> None:
+        line = (
+            'RENDERED SAMPLE hud_select_2560x1080 wall_seconds=60.0 physics_ticks=1800 tick_ms={"max":4.0,"n":1800,'
+            '"p50":1.0,"p95":2.9,"p99":3.5} frame_interval_ms={"max":9.0,"n":6000,"p50":0.3,"p95":0.6,"p99":1.2}\n'
+        )
+        s = {(x.metric, x.scenario): x for x in perf_record.parse_log(line + "RENDERED HUD PASSED 2560x1080\n")}
+        self.assertEqual(s["tick_frame", "hud_select_2560x1080"].p95_ms, 2.9)
+        self.assertEqual(s["frame_interval", "hud_select_2560x1080"].p95_ms, 0.6)
+        with self.assertRaisesRegex(ValueError, "missing marker"):
+            perf_record.parse_log(line + "RENDERED HUD PASSED 1280x720\n")
+        with self.assertRaisesRegex(ValueError, "missing marker"):
+            perf_record.parse_log(line + "RENDERED BENCHMARK PASSED 4\n")
+        with self.assertRaisesRegex(ValueError, "calibration"):
+            perf_record.parse_log(line + "RENDERED HUD CALIBRATION 2560x1080\n")
+
+    def test_hud_and_standard_rows_in_one_log_need_both_markers(self) -> None:
+        std = RENDERED_PROFILE_LOG
+        hud = (
+            'RENDERED SAMPLE hud_select_1280x720 wall_seconds=60.0 physics_ticks=1800 tick_ms={"max":4.0,"n":1800,'
+            '"p50":1.0,"p95":2.9,"p99":3.5} frame_interval_ms={"max":9.0,"n":6000,"p50":0.3,"p95":0.6,"p99":1.2}\n'
+        )
+        with self.assertRaisesRegex(ValueError, "RENDERED HUD PASSED 1280x720"):
+            perf_record.parse_log(std + hud)
+        s = {x.scenario for x in perf_record.parse_log(std + hud + "RENDERED HUD PASSED 1280x720\n")}
+        self.assertIn("hud_select_1280x720", s)
+
     def test_tick_frame_rows_get_their_own_method(self) -> None:
         log = RENDERED_PROFILE_LOG
         self.assertEqual(self.record(self.write_log("h.log", HEADLESS_LOG), "--method", "P1"), 0)

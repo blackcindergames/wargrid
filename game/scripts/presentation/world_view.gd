@@ -40,6 +40,7 @@ var _visual_tick: int = -1
 var _waiting: Dictionary = {}
 var _canvas: CanvasItem
 var draw_usec: int = 0
+var drawn_selection_lines: int = -1
 var _items: Array[Dictionary] = []
 var time_draws: bool = false
 var _quality: int = GraphicsSettings.HIGH
@@ -450,6 +451,7 @@ func _draw_lines() -> void:
 	var grid: PackedVector2Array = grid_lines()
 	if not grid.is_empty(): draw_multiline(grid, GRID_COLOR, 1.0)
 	var green: PackedVector2Array = selected_unit_lines()
+	drawn_selection_lines = green.size()
 	for point in order_marks():
 		green.append_array([point - Vector2(6, 0), point + Vector2(6, 0), point - Vector2(0, 6), point + Vector2(0, 6)])
 	if not green.is_empty(): draw_multiline(green, SELECT_COLOR, 2.0)
