@@ -1435,3 +1435,14 @@ Brainstorming round on progress speed; design: [fun-first reorder](../superpower
 
 - **Game director proposals** (credits counting up with a deposit cue, an optional income-per-minute readout, an idle-collector chip, a refusal that points at its cause): all wanted, each drafted for the owner to see before it is built; the first three ride on "see your economy", the last on P2.3a2.
 - **Review leftovers** go to the findings list (F37 to F39); the capture's one-off blank shots are F40.
+
+## Tooling night (user, 2026-11-20)
+
+Prepared as a night run ([plan](../superpowers/plans/2026-11-20-tooling-night.md)). Two research passes over OpenTTD, OpenRA, 0 A.D., OpenRCT2, Recoil, Zero Hour, Warzone 2100 and primary web sources (private reports) agreed: sparse rows compared one by one, stopping at the first mismatch, is the common design; no engine read uses a variable interval.
+
+- **Scope:** F15 hash rows, measured case times, the definitions lint, and the check-count drift with the STATUS F19 cleanup. F19 items already fixed on `main` are struck from the row; m7 is dropped (no bug today); m4 stays a note; the extra-cell re-measure stays open for later.
+- **F15 design:** offline matches record the live tick hash (`_tick_hash`, the hash ring's value) every 30 ticks, not the snapshot digest (estimated 0.26-0.40 ms once per 30 ticks at the assumed low-end slowdown, against about 4 ms for snapshot plus digest). This adds a public `tick_hash()` to the simulation interface and an optional key in the session file; sessions without it keep today's `end_digest` check. Approved as the contract change for this run.
+- **Online rows:** not stored; online matches keep their desync reports.
+- **Rerun bisect** (replay the recorded commit against the current tree to the first differing field, Zero Hour's `-DebugCRCFromFrame` workflow): later, noted in STATUS.
+- **Budget:** if the recording exceeds a budget, the task parks for the owner (stop condition); no coarser interval is ruled at night.
+- **Gate:** full gate at the end of the run, no merge.
