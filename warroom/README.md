@@ -17,20 +17,22 @@ Then open `http://127.0.0.1:8780/` in Firefox. Paths are relative to the working
 | `WARROOM_ROOT` | `..` | The repository root that `/docs/`, `/game/`, `/web/` are served from |
 | `WARROOM_ROUNDS` | `rounds` | The rounds folder |
 | `WARROOM_HOST`, `WARROOM_PORT` | `127.0.0.1`, `8780` | Where the server listens |
+| `WARROOM_SECRET` | unset | Signs the write tokens (see Tokens). Unset: every link can record and read back, and the log says so once |
+| `WARROOM_RUN_AS` | unset | A uid to drop to after handing the picks directory to it; only `fly/Dockerfile` sets it. Unset: no chown, no drop |
 
 Never use ports 8767 to 8772 (other servers run there).
 
-On SIGINT or SIGTERM the server stops accepting, lets requests in flight finish (a pick being written lands first) for up to 4 s, then closes the rest; a second signal exits at once. A serve error exits with status 1. As root on Linux (the Fly image) it first hands the picks directory to uid 65534 and drops to it, and logs the uid it runs as.
+On SIGINT or SIGTERM the server stops accepting, lets requests in flight finish (a pick being written lands first) for up to 4 s, then closes the rest; a second signal exits at once. A serve error exits with status 1. With `WARROOM_RUN_AS` set (the Fly image sets 65534) the process must be root on Linux: it hands the picks directory to that uid, drops to it, and logs the uid it runs as. Logs are `log/slog` text lines on stderr; the request log has the path only, never the query (it carries tokens).
 
 ## Code layout
 
 | Package | Job |
 |---|---|
-| `main.go` | Reads the environment, listens, shuts down on a signal; `go:generate` lines; `priv_linux.go` drops root |
-| `internal/store` | The picks file: one lock, atomic writes, key and size caps |
-| `internal/rounds` | Round and step YAML types, strict loading and validation, stage control definitions, tune params |
+| `main.go` | Reads the environment, listens, shuts down on a signal; the `token` and `schema` commands; `go:generate` lines; `priv_linux.go` drops root when `WARROOM_RUN_AS` asks |
+| `internal/store` | The picks file and its history: one lock, atomic writes, key and size caps |
+| `internal/rounds` | Round and step YAML types, strict loading and validation, stage control definitions, tune params, the JSON Schema |
 | `internal/stage` | Stage controls resolved per request, the render-page hash, crops and window sizes, the numbers panel (contrast, CIE76) |
-| `internal/web` | Routes and handlers, query parsing, view models, templ views, embedded `static/` |
+| `internal/web` | Routes (stdlib `ServeMux`), tokens, request log and recovery, handlers, query parsing, view models, templ views, embedded `static/` |
 
 Dependencies point one way: `web` uses `stage`, `rounds` and `store`; `stage` uses `rounds`; `rounds` uses `store` (the `Entry` type).
 
@@ -40,17 +42,38 @@ State lives in the address, not in a hash, so every view is a link.
 
 | Route | What |
 |---|---|
-| `GET /` | Round list; `?demo=1` also shows rounds marked `demo: true` |
+| `GET /{$}` | Round list; `?demo=1` also shows rounds marked `demo: true` |
 | `GET /r/{round}` | Redirects to the first unanswered step, or the summary when all are answered |
 | `GET /r/{round}/{n}` | Step `n` (1-based) |
 | `GET /r/{round}/summary` | The round's picks, unanswered steps as links, earlier rounds, Copy summary |
-| `POST /r/{round}/{step}/pick` | Form fields `pick`, `note`. The server builds the key from the round's prefix, so only real steps are accepted |
-| `POST /r/{round}/{step}/note` | Form fields `note`, optional `sub` (a gallery item id or a wording field id) |
-| `GET /picks.json` | All picks, for reading back (`Cache-Control: no-store`) |
+| `POST /r/{round}/{step}/pick?t=<round token>` | Form fields `pick`, `note`. The server builds the key from the round's prefix, so only real steps are accepted |
+| `POST /r/{round}/{step}/note?t=<round token>` | Form fields `note`, optional `sub` (a gallery item id or a wording field id) |
+| `GET /picks.json?t=<admin token>` | All picks, for reading back (`Cache-Control: no-store`) |
+| `GET /history.jsonl?t=<admin token>` | Every recorded change, one JSON line each |
 | `GET /health` | `200 ok` |
-| `/static/*`, `/docs/*`, `/game/*`, `/web/*` | Embedded assets; repository files (no listings, no links out of the root) |
+| `/static/{path...}`, `/docs/...`, `/game/...`, `/web/...` | Embedded assets; repository files (no listings, no links out of the root) |
 
-Pick rules: a body over 8 KiB is 400; the pick must be an option letter the step has, `neither` (step has a neutral answer), `yes` or `change` (confirm step), `pass` or `changes` (verdict), or `tuned` (tune step, with a `value` field); `change` without a note shows the step again asking for one; a `tuned` pick must carry `value`, a JSON object of at most 1 KiB with exactly the step's param ids (numbers in range and on the step grid from `min`, colours `#rrggbb`, choices from the list; anything else is 400) and the server stores it cleaned (grid-snapped, colours lower case); a note is at most 4000 characters; a new key past 500 keys is 507; a failed write, or a picks file that is not a JSON object of objects (left as it is), is 500. Writes are atomic (temporary file, fsync, rename) under one lock. Requests that stall for 15 s are dropped. A pick from a plain form post redirects (303) to the next step; from htmx it answers with the next step's page and `HX-Push-Url`.
+## Tokens
+
+`WARROOM_SECRET` makes every write need a token. A token is `base64url(HMAC-SHA256(secret, scope))` cut to 16 bytes (22 characters): scope `round:<id>` for a round's write token, `admin` for reading `/picks.json` and `/history.jsonl`. Tokens never expire; changing the secret revokes all of them. Comparison is `subtle.ConstantTimeCompare`.
+
+```sh
+WARROOM_SECRET=... go run . token p2-3a1-gate-2    # a round's write link is  /r/p2-3a1-gate-2?t=<token>
+WARROOM_SECRET=... go run . token admin            # curl "$HOST/picks.json?t=<token>"
+```
+
+- A link without a valid token for its round is read only: step pages leave out the pick buttons, notes, the answer form and the phone bar's pick and note buttons, and say "Read only: this link cannot record." Keys that would pick find no button and do nothing. A POST without a valid token is 403.
+- The token is a query parameter like the stage controls: `Query.Carry()` puts it on every link, form action, `hx-get` and `hx-post` the server renders, on the redirects and on `HX-Push-Url`, so htmx navigation and Retry keep it. A link to another round (earlier rounds in the chips) drops it. The client adds nothing: `warroom.js` only rewrites the `phone` and view parameters of the address it was given.
+- A token longer than 64 bytes or with characters outside the control-value set is ignored.
+- Unset secret: no token is checked, nothing is read only, and `/picks.json` is open (local use).
+
+## History
+
+Each write that changes an entry appends `{"t": RFC 3339 UTC, "key", "pick", "note", "value"?}` to `picks.jsonl` next to `picks.json` (`O_APPEND`, fsync, under the store lock, before the state file is replaced). `picks.json` stays the current state in the old format. A write that changes nothing adds no line. The summary shows "changed N times" on a row with more than one line; there is no other history view. The history stops at 5 MiB: a write past it is 507 and changes nothing. A write whose state file then fails leaves its history line behind.
+
+## Pick rules
+
+A body over 8 KiB is 400; the pick must be an option letter the step has, `neither` (step has a neutral answer), `yes` or `change` (confirm step), `pass` or `changes` (verdict), or `tuned` (tune step, with a `value` field); `change` without a note shows the step again asking for one; a `tuned` pick must carry `value`, a JSON object of at most 1 KiB with exactly the step's param ids (numbers in range and on the step grid from `min`, colours `#rrggbb`, choices from the list; anything else is 400) and the server stores it cleaned (grid-snapped, colours lower case); a note is at most 4000 characters; a new key past 500 keys is 507; a failed write, or a picks file that is not a JSON object of objects (left as it is), is 500. Writes are atomic (temporary file, fsync, rename) under one lock. Requests that stall for 15 s are dropped. A pick from a plain form post redirects (303) to the next step; from htmx it answers with the next step's page and `HX-Push-Url`.
 
 Query parameters (carried by the navigation links, so values stay page-wide): `show` (option), `view=side`, `item`, every stage control away from its first value (`size fit ground world zoom hud state tier owner set heading cvd marker x-<id>`), `numbers=0` (hide the numbers panel). A control value over 64 bytes or with characters other than letters, digits and ` ._,:+-` is dropped, as is any `x-` control past 16, since every link repeats them. Read only: `sheet=1` opens the phone's View sheet, `keys=1` the key list, `shot=1` the shown option alone at its frame size on black (`crop=step` keeps the step's crop), `lab=1` starts a lab step's build, `phone=1` asks for the phone crops (a phone-sized first load adds it itself).
 
@@ -142,7 +165,7 @@ How it hangs together:
 | What | Version |
 |---|---|
 | Go | 1.27.4 |
-| chi | v5.5.0 |
+| invopop/jsonschema | v0.14.0 (2026-04-23) |
 | templ | v0.3.1100 (CLI as a `go.mod` tool: `go tool templ`) |
 | YAML | goccy/go-yaml v1.19.2 |
 | htmx | 4.0.1, vendored as `static/htmx.min.js` |
@@ -154,12 +177,16 @@ How it hangs together:
 | Tweakpane | 4.0.5 |
 | Node, npm | only for `islands/`; built with Node 24, npm 12 |
 
-The generated files are committed (`internal/web/*_templ.go`, `internal/web/static/app.css`, `internal/web/static/islands.js`), so `go build` and `go test` need no templ, Tailwind or Node. After changing a `.templ` file, `internal/web/static/input.css` or `islands/`:
+The generated files are committed (`internal/web/*_templ.go`, `internal/web/static/app.css`, `internal/web/static/islands.js`, `rounds/round.schema.json`, `rounds/step.schema.json`), so `go build` and `go test` need no templ, Tailwind or Node. After changing a `.templ` file, `internal/web/static/input.css` or `islands/`:
 
 ```sh
 sh tools/fetch.sh     # Tailwind CLI and daisyUI into .bin/ (git-ignored); checks each download's SHA-256
 go generate ./...     # templ generate, fetch, Tailwind build, npm ci and the islands build
 ```
+
+The JSON Schemas come from the Go types (`go run . schema round|step`, run by `go generate`). Every round and step YAML starts with `# yaml-language-server: $schema=../round.schema.json` (`../step.schema.json` for steps), so an editor with the YAML language server completes fields and flags unknown ones; the strict decoder stays the authority. Two schemas, not one: `round.yaml` and a step file are different types. A new custom YAML type needs a case in `customTypes` (`internal/rounds/schema.go`).
+
+Dev loop: `sh tools/dev.sh` runs `go tool templ generate --watch --open-browser=false --proxy=http://127.0.0.1:8780 --cmd="go run ."`: templ regenerates on a `.templ` or `.go` save, restarts the server and reloads the browser through its proxy at `http://127.0.0.1:7331/`. Rounds are read per request, so a YAML edit needs only a reload. `WARROOM_PORT` changes the port the proxy forwards to. Tailwind and the island are not watched.
 
 Checks, in `warroom/`:
 
@@ -176,29 +203,34 @@ These are not in CI or `tools/run_checks.sh` yet.
 `fly/` deploys War Room to the prototype's app, with the same volume, so picks survive restarts and redeploys. Every `fly` command needs the owner's approval.
 
 ```sh
+fly secrets set WARROOM_SECRET=... -a wargrid-lab-test   # once; without it every link can record and read back
 sh warroom/fly/sync.sh                                  # fly/site/: Go sources, rounds, referenced repository files
 fly volumes create decision_picks --region fra --size 1 -a wargrid-lab-test   # once; exists if the prototype was deployed
 fly deploy warroom/fly
 ```
 
-`sync.sh` copies the Go sources, the rounds not marked `demo: true` (so the public site has no demo rounds or keys) and every `docs/...` and `game/...` path their YAML and the Go sources name, plus the local files those HTML pages load, the backdrops, `layout.json` and the game font. It copies only files Git tracks: a file that exists only on disk, such as an owner mock, is reported as `skipped, not tracked by Git` and stays off the public site. The Dockerfile builds a static binary (`CGO_ENABLED=0 go build -trimpath`) and copies it into `gcr.io/distroless/static-debian12` (root variant, pinned by digest; no shell). Fly's volume and `[mounts]` docs say nothing about who owns a mount, and community reports say mounts arrive root-owned, so the binary chowns the picks directory to 65534 and drops root itself (`priv_linux.go`); the machine stops when idle and starts on the next request; `WARROOM_PICKS` is `/data/picks.json`, the prototype's file and format. It replaces the prototype's image on `wargrid-lab-test`: both cannot be live there.
+`sync.sh` copies the Go sources, the rounds not marked `demo: true` (so the public site has no demo rounds or keys) and every `docs/...` and `game/...` path their YAML and the Go sources name, plus the local files those HTML pages load, the backdrops, `layout.json` and the game font. It copies only files Git tracks: a file that exists only on disk, such as an owner mock, is reported as `skipped, not tracked by Git` and stays off the public site. The Dockerfile builds a static binary (`CGO_ENABLED=0 go build -trimpath`) and copies it into `gcr.io/distroless/static-debian12` (root variant, pinned by digest; no shell). Fly's volume and `[mounts]` docs say nothing about who owns a mount, and community reports say mounts arrive root-owned, so the binary chowns the picks directory to 65534 and drops root itself (`priv_linux.go`); the machine stops when idle and starts on the next request; the Dockerfile sets `WARROOM_RUN_AS=65534`, so a local run as root never chowns anything; `WARROOM_PICKS` is `/data/picks.json`, the prototype's file and format. It replaces the prototype's image on `wargrid-lab-test`: both cannot be live there.
 
 Test the image without Fly with Apple's `container` CLI (`container system start` first). Use a named volume: a host directory cannot be chowned through the shared mount.
 
 ```sh
 container build -t warroom-test warroom/fly
 container volume create warroom-test-vol
-container run -d --name warroom-test -p 8783:8780 -e WARROOM_PICKS=/data/picks.json -v warroom-test-vol:/data warroom-test
+container run -d --name warroom-test -p 8783:8780 -e WARROOM_PICKS=/data/picks.json -e WARROOM_SECRET=test -v warroom-test-vol:/data warroom-test
 curl -s http://127.0.0.1:8783/health
 container logs warroom-test                  # "running as uid 65534"
 container stop warroom-test && container rm warroom-test && container volume rm warroom-test-vol && container image rm warroom-test
 ```
 
-The endpoint has no login: anyone with the URL can read `/picks.json` (notes included) and overwrite a pick.
+With the secret set, reading `/picks.json` or `/history.jsonl` needs the admin token and a pick needs the round's token (see Tokens); without it anyone with the URL can read the notes and overwrite a pick. Reading picks back is `curl "$HOST/picks.json?t=$(WARROOM_SECRET=... go run . token admin)"`, which needs the secret on the machine that asks.
 
 ## Learning notes
 
 Things that cost time with the pinned versions.
+
+- `ServeMux` patterns (Go 1.22+): `GET /r/{round}/{n}`, read with `r.PathValue("n")`. The literal `GET /r/{round}/summary` is more specific than the wildcard `{n}`, so both register and the literal wins; two patterns neither of which matches a subset of the other panic at startup. `GET /` would match every path, so the round list is `GET /{$}`. `{path...}` takes the rest of the path. A pattern with a method answers 405 for other methods, and `GET` also serves `HEAD`. ServeMux cleans the path itself: `/docs/../x` and `/docs` (the subtree `/docs/{path...}` exists) answer a 307 to the cleaned or slashed path, which is then served or 404.
+- `invopop/jsonschema` names fields from `json` tags unless `FieldNameTag: "yaml"`; it makes every field required unless `RequiredFromJSONSchemaTags` is set; pointers are dereferenced before `Mapper` runs, so a `*string` cannot be mapped (the `Card.lines` null is patched after reflection); `ExpandedStruct` puts the root type's fields at the top instead of behind a `$ref`.
+- templ's `--proxy` forwards to the URL after `--cmd` has run the app, and opens a browser unless `--open-browser=false` (`go tool templ generate --help`).
 
 - htmx 4 attributes are not inherited unless they say so: `hx-boost:inherited`, `hx-target:inherited` (`internal/web/layout.templ`).
 - htmx 4 swaps 4xx and 5xx responses by default. The `<body>` sets `hx-status:4xx:inherited="swap:none"` and `hx-status:5xx:inherited="swap:none"`, so a refused pick leaves the page alone and `warroom.js` shows "Not recorded" with Retry.

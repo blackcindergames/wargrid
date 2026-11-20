@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../round.schema.json
 title: 'Demo: stage controls'
 steps: [hud-window, map-ground, hud-tier, scene, clips]
 render:

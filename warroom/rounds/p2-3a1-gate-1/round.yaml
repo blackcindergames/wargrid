@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../round.schema.json
 # Keeps the gate page's key namespace so its recorded picks read back here.
 prefix: p2-3a1-gate
 title: P2.3a1 gate A, round 1

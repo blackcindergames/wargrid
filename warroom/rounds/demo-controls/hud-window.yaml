@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../step.schema.json
 kind: pictures
 question: Does the slab hold at every window size and on every backdrop?
 why: >-

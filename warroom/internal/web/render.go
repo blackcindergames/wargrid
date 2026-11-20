@@ -3,7 +3,8 @@ package web
 import (
 	"bytes"
 	"cmp"
-	"log"
+	"context"
+	"log/slog"
 	"net/http"
 	"wargrid/warroom/internal/rounds"
 
@@ -20,13 +21,13 @@ func respond(w http.ResponseWriter, r *http.Request, title string, p *PageView) 
 	if wantsFragment(r) {
 		page = Fragment(title, *p)
 	}
-	render(w, r, page)
+	render(w, r.WithContext(context.WithValue(r.Context(), readOnlyKey{}, p.ReadOnly)), page)
 }
 
 func render(w http.ResponseWriter, r *http.Request, page templ.Component) {
 	var out bytes.Buffer
 	if err := page.Render(r.Context(), &out); err != nil {
-		log.Printf("render: %v", err)
+		slog.Error("render", "error", err)
 		http.Error(w, "render failed", http.StatusInternalServerError)
 		return
 	}
@@ -65,8 +66,11 @@ func (b *builder) stepPageView(errs []string, n int, record, hint string) *PageV
 	st := b.stage(s)
 	cvd := cmp.Or(st.Value("cvd"), "normal")
 	body, phone := b.stepBody(n, s, record, hint)
+	if b.readOnly {
+		phone.Pick, phone.Confirm, phone.Tuned, phone.Neutral, phone.Note = false, false, false, "", false
+	}
 	return &PageView{
-		Errors: errs, Cvd: cvd, True100: st.Value("fit") == "100", Chips: b.chips(n - 1), Body: body,
+		ReadOnly: b.readOnly, Errors: errs, Cvd: cvd, True100: st.Value("fit") == "100", Chips: b.chips(n - 1), Body: body,
 		Phone: phone, Legend: legendOf(st, len(s.Pairs) > 0), Keys: b.q.Keys,
 	}
 }
@@ -106,4 +110,12 @@ func (b *builder) shotView(s *rounds.Step) ShotView {
 	v.Pic = b.pics(st).pic(src, crop, "shot", true)
 	v.Pic.Whole = nil
 	return v
+}
+
+type readOnlyKey struct{}
+
+// isReadOnly lets any template leave out the pick and note controls without threading a flag through every view model.
+func isReadOnly(ctx context.Context) bool {
+	ro, _ := ctx.Value(readOnlyKey{}).(bool)
+	return ro
 }

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 	"wargrid/warroom/internal/web"
@@ -16,9 +18,9 @@ func TestConfigFromEnv(t *testing.T) {
 	if cfg != want {
 		t.Fatalf("defaults = %+v", cfg)
 	}
-	env := map[string]string{"WARROOM_PORT": "9000", "WARROOM_PICKS": "/data/picks.json"}
+	env := map[string]string{"WARROOM_PORT": "9000", "WARROOM_PICKS": "/data/picks.json", "WARROOM_SECRET": "s", "WARROOM_RUN_AS": "65534"}
 	cfg = configFromEnv(func(k string) string { return env[k] })
-	if cfg.Port != "9000" || cfg.Picks != "/data/picks.json" || cfg.Root != ".." {
+	if cfg.Port != "9000" || cfg.Picks != "/data/picks.json" || cfg.Root != ".." || cfg.Secret != "s" || cfg.RunAs != "65534" {
 		t.Fatalf("overrides = %+v", cfg)
 	}
 }
@@ -110,5 +112,41 @@ func TestServeReturnsAServeError(t *testing.T) {
 	_ = ln.Close()
 	if err := serve(context.Background(), ln, newServer(http.NotFoundHandler()), time.Second); err == nil {
 		t.Fatal("a failed listener was reported as success")
+	}
+}
+
+func TestTokenCommandPrintsTheTokenTheServerAccepts(t *testing.T) {
+	var out bytes.Buffer
+	if err := printToken(&out, "s", []string{"demo"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := strings.TrimSpace(out.String()), web.Token("s", web.RoundScope("demo")); got != want {
+		t.Errorf("round token %q, want %q", got, want)
+	}
+	out.Reset()
+	if err := printToken(&out, "s", []string{"admin"}); err != nil || strings.TrimSpace(out.String()) != web.Token("s", web.AdminScope) {
+		t.Errorf("admin token %q, %v", out.String(), err)
+	}
+	for _, bad := range []struct {
+		secret string
+		args   []string
+	}{{"", []string{"demo"}}, {"s", nil}, {"s", []string{"a", "b"}}} {
+		if printToken(io.Discard, bad.secret, bad.args) == nil {
+			t.Errorf("printToken(%q, %v) succeeded", bad.secret, bad.args)
+		}
+	}
+}
+
+func TestRunAsMustBeAPositiveUID(t *testing.T) {
+	t.Setenv("WARROOM_RUN_AS", "root")
+	t.Setenv("WARROOM_PORT", "0")
+	if err := run(); err == nil || !strings.Contains(err.Error(), "WARROOM_RUN_AS") {
+		t.Errorf("run() = %v", err)
+	}
+}
+
+func TestUnknownCommandIsAnError(t *testing.T) {
+	if runCommand([]string{"nope"}) == nil {
+		t.Error("an unknown command succeeded")
 	}
 }

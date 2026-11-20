@@ -130,11 +130,13 @@ templ NoteField(n NoteView) {
 }
 
 templ NoteBox(n NoteView) {
-	<section class="notebox">
-		<label for={ n.ID } class="h">{ n.Label }</label>
-		@NoteField(n)
-		<p class="nhint" id="nhint">{ n.Hint }</p>
-	</section>
+	if !isReadOnly(ctx) {
+		<section class="notebox">
+			<label for={ n.ID } class="h">{ n.Label }</label>
+			@NoteField(n)
+			<p class="nhint" id="nhint">{ n.Hint }</p>
+		</section>
+	}
 }
 
 templ StepNav(n NavView) {

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../step.schema.json
 kind: pictures
 question: Is the pile card right as drawn?
 why: 'A step with one option is a confirm step: Yes, as drawn, or Change with a note.'

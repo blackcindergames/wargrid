@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../step.schema.json
 kind: pictures
 question: What tells you attack-move is armed?
 why: >-

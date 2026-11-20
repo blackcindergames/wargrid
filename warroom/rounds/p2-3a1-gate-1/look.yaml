@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../step.schema.json
 kind: gallery
 question: 'Gate A look: every P2.3a1 state'
 why: >-

@@ -7,7 +7,7 @@ import (
 	"html"
 	"io"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,9 +17,6 @@ import (
 	"unicode/utf8"
 	"wargrid/warroom/internal/rounds"
 	"wargrid/warroom/internal/store"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 const (
@@ -37,6 +34,8 @@ type Config struct {
 	Root   string
 	Picks  string
 	Rounds string
+	// Secret signs the write tokens; empty leaves writes and read-back open, for local use.
+	Secret string
 }
 
 type Server struct {
@@ -49,24 +48,28 @@ func NewServer(cfg *Config) *Server {
 }
 
 func (s *Server) Routes() http.Handler {
-	r := chi.NewRouter()
-	r.Use(middleware.Recoverer)
-	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) { plain(w, http.StatusOK, "ok") })
-	r.Get("/picks.json", s.picksJSON)
-	r.Get("/", s.roundList)
-	r.Get("/r/{round}", s.openRound)
-	r.Get("/r/{round}/summary", s.summary)
-	r.Get("/r/{round}/{n}", s.stepPage)
-	r.Post("/r/{round}/{step}/pick", s.pick)
-	r.Post("/r/{round}/{step}/note", s.note)
-	r.Get("/static/*", func(w http.ResponseWriter, r *http.Request) {
-		serveFile(w, r, staticFiles, "static/"+chi.URLParam(r, "*"))
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) { plain(w, http.StatusOK, "ok") })
+	mux.HandleFunc("GET /picks.json", s.adminOnly(s.picksJSON))
+	mux.HandleFunc("GET /history.jsonl", s.adminOnly(s.historyJSONL))
+	mux.HandleFunc("GET /{$}", s.roundList)
+	mux.HandleFunc("GET /r/{round}", s.openRound)
+	// The literal segment beats {n}: ServeMux picks the more specific pattern.
+	mux.HandleFunc("GET /r/{round}/summary", s.summary)
+	mux.HandleFunc("GET /r/{round}/{n}", s.stepPage)
+	mux.HandleFunc("POST /r/{round}/{step}/pick", s.pick)
+	mux.HandleFunc("POST /r/{round}/{step}/note", s.note)
+	mux.HandleFunc("GET /static/{path...}", func(w http.ResponseWriter, r *http.Request) {
+		serveFile(w, r, staticFiles, "static/"+r.PathValue("path"))
 	})
 	for _, tree := range siteTrees {
-		r.Get("/"+tree+"/*", func(w http.ResponseWriter, r *http.Request) { s.serveTree(w, r, tree) })
+		mux.HandleFunc("GET /"+tree+"/{path...}", func(w http.ResponseWriter, r *http.Request) { s.serveTree(w, r, tree) })
 	}
-	return r
+	return mux
 }
+
+// Handler is Routes with the request log and panic recovery, which tests leave out.
+func (s *Server) Handler() http.Handler { return requestLog(recoverer(s.Routes())) }
 
 func plain(w http.ResponseWriter, code int, body string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -83,7 +86,7 @@ func (s *Server) serveTree(w http.ResponseWriter, r *http.Request, tree string) 
 		return
 	}
 	defer func() { _ = root.Close() }()
-	serveFile(w, r, root.FS(), tree+"/"+chi.URLParam(r, "*"))
+	serveFile(w, r, root.FS(), tree+"/"+r.PathValue("path"))
 }
 
 // serveFile uses ServeContent, not FileServer, which redirects /index.html away (the lab loads web/site/index.html).
@@ -110,7 +113,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) 
 func (s *Server) catalog() *rounds.Catalog {
 	c := rounds.LoadCatalog(s.cfg.Rounds)
 	for _, e := range c.Errors {
-		log.Printf("rounds: %s", e)
+		slog.Warn("rounds", "error", e)
 	}
 	return c
 }
@@ -118,7 +121,7 @@ func (s *Server) catalog() *rounds.Catalog {
 func (s *Server) picksJSON(w http.ResponseWriter, _ *http.Request) {
 	entries, err := s.store.Entries()
 	if err != nil {
-		log.Printf("picks: %v", err)
+		slog.Error("picks", "error", err)
 		http.Error(w, "picks file unreadable", http.StatusInternalServerError)
 		return
 	}
@@ -132,6 +135,18 @@ func (s *Server) picksJSON(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write(out)
 }
 
+func (s *Server) historyJSONL(w http.ResponseWriter, _ *http.Request) {
+	data, err := s.store.History()
+	if err != nil {
+		slog.Error("history", "error", err)
+		http.Error(w, "history unreadable", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(data)
+}
+
 func (s *Server) roundList(w http.ResponseWriter, r *http.Request) {
 	c := s.catalog()
 	links := roundLinks(c, r.URL.Query().Get("demo") == "1")
@@ -140,14 +155,14 @@ func (s *Server) roundList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) openRound(w http.ResponseWriter, r *http.Request) {
-	round := s.catalog().Round(chi.URLParam(r, "round"))
+	round := s.catalog().Round(r.PathValue("round"))
 	if round == nil {
 		http.NotFound(w, r)
 		return
 	}
 	entries, err := s.store.Entries()
 	if err != nil {
-		log.Printf("picks: %v", err)
+		slog.Error("picks", "error", err)
 	}
 	target := url.URL{Path: "/r/" + round.ID + "/summary", RawQuery: r.URL.RawQuery}
 	if open := round.Open(entries); len(open) > 0 {
@@ -161,10 +176,11 @@ func (s *Server) view(r *http.Request, c *rounds.Catalog, round *rounds.Round) (
 	entries, err := s.store.Entries()
 	errs = c.Errors
 	if err != nil {
-		log.Printf("picks: %v", err)
+		slog.Error("picks", "error", err)
 		errs = append(slices.Clone(errs), "picks file unreadable: nothing recorded can be shown")
 	}
 	b = &builder{cat: c, round: round, entries: entries, q: parseQuery(r.URL.Query())}
+	b.readOnly = !s.canWrite(round.ID, b.q.Token)
 	root, err := os.OpenRoot(s.cfg.Root)
 	if err != nil {
 		return b, errs, func() {}
@@ -175,8 +191,8 @@ func (s *Server) view(r *http.Request, c *rounds.Catalog, round *rounds.Round) (
 
 func (s *Server) stepPage(w http.ResponseWriter, r *http.Request) {
 	c := s.catalog()
-	round := c.Round(chi.URLParam(r, "round"))
-	n, err := strconv.Atoi(chi.URLParam(r, "n"))
+	round := c.Round(r.PathValue("round"))
+	n, err := strconv.Atoi(r.PathValue("n"))
 	if round == nil || err != nil || n < 1 || n > len(round.Loaded) {
 		http.NotFound(w, r)
 		return
@@ -192,13 +208,17 @@ func (s *Server) stepPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) summary(w http.ResponseWriter, r *http.Request) {
 	c := s.catalog()
-	round := c.Round(chi.URLParam(r, "round"))
+	round := c.Round(r.PathValue("round"))
 	if round == nil {
 		http.NotFound(w, r)
 		return
 	}
 	b, errs, done := s.view(r, c, round)
 	defer done()
+	var err error
+	if b.changes, err = s.store.Changes(); err != nil {
+		slog.Error("history", "error", err)
+	}
 	respond(w, r, round.Title+" · War Room", b.summaryPageView(errs))
 }
 
@@ -215,17 +235,21 @@ func validNote(note string) bool {
 	return utf8.ValidString(note) && utf8.RuneCountInString(note) <= maxNote
 }
 
-// stepOf finds the real step a request names; a missing step has no endpoint.
+// stepOf finds the real step a request names and checks the write token; a missing step has no endpoint.
 func (s *Server) stepOf(w http.ResponseWriter, r *http.Request) (*rounds.Catalog, *rounds.Round, *rounds.Step, bool) {
 	c := s.catalog()
-	round := c.Round(chi.URLParam(r, "round"))
+	round := c.Round(r.PathValue("round"))
 	if round == nil {
 		http.NotFound(w, r)
 		return nil, nil, nil, false
 	}
-	step := round.Step(chi.URLParam(r, "step"))
+	step := round.Step(r.PathValue("step"))
 	if step == nil {
 		http.NotFound(w, r)
+		return nil, nil, nil, false
+	}
+	if !s.canWrite(round.ID, r.URL.Query().Get(tokenParam)) {
+		plain(w, http.StatusForbidden, readOnly)
 		return nil, nil, nil, false
 	}
 	return c, round, step, true
@@ -291,7 +315,7 @@ func (s *Server) answered(w http.ResponseWriter, r *http.Request, c *rounds.Cata
 	}
 	target := b.stepHref(next)
 	if r.Header.Get("HX-Request") != "true" {
-		http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // target is built from the validated round and a step number, the query only carries control values
+		http.Redirect(w, r, target, http.StatusSeeOther)
 		return
 	}
 	w.Header().Set("HX-Push-Url", target)
@@ -366,7 +390,7 @@ func recordFailed(w http.ResponseWriter, err error) bool {
 	case errors.Is(err, store.ErrBadKey):
 		http.Error(w, "bad key", http.StatusBadRequest)
 	default:
-		log.Printf("picks: %v", err)
+		slog.Error("picks", "error", err)
 		http.Error(w, "could not record", http.StatusInternalServerError)
 	}
 	return true

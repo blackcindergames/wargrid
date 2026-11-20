@@ -1,5 +1,6 @@
 .bin/
 /warroom
 picks.json
+picks.jsonl
 fly/site/
 islands/node_modules/

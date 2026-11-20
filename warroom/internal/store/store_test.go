@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func newTestStore(t *testing.T) (*Store, string) {
@@ -217,7 +219,77 @@ func TestStoreConcurrentWritersAllLand(t *testing.T) {
 	if got := readFile(t, path); len(got) != 20 {
 		t.Fatalf("%d keys landed, want 20", len(got))
 	}
-	if names := dirNames(t, filepath.Dir(path)); len(names) != 1 {
-		t.Fatalf("directory = %v", names)
+	if names := dirNames(t, filepath.Dir(path)); len(names) != 2 {
+		t.Fatalf("directory = %v, want the picks and the history only", names)
+	}
+}
+
+func historyLines(t *testing.T, s *Store) []string {
+	t.Helper()
+	data, err := s.History()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Fields(string(data))
+}
+
+func TestHistoryAppendsOneLinePerChange(t *testing.T) {
+	s, path := newTestStore(t)
+	s.now = func() time.Time { return time.Date(2026, 11, 20, 4, 5, 6, 0, time.UTC) }
+	for _, pick := range []string{"A", "A", "B"} {
+		if err := s.Update("demo:k", setEntry(pick, "n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.Update("demo:tune", func(Entry) Entry {
+		p := "tuned"
+		return Entry{Pick: &p, Value: map[string]any{"outline": 1.5}}
+	}); err != nil {
+		t.Fatal(err)
+	}
+	lines := historyLines(t, s)
+	want := []string{
+		`{"t":"2026-11-20T04:05:06Z","key":"demo:k","pick":"A","note":"n"}`,
+		`{"t":"2026-11-20T04:05:06Z","key":"demo:k","pick":"B","note":"n"}`,
+		`{"t":"2026-11-20T04:05:06Z","key":"demo:tune","pick":"tuned","note":"","value":{"outline":1.5}}`,
+	}
+	if !slices.Equal(lines, want) {
+		t.Fatalf("history = %q", lines)
+	}
+	if got := readFile(t, path); len(got) != 2 {
+		t.Fatalf("picks.json keeps the current state: %v", got)
+	}
+	counts, err := s.Changes()
+	if err != nil || counts["demo:k"] != 2 || counts["demo:tune"] != 1 {
+		t.Fatalf("counts = %v, %v", counts, err)
+	}
+	if filepath.Base(s.history) != "picks.jsonl" {
+		t.Errorf("history file = %s", s.history)
+	}
+}
+
+func TestHistoryCapRefusesTheWholeWrite(t *testing.T) {
+	s, path := newTestStore(t)
+	s.maxHistory = 200
+	var err error
+	n := 0
+	for ; err == nil && n < 20; n++ {
+		err = s.Update(fmt.Sprintf("demo:k%d", n), setEntry("A", ""))
+	}
+	if !errors.Is(err, ErrFull) || n < 2 {
+		t.Fatalf("after %d writes err = %v, want ErrFull past the cap", n, err)
+	}
+	if got := readFile(t, path); len(got) != n-1 {
+		t.Fatalf("%d keys in picks.json, want the %d that fit", len(got), n-1)
+	}
+	if data, _ := s.History(); len(data) > 200 {
+		t.Fatalf("history is %d bytes, cap 200", len(data))
+	}
+}
+
+func TestHistoryIsEmptyBeforeTheFirstWrite(t *testing.T) {
+	s, _ := newTestStore(t)
+	if data, err := s.History(); err != nil || len(data) != 0 {
+		t.Fatalf("history = %q, %v", data, err)
 	}
 }

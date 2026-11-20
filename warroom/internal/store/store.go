@@ -8,13 +8,17 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
+	"time"
 )
 
 const (
 	// Public URL: caps what an anonymous client can grow the volume to.
 	maxKeys   = 500
 	maxKeyLen = 160
+	// Every write adds a line, so an anonymous client must not grow the history without bound.
+	maxHistory = 5 << 20
 )
 
 var (
@@ -32,15 +36,28 @@ type Entry struct {
 }
 
 // Store is the picks file: one mutex around read-modify-write, atomic replace on write.
+// Beside it, the history file keeps one JSON line per change.
 type Store struct {
-	path    string
-	mu      sync.Mutex
-	maxKeys int
-	write   func(path string, data []byte) error
+	path       string
+	history    string
+	mu         sync.Mutex
+	maxKeys    int
+	maxHistory int64
+	now        func() time.Time
+	write      func(path string, data []byte) error
 }
 
 func NewStore(path string) *Store {
-	return &Store{path: path, maxKeys: maxKeys, write: writeAtomic}
+	return &Store{
+		path: path, history: strings.TrimSuffix(path, filepath.Ext(path)) + ".jsonl",
+		maxKeys: maxKeys, maxHistory: maxHistory, now: time.Now, write: writeAtomic,
+	}
+}
+
+type historyLine struct {
+	T   string `json:"t"`
+	Key string `json:"key"`
+	Entry
 }
 
 // Entries returns every entry; an unreadable file or one of another shape is an error.
@@ -62,7 +79,7 @@ func (s *Store) Entries() (map[string]Entry, error) {
 	return out, nil
 }
 
-// Update replaces the entry for key with change(old entry); a new key past the cap is ErrFull.
+// Update replaces the entry for key with change(old entry); a new key past the cap, or a history past its cap, is ErrFull.
 func (s *Store) Update(key string, change func(Entry) Entry) error {
 	if len(key) > maxKeyLen || !keyRE.MatchString(key) {
 		return ErrBadKey
@@ -82,7 +99,13 @@ func (s *Store) Update(key string, change func(Entry) Entry) error {
 	} else if len(raw) >= s.maxKeys {
 		return ErrFull
 	}
-	enc, err := json.Marshal(change(old))
+	next := change(old)
+	enc, err := json.Marshal(next)
+	if err != nil {
+		return err
+	}
+	// The history goes first: a crash between the two leaves a line for a write the state never saw, not the reverse.
+	err = s.appendHistory(key, old, next, exists)
 	if err != nil {
 		return err
 	}
@@ -92,6 +115,69 @@ func (s *Store) Update(key string, change func(Entry) Entry) error {
 		return err
 	}
 	return s.write(s.path, out)
+}
+
+// appendHistory adds one fsynced line; a write that changes nothing adds none.
+func (s *Store) appendHistory(key string, old, next Entry, exists bool) error {
+	if exists {
+		a, _ := json.Marshal(old)
+		b, _ := json.Marshal(next)
+		if bytes.Equal(a, b) {
+			return nil
+		}
+	}
+	line, err := json.Marshal(historyLine{T: s.now().UTC().Format(time.RFC3339), Key: key, Entry: next})
+	if err != nil {
+		return err
+	}
+	line = append(line, '\n')
+	err = os.MkdirAll(filepath.Dir(s.history), 0o750)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(s.history, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	st, err := f.Stat()
+	if err == nil && st.Size()+int64(len(line)) > s.maxHistory {
+		err = ErrFull
+	}
+	if err == nil {
+		err = writeSynced(f, line)
+	} else {
+		_ = f.Close()
+	}
+	return err
+}
+
+// History is the raw history file; none yet is empty.
+func (s *Store) History() ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	data, err := os.ReadFile(s.history)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	return data, err
+}
+
+// Changes counts the history lines per key.
+func (s *Store) Changes() (map[string]int, error) {
+	data, err := s.History()
+	if err != nil {
+		return nil, err
+	}
+	counts := map[string]int{}
+	for _, l := range bytes.Split(data, []byte{'\n'}) {
+		var h struct {
+			Key string `json:"key"`
+		}
+		if json.Unmarshal(l, &h) == nil && h.Key != "" {
+			counts[h.Key]++
+		}
+	}
+	return counts, nil
 }
 
 // load keeps entries as raw JSON so a rewrite never drops fields it does not know.

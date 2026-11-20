@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../step.schema.json
 kind: text
 question: Which wording for the card question?
 why: 'A text step: the options are words, shown in their frame.'

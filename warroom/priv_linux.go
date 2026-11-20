@@ -7,23 +7,21 @@ import (
 	"syscall"
 )
 
-const nobody = 65534
-
-// dropPrivileges hands the picks directory to nobody and drops root before serving; Fly mounts the volume root-owned.
-func dropPrivileges(picks string) error {
+// dropPrivileges hands the picks directory to uid and drops root before serving; Fly mounts the volume root-owned.
+func dropPrivileges(picks string, uid int) error {
 	if os.Geteuid() != 0 {
-		return nil
+		return errors.New("WARROOM_RUN_AS is set but the process is not root")
 	}
 	for _, p := range []string{filepath.Dir(picks), picks} {
-		if err := os.Chown(p, nobody, nobody); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if err := os.Chown(p, uid, uid); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
 	}
 	if err := syscall.Setgroups(nil); err != nil {
 		return err
 	}
-	if err := syscall.Setgid(nobody); err != nil {
+	if err := syscall.Setgid(uid); err != nil {
 		return err
 	}
-	return syscall.Setuid(nobody)
+	return syscall.Setuid(uid)
 }

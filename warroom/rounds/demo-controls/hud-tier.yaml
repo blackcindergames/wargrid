@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../step.schema.json
 kind: pictures
 question: HUD v5 cell shape, across the states
 why: >-

@@ -1,2 +1,3 @@
+# yaml-language-server: $schema=../round.schema.json
 title: 'Demo: every step kind'
 steps: [pictures, confirm, text, audio, wording, lab, gallery, verdict, tune]

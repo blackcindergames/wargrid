@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../step.schema.json
 kind: pictures
 question: When does Unload (F) show?
 why: >-

@@ -81,6 +81,10 @@ type builder struct {
 	entries map[string]store.Entry
 	q       Query
 	root    *os.Root
+	// readOnly: the link carries no valid write token, so pages offer no pick or note.
+	readOnly bool
+	// changes counts the recorded writes per picks key, for the summary.
+	changes map[string]int
 }
 
 func unmark(s string) string { return strings.ReplaceAll(s, "`", "") }
@@ -100,6 +104,15 @@ func (b *builder) pickOf(r *rounds.Round, key string) string {
 func (b *builder) steps() int { return len(b.round.Loaded) }
 
 func (b *builder) carry() url.Values { return b.q.Carry() }
+
+// tokenOnly is for requests that answer with no page, which need no view state.
+func (b *builder) tokenOnly() url.Values {
+	v := url.Values{}
+	if b.q.Token != "" {
+		v.Set(tokenParam, b.q.Token)
+	}
+	return v
+}
 
 // stepHref wraps around: before the first step is the summary, after the summary the first step.
 func (b *builder) stepHref(n int) string {
@@ -126,7 +139,10 @@ func (b *builder) chips(current int) []Chip {
 	out = append(out, Chip{Label: "Summary", Href: b.stepHref(b.steps() + 1), On: current == b.steps()})
 	for _, id := range b.round.Earlier {
 		if r := b.cat.Rounds[id]; r != nil {
-			out = append(out, Chip{Label: r.Title, Href: summaryURL(r, b.carry()), Earlier: true})
+			// Another round's token is not this one's.
+			other := b.carry()
+			other.Del(tokenParam)
+			out = append(out, Chip{Label: r.Title, Href: summaryURL(r, other), Earlier: true})
 		}
 	}
 	return out
@@ -295,5 +311,5 @@ func pickLabel(s *rounds.Step, p string, reveal bool) string {
 
 func (b *builder) note(s *rounds.Step, key, id, label string) NoteView {
 	e, _ := b.entry(b.round, key)
-	return NoteView{ID: id, Label: label, Value: e.Note, Post: noteURL(b.round, s), What: key, Chip: s.ChipKey()}
+	return NoteView{ID: id, Label: label, Value: e.Note, Post: noteURL(b.round, s, b.tokenOnly()), What: key, Chip: s.ChipKey()}
 }

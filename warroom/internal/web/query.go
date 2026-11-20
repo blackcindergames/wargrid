@@ -19,12 +19,17 @@ type Query struct {
 	Keys    bool
 	Phone   bool
 	Crop    string
+	// Token is the write token; it rides on every link and form like a control.
+	Token string
 }
 
 func parseQuery(v url.Values) Query {
 	q := Query{
 		Ctl: map[string]string{}, Show: v.Get("show"), View: v.Get("view"), Item: v.Get("item"), Numbers: v.Get("numbers") != "0",
 		Lab: v.Get("lab") == "1", Shot: v.Get("shot") == "1", Keys: v.Get("keys") == "1", Phone: v.Get("phone") == "1", Crop: v.Get("crop"),
+	}
+	if t := v.Get(tokenParam); ctlValueOK(t) {
+		q.Token = t
 	}
 	extras := 0
 	for k := range v {
@@ -72,6 +77,9 @@ func (q *Query) Carry() url.Values {
 	if q.Phone {
 		out.Set("phone", "1")
 	}
+	if q.Token != "" {
+		out.Set(tokenParam, q.Token)
+	}
 	return out
 }
 
@@ -107,6 +115,6 @@ func pickURL(round *rounds.Round, step *rounds.Step, v url.Values) string {
 	return withQuery(roundURL(round)+"/"+step.Key+"/pick", v)
 }
 
-func noteURL(round *rounds.Round, step *rounds.Step) string {
-	return roundURL(round) + "/" + step.Key + "/note"
+func noteURL(round *rounds.Round, step *rounds.Step, v url.Values) string {
+	return withQuery(roundURL(round)+"/"+step.Key+"/note", v)
 }

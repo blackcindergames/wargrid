@@ -16,6 +16,8 @@ type PageView struct {
 	Phone   *PhoneView
 	Legend  LegendView
 	Keys    bool
+	// ReadOnly shows the notice; the pick and note controls are left out by the templates (isReadOnly).
+	ReadOnly bool
 }
 
 // ShotView is the page of ?shot=1: one picture alone on black.
@@ -66,6 +68,9 @@ templ Shell(p PageView) {
 	<div id="view" class={ "view", templ.KV("true100", p.True100) } data-cvd={ p.Cvd }>
 		if len(p.Errors) > 0 {
 			<div id="err" role="alert" class="alert alert-error">{ strings.Join(p.Errors, "\n") }</div>
+		}
+		if p.ReadOnly {
+			<p id="readonly" class="readonly text-sm opacity-70" role="status">{ readOnly }</p>
 		}
 		if len(p.Chips) > 0 {
 			<header class="top">

@@ -4,17 +4,22 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
+	"fmt"
+	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
+	"wargrid/warroom/internal/rounds"
 	"wargrid/warroom/internal/web"
 )
 
 //go:generate go tool templ generate
+//go:generate sh -c "go run . schema round > rounds/round.schema.json && go run . schema step > rounds/step.schema.json"
 //go:generate sh tools/fetch.sh
 //go:generate .bin/tailwindcss --input internal/web/static/input.css --output internal/web/static/app.css --minify
 //go:generate sh -c "cd islands && npm ci && npm run build"
@@ -28,6 +33,8 @@ const (
 type config struct {
 	web.Config
 	Host, Port string
+	// RunAs is the uid to drop to after handing the picks directory over; only the container sets it.
+	RunAs string
 }
 
 // Paths are relative to the working directory, which is warroom/: the repository root is its parent.
@@ -43,25 +50,76 @@ func configFromEnv(getenv func(string) string) config {
 			Root:   pick("WARROOM_ROOT", ".."),
 			Picks:  pick("WARROOM_PICKS", "picks.json"),
 			Rounds: pick("WARROOM_ROUNDS", "rounds"),
+			Secret: getenv("WARROOM_SECRET"),
 		},
-		Host: pick("WARROOM_HOST", "127.0.0.1"),
-		Port: pick("WARROOM_PORT", "8780"),
+		Host:  pick("WARROOM_HOST", "127.0.0.1"),
+		Port:  pick("WARROOM_PORT", "8780"),
+		RunAs: getenv("WARROOM_RUN_AS"),
 	}
 }
 
 func main() {
-	if err := run(); err != nil {
-		log.Printf("war room: %v", err)
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	err := runCommand(os.Args[1:])
+	if err != nil {
+		slog.Error("war room", "error", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	cfg := configFromEnv(os.Getenv)
-	if err := dropPrivileges(cfg.Picks); err != nil {
+func runCommand(args []string) error {
+	if len(args) == 0 {
+		return run()
+	}
+	switch args[0] {
+	case "token":
+		return printToken(os.Stdout, os.Getenv("WARROOM_SECRET"), args[1:])
+	case "schema":
+		return printSchema(os.Stdout, args[1:])
+	}
+	return fmt.Errorf("unknown command %q (token <round>|admin, schema round|step)", args[0])
+}
+
+func printToken(w io.Writer, secret string, args []string) error {
+	if len(args) != 1 || secret == "" {
+		return errors.New("usage: WARROOM_SECRET=... go run . token <round>|admin")
+	}
+	scope := web.RoundScope(args[0])
+	if args[0] == web.AdminScope {
+		scope = web.AdminScope
+	}
+	_, err := fmt.Fprintln(w, web.Token(secret, scope))
+	return err
+}
+
+func printSchema(w io.Writer, args []string) error {
+	if len(args) != 1 {
+		return errors.New("usage: go run . schema round|step")
+	}
+	out, err := rounds.Schema(args[0])
+	if err != nil {
 		return err
 	}
-	log.Printf("running as uid %d gid %d", os.Geteuid(), os.Getegid())
+	_, err = w.Write(out)
+	return err
+}
+
+func run() error {
+	cfg := configFromEnv(os.Getenv)
+	if cfg.RunAs != "" {
+		uid, err := strconv.Atoi(cfg.RunAs)
+		if err != nil || uid <= 0 {
+			return fmt.Errorf("WARROOM_RUN_AS must be a positive uid, got %q", cfg.RunAs)
+		}
+		err = dropPrivileges(cfg.Picks, uid)
+		if err != nil {
+			return err
+		}
+	}
+	slog.Info("running", "uid", os.Geteuid(), "gid", os.Getegid())
+	if cfg.Secret == "" {
+		slog.Warn("WARROOM_SECRET is not set: every link can record and read back")
+	}
 	ln, err := net.Listen("tcp", net.JoinHostPort(cfg.Host, cfg.Port))
 	if err != nil {
 		return err
@@ -69,8 +127,8 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	go func() { <-ctx.Done(); stop() }() // a second signal exits at once
-	log.Printf("war room on http://%s/", ln.Addr())
-	return serve(ctx, ln, newServer(web.NewServer(&cfg.Config).Routes()), drainTimeout)
+	slog.Info("listening", "url", "http://"+ln.Addr().String()+"/")
+	return serve(ctx, ln, newServer(web.NewServer(&cfg.Config).Handler()), drainTimeout)
 }
 
 func newServer(h http.Handler) *http.Server {
@@ -93,12 +151,12 @@ func serve(ctx context.Context, ln net.Listener, srv *http.Server, drain time.Du
 		return err
 	case <-ctx.Done():
 	}
-	log.Printf("draining, timeout %s", drain)
+	slog.Info("draining", "timeout", drain)
 	dctx, cancel := context.WithTimeout(context.Background(), drain)
 	defer cancel()
 	err := srv.Shutdown(dctx)
 	if errors.Is(err, context.DeadlineExceeded) {
-		log.Print("drain timeout, closing open requests")
+		slog.Warn("drain timeout, closing open requests")
 		_ = srv.Close()
 		return nil
 	}

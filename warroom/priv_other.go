@@ -2,4 +2,6 @@
 
 package main
 
-func dropPrivileges(string) error { return nil }
+import "errors"
+
+func dropPrivileges(string, int) error { return errors.New("WARROOM_RUN_AS needs Linux") }

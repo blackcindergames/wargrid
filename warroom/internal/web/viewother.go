@@ -155,7 +155,11 @@ func (b *builder) missing(n int, s *rounds.Step) MissingView {
 
 // ---------- summary ----------
 
-type SumRow struct{ Label, Pick, Note string }
+type SumRow struct {
+	Label, Pick, Note string
+	// Changes is how many times the history recorded this row.
+	Changes int
+}
 
 type SumSection struct {
 	Title, Count string
@@ -204,12 +208,12 @@ func (b *builder) rowOf(r *rounds.Round, local string, e store.Entry) orderedRow
 	k, sub, _ := strings.Cut(local, ":")
 	for i := range r.Loaded {
 		if g := &r.Loaded[i]; g.Kind == "gallery" && g.Verdict != nil && g.VerdictKey() == local {
-			return orderedRow{SumRow{"Verdict", pickLabel(g, deref(e.Pick), true), e.Note}, float64(i) + 0.9}
+			return orderedRow{SumRow{Label: "Verdict", Pick: pickLabel(g, deref(e.Pick), true), Note: e.Note}, float64(i) + 0.9}
 		}
 	}
 	s := r.Step(k)
 	if s == nil {
-		return orderedRow{SumRow{local, pickLabel(&rounds.Step{}, deref(e.Pick), true), e.Note}, 999}
+		return orderedRow{SumRow{Label: local, Pick: pickLabel(&rounds.Step{}, deref(e.Pick), true), Note: e.Note}, 999}
 	}
 	order := float64(indexOfStep(r, k))
 	label := cmp.Or(s.Question, k)
@@ -221,7 +225,7 @@ func (b *builder) rowOf(r *rounds.Round, local string, e store.Entry) orderedRow
 	if s.Kind == "tune" && len(e.Value) > 0 {
 		pick = tuneLine(s, e.Value)
 	}
-	return orderedRow{SumRow{label, pick, e.Note}, order}
+	return orderedRow{SumRow{Label: label, Pick: pick, Note: e.Note}, order}
 }
 
 func subLabel(s *rounds.Step, question, sub string) string {
@@ -258,7 +262,9 @@ func (b *builder) section(r *rounds.Round) SumSection {
 	var rows []orderedRow
 	for key, e := range b.entries {
 		if local, ok := strings.CutPrefix(key, r.Prefix+":"); ok {
-			rows = append(rows, b.rowOf(r, local, e))
+			row := b.rowOf(r, local, e)
+			row.Changes = b.changes[key]
+			rows = append(rows, row)
 		}
 	}
 	sort.SliceStable(rows, func(i, j int) bool {

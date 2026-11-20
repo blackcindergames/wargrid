@@ -17,31 +17,35 @@ func colsStyle(n int) templ.SafeCSS {
 }
 
 templ AnswerForm(f FormView) {
-	<form
-		id="answer"
-		method="post"
-		action={ templ.SafeURL(f.Action) }
-		hx-post={ f.Action }
-		hx-swap="innerHTML show:top"
-		hx-sync="this:queue all"
-		data-step={ f.Step }
-		hidden
-	></form>
+	if !isReadOnly(ctx) {
+		<form
+			id="answer"
+			method="post"
+			action={ templ.SafeURL(f.Action) }
+			hx-post={ f.Action }
+			hx-swap="innerHTML show:top"
+			hx-sync="this:queue all"
+			data-step={ f.Step }
+			hidden
+		></form>
+	}
 }
 
 templ PickButton(value, class, key string) {
-	<button
-		type="submit"
-		form="answer"
-		name="pick"
-		value={ value }
-		class={ class }
-		if key != "" {
-			data-key={ key }
-		}
-	>
-		{ children... }
-	</button>
+	if !isReadOnly(ctx) {
+		<button
+			type="submit"
+			form="answer"
+			name="pick"
+			value={ value }
+			class={ class }
+			if key != "" {
+				data-key={ key }
+			}
+		>
+			{ children... }
+		</button>
+	}
 }
 
 templ Tags(o OptView) {
@@ -131,7 +135,7 @@ templ Act(v ChoiceView) {
 			@PickButton("change", "btn", "") {
 				Change (say what in the note)
 			}
-		} else {
+		} else if !isReadOnly(ctx) {
 			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn btn-warning" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")</button>
 		}
 		if v.Act.Neutral != "" {
@@ -205,7 +209,9 @@ templ Tile(o OptView) {
 				@Figures(o.Extras)
 			</details>
 		}
-		<button type="submit" form="answer" name="pick" value={ o.Letter } class="pick btn btn-warning">Pick { o.Letter }</button>
+		if !isReadOnly(ctx) {
+			<button type="submit" form="answer" name="pick" value={ o.Letter } class="pick btn btn-warning">Pick { o.Letter }</button>
+		}
 	</div>
 }
 
@@ -255,12 +261,14 @@ templ ChoiceMain(v ChoiceView) {
 }
 
 templ VerdictBox(v VerdictView) {
-	<section class="verdict">
-		for _, b := range v.Buttons {
-			<button type="submit" form="answer" name="pick" value={ b.Value } class={ "vb btn btn-lg", templ.KV("btn-warning", b.Value == "pass"), templ.KV("done", b.Done) }>{ b.Label }</button>
-		}
-		@NoteField(v.Note)
-	</section>
+	if !isReadOnly(ctx) {
+		<section class="verdict">
+			for _, b := range v.Buttons {
+				<button type="submit" form="answer" name="pick" value={ b.Value } class={ "vb btn btn-lg", templ.KV("btn-warning", b.Value == "pass"), templ.KV("done", b.Done) }>{ b.Label }</button>
+			}
+			@NoteField(v.Note)
+		</section>
+	}
 }
 
 templ GalleryMain(v GalleryView) {
@@ -273,8 +281,10 @@ templ GalleryMain(v GalleryView) {
 					<span class="cnt">{ v.Count }</span>
 					<h2>{ v.ItemLabel }</h2>
 					<p>@Fmt(v.Caption)</p>
-					<label for={ v.ItemNote.ID } class="h">{ v.ItemNote.Label }</label>
-					@NoteField(v.ItemNote)
+					if !isReadOnly(ctx) {
+						<label for={ v.ItemNote.ID } class="h">{ v.ItemNote.Label }</label>
+						@NoteField(v.ItemNote)
+					}
 					<div class="inav">
 						<a class="btn btn-sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
 						<a class="btn btn-sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
@@ -366,11 +376,17 @@ templ WordingMain(v WordingView) {
 		</div>
 		<div class="right">
 			<section class="fields">
-				<p class="nhint">Edits are recorded as you type.</p>
+				if !isReadOnly(ctx) {
+					<p class="nhint">Edits are recorded as you type.</p>
+				}
 				for _, f := range v.Fields {
 					<div class="field">
 						<label for={ f.Note.ID } class="h">{ f.Note.Label }</label>
-						@NoteField(f.Note)
+						if isReadOnly(ctx) {
+							<p>{ f.Note.Value }</p>
+						} else {
+							@NoteField(f.Note)
+						}
 						if f.Was != "" {
 							<p class="was">Drafted: @Fmt(f.Was)</p>
 						}
@@ -406,7 +422,16 @@ templ SumTable(rows []SumRow) {
 				</thead>
 				<tbody>
 					for _, r := range rows {
-						<tr><td>@Fmt(r.Label)</td><td>@Fmt(r.Pick)</td><td>{ r.Note }</td></tr>
+						<tr>
+							<td>@Fmt(r.Label)</td>
+							<td>
+								@Fmt(r.Pick)
+								if r.Changes > 1 {
+									<small class="times">changed { strconv.Itoa(r.Changes) } times</small>
+								}
+							</td>
+							<td>{ r.Note }</td>
+						</tr>
 					}
 				</tbody>
 			</table>
