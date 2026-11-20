@@ -26,6 +26,9 @@ var _preview_origin: Vector2i
 var _preview_key: Array = []
 var _attack_move_mode: bool = false
 var _awaiting_build: String = ""
+# Any submit, re-arm or Esc after the build click bumps this, so a late refusal reopens placement only over an untouched selection.
+var gestures: int = 0
+var _awaiting_from: Array = []
 var _answer: Dictionary = {}
 # Headless reads of the cursor shape stay at the arrow, so tests swap this for a recorder.
 static var set_cursor: Callable = Input.set_default_cursor_shape
@@ -35,7 +38,9 @@ func _init(screen: Node) -> void:
 
 func handle(event: InputEvent) -> void:
 	if not takes_orders(): return
-	if event.is_action_pressed("deselect"): inspected_id = -1
+	if event.is_action_pressed("deselect"):
+		inspected_id = -1
+		gestures += 1
 	var mouse := event as InputEventMouse
 	var on_hud: bool = mouse != null and _screen.hud.blocks(mouse.position)
 	_hover(event, on_hud)
@@ -58,6 +63,7 @@ func takes_orders() -> bool:
 
 # Every arm and disarm goes through here, so the crosshair never outlives the mode.
 func _set_attack_move(on: bool) -> void:
+	if on: gestures += 1
 	_attack_move_mode = on
 	set_cursor.call(Input.CURSOR_CROSS if on else Input.CURSOR_ARROW)
 
@@ -170,6 +176,7 @@ func _placement_input(event: InputEvent) -> void:
 				return
 			_screen._submit({"type":"build","builder_id":_builder(),"building_kind":_placement_kind,"origin":[_preview_origin.x,_preview_origin.y]})
 			_awaiting_build = _placement_kind
+			_awaiting_from = [_builder(), gestures]
 			if _screen.driver.closes_placement_on_click(): _clear_placement()
 
 func answered(answer: Dictionary) -> void:
@@ -179,7 +186,7 @@ func answered(answer: Dictionary) -> void:
 	var online: bool = _screen.driver.closes_placement_on_click()
 	if answer.ok and not online: _clear_placement()
 	# A gesture begun since the click keeps its release; reopening would turn it into a build.
-	elif not answer.ok and online and not busy() and not _attack_move_mode and _builder() != -1: _enter_placement(kind)
+	elif not answer.ok and online and not busy() and [_builder(), gestures] == _awaiting_from: _enter_placement(kind)
 
 func _building_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("deselect"):
@@ -314,6 +321,7 @@ func _builder() -> int:
 	return unit.id if not unit.is_empty() and Registry.is_builder(unit.kind) and unit.owner == _screen.local_player else -1
 
 func _enter_placement(kind: String) -> void:
+	gestures += 1
 	_set_attack_move(false)
 	if _builder() == -1:
 		_screen.refuse("Choose one builder", false)

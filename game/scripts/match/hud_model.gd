@@ -232,21 +232,28 @@ static func drop_off(faction: String) -> String:
 static func collector_labels(view: Dictionary, ids: Array[int], seat: int, previous: Dictionary) -> Dictionary:
 	var labels: Dictionary = {}
 	var units: RefCounted = view.units
+	var found: Array[int] = []
 	for id: int in ids:
 		var i: int = units.index_of(id)
-		if i != -1 and units.owner[i] == seat and not Registry.collects(units.kinds[units.kind[i]]).is_empty(): labels[id] = collector_label(view, i, previous.get(id, ""))
+		if i != -1 and units.owner[i] == seat and not Registry.collects(units.kinds[units.kind[i]]).is_empty(): found.append(i)
+	if found.is_empty(): return labels
+	# One pass over buildings and piles per update, not one per collector.
+	var builders: Dictionary = {}
+	for site: Dictionary in view.buildings:
+		if not site.completed: builders[site.get("builder_id")] = true
+	var boxes_left: bool = view.get("sources", []).any(func(source: Dictionary) -> bool: return source.boxes > 0)
+	for i: int in found: labels[units.id[i]] = collector_label(view, i, previous.get(units.id[i], ""), builders, boxes_left)
 	return labels
 
-static func collector_label(view: Dictionary, i: int, previous: String) -> String:
+static func collector_label(view: Dictionary, i: int, previous: String, builders: Dictionary, boxes_left: bool) -> String:
 	var units: RefCounted = view.units
 	if units.flags[i] & ViewRows.COLLECTING:
 		var phase: String = units.phases[units.phase[i]]
 		if phase == "seeking": return previous
 		# Idle while collecting is a retry at a busy dock while a pile still holds boxes.
-		if phase == "idle": return WAITING_AT_PILE if view.get("sources", []).any(func(source: Dictionary) -> bool: return source.boxes > 0) else IDLE
+		if phase == "idle": return WAITING_AT_PILE if boxes_left else IDLE
 		return PHASE_LABELS[phase].replace("<DROP-OFF>", drop_off(player(view, units.owner[i]).get("faction", Registry.Factions.DEFAULT_FACTION)))
 	var status: int = units.status[i]
 	if status != ViewRows.NONE and ViewRows.STATUSES[status] in ["moving", "path_pending"]: return "MOVING"
-	for site: Dictionary in view.buildings:
-		if not site.completed and site.get("builder_id") == units.id[i]: return "BUILDING"
+	if builders.has(units.id[i]): return "BUILDING"
 	return "" if units.flags[i] & ViewRows.CONTAINED else IDLE

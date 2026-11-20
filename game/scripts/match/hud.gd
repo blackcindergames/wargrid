@@ -268,7 +268,6 @@ func _build_slab() -> void:
 	_commands = _grid("Orders", 2)
 	for part: Array in [["AttackMove", attack_move_pressed], ["Stop", stop_pressed], ["Unload", unload_pressed]]:
 		var button: Button = _button(_commands, part[0], _cell_width(2))
-		button.focus_mode = FOCUS_NONE
 		button.pressed.connect((part[1] as Signal).emit)
 	var font: Font = get_theme_font("font", &"HudButton")
 	_build_menu = _grid("BuildMenu", HudModel.menu_columns(font, get_theme_font_size("font_size", &"HudButton")))
@@ -304,7 +303,9 @@ func _grid(grid_name: String, columns: int) -> GridContainer:
 func _cell_width(columns: int) -> float:
 	return (HudModel.SLAB_CONTENT - (columns - 1) * GAP) / columns
 
+# No slab button keeps the focus: Space or Enter would press it again and the arrows walk a focus ring.
 static func _square(button: Button) -> void:
+	button.focus_mode = FOCUS_NONE
 	button.theme_type_variation = &"HudButton"
 	button.custom_minimum_size.y = ROW
 
@@ -604,8 +605,9 @@ func _show_selection(view: Dictionary, selection: Dictionary, seat: int, faction
 		_show_panel(HudModel.panel(view, selection, seat, faction, _labels), selection.bright_owners)
 
 # The row set holds while the pointer is over the panel, so a row never moves under it.
+# The mouse position outlives a window leave; the hovered control does not.
 func _holding() -> bool:
-	return _many.is_visible_in_tree() and _panel.get_global_rect().has_point(_panel.get_global_mouse_position())
+	return _many.is_visible_in_tree() and get_viewport().gui_get_hovered_control() != null and _panel.get_global_rect().has_point(_panel.get_global_mouse_position())
 
 func _release_hold() -> void:
 	if not _holding() and not _last.is_empty(): _show_selection.callv(_last)

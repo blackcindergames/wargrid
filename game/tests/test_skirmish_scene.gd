@@ -35,7 +35,7 @@ const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
 var freeze_sessions: String = "user://test-freeze-playtests-%d" % OS.get_process_id()
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue, test_hover_equals_click, test_click_results, test_shift_toggles_on_the_map, test_hud_blocks_the_map, test_entering_the_hud_clears_hover, test_drag_across_a_panel, test_card_takes_a_click_after_a_drag, test_releases_on_a_panel_are_the_huds, test_view_player_changes_display_reads_only]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue, test_hover_equals_click, test_click_results, test_shift_toggles_on_the_map, test_hud_blocks_the_map, test_entering_the_hud_clears_hover, test_drag_across_a_panel, test_card_takes_a_click_after_a_drag, test_releases_on_a_panel_are_the_huds, test_view_player_changes_display_reads_only, test_slab_buttons_take_no_focus, test_drag_box_ends_with_the_match]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -1940,8 +1940,11 @@ func test_freeze_card_keeps_the_focus(runner) -> bool:
 			else: _push_key(main, code)
 			runner.check(_in_card(main), "FN5 %s from %s stays in the card, got %s" % [OS.get_keycode_string(code), path.get_file(), _focus_owner(main)])
 	var refusal: String = main.hud.refusal
-	menu.get_child(0).grab_focus()
-	_push_enter(main)
+	runner.check((menu.get_child(0) as Button).focus_mode == Control.FOCUS_NONE, "FN5 a build button takes no focus, so Enter cannot press it behind the card")
+	var gestures: int = main.orders.gestures
+	(menu.get_child(0) as Button).pressed.emit()
+	# The freeze card's own hook would clear an armed ghost at once, so the arm count is what shows it.
+	runner.check(main.orders.gestures == gestures, "FN5 a build button pressed behind the card arms nothing")
 	main.orders._produce_selected()
 	main.orders._cancel_entry(1)
 	main.orders._cancel_build()
@@ -2373,4 +2376,79 @@ func test_view_player_changes_display_reads_only(runner) -> bool:
 	BaseScene.publish(main)
 	runner.check(view.rally_marker().is_empty(), "VP2 the rally marker follows view_player")
 	main.free()
+	return true
+
+func _click_control(main, control: Control) -> void:
+	var at: Vector2 = main.get_viewport().get_final_transform() * control.get_global_rect().get_center()
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = pressed
+		event.position = at
+		event.global_position = at
+		main.get_viewport().push_input(event)
+
+func _accept_keys(runner, main, label: String) -> void:
+	for code: Key in [KEY_SPACE, KEY_ENTER]: _push_key(main, code)
+	var focus: Control = _focus_owner(main)
+	runner.check(focus == null or not main.get_node("HUD/Economy").is_ancestor_of(focus), "SF1 after a click on %s no slab button keeps the focus, got %s" % [label, focus])
+
+func test_slab_buttons_take_no_focus(runner) -> bool:
+	var main = await _setup(runner)
+	var sim = Skirmish.create()
+	var barracks: int = Fixture.build(runner, sim, "usa_barracks", Vector2i(12, 12))
+	main.driver.adopt(sim)
+	main.orders.selected_building_id = barracks
+	main._refresh()
+	await runner.process_frame
+	var count = func(type: String) -> int: return main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == type).size()
+	_click_control(main, main.get_node("HUD/Economy/Produce"))
+	runner.check(count.call("produce") == 1, "SF1 fixture: a click on Produce queues one unit")
+	_accept_keys(runner, main, "Produce")
+	runner.check(count.call("produce") == 1, "SF1 Space and Enter after a click on Produce queue nothing more, got %d" % count.call("produce"))
+	BaseScene.tick(main)
+	await runner.process_frame
+	var queue: Control = main.get_node("HUD/Economy/Queue")
+	runner.check(queue.get_child_count() == 1, "SF1 fixture: one queue row, got %d" % queue.get_child_count())
+	_click_control(main, queue.get_child(0))
+	runner.check(count.call("cancel_production") == 1, "SF1 fixture: a click on the queue row cancels it")
+	_accept_keys(runner, main, "a queue row")
+	runner.check(count.call("cancel_production") == 1, "SF1 Space and Enter after a click on a queue row cancel nothing more, got %d" % count.call("cancel_production"))
+	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1 and unit.kind == "usa_builder")[0].id
+	main.orders.selected_building_id = -1
+	main.orders.selected_ids.assign([builder])
+	main._refresh()
+	await runner.process_frame
+	var item: Control = main.find_child("BuildMenu", true, false).get_child(0)
+	_click_control(main, item)
+	runner.check(not main.orders._placement_kind.is_empty(), "SF1 fixture: a click on a build item arms placement")
+	main.orders._clear_placement()
+	_accept_keys(runner, main, "a build item")
+	runner.check(main.orders._placement_kind.is_empty(), "SF1 Space and Enter after a click on a build item arm nothing, got '%s'" % main.orders._placement_kind)
+	main.free()
+	return true
+
+func test_drag_box_ends_with_the_match(runner) -> bool:
+	var helper = BaseScene.new()
+	for ending: String in ["victory", "freeze"]:
+		var main = await _setup(runner)
+		main.change_scene = func(_path: String) -> void: pass
+		var world: Dictionary = _frozen_arena(main) if ending == "freeze" else {}
+		if ending == "victory": _arena(main)
+		var from: Vector2 = Iso.world_to_plane(Vector2(10.5, 10.5))
+		helper.pointer(main, from, MOUSE_BUTTON_LEFT, true)
+		var motion := InputEventMouseMotion.new()
+		motion.position = main.get_node("WorldView").get_global_transform_with_canvas() * from + Vector2(60, 40)
+		main._unhandled_input(motion)
+		var box: Control = main.get_node("HUD/SelectionBox")
+		runner.check(main.orders.is_selecting() and box.visible, "SE1 fixture (%s): a drag on the map shows its box" % ending)
+		if ending == "victory": _victory(main)
+		else:
+			world.pump.fail_next = true
+			BaseScene.tick(main)
+		runner.check(main.shown_over() if ending == "victory" else main.frozen(), "SE1 fixture (%s): the card is up" % ending)
+		var zoom: Vector2 = main.get_node("Camera2D").zoom
+		main.change_zoom(1)
+		runner.check(not main.orders.is_selecting() and not box.visible and not main.orders.busy() and main.get_node("Camera2D").zoom != zoom, "SE1 the %s card ends the drag: no box, zoom free, got selecting %s box %s busy %s" % [ending, main.orders.is_selecting(), box.visible, main.orders.busy()])
+		main.free()
 	return true

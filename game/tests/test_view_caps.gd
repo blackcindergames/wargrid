@@ -10,9 +10,10 @@ const KEEP := Window.CONTENT_SCALE_ASPECT_KEEP
 const BaseScene = preload("res://tests/test_base_scene.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
+const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
 
 func cases() -> Array[Callable]:
-	return [test_layout_for_table, test_caps_on_the_root_window, test_cap_writes_only_on_change, test_release_drops_a_queued_write, test_launcher_uncapped_round_trip, test_bars_take_no_clicks]
+	return [test_layout_for_table, test_caps_on_the_root_window, test_cap_writes_only_on_change, test_release_drops_a_queued_write, test_launcher_uncapped_round_trip, test_bars_take_no_clicks, test_bar_release_reaches_the_gui]
 
 func _save(root: Window) -> Array:
 	return [root.size, root.content_scale_size, root.content_scale_aspect]
@@ -171,6 +172,42 @@ func test_bars_take_no_clicks(runner) -> bool:
 	_window_click(root, Vector2(100, 700), MOUSE_BUTTON_LEFT, false)
 	runner.check(not main.orders.is_selecting() and not main.get_node("HUD/SelectionBox").visible and main.orders.selected_ids.has(spawned[0]) and not main.orders.selected_ids.has(spawned[1]), "ST6 a drag released in the bar ends at the picture's edge: the tank past it is not picked, got %s for %s" % [main.orders.selected_ids, spawned])
 	main.free()
+	_restore(root, saved)
+	await runner.process_frame
+	return true
+
+static func _window_motion(root: Window, at: Vector2, mask: int) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = at
+	motion.global_position = at
+	motion.button_mask = mask
+	root.push_input(motion)
+
+func test_bar_release_reaches_the_gui(runner) -> bool:
+	var root: Window = runner.root
+	var saved: Array = _save(root)
+	var saved_path: String = AudioSettings.path
+	AudioSettings.path = "user://test-st7-%d.cfg" % OS.get_process_id()
+	var main = await _match(runner)
+	main.get_node("HUD/Playtest/Checklist").hide()
+	await _resize(runner, root, Vector2i(3840, 1080))
+	main._pause.open()
+	await runner.process_frame
+	var slider: HSlider = main._pause.find_child("Music", true, false)
+	slider.value = 0.5
+	var to_window: Transform2D = root.get_final_transform()
+	var rect: Rect2 = slider.get_global_rect()
+	_window_click(root, to_window * (rect.position + Vector2(rect.size.x * 0.25, rect.size.y * 0.5)), MOUSE_BUTTON_LEFT, true)
+	runner.check(not is_equal_approx(slider.value, 0.5), "ST7 fixture: the press lands on the pause menu's Music slider, value %s" % slider.value)
+	_window_motion(root, Vector2(100, 540), MOUSE_BUTTON_MASK_LEFT)
+	_window_click(root, Vector2(100, 540), MOUSE_BUTTON_LEFT, false)
+	var released: float = slider.value
+	_window_motion(root, to_window * (rect.position + Vector2(rect.size.x * 0.9, rect.size.y * 0.5)), 0)
+	runner.check(is_equal_approx(slider.value, released), "ST7 a slider released in the bar of a 3840x1080 window lets go: hovering it after keeps %s, got %s" % [released, slider.value])
+	main.free()
+	DirAccess.remove_absolute(AudioSettings.path)
+	AudioSettings.path = saved_path
+	AudioSettings.apply(AudioSettings.DEFAULTS)
 	_restore(root, saved)
 	await runner.process_frame
 	return true

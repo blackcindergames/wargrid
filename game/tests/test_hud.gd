@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1066,6 +1066,10 @@ func _note_form_holds(runner) -> void:
 	main.orders.stop_selected()
 	main.orders.arm_attack_move()
 	runner.check(main._playtest.holds_match() and _queued(main, "stop").is_empty() and not main.orders._attack_move_mode, "SL4 the note form holds the match: Stop and Attack move do nothing")
+	var mixed: Array = ids.tanks + [ids.infantry]
+	_select(main, mixed)
+	for shift: bool in [false, true]: main.hud.row_clicked.emit("china_tank", shift)
+	runner.check(main.orders.selected_ids == mixed, "SL4 the note form holds the match: a kind-row click and Shift-click keep the selection, got %s" % [main.orders.selected_ids])
 	main.free()
 	overlays._end(saved)
 
@@ -1687,6 +1691,26 @@ func test_rows_hold_under_the_pointer(runner) -> bool:
 	_end_port(scene)
 	return true
 
+func test_rows_let_go_when_the_pointer_leaves_the_window(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _rows_world(main, [["usa_tank", 1], ["usa_rifle_infantry", 2]])
+	await _frames(runner)
+	port.notify_mouse_entered()
+	_move(port, _row(main, "usa_tank").get_global_rect().get_center())
+	await _frames(runner)
+	main.driver.pump.live().remove_object(ids.usa_tank[0])
+	BaseScene.publish(main)
+	await _frames(runner)
+	runner.check(_row(main, "usa_tank") != null, "KR4b fixture: the dead tank's row holds under the pointer")
+	# As a real window leave: the rows get `mouse_exited`, the mouse position stays inside the panel.
+	port.notify_mouse_exited()
+	await _frames(runner)
+	runner.check(_row(main, "usa_tank") == null and _row_names(main) == ["Row_usa_rifle_infantry"], "KR4b the pointer leaving the window lets the rows go, got %s" % [_row_names(main)])
+	_end_port(scene)
+	return true
+
 func test_row_bar_is_the_health_sum(runner) -> bool:
 	var main = await SkirmishTests.new()._setup(runner)
 	var ids: Dictionary = _rows_world(main, [["usa_tank", 2], ["usa_rifle_infantry", 1]])
@@ -1814,6 +1838,33 @@ func test_collector_label_table(runner) -> bool:
 	runner.check(HudModel.collector_labels(enemy_view, enemy_ids, 1, {}).is_empty(), "CL1 collector_labels skips another owner's collector")
 	runner.check(enemy == "" and (hud.get_node("SelectionPanel").find_child("Name", true, false) as Label).text == "Supply Truck", "CL1 an inspected enemy collector shows no label, got '%s'" % enemy)
 	hud.get_parent().free()
+	return true
+
+func test_collector_labels_in_a_mixed_army(runner) -> bool:
+	var states: Array = [["loading", true, "idle", {}, "LOADING"], ["flying_depot", true, "idle", {}, "TO SUPPLY DEPOT"], ["idle", true, "idle", {}, "WAITING AT PILE"], ["seeking", true, "idle", {}, "UNLOADING"], ["idle", false, "moving", {}, "MOVING"], ["idle", false, "idle", {}, "BUILDING"], ["idle", false, "idle", {}, "IDLE"], ["idle", false, "contained", {"container_id": 7}, ""]]
+	var units: Array = []
+	var buildings: Array = []
+	var previous: Dictionary = {}
+	var expected: Dictionary = {}
+	for n in 32:
+		var state: Array = states[n % states.size()]
+		var id: int = 100 + n
+		units.append(_unit_row(id, 1, "china_collector", state[0], state[1], state[2], state[3]))
+		if state[0] == "seeking": previous[id] = state[4]
+		if state[4] == "BUILDING": buildings.append({"id": 500 + n, "owner": 1, "kind": "china_barracks", "completed": false, "builder_id": id})
+		expected[id] = state[4]
+	for n in 26: buildings.append({"id": 600 + n, "owner": 1, "kind": "china_barracks", "completed": true, "builder_id": 100 + n})
+	for n in 86: units.append(_unit_row(200 + n, 1, "china_tank"))
+	units.append(_unit_row(300, 2, "china_collector", "loading", true))
+	units.append(_unit_row(301, 2, "china_tank"))
+	var view: Dictionary = _strip_view(0, 0, 0, "usa")
+	view.units = ViewRows.from_units(units)
+	view.sources = [{"id": 30, "boxes": 0}, {"id": 31, "boxes": 4}]
+	view.buildings = buildings
+	var ids: Array[int] = []
+	ids.assign(units.map(func(unit: Dictionary) -> int: return unit.id))
+	var labels: Dictionary = HudModel.collector_labels(view, ids, 1, previous)
+	runner.check(ids.size() == 120 and buildings.size() == 30 and labels == expected, "CL4 a mixed 120-unit selection with 32 collectors and 30 buildings gives each own collector its label, got %s" % labels)
 	return true
 
 func _header_on(runner, hud: Hud, units: Array) -> String:

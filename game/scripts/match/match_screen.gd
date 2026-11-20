@@ -61,6 +61,8 @@ var _playtest: PlaytestOverlay
 var _leaving: bool = false
 var _unanswered: int = 0
 var _stale: int = 0
+# Window events are sorted here in `_input`; tests that call `_unhandled_input` directly feed map logic points past the view.
+var _off_picture: InputEvent = null
 
 func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: String = Skirmish.default_faction()) -> void:
 	driver = OnlineDriver.new(transport, lockstep, faction, seat)
@@ -241,7 +243,8 @@ func _change_scene(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouse: _route_pointer(event)
+	if event is InputEventMouse and not get_viewport().get_visible_rect().has_point(event.position): _off_picture = event
+	elif event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event) # a STOP panel takes motion before `_unhandled_input`: the drag box keeps up and the hover clears
 	if not (event is InputEventKey and event.pressed and not event.echo): return
 	if event.physical_keycode == KEY_F3: return
 	if event.is_action_pressed("deselect"):
@@ -254,18 +257,15 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_accept"): return
 	get_viewport().set_input_as_handled()
 
-# A STOP panel takes motion before `_unhandled_input`: a drag keeps its box over it and the hover clears at its edge.
-func _route_pointer(event: InputEventMouse) -> void:
+# The bars past a stretch cap show no map: a click there is nobody's, a drag ending there stops at the picture's edge.
+# Dropped after the GUI, so a control that took the press still gets its release in a bar.
+func _drop_off_picture(event: InputEventMouse) -> void:
+	_off_picture = null
+	if not orders.is_selecting(): return
 	var view: Rect2 = get_viewport().get_visible_rect()
-	# The bars past a stretch cap show no map: a click there is nobody's, a drag ending there stops at the picture's edge.
-	if not view.has_point(event.position):
-		if orders.is_selecting():
-			var clamped := event.duplicate() as InputEventMouse
-			clamped.position = event.position.clamp(view.position, view.end)
-			orders.handle(clamped)
-		get_viewport().set_input_as_handled()
-		return
-	if event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event)
+	var clamped := event.duplicate() as InputEventMouse
+	clamped.position = event.position.clamp(view.position, view.end)
+	orders.handle(clamped)
 
 func esc_opens_menu() -> bool:
 	return not _escape_pending() and not _playtest.holds_match() and not _typing() and not _pause.visible
@@ -367,6 +367,9 @@ func change_zoom(direction: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# A field passes on shortcuts it does not use (Cmd+S, Ctrl+1); orders ignore modifiers, so they would fire.
 	if event is InputEventKey and _typing(): return
+	if event == _off_picture:
+		_drop_off_picture(event)
+		return
 	var click := event as InputEventMouseButton
 	if click != null and click.pressed and click.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT] and _typing() and not _playtest.holds_match(): get_viewport().gui_release_focus()
 	orders.handle(event)
@@ -387,8 +390,11 @@ func _reshow() -> void:
 # Only a new view consumes step results and sound; a repaint on input must leave them for the next refresh.
 func _show(state: Dictionary, fresh: bool = true) -> void:
 	shown_state = state
-	# The forecast card must never show over a result card or an ended online match.
-	if (shown_over() or driver.over()) and not orders._placement_kind.is_empty(): orders._clear_placement()
+	# The forecast card and a drag box must never show over a result or freeze card or an ended online match.
+	if shown_over() or driver.over() or frozen():
+		if not orders._placement_kind.is_empty(): orders._clear_placement()
+		orders._selecting = false
+		_selection_box.hide()
 	_shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
@@ -422,6 +428,7 @@ func _take_results(state: Dictionary) -> void:
 
 # A kind row narrows the selection to its kind; with Shift it drops that kind.
 func _select_kind(kind: String, shift: bool) -> void:
+	if not orders.takes_orders(): return
 	var units: RefCounted = shown_state.units
 	orders.selected_ids.assign(orders.selected_ids.filter(func(id: int) -> bool:
 		var i: int = units.index_of(id)
@@ -471,6 +478,7 @@ func _show_hint(payload: Dictionary) -> void:
 	if point != null: _view.add_hint(point, shown_state.tick)
 
 func _submit(payload: Dictionary) -> void:
+	orders.gestures += 1
 	_show_hint(payload)
 	driver.submit(payload)
 	_unanswered += 1
