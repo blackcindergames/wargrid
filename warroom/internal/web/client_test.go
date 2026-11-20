@@ -8,7 +8,7 @@ import (
 )
 
 func TestShotPageIsTheShownPictureAlone(t *testing.T) {
-	a := newShippedApp(t)
+	a := newGateApp(t)
 	whole := a.get("/r/p2-3a1-gate-2/1?shot=1").Body.String()
 	mustContain(t, "shot", whole, `class="shot"`, `<iframe`, `--cw:1280`)
 	for _, absent := range []string{`id="chips"`, `id="phone"`, "<template", "htmx"} {
@@ -32,7 +32,7 @@ func TestShotShowsTheGalleryItem(t *testing.T) {
 }
 
 func TestPhoneFlagClosesFoldsAndRendersTheBar(t *testing.T) {
-	a := newShippedApp(t)
+	a := newGateApp(t)
 	desk := a.get("/r/p2-3a1-gate-1/1").Body.String()
 	phone := a.get("/r/p2-3a1-gate-1/1?phone=1").Body.String()
 	mustContain(t, "desk", desk, `<details class="why" open>`)

@@ -17,10 +17,15 @@ import (
 
 const testSecret = "test-secret"
 
+// locked visits as the viewer friend unless a test clears cookie: a reader who got past the gate without the round's token.
 func (a *testApp) locked() *testApp {
 	a.cfg.Secret = testSecret
+	a.cfg.Viewers = []string{"friend"}
+	a.cookie = viewerToken
 	return a
 }
+
+var viewerToken = Token(testSecret, ViewerScope("friend"))
 
 func roundToken(id string) string { return Token(testSecret, RoundScope(id)) }
 
@@ -125,9 +130,13 @@ func TestReadBackNeedsTheAdminToken(t *testing.T) {
 }
 
 func TestEveryLinkAndRequestCarriesTheToken(t *testing.T) {
-	a := newShippedApp(t).locked()
+	shipped, gate := newShippedApp(t).locked(), newGateApp(t).locked()
 	attr := regexp.MustCompile(`(?:href|action|hx-get|hx-post)="(/r/[^"]*)"`)
 	for _, round := range []string{"demo-controls", "p2-3a1-gate-1", "demo"} {
+		a := shipped
+		if round == "p2-3a1-gate-1" {
+			a = gate
+		}
 		tok := roundToken(round)
 		for _, path := range []string{"/1", "/2", "/summary", "/1?phone=1&ground=dark", "/1?view=side"} {
 			body := a.get("/r/" + round + path + sep(path) + "t=" + tok).Body.String()

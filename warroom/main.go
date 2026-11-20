@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"wargrid/warroom/internal/rounds"
@@ -47,15 +48,26 @@ func configFromEnv(getenv func(string) string) config {
 	}
 	return config{
 		Config: web.Config{
-			Root:   pick("WARROOM_ROOT", ".."),
-			Picks:  pick("WARROOM_PICKS", "picks.json"),
-			Rounds: pick("WARROOM_ROUNDS", "rounds"),
-			Secret: getenv("WARROOM_SECRET"),
+			Root:    pick("WARROOM_ROOT", ".."),
+			Picks:   pick("WARROOM_PICKS", "picks.json"),
+			Rounds:  pick("WARROOM_ROUNDS", "rounds"),
+			Secret:  getenv("WARROOM_SECRET"),
+			Viewers: viewers(getenv("WARROOM_VIEWERS")),
 		},
 		Host:  pick("WARROOM_HOST", "127.0.0.1"),
 		Port:  pick("WARROOM_PORT", "8780"),
 		RunAs: getenv("WARROOM_RUN_AS"),
 	}
+}
+
+func viewers(list string) []string {
+	var out []string
+	for name := range strings.SplitSeq(list, ",") {
+		if name = strings.TrimSpace(name); name != "" {
+			out = append(out, name)
+		}
+	}
+	return out
 }
 
 func main() {
@@ -77,25 +89,32 @@ func runCommand(args []string) error {
 	case "schema":
 		return printSchema(os.Stdout, args[1:])
 	case "open":
-		return printOpen(os.Stdout, configFromEnv(os.Getenv).Config)
+		cfg := configFromEnv(os.Getenv)
+		return printOpen(os.Stdout, &cfg.Config)
 	}
-	return fmt.Errorf("unknown command %q (token <round>|admin, schema round|step, open)", args[0])
+	return fmt.Errorf("unknown command %q (token <round>|admin|viewer:<name>, schema round|step, open)", args[0])
 }
 
 func printToken(w io.Writer, secret string, args []string) error {
 	if len(args) != 1 || secret == "" {
-		return errors.New("usage: WARROOM_SECRET=... go run . token <round>|admin")
+		return errors.New("usage: WARROOM_SECRET=... go run . token <round>|admin|viewer:<name>")
 	}
 	scope := web.RoundScope(args[0])
 	if args[0] == web.AdminScope {
 		scope = web.AdminScope
+	}
+	if name, ok := strings.CutPrefix(args[0], "viewer:"); ok {
+		if !web.ValidViewer(name) {
+			return fmt.Errorf("viewer name %q: want 1 to 32 of a-z, 0-9, -", name)
+		}
+		scope = web.ViewerScope(name)
 	}
 	_, err := fmt.Fprintln(w, web.Token(secret, scope))
 	return err
 }
 
 // printOpen lists the rounds, demos left out, that still have unanswered steps.
-func printOpen(w io.Writer, cfg web.Config) error {
+func printOpen(w io.Writer, cfg *web.Config) error {
 	c := rounds.LoadCatalog(cfg.Rounds)
 	entries, err := store.NewStore(cfg.Picks).Entries()
 	if err != nil {
@@ -149,6 +168,11 @@ func printSchema(w io.Writer, args []string) error {
 
 func run() error {
 	cfg := configFromEnv(os.Getenv)
+	for _, name := range cfg.Viewers {
+		if !web.ValidViewer(name) {
+			return fmt.Errorf("WARROOM_VIEWERS: %q is not a valid viewer name", name)
+		}
+	}
 	if cfg.RunAs != "" {
 		// A deploy must never go out with every link able to record and read back.
 		if cfg.Secret == "" {

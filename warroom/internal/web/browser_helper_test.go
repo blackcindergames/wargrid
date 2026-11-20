@@ -93,7 +93,7 @@ func newSite(t *testing.T, o siteOpts) *site {
 		o.rounds = "../../rounds"
 	}
 	picks := filepath.Join(t.TempDir(), "picks.json")
-	srv := NewServer(&Config{Root: cmp.Or(o.root, "../../.."), Picks: picks, Rounds: o.rounds, Secret: o.secret})
+	srv := NewServer(&Config{Root: cmp.Or(o.root, "../../.."), Picks: picks, Rounds: o.rounds, Secret: o.secret, Viewers: []string{"friend"}})
 	s := &site{testApp: &testApp{Server: srv, picks: picks}}
 	routes := srv.Routes()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -119,6 +119,10 @@ func newSite(t *testing.T, o siteOpts) *site {
 		t.Fatal(err)
 	}
 	s.Page.SetDefaultTimeout(10_000)
+	if o.secret != "" {
+		// Past the gate as the viewer, the reader a link without the round's token used to be.
+		s.open(t, "/?t="+viewerToken)
+	}
 	return s
 }
 
