@@ -184,7 +184,7 @@ Checked by `rg` over `game/scripts/simulation` at the commit below; the presenta
 | `horde` | bonus rule: count, radius, match by kind or class | `horde.gd`, `spawn` |
 | `salvage`, `weapon_tiers` | what a salvager takes from a wreck; weapon upgrade steps | `salvage.gd`, `combat.gd` |
 | `rebuild_hole`, `hole` | rubble left behind; the rubble's worker and timers | `rebuild_holes.gd` |
-| `weapon`, `armor`, `max_hp`, `radius`, `vision` | combat profile | `combat_definitions.gd` and `combat.gd` |
+| `weapon`, `armor`, `max_hp`, `radius`, `vision` | combat profile; `vision` is also the base of the wider guard scan (bot units, and a human unit's retarget scan) and of a human unit's retaliation leash | `combat_definitions.gd` and `combat.gd` |
 
 ## Further reading
 
@@ -196,4 +196,4 @@ Checked by `rg` over `game/scripts/simulation` at the commit below; the presenta
 - Next: [4. The tick](04-the-tick.md) shows what mutates these records; [7. Economy](07-economy.md) opens production, construction and supply.
 
 ---
-Checked against `60b6674`. Files: `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/definitions.gd`, `game/scripts/simulation/definitions/factions.gd`, `game/scripts/simulation/definitions/shared.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/scripts/simulation/definitions/china.gd`, `game/scripts/simulation/definitions/frc.gd`, `game/scripts/simulation/economy_definitions.gd`, `game/scripts/simulation/combat_definitions.gd`, `game/scripts/simulation/production.gd`, `game/scripts/simulation/construction.gd`, `game/scripts/simulation/view_rows.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/simulation/map_data.gd`, `tools/test_sim_boundary.py`, `game/tests/test_factions.gd`
+Checked against `7155d305`. Files: `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/definitions.gd`, `game/scripts/simulation/definitions/factions.gd`, `game/scripts/simulation/definitions/shared.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/scripts/simulation/definitions/china.gd`, `game/scripts/simulation/definitions/frc.gd`, `game/scripts/simulation/economy_definitions.gd`, `game/scripts/simulation/combat_definitions.gd`, `game/scripts/simulation/combat.gd`, `game/scripts/simulation/production.gd`, `game/scripts/simulation/construction.gd`, `game/scripts/simulation/view_rows.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/simulation/map_data.gd`, `tools/test_sim_boundary.py`, `game/tests/test_factions.gd`
