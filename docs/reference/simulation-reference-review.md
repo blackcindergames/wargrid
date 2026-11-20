@@ -223,7 +223,7 @@ Each item: reference, Wargrid code, problem, benefit, cost, risks, validation, s
 ### 5.6 Soft movers, hard stationary blockers — **Spike first (avoidance work)**
 
 - **Reference**: §4.5. Traced in 0 A.D., Recoil and Permafrost (Zero Hour's flags suggest it); OpenRA is the counterexample.
-- **Wargrid code**: today none (movers overlap); the avoidance spike prototypes on branch `spike-avoidance`.
+- **Wargrid code**: today none (movers overlap); the avoidance spike prototypes on tag `archive/spike-avoidance`.
 - **Problem**: the user wants units to go around each other (user, 2026-11-07); every spike round so far missed the +0.5 ms p95 cap or jammed packed 300-unit moves.
 - **Shape (design input, not a design)**: a parked unit blocks its cell for path search and for movers; a moving unit only pushes and is pushed (0 A.D.-style, per-cell neighbours from §5.5's index, with pressure damping so crowds settle); waiting units wake when a cell frees (Permafrost's counter).
 - **Benefit**: no measurement exists for Wargrid. 0 A.D.'s comment says pushing is "dwarfed by regular motion costs" in C++; in GDScript the n²-per-cell loop is the same shape as the horde spike's separation loop: 69 % of a 2.24 ms tick for 1,000 agents (measured, performance next §5.3).
@@ -307,7 +307,7 @@ Low risk first; each step is started by the user and has its own measurement. It
 | 5.3 coarse graph, goal sharing | Recoil QTPFS (`rts/Sim/Path/QTPFS/`), BAR `gamedata/modrules.lua:98`; OpenRA `HierarchicalPathFinder.cs:21-100`; 0 A.D. `helpers/HierarchicalPathfinder.h`, `LongPathfinder.h:271`; Zero Hour `AIPathfind.cpp:6399-6407`; Warzone 2100 `astar.cpp:22-40`, `:671-673`, `fpath.cpp:291-294` | pathing spike (branch `spike-pathing`) §3, §8; `grid_navigation.gd:5-23`, `:108-127` |
 | 5.4 desync localisation | OpenRA `World.cs:482-513`, `Network/SyncReport.cs:25-59`; Warzone 2100 `lib/netplay/sync_debug.cpp:297`; Recoil `System/Sync/SyncChecker.h:11-49`; 0 A.D. `ComponentManagerSerialization.cpp:106-125`, `Simulation2.cpp:400-470`, `ps/Replay.cpp:256-267` | `state_hash.gd:16-27`, `lockstep.gd:35`, determinism rules "State digest" |
 | 5.5 per-tick packed index | Warzone 2100 `loop.cpp:648-651`; Recoil `QuadField.cpp:525-549`; OpenRA `ActorMap.cs:598-601`; 0 A.D. `CCmpRangeManager.cpp:653-686` | `combat.gd:295-314`, `horde.gd:54-62`, `simulation.gd:318-331`; `combat.build_grid` 9 % of `step` (measured) |
-| 5.6 soft movers | 0 A.D. `CCmpUnitMotion_System.cpp:63-110`; Recoil `GroundMoveSystem.cpp:105-140`; Zero Hour `AIPathfind.h:271-273`; Permafrost evaluation §2 | avoidance spike (branch `spike-avoidance`); performance next §5.3 |
+| 5.6 soft movers | 0 A.D. `CCmpUnitMotion_System.cpp:63-110`; Recoil `GroundMoveSystem.cpp:105-140`; Zero Hour `AIPathfind.h:271-273`; Permafrost evaluation §2 | avoidance spike (tag `archive/spike-avoidance`); performance next §5.3 |
 | 5.7 split rates scope | Recoil `UnitHandler.cpp:348-376`, `Weapon.cpp:730`, `:793-829`; OpenRA `AutoTarget.cs:80-83`, `:277-304`; Warzone 2100 `ai.cpp:1238`, `action.h:117`; BAR `luarules/gadgets/unit_continuous_aim.lua:21-60` | `combat.gd:93-147`; `combat_plan` 53 % of `step` on skirmish3v3 (measured) |
 | 5.8 bot stagger | Recoil `UnitHandler.cpp:348-366`; Warzone 2100 `ai.cpp:1238` | `skirmish.gd:11`, `:67-72`; `opponent.decide` max 7.589 ms (measured) |
 | No AI thread with state copy | 0 A.D. `CCmpAIManager.cpp:97-106` | worker-thread design §2 "hand-off: gap" |

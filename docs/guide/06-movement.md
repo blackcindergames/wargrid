@@ -2,7 +2,7 @@
 
 Three small scripts turn "send these tanks over there" into positions that change every tick: a grid pathfinder, a locomotion step that models heading and speed, and a destination allocator that gives each unit of a group its own end cell. The design is simple on purpose: units are points, the grid is four-way, nothing collides. **The movement and pathing milestone, planned and not started, rewrites this** (rectangle navmesh, size classes, any-angle paths; proposed, not built, see the end), so this chapter spends its words on the ideas and their known limits, not on every branch.
 
-Unit avoidance, units going around each other, exists only on the branch `spike-avoidance` and is not part of this chapter; chapter 12 covers it as proposed work.
+Unit avoidance, units going around each other, exists only on the tag `archive/spike-avoidance` and is not part of this chapter; chapter 12 covers it as proposed work.
 
 ## Four steps from a click to motion
 
@@ -107,4 +107,4 @@ Two smaller limits are written in the code. A `shortcut:` comment in `destinatio
 - Previous: [5. Presentation](05-presentation.md). Next: [7. Economy](07-economy.md).
 
 ---
-Checked against `d78b564`. Files: `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/simulation/destination_allocation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/tests/test_allocation.gd`
+Checked against `d78b564`; the avoidance sentence against the tag `archive/spike-avoidance` (2026-11-20). Files: `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/locomotion.gd`, `game/scripts/simulation/destination_allocation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/tests/test_allocation.gd`
