@@ -1430,3 +1430,8 @@ Brainstorming round on progress speed; design: [fun-first reorder](../superpower
 - **Roster rule dropped:** the 2026-11-11 four-units-per-faction rule; balance is judged in playtests.
 - **Rule:** day packages change what a player sees or plays; technical work enters the day lane only when a measured problem blocks a player package.
 - **Director round:** P7's bot work goes to the enemy bots (more units sooner, one shared wave clock and target, growing waves, base defences in the way) after the owner's read: "it plays ok, it just builds too few units too slowly and can be overwhelmed after a few minutes easily. It also doesn't deal well with base defenses in its way"; the allied-bot mode moves to the Later item Team up with a bot; control groups, H, Space and an allied-base alert ride on P2.3b, which defers its layout key labels and defence range ring; P15 is a heavy tank per faction (Overlord, Marauder, Paladin; Terrorist as stretch).
+
+### P2.3a1 loose ends (user, 2026-11-20)
+
+- **Game director proposals** (credits counting up with a deposit cue, an optional income-per-minute readout, an idle-collector chip, a refusal that points at its cause): all wanted, each drafted for the owner to see before it is built; the first three ride on "see your economy", the last on P2.3a2.
+- **Review leftovers** go to the findings list (F37 to F39); the capture's one-off blank shots are F40.
