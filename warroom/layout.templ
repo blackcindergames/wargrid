@@ -101,6 +101,7 @@ templ Document(title string, p PageView) {
 			<script>if(matchMedia("(max-width:900px),(pointer:coarse)").matches&&!/[?&](phone|shot)=1/.test(location.search)){const u=new URL(location.href);u.searchParams.set("phone","1");location.replace(u)}</script>
 			<script src="/static/htmx.min.js" defer></script>
 			<script src="/static/warroom.js" defer></script>
+			<script type="module" src="/static/islands.js"></script>
 		</head>
 		<body
 			class="bg-base-100 text-base-content"

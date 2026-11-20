@@ -246,7 +246,8 @@ func (s *Server) pick(w http.ResponseWriter, r *http.Request) {
 		note = form.Get("note")
 	}
 	key := step.AnswerKey()
-	if key == "" || !validNote(note) || (pick == "" && !hasNote) || (pick != "" && !step.AcceptsPick(pick)) {
+	value, valueOK := step.tunedValue(pick, form.Get("value"))
+	if key == "" || !valueOK || !validNote(note) || (pick == "" && !hasNote) || (pick != "" && !step.AcceptsPick(pick)) {
 		http.Error(w, "bad pick", http.StatusBadRequest)
 		return
 	}
@@ -256,7 +257,7 @@ func (s *Server) pick(w http.ResponseWriter, r *http.Request) {
 	}
 	err := s.store.Update(round.Prefix+":"+key, func(e Entry) Entry {
 		if pick != "" {
-			e.Pick = &pick
+			e.Pick, e.Value = &pick, value
 		}
 		if hasNote {
 			e.Note = note
@@ -349,7 +350,7 @@ func noteKey(s *Step, sub string) string {
 		}
 	case s.Kind == "gallery" && s.Verdict != nil:
 		return s.VerdictKey()
-	case sub == "" && (s.IsChoice() || s.Kind == "verdict"):
+	case sub == "" && (s.IsChoice() || s.Kind == "verdict" || s.Kind == "tune"):
 		return s.Key
 	}
 	return ""

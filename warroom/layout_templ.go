@@ -457,7 +457,7 @@ func Document(title string, p PageView) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<script>if(matchMedia(\"(max-width:900px),(pointer:coarse)\").matches&&!/[?&](phone|shot)=1/.test(location.search)){const u=new URL(location.href);u.searchParams.set(\"phone\",\"1\");location.replace(u)}</script><script src=\"/static/htmx.min.js\" defer></script><script src=\"/static/warroom.js\" defer></script></head><body class=\"bg-base-100 text-base-content\" hx-boost:inherited=\"true\" hx-target:inherited=\"#page\" hx-status:4xx:inherited=\"swap:none\" hx-status:5xx:inherited=\"swap:none\"><div id=\"flash\" role=\"alert\" class=\"alert alert-error\" hidden></div><div id=\"page\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<script>if(matchMedia(\"(max-width:900px),(pointer:coarse)\").matches&&!/[?&](phone|shot)=1/.test(location.search)){const u=new URL(location.href);u.searchParams.set(\"phone\",\"1\");location.replace(u)}</script><script src=\"/static/htmx.min.js\" defer></script><script src=\"/static/warroom.js\" defer></script><script type=\"module\" src=\"/static/islands.js\"></script></head><body class=\"bg-base-100 text-base-content\" hx-boost:inherited=\"true\" hx-target:inherited=\"#page\" hx-status:4xx:inherited=\"swap:none\" hx-status:5xx:inherited=\"swap:none\"><div id=\"flash\" role=\"alert\" class=\"alert alert-error\" hidden></div><div id=\"page\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -513,7 +513,7 @@ func ShotDocument(v ShotView) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templruntime.NewAttributeExpression(v.Cvd).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layout.templ`, Line: 129, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `layout.templ`, Line: 130, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 		if templ_7745c5c3_Err != nil {

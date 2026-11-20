@@ -325,6 +325,38 @@ templ VerdictMain(v VerdictStepView) {
 	@AnswerForm(v.Form)
 }
 
+templ TuneMain(v TuneView) {
+	<main id="main" class="step k-tune">
+		<div class="left">
+			@Head(v.Head)
+			@Info(v.Info, false)
+			@NoteBox(v.Note)
+			@StepNav(v.Nav)
+		</div>
+		<div class="right">
+			<section class="stagecol">
+				<div class="stage">
+					@Picture(v.Pic)
+				</div>
+				<wr-tune data-params={ v.Params } data-target={ v.Pic.FrameID } data-field={ tuneField }></wr-tune>
+				<div class="act">
+					@PickButton("tuned", "pick btn btn-warning", "enter") {
+						Use these values
+						@Kbd("Enter")
+					}
+					if v.Neutral != "" {
+						@PickButton("neither", "neutral btn", "") {
+							{ v.Neutral }
+						}
+					}
+				</div>
+			</section>
+		</div>
+	</main>
+	<input type="hidden" id={ tuneField } name="value" form="answer" value={ v.Value }/>
+	@AnswerForm(v.Form)
+}
+
 templ WordingMain(v WordingView) {
 	<main id="main" class="step k-wording">
 		<div class="left">

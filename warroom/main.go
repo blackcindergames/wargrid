@@ -12,6 +12,7 @@ import (
 //go:generate go tool templ generate
 //go:generate sh tools/fetch.sh
 //go:generate .bin/tailwindcss --input static/input.css --output static/app.css --minify
+//go:generate sh -c "cd islands && npm ci && npm run build"
 
 const requestTimeout = 15 * time.Second
 

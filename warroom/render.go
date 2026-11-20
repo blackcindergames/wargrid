@@ -51,6 +51,9 @@ func (b *builder) stepBody(n int, s *Step, record, hint string) (templ.Component
 	case "wording":
 		plain.Note = true
 		return WordingMain(b.wording(n, s, record)), &plain
+	case "tune":
+		plain.Note, plain.Tuned, plain.Neutral = true, true, s.Neutral
+		return TuneMain(b.tune(n, s, record, hint)), &plain
 	}
 	v := b.choice(n, s, record, hint)
 	return ChoiceMain(v), b.choicePhone(n, s, &v)

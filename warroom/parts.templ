@@ -348,6 +348,9 @@ templ PhoneBar(p PhoneView) {
 		if p.Pick {
 			<button type="submit" form="answer" name="pick" value={ p.Shown } data-shown class="pick btn btn-warning">Pick <span class="pl">{ p.Shown }</span></button>
 		}
+		if p.Tuned {
+			<button type="submit" form="answer" name="pick" value="tuned" class="pick btn btn-warning">Use these</button>
+		}
 		if p.ItemPrev != "" {
 			<a class="btn" href={ templ.SafeURL(p.ItemPrev) }>‹ Item</a>
 			<a class="btn" href={ templ.SafeURL(p.ItemNext) }>Item ›</a>

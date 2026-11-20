@@ -31,9 +31,11 @@ type testApp struct {
 	picks string
 }
 
-func newApp(t *testing.T) *testApp {
+func newApp(t *testing.T) *testApp { return newAppWith(t, fixtureRounds) }
+
+func newAppWith(t *testing.T, roundFiles map[string]string) *testApp {
 	t.Helper()
-	rounds := writeTree(t, fixtureRounds)
+	rounds := writeTree(t, roundFiles)
 	root := writeTree(t, map[string]string{
 		"docs/a.txt":          "doc",
 		"docs/sub/b.txt":      "sub",

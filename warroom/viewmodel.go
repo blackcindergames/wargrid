@@ -280,6 +280,8 @@ func pickLabel(s *Step, p string, reveal bool) string {
 		return s.Verdict.Pass
 	case s.Verdict != nil && p == "changes" && s.Verdict.Changes != "":
 		return s.Verdict.Changes
+	case p == "tuned":
+		return "Tuned"
 	case p == "yes":
 		return "Yes, as drawn"
 	case p == "change":

@@ -36,11 +36,11 @@ State lives in the address, not in a hash, so every view is a link.
 | `GET /health` | `200 ok` |
 | `/static/*`, `/docs/*`, `/game/*`, `/web/*` | Embedded assets; repository files (no listings, no links out of the root) |
 
-Pick rules: a body over 8 KiB is 400; the pick must be an option letter the step has, `neither` (step has a neutral answer), `yes` or `change` (confirm step), or `pass` or `changes` (verdict); `change` without a note shows the step again asking for one; a note is at most 4000 characters; a new key past 500 keys is 507; a failed write, or a picks file that is not a JSON object of objects (left as it is), is 500. Writes are atomic (temporary file, fsync, rename) under one lock. Requests that stall for 15 s are dropped. A pick from a plain form post redirects (303) to the next step; from htmx it answers with the next step's page and `HX-Push-Url`.
+Pick rules: a body over 8 KiB is 400; the pick must be an option letter the step has, `neither` (step has a neutral answer), `yes` or `change` (confirm step), `pass` or `changes` (verdict), or `tuned` (tune step, with a `value` field); `change` without a note shows the step again asking for one; a `tuned` pick must carry `value`, a JSON object of at most 1 KiB with exactly the step's param ids (numbers in range and on the step grid from `min`, colours `#rrggbb`, choices from the list; anything else is 400) and the server stores it cleaned (grid-snapped, colours lower case); a note is at most 4000 characters; a new key past 500 keys is 507; a failed write, or a picks file that is not a JSON object of objects (left as it is), is 500. Writes are atomic (temporary file, fsync, rename) under one lock. Requests that stall for 15 s are dropped. A pick from a plain form post redirects (303) to the next step; from htmx it answers with the next step's page and `HX-Push-Url`.
 
 Query parameters (carried by the navigation links, so values stay page-wide): `show` (option), `view=side`, `item`, every stage control away from its first value (`size fit ground world zoom hud state tier owner set heading cvd marker x-<id>`), `numbers=0` (hide the numbers panel). A control value over 64 bytes or with characters other than letters, digits and ` ._,:+-` is dropped, as is any `x-` control past 16, since every link repeats them. Read only: `sheet=1` opens the phone's View sheet, `keys=1` the key list, `shot=1` the shown option alone at its frame size on black (`crop=step` keeps the step's crop), `lab=1` starts a lab step's build, `phone=1` asks for the phone crops (a phone-sized first load adds it itself).
 
-`picks.json` keeps the prototype's format, `{"<prefix>:<key>[:<sub>]": {"pick": str|null, "note": str}}`, so the old gate picks read back.
+`picks.json` keeps the prototype's format, `{"<prefix>:<key>[:<sub>]": {"pick": str|null, "note": str}}`, so the old gate picks read back. A tune step's entry has one more optional field, `"value": {param id: number|string}`; entries without it stay valid.
 
 ## Keys
 
@@ -80,9 +80,10 @@ Option fields: `name`, `notes`, `sees`, `changes`, `reveal`, `extra` (more pictu
 | `pictures`, `text`, `audio`, `lab` | `options` (`text` kind: optional `card {title, lines, foot}` where a `null` line is the option's text; `lab`: `url`, `w`, `h`, `labHint`) | `<prefix>:<key>` = option letter, `yes`, `change` or `neither` |
 | `gallery` | `items [{id, label, caption, render|img, mark}]`, optional `verdict {key, pass, changes}` | item notes `<prefix>:<key>:<item id>` (pick `null`); verdict `<prefix>:<verdict key>` = `pass` or `changes` |
 | `verdict` | `labels {pass, changes}` | `<prefix>:<key>` = `pass` or `changes` |
+| `tune` | `target`, `params`, optional `neutral` | `<prefix>:<key>` = `tuned` with `value`, or `neither` |
 | `wording` | `fields [{id, label, text}]` | `<prefix>:<key>:<field id>`, the text as `note`, posted as you type |
 
-Rounds here: `demo` and `demo-controls` (marked `demo: true`: one step per kind, one step per render target with its controls) and the two P2.3a1 gate rounds.
+Rounds here: `demo` and `demo-controls` (marked `demo: true`: one step per kind, one step per render target with its controls; `demo` ends with a `tune` step) and the two P2.3a1 gate rounds.
 
 ## Stage controls
 
@@ -91,6 +92,36 @@ Rounds here: `demo` and `demo-controls` (marked `demo: true`: one step per kind,
 `fit`, `set`, `cvd` and `marker` are done by the app; the others reach the render page through `render.pass` (`{size: size, world: world, ground: ground, hud: hud, owner: you}` for `p2-3a1-states.html`). A control that neither does is a load error. The numbers panel prints WCAG contrast and CIE76 distance (normal, deuteranopia, protanopia; Machado 2009) for the step's `pairs`.
 
 `sh warroom/tools/shoot.sh '<path?query>' <out.png|out.webp> [WIDTHxHEIGHT]` screenshots a page with headless Firefox (`WR_URL` points at the server). Headless Firefox here plays only VP8 clips.
+
+## Tune steps
+
+A `tune` step lets you move parameters of a live render and records the values as a preset. Go and templ render the page; a Svelte island, the custom element `<wr-tune>`, draws the knobs with Tweakpane.
+
+```yaml
+kind: tune
+question: Which outline weight and unit size read best?
+neutral: None of these          # optional: records `neither`
+target: {page: static/demo/scene.html, hash: shot=1}   # a render recipe, like an option's `render`
+params:
+- {id: outline, label: Outline, min: 0, max: 4, step: 0.5, value: 1}
+- {id: unit, label: Unit size, min: 0.5, max: 2, step: 0.1, value: 1}
+- {id: you, label: Owner colour, color: '#376eac'}
+- {id: ground, label: Ground, values: [sand, dark], value: sand}
+```
+
+A param is a number (`min`, `max`, `step`, `value`; the value must lie on the grid `min + k * step`), a colour (`color: '#rrggbb'`) or a choice (`values`, `value`). Ids are `[a-z0-9-]+`, unique, at most 12. Loading checks all of it, with the line. Keep ids clear of the hash names the render page already reads: `size` there is the window size, so the demo's unit size is `unit`.
+
+How it hangs together:
+
+- The page prints `<wr-tune data-params='[...]' data-target="<iframe id>" data-field="tune-value">` and a hidden `<input id="tune-value" name="value" form="answer">` holding the start values: the recorded ones when they still fit the params, else the step's own. The target frame's address carries the same start values as hash parameters, so the first draw is right before any script runs.
+- `islands/Tune.svelte` is compiled to a custom element (`shadow: 'none'`, so Tailwind and daisyUI styles reach it). On every change it writes the values as JSON into the hidden field and posts `{type: 'wr:params', params: {id: value}}` to the target frame with `postMessage(msg, location.origin)`; it posts again when the frame finishes loading.
+- The target listens for `wr:params` (`static/demo/scene.html` does), checks `event.origin === location.origin`, `event.source === parent` and the type, and redraws without a reload. Any render page can opt in the same way.
+- The pick button submits the answer form as before; htmx posts the hidden field with it, the server validates it (see Routes) and stores it with the pick. Enter picks, also from a focused slider; other keys inside the panel stay with Tweakpane (`warroom.js` skips them). `warroom.js` starts nothing: htmx swaps add and remove the element, and the custom element lifecycle starts and stops the pane.
+- The summary shows the value compactly: `outline 1.5 · unit 1.2 · you #376eac · ground dark`.
+
+## Islands build
+
+`islands/` holds the Svelte sources, `package.json` with exact versions and `package-lock.json`. `npm run build` (Vite library mode, one ES module) writes `static/islands.js`, which is committed and embedded like `app.css`, so `go build`, `go test` and the Docker build need no Node. `go generate ./...` runs `npm ci` and the build; `tools/check_generated.sh` rebuilds in a temporary copy and fails when `static/islands.js` differs.
 
 ## Build and checks
 
@@ -103,12 +134,17 @@ Rounds here: `demo` and `demo-controls` (marked `demo: true`: one step per kind,
 | htmx | 4.0.1, vendored as `static/htmx.min.js` |
 | Tailwind CSS | v4.3.4 standalone CLI |
 | daisyUI | 5.7.50 |
+| Svelte | 5.57.3 (islands) |
+| Vite | 8.3.6 |
+| @sveltejs/vite-plugin-svelte | 7.3.1 |
+| Tweakpane | 4.0.5 |
+| Node, npm | only for `islands/`; built with Node 24, npm 12 |
 
-The generated files are committed (`*_templ.go`, `static/app.css`), so `go build` and `go test` need no templ or Tailwind. After changing a `.templ` file or `static/input.css`:
+The generated files are committed (`*_templ.go`, `static/app.css`, `static/islands.js`), so `go build` and `go test` need no templ, Tailwind or Node. After changing a `.templ` file, `static/input.css` or `islands/`:
 
 ```sh
 sh tools/fetch.sh     # Tailwind CLI and daisyUI into .bin/ (git-ignored); checks each download's SHA-256
-go generate ./...     # templ generate, fetch, Tailwind build
+go generate ./...     # templ generate, fetch, Tailwind build, npm ci and the islands build
 ```
 
 Checks, in `warroom/`:
@@ -155,3 +191,10 @@ Things that cost time with the pinned versions.
 - htmx 4's `innerMorph` keeps an iframe and only sets its new `src`; when the address differs only after `#`, that is a hash change and the render page does not redraw. Frames carry an id hashed from their address (`frameID` in `pics.go`), so a changed frame is replaced and an unchanged one survives.
 - templ: `@Comp() { text }` on one line is a call with children (the literal text `text`), not a call followed by an expression.
 - daisyUI's `@layer daisyui` outranks Tailwind's `components` layer, so an override of a daisyUI class must sit outside every layer (the end of `static/input.css`).
+- Svelte 5 custom elements (`customElement: true` in the plugin options, `<svelte:options customElement={{tag, shadow: 'none', props}} />`): with `shadow: 'none'` the component renders into the element itself and `$host()` is that element, which is what Tweakpane gets as its container (no template needed). Props come from attributes only when declared: `props: {params: {attribute: 'data-params', type: 'Array'}}`; the type does the `JSON.parse`, otherwise you get the string, and an undeclared prop looks for an attribute named like the prop in lower case.
+- A Svelte custom element builds its component one microtask after `connectedCallback` and destroys it one microtask after `disconnectedCallback` (so a DOM move does not rebuild). An `$effect` that creates the pane and returns `pane.dispose` is therefore enough to start and stop it on htmx swaps.
+- Runes: `$props()` values are reactive, so reading `params` inside the `$effect` rebuilds the pane when `data-params` changes; the values object handed to Tweakpane is a plain object, not `$state`, because Tweakpane writes into it.
+- Tweakpane 4.0.5 ships `.d.ts` files that import `@tweakpane/core`, which is not installed, so the editor has no types; the API (`new Pane({container})`, `addBinding`, `pane.on('change')`, `dispose`) was read from `dist/tweakpane.js`. Number steps count from the initial value, not from `min` (`StepConstraint(step, initialValue)`), which is why a loaded `value` must lie on the grid from `min` and the server snaps from `min`.
+- Tweakpane's slider is a focusable `div` with its own arrow-key handler that does not stop the event, so `warroom.js` would flip the step; it now ignores keys from inside `wr-tune` except Enter. Its text inputs are covered by the existing input rule. It injects its own `<style>` and is themed with `--tp-*` custom properties on `wr-tune` (`static/input.css`); its list is a native `<select>` that stays light grey unless `--tp-button-*` is set.
+- Vite library mode: `build.emptyOutDir` must be `false` because `outDir` is `static/`, which holds the rest of the site. The output keeps whitespace and comments (about 220 KB, 47 KB gzipped). The Svelte plugin's "no Svelte config found" line is harmless; the compiler option sits in `vite.config.js`.
+- Headless Firefox through WebDriver cannot be made narrower than 500 px wide; for a 390 px layout load the page in a same-origin `<iframe>` of that width. In a WebDriver test, `clear` on a Tweakpane text input fires `change` and the pane reverts it; select the text and type instead.

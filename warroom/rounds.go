@@ -22,7 +22,7 @@ var (
 	hexRE = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
 	choiceKinds = []string{"pictures", "text", "audio", "lab"}
-	allKinds    = append([]string{"gallery", "verdict", "wording"}, choiceKinds...)
+	allKinds    = append([]string{"gallery", "verdict", "wording", "tune"}, choiceKinds...)
 	letters     = []string{"A", "B", "C", "D"}
 )
 
@@ -229,6 +229,8 @@ type Step struct {
 	Verdict     *Verdict          `yaml:"verdict"`
 	Labels      *Labels           `yaml:"labels"`
 	Fields      []Field           `yaml:"fields"`
+	Target      *Render           `yaml:"target"`
+	Params      []TuneParam       `yaml:"params"`
 }
 
 // Round is a folder of steps. ID is the folder name; Prefix defaults to it.
@@ -276,7 +278,7 @@ func (s *Step) VerdictKey() string {
 // AnswerKey is the picks key (without prefix) that holds the step's answer; "" for steps with none.
 func (s *Step) AnswerKey() string {
 	switch {
-	case s.IsChoice(), s.Kind == "verdict":
+	case s.IsChoice(), s.Kind == "verdict", s.Kind == "tune":
 		return s.Key
 	case s.Kind == "gallery" && s.Verdict != nil:
 		return s.VerdictKey()
@@ -297,6 +299,8 @@ func (s *Step) AcceptsPick(pick string) bool {
 		return (pick == "neither" && s.Neutral != "") || (s.IsConfirm() && (pick == "yes" || pick == "change"))
 	case s.Kind == "verdict", s.Kind == "gallery" && s.Verdict != nil:
 		return pick == "pass" || pick == "changes"
+	case s.Kind == "tune":
+		return pick == "tuned" || (pick == "neither" && s.Neutral != "")
 	}
 	return false
 }
@@ -422,6 +426,7 @@ func (c *Catalog) validateStep(r *Round, s *Step) {
 	}
 	c.Errors = append(c.Errors, validateControls(where, r, s)...)
 	c.Errors = append(c.Errors, validateChoice(where, s)...)
+	c.Errors = append(c.Errors, validateTune(where, s)...)
 	for _, u := range s.Uses {
 		if !c.useExists(r, u) {
 			c.fail("%s: uses %s is not a step", where, u)

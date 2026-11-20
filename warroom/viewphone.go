@@ -11,6 +11,7 @@ type PhoneView struct {
 	Flip                []FlipButton
 	Shown               string
 	Pick, Confirm       bool
+	Tuned               bool
 	Neutral             string
 	ViewHref, ViewLabel string
 	Play, Note, Copy    bool

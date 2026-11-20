@@ -1,0 +1,14 @@
+{
+  "name": "warroom-islands",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "svelte": "5.57.3",
+    "tweakpane": "4.0.5",
+    "vite": "8.3.6"
+  }
+}

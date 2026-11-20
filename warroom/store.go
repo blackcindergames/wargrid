@@ -27,6 +27,8 @@ var (
 type Entry struct {
 	Pick *string `json:"pick"`
 	Note string  `json:"note"`
+	// Value is a tune step's recorded knobs, param id to number or string.
+	Value map[string]any `json:"value,omitempty"`
 }
 
 // Store is the picks file: one mutex around read-modify-write, atomic replace on write.

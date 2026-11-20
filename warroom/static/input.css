@@ -143,7 +143,7 @@
   .pic.live { cursor: default; }
   .pic.vid video { display: block; width: 100%; height: auto; background: #000; }
   .pic .hudlayer { position: absolute; border: 0; pointer-events: none; background: transparent; }
-  .v-flip .stage .pic[data-cw], .k-gallery .gmain .pic[data-cw] { width: min(100%, calc((100vh - 280px) * var(--ar))); }
+  .v-flip .stage .pic[data-cw], .k-gallery .gmain .pic[data-cw], .k-tune .stage .pic[data-cw] { width: min(100%, calc((100vh - 280px) * var(--ar))); }
   .v-flip .stage .pic.img img, .k-gallery .gmain .pic.img img { width: auto; max-width: 100%; max-height: calc(100vh - 280px); margin: 0 auto; }
 
   .ohd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -244,6 +244,11 @@
   .true100 .v-flip .stage .pic.img, .true100 .k-gallery .gmain .pic.img { width: auto; flex: none; }
   .true100 .v-flip .stage .pic.img img, .true100 .k-gallery .gmain .pic.img img { width: calc(var(--nw, 1280) * 1px / var(--dpr, 1)); max-width: none; max-height: none; }
 
+  .k-tune .stagecol { display: flex; flex-direction: column; gap: 14px; }
+  wr-tune { display: block; max-width: 720px; --tp-base-background-color: var(--panel); --tp-base-font-family: "Public Sans", Arial, sans-serif; --tp-container-unit-size: 34px; --tp-blade-value-width: 55%; --tp-button-background-color: var(--color-base-300); --tp-button-background-color-hover: #3a4e5c; --tp-button-background-color-focus: #3a4e5c; --tp-button-background-color-active: #46606f; --tp-button-foreground-color: var(--color-base-content); --tp-label-foreground-color: var(--soft); }
+  wr-tune .tp-rotv { font-size: 14px; }
+  @media (max-width: 900px), (pointer: coarse) { wr-tune { max-width: none; } }
+
   .numbers table { width: 100%; }
   .numbers th, .numbers td { text-align: right; font-variant-numeric: tabular-nums; }
   .numbers tr th:first-child { text-align: left; color: var(--soft); font-weight: 600; }
@@ -271,7 +276,7 @@
     .head h1 { font-size: 20px; }
     .flipbar, .stepnav, .inav, .stagecol > .ctlbar { display: none; }
     .tiles { grid-template-columns: minmax(0, 1fr); }
-    .v-flip .stage .pic[data-cw], .k-gallery .gmain .pic[data-cw] { width: 100%; }
+    .v-flip .stage .pic[data-cw], .k-gallery .gmain .pic[data-cw], .k-tune .stage .pic[data-cw] { width: 100%; }
     .ref .pic { max-width: none; }
     .extras { grid-template-columns: minmax(0, 1fr); }
     .verdict .vb { flex: 1 1 40%; padding: 14px 8px; }

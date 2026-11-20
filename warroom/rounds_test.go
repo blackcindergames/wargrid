@@ -225,6 +225,11 @@ func TestAcceptsPick(t *testing.T) {
 		{"gallery with a verdict", step(Step{Kind: "gallery", Verdict: &Verdict{}}), "changes", true},
 		{"gallery without a verdict", step(Step{Kind: "gallery"}), "pass", false},
 		{"wording", step(Step{Kind: "wording"}), "A", false},
+		{"tuned on a tune step", step(Step{Kind: "tune"}), "tuned", true},
+		{"tuned on a pictures step", step(Step{Kind: "pictures", Options: two}), "tuned", false},
+		{"letter on a tune step", step(Step{Kind: "tune"}), "A", false},
+		{"neither on a tune step with a neutral", step(Step{Kind: "tune", Neutral: "None"}), "neither", true},
+		{"neither on a tune step without one", step(Step{Kind: "tune"}), "neither", false},
 		{"empty", step(Step{Kind: "pictures", Options: two}), "", false},
 	}
 	for _, tc := range cases {

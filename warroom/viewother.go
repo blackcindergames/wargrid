@@ -215,7 +215,11 @@ func (b *builder) rowOf(r *Round, local string, e Entry) orderedRow {
 		order += 0.5
 		label = subLabel(s, label, sub)
 	}
-	return orderedRow{SumRow{label, pickLabel(s, deref(e.Pick), true), e.Note}, order}
+	pick := pickLabel(s, deref(e.Pick), true)
+	if s.Kind == "tune" && len(e.Value) > 0 {
+		pick = s.tuneLine(e.Value)
+	}
+	return orderedRow{SumRow{label, pick, e.Note}, order}
 }
 
 func subLabel(s *Step, question, sub string) string {

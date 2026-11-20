@@ -362,6 +362,8 @@ function clickKey(k) {
 function onKey(e) {
   if (e.key === 'Escape') { closeOver(); return; }
   if (['TEXTAREA', 'INPUT', 'SELECT'].includes(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
+  // Tweakpane's sliders are focusable divs that take the arrow keys themselves.
+  if (e.key !== 'Enter' && e.target.closest?.('wr-tune')) return;
   const k = keyName(e);
   if ((k === 'enter' || k === ' ') && ['BUTTON', 'A'].includes(e.target.tagName)) return;
   if (overOpen()) {
