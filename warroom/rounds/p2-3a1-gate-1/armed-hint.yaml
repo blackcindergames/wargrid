@@ -1,0 +1,24 @@
+kind: pictures
+question: What tells you attack-move is armed?
+why: >-
+  After the Attack move (A) button or the A key, the next left-click on ground attack-moves; a right-click
+  or Esc cancels. The key list that said so is gone, the cursor does not change, and the Controls list
+  comes with P2.3b. Zero Hour has no hint line; it changes the cursor instead.
+look: 'Where to look: the top of the slab, bottom right.'
+rec: A
+crop: {x: 840, y: 504, w: 440, h: 216}
+options:
+  A:
+    name: One line while armed
+    render: {state: armed-hint}
+    notes: >-
+      A muted 12 px line at the slab top, only while armed: "Left-click: attack-move here · Right-click
+      or Esc: cancel". Built like the "Right-click: resume" line gate A kept; the slab grows 18 px while
+      armed.
+  B:
+    name: Nothing in the HUD
+    render: {state: armed-none}
+    notes: >-
+      Only the button's armed look (panel2 fill, 2 px sel inset). The playtest card explains the mouse
+      rules ("Esc or a right-click cancels a placement or an attack move"). Nothing to build; a player
+      who pressed A by accident sees only an outlined button.

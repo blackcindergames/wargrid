@@ -1,5 +1,7 @@
 # Decision page
 
+> Successor: [War Room](../../warroom/README.md), the Go port, runs in parallel with this prototype (user, 2026-11-19).
+
 One reusable owner page for decision rounds: steps with options A to D on one stage, a click records the pick on the server, and the page moves on. Decided in the design answers, "Decision app" (user, 2026-11-19). This is the prototype: the core flow and the stage controls (window size, fit, ground, backdrops, zoom, HUD layer, colour vision and more, below); a short spec follows once the owner has looked.
 
 ## Run it

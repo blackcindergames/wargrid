@@ -1,0 +1,80 @@
+kind: pictures
+question: 'Unit glyphs: flat or two-tone?'
+why: >-
+  A controls step on a small demo scene (control wiring only, not game art): R and Shift+R turn the units,
+  O and Shift+O change the owner colour and set, G and Z ground and zoom, and the step adds its own controls:
+  V view, X camera, Shift+F faction pair, and a Names button without a key.
+look: 'Where to look: the unit in the middle, ringed.'
+rec: B
+recWhy: demo only.
+render:
+  page: static/demo/scene.html
+  w: 1280
+  h: 720
+  hash: shot=1
+  pass:
+    ground: ground
+    zoom: zoom
+    heading: heading
+    owner: you
+controls:
+  ground: true
+  zoom: ['1', '2', '0.5']
+  heading: true
+  owner: ['1', '2', '3', '4', '5', '6', '7', '8']
+  set: true
+  marker: true
+  fit: true
+  cvd: true
+  extra:
+  - id: view
+    label: View
+    key: v
+    values:
+    - v: base
+      label: Base
+    - v: row
+      label: Owner row
+    - v: glyph
+      label: Glyph sizes
+  - id: cam
+    label: Camera
+    key: x
+    values:
+    - v: middle
+      label: Middle
+    - v: west
+      label: West
+    - v: east
+      label: East
+  - id: pair
+    label: Factions
+    key: shift+f
+    values:
+    - v: usa-china
+      label: USA v China
+    - v: china-frc
+      label: China v FRC
+    - v: frc-usa
+      label: FRC v USA
+  - id: names
+    label: Names
+    values:
+    - v: 'on'
+      label: Shown
+    - v: 'off'
+      label: Hidden
+mark: {x: 578, y: 284, w: 124, h: 130, label: Small change}
+options:
+  A:
+    name: Flat glyph
+    render:
+      params:
+        glyph: flat
+    notes: The glyph on top of the unit in one colour.
+  B:
+    name: Two-tone glyph
+    render:
+      params:
+        glyph: two
+    notes: The glyph with a dark rim.

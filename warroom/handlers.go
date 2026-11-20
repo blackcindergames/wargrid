@@ -1,0 +1,372 @@
+package main
+
+import (
+	"embed"
+	"encoding/json"
+	"errors"
+	"html"
+	"io"
+	"io/fs"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"slices"
+	"strconv"
+	"strings"
+	"unicode/utf8"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+)
+
+const (
+	maxBody = 8192
+	maxNote = 4000
+)
+
+// The repository trees rounds may embed; nothing else under the root is served.
+var siteTrees = []string{"docs", "game", "web"}
+
+//go:embed all:static
+var staticFiles embed.FS
+
+type Config struct {
+	Root   string
+	Picks  string
+	Rounds string
+	Host   string
+	Port   string
+}
+
+type Server struct {
+	cfg   *Config
+	store *Store
+}
+
+func NewServer(cfg *Config) *Server {
+	return &Server{cfg: cfg, store: NewStore(cfg.Picks)}
+}
+
+func (s *Server) Routes() http.Handler {
+	r := chi.NewRouter()
+	r.Use(middleware.Recoverer)
+	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) { plain(w, http.StatusOK, "ok") })
+	r.Get("/picks.json", s.picksJSON)
+	r.Get("/", s.roundList)
+	r.Get("/r/{round}", s.openRound)
+	r.Get("/r/{round}/summary", s.summary)
+	r.Get("/r/{round}/{n}", s.stepPage)
+	r.Post("/r/{round}/{step}/pick", s.pick)
+	r.Post("/r/{round}/{step}/note", s.note)
+	r.Get("/static/*", func(w http.ResponseWriter, r *http.Request) {
+		serveFile(w, r, staticFiles, "static/"+chi.URLParam(r, "*"))
+	})
+	for _, tree := range siteTrees {
+		r.Get("/"+tree+"/*", func(w http.ResponseWriter, r *http.Request) { s.serveTree(w, r, tree) })
+	}
+	return r
+}
+
+func plain(w http.ResponseWriter, code int, body string) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(code)
+	_, _ = io.WriteString(w, body)
+}
+
+// serveTree serves one repository tree from the root, no listings; os.Root refuses links that leave it.
+func (s *Server) serveTree(w http.ResponseWriter, r *http.Request, tree string) {
+	root, err := os.OpenRoot(s.cfg.Root)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer func() { _ = root.Close() }()
+	serveFile(w, r, root.FS(), tree+"/"+chi.URLParam(r, "*"))
+}
+
+// serveFile uses ServeContent, not FileServer, which redirects /index.html away (the lab loads web/site/index.html).
+func serveFile(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) {
+	if !fs.ValidPath(name) {
+		http.NotFound(w, r)
+		return
+	}
+	f, err := fsys.Open(name)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer func() { _ = f.Close() }()
+	st, err := f.Stat()
+	rs, seekable := f.(io.ReadSeeker)
+	if err != nil || st.IsDir() || !seekable {
+		http.NotFound(w, r)
+		return
+	}
+	http.ServeContent(w, r, st.Name(), st.ModTime(), rs)
+}
+
+func (s *Server) catalog() *Catalog {
+	c := LoadCatalog(s.cfg.Rounds)
+	for _, e := range c.Errors {
+		log.Printf("rounds: %s", e)
+	}
+	return c
+}
+
+func (s *Server) picksJSON(w http.ResponseWriter, _ *http.Request) {
+	entries, err := s.store.Entries()
+	if err != nil {
+		log.Printf("picks: %v", err)
+		http.Error(w, "picks file unreadable", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	out, err := json.Marshal(entries)
+	if err != nil {
+		http.Error(w, "encode", http.StatusInternalServerError)
+		return
+	}
+	_, _ = w.Write(out)
+}
+
+func (s *Server) roundList(w http.ResponseWriter, r *http.Request) {
+	c := s.catalog()
+	links := roundLinks(c, r.URL.Query().Get("demo") == "1")
+	keys := parseQuery(r.URL.Query()).Keys
+	respond(w, r, "War Room", &PageView{Errors: c.Errors, Cvd: "normal", Body: RoundListMain(links), Legend: legendOf(nil, false), Keys: keys})
+}
+
+func (s *Server) openRound(w http.ResponseWriter, r *http.Request) {
+	round := s.catalog().Round(chi.URLParam(r, "round"))
+	if round == nil {
+		http.NotFound(w, r)
+		return
+	}
+	entries, err := s.store.Entries()
+	if err != nil {
+		log.Printf("picks: %v", err)
+	}
+	target := url.URL{Path: "/r/" + round.ID + "/summary", RawQuery: r.URL.RawQuery}
+	if open := round.Open(entries); len(open) > 0 {
+		target.Path = "/r/" + round.ID + "/" + strconv.Itoa(open[0]+1)
+	}
+	http.Redirect(w, r, target.String(), http.StatusFound)
+}
+
+// view opens the picks and the repository root a page reads; done closes the root.
+func (s *Server) view(r *http.Request, c *Catalog, round *Round) (b *builder, errs []string, done func()) {
+	entries, err := s.store.Entries()
+	errs = c.Errors
+	if err != nil {
+		log.Printf("picks: %v", err)
+		errs = append(slices.Clone(errs), "picks file unreadable: nothing recorded can be shown")
+	}
+	b = &builder{cat: c, round: round, entries: entries, q: parseQuery(r.URL.Query())}
+	root, err := os.OpenRoot(s.cfg.Root)
+	if err != nil {
+		return b, errs, func() {}
+	}
+	b.root = root
+	return b, errs, func() { _ = root.Close() }
+}
+
+func (s *Server) stepPage(w http.ResponseWriter, r *http.Request) {
+	c := s.catalog()
+	round := c.Round(chi.URLParam(r, "round"))
+	n, err := strconv.Atoi(chi.URLParam(r, "n"))
+	if round == nil || err != nil || n < 1 || n > len(round.Loaded) {
+		http.NotFound(w, r)
+		return
+	}
+	b, errs, done := s.view(r, c, round)
+	defer done()
+	if b.q.Shot {
+		render(w, r, ShotDocument(b.shotView(&round.Loaded[n-1])))
+		return
+	}
+	respond(w, r, round.Title+" · War Room", b.stepPageView(errs, n, "", ""))
+}
+
+func (s *Server) summary(w http.ResponseWriter, r *http.Request) {
+	c := s.catalog()
+	round := c.Round(chi.URLParam(r, "round"))
+	if round == nil {
+		http.NotFound(w, r)
+		return
+	}
+	b, errs, done := s.view(r, c, round)
+	defer done()
+	respond(w, r, round.Title+" · War Room", b.summaryPageView(errs))
+}
+
+func parseForm(w http.ResponseWriter, r *http.Request) (url.Values, bool) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return nil, false
+	}
+	return r.PostForm, true
+}
+
+func validNote(note string) bool {
+	return utf8.ValidString(note) && utf8.RuneCountInString(note) <= maxNote
+}
+
+// stepOf finds the real step a request names; a missing step has no endpoint.
+func (s *Server) stepOf(w http.ResponseWriter, r *http.Request) (*Catalog, *Round, *Step, bool) {
+	c := s.catalog()
+	round := c.Round(chi.URLParam(r, "round"))
+	if round == nil {
+		http.NotFound(w, r)
+		return nil, nil, nil, false
+	}
+	step := round.Step(chi.URLParam(r, "step"))
+	if step == nil {
+		http.NotFound(w, r)
+		return nil, nil, nil, false
+	}
+	return c, round, step, true
+}
+
+func (s *Server) pick(w http.ResponseWriter, r *http.Request) {
+	c, round, step, ok := s.stepOf(w, r)
+	if !ok {
+		return
+	}
+	form, ok := parseForm(w, r)
+	if !ok {
+		return
+	}
+	pick := form.Get("pick")
+	note, hasNote := "", form.Has("note")
+	if hasNote {
+		note = form.Get("note")
+	}
+	key := step.AnswerKey()
+	if key == "" || !validNote(note) || (pick == "" && !hasNote) || (pick != "" && !step.AcceptsPick(pick)) {
+		http.Error(w, "bad pick", http.StatusBadRequest)
+		return
+	}
+	if pick == "change" && strings.TrimSpace(note) == "" {
+		s.askForNote(w, r, c, round, step)
+		return
+	}
+	err := s.store.Update(round.Prefix+":"+key, func(e Entry) Entry {
+		if pick != "" {
+			e.Pick = &pick
+		}
+		if hasNote {
+			e.Note = note
+		}
+		return e
+	})
+	if recordFailed(w, err) {
+		return
+	}
+	s.answered(w, r, c, round, step, pick)
+}
+
+// askForNote answers Change without a note: the same step again, asking for one.
+func (s *Server) askForNote(w http.ResponseWriter, r *http.Request, c *Catalog, round *Round, step *Step) {
+	b, errs, done := s.view(r, c, round)
+	defer done()
+	hint := "Say what to change here, then press Change again."
+	// Not show:top: warroom.js scrolls to the note and its hint instead.
+	w.Header().Set("HX-Reswap", "innerHTML")
+	respond(w, r, round.Title+" · War Room", b.stepPageView(errs, indexOfStep(b.round, step.Key)+1, "", hint))
+}
+
+// answered moves on after a recorded pick: a redirect for a plain form post, the next step's page for htmx.
+func (s *Server) answered(w http.ResponseWriter, r *http.Request, c *Catalog, round *Round, step *Step, pick string) {
+	b, errs, done := s.view(r, c, round)
+	defer done()
+	n := indexOfStep(round, step.Key) + 1
+	next := n + 1
+	if step.Kind == "gallery" {
+		next = len(round.Loaded) + 1
+	}
+	target := b.stepHref(next)
+	if r.Header.Get("HX-Request") != "true" {
+		http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // target is built from the validated round and a step number, the query only carries control values
+		return
+	}
+	w.Header().Set("HX-Push-Url", target)
+	title := round.Title + " · War Room"
+	if next > len(round.Loaded) {
+		respond(w, r, title, b.summaryPageView(errs))
+		return
+	}
+	respond(w, r, title, b.stepPageView(errs, next, recordedLine(step, step.AnswerKey(), pick), ""))
+}
+
+// recordedLine is the line the page shows after a pick; a blind step also says what the letter was.
+func recordedLine(step *Step, key, pick string) string {
+	line := "Recorded: " + key + " " + pick + "."
+	if o, ok := step.Options[pick]; ok && step.Blind && o.Reveal != "" {
+		line += " " + pick + " was " + o.Reveal + "."
+	}
+	return line
+}
+
+func (s *Server) note(w http.ResponseWriter, r *http.Request) {
+	_, round, step, ok := s.stepOf(w, r)
+	if !ok {
+		return
+	}
+	form, ok := parseForm(w, r)
+	if !ok {
+		return
+	}
+	note := form.Get("note")
+	suffix := noteKey(step, form.Get("sub"))
+	if !form.Has("note") || !validNote(note) || suffix == "" {
+		http.Error(w, "bad note", http.StatusBadRequest)
+		return
+	}
+	err := s.store.Update(round.Prefix+":"+suffix, func(e Entry) Entry {
+		e.Note = note
+		return e
+	})
+	if recordFailed(w, err) {
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = io.WriteString(w, html.EscapeString("Recorded: note on "+suffix+"."))
+}
+
+// noteKey is the picks key (without prefix) a note goes to; "" when the step has no such place for one.
+func noteKey(s *Step, sub string) string {
+	switch {
+	case s.Kind == "wording" && slices.ContainsFunc(s.Fields, func(f Field) bool { return f.ID == sub }):
+		return s.Key + ":" + sub
+	case s.Kind == "gallery" && sub != "":
+		if slices.ContainsFunc(s.Items, func(i Item) bool { return i.ID == sub }) {
+			return s.Key + ":" + sub
+		}
+	case s.Kind == "gallery" && s.Verdict != nil:
+		return s.VerdictKey()
+	case sub == "" && (s.IsChoice() || s.Kind == "verdict"):
+		return s.Key
+	}
+	return ""
+}
+
+// recordFailed answers a store error and says whether there was one.
+func recordFailed(w http.ResponseWriter, err error) bool {
+	switch {
+	case err == nil:
+		return false
+	case errors.Is(err, ErrFull):
+		http.Error(w, "picks file is full", http.StatusInsufficientStorage)
+	case errors.Is(err, ErrBadKey):
+		http.Error(w, "bad key", http.StatusBadRequest)
+	default:
+		log.Printf("picks: %v", err)
+		http.Error(w, "could not record", http.StatusInternalServerError)
+	}
+	return true
+}
