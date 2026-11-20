@@ -1457,3 +1457,12 @@ Prepared as a night run ([plan](../superpowers/plans/2026-11-20-tooling-night.md
 - **Rerun bisect** (replay the recorded commit against the current tree to the first differing field, Zero Hour's `-DebugCRCFromFrame` workflow): later, noted in STATUS.
 - **Budget:** if the recording exceeds a budget, the task parks for the owner (stop condition); no coarser interval is ruled at night.
 - **Gate:** full gate at the end of the run, no merge.
+
+## Director's newcomer proposals (user, 2026-11-20)
+
+One selector round on the game director's four proposals for a newcomer's first five minutes (agent advice, 2026-11-19, private); each took the recommendation.
+
+- **Edge scrolling:** a P2.3b rider, edge scrolling only (window and browser, focus only, step capped per frame), because today the camera moves only with the arrow keys and no hint names them, so a mouse-only player cannot reach the enemy base. Replaces the edge-scrolling half of "moved to the Later item Pan with the mouse" (2026-11-17); right-drag pan stays there.
+- **Cadet early:** the bot plan builds Cadet right after the S4 skill-profile seam instead of after Elite; the default stays Regular until an RTS-naive player has played (the 2026-11-18 default rule stands, its order does not).
+- **Next-step line during the first match:** not now; a "not ordered yet" item in `docs/packages.md`. The 2026-11-15 rule (one tip on the result panel, never during play) stands.
+- **First-match focus card:** a P2.3b rider adds it to `focus.json`; it is played when an RTS-naive friend is available, not as a before row for edge scrolling.

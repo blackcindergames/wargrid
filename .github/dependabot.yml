@@ -43,6 +43,10 @@ updates:
       interval: weekly
     cooldown:
       default-days: 14
+    # shortcut: svelte-check 4.7.8 and typescript-eslint 8.73 cap TypeScript below 7; drop when both accept 7.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       warroom-npm:
         patterns: ["*"]
