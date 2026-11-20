@@ -191,10 +191,10 @@ func _queue(open: bool) -> void:
 	HudTests._nine(_main, ids.factory)
 	if open: _main.get_node("HUD/Economy/QueueMore").pressed.emit()
 	await _settle()
-	var row: Button = _main.get_node("HUD/Economy/Queue").get_child(2)
+	var row: Button = _main.get_node("HUD/Economy/Queue").get_child(0)
 	HudTests._move(_port, row.get_global_rect().get_center())
 	await _settle()
-	check(row.is_hovered(), "the pointer is on a waiting queue row")
+	check(row.is_hovered(), "the pointer is on the first queue row")
 
 func _unload() -> void:
 	var ids: Dictionary = await _slab_world(50000, true)
@@ -306,7 +306,8 @@ func _chips_checklist() -> void:
 	_f3()
 
 func _chips_form() -> void:
-	await _scene()
+	var ids: Dictionary = await _slab_world(50000)
+	HudTests._select(_main, [], ids.plant)
 	var overlay: Node = _main.get_node("HUD/Playtest")
 	overlay.toggle_checklist()
 	overlay.open_marker()

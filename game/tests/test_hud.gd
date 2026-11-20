@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1258,6 +1258,48 @@ func test_build_buttons_by_selection_and_price(runner) -> bool:
 		HudModel.player(view, 1).credits = credits[0]
 		main._show(view)
 		runner.check(_colour(price) == _token(credits[1]) and main.hud.rebuilds == rebuilds and tower.get_node("Price").get_instance_id() == node_id, "SL6 credits %d: the price in %s, patched in place" % [credits[0], credits[1]])
+	main.free()
+	return true
+
+# The button draws its name centred between its top and bottom content margins.
+static func _name_centre(button: Button) -> float:
+	var style: StyleBox = button.get_theme_stylebox("normal")
+	var rect: Rect2 = button.get_global_rect()
+	return rect.position.y + (style.get_margin(SIDE_TOP) + rect.size.y - style.get_margin(SIDE_BOTTOM)) / 2.0
+
+static func _on_the_name_line(runner, button: Button, part: String, label: String) -> void:
+	var centre: float = (button.get_node(part) as Control).get_global_rect().get_center().y
+	runner.check(absf(centre - button.get_global_rect().get_center().y) <= 1.0 and absf(centre - _name_centre(button)) <= 1.0, "SL7 %s: %s centred on the button %.1f and its name %.1f, got %.1f" % [label, part, button.get_global_rect().get_center().y, _name_centre(button), centre])
+
+func test_right_labels_on_the_name_line(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, false)
+	_select(main, [ids.builder])
+	await _frames(runner)
+	var tower: Button = main.get_node("HUD/Economy/BuildMenu").get_child(4)
+	_on_the_name_line(runner, tower, "Price", "a build button")
+	var price: Rect2 = (tower.get_node("Price") as Control).get_global_rect()
+	runner.check(is_equal_approx(price.end.x, tower.get_global_rect().end.x - 8.0), "SL7 the price ends 8 px inside the button's right edge %.1f, got %.1f" % [tower.get_global_rect().end.x, price.end.x])
+	_select(main, [], ids.factory)
+	_queue_of(main, ids.factory, 3)
+	await _frames(runner)
+	var row: Button = main.get_node("HUD/Economy/Queue").get_child(0)
+	for part: String in ["Percent", "Cancel"]: _on_the_name_line(runner, row, part, "the queue's first row")
+	for part: String in ["Cancel", "Percent"]:
+		var mark: Label = row.get_node(part)
+		runner.check(_colour(mark) == _token("muted") and mark.get_theme_font_size("font_size") == row.get_theme_font_size("font_size") and mark.get_theme_font("font") == row.get_theme_font("font"), "SL7 %s muted in the row name's font and size, got %s %d" % [part, _colour(mark), mark.get_theme_font_size("font_size")])
+	for look: String in ["hover", "pressed", "hover_pressed"]:
+		var style: StyleBoxFlat = row.get_theme_stylebox(look) as StyleBoxFlat
+		runner.check(style != null and style.bg_color == _token("panel2") and style.border_color == _token("muted") and style.border_width_left == 1 and style.border_width_top == 1 and style.border_width_right == 1 and style.border_width_bottom == 1, "SL7 a queue row's %s look: panel2 with a 1 px muted inset" % look)
+	var flush: Rect2 = (row.get_node("Track") as Control).get_global_rect()
+	row.mouse_entered.emit()
+	await _frames(runner)
+	var track: Rect2 = (row.get_node("Track") as Control).get_global_rect()
+	runner.check(row.get_global_rect().grow(-1.0).encloses(track) and is_equal_approx(track.size.y, 2.0) and is_equal_approx(track.end.y, row.get_global_rect().end.y - 1.0), "SL7 the hovered first row's 2 px track sits inside the 1 px frame, got %s in %s" % [track, row.get_global_rect()])
+	runner.check(_colour(row.get_node("Cancel")) == _token("text"), "SL7 the hovered row's × in text")
+	row.mouse_exited.emit()
+	await _frames(runner)
+	runner.check((row.get_node("Track") as Control).get_global_rect() == flush and _colour(row.get_node("Cancel")) == _token("muted"), "SL7 off the row: the track full width again and the × muted, got %s" % (row.get_node("Track") as Control).get_global_rect())
 	main.free()
 	return true
 

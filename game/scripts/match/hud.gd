@@ -320,7 +320,7 @@ func _button(parent: Control, button_name: String, width: float) -> Button:
 # A label pinned inside a button's right padding; the button keeps the click.
 static func _right_label(button: Button, label_name: String, variation: StringName, right: float) -> Label:
 	var label: Label = _label(button, label_name, variation)
-	label.set_anchors_preset(PRESET_RIGHT_WIDE)
+	label.set_anchors_and_offsets_preset(PRESET_RIGHT_WIDE)
 	label.grow_horizontal = GROW_DIRECTION_BEGIN
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	label.offset_left = right
@@ -433,7 +433,7 @@ func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: Stri
 			button = _button(grid, "Item%d" % i, _cell_width(grid.columns))
 			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			button.pressed.connect(menu_chosen.emit.bind(i))
-			_right_label(button, "Price", &"HudRow", -12.0)
+			_right_label(button, "Price", &"HudRow", -8.0)
 		var cost: int = Registry.kind(kinds[i]).cost
 		button.text = HudModel.menu_name(i, kinds[i])
 		_tint(button.get_node("Price"), "$%d" % cost, cost > credits)
@@ -470,9 +470,15 @@ func _queue_row(entry_id: int, edge: Color) -> Button:
 	var button: Button = _button(_queue, str(entry_id), 0.0)
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.pressed.connect(entry_cancelled.emit.bind(entry_id))
-	var cancel: Label = _right_label(button, "Cancel", &"HudHint", -12.0)
+	var hover := get_theme_stylebox("hover", &"HudButton").duplicate() as StyleBoxFlat
+	hover.border_color = get_theme_color("muted", &"Tokens")
+	for look: String in ["hover", "pressed", "hover_pressed"]: button.add_theme_stylebox_override(look, hover)
+	button.mouse_entered.connect(_hover_queue_row.bind(button, true))
+	button.mouse_exited.connect(_hover_queue_row.bind(button, false))
+	var cancel: Label = _right_label(button, "Cancel", &"HudRow", -12.0)
 	cancel.text = "\u00d7"
-	_right_label(button, "Percent", &"HudHint", -12.0 - cancel.get_combined_minimum_size().x - 8.0)
+	cancel.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	_right_label(button, "Percent", &"HudRow", -12.0 - cancel.get_combined_minimum_size().x - 16.0).add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
 	var track := ColorRect.new()
 	track.name = "Track"
 	track.color = get_theme_color("well", &"Tokens")
@@ -487,6 +493,10 @@ func _queue_row(entry_id: int, edge: Color) -> Button:
 	bar.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	track.add_child(bar)
 	return button
+
+func _hover_queue_row(row: Button, hovered: bool) -> void:
+	_inset_track(row, hovered, 2.0)
+	(row.get_node("Cancel") as Label).add_theme_color_override("font_color", get_theme_color("text" if hovered else "muted", &"Tokens"))
 
 func _show_queue_rows() -> void:
 	var rows: Dictionary = HudModel.queue_rows(_queue.get_child_count(), _queue_open)
@@ -645,8 +655,8 @@ func _kind_row(kind: String) -> void:
 	row.gui_input.connect(_row_input.bind(row, kind))
 	# Deferred: a row freed under the pointer exits during the rebuild itself.
 	row.mouse_exited.connect(_release_hold, CONNECT_DEFERRED)
-	row.mouse_entered.connect(_inset_track.bind(row, true))
-	row.mouse_exited.connect(_inset_track.bind(row, false))
+	row.mouse_entered.connect(_inset_track.bind(row, true, 3.0))
+	row.mouse_exited.connect(_inset_track.bind(row, false, 3.0))
 	_rows.add_child(row)
 	var title: Label = _label(row, "Name", &"HudRow", Registry.kind(kind).get("display_name", kind))
 	title.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
@@ -697,13 +707,13 @@ func _row_input(event: InputEvent, row: Button, kind: String) -> void:
 	row_clicked.emit.call_deferred(kind, click.shift_pressed)
 
 # The track would cover the hover frame's bottom edge.
-func _inset_track(row: Button, hovered: bool) -> void:
+func _inset_track(row: Button, hovered: bool, height: float) -> void:
 	var inset: float = 1.0 if hovered and not row.disabled else 0.0
 	var track: Control = row.get_node("Track")
 	track.offset_left = inset
 	track.offset_right = -inset
 	track.offset_bottom = -inset
-	track.offset_top = -3.0 - inset
+	track.offset_top = -height - inset
 
 func _set_edge(edge: Color) -> void:
 	if _panel_style.border_color == edge: return

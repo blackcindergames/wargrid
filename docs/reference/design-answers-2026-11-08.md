@@ -1379,3 +1379,12 @@ The game director advised on both calls (agent advice, not a decision).
 
 - **Loaded truck at a full drop-off ring:** a known limit for P2.3a1; the `WAITING AT PILE` row stays as is. The real fix goes to "see your economy": a loaded truck that cannot claim a dock drives to the drop-off and waits near it, as Zero Hour lines its trucks up, instead of stopping where it stands (a simulation change with a trace re-pin; the probe in the P2.3a1 verification record becomes its guard test), with the `ViewRows` cargo bit folded in so the label reads `WAITING AT <DROP-OFF>`.
 - **Menu chip's empty tail:** judged by eye in gate B's window. The director's centring fix is not taken in advance: it would move the word on every select, the motion gate fix 1 removed; a ghost chip outline is the other option.
+
+### P2.3a1 gate B screenshot round (user, 2026-11-20)
+
+The player-experience reviewer and the game director compared the offscreen captures (agent advice, not decisions).
+
+- **Right-hand labels off the name line** (prices, `42 %`, the queue `×` riding at the top of their buttons): fixed before the window batch, with the 8 px price inset, a white centred `×`, the queue rows' hover inset and the chips-form fixture moved to the Power Plant; a headless test pins each label's centre to its button's.
+- **Slab moving under the pointer** (director: queueing moves `Produce` up, and the new queue row lands where it was): test first (two presses on `Produce` at one point must queue two); if red, the queue moves above the buttons so the buttons never move under the pointer.
+- **Menu and PLAYTEST chips under the freeze card:** stay bright on purpose (Esc and the helper still work while frozen); recorded as built.
+- **Resume line on a paused site** (director): not now; ask on the gate C card whether a newcomer knew how to restart a paused site.
