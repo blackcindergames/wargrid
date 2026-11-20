@@ -8,7 +8,7 @@ require (
 	github.com/a-h/templ v0.3.1100
 	github.com/goccy/go-yaml v1.19.2
 	github.com/invopop/jsonschema v0.14.0
-	github.com/mxschmitt/playwright-go v0.6201.1
+	github.com/mxschmitt/playwright-go v0.6401.0
 )
 
 require (
