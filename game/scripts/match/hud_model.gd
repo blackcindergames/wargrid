@@ -37,8 +37,7 @@ static func menu_kinds(view: Dictionary, chosen: Dictionary, ids: Array[int], fa
 	return Registry.kind(kind).get("builds", [])
 
 static func menu_label(index: int, kind: String) -> String:
-	var quantity: int = Registry.kind(kind).get("quantity", 1)
-	return "%d: %s%s $%d" % [index + 1, Registry.kind(kind).display_name, " x%d" % quantity if quantity > 1 else "", Registry.kind(kind).cost]
+	return menu_name(index, kind) + " $%d" % Registry.kind(kind).cost
 
 const LOW_POWER := "LOW POWER · DEFENCES OFF"
 static var _powered: Dictionary = {}
@@ -50,12 +49,14 @@ static func strip(view: Dictionary, id: int, placement_kind: String) -> Dictiona
 	var power: int = Registry.kind(placement_kind).get("power", 0)
 	return numbers.merged({"after_credits": found.credits - Registry.kind(placement_kind).cost, "after_used": numbers.used + maxi(0, -power), "after_available": numbers.available + maxi(0, power)})
 
+static func _faction_kinds(faction: String) -> Array:
+	var row: Dictionary = Registry.faction(faction)
+	return Registry.kind(row.get("start_unit", "")).get("builds", []) + [row.get("start_building", "")]
+
 # FRC builds nothing that makes or uses power, so a 0 / 0 group would read like a bug.
 static func uses_power(faction: String) -> bool:
 	if not _powered.has(faction):
-		var row: Dictionary = Registry.faction(faction)
-		var kinds: Array = Registry.kind(row.get("start_unit", "")).get("builds", []) + [row.get("start_building", "")]
-		_powered[faction] = kinds.any(func(kind: String) -> bool: return Registry.kind(kind).get("power", 0) != 0)
+		_powered[faction] = _faction_kinds(faction).any(func(kind: String) -> bool: return Registry.kind(kind).get("power", 0) != 0)
 	return _powered[faction]
 
 # Physical keycodes: orders read their keys here and the buttons print them, so a label never names an unused key.
@@ -76,11 +77,8 @@ static func _platform_label(physical: Key) -> Key:
 	if DisplayServer.keyboard_get_layout_count() > 0: return DisplayServer.keyboard_get_label_from_physical(physical)
 	return physical
 
-static func key_text(label: Key) -> String:
-	return OS.get_keycode_string(label)
-
 static func key_label(physical: Key) -> String:
-	return key_text(layout_label.call(physical))
+	return OS.get_keycode_string(layout_label.call(physical))
 
 static func menu_name(index: int, kind: String) -> String:
 	var quantity: int = Registry.kind(kind).get("quantity", 1)
@@ -90,10 +88,8 @@ static func menu_name(index: int, kind: String) -> String:
 static func _every_menu() -> Array:
 	var menus: Array = []
 	for faction: String in Registry.Factions.FACTIONS:
-		var row: Dictionary = Registry.faction(faction)
-		var builds: Array = Registry.kind(row.get("start_unit", "")).get("builds", [])
-		menus.append(builds)
-		for kind: String in builds + [row.get("start_building", "")]: menus.append(Registry.kind(kind).get("produces", []))
+		menus.append(Registry.kind(Registry.faction(faction).get("start_unit", "")).get("builds", []))
+		for kind: String in _faction_kinds(faction): menus.append(Registry.kind(kind).get("produces", []))
 	return menus
 
 static func menu_columns(font: Font, size: int) -> int:
@@ -104,13 +100,10 @@ static func menu_columns(font: Font, size: int) -> int:
 		if columns * (widest + MENU_PADDING) + (columns - 1) * MENU_GAP <= SLAB_CONTENT: return columns
 	return 1
 
-static func _unit_index(view: Dictionary, id: int) -> int:
-	return view.units.index_of(id)
-
 static func is_container(view: Dictionary, id: int, seat: int) -> bool:
 	var host: Dictionary = building(view, id)
 	if host.is_empty():
-		var i: int = _unit_index(view, id)
+		var i: int = view.units.index_of(id)
 		if i == -1: return false
 		host = {"owner": view.units.owner[i], "kind": view.units.kinds[view.units.kind[i]]}
 	return host.owner == seat and host.get("completed", true) and not Registry.kind(host.kind).get("contains", {}).is_empty()
@@ -127,7 +120,7 @@ static func unload_target(view: Dictionary, selection: Dictionary, seat: int) ->
 
 static func has_armed_unit(view: Dictionary, ids: Array[int], seat: int) -> bool:
 	for id: int in ids:
-		var i: int = _unit_index(view, id)
+		var i: int = view.units.index_of(id)
 		if i != -1 and view.units.owner[i] == seat and not Registry.kind(view.units.kinds[view.units.kind[i]]).get("weapon", "").is_empty(): return true
 	return false
 
@@ -135,7 +128,7 @@ static func has_armed_unit(view: Dictionary, ids: Array[int], seat: int) -> bool
 static func shows_build_menu(view: Dictionary, selection: Dictionary, seat: int) -> bool:
 	if selection.building_id != -1 or selection.ids.is_empty(): return true
 	if selection.ids.size() != 1: return false
-	var i: int = _unit_index(view, selection.ids[0])
+	var i: int = view.units.index_of(selection.ids[0])
 	return i != -1 and view.units.owner[i] == seat and Registry.is_builder(view.units.kinds[view.units.kind[i]])
 
 static func queue_rows(count: int, open: bool) -> Dictionary:
@@ -180,9 +173,8 @@ static func short_of_power(view: Dictionary, owner: int) -> bool:
 
 # What one box pays the viewer: the box value of their faction's collector.
 static func box_value(faction: String) -> int:
-	var row: Dictionary = Registry.faction(faction)
-	var kinds: Array = [row.get("start_unit", "")]
-	for building_kind: String in Registry.kind(row.get("start_unit", "")).get("builds", []) + [row.get("start_building", "")]: kinds.append_array(Registry.kind(building_kind).get("produces", []))
+	var kinds: Array = [Registry.faction(faction).get("start_unit", "")]
+	for building_kind: String in _faction_kinds(faction): kinds.append_array(Registry.kind(building_kind).get("produces", []))
 	for kind: String in kinds:
 		if not Registry.collects(kind).is_empty(): return Registry.collects(kind).box_value
 	return 0
@@ -221,10 +213,8 @@ static func kind_rows(view: Dictionary, ids: Array[int]) -> Dictionary:
 # The uppercased name of the viewer faction's building that receives supply.
 static func drop_off(faction: String) -> String:
 	if not _drop_offs.has(faction):
-		var row: Dictionary = Registry.faction(faction)
-		var kinds: Array = Registry.kind(row.get("start_unit", "")).get("builds", []) + [row.get("start_building", "")]
 		_drop_offs[faction] = ""
-		for kind: String in kinds:
+		for kind: String in _faction_kinds(faction):
 			if Registry.kind(kind).get("receives_supply", false): _drop_offs[faction] = Registry.kind(kind).display_name.to_upper()
 	return _drop_offs[faction]
 
