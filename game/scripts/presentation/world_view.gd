@@ -615,15 +615,43 @@ func _cell_polygon(origin: Vector2, size: Vector2) -> PackedVector2Array:
 	return PackedVector2Array([Iso.world_to_plane(origin), Iso.world_to_plane(origin + Vector2(size.x, 0)),
 		Iso.world_to_plane(origin + size), Iso.world_to_plane(origin + Vector2(0, size.y))])
 
-func pick_entities(plane_rect: Rect2) -> Array[int]:
+func pick_entities(plane_rect: Rect2, blocked: Array[Rect2] = []) -> Array[int]:
 	var rect := plane_rect.abs()
 	var ids: Array[int] = []
+	# A view outside the tree has no canvas, so only a filtered pick reads it.
+	var to_screen: Transform2D = get_global_transform_with_canvas() if not blocked.is_empty() else Transform2D.IDENTITY
 	for i in _rows.size():
 		var point: Vector2 = Iso.world_to_plane(_drawn_position(i))
 		if _rows.owner[i] == local_player and (_rows.flags[i] & (ViewRows.HOLE | ViewRows.CONTAINED)) == 0 and point.x >= rect.position.x and point.y >= rect.position.y and point.x <= rect.end.x and point.y <= rect.end.y:
-			ids.append(_rows.id[i])
+			var screen: Vector2 = to_screen * point
+			if not blocked.any(func(panel: Rect2) -> bool: return panel.has_point(screen)): ids.append(_rows.id[i])
 	ids.sort()
 	return ids
+
+# Click and hover share it: tier, then the local player's before others, then front-most as drawn (air above ground).
+func resolve_pick(plane_point: Vector2) -> Dictionary:
+	var best: int = -1
+	var best_key: Array = []
+	for i in _rows.size():
+		if (_rows.flags[i] & (ViewRows.HOLE | ViewRows.CONTAINED)) != 0 or not _pick_bounds(i).has_point(plane_point): continue
+		var key: Array = [_rows.owner[i] == local_player, WorldBatch.sort_key(WorldBatch.kind_info(_kind_of(i))[1], _drawn_position(i), _rows.id[i])]
+		if best == -1 or key > best_key:
+			best = _rows.id[i]
+			best_key = key
+	if best != -1: return {"tier": "unit", "id": best}
+	var point: Vector2 = Iso.plane_to_world(plane_point)
+	var building: int = -1
+	for object: Dictionary in _state.get("buildings", []):
+		var definition: Dictionary = Definitions.building(object.kind)
+		if definition.is_empty() or not _covers(object.origin, definition.footprint, point): continue
+		if building == -1 or object.owner == local_player: building = object.id
+	if building != -1: return {"tier": "building", "id": building}
+	for source: Dictionary in _state.get("sources", []):
+		if _covers(source.origin, Registry.source_footprint(source), point): return {"tier": "pile", "id": source.id}
+	return {"tier": "ground", "id": -1}
+
+func _covers(origin: Array, size: Vector2i, point: Vector2) -> bool:
+	return point.x >= origin[0] and point.y >= origin[1] and point.x <= origin[0] + size.x and point.y <= origin[1] + size.y
 
 func pick_source(plane_point: Vector2) -> int:
 	var point: Vector2 = Iso.plane_to_world(plane_point)

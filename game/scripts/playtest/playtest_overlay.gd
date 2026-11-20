@@ -52,7 +52,7 @@ func setup(card: Dictionary, context: Callable, record: Callable, header: Callab
 	_build_chip()
 	_build_checklist()
 	_build_dialog()
-	for surface: Control in [_chip, _checklist, _dialog]: surface.visibility_changed.connect(_place)
+	for surface: Control in surfaces(): surface.visibility_changed.connect(_place)
 	# `Saved` appearing grows the checklist without touching its rows.
 	_checklist.minimum_size_changed.connect(_place)
 
@@ -300,9 +300,12 @@ func _rect(surface: Control) -> Rect2:
 	var extent: Vector2 = surface.get_combined_minimum_size()
 	return Rect2(Vector2(get_viewport_rect().size.x + surface.offset_right - extent.x, surface.offset_top), extent)
 
+func surfaces() -> Array[Control]:
+	return [_chip, _checklist, _dialog]
+
 func stack_bottom() -> float:
 	var bottom: float = MENU_BOTTOM
-	for surface: Control in [_chip, _checklist, _dialog]:
+	for surface: Control in surfaces():
 		if surface.visible: bottom = maxf(bottom, _rect(surface).end.y)
 	return bottom
 

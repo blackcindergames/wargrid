@@ -27,16 +27,20 @@ const CARD: String = "HUD/ResultPanel/Center/Card"
 const COPY: String = "HUD/ResultPanel/Center/Card/Box/Buttons/Copy"
 const FREEZE_PARTS: Array[String] = ["HUD/ResultPanel/Center/Card/Box/Outcome/Mark", "HUD/ResultPanel/Center/Card/Box/Body", "HUD/ResultPanel/Center/Card/Box/Divider", "HUD/ResultPanel/Center/Card/Box/Footer", COPY]
 const FailingPump = preload("res://tests/failing_pump.gd")
+const ViewTests = preload("res://tests/test_view.gd")
+const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
 var freeze_sessions: String = "user://test-freeze-playtests-%d" % OS.get_process_id()
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue, test_hover_equals_click, test_click_results, test_shift_toggles_on_the_map, test_hud_blocks_the_map, test_entering_the_hud_clears_hover, test_drag_across_a_panel, test_card_takes_a_click_after_a_drag, test_releases_on_a_panel_are_the_huds]
 
 func _setup(runner):
 	var main = Scene.instantiate()
 	runner.root.add_child(main)
 	main.set_physics_process(false)
 	main.set_process(false)
+	# The open checklist covers the right of the view where these cases click, and it takes those clicks (Task 13).
+	main.get_node("HUD/Playtest/Checklist").hide()
 	await runner.process_frame
 	return main
 
@@ -1950,4 +1954,351 @@ func test_freeze_flush_keeps_the_queue(runner) -> bool:
 	main.driver.flush()
 	runner.check(main.driver.queued().size() == 1 and main.driver.failure().begins_with("query job returned no note") and world.logs.size() == 1 and main.frozen(), "FN6 a failed flush keeps its order and reads the failure, got %s '%s' %s" % [main.driver.queued(), main.driver.failure(), world.logs])
 	main.free()
+	return true
+
+# Mid-screen, clear of every HUD surface, so these checks read the resolver and not the routing.
+func _centre(runner, main, plane: Vector2) -> Vector2:
+	var camera: Camera2D = main.get_node("Camera2D")
+	camera.position = plane
+	camera.force_update_scroll()
+	await runner.process_frame
+	return main.get_node("WorldView").get_global_transform_with_canvas() * plane
+
+func _screen_button(main, at: Vector2, button: MouseButton, pressed: bool, shift: bool = false) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = pressed
+	event.shift_pressed = shift
+	event.position = at
+	main._unhandled_input(event)
+
+func _map_click(runner, main, plane: Vector2, shift: bool = false) -> void:
+	var at: Vector2 = await _centre(runner, main, plane)
+	_screen_button(main, at, MOUSE_BUTTON_LEFT, true, shift)
+	_screen_button(main, at, MOUSE_BUTTON_LEFT, false, shift)
+
+func _map_drag(runner, main, centre: Vector2, half: Vector2, shift: bool = false) -> void:
+	var at: Vector2 = await _centre(runner, main, centre)
+	_screen_button(main, at - half, MOUSE_BUTTON_LEFT, true, shift)
+	var motion := InputEventMouseMotion.new()
+	motion.position = at + half
+	main._unhandled_input(motion)
+	_screen_button(main, at + half, MOUSE_BUTTON_LEFT, false, shift)
+
+static func _clicked(main) -> int:
+	if main.orders.selected_ids.size() == 1: return main.orders.selected_ids[0]
+	return main.orders.selected_building_id if main.orders.selected_building_id != -1 else main.orders.inspected_id
+
+func _pick_scene(runner) -> Array:
+	var main = await _setup(runner)
+	var world: Dictionary = ViewTests.pick_world(runner)
+	main.driver.adopt(world.sim)
+	main._refresh()
+	return [main, world]
+
+func test_hover_equals_click(runner) -> bool:
+	var scene: Array = await _pick_scene(runner)
+	var main = scene[0]
+	for row: Array in scene[1].rows:
+		main.orders.reset()
+		main._refresh()
+		var at: Vector2 = await _centre(runner, main, row[1])
+		var motion := InputEventMouseMotion.new()
+		motion.position = at
+		main._unhandled_input(motion)
+		var hovered: int = main.get_node("WorldView").hovered_id()
+		await _map_click(runner, main, row[1])
+		runner.check(hovered == row[3] and _clicked(main) == row[3], "PK2 %s: hover %d and click %d both name %d" % [row[0], hovered, _clicked(main), row[3]])
+	main.free()
+	return true
+
+func test_click_results(runner) -> bool:
+	var scene: Array = await _pick_scene(runner)
+	var main = scene[0]
+	var rows: Array = scene[1].rows
+	var sim = main.driver.pump.live()
+	sim._buildings[rows[6][3]].completed = false
+	BaseScene.publish(main)
+	var own: int = rows[0][3]
+	await _map_click(runner, main, rows[0][1])
+	runner.check(main.orders.selected_ids == [own] and main.orders.inspected_id == -1, "PK3 an own unit selects")
+	await _map_click(runner, main, rows[1][1])
+	runner.check(main.orders.inspected_id == rows[1][3] and main.orders.selected_ids.is_empty(), "PK3 an enemy unit inspects and clears the own selection, got %s %d" % [main.orders.selected_ids, main.orders.inspected_id])
+	main.orders.selected_ids.assign([own])
+	await _map_click(runner, main, rows[7][1])
+	runner.check(main.orders.selected_building_id == rows[7][3] and main.orders.selected_ids.is_empty() and main.orders.inspected_id == -1, "PK3 an own building selects and clears the units")
+	await _map_click(runner, main, rows[6][1])
+	runner.check(main.orders.inspected_id == rows[6][3] and main.orders.selected_building_id == -1, "PK3 an enemy site inspects, got %d" % main.orders.inspected_id)
+	await _map_click(runner, main, rows[8][1])
+	for i in 3: BaseScene.publish(main)
+	runner.check(main.orders.inspected_id == rows[8][3] and main.get_node("WorldView")._inspected_id == rows[8][3], "PK3 a pile inspects and stays inspected over three refreshes, got %d" % main.orders.inspected_id)
+	main.orders.selected_ids.assign([own])
+	await _map_click(runner, main, rows[9][1])
+	runner.check(main.orders.selected_ids.is_empty() and main.orders.selected_building_id == -1 and main.orders.inspected_id == -1, "PK3 ground deselects")
+	await _map_drag(runner, main, rows[8][1], Vector2(40, 40))
+	runner.check(main.orders.inspected_id == -1 and main.orders.selected_ids.is_empty(), "PK3 a drag over a pile selects no pile, got %d" % main.orders.inspected_id)
+	main.free()
+	return true
+
+func test_shift_toggles_on_the_map(runner) -> bool:
+	var scene: Array = await _pick_scene(runner)
+	var main = scene[0]
+	var rows: Array = scene[1].rows
+	var own: int = rows[0][3]
+	var other: int = rows[4][3]
+	main.orders.selected_ids.assign([other])
+	await _map_click(runner, main, rows[0][1], true)
+	var both: Array[int] = [own, other]
+	both.sort()
+	runner.check(main.orders.selected_ids == both, "PK4 Shift-click on an unselected own unit adds it, got %s" % [main.orders.selected_ids])
+	await _map_click(runner, main, rows[0][1], true)
+	runner.check(main.orders.selected_ids == [other], "PK4 Shift-click on a selected own unit removes it, got %s" % [main.orders.selected_ids])
+	await _map_drag(runner, main, Iso.world_to_plane(Vector2(10.5, 10.5)), Vector2(30, 30), true)
+	runner.check(main.orders.selected_ids == both, "PK4 Shift-drag adds, got %s" % [main.orders.selected_ids])
+	await _map_click(runner, main, rows[7][1], true)
+	runner.check(main.orders.selected_building_id == rows[7][3] and main.orders.selected_ids.is_empty(), "PK4 Shift-click on an own building with units selected leaves the building only, got %d %s" % [main.orders.selected_building_id, main.orders.selected_ids])
+	main.free()
+	return true
+
+# Window-sized events through the port, as the platform sends them; the port scales them to the logical layout.
+static func _push(port: SubViewport, event: InputEventMouse, logical: Vector2) -> void:
+	event.position = logical * Vector2(port.size) / Vector2(port.size_2d_override)
+	event.global_position = event.position
+	port.push_input(event)
+
+static func _push_button(port: SubViewport, at: Vector2, button: MouseButton, pressed: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = pressed
+	_push(port, event, at)
+
+static func _push_click(port: SubViewport, at: Vector2, button: MouseButton = MOUSE_BUTTON_LEFT) -> void:
+	for pressed: bool in [true, false]: _push_button(port, at, button, pressed)
+
+static func _push_move(port: SubViewport, at: Vector2) -> void:
+	_push(port, InputEventMouseMotion.new(), at)
+
+static func _frames(runner) -> void:
+	for i in 3: await runner.process_frame
+
+static func _world_at(main, screen: Vector2) -> Vector2:
+	return Iso.plane_to_world(main.get_node("WorldView").get_global_transform_with_canvas().affine_inverse() * screen)
+
+# A 64-cell world with one own tank far off screen selected, so the panel and the slab show; the camera on the centre.
+func _routing_scene(runner, overlays, size: Array, zoom: float = 1.0, pan: Vector2 = Vector2.ZERO) -> Array:
+	var port: SubViewport = BaseScene.sized_port(runner, size[0], size[1])
+	# A window gets this when the pointer enters it; without it a port never hit-tests motion against the GUI.
+	port.notification(Viewport.NOTIFICATION_VP_MOUSE_ENTER)
+	var main = await overlays._scene(runner, Scene, port)
+	var sim = Fixture.make_world(10000, Vector2i(64, 64))
+	var keeper: int = sim.spawn(1, Vector2(60.5, 4.5), "usa_tank")
+	main.driver.adopt(sim)
+	main.orders.selected_ids.assign([keeper])
+	main._refresh()
+	var camera: Camera2D = main.get_node("Camera2D")
+	camera.position = Iso.world_to_plane(Vector2(32, 32)) + pan
+	camera.zoom = Vector2.ONE * zoom
+	camera.force_update_scroll()
+	await _frames(runner)
+	return [port, main, keeper]
+
+func _spawn_at(runner, main, screen: Vector2) -> int:
+	var id: int = main.driver.pump.live().spawn(1, _world_at(main, screen), "usa_tank")
+	runner.check(id != -1, "MR fixture: a tank spawns under %s" % screen)
+	return id
+
+static func _rect_of(main, path: String) -> Rect2:
+	return main.get_node(path).get_global_rect()
+
+func _unchanged(runner, main, before: Array, label: String) -> void:
+	var now: Array = [main.orders.selected_ids.duplicate(), main.orders.selected_building_id, main.orders.inspected_id]
+	runner.check(now == before and main.driver.queued().is_empty() and _pending(main) == 0, "%s changes no selection and sends no command, got %s against %s, %d queued" % [label, now, before, main.driver.queued().size()])
+
+func test_hud_blocks_the_map(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	for size: Array in [BaseScene.HUD_SIZES[0], BaseScene.HUD_SIZES[2], BaseScene.HUD_SIZES[3]]:
+		var scene: Array = await _routing_scene(runner, overlays, size)
+		var port: SubViewport = scene[0]
+		var main = scene[1]
+		var at := "%s" % [size[0]]
+		var checklist: Control = main.get_node("HUD/Playtest/Checklist")
+		_push_move(port, Vector2(100, 300))
+		runner.check(port.get_mouse_position().is_equal_approx(Vector2(100, 300)), "MR1 %s fixture: a window event lands at its logical point, got %s" % [at, port.get_mouse_position()])
+		runner.check(checklist.is_visible_in_tree() and main.get_node("HUD/Economy").is_visible_in_tree() and main.get_node("HUD/Hud/SelectionPanel").is_visible_in_tree(), "MR1 %s fixture: the checklist, the slab and the panel show" % at)
+		var before: Array = [main.orders.selected_ids.duplicate(), -1, -1]
+		var slab: Rect2 = _rect_of(main, "HUD/Economy")
+		var panel: Rect2 = _rect_of(main, "HUD/Hud/SelectionPanel")
+		var spots: Array = [["the strip", _rect_of(main, "HUD/Hud/TopStrip").get_center()], ["the panel", panel.get_center()], ["the panel's padding", panel.position + Vector2(6, 4)], ["the slab's padding", slab.position + Vector2(6, 4)], ["the slab's bottom padding", slab.end - Vector2(4, 3)], ["the checklist", checklist.get_global_rect().position + Vector2(4, 4)]]
+		for spot: Array in spots:
+			main.orders.selected_ids.assign(before[0])
+			_push_click(port, spot[1])
+			_push_click(port, spot[1], MOUSE_BUTTON_RIGHT)
+			await _frames(runner)
+			_unchanged(runner, main, before, "MR1 %s: a left and a right click on %s" % [at, spot[0]])
+		_push_click(port, _rect_of(main, "HUD/MenuChip").get_center())
+		await _frames(runner)
+		runner.check(main._pause.visible, "MR1 %s: the Menu chip opens the menu" % at)
+		_unchanged(runner, main, before, "MR1 %s: a click on the Menu chip" % at)
+		main._pause.close()
+		_push_click(port, _rect_of(main, "HUD/Playtest/Chip").get_center())
+		await _frames(runner)
+		runner.check(not checklist.visible, "MR1 %s: the Playtest chip toggles the checklist" % at)
+		_unchanged(runner, main, before, "MR1 %s: a click on the Playtest chip" % at)
+		checklist.show()
+		await _frames(runner)
+		for spot: Array in [["the slab", slab.position + Vector2(6, 4)], ["the checklist", checklist.get_global_rect().position + Vector2(4, 4)], ["the panel", panel.get_center()], ["the strip", _rect_of(main, "HUD/Hud/TopStrip").get_center()]]:
+			_push_button(port, spot[1], MOUSE_BUTTON_WHEEL_UP, true)
+			_push_button(port, spot[1], MOUSE_BUTTON_WHEEL_UP, false)
+			runner.check(main.get_node("Camera2D").zoom.x == 1.0, "MR1 %s: the wheel over %s leaves the zoom, got %.1f" % [at, spot[0], main.get_node("Camera2D").zoom.x])
+		var ground := Vector2(size[1].x / 2.0, 300)
+		runner.check(main.get_node("WorldView").resolve_pick(main.get_node("WorldView").get_global_transform_with_canvas().affine_inverse() * ground).tier == "ground", "MR1 %s fixture: open ground at %s" % [at, ground])
+		_push_button(port, ground, MOUSE_BUTTON_WHEEL_UP, true)
+		_push_button(port, ground, MOUSE_BUTTON_WHEEL_UP, false)
+		runner.check(main.get_node("Camera2D").zoom.x == 2.0, "MR1 %s: the wheel over open ground zooms" % at)
+		main.get_node("Camera2D").zoom = Vector2.ONE
+		main.get_node("Camera2D").force_update_scroll()
+		_push_click(port, ground)
+		await _frames(runner)
+		runner.check(main.orders.selected_ids.is_empty(), "MR1 %s: a click on open ground beside them deselects" % at)
+		main.orders.selected_ids.assign(before[0])
+		main.refuse("Target outside map", false)
+		main._reshow()
+		await _frames(runner)
+		var line: Rect2 = _rect_of(main, "HUD/Hud/RefusalLine")
+		runner.check(main.get_node("HUD/Hud/RefusalLine").is_visible_in_tree(), "MR1 %s fixture: the refusal line shows" % at)
+		_push_click(port, line.get_center(), MOUSE_BUTTON_RIGHT)
+		await _frames(runner)
+		runner.check(_pending(main, "move") == 1, "MR1 %s: a right-click on ground under the refusal line sends a move" % at)
+		_push_click(port, line.get_center())
+		await _frames(runner)
+		runner.check(main.orders.selected_ids.is_empty(), "MR1 %s: a left click under the refusal line deselects" % at)
+		port.free()
+	overlays._end(saved)
+	return true
+
+func test_entering_the_hud_clears_hover(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await _routing_scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	var view = main.get_node("WorldView")
+	var panel: Rect2 = _rect_of(main, "HUD/Hud/SelectionPanel")
+	var slab: Rect2 = _rect_of(main, "HUD/Economy")
+	var near := Vector2(panel.end.x + 80, panel.position.y - 40)
+	var edge := Vector2(slab.position.x + 100, slab.position.y + 6)
+	var tank: int = _spawn_at(runner, main, near)
+	var under: int = _spawn_at(runner, main, edge)
+	BaseScene.publish(main)
+	await _frames(runner)
+	_push_move(port, near + Vector2(0, -8))
+	runner.check(view.hovered_id() == tank, "MR2 the tank on the map is hovered, got %d" % view.hovered_id())
+	_push_move(port, panel.get_center())
+	runner.check(view.hovered_id() == -1, "MR2 moving onto the panel clears the hover, got %d" % view.hovered_id())
+	_push_move(port, edge + Vector2(0, -12))
+	runner.check(view.hovered_id() == under, "MR2 fixture: the tank just under the slab is hovered above its edge, got %d" % view.hovered_id())
+	_push_move(port, edge + Vector2(0, -3))
+	runner.check(slab.has_point(edge + Vector2(0, -3)) and view.hovered_id() == -1, "MR2 the pointer on the slab hovers nothing, not the tank under its edge, got %d" % view.hovered_id())
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_drag_across_a_panel(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	for camera: Array in [[1.0, Vector2.ZERO], [2.0, Vector2(-90, 40)]]:
+		var scene: Array = await _routing_scene(runner, overlays, BaseScene.HUD_SIZES[0], camera[0], camera[1])
+		var port: SubViewport = scene[0]
+		var main = scene[1]
+		var at := "zoom %.0f" % camera[0]
+		var panel: Rect2 = _rect_of(main, "HUD/Hud/SelectionPanel")
+		var above: int = _spawn_at(runner, main, Vector2(panel.end.x - 60, panel.position.y - 30))
+		var under: int = _spawn_at(runner, main, Vector2(panel.end.x - 60, panel.position.y + 20))
+		BaseScene.publish(main)
+		await _frames(runner)
+		var start := Vector2(panel.end.x + 40, panel.position.y - 70)
+		var end: Vector2 = panel.get_center()
+		runner.check(main.get_viewport().get_visible_rect().has_point(end) and panel.has_point(end), "MR3 %s fixture: the release point is on the panel, inside the view" % at)
+		_push_button(port, start, MOUSE_BUTTON_LEFT, true)
+		for step in range(1, 6): _push_move(port, start.lerp(end, step / 5.0))
+		var box: ReferenceRect = main.get_node("HUD/SelectionBox")
+		runner.check(box.visible and Rect2(box.position, box.size).is_equal_approx(Rect2(start, end - start).abs()), "MR3 %s: the box follows over the panel, got %s" % [at, Rect2(box.position, box.size)])
+		_push_button(port, end, MOUSE_BUTTON_LEFT, false)
+		await _frames(runner)
+		runner.check(main.orders.selected_ids == [above] and not box.visible, "MR3 %s: the release on the panel applies the box, the tank under the panel skipped, got %s (above %d, under %d)" % [at, main.orders.selected_ids, above, under])
+		port.free()
+	var scene: Array = await _routing_scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	var panel: Rect2 = _rect_of(main, "HUD/Hud/SelectionPanel")
+	var beside: int = _spawn_at(runner, main, Vector2(panel.end.x + 2, panel.position.y + 28))
+	BaseScene.publish(main)
+	await _frames(runner)
+	var press := Vector2(panel.end.x + 2, panel.position.y + 20)
+	runner.check(main.get_node("WorldView").resolve_pick(main.get_node("WorldView").get_global_transform_with_canvas().affine_inverse() * (press - Vector2(4, 0))).id == beside, "MR3 fixture: the tank beside the panel reaches under the release point")
+	_push_button(port, press, MOUSE_BUTTON_LEFT, true)
+	_push_move(port, press - Vector2(4, 0))
+	_push_button(port, press - Vector2(4, 0), MOUSE_BUTTON_LEFT, false)
+	await _frames(runner)
+	runner.check(main.orders.selected_ids == [scene[2]] and main.orders.inspected_id == -1, "MR3 a press just outside the panel released 4 px inside it selects nothing, got %s" % [main.orders.selected_ids])
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_card_takes_a_click_after_a_drag(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin(false)
+	var port: SubViewport = BaseScene.sized_port(runner, Vector2i(1280, 720), Vector2i(1280, 720))
+	var main = await overlays._scene(runner, Scene, port)
+	_arena(main)
+	await _frames(runner)
+	var scenes: Array[String] = []
+	main.change_scene = func(path: String) -> void: scenes.append(path)
+	_push_button(port, Vector2(640, 300), MOUSE_BUTTON_LEFT, true)
+	runner.check(main.orders.is_selecting(), "MR4 fixture: a press on the map starts a drag")
+	_victory(main)
+	await _frames(runner)
+	var at: Vector2 = main.get_node(CHANGE_SETUP).get_global_rect().get_center()
+	_push_move(port, at)
+	_push_click(port, at)
+	await _frames(runner)
+	runner.check(scenes == [main.LAUNCHER_SCENE], "MR4 a drag cut short by the match ending leaves the result card's buttons live, got %s" % [scenes])
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_releases_on_a_panel_are_the_huds(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await _routing_scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	var panel: Vector2 = _rect_of(main, "HUD/Hud/SelectionPanel").get_center()
+	var map: Vector2 = _rect_of(main, "HUD/Hud/SelectionPanel").end + Vector2(40, -140)
+	main.orders.arm_attack_move()
+	_push_button(port, map, MOUSE_BUTTON_LEFT, true)
+	_push_move(port, panel)
+	_push_button(port, panel, MOUSE_BUTTON_LEFT, false)
+	await _frames(runner)
+	runner.check(_pending(main, "attack_move") == 0 and main.orders._attack_move_mode, "MR5 an attack-move press on the map released on the panel sends nothing and stays armed")
+	_push_click(port, map)
+	runner.check(_pending(main, "attack_move") == 1, "MR5 fixture: the next click on the map attack-moves")
+	main.orders.selected_ids.assign([1])
+	main._refresh()
+	main.orders._menu_choose(0, false)
+	await _frames(runner)
+	var forecast: Control = main.get_node("HUD/Hud/Forecast")
+	runner.check(not main.orders._placement_kind.is_empty() and forecast.is_visible_in_tree(), "MR5 fixture: a placement is armed and the forecast card shows")
+	_push_move(port, map)
+	var ghost: Array = main.get_node("WorldView")._preview_cells.duplicate()
+	_push_move(port, panel)
+	runner.check(not ghost.is_empty() and main.get_node("WorldView")._preview_cells == ghost, "MR5 the ghost stays where it was while the pointer is on a panel")
+	_push_button(port, map, MOUSE_BUTTON_LEFT, true)
+	_push_button(port, panel, MOUSE_BUTTON_LEFT, false)
+	_push_click(port, forecast.get_global_rect().get_center())
+	await _frames(runner)
+	runner.check(_pending(main, "build") == 0 and not main.orders._placement_kind.is_empty(), "MR5 a placement released on the panel or clicked on the forecast card builds nothing, got %d" % _pending(main, "build"))
+	port.free()
+	overlays._end(saved)
 	return true

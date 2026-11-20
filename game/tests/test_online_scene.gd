@@ -75,6 +75,8 @@ func _online(runner, seat: int) -> Dictionary:
 	runner.root.add_child(main)
 	main.set_physics_process(false)
 	main.set_process(false)
+	# The open checklist covers the right of the view where these cases click, and it takes those clicks (Task 13).
+	main.get_node("HUD/Playtest/Checklist").hide()
 	await runner.process_frame
 	return {"main": main, "transport": transport, "lockstep": lockstep}
 

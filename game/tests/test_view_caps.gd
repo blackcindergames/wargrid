@@ -7,9 +7,12 @@ const Launcher = preload("res://scenes/launcher.tscn")
 const SkirmishMain = preload("res://scripts/match/match_screen.gd")
 const EXPAND := Window.CONTENT_SCALE_ASPECT_EXPAND
 const KEEP := Window.CONTENT_SCALE_ASPECT_KEEP
+const BaseScene = preload("res://tests/test_base_scene.gd")
+const Iso = preload("res://scripts/presentation/isometric.gd")
+const Fixture = preload("res://tests/economy_fixture.gd")
 
 func cases() -> Array[Callable]:
-	return [test_layout_for_table, test_caps_on_the_root_window, test_cap_writes_only_on_change, test_release_drops_a_queued_write, test_launcher_uncapped_round_trip]
+	return [test_layout_for_table, test_caps_on_the_root_window, test_cap_writes_only_on_change, test_release_drops_a_queued_write, test_launcher_uncapped_round_trip, test_bars_take_no_clicks]
 
 func _save(root: Window) -> Array:
 	return [root.size, root.content_scale_size, root.content_scale_aspect]
@@ -124,4 +127,50 @@ func test_launcher_uncapped_round_trip(runner) -> bool:
 	SkirmishMain.starts = before[2]
 	SkirmishMain.match_seed = before[3]
 	_restore(root, saved)
+	return true
+
+static func _window_click(root: Window, at: Vector2, button: MouseButton, pressed: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = pressed
+	event.position = at
+	event.global_position = at
+	root.push_input(event)
+
+func test_bars_take_no_clicks(runner) -> bool:
+	var root: Window = runner.root
+	var saved: Array = _save(root)
+	var main = await _match(runner)
+	main.get_node("HUD/Playtest/Checklist").hide()
+	await _resize(runner, root, Vector2i(3840, 1080))
+	main.driver.adopt(Fixture.make_world(10000, Vector2i(64, 64)))
+	var camera: Camera2D = main.get_node("Camera2D")
+	camera.position = Iso.world_to_plane(Vector2(32, 32))
+	camera.force_update_scroll()
+	await runner.process_frame
+	BaseScene.select_own_unit(main)
+	var before: Array[int] = main.orders.selected_ids.duplicate()
+	var queued: int = main.driver.queued().size()
+	var bar := Vector2(100, 540)
+	for button: MouseButton in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		for pressed: bool in [true, false]: _window_click(root, bar, button, pressed)
+	runner.check(not before.is_empty() and main.orders.selected_ids == before and main.driver.queued().size() == queued, "ST6 a left and a right click in the bar of a 3840x1080 window change no selection and queue nothing, got %s, %d queued" % [main.orders.selected_ids, main.driver.queued().size() - queued])
+	main.orders.selected_ids.assign(before)
+	_window_click(root, Vector2(1920, 300), MOUSE_BUTTON_RIGHT, true)
+	runner.check(main.driver.queued().size() == queued + 1, "ST6 fixture: a right-click inside the picture reaches the map")
+	var to_world: Transform2D = main.get_node("WorldView").get_global_transform_with_canvas().affine_inverse()
+	var spawned: Array[int] = []
+	for logical: Vector2 in [Vector2(300, 360), Vector2(-150, 360)]:
+		spawned.append(main.driver.pump.live().spawn(1, Iso.plane_to_world(to_world * logical), "usa_tank"))
+	BaseScene.publish(main)
+	runner.check(not spawned.has(-1), "ST6 fixture: one tank inside the picture, one past its left edge")
+	_window_click(root, Vector2(1920, 400), MOUSE_BUTTON_LEFT, true)
+	var motion := InputEventMouseMotion.new()
+	motion.position = Vector2(100, 700)
+	root.push_input(motion)
+	_window_click(root, Vector2(100, 700), MOUSE_BUTTON_LEFT, false)
+	runner.check(not main.orders.is_selecting() and not main.get_node("HUD/SelectionBox").visible and main.orders.selected_ids.has(spawned[0]) and not main.orders.selected_ids.has(spawned[1]), "ST6 a drag released in the bar ends at the picture's edge: the tank past it is not picked, got %s for %s" % [main.orders.selected_ids, spawned])
+	main.free()
+	_restore(root, saved)
+	await runner.process_frame
 	return true

@@ -142,6 +142,7 @@ func _add_playtest() -> void:
 	_pause.opened.connect(_playtest.observe_menu)
 	_pause.playtest_changed.connect(_playtest.set_active)
 	_playtest.set_active(PlaytestSettings.enabled())
+	for surface: Control in _playtest.surfaces(): hud.block(surface)
 	_playtest.stack_changed.connect(_place_perf)
 	$HUD/Economy.item_rect_changed.connect(_place_floor)
 	$HUD/Economy.visibility_changed.connect(_place_floor)
@@ -237,6 +238,7 @@ func _change_scene(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouse: _route_pointer(event)
 	if not (event is InputEventKey and event.pressed and not event.echo): return
 	if event.physical_keycode == KEY_F3: return
 	if event.is_action_pressed("deselect"):
@@ -248,6 +250,19 @@ func _input(event: InputEvent) -> void:
 		else: return
 	elif event.is_action_pressed("ui_accept"): return
 	get_viewport().set_input_as_handled()
+
+# A STOP panel takes motion before `_unhandled_input`: a drag keeps its box over it and the hover clears at its edge.
+func _route_pointer(event: InputEventMouse) -> void:
+	var view: Rect2 = get_viewport().get_visible_rect()
+	# The bars past a stretch cap show no map: a click there is nobody's, a drag ending there stops at the picture's edge.
+	if not view.has_point(event.position):
+		if orders.is_selecting():
+			var clamped := event.duplicate() as InputEventMouse
+			clamped.position = event.position.clamp(view.position, view.end)
+			orders.handle(clamped)
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event)
 
 func esc_opens_menu() -> bool:
 	return not _escape_pending() and not _playtest.holds_match() and not _typing() and not _pause.visible

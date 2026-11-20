@@ -18,7 +18,7 @@ const CombatFixture = preload("res://tests/combat_fixture.gd")
 const MovementWorkload = preload("res://scripts/debug/movement_workload.gd")
 
 func cases() -> Array[Callable]:
-	return [test_pick, test_pile_label_drawn_over_buildings, test_box_and_order,test_economy_picking,test_build_preview,test_click_hint_lifetime,test_hint_replaced_and_fades, test_resume_hint,test_depth_order_matches_comparator,test_battery_target_line,test_building_label_has_no_kind_id,test_horde_count,test_rebuild_laborer_unselectable, test_crate_marks_frc_only, test_passengers_not_pickable, test_terrain_redraws_only_when_map_changes, test_structures_redraw_only_when_they_change, test_small_pile_view, test_structures_redraw_when_a_pile_vanishes, test_pick_under_roof, test_structure_bodies_in_shared_list, test_building_health_bar_in_overlay_pass, test_health_bar_rule, test_health_color_ends, test_selection_is_ground_diamond, test_biome_change_redraws_terrain, test_grid_only_while_placing, test_chevron_placeholder, test_cues_draw_on_low_in_the_view, test_effects_age_per_tick_not_per_refresh, test_bodies_submitted_each_frame, test_quality_change_rebuilds, test_draw_timing_only_on_request, test_air_pick_box_follows_lift, test_pick_covers_drawn_body, test_selected_battery_line_without_a_shot, test_kind_info_follows_air_kinds, test_custom_ground_colors_rearm_the_biome, test_default_biome_is_sand, test_ground_is_built_once, test_blend_between_ticks, test_overlays_and_picks_follow_the_drawn_pose, test_stall_holds_and_does_not_rebuild, test_catch_up_and_restart_snap, test_same_tick_refresh_keeps_the_pose, test_heading_wraps, test_low_never_blends, test_smooth_off_never_blends, test_blend_leaves_effects_alone, test_wide_infantry_pick_default, test_pivot_roles_pick_extent_covers_every_pose, test_horde_ring_in_the_batch, test_neon_reaches_structures_and_rings, test_selection_is_a_set_for_per_frame_loops]
+	return [test_pick, test_pile_label_drawn_over_buildings, test_box_and_order,test_economy_picking,test_build_preview,test_click_hint_lifetime,test_hint_replaced_and_fades, test_resume_hint,test_depth_order_matches_comparator,test_battery_target_line,test_building_label_has_no_kind_id,test_horde_count,test_rebuild_laborer_unselectable, test_crate_marks_frc_only, test_passengers_not_pickable, test_terrain_redraws_only_when_map_changes, test_structures_redraw_only_when_they_change, test_small_pile_view, test_structures_redraw_when_a_pile_vanishes, test_pick_under_roof, test_structure_bodies_in_shared_list, test_building_health_bar_in_overlay_pass, test_health_bar_rule, test_health_color_ends, test_selection_is_ground_diamond, test_biome_change_redraws_terrain, test_grid_only_while_placing, test_chevron_placeholder, test_cues_draw_on_low_in_the_view, test_effects_age_per_tick_not_per_refresh, test_bodies_submitted_each_frame, test_quality_change_rebuilds, test_draw_timing_only_on_request, test_air_pick_box_follows_lift, test_pick_covers_drawn_body, test_selected_battery_line_without_a_shot, test_kind_info_follows_air_kinds, test_custom_ground_colors_rearm_the_biome, test_default_biome_is_sand, test_ground_is_built_once, test_blend_between_ticks, test_overlays_and_picks_follow_the_drawn_pose, test_stall_holds_and_does_not_rebuild, test_catch_up_and_restart_snap, test_same_tick_refresh_keeps_the_pose, test_heading_wraps, test_low_never_blends, test_smooth_off_never_blends, test_blend_leaves_effects_alone, test_wide_infantry_pick_default, test_pivot_roles_pick_extent_covers_every_pose, test_horde_ring_in_the_batch, test_neon_reaches_structures_and_rings, test_selection_is_a_set_for_per_frame_loops, test_resolve_pick_table]
 
 func test_pick(runner) -> bool:
 	var view = View.new()
@@ -995,5 +995,53 @@ func test_selection_is_a_set_for_per_frame_loops(runner) -> bool:
 	view.set_state(sim.snapshot(), ids.slice(0, 150))
 	runner.check(view._selection is Dictionary and view._selection.size() == 150 and view.selected_unit_lines().size() == 8 * view.pick_entities(Rect2(-1e6, -1e6, 2e6, 2e6)).filter(func(id: int) -> bool: return view._selection.has(id)).size(), "V34 each selected unit gets one diamond, looked up in a set")
 	runner.check(view.resume_candidate() == -1, "V34 more than one selected never resumes")
+	view.free()
+	return true
+
+# One world for the resolver table (PK1) and the scene's hover and click checks (PK2): [label, plane point, tier, id] rows.
+static func pick_world(runner) -> Dictionary:
+	var sim = Fixture.make_world(10000, Vector2i(48, 48))
+	sim.add_player(2, 1000)
+	sim.add_player(3, 1000)
+	var hub: int = Fixture.add_completed(sim, 1, "frc_defence", Vector2i(40, 20))
+	Fixture.load_unit(runner, sim, sim.spawn(1, Vector2(39.5, 20.5), "frc_rifle_infantry"), hub)
+	var own: int = sim.spawn(1, Vector2(10.5, 10.5), "usa_tank")
+	var enemy: int = sim.spawn(2, Vector2(20.5, 10.5), "usa_tank")
+	var ally: int = sim.spawn(3, Vector2(10.5, 20.5), "usa_tank")
+	var behind: int = sim.spawn(1, Vector2(30.5, 10.5), "usa_tank")
+	var in_front: int = sim.spawn(2, Vector2(32.5, 10.5), "usa_tank")
+	sim._entities[in_front].position = [30.6, 10.6]
+	var ground: int = sim.spawn(1, Vector2(36.55, 10.55), "usa_tank")
+	var heli: int = sim.spawn(1, Vector2(36.5, 10.5), "usa_collector")
+	var rider: int = sim.spawn(1, Vector2(9.5, 37.5), "usa_rifle_infantry")
+	var plant: int = Fixture.add_completed(sim, 2, "usa_power_plant", Vector2i(9, 37))
+	var neighbour: int = Fixture.add_completed(sim, 2, "usa_power_plant", Vector2i(24, 37))
+	var own_plant: int = Fixture.add_completed(sim, 1, "usa_power_plant", Vector2i(26, 37))
+	var pile: int = sim.add_supply_source(Vector2i(30, 30), 8)
+	var lift := Vector2(0, -8)
+	var rows: Array = [
+		["own unit", Iso.world_to_plane(Vector2(10.5, 10.5)) + lift, "unit", own],
+		["enemy unit", Iso.world_to_plane(Vector2(20.5, 10.5)) + lift, "unit", enemy],
+		["allied unit", Iso.world_to_plane(Vector2(10.5, 20.5)) + lift, "unit", ally],
+		["own unit behind an enemy drawn in front", Iso.world_to_plane(Vector2(30.5, 10.5)) + lift, "unit", behind],
+		["own aircraft over an own ground unit", Iso.world_to_plane(Vector2(36.5, 10.5)) + Vector2(0, -20.5), "unit", heli],
+		["unit on a building footprint", Iso.world_to_plane(Vector2(9.5, 37.5)) + lift, "unit", rider],
+		["enemy building", Iso.world_to_plane(Vector2(10.5, 38.5)), "building", plant],
+		["own building", Iso.world_to_plane(Vector2(27.0, 38.0)), "building", own_plant],
+		["pile", Iso.world_to_plane(Vector2(31.5, 31.5)), "pile", pile],
+		["ground", Iso.world_to_plane(Vector2(44.5, 44.5)), "ground", -1],
+		["unit inside a hub", Iso.world_to_plane(Vector2(40.5, 20.5)), "building", hub],
+		["own building on the edge it shares with an older enemy one", Iso.world_to_plane(Vector2(26.0, 38.0)), "building", own_plant]]
+	return {"sim": sim, "rows": rows, "in_front": in_front, "ground_unit": ground, "neighbour": neighbour}
+
+func test_resolve_pick_table(runner) -> bool:
+	var world: Dictionary = pick_world(runner)
+	var view = View.new()
+	view.set_state(world.sim.snapshot(), [])
+	var rows: Array = world.rows
+	runner.check(view.pick_entity(rows[3][1], true) == world.in_front and view.pick_entity(rows[4][1]) == world.ground_unit and view.pick_object(rows[11][1]) == world.neighbour, "PK1 fixture: the enemy is drawn in front of the own unit, the ground-layer order would pick the ground unit under the aircraft, and id order the enemy building on the shared edge")
+	for row: Array in rows:
+		var got: Dictionary = view.resolve_pick(row[1]) if view.has_method("resolve_pick") else {}
+		runner.check(got == {"tier": row[2], "id": row[3]}, "PK1 %s: %s %d, got %s" % [row[0], row[2], row[3], got])
 	view.free()
 	return true

@@ -36,14 +36,18 @@ func _init(screen: Node) -> void:
 func handle(event: InputEvent) -> void:
 	if not takes_orders(): return
 	if event.is_action_pressed("deselect"): inspected_id = -1
+	var mouse := event as InputEventMouse
+	var on_hud: bool = mouse != null and _screen.hud.blocks(mouse.position)
+	_hover(event, on_hud)
+	# A press that began on the map ends over a panel: only a drag goes on there, never a click, an order or the ghost.
+	if on_hud and not _selecting: return
 	if _placement_kind.is_empty() and _combat_input(event): return
-	_hover(event)
 	if _economy_keys(event): return
 	if not _placement_kind.is_empty():
 		_placement_input(event)
 		return
 	if _building_input(event): return
-	_selection_input(event)
+	_selection_input(event, on_hud)
 	if not is_selecting() and not _pending_placement.is_empty():
 		var pending: String = _pending_placement
 		_pending_placement = ""
@@ -126,9 +130,9 @@ func _combat_input(event: InputEvent) -> bool:
 			return true
 	return false
 
-func _hover(event: InputEvent) -> void:
+func _hover(event: InputEvent, on_hud: bool) -> void:
 	if event is InputEventMouseMotion:
-		var hovered: int = _screen._view.pick_object(_screen._view.make_canvas_position_local(event.position))
+		var hovered: int = -1 if on_hud else _screen._view.resolve_pick(_screen._view.make_canvas_position_local(event.position)).id
 		if hovered != _screen._view.hovered_id():
 			_screen._view.set_hovered(hovered)
 			_screen._reshow()
@@ -186,20 +190,9 @@ func _building_input(event: InputEvent) -> bool:
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed and not is_selecting():
 			var source: int = _screen._view.pick_source(plane)
 			if _context_order(source if source != -1 else _screen._view.pick_object(plane)) or _set_rally(plane): return true
-		if event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and is_selecting():
-			_update_drag(event.position)
-			var building: Dictionary = _screen._building(_screen.shown_state,_screen._view.pick_object(plane))
-			if not _dragged and not building.is_empty() and building.owner == _screen.local_player:
-				selected_building_id = building.id
-				selected_ids.clear()
-				_selecting = false
-				_screen._selection_box.hide()
-				_screen._reshow()
-				return true
-			selected_building_id = -1
 	return false
 
-func _selection_input(event: InputEvent) -> void:
+func _selection_input(event: InputEvent, on_hud: bool) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F3:
 		_screen._perf.toggle()
 	elif event.is_action_pressed("deselect"):
@@ -221,7 +214,7 @@ func _selection_input(event: InputEvent) -> void:
 				_ctrl = event.ctrl_pressed
 				_alt = event.alt_pressed
 			elif _selecting:
-				_finish_selection(event.position)
+				_finish_selection(event.position, on_hud)
 		elif event.pressed and not _selecting:
 			match event.button_index:
 				MOUSE_BUTTON_RIGHT:
@@ -239,32 +232,44 @@ func _update_drag(point: Vector2) -> void:
 	_screen._selection_box.size = rect.size
 	_screen._selection_box.visible = _dragged
 
-func _finish_selection(point: Vector2) -> void:
+func _finish_selection(point: Vector2, on_hud: bool) -> void:
 	_update_drag(point)
-	var picked: Array[int] = []
-	if _dragged:
-		var from: Vector2 = _screen._view.make_canvas_position_local(_start)
-		var to: Vector2 = _screen._view.make_canvas_position_local(point)
-		picked = _screen._view.pick_entities(Rect2(from, to - from))
-	else:
-		var id: int = _screen._view.pick_entity(_screen._view.make_canvas_position_local(point))
-		if id != -1 and _double and not _ctrl:
-			picked = _matching_ids(id, _alt)
-		elif id != -1:
-			picked.append(id)
-	selected_ids.clear()
-	if _shift:
-		selected_ids.assign(_start_selection)
-	for id in picked:
-		if not selected_ids.has(id):
-			selected_ids.append(id)
-	selected_ids.sort()
 	_selecting = false
 	_screen._selection_box.hide()
+	# A click released on a panel belongs to the HUD, even when the press was just beside it.
+	if not _dragged and on_hud:
+		_screen._reshow()
+		return
+	var picked: Array[int] = []
+	var plane: Vector2 = _screen._view.make_canvas_position_local(point)
+	var pick: Dictionary = {"tier": "ground", "id": -1}
+	if _dragged:
+		var from: Vector2 = _screen._view.make_canvas_position_local(_start)
+		picked = _screen._view.pick_entities(Rect2(from, plane - from), _screen.hud.blocking_rects())
+	else:
+		pick = _screen._view.resolve_pick(plane)
+	var own: bool = _owner(pick) == _screen.local_player
+	selected_building_id = pick.id if pick.tier == "building" and own else -1
+	inspected_id = pick.id if pick.tier != "ground" and not own else -1
+	if selected_building_id != -1 or inspected_id != -1: selected_ids.clear()
+	else: _select_units(pick, picked)
 	_screen._reshow()
-	inspected_id = -1
-	if not _dragged and selected_ids.is_empty(): inspected_id = _enemy_at(_screen._view.make_canvas_position_local(point))
-	_screen._reshow()
+
+# Shift-click toggles one own unit; Shift on ground or a drag keeps what was selected at the press.
+func _select_units(pick: Dictionary, picked: Array[int]) -> void:
+	if pick.tier == "unit" and _double and not _ctrl: picked = _matching_ids(pick.id, _alt)
+	elif pick.tier == "unit" and _shift and _start_selection.has(pick.id): _start_selection.erase(pick.id)
+	elif pick.tier == "unit": picked.append(pick.id)
+	selected_ids.clear()
+	if _shift: selected_ids.assign(_start_selection)
+	for id in picked:
+		if not selected_ids.has(id): selected_ids.append(id)
+	selected_ids.sort()
+
+func _owner(pick: Dictionary) -> int:
+	if pick.tier == "ground": return -1
+	var found: Dictionary = HudModel.inspected(_screen.shown_state, pick.id)
+	return found.get("owner", 0)
 
 func _matching_ids(id: int, whole_map: bool) -> Array[int]:
 	var view_rect: Rect2 = _screen._view.get_global_transform_with_canvas().affine_inverse() * _screen.get_viewport().get_visible_rect()
@@ -414,12 +419,6 @@ func _cancel_build() -> void:
 
 func _ground(event: InputEventMouseButton) -> Vector2:
 	return Iso.plane_to_world(_screen._view.make_canvas_position_local(event.position))
-
-func _enemy_at(plane: Vector2) -> int:
-	var id: int = _screen._view.pick_entity(plane, true)
-	if id == -1: return _screen._view.pick_target(plane, _screen.local_player)
-	var unit: Dictionary = _unit(id)
-	return id if not unit.is_empty() and unit.owner != _screen.local_player else -1
 
 func _order_defence(event: InputEventMouseButton) -> bool:
 	var building: Dictionary = _screen._building(_screen.shown_state, selected_building_id)

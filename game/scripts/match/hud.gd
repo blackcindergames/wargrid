@@ -57,6 +57,7 @@ var _counts: Dictionary = {}
 var _labels: Dictionary = {}
 var _last: Array = []
 var _shape: Array = []
+var _blockers: Array[Control] = []
 
 func _init() -> void:
 	name = "Hud"
@@ -70,8 +71,24 @@ func _init() -> void:
 	_build_notice()
 	_build_refusal_line()
 	_build_panel()
+	for surface: Control in [_top_strip, _forecast, _menu, _panel]: block(surface)
 
-# Mouse-transparent until the HUD routing task decides what the panels catch.
+# The spec's HUD blocks: a click, drag release or wheel on a panel never reaches the map.
+func block(surface: Control) -> void:
+	surface.mouse_filter = MOUSE_FILTER_STOP
+	surface.mouse_force_pass_scroll_events = false
+	_blockers.append(surface)
+
+func blocking_rects() -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	for surface: Control in _blockers:
+		if surface.is_visible_in_tree(): rects.append(surface.get_global_rect())
+	return rects
+
+func blocks(point: Vector2) -> bool:
+	return blocking_rects().any(func(rect: Rect2) -> bool: return rect.has_point(point))
+
+# Mouse-transparent unless `block` makes it a HUD surface; the notice and refusal line stay so.
 func _slab(slab_name: String, at: Vector2) -> PanelContainer:
 	var slab := PanelContainer.new()
 	slab.name = slab_name
@@ -232,6 +249,7 @@ func setup(economy: VBoxContainer) -> void:
 	_cancel_build.pressed.connect(cancel_build_pressed.emit)
 	_build_slab()
 	_read_keys()
+	block(economy)
 
 func reset() -> void:
 	clear_refusal()
@@ -508,8 +526,6 @@ func _build_panel() -> void:
 	_panel.grow_vertical = GROW_DIRECTION_BEGIN
 	_panel.custom_minimum_size.x = 408
 	_panel.draw.connect(_draw_panel_lines)
-	# PASS, not IGNORE: its own exit releases the row hold; unhandled clicks still reach the world.
-	_panel.mouse_filter = MOUSE_FILTER_PASS
 	_panel.mouse_exited.connect(_release_hold, CONNECT_DEFERRED)
 	# The title's line box is 18 against the page's 14, so 4 under it keeps the spec heights.
 	var box: BoxContainer = _box(_panel, "Box", VBoxContainer.new(), 4)
