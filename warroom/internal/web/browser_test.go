@@ -198,7 +198,9 @@ func TestPhoneBarStaysAtTheBottomBelowTheNote(t *testing.T) {
 		scrollTo(0, end);
 		const bar = document.querySelector('#phone').getBoundingClientRect();
 		const note = document.querySelector('.notebox').getBoundingClientRect();
-		return mid === innerHeight && bar.bottom === innerHeight && note.bottom <= bar.top ? '' : 'mid-scroll bar to ' + mid + ', note to ' + note.bottom + ', bar ' + bar.top + ' to ' + bar.bottom + ', window ' + innerHeight;
+		// Within a pixel: Linux fonts give a fractional page height, and the furthest scroll is a whole pixel.
+		const atEdge = (y) => Math.abs(y - innerHeight) < 1;
+		return atEdge(mid) && atEdge(bar.bottom) && note.bottom <= bar.top ? '' : 'mid-scroll bar to ' + mid + ', note to ' + note.bottom + ', bar ' + bar.top + ' to ' + bar.bottom + ', window ' + innerHeight;
 	})()`
 	if gap := eval(t, phone, check); gap != "" {
 		t.Errorf("sheet closed: %v", gap)
