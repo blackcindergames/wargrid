@@ -29,13 +29,9 @@ func TestMain(m *testing.M) {
 	os.Exit(runWithBrowser(m))
 }
 
-// Chromium on macOS because Playwright's Firefox does not start on macOS 27 (user, 2026-11-20); Firefox elsewhere, so CI covers it.
 func browserName() string {
 	if b := os.Getenv("WARROOM_BROWSER"); b != "" {
 		return b
-	}
-	if runtime.GOOS == "darwin" {
-		return "chromium"
 	}
 	return "firefox"
 }
@@ -43,6 +39,16 @@ func browserName() string {
 func runWithBrowser(m *testing.M) int {
 	name := browserName()
 	hint := installHint + name
+	if name == "firefox" && runtime.GOOS == "darwin" {
+		dir, err := os.MkdirTemp("", "warroom-moz-app-data")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "browser tests: %v\n", err)
+			return 1
+		}
+		defer func() { _ = os.RemoveAll(dir) }()
+		// shortcut: macOS 27 denies a terminal-started Firefox its app data (bugzilla 2069536, fixed in Firefox 158); drop once playwright-go ships Playwright 1.65.
+		_ = os.Setenv("MOZ_APP_DATA", dir)
+	}
 	pw, err := playwright.Run(&playwright.RunOptions{SkipInstallBrowsers: true})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "browser tests: Playwright is not usable (%v); %s\n", err, hint)
