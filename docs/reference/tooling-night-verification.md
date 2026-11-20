@@ -3,15 +3,15 @@
 Plan: [tooling night](../superpowers/plans/2026-11-20-tooling-night.md). Decisions: [design answers, Tooling night (user, 2026-11-20)](design-answers-2026-11-08.md#tooling-night-user-2026-11-20).
 
 ```text
-Resume record (updated 2026-11-20, Task 3 green, not committed)
-Branch / base commit / working-tree state: tooling-night in ~/projects/wargrid-wt-tooling at 33fff081 (Tasks 1 and 2 committed); Task 3 changes uncommitted
-Last green task / next incomplete task: Task 3 (green, awaiting review and local commit) / Task 4
-Changed paths since last commit: game/tests/run_tests.gd, game/tests/test_runner.gd, tools/case_times.py, tools/test_case_times.py, this file
-Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1246 / 152732 / 0 / 0 / TESTS PASSED 152732
+Resume record (updated 2026-11-20, Task 4 evidence done)
+Branch / base commit / working-tree state: tooling-night in ~/projects/wargrid-wt-tooling at 3b2b9dad (Tasks 1 to 3 committed); only this file changed by Task 4
+Last green task / next incomplete task: Task 4 (evidence only, answered) / Task 5
+Changed paths since last commit: this file only
+Last command / cases / checks / failures / exit / marker: WARGRID_CASE_STATS=1 plus the four trace env vars, sh tools/run_tests.sh / 1246 / 152739 / 0 / 0 / TESTS PASSED 152739
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: F15 design and public tick_hash() approved (user, 2026-11-20); local commit per GREEN task pre-authorized for the night run; no push, no merge. Guide chapters 10 and 13 (incl. the case_times usage line) stay with Task 6
+Approved decisions, pre-authorizations used, deferred gates: unchanged from Task 3; Task 4 finding goes into STATUS F19 in Task 6
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: review Task 3 diff, commit locally, then Task 4 (plan heading "Task 4: Check-count drift (evidence only)")
+Next exact action: Task 5 (plan heading "Task 5: Definitions lint")
 ```
 
 ## Evidence
@@ -38,3 +38,6 @@ Next exact action: review Task 3 diff, commit locally, then Task 4 (plan heading
 | 2026-11-20 | 3 review fixes | `python3 tools/test_case_times.py` before the fix | CT5 (filtered log), CT6 (no pass marker or FAIL line), CT7 (duplicate name, max in either order) fail as assertions; raw shard logs sum (CT1 raw) already passed | tooling-night 33fff081 + Task 3 changes, uncommitted |
 | 2026-11-20 | 3 review fixes | `sh tools/run_python_checks.sh`; `sh tools/run_lint.sh`; `sh tools/run_warnings.sh`; `sh tools/run_tests.sh` | all exit 0; 10 Python tests OK; CASES 1246 CHECKS 152732 FAILURES 0, TESTS PASSED 152732; load 1.87 at start. Fixes: `CASE_FILTER <only>` marker printed by a filtered stats run and refused by `--write`; `--write` also needs one TESTS PASSED per CASES line and no FAIL line; duplicate names keep the max; atomic rewrite (temp file, `os.replace`) | tooling-night 33fff081 + Task 3 changes, uncommitted |
 | 2026-11-20 | 3 review fixes | filtered stats run (`WARGRID_CASE_STATS=1 WARGRID_TEST_ONLY=test_case_stat_line`), then `--write` on a copy of run_tests.gd; old full stats log `--write` on the copy | log has `CASE_FILTER` line; write exits 2 "filtered", copy unchanged; the full log rewrites the copy identical to the committed table (no regeneration needed) | tooling-night 33fff081 + Task 3 changes, uncommitted |
+| 2026-11-20 | 4 | `WARGRID_CASE_STATS=1 sh tools/run_tests.sh` twice, plain (logs t4_a, t4_b) | both CASES 1246 CHECKS 152732 FAILURES 0, exit 0; per-case check counts identical in all 1232 names (1246 lines); load average 2.38 and 3.79 at start | tooling-night 3b2b9dad, clean |
+| 2026-11-20 | 4 | same with `WARGRID_REPLAY_TRACE`, `WARGRID_ECONOMY_REPLAY_TRACE`, `WARGRID_COMBAT_REPLAY_TRACE`, `WARGRID_TEAM_REPLAY_TRACE` set to files under the logs folder (log t4_c) | CASES 1246 CHECKS 152739 FAILURES 0, exit 0; load 4.03 at start (noisy, counts unaffected) | tooling-night 3b2b9dad, clean |
+| 2026-11-20 | 4 Answer | `python3 -I t4compare.py` (per-case CASE_STAT counts, runs a, b, c) | Only four cases differ, all in the trace run: test_trace +2 (3643 to 3645), test_economy_repeatability +2 (2451 to 2453), test_combat_repeatability +2 (1237 to 1239), test_team_match_prefix +1 (10 to 11); total +7 = 152739 - 152732. Cause: each writes its trace only when its env var is set and adds checks then (R1/R3/R4 "opens" and "writes", TB3 "opens"; `test_replay.gd:45,77,235`, `test_team_match.gd:104`). The 144200 to 144212 spread is the trace-env runs; two identical plain runs never differ, so no unexplained drift. CASE_SECONDS table unchanged | tooling-night 3b2b9dad, clean |
