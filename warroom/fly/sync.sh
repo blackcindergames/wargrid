@@ -8,9 +8,8 @@ site=$here/site
 rm -rf "$site"
 mkdir -p "$site/src" "$site/rounds"
 cd "$repo/$app"
-for f in *.go; do case $f in *_test.go) ;; *) cp "$f" "$site/src/" ;; esac; done
-cp go.mod go.sum "$site/src/"
-cp -R static "$site/src/static"
+# The module without tests, templ sources or generated-asset inputs; internal/web/static is embedded.
+tar --exclude='*_test.go' --exclude='*.templ' -cf - main.go priv_*.go go.mod go.sum internal | tar -xf - -C "$site/src"
 cd "$repo"
 
 # Demo rounds stay local: the public site then accepts no demo keys.

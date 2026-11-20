@@ -29,6 +29,10 @@ linters:
     presets:
       - common-false-positives
       - std-error-handling
+    rules:
+      # Internal packages: doc comments on every exported symbol would only restate the names.
+      - linters: [revive]
+        text: "exported|package-comments"
 
 formatters:
   enable:

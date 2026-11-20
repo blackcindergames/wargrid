@@ -20,6 +20,20 @@ Then open `http://127.0.0.1:8780/` in Firefox. Paths are relative to the working
 
 Never use ports 8767 to 8772 (other servers run there).
 
+On SIGINT or SIGTERM the server stops accepting, lets requests in flight finish (a pick being written lands first) for up to 4 s, then closes the rest; a second signal exits at once. A serve error exits with status 1. As root on Linux (the Fly image) it first hands the picks directory to uid 65534 and drops to it, and logs the uid it runs as.
+
+## Code layout
+
+| Package | Job |
+|---|---|
+| `main.go` | Reads the environment, listens, shuts down on a signal; `go:generate` lines; `priv_linux.go` drops root |
+| `internal/store` | The picks file: one lock, atomic writes, key and size caps |
+| `internal/rounds` | Round and step YAML types, strict loading and validation, stage control definitions, tune params |
+| `internal/stage` | Stage controls resolved per request, the render-page hash, crops and window sizes, the numbers panel (contrast, CIE76) |
+| `internal/web` | Routes and handlers, query parsing, view models, templ views, embedded `static/` |
+
+Dependencies point one way: `web` uses `stage`, `rounds` and `store`; `stage` uses `rounds`; `rounds` uses `store` (the `Entry` type).
+
 ## Routes
 
 State lives in the address, not in a hash, so every view is a link.
@@ -121,7 +135,7 @@ How it hangs together:
 
 ## Islands build
 
-`islands/` holds the Svelte sources, `package.json` with exact versions and `package-lock.json`. `npm run build` (Vite library mode, one ES module) writes `static/islands.js`, which is committed and embedded like `app.css`, so `go build`, `go test` and the Docker build need no Node. `go generate ./...` runs `npm ci` and the build; `tools/check_generated.sh` rebuilds in a temporary copy and fails when `static/islands.js` differs.
+`islands/` holds the Svelte sources, `package.json` with exact versions and `package-lock.json`. `npm run build` (Vite library mode, one ES module) writes `internal/web/static/islands.js`, which is committed and embedded like `app.css`, so `go build`, `go test` and the Docker build need no Node. `go generate ./...` runs `npm ci` and the build; `tools/check_generated.sh` rebuilds in a temporary copy and fails when `internal/web/static/islands.js` differs.
 
 ## Build and checks
 
@@ -140,7 +154,7 @@ How it hangs together:
 | Tweakpane | 4.0.5 |
 | Node, npm | only for `islands/`; built with Node 24, npm 12 |
 
-The generated files are committed (`*_templ.go`, `static/app.css`, `static/islands.js`), so `go build` and `go test` need no templ, Tailwind or Node. After changing a `.templ` file, `static/input.css` or `islands/`:
+The generated files are committed (`internal/web/*_templ.go`, `internal/web/static/app.css`, `internal/web/static/islands.js`), so `go build` and `go test` need no templ, Tailwind or Node. After changing a `.templ` file, `internal/web/static/input.css` or `islands/`:
 
 ```sh
 sh tools/fetch.sh     # Tailwind CLI and daisyUI into .bin/ (git-ignored); checks each download's SHA-256
@@ -167,15 +181,17 @@ fly volumes create decision_picks --region fra --size 1 -a wargrid-lab-test   # 
 fly deploy warroom/fly
 ```
 
-`sync.sh` copies the Go sources, the rounds not marked `demo: true` (so the public site has no demo rounds or keys) and every `docs/...` and `game/...` path their YAML and the Go sources name, plus the local files those HTML pages load, the backdrops, `layout.json` and the game font. It copies only files Git tracks: a file that exists only on disk, such as an owner mock, is reported as `skipped, not tracked by Git` and stays off the public site. The Dockerfile builds a static binary (`CGO_ENABLED=0 go build -trimpath`) and runs it on Alpine as `nobody` after handing the volume to it; the machine stops when idle and starts on the next request; `WARROOM_PICKS` is `/data/picks.json`, the prototype's file and format. It replaces the prototype's image on `wargrid-lab-test`: both cannot be live there.
+`sync.sh` copies the Go sources, the rounds not marked `demo: true` (so the public site has no demo rounds or keys) and every `docs/...` and `game/...` path their YAML and the Go sources name, plus the local files those HTML pages load, the backdrops, `layout.json` and the game font. It copies only files Git tracks: a file that exists only on disk, such as an owner mock, is reported as `skipped, not tracked by Git` and stays off the public site. The Dockerfile builds a static binary (`CGO_ENABLED=0 go build -trimpath`) and copies it into `gcr.io/distroless/static-debian12` (root variant, pinned by digest; no shell). Fly's volume and `[mounts]` docs say nothing about who owns a mount, and community reports say mounts arrive root-owned, so the binary chowns the picks directory to 65534 and drops root itself (`priv_linux.go`); the machine stops when idle and starts on the next request; `WARROOM_PICKS` is `/data/picks.json`, the prototype's file and format. It replaces the prototype's image on `wargrid-lab-test`: both cannot be live there.
 
-Test the image without Fly with Apple's `container` CLI (`container system start` first):
+Test the image without Fly with Apple's `container` CLI (`container system start` first). Use a named volume: a host directory cannot be chowned through the shared mount.
 
 ```sh
 container build -t warroom-test warroom/fly
-container run -d --name warroom-test -p 8783:8780 -e WARROOM_PICKS=/data/picks.json --tmpfs /data warroom-test
+container volume create warroom-test-vol
+container run -d --name warroom-test -p 8783:8780 -e WARROOM_PICKS=/data/picks.json -v warroom-test-vol:/data warroom-test
 curl -s http://127.0.0.1:8783/health
-container stop warroom-test && container rm warroom-test
+container logs warroom-test                  # "running as uid 65534"
+container stop warroom-test && container rm warroom-test && container volume rm warroom-test-vol && container image rm warroom-test
 ```
 
 The endpoint has no login: anyone with the URL can read `/picks.json` (notes included) and overwrite a pick.
@@ -184,17 +200,17 @@ The endpoint has no login: anyone with the URL can read `/picks.json` (notes inc
 
 Things that cost time with the pinned versions.
 
-- htmx 4 attributes are not inherited unless they say so: `hx-boost:inherited`, `hx-target:inherited` (`layout.templ`).
+- htmx 4 attributes are not inherited unless they say so: `hx-boost:inherited`, `hx-target:inherited` (`internal/web/layout.templ`).
 - htmx 4 swaps 4xx and 5xx responses by default. The `<body>` sets `hx-status:4xx:inherited="swap:none"` and `hx-status:5xx:inherited="swap:none"`, so a refused pick leaves the page alone and `warroom.js` shows "Not recorded" with Retry.
-- htmx 4 sends `HX-Request-Type: partial` or `full`: `full` when the target is `<body>` (or the request has `hx-select`). A history restore targets `<body>`, so it sends `full` and the server must answer with the whole document, not the fragment (`render.go`, `Vary: HX-Request-Type`).
+- htmx 4 sends `HX-Request-Type: partial` or `full`: `full` when the target is `<body>` (or the request has `hx-select`). A history restore targets `<body>`, so it sends `full` and the server must answer with the whole document, not the fragment (`internal/web/render.go`, `Vary: HX-Request-Type`).
 - htmx 4 event names are `htmx:after:request`, `htmx:response:error`, `htmx:error`, `htmx:after:swap` and `htmx:config:request` (used in `warroom.js`), not the htmx 2 `htmx:afterRequest` family.
-- htmx 4's `innerMorph` keeps an iframe and only sets its new `src`; when the address differs only after `#`, that is a hash change and the render page does not redraw. Frames carry an id hashed from their address (`frameID` in `pics.go`), so a changed frame is replaced and an unchanged one survives.
+- htmx 4's `innerMorph` keeps an iframe and only sets its new `src`; when the address differs only after `#`, that is a hash change and the render page does not redraw. Frames carry an id hashed from their address (`frameID` in `internal/web/pics.go`), so a changed frame is replaced and an unchanged one survives.
 - templ: `@Comp() { text }` on one line is a call with children (the literal text `text`), not a call followed by an expression.
-- daisyUI's `@layer daisyui` outranks Tailwind's `components` layer, so an override of a daisyUI class must sit outside every layer (the end of `static/input.css`).
+- daisyUI's `@layer daisyui` outranks Tailwind's `components` layer, so an override of a daisyUI class must sit outside every layer (the end of `internal/web/static/input.css`).
 - Svelte 5 custom elements (`customElement: true` in the plugin options, `<svelte:options customElement={{tag, shadow: 'none', props}} />`): with `shadow: 'none'` the component renders into the element itself and `$host()` is that element, which is what Tweakpane gets as its container (no template needed). Props come from attributes only when declared: `props: {params: {attribute: 'data-params', type: 'Array'}}`; the type does the `JSON.parse`, otherwise you get the string, and an undeclared prop looks for an attribute named like the prop in lower case.
 - A Svelte custom element builds its component one microtask after `connectedCallback` and destroys it one microtask after `disconnectedCallback` (so a DOM move does not rebuild). An `$effect` that creates the pane and returns `pane.dispose` is therefore enough to start and stop it on htmx swaps.
 - Runes: `$props()` values are reactive, so reading `params` inside the `$effect` rebuilds the pane when `data-params` changes; the values object handed to Tweakpane is a plain object, not `$state`, because Tweakpane writes into it.
 - Tweakpane 4.0.5 ships `.d.ts` files that import `@tweakpane/core`, which is not installed, so the editor has no types; the API (`new Pane({container})`, `addBinding`, `pane.on('change')`, `dispose`) was read from `dist/tweakpane.js`. Number steps count from the initial value, not from `min` (`StepConstraint(step, initialValue)`), which is why a loaded `value` must lie on the grid from `min` and the server snaps from `min`.
-- Tweakpane's slider is a focusable `div` with its own arrow-key handler that does not stop the event, so `warroom.js` would flip the step; it now ignores keys from inside `wr-tune` except Enter. Its text inputs are covered by the existing input rule. It injects its own `<style>` and is themed with `--tp-*` custom properties on `wr-tune` (`static/input.css`); its list is a native `<select>` that stays light grey unless `--tp-button-*` is set.
+- Tweakpane's slider is a focusable `div` with its own arrow-key handler that does not stop the event, so `warroom.js` would flip the step; it now ignores keys from inside `wr-tune` except Enter. Its text inputs are covered by the existing input rule. It injects its own `<style>` and is themed with `--tp-*` custom properties on `wr-tune` (`internal/web/static/input.css`); its list is a native `<select>` that stays light grey unless `--tp-button-*` is set.
 - Vite library mode: `build.emptyOutDir` must be `false` because `outDir` is `static/`, which holds the rest of the site. The output keeps whitespace and comments (about 220 KB, 47 KB gzipped). The Svelte plugin's "no Svelte config found" line is harmless; the compiler option sits in `vite.config.js`.
 - Headless Firefox through WebDriver cannot be made narrower than 500 px wide; for a 390 px layout load the page in a same-origin `<iframe>` of that width. In a WebDriver test, `clear` on a Tweakpane text input fires `change` and the pane reverts it; select the text and type instead.

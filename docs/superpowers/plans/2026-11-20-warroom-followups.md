@@ -20,7 +20,7 @@ Owner (user, 2026-11-20): the flat `package main` is hard to read; graceful shut
 ## Task A: stdlib router, write tokens, pick history, schema, dev loop (Go)
 
 1. Replace chi with `net/http.ServeMux` (Go 1.22+ patterns: `GET /r/{round}/{n}`, `POST /r/{round}/{step}/pick`, `r.PathValue`). Recoverer and request log as two small middleware funcs. Drop chi from `go.mod`.
-2. Write tokens: `WARROOM_SECRET` (env; when unset, writes are open and the log says so once, for local use). Token = base64url HMAC-SHA256 over the round id, truncated to 16 bytes; link `?t=<token>` on `/r/{round}...`; pages carry it in every link and form (like control params). Pick/note POSTs without a valid token for that round: 403 and the page shows "Read only: this link cannot record." Pages without a token render read-only (no pick/note controls, a quiet notice). `GET /picks.json` needs `?t=` of an admin token (HMAC over `"admin"`). `go run . token <round>|admin` prints a token. Constant-time compare. Tests.
+2. Write tokens: `WARROOM_SECRET` (env; when unset, writes are open and the log says so once, for local use). Token = base64url HMAC-SHA256 over the round id, truncated to 16 bytes; link `?t=<token>` on `/r/{round}...`; pages carry it in every link and form (like control params). Pick/note POSTs without a valid token for that round: 403 and the page shows "Read only: this link cannot record." Pages without a token render read-only (no pick/note controls, a quiet notice). `GET /picks.json` needs `?t=` of an admin token (HMAC over `"admin"`). `go run . token <round>|admin` prints a token. Constant-time compare. Tokens never expire; changing `WARROOM_SECRET` revokes all (user, 2026-11-20). Logging with `log/slog` (text handler), config from env only. Tests.
 3. Pick history: append-only `picks.jsonl` (one JSON line per write: `{t, key, pick, note, value?}`, RFC 3339 UTC) next to `picks.json`; `picks.json` stays the current-state file (same format, written as today). Append with `O_APPEND` + fsync under the existing mutex, before the state write. Summary shows "changed N times" per row when N > 1 (no history UI beyond that). `GET /history.jsonl` with the admin token. Key cap unchanged; history file size cap 5 MiB (507 past it). Tests.
 4. JSON Schema for round YAML generated from the Go types (`github.com/invopop/jsonschema`, a version at least two weeks old) by `go run . schema > rounds/round.schema.json` in `go generate`; each round/step YAML gets the yaml-language-server modeline `# yaml-language-server: $schema=../round.schema.json`; `check_generated.sh` covers it. Strict decode stays the authority.
 5. Dev loop: `tools/dev.sh` runs `go tool templ generate --watch --proxy=http://127.0.0.1:8780 --cmd="go run ."` (verify flags against templ v0.3.1100's `--help`); rounds already reload per request. README.
@@ -31,12 +31,14 @@ Read first: `docs/art-direction/ART_DIRECTION.md` (§12 interface mock-ups: the 
 
 ## Task C: gaps the next packages need
 
-1. Options A to H (keys `E` to `H` and `5` to `8`; resolve clashes with the key map: `G`, `H` are ground and HUD today, so move ground/HUD/world to free keys and update the legend, phone bar and README key table; propose the new map in the report). Side-by-side grid wraps beyond 4.
+1. Options A to H: `A` to `D` stay letters, `1` to `8` pick any option, so E to H are digits `5` to `8` only; `G`, `H`, `F` keep their control meaning (user, 2026-11-20). Legend, phone bar and README key table updated. Side-by-side grid wraps beyond 4.
 2. Round intro: `intro` field on the round (judging conditions, what neutral answers ship as), shown above step 1 and in the summary.
 3. Measurement tables: a render page may post `{type: 'wr:measure', rows: [[label, value, ok?]]}` to its parent (same origin, checked); War Room shows them under the stage per option. Wire one demo (`static/demo/scene.html` reports unit count and outline px).
 4. A page-script error banner (`window` `error` and `unhandledrejection`).
 5. A visible Large button on desktop.
 6. README: `V`, `X`, `⇧F` work only as a step's own `extra` controls.
+
+7. Minify the island bundle (`build.minify` in `islands/vite.config.js`; it ships unminified at about 219 KB).
 
 ## Task D: browser tests (playwright-go)
 
@@ -46,6 +48,20 @@ Read first: `docs/art-direction/ART_DIRECTION.md` (§12 interface mock-ups: the 
 
 Delete `tools/decision_page/` and its references (`tools/pyproject.toml` mypy path, `tools/run_python_checks.sh` if it lists it, `docs/images/hud-v5/source/README.md` pointer, `shoot.sh` mentions); `sh tools/run_python_checks.sh`, `sh tools/run_shell_checks.sh`, `sh tools/check_public.sh` exit 0. README brought current (routes, tokens, history, schema, dev loop, CSS layers, key map, learning notes on ServeMux patterns). Then one Opus correctness/security reviewer on the whole batch, the player-experience reviewer on the UI parts, one fix round, a lean pass.
 
+## Task F: workflow docs point at War Room (after E)
+
+Owner (user, 2026-11-20): art labs and decision rounds go through War Room from now on; the workflow docs say so. Grep first (`rg -n -i 'a/b|picks.json|server.py|decision page|click-to-record|round[0-9]+\.html|lab' AGENTS.md docs/kickoff.md docs/wrapup.md docs/night-run.md docs/milestone-prompt.md docs/packages.md docs/development.md docs/art-direction docs/reference/art-godot-integration.md docs/guide`), then short edits, linking `warroom/README.md` rather than repeating it:
+- `AGENTS.md`: the art-work and UI bullets name War Room as the place for owner decision rounds (rounds as YAML in `warroom/rounds/`, picks read back from `picks.json`/`/picks.json` with the admin token); the old per-round A/B pages are history. "A/B" is only the name: a step offers as many options as the question needs (up to A to H), not always two (user, 2026-11-20); say so where the docs say A/B.
+- `docs/kickoff.md`: "Open for you" lists unanswered War Room rounds (from `picks.json` via the summary logic or a `go run . open` style command if one is cheap; otherwise a manual check line).
+- `docs/wrapup.md`: picks recorded today are read back from War Room and their decisions written into the design answers; finished rounds noted in the session notes.
+- `docs/night-run.md` and `docs/milestone-prompt.md`: a night or milestone run that ends at an owner look prepares a War Room round instead of a loose page.
+- `docs/packages.md`: one rider on the art packages (P2.3b, P3, P2.4, P2.5, P2.6): owner looks run as War Room rounds; P2.4/P2.6 motion looks through the lab step once it exists. Do not rename packages (`python3 tools/roadmap.py` must stay consistent).
+- `docs/development.md`: War Room in the commands and Start here list; the codebase guide's tooling chapter gets a short War Room section with its `Checked against` footer.
+- Session notes are private (`~/projects/wargrid-private/docs/session-notes.md`): the coordinator adds the War Room line there, not in this repo.
+These files are also edited on `main` by other runs; keep each edit to a few lines so the merge stays small. Checks: links and paths resolve, `python3 tools/roadmap.py` leaves the README consistent, `sh tools/check_public.sh` exit 0. A fresh Opus review of the docs' code claims before the commit.
+
 ## Not in this batch
 
 Godot lab step (next, before P2.4), CI job, fly deploy, audio features.
+
+Godot lab step, owner answers (user, 2026-11-20), for its own brainstorm and spec after this batch: the game's web build in one persistent iframe (survives htmx step changes), driven over `postMessage`; options compared by flip only (A to H swap the variant live in one instance); the game forwards keys it does not use to War Room; on a phone, short muted clips recorded from the game by default plus a "Start the game anyway" button. The lab uses a single-threaded web preset (all presets have `variant/thread_support=false` today, `game/export_presets.cfg`); the threaded preset of SB5b is not needed for a lab scene (user, 2026-11-20). Settled without a spike (2026-11-20): the lab iframe lives in a fixed layout slot outside the htmx swap region `#page`, so it survives step changes in every browser (htmx 4's `hx-preserve` moves elements with `Element.moveBefore` where the browser has it and falls back to `insertBefore`, which reloads an iframe). Variants map onto the in-game lab's look sets (`game/scripts/lab/lab_look.gd`: palette token sets `SET_A`/`SET_B`, owner colours, bar rules, value sizes) via `{type: 'wr:params', variant, params}`; shape sets join as a look set when P2.4's design defines them.

@@ -1,0 +1,407 @@
+package web
+
+templ Fmt(s string) {
+	for _, p := range fmtParts(s) {
+		if p.Bold {
+			<span class="w">{ p.Text }</span>
+		} else {
+			{ p.Text }
+		}
+	}
+}
+
+templ Kbd(label string) {
+	if label != "" {
+		<kbd class="kbd kbd-xs">{ label }</kbd>
+	}
+}
+
+templ MarkRing(m MarkView) {
+	<i class="mark" style={ m.Style }>
+		if m.Label != "" {
+			<b class={ templ.KV("r", m.Right), templ.KV("u", m.Below) }>{ m.Label }</b>
+		}
+	</i>
+}
+
+templ Picture(p PicView) {
+	switch p.Kind {
+		case "frame":
+			<div class={ "pic", templ.KV("live", p.Live) } data-cw={ p.CW } style={ p.Style } data-large?={ p.Large } data-label={ p.Label }>
+				<div class="sc" style={ p.ScStyle }>
+					<iframe id={ p.FrameID } tabindex="-1" title={ p.Title } src={ p.Src } style={ p.FrameStyle }></iframe>
+					if p.Hud != nil {
+						<iframe id={ p.Hud.ID } tabindex="-1" title="HUD layer" class="hudlayer" src={ p.Hud.Src } style={ p.Hud.Style }></iframe>
+					}
+					for _, m := range p.Marks {
+						@MarkRing(m)
+					}
+				</div>
+				if p.Whole != nil {
+					<template data-whole>
+						@Picture(*p.Whole)
+					</template>
+				}
+			</div>
+		case "img":
+			<div class="pic img" data-large?={ p.Large } data-label={ p.Label }>
+				<img src={ p.URL } alt={ p.Label } data-local?={ p.Local }/>
+				for _, m := range p.Marks {
+					@MarkRing(m)
+				}
+			</div>
+		case "video":
+			<div class="pic vid">
+				<video src={ p.URL } muted loop playsinline controls preload="metadata" aria-label={ p.Label }></video>
+			</div>
+		case "missing":
+			<div class="pic none">
+				if p.Local {
+					<span class="localonly">Your local file, not published with this page: { p.URL }</span>
+				} else {
+					<span class="missing">[picture missing: { p.URL }]</span>
+				}
+			</div>
+		default:
+			<div class="pic none"><span class="missing">[no picture]</span></div>
+	}
+}
+
+templ Figures(list []FigureView) {
+	if len(list) > 0 {
+		<div class="extras">
+			for _, f := range list {
+				<figure>
+					<figcaption>@Fmt(f.Label)</figcaption>
+					@Picture(f.Pic)
+				</figure>
+			}
+		</div>
+	}
+}
+
+templ Folds(list []FoldView) {
+	for _, f := range list {
+		<details class="fold">
+			<summary>@Fmt(f.Label)</summary>
+			if f.Text != "" {
+				<p>@Fmt(f.Text)</p>
+			}
+			@Figures(f.Figures)
+		</details>
+	}
+}
+
+func syncOf(n NoteView) string {
+	if n.InForm {
+		return "#answer:queue last"
+	}
+	return "this:queue last"
+}
+
+func subVals(n NoteView) string {
+	s, _ := templ.JSONString(map[string]string{"sub": n.Sub})
+	return s
+}
+
+templ NoteField(n NoteView) {
+	<textarea
+		id={ n.ID }
+		name="note"
+		class="textarea w-full"
+		data-note={ n.What }
+		data-chip={ n.Chip }
+		if n.InForm {
+			form="answer"
+		}
+		if n.Placeholder != "" {
+			placeholder={ n.Placeholder }
+		}
+		autofocus?={ n.Hint != "" }
+		hx-post={ n.Post }
+		hx-target="#rec"
+		hx-swap="innerHTML"
+		hx-sync={ syncOf(n) }
+		hx-trigger="input changed delay:700ms, blur changed"
+		if n.Sub != "" {
+			hx-vals={ subVals(n) }
+		}
+	>{ n.Value }</textarea>
+}
+
+templ NoteBox(n NoteView) {
+	<section class="notebox">
+		<label for={ n.ID } class="h">{ n.Label }</label>
+		@NoteField(n)
+		<p class="nhint" id="nhint">{ n.Hint }</p>
+	</section>
+}
+
+templ StepNav(n NavView) {
+	<nav class="stepnav" aria-label="Steps">
+		<a class="btn btn-sm" href={ templ.SafeURL(n.Prev) } data-key="arrowleft">@Kbd("←") Back</a>
+		<a class="btn btn-sm" href={ templ.SafeURL(n.Next) } data-key="arrowright">{ n.NextLabel } @Kbd("→")</a>
+		<span class="flex-1"></span>
+		<button type="button" class="btn btn-sm" data-act="legend">@Kbd("?") Keys</button>
+	</nav>
+}
+
+templ Head(h HeadView) {
+	<section class="head">
+		<span class="n">{ h.Eyebrow }</span>
+		<h1>@Fmt(h.Question)</h1>
+		if h.ClaudePick != nil {
+			<p class="cpline">
+				<span class="badge badge-warning badge-sm cp">Claude's pick</span>
+				<b>@Fmt(h.ClaudePick.Label)</b>
+				if h.ClaudePick.Why != "" {
+					· @Fmt(h.ClaudePick.Why)
+				}
+			</p>
+		}
+		<p id="rec" class="rec" aria-live="polite">{ h.Record }</p>
+	</section>
+}
+
+templ NumbersPanel(rows []NumbersRow) {
+	if len(rows) > 0 {
+		<section class="numbers">
+			<span class="h">Numbers (K hides)</span>
+			<div class="overflow-x-auto">
+				<table class="table table-xs">
+					<thead>
+						<tr><th></th><th>Contrast</th><th>ΔE</th><th>Deut.</th><th>Prot.</th></tr>
+					</thead>
+					<tbody>
+						for _, r := range rows {
+							<tr>
+								<th>
+									<i class="sw" style={ templ.SafeCSS("background:" + r.AHex) }></i>{ r.AName } <span>{ r.AHex }</span><br/>
+									<i class="sw" style={ templ.SafeCSS("background:" + r.BHex) }></i>{ r.BName } <span>{ r.BHex }</span>
+								</th>
+								@NumberCellView(r.Contrast)
+								@NumberCellView(r.Normal)
+								@NumberCellView(r.Deut)
+								@NumberCellView(r.Prot)
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+			<p>Contrast: WCAG, for a colour on its background, under 3:1 marked; – for two colours that only need to differ. ΔE: CIE76 distance as seen normally and with simulated deuteranopia and protanopia (Machado 2009), under 20 marked.</p>
+		</section>
+	}
+}
+
+templ NumberCellView(c NumberCell) {
+	<td class={ templ.KV("low", c.Low) }>{ c.Text }</td>
+}
+
+templ Info(i InfoView, side bool) {
+	if i.Why != "" {
+		<details class="why" open?={ !side && !i.Phone }>
+			<summary>Why this question</summary>
+			<p>@Fmt(i.Why)</p>
+		</details>
+	}
+	if i.HasCue() {
+		<section class="cue">
+			if i.Look != "" {
+				<p class="look">@Fmt(i.Look)</p>
+			}
+			if i.Ref != nil {
+				<details class="ref" open?={ !i.Phone }>
+					<summary>@Fmt(i.Ref.Label)</summary>
+					@Picture(i.Ref.Pic)
+				</details>
+			}
+		</section>
+	}
+	if i.HasInfo() {
+		<section class="info">
+			if len(i.Checklist) > 0 {
+				<div class="check">
+					<span class="h">What to judge</span>
+					<ul>
+						for _, c := range i.Checklist {
+							<li>@Fmt(c)</li>
+						}
+					</ul>
+				</div>
+			}
+			if len(i.Uses) > 0 {
+				<div class="uses">
+					<span class="h">Shown with your earlier picks</span>
+					<ul>
+						for _, u := range i.Uses {
+							<li>{ useText(u) }: <b>@Fmt(u.Pick)</b></li>
+						}
+					</ul>
+				</div>
+			}
+			@NumbersPanel(i.Numbers)
+			@Folds(i.Folds)
+		</section>
+	}
+}
+
+func useText(u UseLine) string {
+	if u.Round == "" {
+		return u.Question
+	}
+	return u.Question + " (" + u.Round + ")"
+}
+
+func ctlHxAttrs(href string) templ.Attributes {
+	return templ.Attributes{"hx-get": href, "hx-push-url": "true", "hx-swap": "innerMorph", "data-keepview": ""}
+}
+
+templ CtlLabel(b CtlButton) {
+	@Kbd(b.KeyLabel)
+	<span>{ b.Label }:</span> { b.Value }
+}
+
+templ CtlLink(href, key, class string) {
+	<a
+		class={ class }
+		href={ templ.SafeURL(href) }
+		{ ctlHxAttrs(href)... }
+		if key != "" {
+			data-key={ key }
+		}
+	>
+		{ children... }
+	</a>
+}
+
+templ CtlSelect(b CtlButton, sheet bool) {
+	<label class="ctlsel">
+		@Kbd(b.KeyLabel)
+		<span>{ b.Label }</span>
+		<select name={ b.Select.Name } class="select select-sm" { ctlHxAttrs(b.Select.Href)... }>
+			for _, o := range b.Select.Options {
+				<option value={ o.Value } selected?={ o.Selected }>{ o.Name }</option>
+			}
+		</select>
+	</label>
+	if b.Key != "" && b.Href != "" && !sheet {
+		@CtlLink(b.Href, b.Key, "sr-only") {
+			next
+		}
+	}
+}
+
+// CtlControl is one stage control; the phone sheet's copy has no keys, so a key finds the stage's own link.
+templ CtlControl(b CtlButton, sheet bool) {
+	switch {
+		case b.Select != nil:
+			@CtlSelect(b, sheet)
+		case b.Disabled || b.Href == "":
+			<span class="btn btn-sm btn-disabled" aria-disabled="true">@CtlLabel(b)</span>
+		default:
+			@CtlLink(b.Href, keyUnless(b.Key, sheet), "btn btn-sm") {
+				@CtlLabel(b)
+			}
+			if b.BackHref != "" && !sheet {
+				@CtlLink(b.BackHref, b.BackKey, "sr-only") {
+					previous
+				}
+			}
+	}
+}
+
+func keyUnless(key string, sheet bool) string {
+	if sheet {
+		return ""
+	}
+	return key
+}
+
+templ CtlBar(bar CtlBarView, sheet bool) {
+	if len(bar.Buttons) > 0 {
+		<div class="ctlbar" role="group" aria-label="Stage controls">
+			for _, b := range bar.Buttons {
+				@CtlControl(b, sheet)
+			}
+		</div>
+	}
+}
+
+templ PhoneBar(p PhoneView) {
+	<div class="sheet">
+		@CtlBar(p.Ctl, true)
+		<div class="ctlbar">
+			if p.Whole {
+				<button type="button" class="btn btn-sm" data-act="whole">Whole screen</button>
+			}
+			<button type="button" class="btn btn-sm" data-act="legend">Keys</button>
+		</div>
+	</div>
+	<div class="row">
+		<a class="btn arrow" href={ templ.SafeURL(p.Prev) } aria-label="Previous step">‹</a>
+		for _, f := range p.Flip {
+			<button type="button" class={ "ob btn", templ.KV("btn-primary", f.On) } data-show={ f.Letter }>{ f.Letter }</button>
+		}
+		if p.Confirm {
+			<button type="submit" form="answer" name="pick" value="yes" class="pick btn btn-warning">Yes</button>
+		}
+		if p.Pick {
+			<button type="submit" form="answer" name="pick" value={ p.Shown } data-shown class="pick btn btn-warning">Pick <span class="pl">{ p.Shown }</span></button>
+		}
+		if p.Tuned {
+			<button type="submit" form="answer" name="pick" value="tuned" class="pick btn btn-warning">Use these</button>
+		}
+		if p.ItemPrev != "" {
+			<a class="btn" href={ templ.SafeURL(p.ItemPrev) }>‹ Item</a>
+			<a class="btn" href={ templ.SafeURL(p.ItemNext) }>Item ›</a>
+		}
+		if p.Copy {
+			<button type="button" class="btn" data-copy-from="#summary-text">Copy summary</button>
+		}
+		<a class="btn arrow" href={ templ.SafeURL(p.Next) } aria-label="Next step">›</a>
+	</div>
+	<div class="row">
+		if p.ViewHref != "" {
+			<a class="btn" href={ templ.SafeURL(p.ViewHref) } data-keepview>{ p.ViewLabel }</a>
+		}
+		if p.Confirm {
+			<button type="submit" form="answer" name="pick" value="change" class="btn">Change</button>
+		}
+		if p.Neutral != "" {
+			<button type="submit" form="answer" name="pick" value="neither" class="btn">{ p.Neutral }</button>
+		}
+		if p.Play {
+			<button type="button" class="btn" data-act="play">Play</button>
+		}
+		<button type="button" class="btn" data-act="sheet" aria-expanded="false">View</button>
+		if p.Note {
+			<button type="button" class="btn" data-act="note">Note</button>
+		}
+	</div>
+}
+
+templ LegendBox(l LegendView) {
+	<div class="lg">
+		<h2>Keys</h2>
+		@legendTable(l.Keys)
+		<h3>Stage controls</h3>
+		@legendTable(l.Controls)
+		<p>Esc or click to close.</p>
+	</div>
+}
+
+templ legendTable(rows []LegendRow) {
+	<table>
+		for _, r := range rows {
+			<tr class={ templ.KV("off", r.Off) }>
+				<th>{ r.Keys }</th>
+				<td>
+					{ r.Text }
+					if r.Off {
+						{ " (not on this step)" }
+					}
+				</td>
+			</tr>
+		}
+	</table>
+}
