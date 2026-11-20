@@ -24,6 +24,7 @@ window/stretch/aspect="expand"
 [gui]
 
 theme/custom="res://ui/launcher_theme.tres"
+theme/custom.editor_hint=""
 
 [input]
 camera_left={

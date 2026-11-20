@@ -784,7 +784,10 @@ func _notice_clear(runner, main, label: String, others: Array, lines: int = 1) -
 	var text: Rect2 = _rect(main, "HUD/Hud/Notice/Text")
 	runner.check(absf(notice.get_center().x - view.size.x / 2.0) <= 1.0 and notice.position.y == 48.0 and view.encloses(notice) and notice.size.x <= 600.0 and notice.encloses(text), "CH4 %s: the notice is centred at top 48, at most 600 wide, its text inside, got %s" % [label, notice])
 	var one_line: bool = notice.size.y == 28.0
-	runner.check(one_line == (lines == 1) and (main.get_node("HUD/Hud/Notice/Text") as Label).get_line_count() == lines, "CH4 %s: %d line(s), 28 high for one, got %s" % [label, lines, notice])
+	var count: int = (main.get_node("HUD/Hud/Notice/Text") as Label).get_line_count()
+	# lines 0: wraps to two or more; the count follows the OS save path in the text.
+	var lines_ok: bool = count >= 2 if lines == 0 else count == lines
+	runner.check(one_line == (lines == 1) and lines_ok, "CH4 %s: %d line(s) (0 = two or more), 28 high for one, got %s with %d" % [label, lines, notice, count])
 	for path: String in others:
 		var node: Control = main.get_node(path)
 		runner.check(node.is_visible_in_tree() and not notice.intersects(node.get_global_rect()), "CH4 %s: the notice clears %s, notice %s, other %s" % [label, path.get_file(), notice, node.get_global_rect()])
@@ -815,7 +818,7 @@ func test_online_notice_top_centre(runner) -> bool:
 	runner.check(_part(main.hud, "TopStrip", "Delta").text == MINUS + "1200" and _part(main.hud, "TopStrip", "LowPower").is_visible_in_tree(), "CH4 fixture: the preview's longest form with low power")
 	main.free()
 	await _ended_notice(runner, online, 1, func(lockstep, _transport) -> void: lockstep.receive('{"type":"left","seat":2,"after_tick":3}'), "Opponent left before the start (a different map or version, or their game tab was hidden)")
-	await _ended_notice(runner, online, 2, func(_lockstep, transport) -> void: transport.frames.append(OnlineTests.Wire.encode(OnlineTests.Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"}))), "Desync", 2)
+	await _ended_notice(runner, online, 2, func(_lockstep, transport) -> void: transport.frames.append(OnlineTests.Wire.encode(OnlineTests.Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"}))), "Desync", 0)
 	DirAccess.remove_absolute("user://desync/desync-seat2.json")
 	var closed: Dictionary = await online._online(runner, 2)
 	online._end_match(closed)
