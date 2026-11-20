@@ -27,6 +27,9 @@ var (
 	letters     = []string{"A", "B", "C", "D", "E", "F", "G", "H"}
 )
 
+// AdvisoryNote marks an advisory round in the index and in `open`.
+const AdvisoryNote = "advisory: answer when you like"
+
 type IndexEntry struct {
 	ID    string `yaml:"id"`
 	Title string `yaml:"title"`
@@ -247,6 +250,8 @@ type Round struct {
 	Earlier  []string  `yaml:"earlier"`
 	Render   *Render   `yaml:"render"`
 	Controls *Controls `yaml:"controls"`
+	// Advisory rounds confirm defaults already built; they never block a merge.
+	Advisory bool `yaml:"advisory"`
 	// Loaded holds the steps in order; a step whose file did not load has Kind "missing".
 	Loaded []Step `yaml:"-"`
 }

@@ -141,6 +141,20 @@ func TestRoundListHidesDemoRounds(t *testing.T) {
 	}
 }
 
+func TestRoundListMarksAdvisoryRounds(t *testing.T) {
+	files := map[string]string{}
+	for k, v := range fixtureRounds {
+		files[k] = v
+	}
+	files["r/round.yaml"] = "advisory: true\n" + files["r/round.yaml"]
+	if body := newAppWith(t, files).get("/").Body.String(); !strings.Contains(body, rounds.AdvisoryNote) {
+		t.Fatalf("list = %s", body)
+	}
+	if body := newApp(t).get("/").Body.String(); strings.Contains(body, rounds.AdvisoryNote) {
+		t.Fatalf("a blocking round is marked advisory: %s", body)
+	}
+}
+
 func TestLoadErrorsShowAsABanner(t *testing.T) {
 	a := newApp(t)
 	if err := os.Remove(filepath.Join(a.cfg.Rounds, "r", "ver.yaml")); err != nil {

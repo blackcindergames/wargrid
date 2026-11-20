@@ -334,6 +334,9 @@
     },
     "controls": {
       "$ref": "#/$defs/Controls"
+    },
+    "advisory": {
+      "type": "boolean"
     }
   },
   "additionalProperties": false,

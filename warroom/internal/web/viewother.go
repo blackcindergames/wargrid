@@ -345,13 +345,17 @@ func summaryText(sections []SumSection, questionsOnly bool) string {
 
 // ---------- round list ----------
 
-type RoundLink struct{ Title, Href string }
+type RoundLink struct{ Title, Href, Note string }
 
 func roundLinks(c *rounds.Catalog, showDemo bool) []RoundLink {
 	var out []RoundLink
 	for _, e := range c.Index {
 		if r := c.Rounds[e.ID]; r != nil && (showDemo || !e.Demo) {
-			out = append(out, RoundLink{cmp.Or(e.Title, e.ID), "/r/" + r.ID})
+			link := RoundLink{cmp.Or(e.Title, e.ID), "/r/" + r.ID, ""}
+			if r.Advisory {
+				link.Note = rounds.AdvisoryNote
+			}
+			out = append(out, link)
 		}
 	}
 	return out

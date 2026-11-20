@@ -113,7 +113,11 @@ func printOpen(w io.Writer, cfg web.Config) error {
 			}
 		}
 		if open := len(r.Open(entries)); open > 0 {
-			if _, err := fmt.Fprintf(w, "%s\t%d of %d answered\n", r.ID, total-open, total); err != nil {
+			note := ""
+			if r.Advisory {
+				note = "\t" + rounds.AdvisoryNote
+			}
+			if _, err := fmt.Fprintf(w, "%s\t%d of %d answered%s\n", r.ID, total-open, total, note); err != nil {
 				return err
 			}
 		}

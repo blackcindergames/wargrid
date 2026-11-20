@@ -527,7 +527,14 @@ templ RoundListMain(links []RoundLink) {
 		</section>
 		<ul class="rounds">
 			for _, l := range links {
-				<li><a href={ templ.SafeURL(l.Href) }>{ l.Title }</a></li>
+				<li>
+					<a href={ templ.SafeURL(l.Href) }>
+						{ l.Title }
+						if l.Note != "" {
+							<span class="adv">{ l.Note }</span>
+						}
+					</a>
+				</li>
 			}
 		</ul>
 	</main>
