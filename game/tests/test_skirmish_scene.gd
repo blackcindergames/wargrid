@@ -1278,7 +1278,7 @@ func test_hud_reads_only_state_and_orders(runner) -> bool:
 	main.stepped_results.append({"ok": false, "error": "Not yours", "player": 2, "tick": 5, "sequence": 0})
 	var view: Dictionary = sim.view_state()
 	main._take_results(view)
-	main.hud.update_hud(view, main._hud_selection(view), main.local_player, main.local_player)
+	main.hud.update_hud(view, main._hud_selection(), main.local_player, main.local_player)
 	var line: String = (main.get_node("HUD/Hud/RefusalLine").find_child("Text", true, false) as Label).text if main.get_node("HUD/Hud/RefusalLine").visible else ""
 	runner.check(produce.visible and _panel_text(main, "Name") == Registry.kind("usa_barracks").display_name and main.hud.refusal == "Choose one builder" and line == "Choose one builder", "HU1 the HUD shows the selection and keeps the local hint on the line, got '%s'" % line)
 	runner.check(main.hud.refusal != "Not yours" and not BaseScene.hud_text(main).contains("Not yours"), "HU1 _take_results ignores player 2's stepped result, got '%s'" % main.hud.refusal)

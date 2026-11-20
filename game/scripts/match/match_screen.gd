@@ -407,7 +407,7 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	zone = Profiler.begin()
 	_ensure_sound()
 	_take_results(state)
-	hud.update_hud(state, _hud_selection(state), view_player, local_player)
+	hud.update_hud(state, _hud_selection(), view_player, local_player)
 	_place_floor()
 	orders.menu = hud.menu_kinds
 	_view.set_inspected(orders.inspected_id)
@@ -434,11 +434,11 @@ func _select_kind(kind: String, shift: bool) -> void:
 		return (i != -1 and units.kinds[units.kind[i]] == kind) != shift))
 	_reshow()
 
-func _hud_selection(state: Dictionary) -> Dictionary:
-	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": not _result(state).is_empty(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
+func _hud_selection() -> Dictionary:
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": shown_over() or driver.over() or frozen(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
 
 func _result(state: Dictionary) -> String:
-	var result: String = "" if state.match == null else _result_text(state.match)
+	var result: String = _result_text(state.match)
 	return "Victory" if result.is_empty() and driver.opponent_left() else result
 
 func _show_result(state: Dictionary) -> void:
@@ -500,9 +500,6 @@ func _collect_note(note: SimPump.Note) -> void:
 	_ensure_sound()
 	_sound.collect_step(note.tick, note.events, note.results)
 	_visuals.collect_step(note.tick, note.events, note.results)
-
-func _building(state: Dictionary, id: int) -> Dictionary:
-	return HudModel.building(state, id)
 
 func _play_again() -> void:
 	if driver.can_restart(): _restart()

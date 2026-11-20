@@ -206,11 +206,10 @@ func _set_freeze(on: bool) -> void:
 	_frozen = on
 	for part: Control in [_mark, _body, _divider, _footer, _copy]: part.visible = on
 	for part: Control in [_status, _play_again]: part.visible = not on
+	_outcome.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if on else HORIZONTAL_ALIGNMENT_CENTER
 	if on:
 		_length.visible = false
 		_table.visible = false
-	_outcome.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if on else HORIZONTAL_ALIGNMENT_CENTER
-	if on:
 		var margin := StyleBoxEmpty.new()
 		margin.content_margin_left = 40.0
 		_outcome.add_theme_stylebox_override("normal", margin)

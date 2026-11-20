@@ -96,7 +96,7 @@ func reset() -> void:
 	_dragged = false
 
 func prune(state: Dictionary) -> void:
-	if selected_building_id != -1 and _screen._building(state, selected_building_id).is_empty(): selected_building_id = -1
+	if selected_building_id != -1 and HudModel.building(state, selected_building_id).is_empty(): selected_building_id = -1
 	selected_ids.assign(selected_ids.filter(func(id: int) -> bool: return state.units.index_of(id) != -1))
 	if HudModel.inspected(state, inspected_id).is_empty(): inspected_id = -1
 
@@ -301,7 +301,7 @@ func _hint_point(payload: Dictionary) -> Variant:
 	if payload.type != "resume_build":
 		if payload.type in ["move", "attack_move", "set_rally"]: return Vector2(payload.target[0], payload.target[1])
 		return null
-	var building: Dictionary = _screen._building(_screen.shown_state,payload.building_id)
+	var building: Dictionary = HudModel.building(_screen.shown_state,payload.building_id)
 	if building.is_empty(): return null
 	return Vector2(building.origin[0],building.origin[1]) + Vector2(Definitions.building(building.kind).footprint) / 2.0
 
@@ -374,7 +374,7 @@ func _context_order(id: int) -> bool:
 			_screen.refuse("Choose homogeneous collector selection", false)
 			_screen._reshow()
 		return true
-	var building: Dictionary = _screen._building(state,id)
+	var building: Dictionary = HudModel.building(state,id)
 	if selected_ids != [id] and HudModel.is_container(state, id, _screen.local_player):
 		_screen._submit({"type":"enter","entity_ids":selected_ids.filter(func(unit_id: int) -> bool: return unit_id != id),"target_id":id})
 		return true
@@ -398,7 +398,7 @@ func _unload_selected() -> void:
 	_screen._submit({"type":"unload","target_id":id})
 
 func _set_rally(plane: Vector2) -> bool:
-	var building: Dictionary = _screen._building(_screen.shown_state,selected_building_id)
+	var building: Dictionary = HudModel.building(_screen.shown_state,selected_building_id)
 	if building.is_empty() or building.owner != _screen.local_player or not Registry.can_rally(building.kind): return false
 	var cell: Vector2 = Iso.plane_to_world(plane).floor() + Vector2(.5,.5)
 	_screen._submit({"type":"set_rally","building_id":building.id,"target":[cell.x,cell.y]})
@@ -416,7 +416,7 @@ func _ground(event: InputEventMouseButton) -> Vector2:
 	return Iso.plane_to_world(_screen._view.make_canvas_position_local(event.position))
 
 func _order_defence(event: InputEventMouseButton) -> bool:
-	var building: Dictionary = _screen._building(_screen.shown_state, selected_building_id)
+	var building: Dictionary = HudModel.building(_screen.shown_state, selected_building_id)
 	if building.is_empty() or building.owner != _screen.local_player or not building.completed or building.get("combat") == null: return false
 	var enemy: int = _screen._view.pick_target(_screen._view.make_canvas_position_local(event.position), _screen.local_player)
 	if enemy == -1: return false

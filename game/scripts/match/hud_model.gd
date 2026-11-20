@@ -40,7 +40,6 @@ static func menu_label(index: int, kind: String) -> String:
 	return menu_name(index, kind) + " $%d" % Registry.kind(kind).cost
 
 const LOW_POWER := "LOW POWER · DEFENCES OFF"
-static var _powered: Dictionary = {}
 
 static func strip(view: Dictionary, id: int, placement_kind: String) -> Dictionary:
 	var found: Dictionary = player(view, id)
@@ -55,9 +54,7 @@ static func _faction_kinds(faction: String) -> Array:
 
 # FRC builds nothing that makes or uses power, so a 0 / 0 group would read like a bug.
 static func uses_power(faction: String) -> bool:
-	if not _powered.has(faction):
-		_powered[faction] = _faction_kinds(faction).any(func(kind: String) -> bool: return Registry.kind(kind).get("power", 0) != 0)
-	return _powered[faction]
+	return _faction_kinds(faction).any(func(kind: String) -> bool: return Registry.kind(kind).get("power", 0) != 0)
 
 # Physical keycodes: orders read their keys here and the buttons print them, so a label never names an unused key.
 const ORDER_KEYS := {"attack_move": KEY_A, "stop": KEY_S, "unload": KEY_F}

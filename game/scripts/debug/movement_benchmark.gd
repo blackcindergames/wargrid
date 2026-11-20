@@ -469,7 +469,7 @@ func _hud_tick() -> void:
 	_simulation.step()
 	var state: Dictionary = _simulation.view_state()
 	_view.set_view(state, _hud_ids)
-	_hud.update_hud(state, {"ids": _hud_ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "bright_owners": false, "esc_opens_menu": false, "attack_move": false}, 1, 1)
+	_hud.update_hud(state, {"ids": _hud_ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "bright_owners": false, "over": false, "esc_opens_menu": false, "attack_move": false}, 1, 1)
 	var elapsed: float = (Time.get_ticks_usec() - started) / 1000.0
 	_status.text = "hud_select | %s | tick %d | Esc: quit" % ["draining" if _sampling_done else ("sampling" if _sample_started > 0 else "warmup"), state.tick]
 	if _sample_started > 0 and not _sampling_done:

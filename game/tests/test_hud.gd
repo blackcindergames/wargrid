@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_build_buttons_by_selection_and_price, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_build_buttons_by_selection_and_price, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -359,15 +359,18 @@ func test_forecast_forms(runner) -> bool:
 	var low: Label = _part(hud, "TopStrip", "LowPower")
 	var preview: Label = _part(hud, "TopStrip", "Preview")
 	runner.check(hud.get_node_or_null("Forecast") == null and _previewing(hud) and preview.text == "PREVIEW" and _colour(preview) == _token("sel") and _border(strip) == _token("sel"), "TS2 a Rotary Gun Tower armed: the strip shows PREVIEW and its border in sel, no card")
+	var xs: Array[float] = [preview.global_position.x]
 	runner.check(credits.text == "3600" and _colour(credits) == _token("text") and delta.is_visible_in_tree() and delta.text == MINUS + "1200" and _colour(delta) == _token("muted"), "TS2 credits after purchase 3600 in text, a muted −1200 beside, got '%s' '%s'" % [credits.text, delta.text])
 	runner.check(power.text == "11 / 10" and _colour(power) == _token("warn") and low.is_visible_in_tree() and low.text == LOW and _colour(low) == _token("warn"), "TS2 power after purchase 11 / 10 and low power in warn, got %s" % [_texts(hud, "TopStrip")])
 	_no_arrow_or_short(runner, hud, "tower")
 	await _show(runner, hud, _strip_view(4800, 8, 10), "usa_power_plant")
 	runner.check(credits.text == "4000" and delta.text == MINUS + "800" and power.text == "8 / 15" and _colour(power) == _token("text") and not low.is_visible_in_tree(), "TS2 a Power Plant armed reads 4000 −800 and 8 / 15, no low power, got %s" % [_texts(hud, "TopStrip")])
+	xs.append(preview.global_position.x)
 	await _show(runner, hud, _strip_view(10650, 8, 10))
 	runner.check(credits.text == "10650" and power.text == "8 / 10" and not _previewing(hud) and not delta.is_visible_in_tree() and _border(strip) == _token("line"), "TS2 nothing armed: today's 10650 and 8 / 10, no PREVIEW, no delta, the line border, got '%s'" % credits.text)
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
 	runner.check(credits.text == "500" and _colour(credits) == _token("text") and delta.text == MINUS + "1200" and _colour(delta) == _token("warn"), "TS2 short: today's 500 in text and the cost −1200 (U+2212) in warn, got '%s' '%s'" % [credits.text, delta.text])
+	xs.append(preview.global_position.x)
 	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
 	runner.check(credits.text == "3600" and _colour(delta) == _token("muted"), "TS2 affordable again: the after value and a muted delta, got '%s'" % credits.text)
 	_no_arrow_or_short(runner, hud, "shortfall")
@@ -376,6 +379,13 @@ func test_forecast_forms(runner) -> bool:
 		var shown: Array = ["PowerLabel", "Power", "LowPower"].filter(func(part: String) -> bool: return _part(hud, "TopStrip", part).is_visible_in_tree())
 		runner.check(shown.is_empty() and credits.is_visible_in_tree() and _previewing(hud) != armed.is_empty(), "TS2 FRC uses no power, so no power group (armed '%s'), shown %s" % [armed, shown])
 	runner.check(credits.text == "4300" and delta.text == MINUS + "500", "TS2 FRC's preview keeps its credits, got '%s' '%s'" % [credits.text, delta.text])
+	xs.append(preview.global_position.x)
+	runner.check(xs.all(func(x: float) -> bool: return is_equal_approx(x, xs[0])), "TS2 PREVIEW keeps one x across the tower, plant, short and FRC forms, got %s" % [xs])
+	var free_view: Dictionary = _strip_view(4800, 8, 10)
+	Registry.add_test_kind("test_free_building", {"display_name": "Free", "cost": 0, "produces": []})
+	await _show(runner, hud, free_view, "test_free_building")
+	Registry.clear_test_kinds()
+	runner.check(_previewing(hud) and credits.text == "4800" and not delta.is_visible_in_tree(), "TS2 a free building previews without a −0 delta, got '%s' '%s'" % [credits.text, delta.text])
 	hud.get_parent().free()
 	await _forecast_follows_the_placement(runner)
 	return true
@@ -463,6 +473,34 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	runner.check(_previewing(main.hud), "TS6 fixture: a build button hovered in the arena previews it")
 	skirmish._victory(main)
 	runner.check(main.shown_over() and not _previewing(main.hud), "TS6 the match ending under a hovered build button ends the preview")
+	main.free()
+	var online: Dictionary = await OverlayTests.new()._online(runner)
+	main = online.main
+	main.driver._finished = true
+	_select(main, [])
+	var item: Button = main.get_node("HUD/Economy/BuildMenu").get_child(0)
+	runner.check(item.is_visible_in_tree() and not main.shown_over() and not main.frozen(), "TS6 fixture: an online ending without a card leaves the build menu up")
+	item.mouse_entered.emit()
+	runner.check(not _previewing(main.hud), "TS6 an ending without a card: hovering a build button previews nothing")
+	main.free()
+	return true
+
+# Gate C (user, 2026-11-20): the queue rows' hover inset; the armed look keeps its own.
+func test_build_button_hover_inset(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _slab_world(runner, main, false)
+	_select(main, [ids.builder])
+	var plant: Button = main.get_node("HUD/Economy/BuildMenu").get_child(0)
+	var plain: StyleBoxFlat = main.hud.get_theme_stylebox("hover", &"HudButton") as StyleBoxFlat
+	for look: String in ["hover", "pressed", "hover_pressed"]:
+		var style: StyleBoxFlat = plant.get_theme_stylebox(look) as StyleBoxFlat
+		runner.check(style != null and style.border_color == _token("muted") and style.border_width_left == 1 and style.border_width_bottom == 1 and style.bg_color == plain.bg_color, "SL9 a build button's %s look is the queue rows' 1 px muted inset" % look)
+	plant.pressed.emit()
+	var armed: StyleBoxFlat = plant.get_theme_stylebox("hover") as StyleBoxFlat
+	runner.check(plant.theme_type_variation == &"HudButtonArmed" and armed.border_color == _token("sel") and armed.border_width_left == 2, "SL9 the armed build button keeps its cyan look under the pointer")
+	main.orders._clear_placement()
+	main._refresh()
+	runner.check((plant.get_theme_stylebox("hover") as StyleBoxFlat).border_color == _token("muted"), "SL9 disarmed, the inset comes back")
 	main.free()
 	return true
 
@@ -1086,9 +1124,9 @@ func test_slab_order_buttons(runner) -> bool:
 	runner.check(stops.size() == 1 and stops[0].entity_ids == ids.tanks, "SL4 a click on Stop submits one stop with the selection, got %s" % [stops])
 	for code: Key in [KEY_SPACE, KEY_ENTER]: SkirmishTests.new()._push_key(main, code)
 	runner.check(_queued(main, "stop").size() == 1, "SL4 Space and Enter after the click submit no second stop")
-	runner.check(attack.theme_type_variation == &"HudButton" and not main._hud_selection(main.shown_state).attack_move, "SL4 before the press: plain, not armed")
+	runner.check(attack.theme_type_variation == &"HudButton" and not main._hud_selection().attack_move, "SL4 before the press: plain, not armed")
 	_click(runner, attack.get_global_rect().get_center())
-	runner.check(attack.theme_type_variation == &"HudButtonArmed" and main.orders._attack_move_mode and main._hud_selection(main.shown_state).attack_move, "SL4 a click on Attack move arms it")
+	runner.check(attack.theme_type_variation == &"HudButtonArmed" and main.orders._attack_move_mode and main._hud_selection().attack_move, "SL4 a click on Attack move arms it")
 	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false)
 	var moves: Array = _queued(main, "attack_move")
@@ -1988,6 +2026,29 @@ func test_rows_let_go_when_the_pointer_leaves_the_window(runner) -> bool:
 	port.notify_mouse_exited()
 	await _frames(runner)
 	runner.check(_row(main, "usa_tank") == null and _row_names(main) == ["Row_usa_rifle_infantry"], "KR4b the pointer leaving the window lets the rows go, got %s" % [_row_names(main)])
+	_end_port(scene)
+	return true
+
+# Gate C (user, 2026-11-20): only a shrink holds the rows; a fresh drag released over the panel replaces them.
+func test_fresh_selection_over_the_panel_drops_the_hold(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _rows_world(main, [["usa_tank", 3], ["usa_rifle_infantry", 2], ["usa_builder", 1]])
+	var army: Array[int] = ids.usa_tank + ids.usa_rifle_infantry
+	_pick(main, army, -1, -1)
+	await _frames(runner)
+	# On the header, not a row: a rebuilt row under the pointer would end the hover itself.
+	_move(port, _many(main, "Header").get_global_rect().get_center())
+	await _frames(runner)
+	main.orders.selected_ids.assign(ids.usa_builder)
+	main._reshow()
+	await _frames(runner)
+	runner.check(not _many(main, "Header").is_visible_in_tree() and _panel_texts(main).Name == "Bulldozer", "KR4c a drag from the army to one builder released over the panel shows the builder's panel at once, got %s" % [_panel_texts(main)])
+	main.orders.selected_ids.assign(ids.usa_tank + ids.usa_rifle_infantry)
+	main._reshow()
+	await _frames(runner)
+	runner.check(_row_names(main) == ["Row_usa_tank", "Row_usa_rifle_infantry"], "KR4c a fresh army over the panel shows only its own rows, got %s" % [_row_names(main)])
 	_end_port(scene)
 	return true
 

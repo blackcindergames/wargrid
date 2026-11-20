@@ -50,8 +50,8 @@ var _queue_more: Button
 var _queue_gap: Control
 var _queue_open: bool = false
 var _queue_for: int = -1
+var _inset: StyleBoxFlat
 var _edge: Color = Color.WHITE
-var _keys: Dictionary = {}
 var _panel: PanelContainer
 var _panel_style: StyleBoxFlat
 var _many: BoxContainer
@@ -60,6 +60,7 @@ var _row_looks: Dictionary = {}
 var _counts: Dictionary = {}
 var _labels: Dictionary = {}
 var _last: Array = []
+var _last_ids: Array[int] = []
 var _shape: Array = []
 var _hovered: int = -1
 var _strip_args: Array = []
@@ -125,11 +126,10 @@ func _groups(parent: Control) -> void:
 	_label(credits, "CreditsLabel", &"HudLabel", "CREDITS")
 	_label(credits, "Credits", &"HudCredits")
 	_label(credits, "Delta", &"HudNumber").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
-	_spacer(row, "Gap", Vector2.ZERO).size_flags_horizontal = SIZE_EXPAND_FILL
 	var preview: Label = _label(row, "Preview", &"HudLabel", "PREVIEW")
 	preview.add_theme_color_override("font_color", get_theme_color("sel", &"Tokens"))
 	preview.visible = false
-	_spacer(row, "GapRight", Vector2.ZERO).size_flags_horizontal = SIZE_EXPAND_FILL
+	_spacer(row, "Gap", Vector2.ZERO).size_flags_horizontal = SIZE_EXPAND_FILL
 	var power: BoxContainer = _box(row, "PowerGroup", HBoxContainer.new(), 8)
 	_label(power, "PowerLabel", &"HudLabel", "POWER")
 	_label(power, "Power", &"HudNumber")
@@ -154,8 +154,15 @@ func _build_strip() -> void:
 	swatch.custom_minimum_size = Vector2(8, 8)
 	swatch.size_flags_vertical = SIZE_SHRINK_CENTER
 	swatch.mouse_filter = MOUSE_FILTER_IGNORE
-	_top_strip.get_node("Row/CreditsGroup").add_child(swatch)
-	_top_strip.get_node("Row/CreditsGroup").move_child(swatch, 0)
+	var credits: Control = _top_strip.get_node("Row/CreditsGroup")
+	credits.add_child(swatch)
+	credits.move_child(swatch, 0)
+	# Sized for the widest five-digit form, so PREVIEW keeps one x across forms (gate C, user 2026-11-20).
+	(credits.get_node("Credits") as Label).text = "00000"
+	(credits.get_node("Delta") as Label).text = "\u22120000"
+	credits.custom_minimum_size.x = credits.get_combined_minimum_size().x
+	(credits.get_node("Credits") as Label).text = ""
+	(credits.get_node("Delta") as Label).text = ""
 
 # A top-right chip that hugs its row of labels (hud-v5-layout "Menu chip, Team chip, playtest chip").
 static func chip(chip_name: String, top: float, parts: Array) -> Button:
@@ -263,11 +270,14 @@ func reset() -> void:
 	clear_refusal()
 	_labels = {}
 	_last = []
+	_last_ids = []
 	_counts = {}
 	if _economy != null: _read_keys()
 
 # hud-v5-layout "Command card": the VBox lays out rows, the Hud pads, fills and edges it.
 func _build_slab() -> void:
+	_inset = get_theme_stylebox("hover", &"HudButton").duplicate() as StyleBoxFlat
+	_inset.border_color = get_theme_color("muted", &"Tokens")
 	_economy.alignment = BoxContainer.ALIGNMENT_CENTER
 	_economy.add_theme_constant_override("separation", GAP)
 	_economy.draw.connect(_draw_slab)
@@ -298,10 +308,9 @@ func _build_slab() -> void:
 	for i in rows.size(): _economy.move_child(rows[i], i)
 
 func _read_keys() -> void:
-	for action: String in HudModel.ORDER_KEYS: _keys[action] = HudModel.key_label(HudModel.ORDER_KEYS[action])
-	(_commands.get_node("AttackMove") as Button).text = "Attack move (%s)" % _keys.attack_move
-	(_commands.get_node("Stop") as Button).text = "Stop (%s)" % _keys.stop
-	(_commands.get_node("Unload") as Button).text = "Unload (%s)" % _keys.unload
+	(_commands.get_node("AttackMove") as Button).text = "Attack move (%s)" % HudModel.key_label(HudModel.ORDER_KEYS.attack_move)
+	(_commands.get_node("Stop") as Button).text = "Stop (%s)" % HudModel.key_label(HudModel.ORDER_KEYS.stop)
+	(_commands.get_node("Unload") as Button).text = "Unload (%s)" % HudModel.key_label(HudModel.ORDER_KEYS.unload)
 
 func _grid(grid_name: String, columns: int) -> GridContainer:
 	var grid := GridContainer.new()
@@ -429,7 +438,7 @@ func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> v
 	# Short of credits, today's balance stays and the cost turns warn, so two negatives never stack.
 	var short: bool = preview and numbers.after_credits < 0
 	var delta: Label = _top_strip.find_child("Delta", true, false)
-	delta.visible = preview
+	delta.visible = preview and numbers.after_credits != numbers.credits
 	if preview: delta.text = "\u2212%d" % (numbers.credits - numbers.after_credits)
 	var tone: Color = get_theme_color("warn" if short else "muted", &"Tokens")
 	if delta.get_theme_color("font_color") != tone: delta.add_theme_color_override("font_color", tone)
@@ -470,16 +479,22 @@ func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: Stri
 			button.pressed.connect(menu_chosen.emit.bind(i))
 			button.mouse_entered.connect(_hover_menu.bind(i, true))
 			button.mouse_exited.connect(_hover_menu.bind(i, false))
+			_inset_looks(button, true)
 			_right_label(button, "Price", &"HudRow", -8.0)
 		var cost: int = Registry.kind(kinds[i]).cost
 		button.text = HudModel.menu_name(i, kinds[i])
 		_tint(button.get_node("Price"), "$%d" % cost, cost > credits)
-		_look(button, kinds[i] == placement_kind)
+		var armed: bool = kinds[i] == placement_kind
+		_look(button, armed)
+		# The armed look keeps its own hover.
+		if button.has_theme_stylebox_override("hover") == armed: _inset_looks(button, not armed)
 
 func end_hover() -> void:
 	_hovered = -1
 
 func _hover_menu(index: int, entered: bool) -> void:
+	# An ending without a card (desync, relay lost) leaves the menu up but previews nothing.
+	if not _strip_args.is_empty() and _strip_args[1].over: return
 	if not entered and _hovered != index: return
 	_hovered = index if entered else -1
 	if not _strip_args.is_empty(): _show_strip.callv(_strip_args)
@@ -518,9 +533,7 @@ func _queue_row(entry_id: int, edge: Color) -> Button:
 	var button: Button = _button(_queue, str(entry_id), 0.0)
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.pressed.connect(entry_cancelled.emit.bind(entry_id))
-	var hover := get_theme_stylebox("hover", &"HudButton").duplicate() as StyleBoxFlat
-	hover.border_color = get_theme_color("muted", &"Tokens")
-	for look: String in ["hover", "pressed", "hover_pressed"]: button.add_theme_stylebox_override(look, hover)
+	_inset_looks(button, true)
 	button.mouse_entered.connect(_hover_queue_row.bind(button, true))
 	button.mouse_exited.connect(_hover_queue_row.bind(button, false))
 	var cancel: Label = _right_label(button, "Cancel", &"HudRow", -12.0)
@@ -541,6 +554,11 @@ func _queue_row(entry_id: int, edge: Color) -> Button:
 	bar.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	track.add_child(bar)
 	return button
+
+func _inset_looks(button: Button, on: bool) -> void:
+	for look: String in ["hover", "pressed", "hover_pressed"]:
+		if on: button.add_theme_stylebox_override(look, _inset)
+		else: button.remove_theme_stylebox_override(look)
 
 func _hover_queue_row(row: Button, hovered: bool) -> void:
 	_inset_track(row, hovered, 2.0)
@@ -653,8 +671,11 @@ func panel_edge() -> Color:
 
 func _show_selection(view: Dictionary, selection: Dictionary, seat: int, faction: String) -> void:
 	_last = [view, selection, seat, faction]
+	# Only a shrink (a death, a row click) holds the rows; a fresh selection replaces them.
+	if _holding() and not selection.ids.all(func(id: int) -> bool: return _last_ids.has(id)): _counts = {}
+	_last_ids = selection.ids.duplicate()
 	_labels = HudModel.collector_labels(view, selection.ids, seat, _labels)
-	var many: bool = selection.building_id == -1 and (selection.ids.size() > 1 or (_holding() and not selection.ids.is_empty()))
+	var many: bool = selection.building_id == -1 and (selection.ids.size() > 1 or (_holding() and not _counts.is_empty() and not selection.ids.is_empty()))
 	_many.visible = many
 	_panel.get_node("Box/Top").visible = not many
 	_panel.get_node("Box/Body").visible = not many
