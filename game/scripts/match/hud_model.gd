@@ -2,17 +2,20 @@ extends RefCounted
 
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 
 static func unit_record(units: RefCounted, i: int) -> Dictionary:
-	var target: Variant = units.target[i] if units.target[i] != -1 else null
-	var combat: Variant = {"mode": units.modes[units.mode[i]], "target_id": target} if units.mode[i] != ViewRows.NONE else null
 	var collection: Variant = {"enabled": (units.flags[i] & ViewRows.COLLECTING) != 0, "phase": units.phases[units.phase[i]]} if units.phase[i] != ViewRows.NONE else null
-	return {"id": units.id[i], "owner": units.owner[i], "kind": units.kinds[units.kind[i]], "hp": units.hp[i], "max_hp": units.max_hp[i], "combat": combat, "collection": collection}
+	return {"id": units.id[i], "owner": units.owner[i], "kind": units.kinds[units.kind[i]], "hp": units.hp[i], "max_hp": units.max_hp[i], "collection": collection}
 
 static func inspected(view: Dictionary, id: int) -> Dictionary:
 	var i: int = view.units.index_of(id)
 	if i != -1: return unit_record(view.units, i)
-	return building(view, id)
+	var found: Dictionary = building(view, id)
+	if not found.is_empty(): return found
+	for source: Dictionary in view.get("sources", []):
+		if source.id == id: return source
+	return {}
 
 static func building(view: Dictionary, id: int) -> Dictionary:
 	for found: Dictionary in view.buildings:
@@ -138,3 +141,45 @@ static func shows_build_menu(view: Dictionary, selection: Dictionary, seat: int)
 static func queue_rows(count: int, open: bool) -> Dictionary:
 	var capped: bool = count > QUEUE_SHOWN
 	return {"shown": QUEUE_COLLAPSED if capped and not open else count, "more": count - QUEUE_COLLAPSED if capped else 0}
+
+const SITE := "UNDER CONSTRUCTION"
+const PAUSED := "PAUSED · NO BUILDER"
+const OFFLINE := "OFFLINE · LOW POWER"
+const RALLY := "Right-click ground: rally point"
+
+# The selection panel's one object: the building, else one unit, else the inspected object; several units are the kind rows' (Task 11).
+static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: String) -> Dictionary:
+	var id: int = selection.building_id
+	if id == -1 and selection.ids.size() == 1: id = selection.ids[0]
+	elif id == -1 and selection.ids.is_empty(): id = selection.inspected_id
+	var object: Dictionary = inspected(view, id) if id != -1 else {}
+	if object.is_empty(): return {}
+	if object.has("boxes"):
+		var credits: int = object.boxes * box_value(faction)
+		return {"name": "Supply Pile", "owner": -1, "key": "CREDITS LEFT", "value": str(credits) if credits > 0 else "Empty"}
+	var row: Dictionary = {"name": Registry.kind(object.kind).display_name, "owner": object.owner, "health": "%d / %d" % [ceili(object.hp / 1000.0), ceili(object.max_hp / 1000.0)], "fraction": float(object.hp) / object.max_hp}
+	if not object.has("completed"): return row
+	var own: bool = object.owner == seat
+	if not object.completed:
+		var paused: bool = own and object.builder_id == null
+		return row.merged({"right": PAUSED if paused else SITE, "paused": paused, "percent": object.work * 100 / (Definitions.building(object.kind).ticks * 1000)})
+	if Registry.kind(object.kind).get("powered", false) and short_of_power(view, object.owner): row.merge({"right": OFFLINE, "warn": true})
+	if not own: return row
+	var power: int = Registry.kind(object.kind).get("power", 0)
+	if power > 0: row.merge({"key": "POWER", "value": "+%d" % power})
+	if Registry.can_rally(object.kind): row.footer = RALLY
+	return row
+
+# combat.gd's `_short_of_power`, read from the view's player rows.
+static func short_of_power(view: Dictionary, owner: int) -> bool:
+	var found: Dictionary = player(view, owner)
+	return found.id == owner and found.power_demand > found.power_supply
+
+# What one box pays the viewer: the box value of their faction's collector.
+static func box_value(faction: String) -> int:
+	var row: Dictionary = Registry.faction(faction)
+	var kinds: Array = [row.get("start_unit", "")]
+	for building_kind: String in Registry.kind(row.get("start_unit", "")).get("builds", []) + [row.get("start_building", "")]: kinds.append_array(Registry.kind(building_kind).get("produces", []))
+	for kind: String in kinds:
+		if not Registry.collects(kind).is_empty(): return Registry.collects(kind).box_value
+	return 0

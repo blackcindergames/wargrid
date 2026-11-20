@@ -45,6 +45,8 @@ var _queue_open: bool = false
 var _queue_for: int = -1
 var _edge: Color = Color.WHITE
 var _keys: Dictionary = {}
+var _panel: PanelContainer
+var _panel_style: StyleBoxFlat
 
 func _init() -> void:
 	name = "Hud"
@@ -56,6 +58,7 @@ func _init() -> void:
 	_build_forecast()
 	_build_menu_chip()
 	_build_notice()
+	_build_panel()
 
 # Mouse-transparent until the HUD routing task decides what the panels catch.
 func _slab(slab_name: String, at: Vector2) -> PanelContainer:
@@ -289,10 +292,11 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	_show_strip(view, selection, view_player)
 	set_esc_chip(selection.esc_opens_menu)
 	_show_notice(selection.notice)
+	_show_panel(HudModel.panel(view, selection, seat, faction), selection.bright_owners)
 	if _economy == null: menu_kinds = kinds
 	else: _economy_controls(view, building, selection, kinds, seat)
 	if _status == null: return
-	_status.text = _status_text(view, selection, building)
+	_status.text = _status_text(view, selection)
 
 func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictionary, kinds: Array, seat: int) -> void:
 	var edge: Color = View.owner_color(seat, selection.bright_owners)
@@ -347,10 +351,14 @@ func _tint(label: Label, text: String, warn: bool) -> void:
 	if warn: label.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 	else: label.remove_theme_color_override("font_color")
 
-func _status_text(view: Dictionary, selection: Dictionary, building: Dictionary) -> String:
-	var detail: String = "Units: " + str(selection.ids)
-	if not building.is_empty(): detail = "%s #%d | Work %d/%d" % [Registry.kind(building.kind).display_name, building.id, building.work, Definitions.building(building.kind).ticks * 1000]
-	return "%s\n%s\n%s%s" % [detail, note, _selected_summary(view, selection.ids), _enemy_summary(view, selection.inspected_id)]
+# Only the collector phase is left here until the kind rows carry it (Task 11).
+func _status_text(view: Dictionary, selection: Dictionary) -> String:
+	var phase: String = ""
+	var i: int = view.units.index_of(selection.ids[0]) if selection.ids.size() == 1 else -1
+	if i != -1:
+		var unit: Dictionary = HudModel.unit_record(view.units, i)
+		if unit.collection != null and unit.collection.enabled: phase = _collection_suffix(view, unit)
+	return "%s\n%s" % [note, phase]
 
 func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: String) -> void:
 	menu_kinds = kinds
@@ -442,16 +450,6 @@ static func queue_parts(entry: Dictionary) -> PackedStringArray:
 	var percent: String = "" if entry.work == 0 else "%d %%" % (entry.work * 100 / (Definitions.unit(entry.kind).ticks * 1000))
 	return PackedStringArray([Registry.kind(entry.kind).display_name, percent])
 
-func _selected_summary(view: Dictionary, ids: Array[int]) -> String:
-	if ids.size() != 1: return ""
-	var i: int = view.units.index_of(ids[0])
-	if i == -1: return ""
-	var unit: Dictionary = HudModel.unit_record(view.units, i)
-	var line: String = "%s #%d HP %d/%d" % [Registry.kind(unit.kind).display_name, unit.id, unit.hp / 1000, unit.max_hp / 1000]
-	if unit.combat != null: line += " | %s%s" % [unit.combat.mode, "" if unit.combat.target_id == null else " -> #" + str(unit.combat.target_id)]
-	if unit.collection != null and unit.collection.enabled: line += _collection_suffix(view, unit)
-	return line + "\n"
-
 func _collection_suffix(view: Dictionary, unit: Dictionary) -> String:
 	var line: String = " | " + unit.collection.phase
 	if unit.collection.phase.begins_with("waiting_"): line += " (%s in line)" % _ordinal(View.line_position(view.units, view.units.index_of(unit.id)))
@@ -461,10 +459,86 @@ func _ordinal(n: int) -> String:
 	var suffix: String = "th" if n % 100 in [11, 12, 13] else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
 	return str(n) + suffix
 
-func _enemy_summary(view: Dictionary, inspected_id: int) -> String:
-	var object: Dictionary = HudModel.inspected(view, inspected_id)
-	if object.is_empty(): return ""
-	var line: String = "Enemy (P%d) %s #%d HP %d/%d" % [object.owner, Registry.kind(object.kind).display_name, object.id, object.hp / 1000, object.max_hp / 1000]
-	var combat: Variant = object.get("combat")
-	if combat != null: line += " | " + combat.mode + ("" if combat.target_id == null else " -> #%d" % combat.target_id)
-	return line + "\n"
+# hud-v5-layout "Selection panel": x 0, 408 wide, bottom on H, height hugs; the 4 px owner edge is the style's left border.
+func _build_panel() -> void:
+	_panel = _slab("SelectionPanel", Vector2.ZERO)
+	_panel_style = StyleBoxFlat.new()
+	_panel_style.bg_color = get_theme_color("bg", &"Tokens")
+	_panel_style.border_width_left = 4
+	_panel_style.content_margin_left = 16
+	_panel_style.content_margin_right = 16
+	_panel_style.content_margin_top = 12
+	_panel_style.content_margin_bottom = 12
+	_panel.add_theme_stylebox_override("panel", _panel_style)
+	_panel.set_anchors_preset(PRESET_BOTTOM_LEFT)
+	_panel.grow_vertical = GROW_DIRECTION_BEGIN
+	_panel.custom_minimum_size.x = 408
+	_panel.draw.connect(_draw_panel_lines)
+	# The title's line box is 18 against the page's 14, so 4 under it keeps the spec heights.
+	var box: BoxContainer = _box(_panel, "Box", VBoxContainer.new(), 4)
+	var top: BoxContainer = _box(box, "Top", HBoxContainer.new(), 8)
+	_label(top, "Name", &"HudTitle").size_flags_horizontal = SIZE_EXPAND_FILL
+	_label(top, "RightLabel", &"HudLabel")
+	var body: BoxContainer = _box(box, "Body", VBoxContainer.new(), 8)
+	_bar_row(body, "ProgressRow", "Progress", "Percent")
+	_bar_row(body, "HealthRow", "HealthBar", "Health")
+	var pair: BoxContainer = _box(body, "KeyRow", HBoxContainer.new(), 0)
+	_label(pair, "Key", &"HudLabel").custom_minimum_size.x = 112
+	_label(pair, "Value", &"HudNumber")
+	_label(body, "Footer", &"HudHint", HudModel.RALLY)
+	_panel.visible = false
+
+# A 160 x 6 bar on a `well` track, then its muted number 8 to the right.
+func _bar_row(parent: Control, row_name: String, bar_name: String, number_name: String) -> void:
+	var row: BoxContainer = _box(parent, row_name, HBoxContainer.new(), 8)
+	var track := ColorRect.new()
+	track.name = bar_name
+	track.color = get_theme_color("well", &"Tokens")
+	track.custom_minimum_size = Vector2(160, 6)
+	track.size_flags_vertical = SIZE_SHRINK_CENTER
+	track.mouse_filter = MOUSE_FILTER_IGNORE
+	row.add_child(track)
+	var fill := ColorRect.new()
+	fill.name = "Fill"
+	fill.mouse_filter = MOUSE_FILTER_IGNORE
+	fill.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	track.add_child(fill)
+	_label(row, number_name, &"HudNumber").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+
+func _draw_panel_lines() -> void:
+	var area: Vector2 = _panel.size
+	var line: Color = get_theme_color("line", &"Tokens")
+	_panel.draw_rect(Rect2(4, 0, area.x - 4, 1), line)
+	_panel.draw_rect(Rect2(area.x - 1, 0, 1, area.y), line)
+
+func panel_edge() -> Color:
+	return _panel_style.border_color
+
+func _show_panel(row: Dictionary, bright: bool) -> void:
+	_panel.visible = not row.is_empty()
+	if row.is_empty(): return
+	var edge: Color = get_theme_color("line", &"Tokens") if row.owner == -1 else View.owner_color(row.owner, bright)
+	if _panel_style.border_color != edge:
+		_panel_style.border_color = edge
+		_panel.queue_redraw()
+	_panel.get_node("Box/Top/Name").text = row.name
+	var right: Label = _panel.get_node("Box/Top/RightLabel")
+	right.visible = row.has("right")
+	_tint(right, row.get("right", ""), row.get("warn", false))
+	var body: Node = _panel.get_node("Box/Body")
+	_fill_bar(body.get_node("HealthRow"), row.has("health"), row.get("fraction", 0.0), View.health_color(row.get("fraction", 0.0)), row.get("health", ""))
+	var progress: Color = get_theme_color("muted", &"Tokens") if row.get("paused", false) else edge
+	_fill_bar(body.get_node("ProgressRow"), row.has("percent"), row.get("percent", 0) / 100.0, progress, "%d %%" % row.get("percent", 0))
+	body.get_node("KeyRow").visible = row.has("key")
+	body.get_node("KeyRow/Key").text = row.get("key", "")
+	body.get_node("KeyRow/Value").text = row.get("value", "")
+	body.get_node("Footer").visible = row.has("footer")
+
+func _fill_bar(row: Node, shown: bool, fraction: float, colour: Color, number: String) -> void:
+	row.visible = shown
+	if not shown: return
+	var fill: ColorRect = row.get_child(0).get_node("Fill")
+	fill.color = colour
+	var right: float = clampf(fraction, 0.0, 1.0)
+	if fill.anchor_right != right: fill.anchor_right = right
+	(row.get_child(1) as Label).text = number

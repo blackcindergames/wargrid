@@ -136,9 +136,8 @@ func test_match_hud_and_restart(runner) -> bool:
 	var ids: Dictionary = _arena(main)
 	main.orders.selected_ids.assign([ids.tank])
 	main._refresh()
-	var text: String = main.get_node("HUD/Status").text
 	var credits: String = str(main._local_state(main.shown_state).credits)
-	runner.check(main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false).text == credits and text.contains("Battle Tank #" + str(ids.tank)) and text.contains("HP 480/480") and text.contains("guard"), "K4 credits, kind, HP and order in the HUD")
+	runner.check(main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false).text == credits and _panel_text(main, "Name") == "Battle Tank" and _panel_text(main, "Health") == "480 / 480", "K4 credits, kind and health in the HUD")
 	var setup: Dictionary = main.driver.pump.live().view_state()
 	setup.match.status = "setup"
 	main._show_result(setup)
@@ -283,10 +282,8 @@ func test_enemy_selection_read_only(runner) -> bool:
 	var enemy_point: Vector2 = Iso.world_to_plane(Vector2(15.5, 10.5)) + Vector2(0, -8)
 	helper.pointer(main, enemy_point, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, enemy_point, MOUSE_BUTTON_LEFT, false)
-	var text: String = main.get_node("HUD/Status").text
 	runner.check(main.orders.inspected_id == ids.enemy and main.orders.selected_ids.is_empty(), "E1 left-click selects the enemy read-only and replaces own selection")
-	runner.check(text.contains("Enemy (P2) Battle Tank #%d HP 480/480" % ids.enemy), "E1 enemy line, got " + text)
-	runner.check(text.contains("HP 480/480 | guard"), "E1 idle enemy shows its mode, got " + text)
+	runner.check(_panel_text(main, "Name") == "Battle Tank" and _panel_text(main, "Health") == "480 / 480" and main.hud.panel_edge() == View.owner_color(2), "E1 the panel shows the enemy's name, health and owner edge, got '%s' '%s'" % [_panel_text(main, "Name"), _panel_text(main, "Health")])
 	var before: Dictionary = main.driver.pump.live().snapshot()
 	helper.key(main, KEY_E)
 	helper.key(main, KEY_A)
@@ -992,7 +989,11 @@ func test_auto_pick_samples_present_time(runner) -> bool:
 	main.free()
 	return true
 
-const HUD_TEXTS: Array[String] = ["Rifleman #49 HP 156/180 | attack -> #31\n", "Supply Helicopter #45 HP 300/300 | waiting_source (3rd in line)\n", "Supply Helicopter #11 HP 300/300 | lead_source\n", "Bulldozer #1 HP 250/250\n", "Enemy (P2) Rifleman #19 HP 180/180 | guard\n", "Enemy (P2) Headquarters #4 HP 5000/5000\n"]
+const HUD_TEXTS: Array[String] = ["Rifleman · 156 / 180 · ", "Supply Helicopter · 300 / 300 · | waiting_source (3rd in line)", "Supply Helicopter · 300 / 300 · | lead_source", "Bulldozer · 250 / 250 · ", "Rifleman · 180 / 180 · ", "Headquarters · 5000 / 5000 · "]
+
+static func _panel_text(main, part: String) -> String:
+	var label: Label = main.get_node("HUD/Hud/SelectionPanel").find_child(part, true, false)
+	return label.text if label.is_visible_in_tree() else ""
 
 func _ids_where(units: Array, test: Callable) -> Array[int]:
 	var ids: Array[int] = []
@@ -1015,14 +1016,15 @@ func test_hud_summaries_are_pinned(runner) -> bool:
 	runner.check(waiting.size() >= 2 and not working.is_empty() and not firing.is_empty() and not plain.is_empty() and not enemy_unit.is_empty() and not enemy_building.is_empty(), "HUD1 fixture: every case has its unit")
 	var view: Dictionary = sim.view_state()
 	var texts: Array[String] = []
-	for id: int in [firing[0], waiting[-1], working[0], plain[0]]:
-		main.orders.selected_ids.assign([id])
-		texts.append(main.hud._selected_summary(view, main.orders.selected_ids))
-	main.orders.selected_ids.clear()
-	for id: int in [enemy_unit[0], enemy_building[0]]:
-		main.orders.inspected_id = id
-		texts.append(main.hud._enemy_summary(view, main.orders.inspected_id))
-	runner.check(texts == HUD_TEXTS, "HUD1 pinned summary texts, got " + str(texts))
+	var edges: Array = []
+	for row: Array in [[firing[0], -1], [waiting[-1], -1], [working[0], -1], [plain[0], -1], [-1, enemy_unit[0]], [-1, enemy_building[0]]]:
+		main.orders.selected_ids.assign([row[0]] if row[0] != -1 else [])
+		main.orders.inspected_id = row[1]
+		main._show(view)
+		texts.append("%s · %s · %s" % [_panel_text(main, "Name"), _panel_text(main, "Health"), main.get_node("HUD/Status").text.strip_edges()])
+		edges.append(main.hud.panel_edge() == View.owner_color(1 if row[1] == -1 else 2))
+	runner.check(texts == HUD_TEXTS, "HUD1 pinned panel and collector texts, got " + str(texts))
+	runner.check(not edges.has(false), "HUD1 each panel edge is its owner's colour, got %s" % [edges])
 	main.free()
 	return true
 
@@ -1275,7 +1277,7 @@ func test_hud_reads_only_state_and_orders(runner) -> bool:
 	main._take_results(view)
 	main.hud.update_hud(view, main._hud_selection(view), main.local_player, main.local_player)
 	var status: String = main.get_node("HUD/Status").text
-	runner.check(produce.visible and status.contains("%s #%d" % [Registry.kind("usa_barracks").display_name, barracks]) and main.hud.note == "Choose one builder" and status.contains("Choose one builder"), "HU1 the HUD shows the selection and keeps the local note")
+	runner.check(produce.visible and _panel_text(main, "Name") == Registry.kind("usa_barracks").display_name and main.hud.note == "Choose one builder" and status.contains("Choose one builder"), "HU1 the HUD shows the selection and keeps the local note")
 	runner.check(main.hud.refusal != "Not yours" and not status.contains("Not yours"), "HU1 _take_results ignores player 2's stepped result, got '%s'" % main.hud.refusal)
 	main.free()
 	return true

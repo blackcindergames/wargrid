@@ -97,6 +97,7 @@ func _ready() -> void:
 		quit.call())
 	_pause.quality_changed.connect(_view.set_quality)
 	_pause.neon_changed.connect(_view.set_bright_owners)
+	_pause.neon_changed.connect(func(_bright: bool) -> void: _reshow())
 	_pause.smooth_changed.connect(_view.set_smooth)
 	_pause.destinations_changed.connect(_view.set_show_destinations)
 	$HUD.add_child(_pause)

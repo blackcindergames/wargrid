@@ -16,6 +16,8 @@ const OnlineTests = preload("res://tests/test_online_scene.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const Orders = preload("res://scripts/match/orders.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
+const Economy = preload("res://scripts/simulation/economy_definitions.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
 const LOW: String = "LOW POWER · DEFENCES OFF"
 const MINUS: String = "\u2212"
 const THEME_PATH: String = "res://ui/launcher_theme.tres"
@@ -25,7 +27,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -52,7 +54,8 @@ func test_hud_reads_only_its_input(runner) -> bool:
 	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false, "esc_opens_menu": true, "attack_move": false}
 	hud.update_hud(Fixture.make_world().view_state(), selection, 1, 1)
 	runner.check(hud.name == "Hud" and hud.mouse_filter == Control.MOUSE_FILTER_IGNORE and hud.anchor_right == 1.0 and hud.anchor_bottom == 1.0, "HN1 the Hud is a full-rect node that ignores the mouse")
-	runner.check(_part(hud, "TopStrip", "Credits").text == "10000" and status.text.contains(Registry.kind("usa_builder").display_name + " #1"), "HN1 the strip and the Status fixture fill from the view and the selection alone, got '%s'" % status.text)
+	var panel_name: String = _part(hud, "SelectionPanel", "Name").text
+	runner.check(_part(hud, "TopStrip", "Credits").text == "10000" and panel_name == Registry.kind("usa_builder").display_name, "HN1 the strip and the selection panel fill from the view and the selection alone, got '%s'" % panel_name)
 	runner.check(hud.menu_kinds == Registry.kind("usa_builder").builds and economy.get_node("BuildMenu").get_child_count() == hud.menu_kinds.size(), "HN1 the builder's menu fills, got %s" % [hud.menu_kinds])
 	var sim = Fixture.make_world()
 	var tank: int = sim.spawn(1, Vector2(8.5, 8.5), "usa_tank")
@@ -1246,4 +1249,178 @@ func test_key_labels(runner) -> bool:
 	HudModel.layout_label = HudModel._platform_label
 	main.free()
 	runner.check(texts.slice(0, 3) == ["Attack move (Q)", "Stop (S)", "Unload (G)"] and texts[3].ends_with("(R)"), "KL1 the buttons print the layout's labels, got %s" % [texts])
+	return true
+
+const SITE_PERCENT: int = 62
+
+# Turns a building of the shown view into a site at `percent`, paused when `builder` is null.
+static func _site(view: Dictionary, id: int, builder: Variant, percent: int = SITE_PERCENT) -> void:
+	var site: Dictionary = HudModel.building(view, id)
+	site.merge({"completed": false, "work": Economy.building(site.kind).ticks * 10 * percent, "builder_id": builder}, true)
+
+# The panel's fifteen states in one world; player 3 is player 1's teammate.
+func _panel_world(main) -> Dictionary:
+	var sim = Fixture.make_world(50000)
+	sim.add_player(2, 1000)
+	sim.add_player(3, 1000, "human", 1)
+	var ids := {}
+	ids.tank = sim.spawn(1, Vector2(8.5, 6.5), "china_light_vehicle")
+	ids.enemy = sim.spawn(2, Vector2(28.5, 28.5), "usa_tank")
+	ids.ally = sim.spawn(3, Vector2(4.5, 28.5), "usa_tank")
+	ids.depot = Fixture.add_completed(sim, 1, "usa_supply_center", Vector2i(2, 10))
+	ids.defence = Fixture.add_completed(sim, 1, "china_defence", Vector2i(8, 10))
+	ids.plant = Fixture.add_completed(sim, 1, "china_power_plant", Vector2i(10, 10))
+	ids.factory = Fixture.add_completed(sim, 1, "usa_factory", Vector2i(14, 10))
+	ids.site = Fixture.add_completed(sim, 1, "usa_barracks", Vector2i(20, 10))
+	ids.paused = Fixture.add_completed(sim, 1, "usa_barracks", Vector2i(24, 10))
+	ids.enemy_building = Fixture.add_completed(sim, 2, "usa_power_plant", Vector2i(2, 18))
+	ids.enemy_site = Fixture.add_completed(sim, 2, "usa_factory", Vector2i(8, 18))
+	ids.ally_building = Fixture.add_completed(sim, 3, "usa_factory", Vector2i(14, 18))
+	ids.ally_site = Fixture.add_completed(sim, 3, "usa_barracks", Vector2i(20, 18))
+	ids.hq = Fixture.add_completed(sim, 1, "usa_command_center", Vector2i(2, 24))
+	ids.pile = sim.add_supply_source(Vector2i(26, 2), 142)
+	ids.empty = sim.add_supply_source(Vector2i(26, 21), 0)
+	main.driver.adopt(sim)
+	var view: Dictionary = main.driver.current().view
+	_site(view, ids.site, 1)
+	for id: int in [ids.paused, ids.enemy_site, ids.ally_site]: _site(view, id, null)
+	main._refresh()
+	return ids
+
+# [label, selected ids, building, inspected, height, short owner] (spec "Selection panel" table).
+static func _panel_cases(ids: Dictionary) -> Array:
+	return [["one unit", [ids.tank], -1, -1, 62, 0], ["own building", [], ids.depot, -1, 62, 0], ["own offline defence", [], ids.defence, -1, 62, 1],
+		["power plant", [], ids.plant, -1, 86, 0], ["factory", [], ids.factory, -1, 84, 0], ["own site", [], ids.site, -1, 86, 0], ["own paused site", [], ids.paused, -1, 86, 0],
+		["enemy unit", [], -1, ids.enemy, 62, 0], ["enemy building", [], -1, ids.enemy_building, 62, 0], ["enemy site", [], -1, ids.enemy_site, 86, 0],
+		["allied unit", [], -1, ids.ally, 62, 0], ["allied building", [], -1, ids.ally_building, 62, 0], ["allied site", [], -1, ids.ally_site, 86, 0],
+		["pile", [], -1, ids.pile, 62, 0], ["empty pile", [], -1, ids.empty, 62, 0]]
+
+# Shows a selection on the current view, with `short` owner's demand above its supply.
+static func _panel_select(main, case: Array) -> void:
+	main.orders.selected_ids.assign(case[1])
+	main.orders.selected_building_id = case[2]
+	main.orders.inspected_id = case[3]
+	var view: Dictionary = main.driver.current().view
+	if case[5] != 0:
+		view = view.duplicate()
+		view.players = view.players.map(func(row: Dictionary) -> Dictionary: return row.merged({"power_demand": row.power_supply + 1}, true) if row.id == case[5] else row)
+	main._show(view)
+
+static func _pick(main, ids: Array, building: int, inspected: int) -> void:
+	_panel_select(main, ["", ids, building, inspected, 0, 0])
+
+static func _panel_part(main, part: String) -> Control:
+	return main.get_node("HUD/Hud/SelectionPanel").find_child(part, true, false)
+
+func _panel_contained(runner, main, panel: Rect2, label: String) -> void:
+	var content: Rect2 = panel.grow_individual(-16.0, -12.0, -16.0, -12.0)
+	for control: Control in _controls(main.get_node("HUD/Hud/SelectionPanel")):
+		if not control is Label or not control.is_visible_in_tree(): continue
+		var rect: Rect2 = control.get_global_rect()
+		runner.check(content.grow(0.5).encloses(rect) and (control.get_parent() as Control).get_global_rect().grow(0.5).encloses(rect), "SP1 %s: %s inside its row and the panel content %s, got %s" % [label, control.name, content, rect])
+	var right: Control = _panel_part(main, "RightLabel")
+	if right.is_visible_in_tree(): runner.check(not _panel_part(main, "Name").get_global_rect().intersects(right.get_global_rect()), "SP1 %s: the name and the right label do not meet" % label)
+
+func test_panel_states_layout(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await overlays._scene(runner, Skirmish, port)
+		var ids: Dictionary = _panel_world(main)
+		var refusal := Rect2((size.x - 416.0) / 2.0, size.y - 204.0, 416.0, 28.0)
+		for case: Array in _panel_cases(ids):
+			_panel_select(main, case)
+			await _frames(runner)
+			var at: String = "%s at %s" % [case[0], size]
+			var panel_node: Control = main.get_node_or_null("HUD/Hud/SelectionPanel")
+			runner.check(panel_node != null and panel_node.is_visible_in_tree(), "SP1 %s: the panel shows" % at)
+			if panel_node == null: break
+			var panel: Rect2 = panel_node.get_global_rect()
+			runner.check(absf(panel.position.x) <= 0.5 and is_equal_approx(panel.size.x, 408.0) and absf(panel.end.y - size.y) <= 0.5 and absf(panel.size.y - case[4]) <= 1.0 and view.encloses(panel), "SP1 %s: x 0, 408 wide, bottom on H, %d high, inside the view, got %s" % [at, case[4], panel])
+			var others: Dictionary = {"the strip": _rect(main, "HUD/Hud/TopStrip"), "the refusal line": refusal}
+			if main.get_node("HUD/Economy").is_visible_in_tree(): others["the slab"] = _rect(main, "HUD/Economy")
+			for other: String in others: runner.check(not panel.intersects(others[other]), "SP1 %s: clear of %s" % [at, other])
+			_panel_contained(runner, main, panel, at)
+		_pick(main, [], -1, -1)
+		await _frames(runner)
+		runner.check(not main.get_node("HUD/Hud/SelectionPanel").is_visible_in_tree(), "SP1 nothing selected hides the panel at %s" % size)
+		port.free()
+	overlays._end(saved)
+	return true
+
+static func _panel_texts(main) -> Dictionary:
+	var texts := {}
+	for part: String in ["Name", "RightLabel", "Health", "Percent", "Key", "Value", "Footer"]:
+		var label: Label = _panel_part(main, part)
+		texts[part] = label.text if label != null and label.is_visible_in_tree() else ""
+	return texts
+
+static func _fill(main, bar: String) -> Color:
+	return (_panel_part(main, bar).get_node("Fill") as ColorRect).color
+
+func test_panel_values(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _panel_world(main)
+	var view: Dictionary = main.driver.current().view
+	view.units.hp[view.units.index_of(ids.tank)] = 179500
+	_pick(main, [ids.tank], -1, -1)
+	runner.check(_panel_texts(main).Name == "Medium Tank" and _panel_texts(main).Health == "180 / 400", "SP2 a Medium Tank at 179500 reads 180 / 400, got %s" % _panel_texts(main))
+	_pick(main, [], ids.plant, -1)
+	runner.check(_panel_texts(main).Key == "POWER" and _panel_texts(main).Value == "+10", "SP2 a China Power Plant reads POWER +10, got %s" % _panel_texts(main))
+	_pick(main, [], ids.site, -1)
+	runner.check(_panel_texts(main).Percent == "62 %" and _panel_texts(main).RightLabel == "UNDER CONSTRUCTION" and _fill(main, "Progress") == View.owner_color(1), "SP2 an own site at 62 %% reads 62 %% with the owner-coloured fill, got %s" % _panel_texts(main))
+	_pick(main, [], ids.paused, -1)
+	var right: Label = _panel_part(main, "RightLabel")
+	runner.check(right.text == "PAUSED · NO BUILDER" and _colour(right) == _token("muted") and _colour(right) != _token("amber") and _fill(main, "Progress") == _token("muted"), "SP2 the paused site reads PAUSED · NO BUILDER in muted with a muted fill, got '%s' %s" % [right.text, _fill(main, "Progress")])
+	_pick(main, [], -1, ids.enemy_site)
+	runner.check(_panel_texts(main).RightLabel == "UNDER CONSTRUCTION" and _panel_texts(main).Percent == "62 %" and _fill(main, "Progress") == View.owner_color(2), "SP2 an enemy site with no builder is never paused, got %s" % _panel_texts(main))
+	_pick(main, [], ids.hq, -1)
+	runner.check(_panel_texts(main).Health == "5000 / 5000", "SP2 a full Headquarters reads 5000 / 5000, got %s" % _panel_texts(main))
+	for pile: Array in [[ids.pile, "10650"], [ids.empty, "Empty"]]:
+		_pick(main, [], -1, pile[0])
+		runner.check(_panel_texts(main).Name == "Supply Pile" and _panel_texts(main).Key == "CREDITS LEFT" and _panel_texts(main).Value == pile[1] and _panel_texts(main).Health.is_empty(), "SP2 the pile reads CREDITS LEFT %s, got %s" % [pile[1], _panel_texts(main)])
+	main.free()
+	return await _offline_label(runner)
+
+# OFFLINE · LOW POWER for any owner's powered defence while that owner is short (director round, user 2026-11-19).
+func _offline_label(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var sim = Fixture.make_world(50000)
+	sim.add_player(2, 1000)
+	var tower: int = Fixture.add_completed(sim, 1, "china_defence", Vector2i(8, 10))
+	var depot: int = Fixture.add_completed(sim, 1, "usa_supply_center", Vector2i(12, 10))
+	var battery: int = Fixture.add_completed(sim, 2, "usa_defence", Vector2i(20, 20))
+	main.driver.adopt(sim)
+	_pick(main, [], tower, -1)
+	await _frames(runner)
+	var right: Label = _panel_part(main, "RightLabel")
+	var height: float = main.get_node("HUD/Hud/SelectionPanel").size.y
+	runner.check(right.is_visible_in_tree() and right.text == "OFFLINE · LOW POWER" and _colour(right) == _token("warn") and absf(height - 62.0) <= 1.0, "SP2 an own short defence reads OFFLINE · LOW POWER in warn, 62 high, got '%s' %s %.1f" % [right.text, _colour(right), height])
+	_pick(main, [], -1, battery)
+	runner.check(_panel_texts(main).RightLabel == "OFFLINE · LOW POWER", "SP2 an inspected enemy defence whose owner is short reads offline, got %s" % _panel_texts(main))
+	_pick(main, [], depot, -1)
+	runner.check(_panel_texts(main).RightLabel.is_empty(), "SP2 a short owner's unpowered building has no label, got %s" % _panel_texts(main))
+	Fixture.add_completed(sim, 1, "china_power_plant", Vector2i(2, 2))
+	BaseScene.publish(main)
+	_pick(main, [], tower, -1)
+	runner.check(_panel_texts(main).RightLabel.is_empty() and _colour(right) != _token("warn"), "SP2 a power plant evens it: no label, got %s" % _panel_texts(main))
+	main.free()
+	return true
+
+func test_panel_edge_colours(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _panel_world(main)
+	for case: Array in [[[ids.tank], -1, View.owner_color(1), "own"], [[], ids.enemy, View.owner_color(2), "enemy"], [[], ids.ally, View.owner_color(3), "allied"], [[], ids.pile, _token("line"), "pile"]]:
+		_pick(main, case[0], -1, case[1])
+		runner.check(main.hud.panel_edge() == case[2], "SP3 the %s edge is %s, got %s" % [case[3], case[2], main.hud.panel_edge()])
+	runner.check(View.owner_color(3) != View.owner_color(1) and View.owner_color(3) != View.owner_color(2), "SP3 fixture: the ally's slot colour is its own")
+	_pick(main, [ids.tank], -1, -1)
+	main._pause.neon_changed.emit(true)
+	var body: Color = Palette.owner_colors(1, main._view._batch.bright_owners)[0]
+	runner.check(main._view._batch.bright_owners and body != View.owner_color(1) and main.hud.panel_edge() == body, "SP3 Neon on live: the edge is the body colour the batch draws, got %s against %s" % [main.hud.panel_edge(), body])
+	main._pause.neon_changed.emit(false)
+	main.free()
 	return true

@@ -107,7 +107,7 @@ Anchored top left at (8, 8), 32 high, width hugs its text (Core about 255 at `4,
 
 Anchored bottom left: x = 0 in Core, x = 176 in Full (8 right of the minimap); it moves once when the minimap lands (user, 2026-11-16). 408 wide, bottom on the screen bottom, height hugs. Borders 1 px top and right in `line`, 4 px owner edge on the left, padding 12 top and bottom, 16 left and right, blocks 8 apart. It holds no command buttons, with one exception: Sell stays a button here until its own package decides between panel and card cell (user, 2026-11-16). Not shown when nothing is selected.
 
-Heights per state (measured, HUD px): Core one, builder, build, place, blocked, enemy 62; plant, pile, site 86; factory and full 128; many 136. Full: one, builder, build, place, blocked, site 88 (64 px glyph); plant 128 (with Sell); factory and full 172; enemy 62; pile 86; many 136.
+Heights per state (measured, HUD px): Core one, builder, build, place, blocked, enemy, pile 62; plant, site 86; factory and full 84 (P2.3a1 moved the queue to the slab and the pile to one `CREDITS LEFT` line; [P2.3a1 plan](../superpowers/plans/2026-11-19-p2-3a1-see-your-selection.md) Task 10); many 136. Full: one, builder, build, place, blocked, site 88 (64 px glyph); plant 128 (with Sell); factory and full 172; enemy 62; pile 86; many 136.
 
 Blocks:
 
