@@ -388,7 +388,7 @@ func _reshow() -> void:
 # Only a new view consumes step results and sound; a repaint on input must leave them for the next refresh.
 func _show(state: Dictionary, fresh: bool = true) -> void:
 	shown_state = state
-	# The forecast card and a drag box must never show over a result or freeze card or an ended online match.
+	# An armed placement (and its strip preview) and a drag box must never show over a result or freeze card or an ended online match.
 	if shown_over() or driver.over() or frozen():
 		if not orders._placement_kind.is_empty(): orders._clear_placement()
 		orders._selecting = false

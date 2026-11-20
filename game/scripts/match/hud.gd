@@ -16,8 +16,9 @@ const PAD_Y: float = 8.0
 const GAP: int = 4
 const ROW: float = 32.0
 const QUEUE_GAP: float = 12.0
-# Fits the longest five-digit preview with low power (666 at 1280 x 720); longer numbers still widen the strip.
+# Each fits its faction's widest five-digit preview (678 with power and low power, 343 without power, measured at 1280 x 720); longer numbers still widen the strip.
 const STRIP_WIDTH: float = 704.0
+const STRIP_WIDTH_UNPOWERED: float = 352.0
 
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -60,6 +61,8 @@ var _counts: Dictionary = {}
 var _labels: Dictionary = {}
 var _last: Array = []
 var _shape: Array = []
+var _hovered: int = -1
+var _strip_args: Array = []
 var _blockers: Array[Control] = []
 
 func _init() -> void:
@@ -142,7 +145,6 @@ func _flat(slab: PanelContainer, height: float) -> void:
 
 func _build_strip() -> void:
 	_flat(_top_strip, 32)
-	_top_strip.custom_minimum_size.x = STRIP_WIDTH
 	_strip_style = _top_strip.get_theme_stylebox("panel") as StyleBoxFlat
 	_preview_style = _strip_style.duplicate() as StyleBoxFlat
 	_preview_style.border_color = get_theme_color("sel", &"Tokens")
@@ -370,12 +372,13 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	var building: Dictionary = HudModel.building(view, selection.building_id)
 	var faction: String = HudModel.player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)
 	var kinds: Array = HudModel.menu_kinds(view, building, selection.ids, faction)
-	_show_strip(view, selection, view_player)
 	set_esc_chip(selection.esc_opens_menu)
 	_show_notice(selection.notice)
 	_show_selection(view, selection, seat, HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
 	if _economy == null: menu_kinds = kinds
 	else: _economy_controls(view, building, selection, kinds, seat)
+	_strip_args = [view, selection, view_player]
+	_show_strip(view, selection, view_player)
 	_count_rebuild(selection)
 
 # Structural changes only; values patch in place.
@@ -414,23 +417,29 @@ static func _look(button: Button, armed: bool) -> void:
 	if button.theme_type_variation != look: button.theme_type_variation = look
 
 func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> void:
-	var numbers: Dictionary = HudModel.strip(view, view_player, selection.placement_kind)
+	var hovered: String = menu_kinds[_hovered] if _hovered >= 0 and _hovered < menu_kinds.size() else ""
+	var numbers: Dictionary = HudModel.strip(view, view_player, hovered if not hovered.is_empty() else selection.placement_kind)
 	var powered: bool = HudModel.uses_power(HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
+	_top_strip.custom_minimum_size.x = STRIP_WIDTH if powered else STRIP_WIDTH_UNPOWERED
 	(_top_strip.get_node("Row/CreditsGroup/Swatch") as ColorRect).color = View.owner_color(view_player, selection.bright_owners)
 	var preview: bool = numbers.has("after_credits")
+	# Short of credits, today's balance stays and the cost turns warn, so two negatives never stack.
+	var short: bool = preview and numbers.after_credits < 0
 	var delta: Label = _top_strip.find_child("Delta", true, false)
 	delta.visible = preview
 	if preview: delta.text = "\u2212%d" % (numbers.credits - numbers.after_credits)
+	var tone: Color = get_theme_color("warn" if short else "muted", &"Tokens")
+	if delta.get_theme_color("font_color") != tone: delta.add_theme_color_override("font_color", tone)
 	var label: Label = _top_strip.find_child("Preview", true, false)
 	if label.visible != preview:
 		label.visible = preview
 		_top_strip.add_theme_stylebox_override("panel", _preview_style if preview else _strip_style)
-	var credits: int = numbers.after_credits if preview else numbers.credits
-	_fill(_top_strip, str(credits) if credits >= 0 else "\u2212%d" % -credits, credits < 0, numbers.after_used if preview else numbers.used, numbers.after_available if preview else numbers.available, powered)
+	var credits: int = numbers.after_credits if preview and not short else numbers.credits
+	_fill(_top_strip, str(credits), numbers.after_used if preview else numbers.used, numbers.after_available if preview else numbers.available, powered)
 
-func _fill(slab: PanelContainer, credits: String, short: bool, used: int, available: int, powered: bool) -> void:
+func _fill(slab: PanelContainer, credits: String, used: int, available: int, powered: bool) -> void:
 	var low: bool = used > available
-	_tint(slab.find_child("Credits", true, false), credits, short)
+	_tint(slab.find_child("Credits", true, false), credits, false)
 	_tint(slab.find_child("Power", true, false), "%d / %d" % [used, available], low)
 	slab.find_child("LowPower", true, false).visible = low
 	slab.find_child("PowerGroup", true, false).visible = powered
@@ -447,6 +456,8 @@ func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: Stri
 	menu_kinds = kinds
 	var grid: GridContainer = _build_menu
 	grid.visible = shown and not kinds.is_empty()
+	# A freed or hidden button sends no exit, so its hover ends here.
+	if not grid.visible or _hovered >= kinds.size(): _hovered = -1
 	while grid.get_child_count() > kinds.size(): grid.get_child(grid.get_child_count() - 1).free()
 	for i in kinds.size():
 		var button: Button = grid.get_child(i) if i < grid.get_child_count() else null
@@ -454,11 +465,18 @@ func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: Stri
 			button = _button(grid, "Item%d" % i, _cell_width(grid.columns))
 			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			button.pressed.connect(menu_chosen.emit.bind(i))
+			button.mouse_entered.connect(_hover_menu.bind(i, true))
+			button.mouse_exited.connect(_hover_menu.bind(i, false))
 			_right_label(button, "Price", &"HudRow", -8.0)
 		var cost: int = Registry.kind(kinds[i]).cost
 		button.text = HudModel.menu_name(i, kinds[i])
 		_tint(button.get_node("Price"), "$%d" % cost, cost > credits)
 		_look(button, kinds[i] == placement_kind)
+
+func _hover_menu(index: int, entered: bool) -> void:
+	if not entered and _hovered != index: return
+	_hovered = index if entered else -1
+	if not _strip_args.is_empty(): _show_strip.callv(_strip_args)
 
 func _refresh_queue(building: Dictionary, edge: Color) -> void:
 	var queue: Array = building.get("queue", [])

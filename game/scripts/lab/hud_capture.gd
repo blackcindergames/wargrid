@@ -60,9 +60,10 @@ func shots() -> Array[Dictionary]:
 		_shot("refusal-longest", _refusal_longest, LONGEST),
 		_shot("strip", _strip.bind(8), "4800"),
 		_shot("low-power", _strip.bind(12), "LOW POWER · DEFENCES OFF"),
-		_shot("preview-short", _slab_armed.bind(500, "china_defence"), HudTests.MINUS + "700"),
+		_shot("preview-short", _slab_armed.bind(500, "china_defence"), HudTests.MINUS + "1200"),
 		_shot("preview-plant", _slab_armed.bind(4800, "usa_power_plant"), "8 / 15"),
 		_shot("preview-frc", _slab_armed.bind(4800, "frc_barracks", "frc"), "PREVIEW"),
+		_shot("preview-hover", _hover_unit, "PREVIEW", one),
 		_shot("chips-menu-free", _menu_chip.bind(false), "Esc"),
 		_shot("chips-menu-held", _menu_chip.bind(true), ""),
 		_shot("chips", _chips_worst.bind(false), "PLAYTEST"),
@@ -176,6 +177,15 @@ func _slab_armed(credits: int, kind: String, faction: String = "") -> void:
 	var index: int = _main.hud.menu_kinds.find(kind)
 	check(index != -1, "%s not in the builder's menu %s" % [kind, _main.hud.menu_kinds])
 	if index != -1: _main.get_node("HUD/Economy/BuildMenu").get_child(index).pressed.emit()
+
+func _hover_unit() -> void:
+	var ids: Dictionary = await _slab_world(50000)
+	HudTests._select(_main, [], ids.factory)
+	await _settle()
+	var button: Button = _main.get_node("HUD/Economy/BuildMenu").get_child(0)
+	HudTests._move(_port, button.get_global_rect().get_center())
+	await _settle()
+	check(button.is_hovered() and HudTests._previewing(_main.hud), "the pointer on the first unit button previews it")
 
 func _slab_attack() -> void:
 	await _slab_pick("tanks", 50000)
