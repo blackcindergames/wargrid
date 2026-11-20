@@ -48,7 +48,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**14 of 40 parts done**
+**14 of 42 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -66,10 +66,11 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | Quick rematch | Done |
 | ✅ | Notes that never block | Done |
 | ✅ | See your selection | Done |
-| ⏭ | Know why an order failed | Next |
-| 📋 | Read the battlefield | Planned |
+| ⏭ | Build from the dock | Next |
 | 📋 | Team up against bots | Planned |
-| 📋 | Build from the dock | Planned |
+| 📋 | First new units | Planned |
+| 📋 | Know why an order failed | Planned |
+| 📋 | Read the battlefield | Planned |
 | 📋 | See the whole map | Planned |
 | 📋 | Reconnect after a drop | Planned |
 | 📋 | More maps | Planned |
@@ -91,6 +92,7 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 💡 | Ground batch A | Later |
 | 💡 | Wrecks | Later |
 | 💡 | Ground batch B | Later |
+| 💡 | Team up with a bot | Later |
 | 💡 | Bots worth playing | Later |
 <!-- roadmap:end -->
 

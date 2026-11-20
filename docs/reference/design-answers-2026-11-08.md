@@ -418,7 +418,7 @@ Answers to an outside audit of `main` at `ec78012` (audit and fix list kept outs
 - **Relay Origin check:** skipped for now (friends only); revisit in M9.
 - **Fuzz and invariant test:** before the movement milestone. **One targetability predicate:** before ground batch A. **Controller chain flattening:** with the controls task, together with the `SimPump` seam.
 - **Performance:** now a `BUDGET EXCEEDED` summary line and a report-only worst-tick line; the forward budget per unbuilt system after measuring the browser against native on the team match (desktop-only 3v3 is decided from that measurement); a report-only late-game canary before the movement design.
-- **Roadmap:** a thin playable slice (controls task, minimal real HUD, order acknowledgement sound, regular 1v1 playtests) directly after the movement milestone; fog (M7.9) before ground batch A; the roster stays at four units per faction until three recorded 1v1 matches are reviewed.
+- **Roadmap:** a thin playable slice (controls task, minimal real HUD, order acknowledgement sound, regular 1v1 playtests) directly after the movement milestone; fog (M7.9) before ground batch A; the roster stays at four units per faction until three recorded 1v1 matches are reviewed (dropped 2026-11-20, see [Fun-first reorder](#fun-first-reorder-user-2026-11-20)).
 - **Unit autonomy (human vs AI behaviour):** decided at the M8 design, leaning toward a per-unit stance; count "units just stood there" and "ran off" remarks in playtests first.
 - **Documentation:** `docs/ARCHITECTURE.md`; a `docs/STATUS.md` that replaces the status bullets in the development notes' Start here; symbols instead of line numbers in living documents; a short table at the head of the performance ledger. Logs are not moved.
 - **README:** current screenshot and a short fight clip (needs a window: ask first), remove "placeholder shapes for now", CI badge once `main` is green, three lines on what Wargrid does differently. Align `AGENTS.md` with the README's "inspired by" wording; open item: a qualified opinion on deriving the roster's numbers from retail data before wider distribution.
@@ -1410,3 +1410,15 @@ The Opus, Grok and player-experience gate reviewers and `/ponytail-review` read 
 - **Playtest card:** the player-experience reviewer's mix: keep `found_it`, `hud_clicks`, `buttons_fit`; add `preview_read` and `queue_cancel`; `numbers` moves to free text; try items for resuming a paused site and cancelling a queued unit; the text describes the strip preview and the grounded refusal line.
 - **Polish before the merge:** the hovered build button gets the queue rows' 1 px muted inset; `PREVIEW` keeps one x across forms; no preview after an ending without a card; a free building shows no `−0`; stale layout-doc paragraphs about the forecast card and the barracks key in the development notes are corrected. Per-refresh layout work (Grok P2) and the larger ponytail cuts wait.
 - **F17 placed** (P2.3a1 playtest marker: a worker behind a building is found only with a drag box): a rider on P2.3a3 Read the battlefield, picked in the art lab first (outline or silhouette against a fade).
+
+## Fun-first reorder (user, 2026-11-20)
+
+Brainstorming round on progress speed; design: [fun-first reorder](../superpowers/specs/2026-11-20-fun-first-reorder-design.md).
+
+- **Goal:** a 2v2 with a friend against bots, with a real HUD and one or two new units.
+- **Day lane:** P2.3a1 → P2.3b → P7 → P15 First new units → P2.3a2 → P2.3a3 → P3; P3 ahead of P15 offered and declined.
+- **Lighter process** for P2.3b, P7 and P15 (route B of three).
+- **Night lane** stays; SB5a, SB5b and SB6 are night lane only.
+- **Roster rule dropped:** the 2026-11-11 four-units-per-faction rule; balance is judged in playtests.
+- **Rule:** day packages change what a player sees or plays; technical work enters the day lane only when a measured problem blocks a player package.
+- **Director round:** P7's bot work goes to the enemy bots (more units sooner, one shared wave clock and target, growing waves, base defences in the way) after the owner's read: "it plays ok, it just builds too few units too slowly and can be overwhelmed after a few minutes easily. It also doesn't deal well with base defenses in its way"; the allied-bot mode moves to the Later item Team up with a bot; control groups, H, Space and an allied-base alert ride on P2.3b, which defers its layout key labels and defence range ring; P15 is a heavy tank per faction (Overlord, Marauder, Paladin; Terrorist as stretch).

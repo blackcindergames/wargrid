@@ -16,7 +16,7 @@ The full row is about 16 tasks, more than one 15 to 20 minute playtest can judge
 | P2.3a2 | Know why an order failed (user, 2026-11-19) | wording table (match and launcher), F29, F30, the N-cap rider, the Esc menu | rendered rerun with a refusal shown during the sample |
 | P2.3a3 | Read the battlefield (user, 2026-11-19) | white marks, hover ticks, drag box and preview, rally and target line, map edge and canvas, health-bar rule and size | damaged-army row at 1280x720 and 2560x1080 |
 
-The three run back to back, then P7; night 8 Play on after a leave takes the first free night gap after P2.3a1 (user, 2026-11-19). P2.5 needs only P2.3a1 (credits left and build percent in the panel). This session writes the plan for P2.3a1 only; P2.3a2 and P2.3a3 get their plans when the owner starts them (user, 2026-11-19).
+The three run back to back, then P7 (superseded: P2.3b, P7 and P15 now run between P2.3a1 and P2.3a2, [fun-first reorder](2026-11-20-fun-first-reorder-design.md), user, 2026-11-20); night 8 Play on after a leave takes the first free night gap after P2.3a1 (user, 2026-11-19). P2.5 needs only P2.3a1 (credits left and build percent in the panel). This session writes the plan for P2.3a1 only; P2.3a2 and P2.3a3 get their plans when the owner starts them (user, 2026-11-19).
 
 ## Goals
 
