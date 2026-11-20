@@ -61,10 +61,10 @@ func test_ready(runner) -> bool:
 		positions[unit.position] = true
 	runner.check(positions.size() == 20, "S1 unique starts")
 	runner.check(state.map.blocked_cells.size() == 18, "S1 static obstacle")
-	runner.check(main.has_node("Camera2D") and main.has_node("WorldView") and main.has_node("HUD/Status"), "S1 scene nodes")
+	runner.check(main.has_node("Camera2D") and main.has_node("WorldView") and main.has_node("HUD/Hud"), "S1 scene nodes")
 	runner.check(main.orders.selected_ids == [], "S1 no selection")
 	runner.check(main.get_node("Camera2D").position == Iso.world_to_plane(Vector2(8, 8)), "S1 camera center")
-	runner.check(main.get_node("HUD/Status").mouse_filter == Control.MOUSE_FILTER_IGNORE, "S1 HUD click through")
+	runner.check(main.get_node("HUD/Hud").mouse_filter == Control.MOUSE_FILTER_IGNORE, "S1 HUD click through")
 	runner.check(ProjectSettings.get_setting("physics/common/physics_ticks_per_second") == 30, "S1 tick rate")
 	runner.check(ProjectSettings.get_setting("rendering/renderer/rendering_method") == "gl_compatibility", "S1 renderer")
 	for binding in [["camera_left", KEY_A, KEY_LEFT], ["camera_right", KEY_D, KEY_RIGHT], ["camera_up", KEY_W, KEY_UP], ["camera_down", KEY_S, KEY_DOWN], ["deselect", KEY_ESCAPE]]:
@@ -123,7 +123,9 @@ func test_rejection(runner) -> bool:
 	main.driver.flush()
 	var queued: Dictionary = main.driver.pump.live().snapshot()
 	runner.check(queued.pending_commands.size() == 1 and queued.pending_commands[0].sequence == 1, "S3 rejection did not consume sequence")
-	runner.check(not BaseScene.hud_text(main).contains("Target"), "S3 accepted clears error")
+	BaseScene.tick(main)
+	runner.check(not BaseScene.hud_text(main).contains("Target"), "S3 the accepted answer clears error")
+	queued = main.driver.pump.live().snapshot()
 	await click(runner, view, Iso.world_to_plane(Vector2(0.5, 0.5)), MOUSE_BUTTON_LEFT)
 	runner.check(main.orders.selected_ids == [], "S3 empty clears")
 	await click(runner, view, Iso.world_to_plane(Vector2(4.5, 4.5)), MOUSE_BUTTON_RIGHT)

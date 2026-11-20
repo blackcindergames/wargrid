@@ -227,13 +227,14 @@ func test_menu_layout(runner) -> bool:
 		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		_esc(main)
+		BaseScene.select_own_unit(main)
 		await runner.process_frame
 		await runner.process_frame
 		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size), "E8 the viewport really is %s, got %s" % [size, main.get_viewport().get_visible_rect().size])
 		var menu: Control = main.get_node("HUD/PauseMenu")
 		var buttons: Array = menu.find_children("*", "Button", true, false).filter(func(button: Button) -> bool: return button.is_visible_in_tree())
 		var panels: Dictionary = BaseScene.hud_panels(main)
-		runner.check(panels.has("HUD/MenuChip") and panels.has("HUD/Hud/TopStrip"), "E8 the list holds the Menu chip and the strip at %s, got %s" % [size, panels.keys()])
+		runner.check(panels.has("HUD/MenuChip") and panels.has("HUD/Hud/TopStrip") and panels.has("HUD/Hud/SelectionPanel"), "E8 the list holds the Menu chip, the strip and the selection panel at %s, got %s" % [size, panels.keys()])
 		var hud: Array = panels.values()
 		var quality: Button = menu.find_child("Quality", true, false)
 		runner.check(quality != null and quality.is_visible_in_tree() and buttons.has(quality), "E8 quality toggle is visible")

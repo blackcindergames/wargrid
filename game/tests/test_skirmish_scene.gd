@@ -30,7 +30,7 @@ const FailingPump = preload("res://tests/failing_pump.gd")
 var freeze_sessions: String = "user://test-freeze-playtests-%d" % OS.get_process_id()
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -54,7 +54,7 @@ func _arena(main) -> Dictionary:
 
 func test_skirmish_ready_and_tick(runner) -> bool:
 	var main = await _setup(runner)
-	for path in ["WorldView", "Camera2D", "HUD/Status", "HUD/ResultPanel", "HUD/Economy/Produce"]:
+	for path in ["WorldView", "Camera2D", "HUD/ResultPanel", "HUD/Economy/Produce"]:
 		runner.check(main.has_node(path), "K2 node " + path)
 	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot(), "K2 exact scenario")
 	BaseScene.tick(main)
@@ -146,7 +146,7 @@ func test_match_hud_and_restart(runner) -> bool:
 	main.driver.pump.live().remove_object(4)
 	BaseScene.tick(main)
 	runner.check(main.get_node(OUTCOME).text == "Victory" and main.get_node(PLAY_AGAIN).visible and not main.get_node(PLAY_AGAIN).disabled, "K4 victory and restart button")
-	runner.check(not main.get_node("HUD/Status").text.contains("A: attack-move click"), "K4 the status line drops the order hints under a result")
+	runner.check(not BaseScene.hud_text(main).contains("A: attack-move click"), "K4 the HUD drops the order hints under a result")
 	main.driver.pump.live()._players[main.local_player].team = 7
 	BaseScene.publish(main)
 	runner.check(main._result_text({"status": "won", "winner": 7}) == "Victory" and main._result_text({"status": "won", "winner": main.local_player}) == "Defeat", "K4 result compares the winning team id with the local team")
@@ -155,7 +155,7 @@ func test_match_hud_and_restart(runner) -> bool:
 	main._unhandled_input(InputEventKey.new())
 	runner.check(main.driver.pump.live().snapshot().pending_commands == before, "K4 terminal match accepts no orders")
 	BaseScene.tick(main)
-	runner.check(main.hud.refusal == "Match ended", "K4 terminal match accepts no orders, got '%s'" % main.hud.refusal)
+	runner.check(main.hud.refusal.is_empty() and not main.get_node("HUD/Hud/RefusalLine").visible, "K4 the refused order of an ended match stays off the line (the card says why), got '%s'" % main.hud.refusal)
 	main.orders._placement_kind = "usa_power_plant"
 	main.orders._attack_move_mode = true
 	main.hud.refusal = "old"
@@ -796,9 +796,6 @@ func test_hud_font_size_is_shared(runner) -> bool:
 	BaseScene.tick(main)
 	await runner.process_frame
 	runner.check(main.get_node("HUD/Economy/Queue").get_child_count() == 1, "FS1 fixture: a queue entry, got %d" % main.get_node("HUD/Economy/Queue").get_child_count())
-	runner.check(main.get_node("HUD/Status").get_theme_font_size("font_size") == 12, "FS1 HUD/Status is 12 px")
-	var muted: Color = ThemeDB.get_project_theme().get_color(&"muted", &"Tokens")
-	runner.check(main.get_node("HUD/Status").get_theme_color("font_color") != muted, "FS1 the status line has no backdrop, so it is not muted")
 	for control: Control in main.get_node("HUD").find_children("*", "Control", true, false):
 		if control is Label or control is BaseButton or control is LineEdit or control is TextEdit: runner.check(control.get_theme_font_size("font_size") >= 12, "FS1 %s is at least 12 px, got %d" % [control.name, control.get_theme_font_size("font_size")])
 	main.free()
@@ -1270,14 +1267,14 @@ func test_hud_reads_only_state_and_orders(runner) -> bool:
 	main.orders.selected_building_id = barracks
 	var produce: Button = main.get_node("HUD/Economy/Produce")
 	produce.hide()
-	main.hud.note = "Choose one builder"
+	main.hud.refuse("Choose one builder")
 	main.stepped_results.append({"ok": false, "error": "Not yours", "player": 2, "tick": 5, "sequence": 0})
 	var view: Dictionary = sim.view_state()
 	main._take_results(view)
 	main.hud.update_hud(view, main._hud_selection(view), main.local_player, main.local_player)
-	var status: String = main.get_node("HUD/Status").text
-	runner.check(produce.visible and _panel_text(main, "Name") == Registry.kind("usa_barracks").display_name and main.hud.note == "Choose one builder" and status.contains("Choose one builder"), "HU1 the HUD shows the selection and keeps the local note")
-	runner.check(main.hud.refusal != "Not yours" and not status.contains("Not yours"), "HU1 _take_results ignores player 2's stepped result, got '%s'" % main.hud.refusal)
+	var line: String = (main.get_node("HUD/Hud/RefusalLine").find_child("Text", true, false) as Label).text if main.get_node("HUD/Hud/RefusalLine").visible else ""
+	runner.check(produce.visible and _panel_text(main, "Name") == Registry.kind("usa_barracks").display_name and main.hud.refusal == "Choose one builder" and line == "Choose one builder", "HU1 the HUD shows the selection and keeps the local hint on the line, got '%s'" % line)
+	runner.check(main.hud.refusal != "Not yours" and not BaseScene.hud_text(main).contains("Not yours"), "HU1 _take_results ignores player 2's stepped result, got '%s'" % main.hud.refusal)
 	main.free()
 	return true
 
@@ -1448,6 +1445,63 @@ func test_sb2_refusal_survives_accepted_result(runner) -> bool:
 				await runner.process_frame
 			runner.check(main.hud.refusal == "Target outside map" and BaseScene.hud_text(main).contains("Target outside map"), "RA3 an accepted result keeps the refusal (processing %s, refused first %s), got '%s'" % [processing, refused_first, main.hud.refusal])
 			main.free()
+	return true
+
+func test_one_line_one_beep_per_drain(runner) -> bool:
+	var main = await _setup(runner)
+	var ids: Dictionary = _arena(main)
+	main._submit(_off_map_move(ids))
+	main._submit({"type": "stop", "entity_ids": [999]})
+	BaseScene.tick(main)
+	var text: String = BaseScene.hud_text(main)
+	runner.check(main.hud.refusal == "Missing entity or wrong owner" and text.count("Missing entity or wrong owner") == 1 and not text.contains("Target outside map"), "RN4 two refusals in one drain show the second once, got '%s'" % main.hud.refusal)
+	runner.check(_error_cues(main) == 1, "RN4 two refusals in one drain beep once, got %d" % _error_cues(main))
+	main.free()
+	return true
+
+func test_due_failure_beeps_once(runner) -> bool:
+	var main = await _setup(runner)
+	main.driver.adopt(Fixture.make_world())
+	main._refresh()
+	for i in 2: main._submit({"type": "build", "builder_id": 1, "building_kind": "usa_power_plant", "origin": [8, 4]})
+	var beeps: int = 0
+	for i in 4:
+		BaseScene.tick(main)
+		beeps += _error_cues(main)
+	var line: Control = main.get_node("HUD/Hud/RefusalLine")
+	var text: String = (line.find_child("Text", true, false) as Label).text
+	runner.check(line.visible and not text.is_empty() and text == main.hud.refusal, "RN7 an own due-time failure shows on the line, got '%s'" % text)
+	runner.check(beeps == 1, "RN7 the due-time failure beeps once (the sound director's), got %d" % beeps)
+	main.free()
+	return true
+
+func test_no_refusal_over_a_card(runner) -> bool:
+	var main = await _setup(runner)
+	var ids: Dictionary = _arena(main)
+	var live = main.driver.pump.live()
+	for object: Dictionary in live.snapshot().entities + live.snapshot().buildings:
+		if object.owner == 2: live.remove_object(object.id)
+	BaseScene.tick(main)
+	runner.check(main.shown_over(), "RN8 fixture: the match is won")
+	main._submit(_off_map_move(ids))
+	main.refuse("Choose one builder", false)
+	main.refuse("Target outside map")
+	var beeps: int = 0
+	for i in 2:
+		BaseScene.tick(main)
+		beeps += _error_cues(main)
+	runner.check(main.hud.refusal.is_empty() and not main.get_node("HUD/Hud/RefusalLine").visible and beeps == 0, "RN8 under the result card nothing refuses on the line or beeps, got '%s' and %d" % [main.hud.refusal, beeps])
+	main.free()
+	main = await _setup(runner)
+	var world: Dictionary = _frozen_arena(main)
+	main.driver.submit(_off_map_move(world.ids))
+	world.pump.fail_next = true
+	BaseScene.tick(main)
+	runner.check(main.frozen(), "RN8 fixture: the pump failed")
+	main.refuse("Target outside map")
+	BaseScene.tick(main)
+	runner.check(main.hud.refusal.is_empty() and not main.get_node("HUD/Hud/RefusalLine").visible and _error_cues(main) == 0, "RN8 under the freeze card nothing refuses on the line or beeps, got '%s' and %d" % [main.hud.refusal, _error_cues(main)])
+	main.free()
 	return true
 
 func test_sb2_restart_drops_held_answer(runner) -> bool:

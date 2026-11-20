@@ -311,8 +311,7 @@ func _builder() -> int:
 func _enter_placement(kind: String) -> void:
 	_set_attack_move(false)
 	if _builder() == -1:
-		_screen.hud.note = "Choose one builder"
-		_screen.hud.refusal = "Choose one builder"
+		_screen.refuse("Choose one builder", false)
 		_screen._reshow()
 		return
 	_placement_kind = kind
@@ -362,8 +361,7 @@ func _context_order(id: int) -> bool:
 			if not unit.is_empty() and Registry.collects(unit.kind).is_empty(): collectors = false
 		if collectors: _screen._submit({"type":"gather","entity_ids":selected_ids.duplicate(),"source_id":id})
 		else:
-			_screen.hud.note = "Choose homogeneous collector selection"
-			_screen.hud.refusal = "Choose homogeneous collector selection"
+			_screen.refuse("Choose homogeneous collector selection", false)
 			_screen._reshow()
 		return true
 	var building: Dictionary = _screen._building(state,id)
@@ -373,8 +371,7 @@ func _context_order(id: int) -> bool:
 	if not building.is_empty() and building.owner == _screen.local_player and not building.completed:
 		if _builder() != -1: _screen._submit({"type":"resume_build","builder_id":_builder(),"building_id":id})
 		else:
-			_screen.hud.note = "Choose one builder"
-			_screen.hud.refusal = "Choose one builder"
+			_screen.refuse("Choose one builder", false)
 			_screen._reshow()
 		return true
 	return false
@@ -385,8 +382,7 @@ func _unload_selected() -> void:
 	var state: Dictionary = _screen.shown_state
 	var id: int = selected_building_id if selected_building_id != -1 else (selected_ids[0] if selected_ids.size() == 1 else -1)
 	if not HudModel.is_container(state, id, _screen.local_player):
-		_screen.hud.note = "Select a container"
-		_screen.hud.refusal = "Select a container"
+		_screen.refuse("Select a container", false)
 		_screen._reshow()
 		return
 	_screen._submit({"type":"unload","target_id":id})
@@ -403,8 +399,7 @@ func _produce_selected() -> void:
 	var state: Dictionary = _screen.shown_state
 	var building: Dictionary = _screen._building(state,selected_building_id)
 	if building.is_empty():
-		_screen.hud.note = "Select a production building"
-		_screen.hud.refusal = "Select a production building"
+		_screen.refuse("Select a production building", false)
 		_screen._reshow()
 		return
 	_screen._submit({"type":"produce","building_id":building.id,"unit_kind":_screen._production_kind(building, state)})

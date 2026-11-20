@@ -320,7 +320,7 @@ func test_overlay_layout(runner) -> bool:
 			runner.check(panel.visible and screen.encloses(panel.get_global_rect()), "PO8 %s inside %s, rect %s" % [path, size, panel.get_global_rect()])
 			panels.append(panel.get_global_rect())
 			var hud: Dictionary = BaseScene.hud_panels(main)
-			runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip"), "PO8 the list holds the Menu chip and the strip at %s, got %s" % [size, hud.keys()])
+			runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip") and hud.has("HUD/Hud/SelectionPanel"), "PO8 the list holds the Menu chip, the strip and the selection panel at %s, got %s" % [size, hud.keys()])
 			for other: String in hud: runner.check(not panel.get_global_rect().intersects(hud[other]), "PO8 %s clear of %s at %s" % [path, other, size])
 		runner.check(not panels[0].intersects(panels[1]), "PO8 checklist and note apart at %s" % size)
 		port.free()

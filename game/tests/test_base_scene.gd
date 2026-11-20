@@ -11,7 +11,7 @@ const SimPump = preload("res://scripts/match/sim_pump.gd")
 # [window, logical]: what the match's stretch caps lay each window out at
 const HUD_SIZES: Array[Array] = [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)]]
 
-const HUD_PANELS: Array[String] = ["HUD/Status", "HUD/Economy", "HUD/Hud/TopStrip", "HUD/Hud/Forecast", "HUD/MenuChip", "HUD/Hud/Notice"]
+const HUD_PANELS: Array[String] = ["HUD/Economy", "HUD/Hud/TopStrip", "HUD/Hud/Forecast", "HUD/MenuChip", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/Hud/SelectionPanel"]
 
 # The no-overlap lists: each shown HUD panel by path, sized as the layout tests always read them.
 static func hud_panels(main) -> Dictionary:
@@ -20,6 +20,14 @@ static func hud_panels(main) -> Dictionary:
 		var control: Control = main.get_node(path)
 		if control.is_visible_in_tree(): rects[path] = Rect2(control.global_position, control.get_combined_minimum_size())
 	return rects
+
+# The no-overlap lists hold the selection panel only while something is selected.
+static func select_own_unit(main) -> void:
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
+		if unit.owner == main.local_player:
+			main.orders.selected_ids.assign([unit.id])
+			break
+	main._refresh()
 
 # The slab replaced "below the status": inside the view and clear of the strip (P2.3a1 Task 9).
 static func slab_clear(runner, main, label: String) -> void:
@@ -268,7 +276,8 @@ func test_execution_feedback(runner) -> bool:
 	tick(main)
 	runner.check(main.hud.refusal == error,"Bs5 unrelated player result preserves immediate error")
 	main._submit({"type":"stop","entity_ids":[1]})
-	runner.check(main.hud.refusal.is_empty(),"Bs5 accepted clears immediate error")
+	tick(main)
+	runner.check(main.hud.refusal.is_empty() and not main.get_node("HUD/Hud/RefusalLine").visible,"Bs5 the accepted answer clears immediate error")
 	main.free()
 	return true
 
@@ -391,7 +400,7 @@ func test_resume_status(runner) -> bool:
 	main._refresh()
 	var hint: Label = main.get_node("HUD/Economy/ResumeHint")
 	runner.check(hud_text(main).contains("Right-click: resume") and hint.is_visible_in_tree() and hint.text == "Right-click: resume","H6 resume hint shown in the slab while hovering")
-	runner.check(not main.get_node("HUD/Status").text.contains("Right-click: resume"),"H6 the resume hint left the status line")
+	runner.check(hud_text(main).count("Right-click: resume") == 1,"H6 the resume hint shows once")
 	slab_clear(runner,main,"H6")
 	hover(main,Iso.world_to_plane(Vector2(20.5,20.5)))
 	main._refresh()

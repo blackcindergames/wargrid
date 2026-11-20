@@ -58,6 +58,8 @@ var _auto_tick_usec: int = 0
 var _visuals := VisualDirector.new()
 var _playtest: PlaytestOverlay
 var _leaving: bool = false
+var _unanswered: int = 0
+var _stale: int = 0
 
 func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: String = Skirmish.default_faction()) -> void:
 	driver = OnlineDriver.new(transport, lockstep, faction, seat)
@@ -71,8 +73,8 @@ func _ready() -> void:
 	$HUD.add_child(_result_panel)
 	hud = Hud.new()
 	$HUD.add_child(hud)
-	$HUD.move_child(hud, $HUD/Status.get_index() + 1)
-	hud.setup($HUD/Economy, $HUD/Status)
+	$HUD.move_child(hud, 0)
+	hud.setup($HUD/Economy)
 	# Above the result card's dim and click catcher, so Menu stays live after the match, as the Playtest chip does.
 	var menu_chip: Control = hud.get_node("MenuChip")
 	menu_chip.reparent($HUD, false)
@@ -187,14 +189,22 @@ func _match_record(mode: String, match_factions: Array, lines: PackedStringArray
 	var record: Dictionary = driver.record()
 	return _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines})
 
+# Only an answer to an order sent after the refusal clears it, so an earlier order in flight cannot wipe a hint.
+# shortcut: answers are counted, not matched; an order that never gets one leaves the line to its timer; match by sequence if that shows up.
 func _take_answers() -> void:
-	for answer: Dictionary in driver.take_answers():
+	var answers: Array[Dictionary] = driver.take_answers()
+	var refused: Dictionary = {}
+	var fresh: bool = false
+	for answer: Dictionary in answers:
+		if not answer.ok: refused = answer
+		if answer.command.is_empty(): continue
+		_unanswered = maxi(_unanswered - 1, 0)
+		if _stale > 0: _stale -= 1
+		elif answer.ok: fresh = true
+	if not refused.is_empty(): refuse(refused.error)
+	elif fresh: hud.clear_refusal()
+	for answer: Dictionary in answers:
 		if answer.ok: _playtest.observe_command(answer.command)
-		else:
-			_ensure_sound()
-			_sound.rejected(answer.error)
-			hud.note = "Rejected: " + answer.error
-			hud.refusal = answer.error
 		orders.answered(answer)
 
 func menu_open() -> bool:
@@ -348,7 +358,7 @@ func _refresh() -> void:
 
 func _note() -> String:
 	# The rematch line changes without a tick, so a finished match still redraws its panel.
-	return hud.note + driver.notice() + driver.rematch_line()
+	return hud.refusal + driver.notice() + driver.rematch_line()
 
 func shown_over() -> bool:
 	return shown_state.get("match") != null and shown_state.match.status in ["won", "draw"]
@@ -386,9 +396,8 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 func _take_results(state: Dictionary) -> void:
 	for result: Dictionary in stepped_results + state.command_results:
 		if result.player == local_player and (result.tick > _last_result_tick or (result.tick == _last_result_tick and result.sequence > _last_result_sequence)):
-			if not result.ok:
-				hud.note = result.error
-				hud.refusal = result.error
+			# The sound director already beeps for a due-time failure.
+			if not result.ok: refuse(result.error, false)
 			_last_result_tick = result.tick
 			_last_result_sequence = result.sequence
 
@@ -445,17 +454,18 @@ func _show_hint(payload: Dictionary) -> void:
 func _submit(payload: Dictionary) -> void:
 	_show_hint(payload)
 	driver.submit(payload)
-	hud.note = ""
-	hud.refusal = ""
+	_unanswered += 1
 	_reshow()
 	_sound.order(payload)
 
-func refuse(error: String) -> void:
-	_ensure_sound()
-	_sound.rejected(error)
-	hud.note = "Rejected: " + error
-	hud.refusal = error
-	_reshow()
+# The result and freeze cards already say why nothing is taken, as with the notice.
+func refuse(raw_error: String, sound: bool = true) -> void:
+	if shown_over() or frozen(): return
+	_stale = _unanswered
+	if sound:
+		_ensure_sound()
+		_sound.rejected(raw_error)
+	hud.refuse(raw_error)
 
 func _ensure_sound() -> void:
 	if _sound != null: return
@@ -501,6 +511,8 @@ func _restart_world() -> void:
 	_visuals.reset()
 	orders.reset()
 	hud.reset()
+	_unanswered = 0
+	_stale = 0
 	_last_result_tick = -1
 	_last_result_sequence = -1
 	stepped_results.clear()

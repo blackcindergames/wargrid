@@ -53,6 +53,7 @@ func test_layout_clear_of_hud(runner) -> bool:
 		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		main.get_node("HUD/PerfOverlay").set_counts(300, 12, 123456)
+		BaseScene.select_own_unit(main)
 		_f3(main)
 		await runner.process_frame
 		var overlay: Label = main.get_node("HUD/PerfOverlay")
@@ -60,7 +61,7 @@ func test_layout_clear_of_hud(runner) -> bool:
 		var viewport: Rect2 = main.get_viewport().get_visible_rect()
 		runner.check(viewport.size == Vector2(size) and viewport.encloses(rect), "PO3 overlay inside the %s viewport, got %s, rect %s" % [size, viewport.size, rect])
 		var hud: Dictionary = BaseScene.hud_panels(main)
-		runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip"), "PO3 the list holds the Menu chip and the strip at %s, got %s" % [size, hud.keys()])
+		runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip") and hud.has("HUD/Hud/SelectionPanel"), "PO3 the list holds the Menu chip, the strip and the selection panel at %s, got %s" % [size, hud.keys()])
 		for path: String in hud: runner.check(not rect.intersects(hud[path]), "PO3 overlay clear of %s at %s" % [path, size])
 		port.free()
 	return true

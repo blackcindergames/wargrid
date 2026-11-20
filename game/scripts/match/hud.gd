@@ -23,10 +23,9 @@ const View = preload("res://scripts/presentation/world_view.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 
 var refusal: String = ""
-var note: String = ""
+var now_msec: Callable = Time.get_ticks_msec
 var rebuilds: int = 0
 var menu_kinds: Array = []
-var _status: Label
 var _economy: VBoxContainer
 var _build_menu: GridContainer
 var _queue: Control
@@ -37,6 +36,9 @@ var _forecast: PanelContainer
 var _menu: Button
 var _notice: PanelContainer
 var _notice_text: Label
+var _refusal_line: PanelContainer
+var _refusal_text: Label
+var _refused_at: int = 0
 var _esc: Label
 var _resume: Label
 var _commands: GridContainer
@@ -66,6 +68,7 @@ func _init() -> void:
 	_build_forecast()
 	_build_menu_chip()
 	_build_notice()
+	_build_refusal_line()
 	_build_panel()
 
 # Mouse-transparent until the HUD routing task decides what the panels catch.
@@ -181,12 +184,45 @@ func _show_notice(text: String) -> void:
 	var padding: float = _notice.get_theme_stylebox("panel").get_minimum_size().x
 	_notice_text.custom_minimum_size.x = minf(ceilf(width) + 1.0, NOTICE_WIDTH - padding)
 
+# hud-v5-layout "Refusal line": bottom centre, its bottom edge 8 above the dock line.
+func _build_refusal_line() -> void:
+	_refusal_line = _slab("RefusalLine", Vector2.ZERO)
+	_flat(_refusal_line, 28)
+	_refusal_line.set_anchors_preset(PRESET_CENTER_BOTTOM)
+	_refusal_line.grow_horizontal = GROW_DIRECTION_BOTH
+	_refusal_line.offset_top = -204
+	_refusal_line.offset_bottom = -176
+	var row: BoxContainer = _box(_refusal_line, "Row", HBoxContainer.new(), 8)
+	var square := ColorRect.new()
+	square.name = "Square"
+	square.color = get_theme_color("warn", &"Tokens")
+	square.custom_minimum_size = Vector2(8, 8)
+	square.size_flags_vertical = SIZE_SHRINK_CENTER
+	square.mouse_filter = MOUSE_FILTER_IGNORE
+	row.add_child(square)
+	_refusal_text = _label(row, "Text", &"HudRow")
+	_refusal_text.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
+	_refusal_line.visible = false
+
+func refuse(raw_error: String) -> void:
+	refusal = raw_error
+	_refused_at = now_msec.call()
+	_refusal_text.text = raw_error
+	_refusal_line.visible = true
+
+func clear_refusal() -> void:
+	refusal = ""
+	_refusal_line.visible = false
+
+# The timer only hides the line; `refusal` keeps the words until replaced, cleared or reset.
+func _process(_delta: float) -> void:
+	if _refusal_line.visible and now_msec.call() - _refused_at >= 3000: _refusal_line.visible = false
+
 # Esc's first job is to back out of a selection, placement or form; the chip says so only when it opens the menu.
 func set_esc_chip(shown: bool) -> void:
 	_esc.visible = shown
 
-func setup(economy: VBoxContainer, status: Label) -> void:
-	_status = status
+func setup(economy: VBoxContainer) -> void:
 	_economy = economy
 	if economy == null: return
 	_queue = economy.get_node("Queue")
@@ -198,8 +234,7 @@ func setup(economy: VBoxContainer, status: Label) -> void:
 	_read_keys()
 
 func reset() -> void:
-	note = ""
-	refusal = ""
+	clear_refusal()
 	_labels = {}
 	_last = []
 	_counts = {}
@@ -307,7 +342,6 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	if _economy == null: menu_kinds = kinds
 	else: _economy_controls(view, building, selection, kinds, seat)
 	_count_rebuild(selection)
-	if _status != null: _status.text = note
 
 # Structural changes only; values patch in place.
 func _count_rebuild(selection: Dictionary) -> void:

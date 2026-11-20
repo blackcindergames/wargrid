@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_idle_header, test_rebuild_count]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -46,11 +46,9 @@ func test_hud_reads_only_its_input(runner) -> bool:
 	runner.root.add_child(parent)
 	var hud = script.new()
 	parent.add_child(hud)
-	var status := Label.new()
-	parent.add_child(status)
 	var economy := _economy()
 	parent.add_child(economy)
-	hud.setup(economy, status)
+	hud.setup(economy)
 	var ids: Array[int] = [1]
 	var selection: Dictionary = {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": "", "resume_id": -1, "notice": "", "production_kind": "", "bright_owners": false, "over": false, "esc_opens_menu": true, "attack_move": false}
 	hud.update_hud(Fixture.make_world().view_state(), selection, 1, 1)
@@ -265,7 +263,7 @@ func test_match_surfaces_keep_their_size(runner) -> bool:
 	main.get_node("HUD/PerfOverlay").toggle()
 	await runner.process_frame
 	await runner.process_frame
-	runner.check(main.get_node("HUD/PerfOverlay").theme_type_variation == &"HudSmallNumber" and main.get_node("HUD/Status").theme_type_variation == &"HudSmallNumber", "TH5 the F3 overlay and the status line print tabular digits")
+	runner.check(main.get_node("HUD/PerfOverlay").theme_type_variation == &"HudSmallNumber", "TH5 the F3 overlay prints tabular digits")
 	for path: String in ["HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog", "HUD/PerfOverlay"]:
 		var surface: Control = main.get_node(path)
 		runner.check(surface.is_visible_in_tree(), "TH5 %s is shown" % path)
@@ -317,7 +315,7 @@ func _bare_hud(runner) -> Hud:
 	runner.root.add_child(port)
 	var hud := Hud.new()
 	port.add_child(hud)
-	hud.setup(null, null)
+	hud.setup(null)
 	return hud
 
 func _show(runner, hud: Hud, view: Dictionary, kind: String = "", player: int = 1, bright: bool = false) -> void:
@@ -687,7 +685,7 @@ func test_online_notice_top_centre(runner) -> bool:
 	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)
 	runner.check(main.driver.notice() == "Waiting for player 1" and label.is_visible_in_tree() and label.text == "Waiting for player 1" and _colour(label) == _token("muted"), "CH4 the waiting notice shows in muted, got '%s'" % label.text)
 	runner.check(main.get_node("HUD/Hud/Forecast").visible and main.orders.busy(), "CH4 fixture: a building armed while the notice shows")
-	runner.check(not main.get_node("HUD/Status").text.contains("Waiting") and BaseScene.hud_text(main).contains("Waiting for player 1"), "CH4 the notice left HUD/Status")
+	runner.check(BaseScene.hud_text(main).count("Waiting for player 1") == 1, "CH4 the notice shows once")
 	var chips: Array = ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip"]
 	for strip: Array in [[8, "the longest card"], [12, "low power in the strip"]]:
 		main.hud.update_hud(_strip_view(500, strip[0], 10), _armed("china_defence", false, main.driver.notice()), 1, 1)
@@ -719,7 +717,7 @@ func _ended_notice(runner, online, seat: int, end: Callable, words: String, line
 	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)
 	runner.check(main.driver.over() and label.is_visible_in_tree() and label.text.begins_with(words), "CH4 %s: the ended match shows its notice, got '%s'" % [words, label.text])
 	runner.check(not main.get_node("HUD/Hud/Forecast").visible and not main.orders.busy(), "CH4 %s: the ending cleared the armed building" % words)
-	runner.check(not main.get_node("HUD/Status").text.contains(words) and BaseScene.hud_text(main).contains(words), "CH4 %s: the notice left HUD/Status" % words)
+	runner.check(BaseScene.hud_text(main).count(words) == 1, "CH4 %s: the notice shows once" % words)
 	_notice_clear(runner, main, words, ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip", "HUD/Playtest/Checklist"], lines)
 	main.free()
 
@@ -830,7 +828,7 @@ func test_slab_rect(runner) -> bool:
 		var panels: Dictionary = BaseScene.hud_panels(main)
 		runner.check(panels.has("HUD/Hud/TopStrip") and panels.has("HUD/MenuChip") and panels.has("HUD/Hud/Notice"), "SL1 fixture: strip, Menu and a notice shown%s" % at)
 		for path: String in panels:
-			if path != "HUD/Economy" and path != "HUD/Status": runner.check(not slab.intersects(panels[path]), "SL1 the slab clears %s%s" % [path, at])
+			if path != "HUD/Economy": runner.check(not slab.intersects(panels[path]), "SL1 the slab clears %s%s" % [path, at])
 		var chip: Control = main.get_node("HUD/Playtest/Chip")
 		runner.check(chip.is_visible_in_tree() and not slab.intersects(chip.get_global_rect()), "SL1 the Playtest chip shown and clear of the slab%s" % at)
 		var rows: Array = main.get_node("HUD/Economy").get_children().filter(func(row: Control) -> bool: return row.visible)
@@ -1878,5 +1876,154 @@ func test_rebuild_count(runner) -> bool:
 		var before: int = main.hud.rebuilds
 		_pick(main, change, -1, -1)
 		runner.check(main.hud.rebuilds == before + 1, "HN3 a selection change adds one rebuild, got %d after %d" % [main.hud.rebuilds, before])
+	main.free()
+	return true
+
+static func _refusal_line(main) -> Control:
+	return main.get_node_or_null("HUD/Hud/RefusalLine")
+
+static func _line_shown(main) -> bool:
+	var line: Control = _refusal_line(main)
+	return line != null and line.is_visible_in_tree()
+
+static func _line_text(main) -> String:
+	var line: Control = _refusal_line(main)
+	return (line.find_child("Text", true, false) as Label).text if line != null and _line_shown(main) else ""
+
+func test_refusal_line_place(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var skirmish = SkirmishTests.new()
+	var saved: String = overlays._begin()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await overlays._scene(runner, Skirmish, port)
+		var at: String = " at %s" % size
+		main._submit(skirmish._off_map_move(skirmish._arena(main)))
+		BaseScene.tick(main)
+		await _frames(runner)
+		var line: Control = _refusal_line(main)
+		runner.check(_line_shown(main), "RN1 a refused move shows the line%s" % at)
+		if line == null:
+			port.free()
+			break
+		var rect: Rect2 = line.get_global_rect()
+		runner.check(absf(rect.get_center().x - size.x / 2.0) <= 1.0 and absf(rect.position.y - (size.y - 204.0)) <= 0.5 and absf(rect.size.y - 28.0) <= 0.5, "RN1 centred, top H-204, 28 high%s, got %s" % [at, rect])
+		var square: ColorRect = line.find_child("Square", true, false)
+		var text: Label = line.find_child("Text", true, false)
+		runner.check(square != null and text != null and square.color == _token("warn") and square.size == Vector2(8, 8) and _colour(text) == _token("warn") and text.get_theme_font_size("font_size") == 13, "RN1 an 8x8 warn square and 13 px warn text%s" % at)
+		if square == null or text == null:
+			port.free()
+			break
+		runner.check(text.text == "Target outside map", "RN1 the raw words%s, got '%s'" % [at, text.text])
+		var square_rect: Rect2 = square.get_global_rect()
+		var text_rect: Rect2 = text.get_global_rect()
+		runner.check(absf(square_rect.position.x - rect.position.x - 8.0) <= 0.5 and absf(text_rect.position.x - square_rect.end.x - 8.0) <= 0.5 and absf(rect.end.x - text_rect.end.x - 8.0) <= 0.5, "RN1 padding 8, gap 8, the width hugs%s, got %s %s %s" % [at, rect, square_rect, text_rect])
+		var panels: Dictionary = BaseScene.hud_panels(main)
+		runner.check(panels.has("HUD/Hud/RefusalLine") and panels.has("HUD/Hud/SelectionPanel"), "RN1 the no-overlap list holds the line and the selection panel%s, got %s" % [at, panels.keys()])
+		for other: String in panels:
+			if other != "HUD/Hud/RefusalLine" and panels.has("HUD/Hud/RefusalLine"): runner.check(not panels["HUD/Hud/RefusalLine"].intersects(panels[other]), "RN1 the line clears %s%s" % [other, at])
+		var catches: Array = [line] + line.find_children("*", "Control", true, false)
+		runner.check(catches.all(func(part: Control) -> bool: return part.mouse_filter == Control.MOUSE_FILTER_IGNORE), "RN1 the line never catches the mouse%s" % at)
+		main.refuse("Footprint covers ground unit or destination", false)
+		await _frames(runner)
+		rect = line.get_global_rect()
+		var tallest := Rect2(0, size.y - 158.0, 408.0, 158.0)
+		runner.check(_line_text(main) == "Footprint covers ground unit or destination" and rect.size.x <= 416.0 and view.encloses(rect) and not rect.intersects(tallest), "RN1 the longest command text fits 416, inside the view and clear of the tallest panel%s, got %s" % [at, rect])
+		var slab: Control = main.get_node("HUD/Economy")
+		runner.check(slab.is_visible_in_tree() and not rect.intersects(slab.get_global_rect()), "RN1 the longest line clears the slab%s, slab %s" % [at, slab.get_global_rect()])
+		port.free()
+	overlays._end(saved)
+	return true
+
+func test_refusal_timer_and_replace(runner) -> bool:
+	var hud: Hud = _bare_hud(runner)
+	var clock: Array[int] = [10000]
+	hud.now_msec = func() -> int: return clock[0]
+	var line: Control = hud.get_node("RefusalLine")
+	var text: Label = line.find_child("Text", true, false)
+	hud.refuse("A")
+	for step: Array in [[12999, true], [13000, false]]:
+		clock[0] = step[0]
+		hud._process(0.0)
+		runner.check(line.visible == step[1] and hud.refusal == "A", "RN2 refused at 10000: shown %s at %d, got %s" % [step[1], step[0], line.visible])
+	clock[0] = 20000
+	hud.refuse("A")
+	clock[0] = 22000
+	hud.refuse("B")
+	for step: Array in [[24999, true], [25000, false]]:
+		clock[0] = step[0]
+		hud._process(0.0)
+		runner.check(line.visible == step[1] and text.text == "B" and hud.refusal == "B", "RN2 B replaced A at 22000: shown %s at %d, got %s '%s'" % [step[1], step[0], line.visible, text.text])
+	hud.get_parent().free()
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await overlays._scene(runner, Skirmish)
+	main.hud.now_msec = func() -> int: return clock[0]
+	clock[0] = 30000
+	main.refuse("Target outside map", false)
+	main._pause.open()
+	var tick: int = main.driver.current().tick
+	await _frames(runner)
+	runner.check(_line_shown(main), "RN2 the line shows behind the open menu")
+	clock[0] = 33000
+	await _frames(runner)
+	runner.check(not _line_shown(main) and main.driver.current().tick == tick and main.hud.refusal == "Target outside map", "RN2 the line expires on the clock while ticks stall, tick %d after %d" % [main.driver.current().tick, tick])
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_accepted_answer_clears(runner) -> bool:
+	var skirmish = SkirmishTests.new()
+	var main = await skirmish._setup(runner)
+	var ids: Dictionary = skirmish._arena(main)
+	var stop := {"type": "stop", "entity_ids": [ids.tank]}
+	main._submit(skirmish._off_map_move(ids))
+	BaseScene.tick(main)
+	runner.check(_line_text(main) == "Target outside map", "RN3 fixture: a refusal on the line, got '%s'" % _line_text(main))
+	main._submit(stop)
+	runner.check(_line_text(main) == "Target outside map" and main.hud.refusal == "Target outside map", "RN3 a submit before its answer leaves the line, got '%s'" % _line_text(main))
+	BaseScene.tick(main)
+	runner.check(not _line_shown(main) and main.hud.refusal == "", "RN3 a drain with only an accepted answer clears it, got '%s'" % main.hud.refusal)
+	for refused_first: bool in [true, false]:
+		for payload: Dictionary in ([skirmish._off_map_move(ids), stop] if refused_first else [stop, skirmish._off_map_move(ids)]): main._submit(payload)
+		BaseScene.tick(main)
+		runner.check(_line_text(main) == "Target outside map" and main.hud.refusal == "Target outside map", "RN3 an accepted and a refused answer in one drain keep the refusal (refused first %s), got '%s'" % [refused_first, _line_text(main)])
+		main._submit(stop)
+		BaseScene.tick(main)
+	main._submit(skirmish._off_map_move(ids))
+	main._restart()
+	ids = skirmish._arena(main)
+	main.orders._produce_selected()
+	main._submit({"type": "stop", "entity_ids": [ids.tank]})
+	BaseScene.tick(main)
+	runner.check(main.hud.refusal == "" and not _line_shown(main), "RN3 after a restart dropped an unanswered order, the next accepted answer still clears a hint, got '%s'" % main.hud.refusal)
+	main.free()
+	return true
+
+func test_placement_refusal_after_the_click_only(runner) -> bool:
+	var helper = BaseScene.new()
+	var main = await helper._placing(runner)
+	var cell: Vector2 = Iso.world_to_plane(Vector2(4.25, 4.25))
+	helper.hover(main, cell)
+	BaseScene.tick(main)
+	BaseScene.tick(main)
+	helper.hover(main, cell)
+	runner.check(main.orders._known_refused() and not _line_shown(main) and main.hud.refusal == "", "RN5 hovering a refused spot shows no line, got '%s'" % main.hud.refusal)
+	helper.pointer(main, cell, MOUSE_BUTTON_LEFT, false)
+	runner.check(_line_shown(main) and not main.hud.refusal.is_empty() and _line_text(main) == main.hud.refusal and main.orders._placement_kind == "usa_power_plant", "RN5 the click shows the line and keeps the placement, got '%s'" % _line_text(main))
+	main.free()
+	return true
+
+func test_local_hints_on_the_line(runner) -> bool:
+	var skirmish = SkirmishTests.new()
+	var main = await skirmish._setup(runner)
+	var ids: Dictionary = skirmish._arena(main)
+	main.orders.selected_ids.assign([ids.infantry])
+	BaseScene.new().key(main, KEY_1)
+	BaseScene.tick(main)
+	runner.check(_line_text(main) == "Choose one builder" and main.hud.refusal == "Choose one builder", "RN6 placing without a builder says so on the line, got '%s'" % _line_text(main))
+	runner.check(skirmish._error_cues(main) == 0, "RN6 a local hint asks for no sound, got %d" % skirmish._error_cues(main))
 	main.free()
 	return true

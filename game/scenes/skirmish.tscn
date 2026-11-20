@@ -15,12 +15,6 @@ position_smoothing_enabled = false
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
-[node name="Status" type="Label" parent="HUD"]
-theme_type_variation = &"HudSmallNumber"
-offset_left = 16.0
-offset_top = 16.0
-mouse_filter = 2
-
 [node name="SelectionBox" type="ReferenceRect" parent="HUD"]
 visible = false
 mouse_filter = 2
