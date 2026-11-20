@@ -3,15 +3,15 @@
 Plan: [tooling night](../superpowers/plans/2026-11-20-tooling-night.md). Decisions: [design answers, Tooling night (user, 2026-11-20)](design-answers-2026-11-08.md#tooling-night-user-2026-11-20).
 
 ```text
-Resume record (updated 2026-11-20, Task 5 review fixes applied, uncommitted)
-Branch / base commit / working-tree state: tooling-night in ~/projects/wargrid-wt-tooling at 7155d305 (Tasks 1 to 3 committed, Task 4 evidence committed); Task 5 changes uncommitted
-Last green task / next incomplete task: Task 5 (awaiting per-task review and commit) / Task 6
-Changed paths since last commit: game/tests/test_definitions_lint.gd (new), game/tests/run_tests.gd (SUITES entry), docs/guide/03-entities.md (vision row), this file
-Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh / 1249 / 152751 / 0 / 0 / TESTS PASSED 152751
-Known red case or blocker: none; the lint found no bad key or dangling reference in today's data
-Approved decisions, pre-authorizations used, deferred gates: unchanged; Task 4 finding goes into STATUS F19 in Task 6
+Resume record (updated 2026-11-20, Task 6 docs written, uncommitted)
+Branch / base commit / working-tree state: tooling-night in ~/projects/wargrid-wt-tooling at 2f614411 (Tasks 1 to 5 committed); Task 6 doc changes uncommitted
+Last green task / next incomplete task: Task 6 (docs, awaiting review and commit) / Task 7 (gate, stop gate, no merge)
+Changed paths since last commit: docs/STATUS.md (F15, F19), docs/reference/determinism-rules.md, docs/reference/sim-interface.md (status line), docs/guide/03-entities.md, 04-the-tick.md, 10-determinism-and-replays.md, 13-testing-and-tooling.md (footers; chapters 10 and 13 text), this file
+Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh (Task 5) / 1249 / 152751 / 0 / 0 / TESTS PASSED 152751; Task 6 is docs only, no suite run
+Known red case or blocker: none; limits recorded in the docs: the 10 <anonymous lambda> cases get no CASE_SECONDS key, --write refuses filtered or failed logs, RH5 CI (exported suite) variants unverified
+Approved decisions, pre-authorizations used, deferred gates: unchanged; footers say "not merged"; the rerun bisect stays a later step
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: per-task review of Task 5, local commit, then Task 6 (plan heading "Task 6: Docs")
+Next exact action: per-task review of Task 6 (docs claim review, Opus), local commit, then Task 7 (plan heading "Task 7: Gate")
 ```
 
 ## Evidence
@@ -47,6 +47,10 @@ Next exact action: per-task review of Task 5, local commit, then Task 6 (plan he
 | 2026-11-20 | 5 review fixes | `WARGRID_TEST_ONLY=test_definitions_lint sh tools/run_tests.sh` with the category rule (buildings vs units) and the `rebuild_hole` check removed | CASES 3 CHECKS 19 FAILURES 6: the new DL2 cases (rebuild_hole unknown and a unit id, prerequisite/builds/rebuild_hole naming a unit, produces/spawns_on_complete naming a building) fail as assertions | tooling-night 7155d305 + Task 5 changes, uncommitted |
 | 2026-11-20 | 5 review fixes | same command with the rules restored | CASES 3 CHECKS 19 FAILURES 0, TESTS PASSED 19, exit 0; today's data passes both new rules (prerequisite, builds, rebuild_hole resolve to buildings; produces, spawns_on_complete to units) | same tree |
 | 2026-11-20 | 5 review fixes | `sh tools/run_lint.sh`; `sh tools/run_warnings.sh`; `python3 tools/test_sim_boundary.py`; `sh tools/run_tests.sh` | all exit 0; warnings 188 files; CASES 1249 CHECKS 152751 FAILURES 0, TESTS PASSED 152751; load 3.12 at the end | same tree |
+| 2026-11-20 | 6 Docs | `sh tools/check_public.sh`; `python3 tools/roadmap.py --check` | PUBLIC CHECK PASSED (exit 0); roadmap check exit 0 (STATUS F15 and F19 rows edited by hand, generated blocks untouched) | tooling-night 2f614411 + Task 6 doc changes, uncommitted |
+| 2026-11-20 | 6 Docs | link check: every relative `](target)` in the 7 touched docs (STATUS, determinism-rules, sim-interface, guide chapters 03, 04, 10, 13) resolved against the file's folder | no MISSING target (anchors not checked) | tooling-night 2f614411 + Task 6 doc changes, uncommitted |
+| 2026-11-20 | 6 Docs | read against code: `playtest_session.py` `compare_hashes` messages, `replay_session.sh` lines, `run_tests.gd` `stat_line`/`CASE_FILTER`, `case_times.py` refusals, `test_definitions_lint.gd` checks | doc wording matches; one plan-vs-code difference documented as the code has it: a first-row mismatch reads `first differing row at tick 30, no earlier recorded row`, and `replay ended before tick T` exits 1 (REPLAY DIFFERS), not 2 | tooling-night 2f614411 + Task 6 doc changes, uncommitted |
+| 2026-11-20 | 6 review fixes | doc claims re-read against `offline_driver.gd`, `playtest_session.py` `compare_hashes`, `test_playtest_replay.gd` RH5, `replay_session.sh`; `sh tools/check_public.sh`; `python3 tools/roadmap.py --check` | reworded: the replay names the first differing 30-tick row (the exact tick needs the rerun bisect), RH5 calls only the compare script, replay runs on the current tree; both checks exit 0 | tooling-night 2f614411 + Task 6 doc changes, uncommitted |
 
 ## F19 wording for Task 6
 
