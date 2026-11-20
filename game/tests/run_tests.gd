@@ -13,7 +13,7 @@ var _watchdog := Thread.new()
 var _watchdog_stop: bool = false
 var _case_lock := Mutex.new()
 # The slowest process bounds the run, so the long cases are dealt first and spread.
-const CASE_SECONDS := {"test_team_match_prefix": 44.8, "test_frc_skirmish_match": 11.7, "test_mirror_match_script": 8.2, "test_china_skirmish_match": 4.7, "test_horde_render_layout": 4.2, "test_skirmish_core_series": 4.2, "test_settled_matches_snapshot_predicate": 4.2, "test_rows_equal_snapshot": 3.8, "test_openings_deposit": 3.0, "test_report_rows": 2.9, "test_multi_collector_rates": 2.8, "test_combat_fixtures": 1.9, "test_bot_counts_queued_collectors": 1.9, "test_team_match_pair": 1.1, "test_view_reads_digest_is_pinned": 1.1}
+const CASE_SECONDS := {"test_team_match_prefix": 52.6, "test_frc_skirmish_match": 14.2, "test_china_skirmish_match": 11.0, "test_mirror_match_script": 9.4, "test_match_stats_mirror_and_replay": 8.2, "test_report_rows": 6.6, "test_settled_matches_snapshot_predicate": 5.2, "test_horde_render_layout": 5.1, "test_rows_equal_snapshot": 4.8, "test_skirmish_core_series": 4.7, "test_openings_deposit": 4.0, "test_multi_collector_rates": 3.9, "test_bot_counts_queued_collectors": 2.4, "test_chip_stack": 2.4, "test_combat_fixtures": 2.2, "test_hordes300_home_allocations_match_full_scan": 2.0, "test_panel_states_layout": 1.5, "test_team_match_pair": 1.5, "test_view_state_other_keys": 1.3, "test_view_batch_equals_snapshot_batch": 1.2, "test_view_reads_digest_is_pinned": 1.2, "test_choose_faction_online_frc_same_hash": 1.1, "test_defences_fixture": 1.1, "test_incremental_matches_rebuild": 1.1, "test_four_helicopters_reported": 1.0}
 
 func check(condition: bool, message: String) -> void:
 	checks += 1
@@ -53,6 +53,12 @@ static func shard(count: int, args: PackedStringArray, costs: PackedFloat64Array
 static func _cost(costs: PackedFloat64Array, i: int) -> float:
 	return costs[i] if i < costs.size() else 1.0
 
+static func stat_line(method: String, msec: int, added: int) -> String:
+	return "CASE_STAT %s %.1f %d" % [method, msec / 1000.0, added]
+
+static func stats_enabled(value: String) -> bool:
+	return value == "1"
+
 static func only_filter(args: PackedStringArray) -> String:
 	for arg in args:
 		if arg.begins_with("--only="):
@@ -87,6 +93,9 @@ func _run() -> void:
 		for test in selected:
 			if only.is_empty() or suite_script.resource_path.contains(only) or test.get_method().contains(only):
 				tests.append(test)
+	var stats: bool = stats_enabled(OS.get_environment("WARGRID_CASE_STATS"))
+	if stats and not only.is_empty():
+		print("CASE_FILTER ", only) # tools/case_times.py refuses to regenerate the table from a filtered run
 	var costs: PackedFloat64Array = PackedFloat64Array()
 	for test in tests:
 		costs.append(CASE_SECONDS.get(test.get_method(), 0.1))
@@ -98,7 +107,10 @@ func _run() -> void:
 		case_count += 1
 		DirAccess.remove_absolute(AudioSettings.path) # remembered launcher picks must not leak into the next case
 		var before: int = checks
+		var started: int = Time.get_ticks_msec()
 		var completed: Variant = await test.call(self)
+		if stats:
+			print(stat_line(test.get_method(), Time.get_ticks_msec() - started, checks - before))
 		if completed is not bool or completed != true or checks == before:
 			failures += 1
 			print("FAIL: incomplete/empty case ", test.get_method())
