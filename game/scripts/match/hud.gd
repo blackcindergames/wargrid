@@ -212,10 +212,8 @@ func _show_notice(text: String) -> void:
 func _build_refusal_line() -> void:
 	_refusal_line = _slab("RefusalLine", Vector2.ZERO)
 	_flat(_refusal_line, 28)
-	_refusal_line.set_anchors_preset(PRESET_CENTER_BOTTOM)
 	_refusal_line.grow_horizontal = GROW_DIRECTION_BOTH
-	_refusal_line.offset_top = -204
-	_refusal_line.offset_bottom = -176
+	place_refusal(0)
 	var row: BoxContainer = _box(_refusal_line, "Row", HBoxContainer.new(), 8)
 	var square := ColorRect.new()
 	square.name = "Square"
@@ -227,6 +225,25 @@ func _build_refusal_line() -> void:
 	_refusal_text = _label(row, "Text", &"HudRow")
 	_refusal_text.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 	_refusal_line.visible = false
+
+# shortcut: the refusal-line A/B (user 2026-11-20): A at H - 204, B grounded between the panel and the slab, C under the notice; removed once the owner picks a spot.
+const REFUSAL_SPOTS: Array[Array] = [[PRESET_CENTER_BOTTOM, 0.0, -204.0], [PRESET_CENTER_BOTTOM, -12.0, -36.0], [PRESET_CENTER_TOP, 0.0, 84.0]]
+var refusal_spot: int = 0
+
+func place_refusal(spot: int) -> void:
+	refusal_spot = spot
+	var place: Array = REFUSAL_SPOTS[spot]
+	_refusal_line.set_anchors_preset(place[0])
+	_refusal_line.offset_left = place[1]
+	_refusal_line.offset_right = place[1]
+	_refusal_line.offset_top = place[2]
+	_refusal_line.offset_bottom = place[2] + 28.0
+
+func cycle_refusal_spot() -> void:
+	place_refusal((refusal_spot + 1) % REFUSAL_SPOTS.size())
+	var spot: String = "Refusal spot %s" % "ABC"[refusal_spot]
+	print(spot)
+	refuse(spot)
 
 func refuse(raw_error: String) -> void:
 	refusal = raw_error
@@ -472,6 +489,9 @@ func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: Stri
 		button.text = HudModel.menu_name(i, kinds[i])
 		_tint(button.get_node("Price"), "$%d" % cost, cost > credits)
 		_look(button, kinds[i] == placement_kind)
+
+func end_hover() -> void:
+	_hovered = -1
 
 func _hover_menu(index: int, entered: bool) -> void:
 	if not entered and _hovered != index: return

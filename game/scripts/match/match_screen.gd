@@ -30,6 +30,8 @@ static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
 static var map_path: String = Skirmish.MAP_PATH
 static var starts: Array[int] = []
 static var match_seed: int = 0
+# shortcut: the refusal-line A/B test aid (user 2026-11-20); removed once the owner picks a spot.
+static var refusal_ab: bool = OS.get_cmdline_user_args().has("--refusal-ab")
 var driver: RefCounted
 var orders: RefCounted = Orders.new(self)
 var hud: Hud
@@ -245,6 +247,10 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event) # a STOP panel takes motion before `_unhandled_input`: the drag box keeps up and the hover clears
 	if not (event is InputEventKey and event.pressed and not event.echo): return
 	if event.physical_keycode == KEY_F3: return
+	if event.physical_keycode == KEY_F7 and refusal_ab:
+		hud.cycle_refusal_spot()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("deselect"):
 		if _pause.visible: _pause.back()
 		elif not _escape_pending(): _pause.open()
@@ -391,6 +397,7 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	# An armed placement (and its strip preview) and a drag box must never show over a result or freeze card or an ended online match.
 	if shown_over() or driver.over() or frozen():
 		if not orders._placement_kind.is_empty(): orders._clear_placement()
+		hud.end_hover()
 		orders._selecting = false
 		_selection_box.hide()
 	_shown_note = _note()

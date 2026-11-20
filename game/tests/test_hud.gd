@@ -10,6 +10,7 @@ const BaseScene = preload("res://tests/test_base_scene.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Hud = preload("res://scripts/match/hud.gd")
+const MatchScreen = preload("res://scripts/match/match_screen.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
 const SkirmishTests = preload("res://tests/test_skirmish_scene.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
@@ -28,7 +29,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_build_buttons_by_selection_and_price, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_build_buttons_by_selection_and_price, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_spot_ab, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -429,6 +430,10 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	var rebuilds: int = main.hud.rebuilds
 	tower.mouse_entered.emit()
 	runner.check(_delta(main) == MINUS + "1200" and main.orders._placement_kind.is_empty(), "TS6 hovering the tower previews −1200 without arming, got '%s'" % _delta(main))
+	var view: Dictionary = main.driver.current().view
+	HudModel.player(view, 1).credits = 3000
+	main._show(view)
+	runner.check(_part(main.hud, "TopStrip", "Credits").text == "1800", "TS6 the pointer resting on the tower: the preview follows a credit change to 1800, got '%s'" % _part(main.hud, "TopStrip", "Credits").text)
 	tower.mouse_exited.emit()
 	runner.check(_delta(main) == "" and main.hud.rebuilds == rebuilds, "TS6 off the tower: no preview, and hovering rebuilt nothing, got '%s'" % _delta(main))
 	menu.get_child(0).pressed.emit()
@@ -450,6 +455,15 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	runner.check(_delta(main) == MINUS + str(Registry.kind(main.hud.menu_kinds[0]).cost) and _part(main.hud, "TopStrip", "Power").text == power, "TS6 hovering a unit previews its cost and leaves the power, got '%s' '%s'" % [_delta(main), _part(main.hud, "TopStrip", "Power").text])
 	_select(main, ids.tanks)
 	runner.check(_delta(main) == "", "TS6 the menu hidden under the pointer ends the preview, got '%s'" % _delta(main))
+	main.free()
+	var skirmish = SkirmishTests.new()
+	main = await skirmish._setup(runner)
+	skirmish._arena(main)
+	_select(main, [])
+	(main.get_node("HUD/Economy/BuildMenu").get_child(0) as Button).mouse_entered.emit()
+	runner.check(_previewing(main.hud), "TS6 fixture: a build button hovered in the arena previews it")
+	skirmish._victory(main)
+	runner.check(main.shown_over() and not _previewing(main.hud), "TS6 the match ending under a hovered build button ends the preview")
 	main.free()
 	return true
 
@@ -2236,6 +2250,40 @@ static func _line_shown(main) -> bool:
 static func _line_text(main) -> String:
 	var line: Control = _refusal_line(main)
 	return (line.find_child("Text", true, false) as Label).text if line != null and _line_shown(main) else ""
+
+# shortcut: the refusal-line A/B test aid (user 2026-11-20); this test goes with it once the owner picks a spot.
+func test_refusal_spot_ab(runner) -> bool:
+	const LONGEST: String = "Footprint covers ground unit or destination"
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	runner.check(not MatchScreen.refusal_ab, "RN8 a run without --refusal-ab has the A/B off")
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await overlays._scene(runner, Skirmish, port)
+		var line: Control = main.get_node("HUD/Hud/RefusalLine")
+		var at: String = " at %s" % size
+		SkirmishTests.new()._push_key(main, KEY_F7)
+		main.hud.refuse(LONGEST)
+		await _frames(runner)
+		var rect: Rect2 = line.get_global_rect()
+		runner.check(main.hud.refusal_spot == 0 and absf(rect.position.y - (size.y - 204.0)) <= 0.5 and absf(rect.get_center().x - size.x / 2.0) <= 1.0, "RN8 without the flag F7 does nothing: spot A, top H-204, centred%s, got %s" % [at, rect])
+		main.hud.place_refusal(1)
+		await _frames(runner)
+		rect = line.get_global_rect()
+		var gap := Rect2(408.0, 0.0, size.x - 432.0 - 408.0, size.y)
+		runner.check(absf(rect.end.y - (size.y - 8.0)) <= 0.5 and absf(rect.get_center().x - (408.0 + size.x - 432.0) / 2.0) <= 1.0 and gap.encloses(rect), "RN8 spot B: bottom H-8, centred between the panel and the slab and clear of both%s, got %s" % [at, rect])
+		main.hud.place_refusal(2)
+		await _frames(runner)
+		rect = line.get_global_rect()
+		runner.check(absf(rect.position.y - 84.0) <= 0.5 and absf(rect.size.y - 28.0) <= 0.5 and absf(rect.get_center().x - size.x / 2.0) <= 1.0, "RN8 spot C: top 84, 28 high, centred%s, got %s" % [at, rect])
+		MatchScreen.refusal_ab = true
+		SkirmishTests.new()._push_key(main, KEY_F7)
+		MatchScreen.refusal_ab = false
+		runner.check(main.hud.refusal_spot == 0 and main.hud.refusal == "Refusal spot A", "RN8 with the flag F7 cycles C back to A and names it on the line%s, got %d '%s'" % [at, main.hud.refusal_spot, main.hud.refusal])
+		port.free()
+	overlays._end(saved)
+	return true
 
 func test_refusal_line_place(runner) -> bool:
 	var overlays = OverlayTests.new()
