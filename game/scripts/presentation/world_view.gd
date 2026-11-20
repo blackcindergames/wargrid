@@ -26,6 +26,7 @@ var _last_points: Dictionary = {}
 var _selection := {}
 var _inspected_id: int = -1
 var local_player: int = 1
+var view_player: int = 1
 var _hints: Array[Dictionary] = []
 var _hovered_id: int = -1
 var _biome: int = Palette.DEFAULT_BIOME
@@ -375,7 +376,7 @@ func order_marks() -> Array[Vector2]:
 	var marks: Array[Vector2] = []
 	if not _show_destinations: return marks
 	for i in _order:
-		if _rows.owner[i] == local_player and (_rows.flags[i] & ViewRows.ORDERED) != 0: marks.append(Iso.world_to_plane(Vector2(_rows.order_x[i], _rows.order_y[i])))
+		if _rows.owner[i] == view_player and (_rows.flags[i] & ViewRows.ORDERED) != 0: marks.append(Iso.world_to_plane(Vector2(_rows.order_x[i], _rows.order_y[i])))
 	return marks
 
 # Above the focus box's outer stroke (grow 4 + half of 3 px), so the bar stays readable under a target box.
@@ -389,7 +390,7 @@ func horde_count() -> int:
 func crate_marks() -> Array[Vector2]:
 	var marks: Array[Vector2] = []
 	for player: Dictionary in _state.get("players", []):
-		if player.id != local_player or not Registry.kind(Registry.faction(player.get("faction", "")).get("start_unit", "")).has("salvage"): continue
+		if player.id != view_player or not Registry.kind(Registry.faction(player.get("faction", "")).get("start_unit", "")).has("salvage"): continue
 		for crate: Dictionary in _state.get("crates", []): marks.append(Iso.world_to_plane(Vector2(crate.cell[0] + 0.5, crate.cell[1] + 0.5)))
 	return marks
 
@@ -556,7 +557,7 @@ func _draw_hints() -> void:
 
 func rally_marker() -> Array:
 	for building: Dictionary in _state.get("buildings", []):
-		if _selection.has(building.id) and building.owner == local_player and Registry.can_rally(building.kind) and building.has("rally"): return building.rally
+		if _selection.has(building.id) and building.owner == view_player and Registry.can_rally(building.kind) and building.has("rally"): return building.rally
 	return []
 
 func _draw_rally() -> void:

@@ -356,7 +356,7 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	_show_strip(view, selection, view_player)
 	set_esc_chip(selection.esc_opens_menu)
 	_show_notice(selection.notice)
-	_show_selection(view, selection, seat, faction)
+	_show_selection(view, selection, seat, HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
 	if _economy == null: menu_kinds = kinds
 	else: _economy_controls(view, building, selection, kinds, seat)
 	_count_rebuild(selection)
@@ -593,7 +593,7 @@ func panel_edge() -> Color:
 
 func _show_selection(view: Dictionary, selection: Dictionary, seat: int, faction: String) -> void:
 	_last = [view, selection, seat, faction]
-	_labels = HudModel.collector_labels(view, selection.ids, seat, faction, _labels)
+	_labels = HudModel.collector_labels(view, selection.ids, seat, _labels)
 	var many: bool = selection.building_id == -1 and (selection.ids.size() > 1 or (_holding() and not selection.ids.is_empty()))
 	_many.visible = many
 	_panel.get_node("Box/Top").visible = not many

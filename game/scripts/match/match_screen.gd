@@ -35,6 +35,7 @@ var driver: RefCounted
 var orders: RefCounted = Orders.new(self)
 var hud: Hud
 var local_player: int = 1
+var view_player: int = 1
 var stepped_results: Array = []
 var _last_result_tick: int = -1
 var _last_result_sequence: int = -1
@@ -64,8 +65,10 @@ var _stale: int = 0
 func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: String = Skirmish.default_faction()) -> void:
 	driver = OnlineDriver.new(transport, lockstep, faction, seat)
 	local_player = seat
+	view_player = seat
 
 func _ready() -> void:
+	view_player = local_player
 	if driver == null: driver = OfflineDriver.new(local_player)
 	_result_panel = ResultPanel.new()
 	_result_panel.play_again_pressed.connect(_play_again)
@@ -161,7 +164,7 @@ func _reset_camera() -> void:
 	_camera_bounds = Rect2(Vector2.ZERO, Vector2.ZERO)
 	for corner: Variant in [Vector2(size[0], 0), Vector2(0, size[1]), Vector2(size[0], size[1])]:
 		_camera_bounds = _camera_bounds.expand(Iso.world_to_plane(corner))
-	var start: Vector2i = driver.first_note.starts.get(local_player, Vector2i(-1, -1))
+	var start: Vector2i = driver.first_note.starts.get(view_player, Vector2i(-1, -1))
 	var focus := Vector2(start) + Vector2(0.5, 0.5) if start.x >= 0 else Vector2(size[0], size[1]) / 2.0
 	_camera.position = Iso.world_to_plane(focus)
 
@@ -394,11 +397,12 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	_drop_stale_attack_move()
 	orders.show_preview(driver.preview_answer())
 	Profiler.end(&"refresh.selection", zone)
+	_view.view_player = view_player
 	_view.set_view(state, orders.view_selection())
 	zone = Profiler.begin()
 	_ensure_sound()
 	_take_results(state)
-	hud.update_hud(state, _hud_selection(state), local_player, local_player)
+	hud.update_hud(state, _hud_selection(state), view_player, local_player)
 	_place_floor()
 	orders.menu = hud.menu_kinds
 	_view.set_inspected(orders.inspected_id)
@@ -518,6 +522,7 @@ func _rematch(match_seed_value: int) -> void:
 	_restart_world()
 
 func _restart_world() -> void:
+	view_player = local_player
 	_playtest.begin_match()
 	_create_world()
 	_clock = PresentationClock.new()

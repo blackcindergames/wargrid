@@ -1811,7 +1811,7 @@ func test_collector_label_table(runner) -> bool:
 	var enemy_view: Dictionary = _strip_view(0, 0, 0)
 	enemy_view.units = ViewRows.from_units([_unit_row(5, 2, "china_collector", "idle")])
 	var enemy_ids: Array[int] = [5]
-	runner.check(HudModel.collector_labels(enemy_view, enemy_ids, 1, "usa", {}).is_empty(), "CL1 collector_labels skips another owner's collector")
+	runner.check(HudModel.collector_labels(enemy_view, enemy_ids, 1, {}).is_empty(), "CL1 collector_labels skips another owner's collector")
 	runner.check(enemy == "" and (hud.get_node("SelectionPanel").find_child("Name", true, false) as Label).text == "Supply Truck", "CL1 an inspected enemy collector shows no label, got '%s'" % enemy)
 	hud.get_parent().free()
 	return true

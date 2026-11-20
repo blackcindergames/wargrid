@@ -273,6 +273,13 @@ func test_crate_marks_frc_only(runner) -> bool:
 			var world: Vector2 = Iso.plane_to_world(mark)
 			runner.check(Vector2i(world.floor()) in [Vector2i(4, 7), Vector2i(12, 3)] and absf(world.x - floorf(world.x) - 0.5) < 0.01 and absf(world.y - floorf(world.y) - 0.5) < 0.01, "V10 a mark lies at the centre of its cell")
 		view.free()
+	var viewer = View.new()
+	sim._players[1].faction = "frc"
+	viewer.local_player = 2
+	viewer.view_player = 1
+	viewer.set_state(sim.snapshot(), [])
+	runner.check(viewer.crate_marks().size() == 2, "V10 crate marks follow view_player, not the seat")
+	viewer.free()
 	return true
 
 func test_passengers_not_pickable(runner) -> bool:

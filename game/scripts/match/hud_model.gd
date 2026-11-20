@@ -229,22 +229,22 @@ static func drop_off(faction: String) -> String:
 	return _drop_offs[faction]
 
 # The selected own collectors' labels; `previous` carries the last label through a `seeking` tick.
-static func collector_labels(view: Dictionary, ids: Array[int], seat: int, faction: String, previous: Dictionary) -> Dictionary:
+static func collector_labels(view: Dictionary, ids: Array[int], seat: int, previous: Dictionary) -> Dictionary:
 	var labels: Dictionary = {}
 	var units: RefCounted = view.units
 	for id: int in ids:
 		var i: int = units.index_of(id)
-		if i != -1 and units.owner[i] == seat and not Registry.collects(units.kinds[units.kind[i]]).is_empty(): labels[id] = collector_label(view, i, previous.get(id, ""), faction)
+		if i != -1 and units.owner[i] == seat and not Registry.collects(units.kinds[units.kind[i]]).is_empty(): labels[id] = collector_label(view, i, previous.get(id, ""))
 	return labels
 
-static func collector_label(view: Dictionary, i: int, previous: String, faction: String) -> String:
+static func collector_label(view: Dictionary, i: int, previous: String) -> String:
 	var units: RefCounted = view.units
 	if units.flags[i] & ViewRows.COLLECTING:
 		var phase: String = units.phases[units.phase[i]]
 		if phase == "seeking": return previous
 		# Idle while collecting is a retry at a busy dock while a pile still holds boxes.
 		if phase == "idle": return WAITING_AT_PILE if view.get("sources", []).any(func(source: Dictionary) -> bool: return source.boxes > 0) else IDLE
-		return PHASE_LABELS[phase].replace("<DROP-OFF>", drop_off(faction))
+		return PHASE_LABELS[phase].replace("<DROP-OFF>", drop_off(player(view, units.owner[i]).get("faction", Registry.Factions.DEFAULT_FACTION)))
 	var status: int = units.status[i]
 	if status != ViewRows.NONE and ViewRows.STATUSES[status] in ["moving", "path_pending"]: return "MOVING"
 	for site: Dictionary in view.buildings:

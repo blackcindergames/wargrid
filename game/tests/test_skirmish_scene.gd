@@ -10,6 +10,9 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
+const WorldBatch = preload("res://scripts/presentation/world_batch.gd")
+const HudModel = preload("res://scripts/match/hud_model.gd")
+const MapData = preload("res://scripts/simulation/map_data.gd")
 const ViewRows = preload("res://tests/test_view_rows.gd")
 const IcRows = preload("res://tests/input_script_rows.gd")
 const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
@@ -32,7 +35,7 @@ const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
 var freeze_sessions: String = "user://test-freeze-playtests-%d" % OS.get_process_id()
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue, test_hover_equals_click, test_click_results, test_shift_toggles_on_the_map, test_hud_blocks_the_map, test_entering_the_hud_clears_hover, test_drag_across_a_panel, test_card_takes_a_click_after_a_drag, test_releases_on_a_panel_are_the_huds]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue, test_hover_equals_click, test_click_results, test_shift_toggles_on_the_map, test_hud_blocks_the_map, test_entering_the_hud_clears_hover, test_drag_across_a_panel, test_card_takes_a_click_after_a_drag, test_releases_on_a_panel_are_the_huds, test_view_player_changes_display_reads_only]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -2301,4 +2304,73 @@ func test_releases_on_a_panel_are_the_huds(runner) -> bool:
 	runner.check(_pending(main, "build") == 0 and not main.orders._placement_kind.is_empty(), "MR5 a placement released on the panel or clicked on the forecast card builds nothing, got %d" % _pending(main, "build"))
 	port.free()
 	overlays._end(saved)
+	return true
+
+func _duo_world(main) -> Dictionary:
+	var seats: Array[Dictionary] = [{"seat": 1, "team": 1, "controller": "human", "credits": 1111, "faction": "usa"}, {"seat": 2, "team": 2, "controller": "human", "credits": 2222, "faction": "frc"}]
+	var sim = MapData.create(MapData.load(Skirmish.MAP_PATH), seats)
+	var source: int = sim.add_supply_source(Vector2i(8, 8), 10)
+	var ids := {"source": source, "one": sim.spawn(1, Vector2(20.5, 10.5), "usa_builder"), "two": sim.spawn(2, Vector2(24.5, 10.5), "usa_builder"), "stacked": sim.spawn(1, Vector2(22.5, 20.5), "usa_builder"), "rival": sim.spawn(2, Vector2(23.3, 20.5), "usa_builder"), "collector": sim.spawn(1, Vector2(12.5, 10.5), "usa_collector")}
+	sim.start_match([1, 2] as Array[int])
+	Fixture.add_completed(sim, 1, "usa_supply_center", Vector2i(2, 10))
+	ids["barracks"] = Fixture.add_completed(sim, 1, "usa_barracks", Vector2i(2, 16))
+	Fixture.send(sim, {"type": "set_rally", "building_id": ids.barracks, "target": [20.5, 14.5]})
+	Fixture.send(sim, {"type": "gather", "entity_ids": [ids.collector], "source_id": source})
+	for i in 900:
+		sim.step()
+		if Fixture.object(sim, ids.collector).collection.phase.ends_with("_depot"): break
+	main.driver.adopt(sim)
+	main.orders.selected_ids.clear()
+	main._refresh()
+	return ids
+
+func test_view_player_changes_display_reads_only(runner) -> bool:
+	var main = await _setup(runner)
+	var ids: Dictionary = _duo_world(main)
+	var sim = main.driver.pump.live()
+	var view = main.get_node("WorldView")
+	var strip: Node = main.get_node("HUD/Hud/TopStrip")
+	runner.check(Fixture.object(sim, ids.collector).collection.phase.ends_with("_depot"), "VP2 fixture: the collector is on its way to the drop-off, got " + str(Fixture.object(sim, ids.collector).collection))
+
+	Fixture.send(sim, {"type": "move", "entity_ids": [ids.one], "target": [12.5, 14.5]})
+	Fixture.send(sim, {"type": "move", "player": 2, "entity_ids": [ids.two], "target": [16.5, 14.5]})
+	Fixture.steps(sim, 2)
+	view.set_show_destinations(true)
+	BaseScene.publish(main)
+	runner.check(main.view_player == 1 and strip.find_child("Credits", true, false).text == "1111", "VP2 fixture: the strip starts on player 1")
+	runner.check(view.order_marks().has(Iso.world_to_plane(Vector2(12.5, 14.5))) and not view.order_marks().has(Iso.world_to_plane(Vector2(16.5, 14.5))), "VP2 player 1's marks first, got " + str(view.order_marks()))
+	main.orders.selected_ids.assign([ids.one])
+	main.view_player = 2
+	BaseScene.publish(main)
+	var swatch: ColorRect = strip.find_child("Swatch", true, false)
+	runner.check(strip.find_child("Credits", true, false).text == "2222" and swatch.color == View.owner_color(2, false) and swatch.color != View.owner_color(1, false), "VP2 the strip shows player 2's credits and swatch, got %s" % strip.find_child("Credits", true, false).text)
+	runner.check(not strip.find_child("PowerGroup", true, false).visible, "VP2 the strip reads player 2's faction (no power)")
+	runner.check(view.order_marks() == [Iso.world_to_plane(Vector2(16.5, 14.5))], "VP2 order marks show player 2's units only, got " + str(view.order_marks()))
+	main._reset_camera()
+	runner.check(main.get_node("Camera2D").position == Iso.world_to_plane(Vector2(main.driver.first_note.starts[2]) + Vector2(0.5, 0.5)), "VP2 the camera resets onto player 2's start")
+	var at := Vector2(76, 688)
+	var one: int = view._rows.index_of(ids.stacked)
+	var rival: int = view._rows.index_of(ids.rival)
+	var front: Callable = func(i: int) -> Variant: return WorldBatch.sort_key(WorldBatch.kind_info(view._kind_of(i))[1], view._drawn_position(i), view._rows.id[i])
+	runner.check(view._pick_bounds(one).has_point(at) and view._pick_bounds(rival).has_point(at) and front.call(rival) > front.call(one), "VP2 fixture: the click lies in both units and the rival is drawn in front")
+	runner.check(view.resolve_pick(at) == {"tier": "unit", "id": ids.stacked}, "VP2 a pick still puts player 1's unit first, got " + str(view.resolve_pick(at)))
+	main.orders._move(Vector2(20.5, 10.5))
+	var moves: Array = (sim.snapshot().pending_commands + main.driver.queued()).filter(func(command: Dictionary) -> bool: return command.type == "move")
+	runner.check(moves.size() == 1 and moves[0].has("player") and moves[0].player == 1, "VP2 an order still carries player 1, got " + str(moves))
+	main.orders.selected_ids.clear()
+	BaseScene.publish(main)
+	var labels: Array = _build_labels(main)
+	runner.check(labels.any(func(text: String) -> bool: return text.contains("Supply Depot")) and not labels.any(func(text: String) -> bool: return text.contains("Supply Cache")), "VP2 the build menu keeps player 1's faction, got " + str(labels))
+	main.orders.selected_ids.assign([ids.collector])
+	BaseScene.publish(main)
+	runner.check(_panel_text(main, "RightLabel") == "TO SUPPLY DEPOT" and HudModel.drop_off("frc") != "SUPPLY DEPOT", "VP2 the collector names its owner's drop-off, got '%s'" % _panel_text(main, "RightLabel"))
+	main.orders.selected_ids.clear()
+	main.orders.selected_building_id = ids.barracks
+	main.view_player = 1
+	BaseScene.publish(main)
+	runner.check(view.rally_marker() == [20.5, 14.5], "VP2 fixture: the rally marker shows for player 1")
+	main.view_player = 2
+	BaseScene.publish(main)
+	runner.check(view.rally_marker().is_empty(), "VP2 the rally marker follows view_player")
+	main.free()
 	return true
