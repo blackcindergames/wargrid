@@ -79,8 +79,9 @@ def _write_hashes(match: dict, hashes: Path) -> None:
 
 def _parse_hash_rows(path: Path) -> list[tuple[int, str]]:
     rows = []
-    lines = path.read_text().splitlines() if path.exists() else []
-    for n, line in enumerate(lines, 1):
+    for n, line in enumerate(path.read_text().splitlines(), 1):
+        if not line:
+            continue
         tick, sep, digest = line.partition("\t")
         if not (sep and tick.isdigit() and digest):
             raise ValueError(f"malformed hash row {n} in {path.name}")
@@ -89,7 +90,7 @@ def _parse_hash_rows(path: Path) -> list[tuple[int, str]]:
 
 
 def compare_hashes(recorded: Path, ring: Path) -> tuple[int, str]:
-    """Exit code and one line: 0 all recorded rows equal, 1 first problem, 2 malformed row."""
+    """Exit code and one line: 0 all recorded rows equal, 1 first problem, 2 malformed row or unreadable file."""
     try:
         rows, replayed = _parse_hash_rows(recorded), dict(_parse_hash_rows(ring))
     except (ValueError, OSError) as err:  # UnicodeError is a ValueError
@@ -147,7 +148,10 @@ def main(argv: list[str]) -> int:
     )
     args = parser.parse_args(argv)
     if args.compare_hashes:
-        code, line = compare_hashes(*args.compare_hashes)
+        try:
+            code, line = compare_hashes(*args.compare_hashes)
+        except Exception as err:  # a crash must not exit 1, which the wrapper reads as REPLAY DIFFERS
+            code, line = 2, f"compare crashed: {err!r}"
         if line:
             print(line)
         return code

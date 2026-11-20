@@ -35,6 +35,7 @@ while IFS=$tab read -r k cmd mode map seed factions end_tick end_digest marker_t
 	[ "$state_ticks" = "-" ] || set -- "$@" --state-ticks "$state_ticks"
 	hashes=${cmd%.cmd}.hashes
 	[ ! -f "$hashes" ] || set -- "$@" --ring-log "$ring"
+	: >"$ring"
 	run_client "$@" >"$log" 2>&1
 	client_status=$?
 	compare_status=0
@@ -59,7 +60,12 @@ while IFS=$tab read -r k cmd mode map seed factions end_tick end_digest marker_t
 		echo "REPLAY MATCHED $k"
 	else
 		echo "REPLAY DIFFERS $k recorded=$end_digest replayed=$replayed (recorded on build $build)"
-		[ ! -f "$hashes" ] || echo "hash rows all equal; difference is in unhashed state"
+		if [ -s "$hashes" ]; then
+			last=$(tail -n 1 "$hashes" | cut -f 1)
+			echo "no recorded row differs (last row tick $last); the difference is after tick $last or in unhashed state"
+		elif [ -f "$hashes" ]; then
+			echo "no hash rows recorded"
+		fi
 		status=1
 	fi
 done <<EOF2

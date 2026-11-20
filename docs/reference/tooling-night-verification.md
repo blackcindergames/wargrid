@@ -3,15 +3,15 @@
 Plan: [tooling night](../superpowers/plans/2026-11-20-tooling-night.md). Decisions: [design answers, Tooling night (user, 2026-11-20)](design-answers-2026-11-08.md#tooling-night-user-2026-11-20).
 
 ```text
-Resume record (updated 2026-11-20, Task 6 docs written, uncommitted)
-Branch / base commit / working-tree state: tooling-night in ~/projects/wargrid-wt-tooling at 2f614411 (Tasks 1 to 5 committed); Task 6 doc changes uncommitted
-Last green task / next incomplete task: Task 6 (docs, awaiting review and commit) / Task 7 (gate, stop gate, no merge)
-Changed paths since last commit: docs/STATUS.md (F15, F19), docs/reference/determinism-rules.md, docs/reference/sim-interface.md (status line), docs/guide/03-entities.md, 04-the-tick.md, 10-determinism-and-replays.md, 13-testing-and-tooling.md (footers; chapters 10 and 13 text), this file
-Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh (Task 5) / 1249 / 152751 / 0 / 0 / TESTS PASSED 152751; Task 6 is docs only, no suite run
+Resume record (updated 2026-11-20, Task 7 gate fix round done, uncommitted)
+Branch / base commit / working-tree state: tooling-night in ~/projects/wargrid-wt-tooling at 7ab22353 (Tasks 1 to 6 committed; 7ab22353 holds the gate benchmark row); gate fix round changes uncommitted
+Last green task / next incomplete task: Task 7 gate benchmark and gate fix round / Task 7 commit of the fix round, then the stop gate (no merge)
+Changed paths since last commit: tools/replay_session.sh, tools/playtest_session.py, tools/test_playtest_session.py, tools/case_times.py, tools/test_case_times.py, game/tests/test_definitions_lint.gd, game/tests/test_playtest_overlay.gd, docs/guide/10-determinism-and-replays.md, docs/guide/13-testing-and-tooling.md, this file
+Last command / cases / checks / failures / exit / marker: sh tools/run_tests.sh (gate fix round) / 1249 / 152751 / 0 / 0 / TESTS PASSED 152751
 Known red case or blocker: none; limits recorded in the docs: the 10 <anonymous lambda> cases get no CASE_SECONDS key, --write refuses filtered or failed logs, RH5 CI (exported suite) variants unverified
 Approved decisions, pre-authorizations used, deferred gates: unchanged; footers say "not merged"; the rerun bisect stays a later step
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: per-task review of Task 6 (docs claim review, Opus), local commit, then Task 7 (plan heading "Task 7: Gate")
+Next exact action: coordinator commits the gate fix round, then stops at the Task 7 stop gate (no merge, no push)
 ```
 
 ## Evidence
@@ -51,6 +51,10 @@ Next exact action: per-task review of Task 6 (docs claim review, Opus), local co
 | 2026-11-20 | 6 Docs | link check: every relative `](target)` in the 7 touched docs (STATUS, determinism-rules, sim-interface, guide chapters 03, 04, 10, 13) resolved against the file's folder | no MISSING target (anchors not checked) | tooling-night 2f614411 + Task 6 doc changes, uncommitted |
 | 2026-11-20 | 6 Docs | read against code: `playtest_session.py` `compare_hashes` messages, `replay_session.sh` lines, `run_tests.gd` `stat_line`/`CASE_FILTER`, `case_times.py` refusals, `test_definitions_lint.gd` checks | doc wording matches; one plan-vs-code difference documented as the code has it: a first-row mismatch reads `first differing row at tick 30, no earlier recorded row`, and `replay ended before tick T` exits 1 (REPLAY DIFFERS), not 2 | tooling-night 2f614411 + Task 6 doc changes, uncommitted |
 | 2026-11-20 | 6 review fixes | doc claims re-read against `offline_driver.gd`, `playtest_session.py` `compare_hashes`, `test_playtest_replay.gd` RH5, `replay_session.sh`; `sh tools/check_public.sh`; `python3 tools/roadmap.py --check` | reworded: the replay names the first differing 30-tick row (the exact tick needs the rerun bisect), RH5 calls only the compare script, replay runs on the current tree; both checks exit 0 | tooling-night 2f614411 + Task 6 doc changes, uncommitted |
+| 2026-11-20 | 7 gate fixes Red | `python3 -m unittest test_playtest_session test_case_times` (in `tools/`) before the fixes | 4 failures, 1 error in playtest_session (wrapper wording for a short and an empty row list, ring not emptied between matches, blank ring line rejected, missing file exits 0, compare crash exits 1); 3 failures in case_times (ERROR: line not refused, print mode silent, leftover `.tmp` after a failed write) | tooling-night 7ab22353 + gate fix round changes, uncommitted |
+| 2026-11-20 | 7 gate fixes Green | same command after the fixes | 29 tests OK | tooling-night 7ab22353 + gate fix round changes, uncommitted |
+| 2026-11-20 | 7 gate fixes PO12 | `WARGRID_TEST_ONLY=test_two_match_session_file sh tools/run_tests.sh`, match 1 now 47 ticks; then with `_next_tick = first_note.tick` removed from `offline_driver.gd`, then restored | green CASES 1 CHECKS 19 FAILURES 0; red with the line removed: match 2 rows `["13", "43", "73"]` (FAILURES 1); `offline_driver.gd` restored, no diff under `game/scripts/` | tooling-night 7ab22353 + gate fix round changes, uncommitted |
+| 2026-11-20 | 7 gate fixes | `sh tools/run_tests.sh`; `python3 tools/test_sim_boundary.py`; `sh tools/run_checks.sh` | CASES 1249 CHECKS 152751 FAILURES 0, TESTS PASSED 152751, exit 0 (load 1.44 at start); boundary 17 tests OK, exit 0; CHECKS PASSED 5, exit 0. DL3 now clears test kinds first and the lint builds its id tables once | tooling-night 7ab22353 + gate fix round changes, uncommitted |
 
 ## F19 wording for Task 6
 

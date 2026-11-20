@@ -13,11 +13,13 @@ func cases() -> Array[Callable]:
 
 static func lint(kinds: Dictionary) -> Array[String]:
 	var errors: Array[String] = []
+	var buildings: Dictionary = _ids_of(kinds, false)
+	var units: Dictionary = _ids_of(kinds, true)
 	for id: String in kinds:
 		var row: Dictionary = kinds[id]
 		for key: String in row:
 			if not KNOWN_KEYS.has(key): errors.append("%s: unknown key %s" % [id, key])
-		_check_refs(id, row, _ids_of(kinds, false), _ids_of(kinds, true), errors)
+		_check_refs(id, row, buildings, units, errors)
 	return errors
 
 static func _ids_of(kinds: Dictionary, units: bool) -> Dictionary:
@@ -76,6 +78,8 @@ func test_dangling_reference_is_named(runner) -> bool:
 	return true
 
 func test_real_registry_is_clean(runner) -> bool:
+	# A test kind leaked by an earlier case in the same shard would read as a real kind.
+	Registry.clear_test_kinds()
 	var kinds: Dictionary = _registry_kinds()
 	runner.check(kinds.size() >= 37, "DL3 the registry has its kinds (%d)" % kinds.size())
 	var errors: Array[String] = lint(kinds)

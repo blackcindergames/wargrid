@@ -3,6 +3,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from case_times import main
 
@@ -95,6 +96,30 @@ class CaseTimesTests(unittest.TestCase):
             code, _, _ = self.run_main(log, "--write", target)
             self.assertEqual(code, 2)
             self.assertEqual(target.read_text(), OLD)
+
+    def test_ct6_write_refuses_a_log_with_an_engine_error(self):
+        stat = ["CASE_STAT test_a 3.0 1", "CASES 1 CHECKS 1 FAILURES 0", "TESTS PASSED 1"]
+        target = self.target(OLD)
+        for error in ["ERROR: leaked node", "SCRIPT ERROR: Parse Error"]:
+            code, _, _ = self.run_main(self.log("e.log", [*stat, error]), "--write", target)
+            self.assertEqual(code, 2, error)
+            self.assertEqual(target.read_text(), OLD)
+
+    def test_ct6_print_mode_names_the_problem_and_still_prints(self):
+        log = self.log("f.log", ["CASE_STAT test_a 3.0 1", "CASES 1 CHECKS 1 FAILURES 0", "FAIL: x", "TESTS PASSED 1"])
+        code, out, err = self.run_main(log)
+        self.assertEqual((code, out), (0, 'const CASE_SECONDS := {"test_a": 3.0}\n'))
+        self.assertIn("did not pass", err)
+
+    def test_ct2_failed_write_leaves_no_temp_file(self):
+        log = self.log("l.log", ["CASE_STAT test_a 3.0 1", "CASES 1 CHECKS 1 FAILURES 0", "TESTS PASSED 1"])
+        target = self.target(OLD)
+        with mock.patch("case_times.os.replace", side_effect=OSError("disk full")):
+            code, _, err = self.run_main(log, "--write", target)
+        self.assertEqual(code, 2)
+        self.assertIn("disk full", err)
+        self.assertEqual(target.read_text(), OLD)
+        self.assertEqual(sorted(p.name for p in self.directory.iterdir()), ["l.log", "run_tests.gd"])
 
     def test_ct7_a_name_in_two_suites_keeps_the_slower_time_in_either_order(self):
         a = self.log("a.log", ["CASE_STAT test_a 3.0 1", "CASES 1 CHECKS 1 FAILURES 0"])

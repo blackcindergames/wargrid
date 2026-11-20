@@ -36,7 +36,8 @@ class Logs:
             self.total += int(match.group(1))
         elif line.startswith("TESTS PASSED "):
             self.passed += 1
-        elif line.startswith("FAIL:"):
+        # The same ERROR: and SCRIPT ERROR: lines run_tests.sh fails the run on.
+        elif line.startswith("FAIL:") or "ERROR:" in line:
             self.failed = True
         elif line.startswith("CASE_FILTER"):
             self.filtered = True
@@ -63,8 +64,11 @@ def write_table(target: Path, line: str) -> None:
         raise ValueError(f"{target}: expected one '{TABLE}' line, found {len(hits)}")
     lines[hits[0]] = line
     temp = target.with_name(target.name + ".tmp")
-    temp.write_text("\n".join(lines))
-    os.replace(temp, target)
+    try:
+        temp.write_text("\n".join(lines))
+        os.replace(temp, target)
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 def main(argv: list[str]) -> int:
@@ -80,6 +84,8 @@ def main(argv: list[str]) -> int:
                 raise ValueError(f"refusing --write, {problem}")
             write_table(args.write, line)
         else:
+            if problem := logs.complete():
+                print(f"case_times: --write would refuse, {problem}", file=sys.stderr)
             print(line)
     except (OSError, ValueError) as error:
         print(f"case_times: {error}", file=sys.stderr)
