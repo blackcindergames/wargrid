@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1583,6 +1583,28 @@ func _rows_contained(runner, main, label: String) -> void:
 		var name_rect: Rect2 = (row.get_node("Name") as Control).get_global_rect()
 		var count_rect: Rect2 = (row.get_node("Count") as Control).get_global_rect()
 		runner.check(not name_rect.intersects(count_rect), "KR2 %s: %s name and count do not meet, got %s %s" % [label, row.name, name_rect, count_rect])
+
+# A seventh kind needs the six-cell cap with `+N kinds` built first (hud-v5-layout.md, "Kind rows").
+func test_six_kinds_at_most(runner) -> bool:
+	var factions: Array = Registry.Factions.FACTIONS.keys()
+	factions.sort()
+	runner.check(factions == ["china", "frc", "usa"], "KC1 the definitions hold usa, china and frc, got %s" % [factions])
+	for faction: String in factions:
+		var count: int = _fielded_units(faction).size()
+		runner.check(count > 0, "KC1 %s fields no selectable unit kinds; the roster read is broken" % faction)
+		runner.check(count <= 6, "KC1 %s fields %d selectable unit kinds; past six, build the kind-row cap (`+N kinds`, docs/reference/hud-v5-layout.md \"Kind rows\") first" % [faction, count])
+	return true
+
+# The start unit, then every unit its builds and the start building produce or spawn.
+static func _fielded_units(faction: String) -> Dictionary:
+	var row: Dictionary = Registry.faction(faction)
+	var kinds: Array = [row.get("start_unit", "")]
+	for building: String in Registry.kind(kinds[0]).get("builds", []) + [row.get("start_building", "")]:
+		kinds.append_array(Registry.kind(building).get("produces", []) + Registry.kind(building).get("spawns_on_complete", []))
+	var found: Dictionary = {}
+	for kind: String in kinds:
+		if Registry.kind(kind).has("class"): found[kind] = true
+	return found
 
 func test_roster_fits(runner) -> bool:
 	var overlays = OverlayTests.new()
