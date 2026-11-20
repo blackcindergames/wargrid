@@ -1,6 +1,7 @@
 extends Node2D
 
 const LabLook = preload("res://scripts/lab/lab_look.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
 const WorldView = preload("res://scripts/presentation/world_view.gd")
 const WorldBatch = preload("res://scripts/presentation/world_batch.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
@@ -74,7 +75,7 @@ static func bars(source: Dictionary) -> Array[Dictionary]:
 static func _add_bar(result: Array[Dictionary], row: Dictionary, top_left: Vector2, source: Dictionary, selected: bool) -> void:
 	if not LabLook.bar_shown(source.rule, selected, row.id == source.hovered, row.hp, row.max_hp): return
 	var fraction: float = WorldView.hp_fraction(row.hp, row.max_hp)
-	result.append({id = row.id, rects = bar_rects(top_left, fraction), fill = WorldView.health_color(fraction), frame = LabLook.PALETTE_A[row.owner - 1]})
+	result.append({id = row.id, rects = bar_rects(top_left, fraction), fill = WorldView.health_color(fraction), frame = Palette.OWNER_BASE[row.owner - 1]})
 
 static func preview_ids(picked: Array[int], start_selection: Array[int], shift: bool) -> Array[int]:
 	var ids: Array[int] = []

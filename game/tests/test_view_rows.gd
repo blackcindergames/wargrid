@@ -15,7 +15,7 @@ const TeamMatch = preload("res://scripts/debug/team_match.gd")
 const SKIRMISH_TICKS: int = 3000
 const HORDES_TICKS: int = 400
 const EXTRA_COLLECTORS: int = 3
-const EXPECTED_DIGEST: String = "5dce6afed36f1c8b57c590308ff8c067a37e5883fd707499e341b277d37ecb65"
+const EXPECTED_DIGEST: String = "6cff89f266566c3a38ead9a1ae0b700c980bd2fb73ad4c110b29c4c2e620ff45"
 
 func cases() -> Array[Callable]:
 	return [test_view_reads_digest_is_pinned, test_rows_equal_snapshot, test_view_state_other_keys, test_view_state_is_read_only, test_view_items_persist, test_view_batch_equals_snapshot_batch]

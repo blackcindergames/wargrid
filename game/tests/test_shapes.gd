@@ -200,9 +200,12 @@ func test_tracks_deck_and_cannon(runner) -> bool:
 	return true
 
 func test_neutral_faces(runner) -> bool:
-	for owner in range(0, 9):
+	for owner in range(0, 10):
 		var colors: PackedColorArray = Palette.owner_colors(owner)
-		runner.check(colors[Shapes.SLOT_SIDE] == Color("3D515F") and colors[Shapes.SLOT_SIDE_DARK] == Color("263842") and colors[Shapes.SLOT_MACHINE] == Color("8098A5"), "SH15 owner %d has neutral sides and machinery" % owner)
+		var owned: bool = owner >= 1 and owner <= 8
+		var side: Color = Color("1c2e39") if owned else Color("3D515F")
+		var side_dark: Color = Color("0e1b23") if owned else Color("263842")
+		runner.check(colors[Shapes.SLOT_SIDE] == side and colors[Shapes.SLOT_SIDE_DARK] == side_dark and colors[Shapes.SLOT_MACHINE] == Color("8098A5"), "SH15 owner %d has palette A sides (owner 0 and unknown owner 9 the grey ones) and neutral machinery" % owner)
 		runner.check(colors[Shapes.SLOT_SMOKE].v < 0.3, "SH15 owner %d smoke is a dark neutral" % owner)
 	return true
 

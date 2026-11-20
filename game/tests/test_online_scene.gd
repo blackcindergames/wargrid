@@ -16,9 +16,11 @@ const Lockstep = preload("res://scripts/net/lockstep.gd")
 const Wire = preload("res://scripts/net/wire.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const MapData = preload("res://scripts/simulation/map_data.gd")
+const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const PEER_TICKS: int = 60
 const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
 
@@ -63,7 +65,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -74,6 +76,8 @@ func _online(runner, seat: int) -> Dictionary:
 	runner.root.add_child(main)
 	main.set_physics_process(false)
 	main.set_process(false)
+	# The open checklist covers the right of the view where these cases click, and it takes those clicks (Task 13).
+	main.get_node("HUD/Playtest/Checklist").hide()
 	await runner.process_frame
 	return {"main": main, "transport": transport, "lockstep": lockstep}
 
@@ -100,9 +104,7 @@ func _own_commands(transport: FakeTransport) -> Array:
 	return commands
 
 func _layout_ok(runner, main, label: String, panel_up: bool = false) -> void:
-	var status: Label = main.get_node("HUD/Status")
-	var economy: Control = main.get_node("HUD/Economy")
-	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y, "N3 buttons sit below every status line: " + label)
+	BaseScene.slab_clear(runner, main, "N3 " + label)
 	runner.check(main.get_node("HUD/ResultPanel").visible == panel_up, "N3 result panel %s: %s" % ["up" if panel_up else "hidden", label])
 
 func test_seat_two_controls_player_two(runner) -> bool:
@@ -138,19 +140,19 @@ func test_seat_two_controls_player_two(runner) -> bool:
 func test_status_lines_and_layout(runner) -> bool:
 	var waiting: Dictionary = await _online(runner, 2)
 	_run(waiting.main, 12)
-	runner.check(waiting.lockstep.status() == "waiting" and waiting.main.get_node("HUD/Status").text.contains("Waiting for player 1"), "N2 waiting line")
+	runner.check(waiting.lockstep.status() == "waiting" and BaseScene.hud_text(waiting.main).contains("Waiting for player 1"), "N2 waiting line")
 	_layout_ok(runner, waiting.main, "waiting")
 	waiting.main.free()
 	var left: Dictionary = await _online(runner, 2)
 	left.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": 4}))
 	_run(left.main, 12)
-	runner.check(left.main.get_node("HUD/Status").text.contains("Player 1 disconnected"), "N2 left line")
+	runner.check(BaseScene.hud_text(left.main).contains("Player 1 disconnected"), "N2 left line")
 	_layout_ok(runner, left.main, "left", true)
 	left.main.free()
 	var lost: Dictionary = await _online(runner, 2)
 	lost.transport.is_closed = true
 	_run(lost.main, 2)
-	runner.check(lost.main.get_node("HUD/Status").text.contains("Connection to relay lost"), "N2 relay lost line")
+	runner.check(BaseScene.hud_text(lost.main).contains("Connection to relay lost"), "N2 relay lost line")
 	_layout_ok(runner, lost.main, "relay lost")
 	lost.main.free()
 	var silent: Dictionary = await _online(runner, 2)
@@ -164,7 +166,7 @@ func test_status_lines_and_layout(runner) -> bool:
 	SkirmishMain.match_seed = before_seed
 	desync.transport.frames.append(Wire.encode(Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"})))
 	_run(desync.main, 12)
-	var text: String = desync.main.get_node("HUD/Status").text
+	var text: String = BaseScene.hud_text(desync.main)
 	runner.check(desync.lockstep.status() == "ended_desync" and text.contains("Desync — report saved to") and FileAccess.file_exists("user://desync/desync-seat2.json"), "N2 desync line and report file, got " + text)
 	var report = JSON.parse_string(FileAccess.get_file_as_string("user://desync/desync-seat2.json"))
 	runner.check(report is Dictionary and report.get("seed") == 7 and report.get("map") == SkirmishMain.map_path.get_file().get_basename() and report.get("starts") == SkirmishMain.starts and not report.get("hash_ring", []).is_empty(), "N2 desync report carries the screen's seed, map, starts and the sim's hash ring, got " + str(report))
@@ -178,7 +180,7 @@ func test_status_lines_and_layout(runner) -> bool:
 	web_desync.main.driver.download = func(buffer: PackedByteArray, file_name: String, mime: String) -> void: downloads.append([buffer.size(), file_name, mime])
 	web_desync.transport.frames.append(Wire.encode(Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"})))
 	_run(web_desync.main, 12)
-	var web_text: String = web_desync.main.get_node("HUD/Status").text
+	var web_text: String = BaseScene.hud_text(web_desync.main)
 	runner.check(downloads.size() == 1 and downloads[0][0] > 0 and downloads[0][1] == "desync-seat2.json" and web_text.contains("report downloaded as desync-seat2.json") and not FileAccess.file_exists("user://desync/desync-seat2.json"), "N2w web desync downloads the report and writes no file, got " + web_text)
 	web_desync.main.free()
 	return true
@@ -299,7 +301,7 @@ func test_friend_left_after_end(runner) -> bool:
 	_run(main, 3)
 	runner.check(_panel_line(main) == "Your friend left" and _play_again_button(main).disabled, "N16 friend left line, Play again disabled, got '%s'" % _panel_line(main))
 	runner.check(online.transport.close_calls == 1, "N16 the socket closes once, got %d" % online.transport.close_calls)
-	runner.check(main.driver.notice() == "" and not main.get_node("HUD/Status").text.contains("relay"), "N16 a friend leaving is no relay loss, got '%s'" % main.driver.notice())
+	runner.check(main.driver.notice() == "" and not BaseScene.hud_text(main).contains("relay"), "N16 a friend leaving is no relay loss, got '%s'" % main.driver.notice())
 	main.free()
 	return true
 
@@ -602,7 +604,7 @@ func test_two_tick_frame_keeps_earlier_results(runner) -> bool:
 	_double_build(control)
 	_peer_packets(control.transport, 2, 4, PEER_TICKS)
 	_run(control.main, 6)
-	runner.check(control.main.get_node("HUD/Status").text.contains(DUE_REJECTION), "N27 control: a one-tick frame shows the own due-time rejection")
+	runner.check(BaseScene.hud_text(control.main).contains(DUE_REJECTION), "N27 control: a one-tick frame shows the own due-time rejection")
 	control.main.free()
 	var online: Dictionary = await _online(runner, 1)
 	_double_build(online)
@@ -612,7 +614,7 @@ func test_two_tick_frame_keeps_earlier_results(runner) -> bool:
 	_peer_packets(online.transport, 2, 5, PEER_TICKS)
 	_run(online.main, 1)
 	runner.check(online.main.driver.pump.live().tick() == 7, "N27 fixture: the frame advanced ticks 5 and 6, got %d" % online.main.driver.pump.live().tick())
-	runner.check(online.main.get_node("HUD/Status").text.contains(DUE_REJECTION), "N27 a two-tick frame keeps the earlier tick's own rejection")
+	runner.check(BaseScene.hud_text(online.main).contains(DUE_REJECTION), "N27 a two-tick frame keeps the earlier tick's own rejection")
 	online.main.free()
 	return true
 
@@ -654,11 +656,11 @@ func test_notices_reach_the_hud_while_processing(runner) -> bool:
 	var waiting: Dictionary = await _online(runner, 2)
 	waiting.main.set_process(true)
 	_run(waiting.main, 6)
-	runner.check(waiting.main.get_node("HUD/Status").text.contains("Waiting for player 1"), "N2 waiting line shows while processing")
+	runner.check(BaseScene.hud_text(waiting.main).contains("Waiting for player 1"), "N2 waiting line shows while processing")
 	runner.check(waiting.main._clock.split_share() == 0.0, "N2 notice refresh leaves the clock alone")
 	waiting.transport.is_closed = true
 	_run(waiting.main, 3)
-	runner.check(waiting.main.get_node("HUD/Status").text.contains("Connection to relay lost"), "N2 ended match shows its message while processing")
+	runner.check(BaseScene.hud_text(waiting.main).contains("Connection to relay lost"), "N2 ended match shows its message while processing")
 	waiting.main.free()
 	return true
 
@@ -771,7 +773,7 @@ func test_rejection_line(runner) -> bool:
 	var main = online.main
 	online.lockstep._rejections.append({"tick": 5, "sequence": 0, "error": "No units left"})
 	_run(main, 1)
-	runner.check(main.get_node("HUD/Status").text.contains("Rejected: No units left"), "H5 online rejection line, got " + main.get_node("HUD/Status").text)
+	runner.check(BaseScene.hud_text(main).contains("No units left"), "H5 online rejection line, got " + BaseScene.hud_text(main))
 	_layout_ok(runner, main, "rejection")
 	main.free()
 	return true
@@ -799,7 +801,11 @@ func _faction_row_controls(page: Control) -> Array[Control]:
 
 func test_launcher_faction_rows(runner) -> bool:
 	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+	var window: Window = runner.root
+	var saved := [window.size, window.content_scale_size, window.content_scale_aspect]
+	for row: Array in [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(1280, 720), Vector2i(3840, 1080)]]:
+		var size: Vector2i = row[0]
+		window.size = row[1]
 		var port := SubViewport.new()
 		port.size = size
 		runner.root.add_child(port)
@@ -846,13 +852,18 @@ func test_launcher_faction_rows(runner) -> bool:
 		launcher._transport = FakeTransport.new()
 		launcher._seat = 1
 		launcher._start(_start_message("dry_wells", 3))
-		runner.check(runner.root.get_tree().root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "N25 the match scene is added under keep, before any frame, at %s" % size)
+		var root: Window = runner.root.get_tree().root
+		var layout: Dictionary = ViewCaps.layout_for(root.size)
+		runner.check([root.content_scale_size, root.content_scale_aspect] == [layout.size, layout.aspect], "N25 the match scene is added under its caps for the %s window, before any frame, at %s, got %s %d" % [root.size, size, root.content_scale_size, root.content_scale_aspect])
 		var main = runner.root.get_tree().current_scene
 		runner.check(main.driver._own_faction == third, "N25 online match carries Own's faction at %s, got %s" % [size, main.driver._own_faction])
 		main.free()
 		await runner.process_frame
-		runner.check(runner.root.get_tree().root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_KEEP, "N25 a match start restores keep at %s" % size)
+		runner.check([root.content_scale_size, root.content_scale_aspect] == [ViewCaps.BASE, Window.CONTENT_SCALE_ASPECT_EXPAND], "N25 leaving the match writes 1280x720 expand at %s, got %s %d" % [size, root.content_scale_size, root.content_scale_aspect])
 		port.free()
+	window.size = saved[0]
+	window.content_scale_size = saved[1]
+	window.content_scale_aspect = saved[2]
 	SkirmishMain.factions = before[0]
 	SkirmishMain.map_path = before[1]
 	SkirmishMain.starts = before[2]
@@ -961,7 +972,7 @@ func test_restart_drops_old_stepped_results(runner) -> bool:
 	await runner.process_frame
 	main.stepped_results.append({"ok": false, "error": "old match", "player": main.local_player, "tick": 50, "sequence": 0})
 	main._restart()
-	runner.check(not main.get_node("HUD/Status").text.contains("old match"), "N12 Restart drops the old match's stepped results")
+	runner.check(not BaseScene.hud_text(main).contains("old match"), "N12 Restart drops the old match's stepped results")
 	main.free()
 	return true
 
@@ -1080,7 +1091,7 @@ func test_host_told_opponent_left_before_start(runner) -> bool:
 	var early: Dictionary = await _online(runner, 1)
 	early.lockstep.receive('{"type":"left","seat":2,"after_tick":3}')
 	_run(early.main, 12)
-	runner.check(early.main.get_node("HUD/Status").text.contains(notice), "N16 left before the start is explained")
+	runner.check(BaseScene.hud_text(early.main).contains(notice), "N16 left before the start is explained")
 	_layout_ok(runner, early.main, "left before start")
 	runner.check(not early.main.get_node("HUD/ResultPanel").visible, "N16 left before the start shows no result panel")
 	early.main.free()
@@ -1088,7 +1099,7 @@ func test_host_told_opponent_left_before_start(runner) -> bool:
 	_peer_packets(late.transport, 2, 4, 40)
 	late.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
 	_run(late.main, 80)
-	var text: String = late.main.get_node("HUD/Status").text
+	var text: String = BaseScene.hud_text(late.main)
 	runner.check(text.contains("Player 2 disconnected") and not text.contains(notice), "N16 a later leave keeps the plain text, got " + text)
 	late.main.free()
 	return true
@@ -1105,9 +1116,8 @@ func test_opponent_left_mid_match(runner) -> bool:
 	runner.check(_panel_line(main) == "Your opponent left" and _play_again_button(main).disabled, "N29 the line says the opponent left, Play again disabled, got '%s'" % _panel_line(main))
 	runner.check(main.get_viewport().gui_get_focus_owner() == main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"), "N29 Back to menu has the focus")
 	runner.check(cells.size() == 12 and cells[4].text.ends_with("(you)") and not cells[8].text.contains("(you)"), "N29 the table shows both players, got %d cells" % cells.size())
-	runner.check(main.get_node("HUD/Status").text.contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
-	var status: Label = main.get_node("HUD/Status")
-	runner.check(main.get_node("HUD/Economy").position.y >= status.position.y + status.get_minimum_size().y, "N29 buttons sit below every status line")
+	runner.check(BaseScene.hud_text(main).contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
+	BaseScene.slab_clear(runner, main, "N29")
 	main.free()
 	return true
 
@@ -1190,7 +1200,7 @@ func test_pause_leave_mid_match_with_the_helper_on(runner) -> bool:
 	main._pause.leave_requested.emit()
 	_run(main, 3)
 	main._refresh()
-	var status: String = main.get_node("HUD/Status").text
+	var status: String = BaseScene.hud_text(main)
 	runner.check(main._playtest._active, "N33 fixture: the playtest helper is on")
 	runner.check(scenes == ["res://scenes/launcher.tscn"], "N33 (F22) a deliberate leave reaches the launcher without waiting for the playtest form, got %s" % [scenes])
 	runner.check(not status.contains("relay") and main.driver.notice() == "", "N33 (F22) a deliberate leave shows no relay loss, got '%s'" % main.driver.notice())
@@ -1437,7 +1447,7 @@ func _ic_row(main, transport: FakeTransport, step: int, seen: Array, status: boo
 	for command: Dictionary in sent.slice(mini(seen[0], sent.size())): added.append(JSON.stringify(command))
 	seen[0] = sent.size()
 	var row: String = "%d|sel=%s|bld=%d|insp=%d|place=%s|pend=%s|am=%s|esc=%s|menu=%s|perf=%s|%s" % [step, main.orders.selected_ids, main.orders.selected_building_id, main.orders.inspected_id, main.orders._placement_kind, main.orders._pending_placement, main.orders._attack_move_mode, main._escape_pending(), main.menu_open(), main._perf.visible, ";".join(added)]
-	return row + "|" + main.get_node("HUD/Status").text if status else row
+	return row + "|refusal=" + main.hud.refusal if status else row
 
 func _ic_esc(main) -> void:
 	var event := InputEventKey.new()
@@ -1534,6 +1544,25 @@ func _run_until_answered(main, frames: int) -> void:
 		if main.orders._awaiting_build.is_empty(): return
 		BaseScene.tick(main)
 
+func test_hint_outlives_an_earlier_order(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_peer_packets(online.transport, 2, 4, 200)
+	_run(main, 8)
+	main.orders.selected_ids.assign([3])
+	main._refresh()
+	var stops = func() -> int: return online.lockstep.command_log().filter(func(command: Dictionary) -> bool: return command.type == "stop" and command.player == 1).size()
+	main._submit({"type": "stop", "entity_ids": [3]})
+	main.orders._unload_selected()
+	_run(main, 30)
+	runner.check(stops.call() == 1, "RN3 online fixture: the earlier stop was played and answered, got %d" % stops.call())
+	runner.check(main.hud.refusal == "Select a container" and main.get_node("HUD/Hud/RefusalLine").visible, "RN3 online: the earlier order's answer leaves the later hint, got '%s'" % main.hud.refusal)
+	main._submit({"type": "stop", "entity_ids": [3]})
+	_run(main, 30)
+	runner.check(stops.call() == 2 and main.hud.refusal.is_empty() and not main.get_node("HUD/Hud/RefusalLine").visible, "RN3 online: an order sent after the hint clears it, got '%s'" % main.hud.refusal)
+	main.free()
+	return true
+
 func test_sb2_online_placement_closes_and_reopens(runner) -> bool:
 	var helper = BaseScene.new()
 	var online: Dictionary = await _online(runner, 1)
@@ -1549,7 +1578,7 @@ func test_sb2_online_placement_closes_and_reopens(runner) -> bool:
 	helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
 	runner.check(not kind.is_empty() and main.orders._placement_kind.is_empty(), "RA8 a build click closes placement at once")
 	_run_until_answered(main, 30)
-	runner.check(main.orders._placement_kind == kind and main.hud.note.begins_with("Rejected: "), "RA8 a refusal reopens placement with the same kind, got '%s' '%s'" % [main.orders._placement_kind, main.hud.note])
+	runner.check(main.orders._placement_kind == kind and not main.hud.refusal.is_empty(), "RA8 a refusal reopens placement with the same kind, got '%s' '%s'" % [main.orders._placement_kind, main.hud.refusal])
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	runner.check(main.orders._placement_kind.is_empty(), "RA8 an accepted build click closes placement in the same frame")
 	helper.key(main, KEY_1)
@@ -1577,7 +1606,7 @@ func test_sb2_online_refusal_keeps_new_gesture(runner) -> bool:
 	_run_until_answered(main, 30)
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	_run(main, 3)
-	runner.check(main.hud.note.begins_with("Rejected: ") and count.call("build") == 1, "RA9 a refusal during a selection click does not turn its release into a build, builds %d" % count.call("build"))
+	runner.check(not main.hud.refusal.is_empty() and count.call("build") == 1, "RA9 a refusal during a selection click does not turn its release into a build, builds %d" % count.call("build"))
 	main.orders.selected_ids.assign([3])
 	main._refresh()
 	helper.key(main, KEY_1)
@@ -1587,6 +1616,50 @@ func test_sb2_online_refusal_keeps_new_gesture(runner) -> bool:
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	_run(main, 3)
 	runner.check(count.call("build") == 2 and count.call("attack_move") == 1, "RA9 a refusal in attack-move mode keeps the attack-move click, builds %d attack moves %d" % [count.call("build"), count.call("attack_move")])
+	main.free()
+	return true
+
+func test_sb2_online_refusal_after_a_later_gesture(runner) -> bool:
+	var helper = BaseScene.new()
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_peer_packets(online.transport, 2, 4, 200)
+	_run(main, 8)
+	main._refresh()
+	var rows = main.shown_state.units
+	var at: int = rows.index_of(3)
+	runner.check(at != -1, "RA10 fixture: builder 3 is shown")
+	if at == -1: return true
+	var second: int = main.driver.pump.live().spawn(1, Vector2(rows.x[at] + 1.0, rows.y[at]), "usa_builder")
+	_run(main, 1)
+	runner.check(second != -1, "RA10 fixture: a second own builder")
+	var ground: Vector2 = Iso.world_to_plane(Vector2(10.5, 10.5))
+	var gestures: Dictionary = {
+		"another builder selected": func() -> void:
+			main.orders.selected_ids.assign([second])
+			main._refresh(),
+		"A then a ground click": func() -> void:
+			helper.key(main, KEY_A)
+			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
+			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false),
+		"a right-click move": func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true),
+		"Esc, then the same builder again": func() -> void:
+			helper.key(main, KEY_ESCAPE)
+			main.orders.selected_ids.assign([3])
+			main._refresh(),
+		"nothing": func() -> void: pass,
+	}
+	for gesture: String in gestures:
+		main.orders.selected_ids.assign([3])
+		main._refresh()
+		helper.key(main, KEY_1)
+		var kind: String = main.orders._placement_kind
+		helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
+		gestures[gesture].call()
+		_run_until_answered(main, 30)
+		var reopened: bool = main.orders._placement_kind == kind
+		runner.check(not kind.is_empty() and main.orders._awaiting_build.is_empty() and not main.hud.refusal.is_empty() and reopened == (gesture == "nothing"), "RA10 %s before the refusal answer: placement reopened %s, got '%s'" % [gesture, gesture == "nothing", main.orders._placement_kind])
+		if not main.orders._placement_kind.is_empty(): main.orders._clear_placement()
 	main.free()
 	return true
 
@@ -1702,8 +1775,8 @@ func test_too_many_orders_note(runner) -> bool:
 	var order := {"type": "move", "entity_ids": range(1, 301), "target": [10.5, 10.5]}
 	for i in 200: main._submit(order)
 	_run(main, 1)
-	var status: String = main.get_node("HUD/Status").text
-	runner.check(status.contains("Rejected: " + main.driver.TOO_MANY_ORDERS), "N-cap the HUD shows the refused order, got " + status)
+	var status: String = BaseScene.hud_text(main)
+	runner.check(status.contains(main.driver.TOO_MANY_ORDERS), "N-cap the HUD shows the refused order, got " + status)
 	_layout_ok(runner, main, "too many orders")
 	main.free()
 	return true
@@ -1766,7 +1839,7 @@ func test_sb4_no_waiting_after_end(runner) -> bool:
 	_end_in_catch_up(runner, online, 9, [])
 	_run(main, 3)
 	runner.check(online.lockstep.status() == "running" and main.driver.notice() == "", "SB4 no waiting after the end, got %s '%s'" % [online.lockstep.status(), main.driver.notice()])
-	runner.check(not main.get_node("HUD/Status").text.contains("Waiting"), "SB4 no waiting line, got " + main.get_node("HUD/Status").text)
+	runner.check(not BaseScene.hud_text(main).contains("Waiting"), "SB4 no waiting line, got " + BaseScene.hud_text(main))
 	main.free()
 	return true
 
@@ -2082,4 +2155,37 @@ func test_ph_preview_on_steady_step(runner) -> bool:
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	runner.check(notes.size() == 1 and not notes[0].preview.is_empty(), "PH a steady one-credit step call carries the preview, got %d notes" % notes.size())
 	main.free()
+	return true
+
+func _start_plane(main, seat: int) -> Vector2:
+	return Iso.world_to_plane(Vector2(main.driver.first_note.starts[seat]) + Vector2(0.5, 0.5))
+
+func test_view_player_after_the_online_seat(runner) -> bool:
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	var camera: Camera2D = main.get_node("Camera2D")
+	runner.check(main.local_player == 2 and main.view_player == 2, "VP1 a seat 2 join views player 2, got %d" % main.view_player)
+	runner.check(main.driver.first_note.starts[1] != main.driver.first_note.starts[2] and camera.position == _start_plane(main, 2), "VP1 the camera starts on seat 2's start, got %s" % camera.position)
+	var seats: Array[Dictionary] = [{"seat": 1, "team": 1, "controller": "human", "credits": 1111, "faction": "usa"}, {"seat": 2, "team": 2, "controller": "human", "credits": 2222, "faction": "usa"}]
+	var sim = MapData.create(MapData.load(Skirmish.MAP_PATH), seats)
+	sim.start_match([1, 2] as Array[int])
+	main.driver.adopt(sim)
+	BaseScene.publish(main)
+	var credits: Label = main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false)
+	runner.check(credits.text == "2222", "VP1 the strip shows seat 2's credits, got " + credits.text)
+	main.view_player = 1
+	_end_match(online)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	SkirmishMain.starts = [2, 1]
+	online.transport.frames.append(_rematch_start(99))
+	_peer_packets(online.transport, 1, 4, 4)
+	_run(main, 1)
+	runner.check(main.view_player == 2 and camera.position == _start_plane(main, 2), "VP1 after a rematch the view is player 2 again, got %d" % main.view_player)
+	main.free()
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
 	return true

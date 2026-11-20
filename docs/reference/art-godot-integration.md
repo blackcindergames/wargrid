@@ -2,11 +2,11 @@
 
 (Corrected 2026-11-12: this describes the flow before the art lab. Today units and buildings are baked shapes (`shapes.gd`, `shape_bake.gd`, baked on first use) drawn in one sorted triangle batch (`world_batch.gd`); see [guide chapter 5](../guide/05-presentation.md) and the [art lab verification](art-lab-verification.md).)
 
-Written by GPT with the [art direction](../art-direction/ART_DIRECTION.md) (moved here from `docs/art-direction/GODOT_INTEGRATION.md` on 2026-11-09). Evidence for planning M7.5, not decisions; recheck the cited code before relying on it. The `spike-avoidance` links work only once that branch is pushed.
+Written by GPT with the [art direction](../art-direction/ART_DIRECTION.md) (moved here from `docs/art-direction/GODOT_INTEGRATION.md` on 2026-11-09). Evidence for planning M7.5, not decisions; recheck the cited code before relying on it. The `spike-avoidance` links work only if the pinned commit is reachable; that branch is now the tag `archive/spike-avoidance`, whose tip differs from the pinned revision.
 
 **Recommendation:** keep Wargrid's centralized 2D drawing and deterministic simulation. Implement the geometric 2.5D style as presentation geometry, with explicit ground anchors, role attachments and a small amount of local animation state. First resolve depth ordering, combat-event delivery and actual screen-size readability. A 3D migration or per-unit scene hierarchy is not justified by this art direction.
 
-Source inspection: 2026-11-09. Game baseline: `spike-design` at `07c3ab65f373212816c1f34e6361e5a9b08cff28`. Avoidance research: `spike-avoidance` at `a9a0e3cd1825bbf05837d3898378d75657d6d345`, inspected in its separate worktree without switching or modifying either branch. Links below pin these revisions. Findings describe code; recommendations remain unimplemented. The thirteen [interview answers](../art-direction/ART_DIRECTION.md#1-authority-and-the-thirteen-decisions) are the starting point (revisable, user 2026-11-09).
+Source inspection: 2026-11-09. Game baseline: `spike-design` at `07c3ab65f373212816c1f34e6361e5a9b08cff28`. Avoidance research: `spike-avoidance` (since archived as tag `archive/spike-avoidance`) at `a9a0e3cd1825bbf05837d3898378d75657d6d345`, inspected in its separate worktree without switching or modifying either branch. Links below pin these revisions. Findings describe code; recommendations remain unimplemented. The thirteen [interview answers](../art-direction/ART_DIRECTION.md#1-authority-and-the-thirteen-decisions) are the starting point (revisable, user 2026-11-09).
 
 ## 1. Fit the existing presentation boundary
 

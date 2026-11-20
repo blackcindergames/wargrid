@@ -1,4 +1,21 @@
 [
+ {"id": "p2.3a1-see-your-selection", "title": "See your selection",
+  "new": ["Credits (and power, if your side uses it) sit on the top edge. Point at a buy button or place a building and the strip turns cyan, says PREVIEW and shows what you would have after it.", "Select something and a panel at the bottom left shows it: one unit, a group by kind, a building, a building going up, a supply pile or an enemy.", "A refused order shows the game's reason on a line at the bottom of the screen, between the panel and the buttons (still in the game's own words; plainer words come next).", "The bottom-right buttons follow your selection: build buttons when nothing or one builder is selected, Attack move and Stop for armed units, Unload for a loaded vehicle or Tunnel Hub. Keys are on the buttons; Unload moved from U to F. A factory's queue sits above its buttons; click a row to cancel it. E no longer produces: use the numbered buttons or 1-9.", "Right-click acts on what is under the pointer: move, attack, collect from a pile, or enter a Scout Car or Tunnel Hub. Esc or a right-click cancels a placement or an attack move."],
+  "try": [
+   {"id": "group", "text": "Select a mixed group, drop one kind with the panel's kind rows, then try to get it back"},
+   {"id": "collectors", "text": "Select your collectors (trucks, helicopters or Laborers) and read what the panel says they are doing"},
+   {"id": "enemy", "text": "Click an enemy unit and a supply pile"},
+   {"id": "forecast", "text": "Point at a building you cannot afford and read the top strip, then try to place it; note whether you saw the line at the bottom"},
+   {"id": "buttons", "text": "Select two builders, or a builder and a tank, and look at the buttons; note anything you expected to find"},
+   {"id": "unload", "text": "Put infantry in a Scout Car or Tunnel Hub, then unload with F or the Unload button", "trigger": "unload"},
+   {"id": "resume", "text": "Pull the builder off a building going up, then get it finished. Note whether you knew how", "trigger": "resume_build"},
+   {"id": "queue", "text": "Queue six or more units at one factory, open the rest with Show more, then cancel one you picked", "trigger": "cancel_production"}],
+  "questions": [
+   {"id": "found_it", "text": "I could always tell what I had selected"},
+   {"id": "hud_clicks", "text": "The HUD and the open checklist never took a click I meant for the battlefield"},
+   {"id": "buttons_fit", "text": "The bottom-right buttons showed what I could do with my selection"},
+   {"id": "preview_read", "text": "When I pointed at a buy button, I could tell the top numbers were a preview, not what I had"},
+   {"id": "queue_cancel", "text": "I could cancel the queued unit I meant and never cancelled one by accident"}]},
  {"id": "p12-notes", "title": "Notes that never block",
   "new": ["The playtest notes live in one panel: checklist, questions and markers, any time during or after a match. The key left of 1 (shown in the panel title) opens it.", "The panel never pauses or blocks play and has no Save button: notes save themselves. Only the marker box (N) pauses an offline match while it is open.", "On desktop your notes are filed when you quit or close the window; in the browser they download when you come back to the launcher."],
   "try": [
@@ -71,7 +88,7 @@
   "try": [
    {"id": "tunnel", "text": "Build a Tunnel Hub", "trigger": "build:frc_defence"},
    {"id": "enter", "text": "Right-click a Tunnel Hub or pickup with infantry selected", "trigger": "enter"},
-   {"id": "unload", "text": "Unload with U", "trigger": "unload"},
+   {"id": "unload", "text": "Unload with F", "trigger": "unload"},
    {"id": "esc", "text": "Open the Esc menu and resume", "trigger": "esc_menu"},
    {"id": "online", "text": "Play FRC online against China or USA"}],
   "questions": [

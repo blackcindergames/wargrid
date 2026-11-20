@@ -61,10 +61,12 @@ func test_ready(runner) -> bool:
 		positions[unit.position] = true
 	runner.check(positions.size() == 20, "S1 unique starts")
 	runner.check(state.map.blocked_cells.size() == 18, "S1 static obstacle")
-	runner.check(main.has_node("Camera2D") and main.has_node("WorldView") and main.has_node("HUD/Status"), "S1 scene nodes")
+	runner.check(main.has_node("Camera2D") and main.has_node("WorldView") and main.has_node("HUD/Hud"), "S1 scene nodes")
 	runner.check(main.orders.selected_ids == [], "S1 no selection")
 	runner.check(main.get_node("Camera2D").position == Iso.world_to_plane(Vector2(8, 8)), "S1 camera center")
-	runner.check(main.get_node("HUD/Status").mouse_filter == Control.MOUSE_FILTER_IGNORE, "S1 HUD click through")
+	var stops: Array = ["HUD/Hud/TopStrip", "HUD/Hud/SelectionPanel", "HUD/Economy", "HUD/MenuChip", "HUD/Playtest/Chip", "HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog"].filter(func(path: String) -> bool: return main.get_node(path).mouse_filter == Control.MOUSE_FILTER_STOP and not main.get_node(path).mouse_force_pass_scroll_events)
+	var passes: Array = ["HUD/Hud", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/SelectionBox"].filter(func(path: String) -> bool: return main.get_node(path).mouse_filter == Control.MOUSE_FILTER_IGNORE)
+	runner.check(stops.size() == 7 and passes.size() == 4, "S1 panels stop clicks and the wheel, the rest passes, got %s %s" % [stops, passes])
 	runner.check(ProjectSettings.get_setting("physics/common/physics_ticks_per_second") == 30, "S1 tick rate")
 	runner.check(ProjectSettings.get_setting("rendering/renderer/rendering_method") == "gl_compatibility", "S1 renderer")
 	for binding in [["camera_left", KEY_A, KEY_LEFT], ["camera_right", KEY_D, KEY_RIGHT], ["camera_up", KEY_W, KEY_UP], ["camera_down", KEY_S, KEY_DOWN], ["deselect", KEY_ESCAPE]]:
@@ -118,12 +120,14 @@ func test_rejection(runner) -> bool:
 	await click(runner, view, Iso.world_to_plane(Vector2(7.5, 6.5)), MOUSE_BUTTON_RIGHT)
 	runner.check(main.driver.pump.live().snapshot() == active, "S3 rejected order preserves active destination and sequence")
 	BaseScene.tick(main)
-	runner.check(main.get_node("HUD/Status").text.contains("Target"), "S3 HUD rejection reason")
+	runner.check(BaseScene.hud_text(main).contains("Target"), "S3 HUD rejection reason")
 	await click(runner, view, Iso.world_to_plane(Vector2(5.5, 5.5)), MOUSE_BUTTON_RIGHT)
 	main.driver.flush()
 	var queued: Dictionary = main.driver.pump.live().snapshot()
 	runner.check(queued.pending_commands.size() == 1 and queued.pending_commands[0].sequence == 1, "S3 rejection did not consume sequence")
-	runner.check(not main.get_node("HUD/Status").text.contains("Target"), "S3 accepted clears error")
+	BaseScene.tick(main)
+	runner.check(not BaseScene.hud_text(main).contains("Target"), "S3 the accepted answer clears error")
+	queued = main.driver.pump.live().snapshot()
 	await click(runner, view, Iso.world_to_plane(Vector2(0.5, 0.5)), MOUSE_BUTTON_LEFT)
 	runner.check(main.orders.selected_ids == [], "S3 empty clears")
 	await click(runner, view, Iso.world_to_plane(Vector2(4.5, 4.5)), MOUSE_BUTTON_RIGHT)
@@ -233,6 +237,11 @@ func test_boxes(runner) -> bool:
 			for reverse in [false, true]:
 				await _box(runner, main, Vector2(33, 81) if reverse else Vector2(-33, 47), Vector2(-33, 47) if reverse else Vector2(33, 81))
 				runner.check(main.orders.selected_ids == [1, 2, 6, 7], "S6 transformed/reverse box " + str([center, zoom, reverse]))
+	# The last zoom puts a box corner near the HUD's build menu; the Shift checks are about the world.
+	camera.position = Vector2(0, 128)
+	camera.zoom = Vector2.ONE
+	camera.force_update_scroll()
+	await runner.process_frame
 	await click(runner, main.get_node("WorldView"), Iso.world_to_plane(Vector2(5.5, 1.5)) + Vector2(0, -8), MOUSE_BUTTON_LEFT)
 	await _box(runner, main, Vector2(-33, 47), Vector2(33, 81), true)
 	await _box(runner, main, Vector2(-33, 47), Vector2(33, 81), true)

@@ -47,7 +47,7 @@ var _current: Slot
 var _previous: Slot
 var _ready: Slot = null
 var _stopped: bool = false
-var _failed: bool = false
+var _failure: String = ""
 
 func _init(sim: Simulation) -> void:
 	_sim = sim
@@ -65,11 +65,11 @@ func start() -> Note:
 	return note
 
 func post(job: Job) -> bool:
-	if _stopped or _failed: return false
+	if _stopped or not _failure.is_empty(): return false
 	var slot := Slot.new()
 	var note: Note = _note_for(job, slot)
 	if note == null:
-		_failed = true
+		_fail("post")
 		return false
 	_notes.append(note)
 	_ready = slot
@@ -92,16 +92,25 @@ func previous() -> Slot:
 
 func query(job: Job) -> Note:
 	var note: Note = _note_for(job, null)
-	if note == null: _failed = true
+	if note == null: _fail("query")
 	return note
 
 func record() -> Dictionary:
-	var job := Job.new()
-	job.step = false
-	job.want_digest = true
-	job.want_log = true
-	var note: Note = query(job)
-	return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match, "commands": note.log}
+	if _failure.is_empty():
+		var job := Job.new()
+		job.step = false
+		job.want_digest = true
+		job.want_log = true
+		var note: Note = query(job)
+		if note != null: return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match, "commands": note.log}
+	# A failed simulation cannot be trusted for a digest, so the record keeps what was last shown.
+	return {"tick": _current.tick, "digest": "", "match": _current.view.match, "commands": _recorder.commands().duplicate(true)}
+
+func failure() -> String:
+	return _failure
+
+func _fail(kind: String) -> void:
+	if _failure.is_empty(): _failure = "%s job returned no note after tick %d" % [kind, _current.tick]
 
 func busy() -> bool:
 	return false

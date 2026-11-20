@@ -230,10 +230,10 @@ func test_checklist_triggers(runner) -> bool:
 	var laborer: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), "frc_builder")
 	main._submit({"type": "gather", "entity_ids": [999999], "source_id": pile.id})
 	BaseScene.tick(main)
-	runner.check(not main.hud.note.is_empty() and not overlay.checked("collect"), "PO6 a rejected gather ticks nothing, error '%s'" % main.hud.note)
+	runner.check(not main.hud.refusal.is_empty() and not overlay.checked("collect"), "PO6 a rejected gather ticks nothing, error '%s'" % main.hud.refusal)
 	main._submit({"type": "gather", "entity_ids": [laborer], "source_id": pile.id})
 	BaseScene.tick(main)
-	runner.check(main.hud.note.is_empty() and overlay.checked("collect") and list.find_child("collect", true, false).button_pressed, "PO6 an accepted gather ticks collect, error '%s'" % main.hud.note)
+	runner.check(main.hud.refusal.is_empty() and overlay.checked("collect") and list.find_child("collect", true, false).button_pressed, "PO6 an accepted gather ticks collect, error '%s'" % main.hud.refusal)
 	overlay.observe_command({"type": "build", "building_kind": "frc_supply_center"})
 	runner.check(overlay.checked("cache") and not overlay.checked("workers"), "PO6 build:frc_supply_center ticks cache only")
 	list.find_child("income", true, false).button_pressed = true
@@ -274,7 +274,7 @@ func test_helper_off_changes_nothing(runner) -> bool:
 	var pile: Dictionary = sim.snapshot().sources[0]
 	var laborer: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), "frc_builder")
 	main._submit({"type": "gather", "entity_ids": [laborer], "source_id": pile.id})
-	runner.check(main.hud.note.is_empty() and not overlay.get_node("Checklist").find_child("collect", true, false).button_pressed and PlaytestSession.current == null, "PO7 off: an accepted gather ticks nothing and opens no session, error '%s'" % main.hud.note)
+	runner.check(main.hud.refusal.is_empty() and not overlay.get_node("Checklist").find_child("collect", true, false).button_pressed and PlaytestSession.current == null, "PO7 off: an accepted gather ticks nothing and opens no session, error '%s'" % main.hud.refusal)
 	_key(runner, KEY_ESCAPE)
 	_click(main, "Playtest helper: Off")
 	runner.check(overlay.is_active() and overlay.get_node("Checklist").visible and PlaytestSettings.enabled(), "PO7 the pause menu switch turns the helper on mid-match and stores it")
@@ -302,10 +302,9 @@ func test_helper_off_changes_nothing(runner) -> bool:
 
 func test_overlay_layout(runner) -> bool:
 	var saved: String = _begin()
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		_camera(main)
 		main.orders.selected_ids.assign([_own_unit(main)])
@@ -320,9 +319,9 @@ func test_overlay_layout(runner) -> bool:
 			var panel: Control = main.get_node(path)
 			runner.check(panel.visible and screen.encloses(panel.get_global_rect()), "PO8 %s inside %s, rect %s" % [path, size, panel.get_global_rect()])
 			panels.append(panel.get_global_rect())
-			for other in ["HUD/Status", "HUD/Economy"]:
-				var control: Control = main.get_node(other)
-				runner.check(not panel.get_global_rect().intersects(Rect2(control.global_position, control.get_combined_minimum_size())), "PO8 %s clear of %s at %s" % [path, other, size])
+			var hud: Dictionary = BaseScene.hud_panels(main)
+			runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip") and hud.has("HUD/Hud/SelectionPanel"), "PO8 the list holds the Menu chip, the strip and the selection panel at %s, got %s" % [size, hud.keys()])
+			for other: String in hud: runner.check(not panel.get_global_rect().intersects(hud[other]), "PO8 %s clear of %s at %s" % [path, other, size])
 		runner.check(not panels[0].intersects(panels[1]), "PO8 checklist and note apart at %s" % size)
 		port.free()
 	_end(saved)
@@ -516,7 +515,7 @@ func test_two_match_session_file(runner) -> bool:
 	var overlay = main.get_node("HUD/Playtest")
 	_camera(main)
 	_move_own_unit(main)
-	runner.check(main.hud.note.is_empty(), "PO12 fixture: the first move is accepted, '%s'" % main.hud.note)
+	runner.check(main.hud.refusal.is_empty(), "PO12 fixture: the first move is accepted, '%s'" % main.hud.refusal)
 	_run(main, 60)
 	_mark(overlay, "good", "match one marker")
 	var digests: Array[String] = [StateHash.digest(main.driver.pump.live().snapshot())]
@@ -526,7 +525,7 @@ func test_two_match_session_file(runner) -> bool:
 	main._restart()
 	runner.check(_panel(main).visible, "PO12 a restart keeps the panel")
 	_move_own_unit(main)
-	runner.check(main.hud.note.is_empty(), "PO12 fixture: the second move is accepted, '%s'" % main.hud.note)
+	runner.check(main.hud.refusal.is_empty(), "PO12 fixture: the second move is accepted, '%s'" % main.hud.refusal)
 	_run(main, 45)
 	_mark(overlay, "bad", "match two first")
 	_run(main, 45)
@@ -711,12 +710,11 @@ func test_form_layout(runner) -> bool:
 	for card: Dictionary in FocusCards.load_cards():
 		if JSON.stringify(card).length() > JSON.stringify(longest).length(): longest = card
 	var saved: String = _begin(true, longest.id)
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
 		PlaytestSession.current = null
 		DirAccess.remove_absolute(sessions.path_join(PlaytestSession.CURRENT))
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		var overlay = main.get_node("HUD/Playtest")
 		_camera(main)
@@ -731,9 +729,9 @@ func test_form_layout(runner) -> bool:
 		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size) and PlaytestSession.current.data.focus == longest.id, "PO15 fixture: a real %s viewport and the longest card" % size)
 		runner.check(panel.visible and rect.size.y <= 0.6 * size.y + 0.5, "PO15 the panel is at most 60 %% of %s high, got %s" % [size, rect.size])
 		runner.check(screen.encloses(rect), "PO15 the panel is inside %s, rect %s" % [size, rect])
-		for other in ["HUD/Status", "HUD/Economy"]:
-			var control: Control = main.get_node(other)
-			runner.check(not rect.intersects(Rect2(control.global_position, control.get_combined_minimum_size())), "PO15 the panel is clear of %s at %s" % [other, size])
+		var hud: Dictionary = BaseScene.hud_panels(main)
+		runner.check(hud.has("HUD/MenuChip") and hud.has("HUD/Hud/TopStrip"), "PO15 the list holds the Menu chip and the strip at %s, got %s" % [size, hud.keys()])
+		for other: String in hud: runner.check(not rect.intersects(hud[other]), "PO15 the panel is clear of %s at %s" % [other, size])
 		var card: Control = main.get_node("HUD/ResultPanel/Center/Card")
 		runner.check(card.is_visible_in_tree() and not rect.intersects(card.get_global_rect()), "PO15 the panel is clear of the result card at %s, card %s panel %s" % [size, card.get_global_rect(), rect])
 		var scrolls: Array[Node] = panel.find_children("*", "ScrollContainer", true, false)
@@ -806,7 +804,7 @@ func test_sb2_checklist_waits_for_answer(runner) -> bool:
 	var laborer: int = sim.spawn(1, Vector2(pile.origin[0] + 6.5, pile.origin[1] + 8.5), "frc_builder")
 	main._submit({"type": "gather", "entity_ids": [999999], "source_id": pile.id})
 	BaseScene.tick(main)
-	runner.check(main.hud.note.begins_with("Rejected: ") and not overlay.checked("collect"), "RA2 a refused gather ticks nothing, note '%s'" % main.hud.note)
+	runner.check(not main.hud.refusal.is_empty() and not overlay.checked("collect"), "RA2 a refused gather ticks nothing, note '%s'" % main.hud.refusal)
 	main._submit({"type": "gather", "entity_ids": [laborer], "source_id": pile.id})
 	runner.check(not overlay.checked("collect"), "RA2 an accepted gather waits for its answer")
 	BaseScene.tick(main)
@@ -827,7 +825,7 @@ func test_sb2_review_form_and_pending_answer(runner) -> bool:
 	main._playtest.end_match()
 	runner.check(_panel(main).visible and not main._playtest.holds_match(), "RA7 fixture: the panel is open and holds nothing")
 	BaseScene.tick(main)
-	runner.check(main.orders._awaiting_build.is_empty() and main.hud.note == "Rejected: No units left", "RA7 online answers arrive with the panel open, note '%s'" % main.hud.note)
+	runner.check(main.orders._awaiting_build.is_empty() and main.hud.refusal == "No units left", "RA7 online answers arrive with the panel open, note '%s'" % main.hud.refusal)
 	main.free()
 	_end(saved)
 	saved = _begin()
@@ -858,7 +856,7 @@ func test_open_panel_never_holds(runner) -> bool:
 	_move_own_unit(main)
 	runner.check(_pending(main, "move") == 1, "PO20 a move order is sent with the panel open")
 	_run(main, 10)
-	runner.check(main.driver.pump.live().tick() == tick + 10 and _pending(main, "move") == 0 and main.hud.note.is_empty(), "PO20 ten frames advance ten ticks and deliver the move, tick %d, note '%s'" % [main.driver.pump.live().tick() - tick, main.hud.note])
+	runner.check(main.driver.pump.live().tick() == tick + 10 and _pending(main, "move") == 0 and main.hud.refusal.is_empty(), "PO20 ten frames advance ten ticks and deliver the move, tick %d, note '%s'" % [main.driver.pump.live().tick() - tick, main.hud.refusal])
 	overlay.open_marker()
 	runner.check(overlay.holds_match() and main.menu_open(), "PO20 the marker dialog still holds the match")
 	_run(main, 5)

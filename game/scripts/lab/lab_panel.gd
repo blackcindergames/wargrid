@@ -1,6 +1,7 @@
 extends Control
 
 const LabLook = preload("res://scripts/lab/lab_look.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
 const WorldView = preload("res://scripts/presentation/world_view.gd")
 
 const SCREEN := Vector2(1280, 800)
@@ -221,7 +222,7 @@ func _ally_chip() -> PanelContainer:
 	line.add_child(_caps("ALLY", _tokens.muted))
 	var discs := _row(4)
 	# hud.js:89-98: the ally's minimap dot, beside the palette A green it is judged against.
-	for color: Color in [_tokens.ally, LabLook.PALETTE_A[2]]: discs.add_child(_disc(color))
+	for color: Color in [_tokens.ally, Palette.OWNER_BASE[2]]: discs.add_child(_disc(color))
 	line.add_child(discs)
 	chip.add_child(line)
 	return chip

@@ -1,10 +1,13 @@
 extends RefCounted
 
+# map-art-shapes.md P2.3a, Palette A (slots 1-8) and the round 6 sides.
 const OWNER_BASE: Array[Color] = [
-	Color("376eac"), Color("b04a3a"), Color("3f8f4f"), Color("c9a227"),
-	Color("d27a2c"), Color("7a4fa0"), Color("2f9c9c"), Color("c8628f"),
+	Color("628ffa"), Color("d6120c"), Color("4ad49b"), Color("f8e425"),
+	Color("0e92a7"), Color("7242fe"), Color("ec8600"), Color("f79cef"),
 ]
-# Vertical faces and machinery stay neutral for every owner (ART_DIRECTION section 7, palette-proposal.json materials).
+const OWNER_SIDE := Color("1c2e39")
+const OWNER_SIDE_DARK := Color("0e1b23")
+# Owner 0 and unknown owners keep the neutral grey sides (ART_DIRECTION section 7, palette-proposal.json materials).
 const SIDE := Color("3d515f")
 const SIDE_DARK := Color("263842")
 const MACHINE := Color("8098a5")
@@ -26,10 +29,11 @@ const HEALTH_RED := Color("d8453a")
 
 # Eight slots: the Shapes slots; bright swaps in the Neon hues.
 static func owner_colors(owner: int, bright: bool = false) -> PackedColorArray:
-	var base: Color = OWNER_BASE[owner - 1] if owner >= 1 and owner <= OWNER_BASE.size() else (NEUTRAL if owner == 0 else FALLBACK)
-	if bright and owner >= 1 and owner <= OWNER_BRIGHT.size(): base = OWNER_BRIGHT[owner - 1]
+	var owned: bool = owner >= 1 and owner <= OWNER_BASE.size()
+	var base: Color = OWNER_BASE[owner - 1] if owned else (NEUTRAL if owner == 0 else FALLBACK)
+	if bright and owned: base = OWNER_BRIGHT[owner - 1]
 	return PackedColorArray([
-		base, base.darkened(0.25), SIDE, SIDE_DARK,
+		base, base.darkened(0.25), OWNER_SIDE if owned else SIDE, OWNER_SIDE_DARK if owned else SIDE_DARK,
 		MACHINE, SMOKE, base, SKIN,
 	])
 

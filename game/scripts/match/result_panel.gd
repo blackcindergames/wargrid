@@ -1,5 +1,8 @@
 extends Control
 
+const MatchSettings = preload("res://scripts/match_settings.gd")
+const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]
+
 signal play_again_pressed
 signal change_setup_pressed
 
@@ -16,14 +19,26 @@ var _length: Label
 var _table: GridContainer
 var _play_again: Button
 var _change_setup: Button
+var _copy: Button
+var _focus_target: Button
+var _buttons: HBoxContainer
+var _gap: Control
+var _mark: Control
+var _body: Label
+var _divider: HSeparator
+var _footer: HBoxContainer
+var _version: Label
+var _code: Label
 var _rows: Array[Dictionary] = []
 var _wants_focus: bool = false
 var _grab_pending: bool = false
+var _frozen: bool = false
+var _report: String = ""
+var copy_text: Callable = DisplayServer.clipboard_set
 
 func _init() -> void:
 	name = "ResultPanel"
 	visible = false
-	theme = load("res://ui/launcher_theme.tres")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
@@ -47,7 +62,7 @@ func _init() -> void:
 	_outcome = _label(box, "Outcome")
 	_outcome.add_theme_font_size_override("font_size", 30)
 	_status = _label(box, "Status")
-	_status.add_theme_font_size_override("font_size", 15)
+	_status.add_theme_font_size_override("font_size", 16)
 	_status.add_theme_color_override("font_color", Color("#d4d4d4"))
 	# Reserved even when empty so the card never changes height (user, 2026-11-15).
 	_status.custom_minimum_size.y = 20.0
@@ -60,17 +75,61 @@ func _init() -> void:
 	_table.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_table.add_theme_constant_override("h_separation", 24)
 	box.add_child(_table)
-	var gap := Control.new()
-	gap.custom_minimum_size.y = 16.0
-	box.add_child(gap)
-	var buttons := HBoxContainer.new()
-	buttons.name = "Buttons"
-	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 12)
-	box.add_child(buttons)
-	_play_again = _button(buttons, "PlayAgain", "Play again", play_again_pressed.emit)
+	_add_freeze_parts(box)
+	_gap = Control.new()
+	_gap.custom_minimum_size.y = 16.0
+	box.add_child(_gap)
+	_buttons = HBoxContainer.new()
+	_buttons.name = "Buttons"
+	_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	_buttons.add_theme_constant_override("separation", 12)
+	box.add_child(_buttons)
+	_copy = _button(_buttons, "Copy", "Copy report", _copy_report)
+	_copy.visible = false
+	_play_again = _button(_buttons, "PlayAgain", "Play again", play_again_pressed.emit)
 	_play_again.theme_type_variation = "PrimaryButton"
-	_change_setup = _button(buttons, "ChangeSetup", "Back to menu", change_setup_pressed.emit)
+	_change_setup = _button(_buttons, "ChangeSetup", "Back to menu", change_setup_pressed.emit)
+	_focus_target = _change_setup
+
+# The freeze variant's parts, hidden on the Victory/Defeat card.
+func _add_freeze_parts(box: VBoxContainer) -> void:
+	_mark = Control.new()
+	_mark.name = "Mark"
+	_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mark.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
+	_mark.offset_top = -14.0
+	_mark.offset_bottom = 14.0
+	_mark.offset_right = 32.0
+	_mark.draw.connect(_draw_mark)
+	_mark.visible = false
+	_outcome.add_child(_mark)
+	_body = _label(box, "Body")
+	_body.text = "The game hit an error and cannot continue. Please copy the report and send it to us."
+	_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body.custom_minimum_size.x = 400.0
+	_body.add_theme_font_size_override("font_size", 16)
+	_body.add_theme_color_override("font_color", Color("#d4d4d4"))
+	_divider = HSeparator.new()
+	_divider.name = "Divider"
+	_divider.add_theme_constant_override("separation", 16)
+	var line := StyleBoxLine.new()
+	line.color = Color("#808080")
+	line.thickness = 1
+	_divider.add_theme_stylebox_override("separator", line)
+	box.add_child(_divider)
+	_footer = HBoxContainer.new()
+	_footer.name = "Footer"
+	box.add_child(_footer)
+	_version = _label(_footer, "Version")
+	_version.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_version.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_version.add_theme_font_size_override("font_size", 13)
+	_version.add_theme_color_override("font_color", Color("#d4d4d4"))
+	_code = _label(_footer, "Code")
+	_code.text = "GAME ERROR"
+	_code.add_theme_font_size_override("font_size", 13)
+	for part: Control in [_body, _divider, _footer]: part.visible = false
 
 # Variant A of the result-panel A/B (user, 2026-11-15); the match-slab look follows in slice 2.
 func _ready() -> void:
@@ -79,23 +138,32 @@ func _ready() -> void:
 	panel.bg_color = Color("#2a2a2a")
 	panel.border_color = Color("#808080")
 	panel.set_border_width_all(1)
-	panel.set_corner_radius_all(5)
+	panel.set_corner_radius_all(0)
 	_pad(panel, 24.0, 24.0)
 	card.add_theme_stylebox_override("panel", panel)
 	_outcome.add_theme_font_override("font", get_theme_font("font", "PrimaryButton"))
-	for button: Button in [$Center/Card/Box/Buttons/PlayAgain, $Center/Card/Box/Buttons/ChangeSetup]:
+	_code.add_theme_font_override("font", get_theme_font("font", &"HudLabel"))
+	_mark.self_modulate = get_theme_color("warn", &"Tokens")
+	for button: Button in [_copy, _play_again, _change_setup]:
 		button.add_theme_font_size_override("font_size", 15)
 		button.custom_minimum_size = Vector2(144.0, 36.0)
-		for state: String in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
-			var style: StyleBox = button.get_theme_stylebox(state).duplicate()
-			_pad(style, 12.0, 4.0)
-			button.add_theme_stylebox_override(state, style)
+		_square(button, button.theme_type_variation)
 	var waiting := StyleBoxFlat.new()
 	waiting.bg_color = Color("#666a6c")
-	waiting.set_corner_radius_all(5)
+	waiting.set_corner_radius_all(0)
 	_pad(waiting, 12.0, 4.0)
 	_play_again.add_theme_stylebox_override("disabled", waiting)
 	_play_again.add_theme_color_override("font_disabled_color", Color.WHITE)
+
+# Reads the look's styles afresh, so Back to menu can switch between the secondary and the primary look.
+static func _square(button: Button, look: StringName) -> void:
+	button.theme_type_variation = look
+	for state: String in BUTTON_STATES:
+		button.remove_theme_stylebox_override(state)
+		var style: StyleBox = button.get_theme_stylebox(state).duplicate()
+		_pad(style, 12.0, 4.0)
+		if style is StyleBoxFlat: (style as StyleBoxFlat).set_corner_radius_all(0)
+		button.add_theme_stylebox_override(state, style)
 
 static func _pad(style: StyleBox, horizontal: float, vertical: float) -> void:
 	style.content_margin_left = horizontal
@@ -104,6 +172,7 @@ static func _pad(style: StyleBox, horizontal: float, vertical: float) -> void:
 	style.content_margin_bottom = vertical
 
 func show_result(outcome: String, status: String, can_play: bool, rows: Array[Dictionary] = [], length: String = "", waiting: bool = false, accept: bool = false) -> void:
+	_set_freeze(false)
 	_outcome.text = outcome
 	_status.text = status
 	_play_again.disabled = not can_play
@@ -116,6 +185,58 @@ func show_result(outcome: String, status: String, can_play: bool, rows: Array[Di
 		_rows.assign(rows)
 		_rebuild_table()
 	_take_focus(visible and not can_play and not waiting)
+
+# Later calls keep the report, the focus and Report copied.
+func show_freeze(report: String, footer: String) -> void:
+	if _frozen:
+		_try_grab()
+		return
+	_set_freeze(true)
+	_report = report
+	_version.text = footer
+	_outcome.text = "Match stopped"
+	_copy.text = "Copy report"
+	# The one Enter guard: takes_enter reads it, and Copy report holds the focus.
+	_play_again.disabled = true
+	visible = true
+	_take_focus(true)
+
+func _set_freeze(on: bool) -> void:
+	if on == _frozen: return
+	_frozen = on
+	for part: Control in [_mark, _body, _divider, _footer, _copy]: part.visible = on
+	for part: Control in [_status, _play_again]: part.visible = not on
+	_outcome.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if on else HORIZONTAL_ALIGNMENT_CENTER
+	if on:
+		_length.visible = false
+		_table.visible = false
+		var margin := StyleBoxEmpty.new()
+		margin.content_margin_left = 40.0
+		_outcome.add_theme_stylebox_override("normal", margin)
+	else: _outcome.remove_theme_stylebox_override("normal")
+	_buttons.alignment = BoxContainer.ALIGNMENT_END if on else BoxContainer.ALIGNMENT_CENTER
+	_gap.custom_minimum_size.y = 8.0 if on else 16.0
+	_square(_change_setup, &"PrimaryButton" if on else &"")
+	_focus_target = _copy if on else _change_setup
+	_wants_focus = false
+
+func _copy_report() -> void:
+	copy_text.call(_report)
+	_copy.text = "Report copied"
+
+func _draw_mark() -> void:
+	var outline := PackedVector2Array([Vector2(16.0, 1.0), Vector2(31.0, 27.0), Vector2(1.0, 27.0), Vector2(16.0, 1.0)])
+	_mark.draw_colored_polygon(outline.slice(0, 3), Color.WHITE)
+	# draw_colored_polygon has no antialiasing; the antialiased outline smooths its edges.
+	_mark.draw_polyline(outline, Color.WHITE, 1.0, true)
+	_mark.draw_rect(Rect2(14.0, 9.0, 4.0, 10.0), Color.BLACK)
+	_mark.draw_rect(Rect2(14.0, 21.0, 4.0, 4.0), Color.BLACK)
+
+static func report_text(reason: String, build: String, map: String, tick: int) -> String:
+	return "Wargrid game error report\nerror: %s\nversion: %s\nmap: %s\ntick: %d" % [reason, build, map, tick]
+
+static func footer_text(build: String, map: String) -> String:
+	return "Version %s · %s" % [build, MatchSettings.PLAY_MAPS.get(map, map)]
 
 # Back to menu is the only live button once Play again is gone; wait for the pause menu to close.
 func _take_focus(wanted: bool) -> void:
@@ -131,7 +252,7 @@ func _menu_toggled() -> void:
 
 func _try_grab() -> void:
 	if not _grab_pending or (yields_to != null and yields_to.visible) or (yields_when.is_valid() and yields_when.call()): return
-	_change_setup.grab_focus()
+	_focus_target.grab_focus()
 	_grab_pending = false
 
 func _rebuild_table() -> void:
@@ -149,6 +270,12 @@ func _cell(text: String, bold: bool, left: bool) -> void:
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if left else HORIZONTAL_ALIGNMENT_RIGHT
 	if bold: label.add_theme_font_override("font", get_theme_font("font", "PrimaryButton"))
 	_table.add_child(label)
+
+static func result_text(match_state: Variant, team: int) -> String:
+	if match_state == null: return ""
+	if match_state.status == "draw": return "Draw"
+	if match_state.status != "won": return ""
+	return "Victory" if match_state.winner == team else "Defeat"
 
 static func length_text(ticks: int, rate: int) -> String:
 	var seconds: int = floori(float(ticks) / rate)

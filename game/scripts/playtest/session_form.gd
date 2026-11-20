@@ -5,6 +5,7 @@ const SCALE_LEGEND := "1 strongly disagree … 5 strongly agree"
 
 static func add_action(parent: Control, button_name: String, label: String, target: Callable) -> Button:
 	var button := Button.new()
+	button.theme_type_variation = &"HudSmallButton"
 	button.name = button_name
 	button.text = label
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -36,6 +37,7 @@ static func add_question(parent: VBoxContainer, session: PlaytestSession, questi
 	var answer := LineEdit.new()
 	for n: int in range(1, SCORES + 1):
 		var button := Button.new()
+		button.theme_type_variation = &"HudSmallButton"
 		button.name = "%s_%d" % [id, n]
 		button.text = str(n)
 		button.toggle_mode = true
@@ -53,12 +55,14 @@ static func add_question(parent: VBoxContainer, session: PlaytestSession, questi
 
 static func add_label(parent: VBoxContainer, text: String) -> Label:
 	var label := Label.new()
+	label.theme_type_variation = &"HudSmallLabel"
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(label)
 	return label
 
 static func _add_field(parent: VBoxContainer, field: LineEdit, field_name: String, placeholder: String, text: String) -> void:
+	field.theme_type_variation = &"HudSmallField"
 	field.name = field_name
 	field.placeholder_text = placeholder
 	field.text = text

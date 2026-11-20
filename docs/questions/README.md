@@ -23,7 +23,7 @@ Researched questions for the user's design wizard: one short question at a time,
 | [upcoming-milestones.md](upcoming-milestones.md) | Upcoming milestones | Q8 open |
 | [playtest-repair-bots.md](playtest-repair-bots.md) | Playtest: repair, bots | Q13 open |
 | [playtest-controls.md](playtest-controls.md), [playtest-placement.md](playtest-placement.md) | Playtest follow-ups | answers in the design answers (friend's playtest, controls, repair); not checked question by question |
-| [avoidance-zh.md](avoidance-zh.md), [avoidance-other-engines.md](avoidance-other-engines.md), [avoidance-wargrid.md](avoidance-wargrid.md) | Unit avoidance research | answers in the design answers (unit avoidance scope and behaviour); spike on branch `spike-avoidance` |
+| [avoidance-zh.md](avoidance-zh.md), [avoidance-other-engines.md](avoidance-other-engines.md), [avoidance-wargrid.md](avoidance-wargrid.md) | Unit avoidance research | answers in the design answers (unit avoidance scope and behaviour); spike on tag `archive/spike-avoidance` |
 | [later-ux-experiments.md](later-ux-experiments.md) | Parked UX experiments (preview, alerts, selection lens, workload, order intent) | parked 2026-11-15; command wheel and formation drag rejected |
 | [movement-pathing-brief.md](movement-pathing-brief.md) | Movement and pathing (finer grid, any angle, navmesh, flow fields) | wizard run 2026-11-10: grid size, unit size (size classes), order, feel and priority answered; base method waits for the timing spike |
 

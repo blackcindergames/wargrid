@@ -5,6 +5,7 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
 const BOTS: Array[int] = [2]
+const FREEZE_NOTICE := "Match stopped"
 
 var pump: SimPump
 var first_note: SimPump.Note
@@ -16,6 +17,9 @@ var _answers: Array[Dictionary] = []
 var _last: SimPump.Note
 var _preview_request: Dictionary = {}
 var _preview_answer: Dictionary = {}
+var _failure: String = ""
+# printerr, not push_error: the test runner fails the suite on ERROR lines.
+var log_error: Callable = func(line: String) -> void: printerr(line)
 
 func _init(player: int) -> void:
 	_player = player
@@ -35,6 +39,7 @@ func adopt(value: Simulation) -> void:
 	_answers = []
 	_preview_request = {}
 	_preview_answer = {}
+	_failure = ""
 
 func start() -> void:
 	pass
@@ -47,7 +52,9 @@ func step() -> void:
 	job.bots = BOTS
 	job.preview = _preview_request
 	job.stamp_sequence = true
-	if not pump.post(job): return
+	if not pump.post(job):
+		_read_failure()
+		return
 	_queue = []
 	_preview_request = {}
 
@@ -72,20 +79,35 @@ func queued() -> Array[Dictionary]:
 	return _queue
 
 func flush() -> void:
-	if _queue.is_empty(): return
+	if _queue.is_empty() or not _failure.is_empty(): return
 	var job := SimPump.Job.new()
 	job.commands = _queue
 	job.step = false
 	job.stamp_sequence = true
 	_queue = []
 	var note: SimPump.Note = pump.query(job)
+	if note == null:
+		_queue = job.commands
+		_read_failure()
+		return
 	_flushed.append_array(note.issued)
 
 func current() -> SimPump.Slot:
 	return pump.current()
 
 func record() -> Dictionary:
-	return pump.record()
+	var played: Dictionary = pump.record()
+	_read_failure()
+	return played
+
+func failure() -> String:
+	return _failure
+
+func _read_failure() -> void:
+	var reason: String = pump.failure()
+	if reason.is_empty() or not _failure.is_empty(): return
+	_failure = reason
+	log_error.call("SIM PUMP FAILED " + _failure)
 
 func match_stats() -> Array[Dictionary]:
 	return _last.stats
@@ -104,7 +126,7 @@ func submit(payload: Dictionary) -> Dictionary:
 	return {"ok": true, "error": ""}
 
 func notice() -> String:
-	return ""
+	return FREEZE_NOTICE if not _failure.is_empty() else ""
 
 func pauses_sim() -> bool:
 	return true
@@ -155,4 +177,8 @@ func match_header() -> Dictionary:
 	return {"mode": "offline", "factions": [_factions[1], _factions[2]]}
 
 func match_log() -> Dictionary:
-	return match_header().merged({"commands": Lockstep.log_lines(pump.record().commands)})
+	var played: Dictionary = pump.record()
+	_read_failure()
+	var logged: Dictionary = match_header().merged({"commands": Lockstep.log_lines(played.commands)})
+	if not _failure.is_empty(): logged.end = "sim pump failed: " + _failure
+	return logged

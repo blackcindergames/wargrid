@@ -1,0 +1,609 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid HUD, P2.3a1 states</title>
+<link rel="stylesheet" href="hud.css">
+<style>
+body{margin:0;background:#0a0f14;color:#dfe7ec;font:15px/1.45 "Public Sans",Arial,sans-serif}
+#err{position:fixed;left:0;right:0;top:0;z-index:99;background:#b3261e;color:#fff;font:600 14px ui-monospace,Menlo,monospace;padding:8px 14px;white-space:pre-wrap}
+#err:empty{display:none}
+#app{padding:16px 24px 48px}
+#app h2{margin:24px 0 8px;font-size:18px}
+.frame{position:relative;width:1280px;height:720px;overflow:hidden}
+.stage{position:absolute;left:0;top:0;overflow:hidden;background:#a88e5c}
+/* P2.3a1 additions on top of hud.css */
+.hud .sw{display:block;width:8px;height:8px;flex:none}
+.hud .note{display:flex;align-items:center;height:28px;padding:0 7px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:13px;font-weight:600;line-height:16px;white-space:nowrap}
+.hud .centre{left:0;right:0;margin:0 auto;width:max-content}
+.hud .slab{display:flex;flex-direction:column;gap:4px}
+.hud .hint{color:var(--muted);font-size:12px;font-weight:400;line-height:14px;white-space:nowrap}
+.hud .grid{display:grid;gap:4px}
+/* Gate A (user, 2026-11-19): 8 between the order row and the build menu, so orders read as their own group. */
+.hud .orders:not(:last-child){margin-bottom:4px}
+/* HudButton is 13/600 without tnum (plan Task 3). */
+.hud .btn{display:flex;align-items:center;justify-content:center;height:32px;padding:0 8px;background:var(--btn);font-size:13px;font-weight:600;line-height:16px;white-space:nowrap;position:relative;font-variant-numeric:normal;overflow:hidden}
+.hud .btn.on{background:var(--panel2);box-shadow:inset 0 0 0 2px var(--sel)}
+.hud .btn.off{background:var(--quiet);color:var(--muted)}
+.hud .krow.hover{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--muted)}
+.hud .krow.held{background:var(--quiet);color:var(--muted)}
+.hud .cap.lt{color:var(--text)}
+/* Freeze card: result_panel.gd's card (launcher theme, 15 px) with square corners. */
+.hud .dim{left:0;top:0;background:rgba(0,0,0,.6)}
+.hud .rc{left:0;right:0;top:0;bottom:0;margin:auto;width:450px;height:max-content;padding:24px;background:#2a2a2a;border:1px solid #808080;color:#fff;font-size:15px;font-weight:400;line-height:20px;font-variant-numeric:normal}
+.hud .rc .t{display:flex;align-items:center;gap:12px;font-size:30px;font-weight:800;line-height:36px;white-space:nowrap}
+.hud .rc .t svg{display:block;flex:none}
+.hud .rc .body{margin-top:8px;color:#d4d4d4}
+.hud .rc .rule{height:1px;margin:16px 0;background:#808080}
+.hud .rc .ft{display:flex;align-items:center;justify-content:space-between;gap:16px;color:#d4d4d4;font-size:13px;line-height:16px;white-space:nowrap}
+.hud .rc .ft b{color:#fff;font-weight:700;letter-spacing:.1em}
+.hud .rbtns{display:flex;justify-content:flex-end;gap:12px}
+.hud .rc .rbtns{margin-top:24px}
+.hud .rb{display:flex;align-items:center;justify-content:center;min-width:144px;height:36px;padding:4px 12px;font-size:15px;line-height:20px;white-space:nowrap;position:static}
+.hud .rb.second{background:#2a2a2a;border:1px solid #808080;color:#fff;font-weight:600}
+.hud .rb.primary{background:#f7c871;color:#1a1408;font-weight:800}
+.hud .rb.focus{outline:2px solid #e6e6e6;outline-offset:2px}
+.hud .cap{color:#2a2114;font-size:12px;font-weight:600;line-height:14px;white-space:nowrap}
+.hud .hand{position:absolute;width:18px;height:22px;z-index:6}
+/* Today's Godot default control look, 12 px, square corners (owner question 4, user 2026-11-19) */
+.hud .gd{color:#dfdfdf;font-size:12px;font-weight:400;line-height:15px;background:rgba(26,26,26,.6);overflow:hidden}
+.hud .gd .col{display:flex;flex-direction:column;gap:4px}
+.hud .gd .rowh{display:flex;gap:4px}
+.hud .gd .lbl{color:#fff;white-space:pre-wrap}
+.hud .gd .gbtn{flex:1;display:flex;align-items:center;justify-content:center;padding:4px;background:rgba(26,26,26,.6);white-space:nowrap}
+.hud .gd .gbtn.down{background:rgba(0,0,0,.6)}
+.hud .gd .gbtn.off{color:rgba(223,223,223,.5);background:rgba(26,26,26,.3)}
+.hud .gd .edit{padding:4px 4px 2px;background:rgba(26,26,26,.6);border-bottom:2px solid rgba(0,0,0,.6);color:rgba(223,223,223,.6)}
+.hud .gd .chk{display:flex;gap:4px;align-items:flex-start;padding:4px 0}
+.hud .gd .box{flex:none;width:16px;height:16px;border:1px solid rgba(223,223,223,.55);margin-top:0}
+.hud .gd .box svg{display:block}
+.hud .gd .scroll{position:relative;overflow:hidden}
+.hud .gd .vbar{position:absolute;right:0;top:0;bottom:0;width:8px;background:rgba(26,26,26,.6)}
+.hud .gd .vbar i{position:absolute;left:1px;right:1px;top:0;background:rgba(255,255,255,.35)}
+.hud .f3{color:#fff;font-size:12px;font-weight:400;line-height:15px;text-align:right;white-space:pre}
+/* Gate A round 2 (p2-3a1-gate.html#round=2): queue forms and the after-purchase card, gate-only states. */
+.hud .warn{color:var(--warn)}
+/* Director round (user, 2026-11-19): the price is its own right-aligned Label on every build button; only its colour flips, so nothing moves. */
+.hud .btn.priced{justify-content:space-between}
+.hud .qhd{display:flex;align-items:center;justify-content:space-between;height:14px}
+.hud .qr{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;background:var(--btn);font-size:13px;font-weight:600;line-height:16px;white-space:nowrap;position:relative;overflow:hidden}
+.hud .qr .qn{flex:1;min-width:0;overflow:hidden}
+.hud .qr .pct{color:var(--muted);font-variant-numeric:tabular-nums}
+.hud .qr .x{display:grid;place-items:center;flex:none;width:24px;height:24px;margin-right:-4px;color:var(--muted);font-size:16px;font-weight:400;line-height:16px}
+.hud .qr svg{display:block;flex:none;color:var(--muted)}
+/* The owner's mock: the expand row centres its label with the chevron inline, so it reads as a button, not a tenth entry. */
+.hud .qr.more{justify-content:center;color:var(--muted)}
+.hud .qr.more .qn{flex:none}
+.hud .qr.hov{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--muted)}
+.hud .qr.hov .x{color:var(--text)}
+.hud .qr.hovx .x{color:var(--text);background:var(--panel2);box-shadow:inset 0 0 0 1px var(--muted)}
+.hud .tip{padding:8px;background:var(--bg);border:1px solid var(--line);font-size:13px;font-weight:400;line-height:20px;white-space:nowrap;z-index:5}
+.hud .qline{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--well)}
+.hud .qline b{display:block;height:100%;background:var(--you)}
+.hud .qtiles{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.hud .qslots{display:flex;gap:4px}
+.hud .qs{display:grid;place-items:center;width:36px;height:36px;background:var(--btn);font-size:13px;font-weight:700;position:relative;overflow:hidden}
+.hud .after{display:flex;flex-direction:column;gap:4px;width:max-content;padding:8px;background:var(--bg);border:1px solid var(--line)}
+.hud .after .lab{font-weight:600}
+.hud .after .ar{display:flex;align-items:center;gap:8px;height:20px;white-space:nowrap}
+.hud .after .ar b{font-size:16px;font-weight:700;line-height:20px;font-variant-numeric:tabular-nums}
+.hud .after .ar .gp{width:8px}
+.hud .sws{display:flex;gap:4px}
+.hud .sws i{display:block;width:20px;height:20px}
+.hud .mini{width:250px;height:120px}
+.hud .mini .rc{position:absolute;left:0;top:0;right:auto;bottom:auto;margin:0;transform:scale(.5);transform-origin:0 0}
+</style>
+<div id="err"></div>
+<div id="app"></div>
+<script>
+addEventListener('error', e => { err.textContent += `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})\n`; });
+addEventListener('unhandledrejection', e => { err.textContent += `${e.reason}\n`; });
+
+// Values: docs/reference/hud-v5-layout.md and the P2.3a design (P2.3a1 sections); names, costs, health and power from game/scripts/simulation/definitions/.
+const W = 1280, H = 720;
+const TOKENS = {bg: '#121c24', btn: '#223241', panel2: '#26384a', quiet: '#16212a', well: '#0c141a', line: '#2e3f4b', text: '#eef3f5', muted: '#93a5b0',
+  sel: '#60e5ed', amber: '#f7c871', warn: '#f47b6c', you: '#628ffa', enemy: '#d6120c', r: '0'};
+const SLAB_W = 432, SEL_W = 408, STACK_TOP = 88, CHECKLIST_W = 320, DIALOG_W = 360;
+// Gate A (user, 2026-11-19): no key-hint block; the resume line only in its context; the kind-row rule as the panel's last line.
+const RESUME = 'Right-click: resume', ROWS_RULE = 'Click a kind: select only that kind · Shift-click: deselect it';
+const ORDERS = ['Attack move (A)', 'Stop (S)'], UNLOAD = 'Unload (F)';
+const LOW_POWER = 'Low power · defences off', OFFLINE = 'Offline · low power';
+// hud.gd menu_label "%d: %s $%d", today's plain digits (gate A); builder builds per faction (usa.gd, china.gd, frc.gd).
+const MENUS = {
+  usa: ['Power Plant $800', 'Supply Depot $2000', 'Barracks $600', 'Vehicle Factory $2000', 'Missile Battery $1000'],
+  china: ['Power Plant $1000', 'Supply Depot $1500', 'Barracks $500', 'Vehicle Factory $2000', 'Rotary Gun Tower $1200'],
+  frc: ['Supply Cache $1500', 'Barracks $500', 'Vehicle Yard $2500', 'Tunnel Hub $800']};
+const CHINA_FACTORY = ['Rotary Gun Tank $800', 'Medium Tank $800'];
+const BUTTON_PAD = 8, GAP = 4, SLAB_INNER = SLAB_W - 12 - 8;
+// Focus cards from game/data/playtest/focus.json (illustrative picks).
+const CARDS = {
+  again: {title: 'Play again', ticked: [0], try: ['Finish an online match and press Play again on both sides', 'Create a match, switch to another tab or app for a minute, then let your friend join', 'Press Cancel while connecting'],
+    questions: ['Starting a second match was quick', 'The result panel told me what was going on', 'Waiting for my friend felt safe']},
+  heard: {title: 'Every order heard', ticked: [0, 2], try: ['Move infantry, a vehicle and a worker with a right-click', 'Attack an enemy with a right-click', 'Send workers to collect supplies', 'Give orders in an online match',
+    'Start a second match and listen to the first track', 'Online: Copy the join link, open it in a second tab, and paste a code into the join field'],
+    questions: ['Every order I gave felt heard', 'The voices stayed out of the way when I clicked fast', 'The menu sections made it easy to find things', 'The match music felt varied between matches']}};
+const F3_TEXT = 'FPS 60\nFrame 16.7 / p95 17.9 / max 24.1 ms\nSim step 0.41 / p95 0.63 ms\nUnits 46 | Buildings 9 | Tick 5412 | split 0%';
+const FREEZE = {title: 'Match stopped', body: 'The game hit an error and cannot continue. Please copy the report and send it to us.',
+  // The footer carries the report's version and map, so a playtester sees what they send (illustrative values).
+  report: 'Version 0.14.0-dev+75898c8 · Dry Wells', code: 'GAME ERROR', copy: 'Copy report', copied: 'Report copied', leave: 'Back to menu'};
+
+const px = n => `${n}px`;
+const mixHex = (a, b, t) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
+// world_view.gd health_color with palette.gd's three colours.
+function healthColor(f) {
+  if (f >= 1) return '#5cc85a';
+  if (f < .5) return mixHex('#d8453a', '#e0d060', f * 2);
+  return mixHex('#e0d060', '#5cc85a', (f - .5) * 2);
+}
+const key = k => `<span class="k">${k}</span>`;
+const bar = (frac, w, h, color) => `<i class="hp" style="width:${w}px;height:${h}px"><b style="width:${frac * 100}%;background:${color}"></b></i>`;
+
+function menuColumns() {
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = "600 13px 'Public Sans'";
+  const widest = Math.max(...Object.values(MENUS).flatMap(list => list.map((l, i) => ctx.measureText(`${i + 1}: ${l}`).width)));
+  let cols = 1;
+  for (let n = 4; n >= 1; n--) if (n * (widest + 2 * BUTTON_PAD) + (n - 1) * GAP <= SLAB_INNER) { cols = n; break; }
+  return {cols, widest};
+}
+
+function strip(s) {
+  const arr = '<span class="arr">→</span>';
+  let credits = String(s.credits);
+  if (s.short) credits += ` ${arr} <span class="amb">${s.short} short</span>`;
+  else if (s.after != null) credits += ` ${arr} ${s.after}`;
+  const parts = [`<span class="stat cr"><i class="sw" style="background:var(--you)"></i><span class="lab">Credits</span><b>${credits}</b></span>`];
+  if (s.power) {
+    const [u, a] = s.power, after = s.powerAfter;
+    const value = after ? `${u} / ${a} ${arr} ${after[0]} / ${after[1]}` : `${u} / ${a}`;
+    const low = after ? after[0] > after[1] : u > a;
+    parts.push(`<span class="stat"><span class="lab">Power</span><b class="${low ? 'warn' : ''}">${value}</b>${low ? `<span class="lab warn">${s.low || 'Low power'}</span>` : ''}</span>`);
+  }
+  return `<div class="strip" style="left:${s.x ?? 8}px;top:${s.y ?? 8}px;border-width:1px"><div class="g wide">${parts.join('')}</div></div>`;
+}
+
+function chips(c) {
+  const menu = `<div class="tc" data-id="menu" style="right:8px;top:8px;border-width:1px">Menu${c.esc ? key('Esc') : ''}</div>`;
+  const pt = c.playtest ? `<div class="tc" data-id="playtest" style="right:8px;top:48px;border-width:1px"><span class="lab">Playtest</span><b class="num">${c.playtest}</b></div>` : '';
+  return menu + pt;
+}
+
+const notice = text => `<div class="note centre" data-id="notice" style="top:48px">${text}</div>`;
+const refusal = text => `<div class="refuse warn centre" data-id="refusal" style="top:${H - 204}px;border-width:1px"><i class="sq" style="background:var(--warn)"></i><span>${text}</span></div>`;
+
+function panelSlab(edge, body, place = 'left:0;bottom:0') {
+  return `<div class="slabbg sel" data-id="selection" style="${place};width:${SEL_W}px;border-width:1px 1px 0 0;padding:11px 15px 12px 16px;box-shadow:inset 4px 0 0 ${edge}"><div class="pn">${body}</div></div>`;
+}
+function identity(name, cur, max, side = '', extra = '') {
+  return `<div class="id"><div><div class="nr"><span class="nm">${name}</span>${side}</div>${extra}
+    <div class="hr">${bar(cur / max, 160, 6, healthColor(cur / max))}<span class="num">${cur} / ${max}</span></div></div></div>`;
+}
+const kv = (label, value) => `<div class="kv"><span class="lab">${label}</span><b class="num">${value}</b></div>`;
+const footer = text => `<div class="foot"><span class="muted">${text}</span></div>`;
+function siteBody(name, pct, cur, max, label, color) {
+  const progress = `<div class="hr">${bar(pct / 100, 160, 6, color)}<span class="num">${pct} %</span></div>`;
+  return identity(name, cur, max, `<span class="lab">${label}</span>`, progress);
+}
+function kindRow([name, count, frac], cls = '') {
+  const fill = count ? bar(frac, 0, 3, healthColor(frac)) : bar(0, 0, 3, 'transparent');
+  return `<span class="b krow ${cls}" data-name="${name}" data-count="${count}"><span class="kn">${name}</span><b class="num">${count}</b>${fill}</span>`;
+}
+function manyBody(header, rows) {
+  return `<div class="hd">${header}</div><div class="cards">${rows.map(r => kindRow(r, r[3] || '')).join('')}</div>`;
+}
+
+const PANELS = {
+  bulldozer: () => panelSlab('var(--you)', identity('Bulldozer', 250, 250)),
+  tank: () => panelSlab('var(--you)', identity('Medium Tank', 180, 400)),
+  factory: (place) => panelSlab('var(--you)', identity('Vehicle Factory', 2000, 2000) + footer('Right-click ground: rally point'), place),
+  plant: () => panelSlab('var(--you)', identity('Power Plant', 1500, 1500) + kv('Power', '+10')),
+  paused: () => panelSlab('var(--you)', siteBody('Vehicle Factory', 62, 1240, 2000, 'Paused · no builder', 'var(--muted)')),
+  enemySite: (place) => panelSlab('var(--enemy)', siteBody('Vehicle Factory', 38, 760, 2000, 'Under construction', 'var(--enemy)'), place),
+  pile: (place, value = '10650') => panelSlab('var(--line)', `<div class="nm">Supply Pile</div>${kv('Credits left', value)}`, place),
+  scoutCar: () => panelSlab('var(--you)', identity('Scout Car', 240, 240))};
+
+// Agent pick: with no button to show (a Power Plant selected) the slab is hidden, not an empty strip.
+function slab(s) {
+  const line = s.hint || (s.resume ? RESUME : '');
+  const resume = line ? `<div class="hint">${line}</div>` : '';
+  const look = i => s.ordersArmed === i ? 'on' : (s.ordersOff || []).includes(i) ? 'off' : '';
+  const orders = s.orders ? `<div class="grid orders" style="grid-template-columns:repeat(${COLS},1fr)">${s.orders.map((o, i) => `<span class="btn ${look(i)}">${o}</span>`).join('')}</div>` : '';
+  const hov = i => s.hover === i ? 'hov' : '';
+  const priced = l => l.match(/^(.*) \$(\d+)$/), poor = l => s.credits != null && priced(l) && +priced(l)[2] > s.credits;
+  const label = (l, i) => priced(l) ? `${i + 1}: ${priced(l)[1]}<span class="${poor(l) ? 'warn' : ''}">$${priced(l)[2]}</span>` : `${i + 1}: ${l}`;
+  const grid = s.menu && s.menu.length ? `<div class="grid" style="grid-template-columns:repeat(${COLS},1fr)">${s.menu.map((l, i) => `<span class="btn ${s.armed === i ? 'on' : ''} ${hov(i)} ${priced(l) ? 'priced' : ''}">${label(l, i)}</span>`).join('')}</div>` : '';
+  const produce = s.produce ? `<span class="btn ${hov('produce')}">${s.produce}</span>` : '';
+  const cancel = s.cancel ? '<span class="btn">Cancel construction</span>' : '';
+  const queue = (s.queue || []).map(q => `<span class="btn">${q}</span>`).join('');
+  const inner = resume + orders + grid + produce + cancel + queue + (s.list || '');
+  if (!inner) return '';
+  const place = s.place || `left:${W - SLAB_W}px;bottom:0`;
+  return `<div class="slabbg slab" data-id="economy" style="${place};width:${SLAB_W}px;border-width:1px 0 0 0;padding:7px 8px 8px 12px;box-shadow:inset 4px 0 0 var(--you)">${inner}</div>`;
+}
+const menuSlab = (faction = 'china') => slab({menu: MENUS[faction]});
+const NINE = ['Cancel Rotary Gun Tank (42%)', ...['Medium Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank', 'Rotary Gun Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank'].map(n => `Cancel ${n} (queued)`)];
+
+const TICK = '<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7.5 6 10.5 11.5 4" fill="none" stroke="#dfdfdf" stroke-width="2"/></svg>';
+function checkRow(text, on) { return `<div class="chk"><i class="box">${on ? TICK : ''}</i><span>${text}</span></div>`; }
+function questionBlock(text) {
+  const buttons = [1, 2, 3, 4, 5].map(n => `<span class="gbtn">${n}</span>`).join('');
+  return `<div class="lbl">${text}</div><div class="rowh">${buttons}</div><div class="edit">Optional comment</div>`;
+}
+function checklist(card) {
+  const rows = [`<div class="lbl">${card.title}  (\`)</div>`, ...card.try.map((t, i) => checkRow(t, card.ticked.includes(i))), ...card.questions.map(questionBlock),
+    '<div class="lbl">1 strongly disagree … 5 strongly agree</div>', '<div class="lbl">This match</div>', '<div class="lbl">No markers yet (N adds one)</div>'];
+  return `<div class="gd" data-id="checklist" style="right:8px;top:${STACK_TOP}px;width:${CHECKLIST_W}px"><div class="scroll"><div class="col rows">${rows.join('')}</div></div></div>`;
+}
+function noteForm() {
+  return `<div class="gd" data-id="note_form" style="right:8px;top:${STACK_TOP}px;width:${DIALOG_W}px"><div class="col">
+    <div class="rowh"><span class="gbtn">Good</span><span class="gbtn">Bad</span><span class="gbtn">Confusing</span></div>
+    <div class="edit">Optional note</div>
+    <div class="rowh"><span class="gbtn off">Save</span><span class="gbtn">Cancel</span></div></div></div>`;
+}
+const f3 = () => `<div class="f3" data-id="f3" style="right:8px;top:${STACK_TOP}px">${F3_TEXT}</div>`;
+const WARN = '<svg width="32" height="28" viewBox="0 0 32 28"><path d="M16 1 31 27H1Z" fill="#f7c871"/><path d="M14.5 9h3l-.5 9.5h-2Z M14.5 21h3v3h-3Z" fill="#1a1408"/></svg>';
+function freezeCard(copied, mark = WARN) {
+  // Copy holds the focus from the start, so a reflexive Enter copies instead of leaving with the report.
+  const copy = `<span class="rb second focus">${copied ? FREEZE.copied : FREEZE.copy}</span>`;
+  const leave = `<span class="rb primary">${FREEZE.leave}</span>`;
+  return `<div class="dim" style="width:${W}px;height:${H}px"></div><div class="rc" data-id="freeze_card"><div class="t">${mark}<span>${FREEZE.title}</span></div>
+    <div class="body">${FREEZE.body}</div><div class="rule"></div><div class="ft"><span>${FREEZE.report}</span><b>${FREEZE.code}</b></div>
+    <div class="rbtns">${copy}${leave}</div></div>`;
+}
+const cap = (text, x, y) => `<div class="cap" style="left:${x}px;top:${y}px">${text}</div>`;
+const hand = (x, y) => `<svg class="hand" viewBox="0 0 18 22" style="left:${x}px;top:${y}px"><path d="M6 1.5c.9 0 1.5.7 1.5 1.6V10h.4V7.6c0-.9.7-1.5 1.5-1.5s1.5.6 1.5 1.5V10h.4V8.6c0-.9.6-1.5 1.5-1.5s1.4.6 1.4 1.5v1.9h.4v-.6c0-.8.6-1.4 1.4-1.4.8 0 1.4.6 1.4 1.4v5.6c0 3.3-2.4 6-5.6 6H9.6c-1.7 0-3.2-.8-4.2-2.2L1.6 13.4c-.5-.7-.3-1.6.4-2 .6-.4 1.4-.3 1.9.2L4.5 13V3.1C4.5 2.2 5.1 1.5 6 1.5z" fill="#fff" stroke="#000" stroke-width="1"/></svg>`;
+const crosshair = (x, y) => `<svg class="hand" viewBox="0 0 17 17" style="left:${x}px;top:${y}px;width:17px;height:17px"><path d="M8.5 0v17M0 8.5h17" stroke="#fff" stroke-width="3"/><path d="M8.5 1v15M1 8.5h15" stroke="#000" stroke-width="1"/></svg>`;
+
+const BASE_STRIP = {credits: 4800, power: [8, 10]};
+const CHINA_DEFENCE = {credits: 4800, after: 3600, power: [8, 10], powerAfter: [11, 10]};
+const STATES = {
+  slab: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, armed: 4, credits: 4800}) +
+    afterCard({credits: 3600, power: [11, 10], low: LOW_POWER}) +
+    cap('Specimen, order row only: Medium Tanks after Attack move or A, armed until a ground click, a right-click or Esc', 436, 140) +
+    slab({orders: ORDERS, ordersArmed: 0, place: 'left:436px;top:158px'}) +
+    crosshair(452, 222) + cap('Pointer over the ground while armed: the system crosshair', 478, 226) +
+    cap('Specimen: the same Bulldozer, pointer on its paused site: the resume line tops the slab while the pointer stays there', 436, 290) +
+    slab({resume: true, menu: MENUS.china, place: 'left:436px;top:308px'}),
+  notice: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + notice('Waiting for player 2') + PANELS.tank() + slab({orders: ORDERS}),
+  freeze: () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + PANELS.bulldozer() + menuSlab() + freezeCard(false, WARN_MARK) +
+    `<div class="cap lt" style="left:16px;top:48px">Offline freeze: Copy report holds the focus, so Enter copies; Back to menu leaves on a click or Tab then Enter; Esc opens the pause menu, as on the Victory/Defeat card</div>`,
+  'freeze-copied': () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + PANELS.bulldozer() + menuSlab() + freezeCard(true, WARN_MARK) +
+    `<div class="cap lt" style="left:16px;top:48px">After a click on Copy report: the clipboard holds the report, the button keeps the focus and reads Report copied</div>`,
+  forecast: () => strip({credits: 4800, after: 4000, power: [8, 10], powerAfter: [8, 15]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.usa, armed: 0}) +
+    cap('In place: USA, Power Plant armed (makes 5 power)', 8, 46) +
+    cap('China, Rotary Gun Tower armed (uses 3 power)', 8, 82) + strip({...CHINA_DEFENCE, y: 100}) +
+    cap('China, Rotary Gun Tower armed, 500 credits', 8, 152) + strip({credits: 500, short: 700, power: [8, 10], powerAfter: [11, 10], y: 170}) +
+    cap('FRC, Barracks armed: no kind uses or makes power, so no POWER group', 8, 222) + strip({credits: 4800, after: 4300, y: 240}),
+  sites: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.paused() + slab({menu: [], cancel: true}) +
+    cap('Enemy site: owner colour, never the paused label', 436, 268) + PANELS.enemySite('left:436px;top:286px') +
+    cap('Own factory, nothing queued: rally footer; a queue shows in its slab (queue picture)', 436, 404) + PANELS.factory('left:436px;top:422px'),
+  chips: () => strip(BASE_STRIP) + chips({esc: false, playtest: '2 / 6'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', queue: NINE}) + checklist(CARDS.heard) + noteForm(),
+  'chips-f3': () => strip(BASE_STRIP) + chips({esc: true, playtest: '1 / 3'}) + menuSlab() + f3(),
+  'chips-f3-rule': () => strip(BASE_STRIP) + chips({esc: false, playtest: '2 / 6'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', queue: NINE}) +
+    checklist(CARDS.heard) + noteForm() + f3() +
+    cap('Worst case: no room below the capped checklist, the note form left of it, so F3 opens under the note form', 8, 46),
+  'chips-checklist': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.plant() + checklist(CARDS.again) + f3(),
+  'chips-form': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.plant() + checklist(CARDS.again) + noteForm() + f3(),
+  'chips-off': () => strip(BASE_STRIP) + chips({esc: true, playtest: null}) + menuSlab() + f3(),
+  refusal: () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() + slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', credits: 500}) + refusal('Insufficient credits'),
+  pile: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.pile() + menuSlab() +
+    cap('The same pile once its last box is taken', 436, 404) + PANELS.pile('left:436px;top:422px', 'Empty'),
+  'rows-footer': rowsFooter,
+  unload: () => strip({credits: 4800, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.scoutCar() + slab({orders: [...ORDERS, UNLOAD]}) +
+    cap('USA Scout Car with infantry inside: Unload joins the orders; no builder selected, so no build menu', 16, 618) +
+    cap('Specimen: an empty Scout Car, no own unit inside any container: Unload (F) hidden', 436, 272) +
+    cap('(a vehicle shows it while some own unit is inside any container: the view has no container id)', 436, 290) +
+    slab({orders: ORDERS, place: 'left:436px;top:308px'}) +
+    cap('Specimen: FRC Tunnel Hub with units inside: a building, so Unload alone and no build menu', 436, 404) +
+    slab({orders: [UNLOAD], place: 'left:436px;top:422px'}),
+  collector: collectorSheet,
+  // Gate A round 2 and the director round (user, 2026-11-19), shot as pictures.
+  queue: () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() +
+    slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', credits: 4800, list: queueList('hover')}) +
+    hand(0, 0).replace('class="hand"', 'class="hand" data-at="qrow"') + '<div class="tip" data-id="tip">Cancel: refunds $800</div>' +
+    cap('China Vehicle Factory, nine queued: the one in production with its percent and line, 3 next, then Show 5 more queued (from 6 entries; up to 5 all show)', 8, 46) +
+    cap('Pointer on a waiting row: the whole row cancels, the × is its sign', 8, 64),
+  'queue-open': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() +
+    slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', credits: 4800, list: queueList('open')}) +
+    cap('After a click on Show 5 more queued: all nine, then Show fewer; the list collapses again on a selection change or at 5 or fewer', 8, 46),
+  'forecast-card': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, armed: 4, credits: 4800}) +
+    afterCard({credits: 3600, power: [11, 10], low: LOW_POWER}) +
+    cap('China, Rotary Gun Tower armed at 4800 credits: the strip keeps the real numbers, the card under it shows the purchase', 8, 116) +
+    cap('Specimen: the same at 500 credits; right, its slab: the armed button with its price in warn', 8, 140) + strip({credits: 500, power: [8, 10], y: 158}) + afterCard({credits: -700, power: [11, 10], low: LOW_POWER}, 'strip', 198) +
+    slab({menu: MENUS.china, armed: 4, credits: 500, place: 'left:560px;top:158px'}) +
+    cap('Specimen: USA, Power Plant armed (makes 5 power): nothing to warn about', 8, 266) + strip({credits: 4800, power: [8, 10], y: 284}) + afterCard({credits: 4000, power: [8, 15]}, 'strip', 324) +
+    cap('Specimen: FRC, Barracks armed: no kind uses or makes power, so no POWER group', 8, 392) + strip({credits: 4800, y: 410}) + afterCard({credits: 4300}, 'strip', 450),
+  'slab-army': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.tank() + slab({orders: ORDERS}) +
+    cap('Medium Tank selected: the order row alone, no build menu (no builder selected)', 16, 618) +
+    cap('A Supply Truck alone (no weapon, no builder) gets no button, so no slab', 436, 404),
+  'slab-builder': () => strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, credits: 4800}) +
+    cap('China Bulldozer selected: the build menu alone, no order row (no weapon)', 16, 618) +
+    cap('Specimen: a Bulldozer and Medium Tanks together: the order row only; build buttons need one own builder alone', 436, 272) +
+    slab({orders: ORDERS, place: 'left:436px;top:290px'}),
+  'slab-poor': () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, credits: 500}) +
+    cap('China Bulldozer at 500 credits: each price it cannot afford in warn, updated live; labels never move; Barracks ($500) stays in text', 16, 600),
+  'low-power': () => strip({credits: 4800, power: [12, 10], warn: true, low: LOW_POWER}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, credits: 4800}) +
+    cap('Power used above power made: the strip names the one effect, powered defences stop firing', 8, 46),
+  offline: () => strip({credits: 4800, power: [12, 10], warn: true, low: LOW_POWER}) + chips({esc: false, playtest: '1 / 3'}) +
+    panelSlab('var(--you)', identity('Rotary Gun Tower', 1000, 1000, `<span class="lab warn">${OFFLINE}</span>`)) +
+    cap('Own Rotary Gun Tower selected while its owner is short: OFFLINE · LOW POWER on its name row; no button, so no slab', 16, 600) +
+    cap('An enemy defence reads the same only where the view already carries that player\'s power', 16, 618),
+  // Gate A second look (owner questions 9 and 10): drawn for p2-3a1-gate.html, not shot as pictures.
+  'unload-loaded': () => unloadSheet('loaded'),
+  'unload-empty-hidden': () => unloadSheet('hidden'),
+  'unload-empty-greyed': () => unloadSheet('greyed'),
+  'unload-empty-always': () => unloadSheet('always'),
+  'armed-hint': () => armedSheet(ARMED_HINT),
+  'armed-none': () => armedSheet(''),
+  // Gate A round 2 (queue cap, forecast card): drawn for p2-3a1-gate.html#round=2, not shot as pictures.
+  'queue-a': () => queueSheet('capped'),
+  'queue-a-open': () => queueSheet('open'),
+  'queue-b': () => queueSheet('tiles'),
+  'queue-c': () => queueSheet('slots'),
+  'queue-d': () => queueSheet('rows'),
+  'queue-a-hover': () => queueSheet('hover'),
+  'queue-a-hover-x': () => queueSheet('hover-x'),
+  'forecast-a': forecastSheet,
+  'forecast-b': forecastSheet,
+  'forecast-c': () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, hover: 4}) +
+    afterCard({credits: -700, power: [11, 10]}, 'hover') + pointer() +
+    cap('China Bulldozer at 500 credits, pointer on Rotary Gun Tower for 250 ms, nothing armed', 16, 618),
+  'forecast-c-armed': () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, armed: 4}) +
+    afterCard({credits: -700, power: [11, 10]}, 'hover') + pointer('map', 1012, 474) +
+    cap('Strip while armed: real numbers, no arrow, no 700 short', 8, 46) +
+    cap('Rotary Gun Tower armed at 500 credits, pointer back on the map: the card stays above the slab until you place or cancel', 16, 618),
+  'forecast-c-list': () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '2 / 6'}) + PANELS.bulldozer() + slab({menu: MENUS.china, hover: 4}) +
+    checklist(CARDS.heard) + afterCard({credits: -700, power: [11, 10]}, 'hover') + pointer() +
+    cap('Checklist open: it ends 8 above the slab, where the card goes; the card draws over it while the pointer stays', 16, 618),
+  'forecast-c-unit': () => strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.factory() +
+    slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', hover: 'produce'}) + afterCard({credits: -300}, 'hover') + pointer() +
+    cap('China Vehicle Factory at 500 credits, pointer on Produce: units show the card too', 16, 618)};
+// Round 2: the placement step draws everything in the owner's sampled coral; the colour step sets it against the stronger one (B).
+const STATE_VARS = Object.fromEntries([['forecast-b', '#f47b6c'], ...['forecast-a', 'forecast-c', 'forecast-c-armed', 'forecast-c-list', 'forecast-c-unit'].map(s => [s, '#dc948b'])]
+  .map(([s, c]) => [s, `--warn:${c}`]));
+
+// The queue of the chips state: the first in production at 42 %; the digit is the unit's build key.
+const QUEUE = ['Rotary Gun Tank', 'Medium Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank', 'Rotary Gun Tank', 'Rotary Gun Tank', 'Medium Tank', 'Medium Tank'];
+const BUILD_KEY = Object.fromEntries(CHINA_FACTORY.map((l, i) => [l.replace(/ \$\d+$/, ''), i + 1]));
+const qline = pct => `<i class="qline"><b style="width:${pct}%"></b></i>`;
+const CHEVRON = up => `<svg width="10" height="6" viewBox="0 0 10 6"><path d="${up ? 'M1 5 5 1 9 5' : 'M1 1 5 5 9 1'}" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`;
+const qrow = (name, pct, cls = '') => `<span class="qr ${cls}"><span class="qn">${name}</span>${pct == null ? '' : `<span class="pct">${pct} %</span>`}<span class="x">×</span>${pct == null ? '' : qline(pct)}</span>`;
+const qmore = (text, up) => `<span class="qr more"><span class="qn">${text}</span>${CHEVRON(up)}</span>`;
+function queueList(form) {
+  const waiting = QUEUE.length - 1, rest = QUEUE.slice(1).map((n, i) => qrow(n, null, i ? '' : {hover: 'hov', 'hover-x': 'hovx'}[form] || ''));
+  const head = `<div class="qhd"><span class="lab">Queue</span>${waiting ? `<span class="muted">${waiting} waiting</span>` : ''}</div>`;
+  const first = qrow(QUEUE[0], 42);
+  if (form === 'slots') return head + `<div class="qslots">${QUEUE.map((n, i) => `<span class="qs">${BUILD_KEY[n]}${i ? '' : qline(42)}</span>`).join('')}</div>`;
+  if (form === 'tiles') return head + first + `<div class="qtiles">${rest.join('')}</div>`;
+  if (['capped', 'hover', 'hover-x'].includes(form)) return head + first + rest.slice(0, 3).join('') + qmore(`Show ${QUEUE.length - 4} more queued`, false);
+  if (form === 'open') return head + first + rest.join('') + qmore('Show fewer', true);
+  return head + first + rest.join('');
+}
+const QUEUE_CAPTION = {capped: 'A collapsed: in production plus 3 next, then Show 5 more queued', open: 'A expanded, after a click on Show 5 more queued',
+  tiles: 'B: in production full width, 8 waiting in two columns', slots: 'C: nine slots, the build key of each unit', rows: 'D: nine rows, shorter words',
+  hover: 'Whole row cancels: the row lights up, × brighter, tooltip beside the slab',
+  'hover-x': 'Only the × cancels: the × alone lights up (24 x 24), the row stays inert'};
+function queueSheet(form) {
+  const hover = form.startsWith('hover') ? hand(0, 0).replace('class="hand"', 'class="hand" data-at="qrow"') + '<div class="tip" data-id="tip">Cancel: refunds $800</div>' : '';
+  return strip(BASE_STRIP) + chips({esc: false, playtest: '2 / 6'}) + PANELS.factory() +
+    slab({menu: CHINA_FACTORY, produce: 'Produce Rotary Gun Tank (E)', list: queueList(form)}) + checklist(CARDS.heard) + noteForm() + f3() + hover +
+    cap(`${QUEUE_CAPTION[form]}. Slab <span data-slabh></span> px high at 1280x720 (today 408); checklist, note form and F3 open`, 8, 46);
+}
+
+// Gate A round 2: the strip keeps the real numbers; the card under it previews the purchase.
+function afterCard({credits, power, low = 'Low power'}, place = 'strip', y = 48) {
+  const value = (text, bad) => `<b class="${bad ? 'warn' : ''}">${text}</b>`;
+  const parts = [`<span class="lab">Credits</span>${value(credits < 0 ? `−${-credits}` : credits, credits < 0)}`];
+  if (power) {
+    const short = power[0] > power[1];
+    parts.push(`<span class="gp"></span><span class="lab">Power</span>${value(`${power[0]} / ${power[1]}`, short)}${short ? `<span class="lab warn">${low}</span>` : ''}`);
+  }
+  const at = place === 'hover' ? 'left:0;top:0' : `left:8px;top:${y}px`;
+  return `<div class="after" data-id="after" data-at="${place}" style="${at}"><span class="lab">After purchase</span><div class="ar">${parts.join('')}</div></div>`;
+}
+const pointer = (at = 'btn', x = 0, y = 0) => `<svg class="hand" data-at="${at}" viewBox="0 0 16 22" style="width:16px;left:${x}px;top:${y}px"><path d="M1 1v17l4.5-4 3 7 2.6-1.1-3-6.9H14z" fill="#fff" stroke="#000"/></svg>`;
+const SWATCHES = ['#628ffa', '#d6120c', '#4ad49b', '#f8e425', '#0e92a7', '#7242fe', '#ec8600', '#f79cef', '#69ceaa', '#d8453a'];
+const WARN_MARK = WARN.replace('fill="#f7c871"', 'style="fill:var(--warn)"');
+function forecastSheet() {
+  return strip({credits: 500, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.bulldozer() + slab({menu: MENUS.china, armed: 4}) +
+    afterCard({credits: -700, power: [11, 10]}) +
+    cap('Owner colours (palette A), ally, health red, then this warning colour', 8, 112) +
+    `<div class="sws" style="left:8px;top:130px">${SWATCHES.map(c => `<i style="background:${c}"></i>`).join('')}<i style="background:var(--warn)"></i></div>` +
+    cap('health red · warning', 274, 133) +
+    cap('China, Rotary Gun Tower armed at 4800 credits', 8, 164) + strip({credits: 4800, power: [8, 10], y: 182}) + afterCard({credits: 3600, power: [11, 10]}, 'strip', 222) +
+    cap('USA, Power Plant armed (makes 5 power): nothing to warn about', 8, 290) + strip({credits: 4800, power: [8, 10], y: 308}) + afterCard({credits: 4000, power: [8, 15]}, 'strip', 348) +
+    cap('The strip\'s own low power, nothing armed', 8, 416) + strip({credits: 4800, power: [12, 10], warn: true, y: 434}) +
+    cap('Refusal line and the whole freeze card (half size), same colour', 8, 478) +
+    `<div class="refuse warn" data-id="refusal" style="left:8px;top:496px;border-width:1px"><i class="sq" style="background:var(--warn)"></i><span>Insufficient credits</span></div>` +
+    `<div class="mini" style="left:190px;top:494px">${freezeCard(false, WARN_MARK).replace(/^<div class="dim"[^>]*><\/div>/, '')}</div>`;
+}
+
+const ARMED_HINT = 'Left-click: attack-move here · Right-click or Esc: cancel';
+function unloadSheet(form) {
+  const loaded = form === 'loaded', off = form === 'greyed' ? [2] : [];
+  const orders = form === 'hidden' ? ORDERS : [...ORDERS, UNLOAD];
+  const hub = form === 'hidden' ? cap('No button, so no slab', 848, 444) : slab({orders: [UNLOAD], ordersOff: form === 'greyed' ? [0] : [], place: 'left:848px;top:440px'});
+  return strip({credits: 4800, power: [8, 10]}) + chips({esc: false, playtest: '1 / 3'}) + PANELS.scoutCar() +
+    slab({orders, ordersOff: off, menu: MENUS.usa}) +
+    cap(loaded ? 'USA Scout Car with infantry inside' : 'USA Scout Car, empty; no own unit inside any container', 16, 618) +
+    cap(loaded ? 'Specimen: FRC Tunnel Hub with units inside' : 'Specimen: FRC Tunnel Hub, empty', 848, 422) + hub;
+}
+function armedSheet(hint) {
+  return strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + PANELS.tank() +
+    slab({hint, orders: ORDERS, ordersArmed: 0, menu: MENUS.china}) +
+    cap('Medium Tanks selected, Attack move armed by its button or A', 16, 618) +
+    cap(hint ? 'Until a ground click, a right-click or Esc' : 'No hint; the pointer looks as always', 848, 522);
+}
+
+function rowsFooter() {
+  const rows = [['Medium Tank', 36, .82], ['Rotary Gun Tank', 24, .64, 'hover'], ['Militia', 0, 0, 'held'], ['Anti-Tank Trooper', 12, .45], ['Supply Truck', 12, 1], ['Bulldozer', 12, 1]];
+  return strip(BASE_STRIP) + chips({esc: false, playtest: '1 / 3'}) + panelSlab('var(--you)', manyBody('96 selected · 5 kinds · 12 idle collectors', rows) + footer(ROWS_RULE)) +
+    slab({orders: ORDERS}) + hand(0, 0).replace('class="hand"', 'class="hand" data-at="hover"') +
+    cap('Pointer on Rotary Gun Tank: panel2 fill, 1 px muted inset, pointing hand. The last Militia died under the pointer: the row holds at 0 until the pointer leaves.', 16, 48) +
+    cap('The rule line closes the panel while two or more kinds show: six kinds, the largest roster, make the panel 158 high.', 16, 66) +
+    cap('Specimen: one kind keeps its row, no rule line (a click there changes nothing)', 436, 404) +
+    panelSlab('var(--you)', manyBody('12 selected · 1 kind', [['Medium Tank', 12, .82]]), 'left:436px;top:422px');
+}
+
+function collectorSheet() {
+  const one = (name, cur, max, label) => identity(name, cur, max, label ? `<span class="lab">${label}</span>` : '');
+  const items = [
+    ['collecting: flying_source or lead_source', 'Supply Truck', 'TO PILE'],
+    ['collecting: waiting_source; or idle while a pile in view holds boxes', 'Supply Truck', 'WAITING AT PILE'],
+    ['collecting: loading', 'Supply Truck', 'LOADING'],
+    ['collecting: flying_depot or lead_depot', 'Supply Truck', 'TO SUPPLY DEPOT'],
+    ['collecting: waiting_depot', 'Supply Truck', 'WAITING AT SUPPLY DEPOT'],
+    ['collecting: unloading', 'Supply Truck', 'UNLOADING'],
+    ['collecting, idle, no pile with boxes; or not collecting, nothing else', 'Supply Truck', 'IDLE'],
+    ['not collecting: moving or path pending', 'Supply Truck', 'MOVING'],
+    ['not collecting: named builder of an unfinished site (FRC)', 'Laborer', 'BUILDING'],
+    ['not collecting: inside a transport (no label)', 'Laborer', ''],
+    ['longest FRC label', 'Laborer', 'WAITING AT SUPPLY CACHE'],
+    ['longest name with the longest USA label', 'Supply Helicopter', 'WAITING AT SUPPLY DEPOT']];
+  const HP = {'Supply Truck': [255, 300], 'Laborer': [100, 100], 'Supply Helicopter': [300, 300]};
+  let html = cap('Collector status labels, P2.3a1: one own collector per published state (spec table); seeking holds the previous label. Many selected: the idle count in the header.', 16, 16);
+  items.forEach(([what, name, label], i) => {
+    const col = Math.floor(i / 5), row = i % 5, x = 16 + col * (SEL_W + 12), y = 48 + row * 96;
+    html += cap(what, x, y) + panelSlab('var(--you)', one(name, ...HP[name], label), `left:${x}px;top:${y + 18}px`);
+  });
+  const x = 16 + 2 * (SEL_W + 12), y = 48 + 2 * 96;
+  html += cap('many: idle collectors counted in the header', x, y) +
+    panelSlab('var(--you)', manyBody('9 selected · 2 kinds · 1 idle collector', [['Medium Tank', 4, .7], ['Supply Truck', 5, .92]]) + footer(ROWS_RULE), `left:${x}px;top:${y + 18}px`);
+  return html;
+}
+
+const COLUMNS = menuColumns();
+let COLS = COLUMNS.cols;
+const flat = Object.entries(TOKENS).map(([k, v]) => `--${k}:${v}`).join(';');
+const hudHtml = (state, k) => `<div class="hud" data-state="${state}" style="--k:${k};--ff:'Public Sans',Arial,sans-serif;width:${W}px;height:${H}px;${flat};${STATE_VARS[state] || ''}">${STATES[state]()}</div>`;
+
+function rectOf(hudEl, el) {
+  const hr = hudEl.getBoundingClientRect(), r = el.getBoundingClientRect(), s = hr.width / hudEl.offsetWidth;
+  return {x: (r.left - hr.left) / s, y: (r.top - hr.top) / s, w: r.width / s, h: r.height / s};
+}
+const hits = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+// Owner question 5 (user, 2026-11-19): the checklist is capped to the space above the slab; the note form goes left of it when there is no room below; F3 sits below whatever is open.
+function stackLayout(hudEl) {
+  const slabEl = hudEl.querySelector('[data-id=economy]:not([style*="top:"])');
+  const slabTop = slabEl ? rectOf(hudEl, slabEl).y : H;
+  const list = hudEl.querySelector('[data-id=checklist]'), form = hudEl.querySelector('[data-id=note_form]'), perf = hudEl.querySelector('[data-id=f3]');
+  const helper = hudEl.querySelector('[data-id=playtest]');
+  let bottom = helper ? 80 : 40;
+  if (list) {
+    const scroll = list.querySelector('.scroll'), rows = list.querySelector('.rows'), cap = slabTop - 8 - STACK_TOP;
+    scroll.style.height = '';
+    scroll.querySelectorAll('.vbar').forEach(e => e.remove());
+    if (rows.offsetHeight > cap) {
+      scroll.style.height = px(cap);
+      rows.style.paddingRight = '12px';
+      scroll.insertAdjacentHTML('beforeend', `<span class="vbar"><i style="height:${Math.round(cap * cap / rows.offsetHeight)}px"></i></span>`);
+    }
+    bottom = STACK_TOP + list.offsetHeight;
+  }
+  if (form) {
+    const below = slabTop - 8 - (bottom + 8);
+    if (list && below < form.offsetHeight) {
+      form.style.right = px(8 + CHECKLIST_W + 8);
+      form.style.top = px(STACK_TOP);
+    } else {
+      form.style.right = '8px';
+      form.style.top = px(list ? bottom + 8 : STACK_TOP);
+      bottom = list ? bottom + 8 + form.offsetHeight : STACK_TOP + form.offsetHeight;
+    }
+    if (list) bottom = Math.max(bottom, STACK_TOP + list.offsetHeight);
+  }
+  if (!perf) return;
+  perf.style.right = '8px';
+  perf.style.top = px(bottom + 8);
+  // Gate A (user, 2026-11-19): F3 follows the note form's rule when it does not fit above the slab.
+  if ((list || form) && bottom + 8 + perf.offsetHeight > slabTop - 8) {
+    const formLeft = form && form.style.right !== '8px';
+    perf.style.right = px(8 + (list ? CHECKLIST_W : DIALOG_W) + 8);
+    perf.style.top = px(formLeft ? STACK_TOP + form.offsetHeight + 8 : STACK_TOP);
+  }
+}
+function placeOnHover(hudEl) {
+  const row = hudEl.querySelector('[data-id=selection] .krow.hover');
+  if (!row) return;
+  const r = rectOf(hudEl, row);
+  const handEl = hudEl.querySelector('.hand[data-at=hover]');
+  if (handEl) { handEl.style.left = px(r.x + 124); handEl.style.top = px(r.y + 6); }
+}
+// Round 2: the hover card sits 8 above the slab, left-aligned with the hovered button; the caption prints the slab's height.
+function placeOnButton(hudEl) {
+  const slabEl = hudEl.querySelector('[data-id=economy]:not([style*="top:"])');
+  if (!slabEl) return;
+  const s = rectOf(hudEl, slabEl);
+  hudEl.querySelectorAll('[data-slabh]').forEach(e => { e.textContent = Math.round(s.h); });
+  const row = slabEl.querySelector('.qr.hov, .qr.hovx'), tip = hudEl.querySelector('[data-id=tip]'), rowHand = hudEl.querySelector('.hand[data-at=qrow]');
+  if (row) {
+    const r = rectOf(hudEl, row), x = rectOf(hudEl, row.querySelector('.x')), onX = row.classList.contains('hovx');
+    if (rowHand) { rowHand.style.left = px(onX ? x.x + 2 : r.x + 150); rowHand.style.top = px(onX ? x.y + 18 : r.y + 8); }
+    // Beside the slab, level with the row, so the picture hides no queue entry.
+    if (tip) { tip.style.left = px(s.x - 8 - tip.offsetWidth); tip.style.top = px(r.y + (r.h - tip.offsetHeight) / 2); }
+  }
+  // A card that stays while armed sits over the armed button once the pointer has left.
+  const btn = slabEl.querySelector('.btn.hov') || slabEl.querySelector('.btn.on'), card = hudEl.querySelector('.after[data-at=hover]'), cur = hudEl.querySelector('.hand[data-at=btn]');
+  if (!btn) return;
+  const b = rectOf(hudEl, btn);
+  if (card) { card.style.left = px(Math.min(b.x, W - 8 - card.offsetWidth)); card.style.top = px(s.y - 8 - card.offsetHeight); }
+  // The tip sits under the label's baseline, so the arrow hides no letters.
+  if (cur) { cur.style.left = px(b.x + Math.round(b.w * .6)); cur.style.top = px(b.y + b.h - 7); }
+}
+function audit(hudEl) {
+  const problems = [];
+  const ids = ['selection', 'economy', 'refusal', 'notice', 'freeze_card', 'after'].flatMap(id => [...hudEl.querySelectorAll(`[data-id=${id}]`)]);
+  ids.forEach(el => { const r = rectOf(hudEl, el); if (r.x < -0.5 || r.y < -0.5 || r.x + r.w > W + 0.5 || r.y + r.h > H + 0.5) problems.push(`${el.dataset.id} outside the view`); });
+  const slabEl = hudEl.querySelector('[data-id=economy]:not([style*="top:"])');
+  ['checklist', 'note_form', 'f3'].forEach(id => {
+    const el = hudEl.querySelector(`[data-id=${id}]`);
+    if (el && slabEl && hits(rectOf(hudEl, el), rectOf(hudEl, slabEl))) problems.push(`${id} meets the slab`);
+  });
+  const perf = hudEl.querySelector('[data-id=f3]');
+  if (perf) {
+    const r = rectOf(hudEl, perf);
+    if (r.x < 0 || r.y < 0 || r.x + r.w > W || r.y + r.h > H) problems.push('f3 outside the view');
+    ['checklist', 'note_form', 'selection'].forEach(id => hudEl.querySelectorAll(`[data-id=${id}]`).forEach(el => { if (hits(r, rectOf(hudEl, el))) problems.push(`f3 meets ${id}`); }));
+  }
+  hudEl.querySelectorAll('.krow .kn, .nr, .sel .hd').forEach(el => { if (el.scrollWidth > el.clientWidth + 0.5) problems.push(`cut: ${el.textContent.trim()}`); });
+  hudEl.querySelectorAll('.btn, .rb, .qr .qn').forEach(el => { if (el.scrollWidth > el.clientWidth + 0.5) problems.push(`button text cut: ${el.textContent}`); });
+  hudEl.querySelectorAll('.hint, .foot .muted, .rc .ft, .rc .t').forEach(el => { if (el.scrollWidth > el.parentElement.clientWidth + 0.5) problems.push(`line wider than its box: ${el.textContent.trim()}`); });
+  return problems;
+}
+function layoutAll() {
+  COLS = menuColumns().cols;
+  document.querySelectorAll('.hud').forEach(h => {
+    h.querySelectorAll('.grid').forEach(g => { g.style.gridTemplateColumns = `repeat(${COLS},1fr)`; });
+    stackLayout(h);
+    placeOnHover(h);
+    placeOnButton(h);
+  });
+}
+
+const H_ = new URLSearchParams(location.hash.slice(1));
+if (H_.has('shot')) {
+  const state = H_.get('shot'), scale = +(H_.get('scale') || 2), size = H_.get('size') || '720';
+  if (size !== '720') err.textContent += `size=${size}: this page draws the 1280x720 layout only (size=720)\n`;
+  if (!STATES[state]) err.textContent += `unknown state ${state}\n`;
+  document.body.style.cssText = 'overflow:hidden;background:#000';
+  app.style.padding = '0';
+  app.innerHTML = `<div class="stage" style="width:${W * scale}px;height:${H * scale}px">${hudHtml(state, scale)}</div>`;
+  // Round 2 gate page: #cvd=deut|prot shows the state as Machado 2009 (severity 1) deuteranopia or protanopia, on linear RGB.
+  const cvd = {deut: '0.367322 0.860646 -0.227968 0 0 0.280085 0.672501 0.047413 0 0 -0.011820 0.042940 0.968881 0 0 0 0 0 1 0',
+    prot: '0.152286 1.052583 -0.204868 0 0 0.114503 0.786281 0.099216 0 0 -0.003882 -0.048116 1.051998 0 0 0 0 0 1 0'}[H_.get('cvd')];
+  if (cvd) {
+    app.insertAdjacentHTML('beforeend', `<svg width="0" height="0" style="position:absolute"><filter id="cvd" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="${cvd}"/></filter></svg>`);
+    app.querySelector('.stage').style.filter = 'url(#cvd)';
+  }
+  layoutAll();
+  document.fonts.ready.then(() => { layoutAll(); audit(app.querySelector('.hud')).forEach(p => { err.textContent += `layout: ${p}\n`; }); });
+} else {
+  app.innerHTML = Object.keys(STATES).map(s => `<h2>${s} <a style="color:#60e5ed;font-size:13px" href="#shot=${s}&size=720&scale=2" onclick="setTimeout(()=>location.reload())">2x</a></h2><div class="frame"><div class="stage" style="width:${W}px;height:${H}px">${hudHtml(s, 1)}</div></div>`).join('');
+  layoutAll();
+  document.fonts.ready.then(() => {
+    layoutAll();
+    const m = menuColumns();
+    app.insertAdjacentHTML('afterbegin', `<p>Build menu: widest label ${m.widest.toFixed(1)} px at 13/600 plus ${2 * BUTTON_PAD} padding, ${m.cols} columns in ${SLAB_INNER} px.</p>`);
+    document.querySelectorAll('.hud').forEach(h => audit(h).forEach(p => { err.textContent += `${h.dataset.state}: ${p}\n`; }));
+  });
+}
+</script>

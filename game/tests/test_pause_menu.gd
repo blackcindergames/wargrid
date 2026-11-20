@@ -179,10 +179,9 @@ func test_online_leave_cancel(runner) -> bool:
 	return true
 
 func test_online_leave_text_and_focus(runner) -> bool:
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var transport := FakeTransport.new()
 		var seats: Array[int] = [1, 2]
 		var lockstep = Lockstep.new(1, seats)
@@ -223,21 +222,20 @@ func test_quit_hidden_on_web(runner) -> bool:
 	return true
 
 func test_menu_layout(runner) -> bool:
-	for size in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
-		var port := SubViewport.new()
-		port.size = size
-		runner.root.add_child(port)
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
 		_esc(main)
+		BaseScene.select_own_unit(main)
 		await runner.process_frame
 		await runner.process_frame
 		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size), "E8 the viewport really is %s, got %s" % [size, main.get_viewport().get_visible_rect().size])
 		var menu: Control = main.get_node("HUD/PauseMenu")
 		var buttons: Array = menu.find_children("*", "Button", true, false).filter(func(button: Button) -> bool: return button.is_visible_in_tree())
-		var hud: Array[Rect2] = []
-		for path in ["HUD/Status", "HUD/Economy"]:
-			var control: Control = main.get_node(path)
-			hud.append(Rect2(control.global_position, control.get_combined_minimum_size()))
+		var panels: Dictionary = BaseScene.hud_panels(main)
+		runner.check(panels.has("HUD/MenuChip") and panels.has("HUD/Hud/TopStrip") and panels.has("HUD/Hud/SelectionPanel"), "E8 the list holds the Menu chip, the strip and the selection panel at %s, got %s" % [size, panels.keys()])
+		var hud: Array = panels.values()
 		var quality: Button = menu.find_child("Quality", true, false)
 		runner.check(quality != null and quality.is_visible_in_tree() and buttons.has(quality), "E8 quality toggle is visible")
 		var neon: Button = menu.find_child("Neon", true, false)

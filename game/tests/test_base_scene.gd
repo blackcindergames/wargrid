@@ -8,6 +8,40 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+# [window, logical]: what the match's stretch caps lay each window out at
+const HUD_SIZES: Array[Array] = [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)]]
+
+const HUD_PANELS: Array[String] = ["HUD/Economy", "HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/Hud/SelectionPanel"]
+
+# The no-overlap lists: each shown HUD panel by path, sized as the layout tests always read them.
+static func hud_panels(main) -> Dictionary:
+	var rects: Dictionary = {}
+	for path: String in HUD_PANELS:
+		var control: Control = main.get_node(path)
+		if control.is_visible_in_tree(): rects[path] = Rect2(control.global_position, control.get_combined_minimum_size())
+	return rects
+
+# The no-overlap lists hold the selection panel only while something is selected.
+static func select_own_unit(main) -> void:
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
+		if unit.owner == main.local_player:
+			main.orders.selected_ids.assign([unit.id])
+			break
+	main._refresh()
+
+# The slab replaced "below the status": inside the view and clear of the strip (P2.3a1 Task 9).
+static func slab_clear(runner, main, label: String) -> void:
+	var slab: Rect2 = main.get_node("HUD/Economy").get_global_rect()
+	var strip: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
+	runner.check(main.get_viewport().get_visible_rect().encloses(slab) and not slab.intersects(strip), "%s: the slab inside the view and clear of the strip, slab %s strip %s" % [label, slab, strip])
+
+static func sized_port(runner, window: Vector2i, logical: Vector2i) -> SubViewport:
+	var port := SubViewport.new()
+	port.size = window
+	port.size_2d_override = logical
+	port.size_2d_override_stretch = true
+	runner.root.add_child(port)
+	return port
 
 func cases() -> Array[Callable]:
 	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_red_answer_elsewhere_does_not_block,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
@@ -35,6 +69,12 @@ func setup(runner):
 static func tick(main) -> void:
 	main._physics_process(1.0 / 30.0)
 	main._drain_notes()
+
+static func hud_text(main: Node) -> String:
+	var lines: PackedStringArray = []
+	for label: Node in main.get_node("HUD").find_children("*", "Label", true, false):
+		if (label as Label).is_visible_in_tree() and (label as Label).modulate.a > 0.0: lines.append((label as Label).text)
+	return "\n".join(lines)
 
 # Shows a direct change to the live sim as a tick would, without stepping, sound or step results.
 static func publish(main) -> void:
@@ -72,7 +112,7 @@ func test_base_ready(runner) -> bool:
 	runner.check(main.driver.pump.live().snapshot().tick == state.tick + 1,"Bs1 one physics tick")
 	key(main,KEY_B)
 	runner.check(main.driver.pump.live().snapshot().terrain_cells.is_empty(),"Bs1 B cannot toggle terrain")
-	runner.check(main.get_node("HUD/Status").text.contains("Credits"),"Bs1 economy HUD")
+	runner.check(hud_text(main).contains("CREDITS") and main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false).text == str(main.shown_state.players[0].credits),"Bs1 economy HUD shows the player's credits")
 	main.free()
 	return true
 
@@ -104,7 +144,7 @@ func test_placement_input(runner) -> bool:
 	tick(main)
 	var refused: Dictionary = main.driver.pump.live().snapshot()
 	var credits = func(state: Dictionary) -> Array: return state.players.map(func(player: Dictionary) -> int: return player.credits)
-	runner.check(not main.orders._placement_kind.is_empty() and credits.call(refused) == credits.call(before) and refused.buildings == before.buildings and refused.pending_commands == before.pending_commands and main.hud.note.begins_with("Rejected: "),"Bs2 invalid remains mode reason")
+	runner.check(not main.orders._placement_kind.is_empty() and credits.call(refused) == credits.call(before) and refused.buildings == before.buildings and refused.pending_commands == before.pending_commands and not main.hud.refusal.is_empty(),"Bs2 invalid remains mode reason")
 	runner.check(refused.tick == before.tick + 1,"Bs2 the refusal arrives with one step")
 	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,true)
@@ -136,14 +176,14 @@ func test_production_ui(runner) -> bool:
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,false)
 	runner.check(main.orders.selected_building_id == depot and main.orders.selected_ids.is_empty() and main.get_node("WorldView")._selection.keys() == [depot],"Bs3 building selection outline")
 	main.orders.selected_building_id = depot
-	main.get_node("HUD/Economy/Produce").pressed.emit()
-	key(main,KEY_E)
+	main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()
+	key(main,KEY_1)
 	runner.check(main.driver.queued().size() == 2,"Bs3 one command per produce")
 	tick(main)
 	var queue: Array = Fixture.object(main.driver.pump.live(),depot).queue
 	if queue.size() == 2:
 		await runner.process_frame
-		var button: Button = main.get_node("HUD/Economy/Queue").get_child(1)
+		var button: Button = main.get_node("HUD/Economy/Queue").get_node(str(queue[1].id))
 		var viewport_point: Vector2 = button.get_global_rect().get_center()
 		var press := InputEventMouseButton.new()
 		press.position = runner.root.get_final_transform() * viewport_point
@@ -165,7 +205,7 @@ func test_production_ui(runner) -> bool:
 		tick(main)
 		runner.check(Fixture.object(main.driver.pump.live(),depot).queue.size() == 1 and Fixture.object(main.driver.pump.live(),depot).queue[0].id == queue[0].id,"Bs3 stable cancel entry ID")
 	else: runner.check(false,"Bs3 queue populated")
-	runner.check(main.has_node("HUD/Economy/Produce") and main.get_node("HUD/Economy/Produce").mouse_filter == Control.MOUSE_FILTER_STOP,"Bs3 GUI consumes mouse")
+	runner.check(main.has_node("HUD/Economy/CancelBuild") and main.get_node("HUD/Economy/CancelBuild").mouse_filter == Control.MOUSE_FILTER_STOP,"Bs3 GUI consumes mouse")
 	main.driver.pump.live().remove_object(depot)
 	publish(main)
 	runner.check(main.orders.selected_building_id == -1,"Bs3 removed selection cleared")
@@ -195,7 +235,7 @@ func test_context_orders(runner) -> bool:
 	main.orders.selected_ids.assign([1,air])
 	var before: Dictionary = main.driver.pump.live().snapshot()
 	pointer(main,Iso.world_to_plane(Vector2(25.5,5.5)),MOUSE_BUTTON_RIGHT,true)
-	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().size() == 1 and not main.hud.note.is_empty(),"Bs4 mixed context rejected")
+	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().size() == 1 and not main.hud.refusal.is_empty(),"Bs4 mixed context rejected")
 	pointer(main,Iso.world_to_plane(Vector2(6.5,10.5)),MOUSE_BUTTON_RIGHT,true)
 	runner.check(main.driver.queued().size() == 2 and main.driver.queued().back().type == "move","Bs4 mixed ordinary ground move")
 	main.driver.adopt(Fixture.make_world())
@@ -224,19 +264,20 @@ func test_execution_feedback(runner) -> bool:
 	main.driver.flush()
 	Fixture.steps(main.driver.pump.live(),3)
 	publish(main)
-	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"Bs5 due rejection visible")
+	runner.check(hud_text(main).contains("Insufficient credits") and main.hud.refusal == "Insufficient credits","Bs5 due rejection visible")
 	main._submit({"type":"stop","entity_ids":[999]})
 	tick(main)
-	var error: String = main.hud.note
+	var error: String = main.hud.refusal
 	main._refresh()
-	runner.check(not error.is_empty() and main.hud.note == error,"Bs5 immediate error persists refresh")
+	runner.check(not error.is_empty() and main.hud.refusal == error,"Bs5 immediate error persists refresh")
 	main.driver.pump.live().add_player(2,0)
 	var other: int = main.driver.pump.live().spawn(2,Vector2(2.5,2.5))
 	Fixture.send(main.driver.pump.live(),{"type":"stop","entity_ids":[other],"player":2})
 	tick(main)
-	runner.check(main.hud.note == error,"Bs5 unrelated player result preserves immediate error")
+	runner.check(main.hud.refusal == error,"Bs5 unrelated player result preserves immediate error")
 	main._submit({"type":"stop","entity_ids":[1]})
-	runner.check(main.hud.note.is_empty(),"Bs5 accepted clears immediate error")
+	tick(main)
+	runner.check(main.hud.refusal.is_empty() and not main.get_node("HUD/Hud/RefusalLine").visible,"Bs5 the accepted answer clears immediate error")
 	main.free()
 	return true
 
@@ -289,7 +330,7 @@ func test_sb2_red_ghost_click_refused_locally(runner) -> bool:
 	tick(main)
 	tick(main)
 	pointer(main,cell,MOUSE_BUTTON_LEFT,false)
-	runner.check(main.driver.queued().is_empty() and main.orders._placement_kind == "usa_power_plant" and main.hud.note.begins_with("Rejected: "),"RL1 a click on a red ghost sends nothing, says why and keeps placement, held %d note '%s'" % [main.driver.queued().size(), main.hud.note])
+	runner.check(main.driver.queued().is_empty() and main.orders._placement_kind == "usa_power_plant" and not main.hud.refusal.is_empty(),"RL1 a click on a red ghost sends nothing, says why and keeps placement, held %d note '%s'" % [main.driver.queued().size(), main.hud.refusal])
 	tick(main)
 	var errors: int = main._sound.last_requests().filter(func(request: Dictionary) -> bool: return request.cue == "error").size()
 	runner.check(errors == 1,"RL1 the local refusal beeps once at the next step, got %d" % errors)
@@ -355,22 +396,22 @@ func test_resume_status(runner) -> bool:
 	main.driver.pump.live().step()
 	main.orders.selected_ids.assign([1])
 	publish(main)
-	var status: Label = main.get_node("HUD/Status")
 	hover(main,Iso.world_to_plane(Vector2(8.5,4.5)))
 	main._refresh()
-	runner.check(status.text.contains("Right-click: resume"),"H6 resume hint shown while hovering")
-	var economy: Control = main.get_node("HUD/Economy")
-	runner.check(economy.position.y >= status.position.y + status.get_minimum_size().y,"H6 buttons below the resume line")
+	var hint: Label = main.get_node("HUD/Economy/ResumeHint")
+	runner.check(hud_text(main).contains("Right-click: resume") and hint.is_visible_in_tree() and hint.text == "Right-click: resume","H6 resume hint shown in the slab while hovering")
+	runner.check(hud_text(main).count("Right-click: resume") == 1,"H6 the resume hint shows once")
+	slab_clear(runner,main,"H6")
 	hover(main,Iso.world_to_plane(Vector2(20.5,20.5)))
 	main._refresh()
-	runner.check(not status.text.contains("Right-click: resume"),"H6 hint gone off the building")
+	runner.check(not hud_text(main).contains("Right-click: resume") and not hint.is_visible_in_tree(),"H6 hint gone off the building")
 	main.free()
 	return true
 
 func test_queue_label(runner) -> bool:
 	var BaseMain = load("res://scripts/match/hud.gd")
-	runner.check(BaseMain.queue_label({"id":10,"kind":"usa_tank","work":270000}) == "Cancel Battle Tank (90%)","Bs5 started entry shows percent, no id or raw work")
-	runner.check(BaseMain.queue_label({"id":12,"kind":"usa_tank","work":0}) == "Cancel Battle Tank (queued)","Bs5 unstarted entry shows queued")
+	runner.check(BaseMain.queue_parts({"id":10,"kind":"usa_tank","work":270000}) == PackedStringArray(["Battle Tank","90 %"]),"Bs5 a started entry's row shows its name and percent, no id or raw work")
+	runner.check(BaseMain.queue_parts({"id":12,"kind":"usa_tank","work":0}) == PackedStringArray(["Battle Tank",""]),"Bs5 an unstarted entry's row shows its name and no percent")
 	return true
 
 func test_one_snapshot_per_refresh(runner) -> bool:
@@ -426,7 +467,7 @@ func test_rejection_survives_two_steps(runner) -> bool:
 	tick(main)
 	await runner.process_frame
 	await runner.process_frame
-	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"RF8 a rejection from the first of two steps reaches the HUD")
+	runner.check(hud_text(main).contains("Insufficient credits"),"RF8 a rejection from the first of two steps reaches the HUD")
 	main.free()
 	return true
 
@@ -448,14 +489,14 @@ func test_sb1_repaint_keeps_step_pending(runner) -> bool:
 	runner.check(director.collected_ticks() == [1,2] and not director.consumed_ticks().has(1) and not director.consumed_ticks().has(2),"RB5 a repaint leaves the step's sound pending, got %s and %s" % [director.collected_ticks(),director.consumed_ticks()])
 	await runner.process_frame
 	await runner.process_frame
-	runner.check(main.get_node("HUD/Status").text.contains("Insufficient credits"),"RB5 the rejection still reaches the HUD after a repaint")
+	runner.check(hud_text(main).contains("Insufficient credits"),"RB5 the rejection still reaches the HUD after a repaint")
 	runner.check(director.consumed_ticks().count(1) == 1 and director.consumed_ticks().count(2) == 1,"RB5 each step's sound plays once, got %s" % [director.consumed_ticks()])
 	runner.check(main._view._state.tick == main.driver.pump.live().tick(),"RB5 the deferred refresh shows the new tick")
 	main.free()
 	return true
 
 func _menu_texts(main) -> Array:
-	return main.get_node("HUD/Economy/BuildMenu").get_children().map(func(button: Button) -> String: return button.text)
+	return main.get_node("HUD/Economy/BuildMenu").get_children().map(func(button: Button) -> String: return button.text + " " + button.get_node("Price").text)
 
 func test_build_menu_from_capabilities(runner) -> bool:
 	var main = await setup(runner)
@@ -487,15 +528,14 @@ func test_build_menu_wraps_eleven(runner) -> bool:
 	for i in 11:
 		Registry.add_test_kind("test_k%d" % i,{"display_name":"Synthetic %d" % i,"cost":100 + i})
 		kinds.append("test_k%d" % i)
-	main.hud._refresh_menu(kinds)
+	main.hud._refresh_menu(kinds,true,0,"")
 	await runner.process_frame
 	await runner.process_frame
 	var buttons: Array = main.get_node("HUD/Economy/BuildMenu").get_children()
-	var status: Label = main.get_node("HUD/Status")
-	var status_rect := Rect2(status.global_position,status.get_minimum_size())
 	runner.check(buttons.size() == 11,"M5 eleven buttons")
+	slab_clear(runner,main,"M5")
 	for i in buttons.size():
-		runner.check(not buttons[i].get_global_rect().intersects(status_rect),"M5 button %d clear of status" % i)
+		runner.check(main.get_node("HUD/Economy").get_global_rect().encloses(buttons[i].get_global_rect()),"M5 button %d inside the slab" % i)
 		for j in range(i + 1,buttons.size()):
 			runner.check(not buttons[i].get_global_rect().intersects(buttons[j].get_global_rect()),"M5 buttons %d and %d do not overlap" % [i,j])
 	Registry.clear_test_kinds()
@@ -504,14 +544,13 @@ func test_build_menu_wraps_eleven(runner) -> bool:
 
 func test_build_menu_quantity_label(runner) -> bool:
 	var main = await setup(runner)
-	main.hud._refresh_menu(["china_rifle_infantry","china_rocket_infantry"])
+	main.hud._refresh_menu(["china_rifle_infantry","china_rocket_infantry"],true,0,"")
 	await runner.process_frame
 	await runner.process_frame
 	var buttons: Array = main.get_node("HUD/Economy/BuildMenu").get_children()
-	runner.check(buttons.size() == 2 and buttons[0].text == "1: Militia x2 $300" and buttons[1].text == "2: Anti-Tank Trooper $300","M6 militia button reads x2, got " + str(buttons.map(func(b: Button) -> String: return b.text)))
-	var status: Label = main.get_node("HUD/Status")
-	var status_rect := Rect2(status.global_position,status.get_minimum_size())
-	for button: Button in buttons: runner.check(not button.get_global_rect().intersects(status_rect),"M6 button clear of status")
+	runner.check(_menu_texts(main) == ["1: Militia x2 $300","2: Anti-Tank Trooper $300"],"M6 militia button reads x2, got " + str(_menu_texts(main)))
+	slab_clear(runner,main,"M6")
+	for button: Button in buttons: runner.check(main.get_node("HUD/Economy").get_global_rect().encloses(button.get_global_rect()),"M6 button inside the slab")
 	runner.check(not buttons[0].get_global_rect().intersects(buttons[1].get_global_rect()),"M6 buttons do not overlap")
 	main.free()
 	return true
@@ -524,11 +563,11 @@ func test_sb2_placement_waits_for_build_answer(runner) -> bool:
 	key(main,KEY_1)
 	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
-	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.note.is_empty(),"RA6 a refused click keeps placement and says nothing yet, got '%s'" % main.hud.note)
+	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.refusal.is_empty(),"RA6 a refused click keeps placement and says nothing yet, got '%s'" % main.hud.refusal)
 	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
 	runner.check(main.driver.queued().size() == 1,"RA6 a second click while the answer is pending is ignored, held %d" % main.driver.queued().size())
 	tick(main)
-	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.note.begins_with("Rejected: "),"RA6 the refusal keeps placement, got '%s'" % main.hud.note)
+	runner.check(main.orders._placement_kind == "usa_power_plant" and not main.hud.refusal.is_empty(),"RA6 the refusal keeps placement, got '%s'" % main.hud.refusal)
 	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(8.25,4.25)),MOUSE_BUTTON_LEFT,false)
 	var builds: int = main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == "build").size()
