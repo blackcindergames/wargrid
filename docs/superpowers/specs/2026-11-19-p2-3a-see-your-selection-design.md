@@ -167,7 +167,7 @@ Bottom left, x 0, 408 wide, as tall as its content; `bg`, 1 px `line` on top and
   | collecting, `unloading` | `UNLOADING` |
   | collecting, `seeking` (one tick between legs) | the previous label held; no label if the collector was selected during that tick |
   | collecting, `idle` while the owner has no finished building that receives supply (an unfinished site does not count) | `NO <DROP-OFF>`, muted like `IDLE`, counted as idle in the header; wins over the busy-dock row: without a finished drop-off no load can be delivered (user, 2026-11-20) |
-  | collecting, `idle` with a pile holding boxes in the view (retrying a busy dock, `supply_collection.gd:101-104`) | `WAITING AT PILE`; also for a loaded truck retrying a full drop-off ring, since the view publishes no cargo (known limit, owner call open: see the verification record) |
+  | collecting, `idle` with a pile holding boxes in the view (retrying a busy dock, `supply_collection.gd:101-104`) | `WAITING AT PILE`; also for a loaded truck retrying a full drop-off ring, since the view publishes no cargo (known limit, user 2026-11-20; the fix, trucks waiting near the drop-off, goes to "see your economy": [design answers](../../reference/design-answers-2026-11-08.md#p23a1-before-gate-b-user-2026-11-20)) |
   | collecting, `idle` with no pile holding boxes | `IDLE` |
   | not collecting, moving or path pending | `MOVING` |
   | not collecting, named builder of an unfinished site | `BUILDING` |

@@ -1372,3 +1372,10 @@ From the low-end performance budget report (unattended run, 2026-11-19, private)
 - **D2, target unchanged:** Deck Firefox, 10/20/5 ms, F 5.5.
 - **D6, honest no-threads sentence:** the ledger states the measured no-threads outcome at about 250 units on the Deck in Firefox (30 ticks per second, about 58 frames per second, per-frame CPU p95 31 ms, a quarter of frames over 25 ms; smooth with the worker) at the next docs pass.
 - **D1, D3-D5, D7-D13, D15-D18 deferred:** each is asked at the moment its row names (README change, SB6 plan, P3, P5, P6, night 13).
+
+### P2.3a1 before gate B (user, 2026-11-20)
+
+The game director advised on both calls (agent advice, not a decision).
+
+- **Loaded truck at a full drop-off ring:** a known limit for P2.3a1; the `WAITING AT PILE` row stays as is. The real fix goes to "see your economy": a loaded truck that cannot claim a dock drives to the drop-off and waits near it, as Zero Hour lines its trucks up, instead of stopping where it stands (a simulation change with a trace re-pin; the probe in the P2.3a1 verification record becomes its guard test), with the `ViewRows` cargo bit folded in so the label reads `WAITING AT <DROP-OFF>`.
+- **Menu chip's empty tail:** judged by eye in gate B's window. The director's centring fix is not taken in advance: it would move the word on every select, the motion gate fix 1 removed; a ghost chip outline is the other option.
