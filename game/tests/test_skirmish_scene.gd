@@ -343,11 +343,10 @@ func test_supply_pile_labels(runner) -> bool:
 	runner.check(points.size() == 2 and points[1].y - points[0].y >= ThemeDB.fallback_font.get_height(View.MAP_LABEL_SIZE), "S1 pile lines are a full text height apart, got " + str(points))
 	main.orders.selected_ids.assign([pile.waiting])
 	main._refresh()
-	runner.check(main.get_node("HUD/Status").text.contains("waiting_source (1st in line)"), "S1 waiting collector shows its place in line")
+	runner.check(_panel_text(main, "RightLabel") == "WAITING AT PILE", "S1 waiting collector reads WAITING AT PILE, got " + _panel_text(main, "RightLabel"))
 	main.orders.selected_ids.assign([pile.docked])
 	main._refresh()
-	var text: String = main.get_node("HUD/Status").text
-	runner.check(text.contains("| loading") and not text.contains("in line"), "S1 docked collector shows its phase only")
+	runner.check(_panel_text(main, "RightLabel") == "LOADING", "S1 docked collector reads LOADING, got " + _panel_text(main, "RightLabel"))
 	main.free()
 	return true
 
@@ -989,7 +988,7 @@ func test_auto_pick_samples_present_time(runner) -> bool:
 	main.free()
 	return true
 
-const HUD_TEXTS: Array[String] = ["Rifleman · 156 / 180 · ", "Supply Helicopter · 300 / 300 · | waiting_source (3rd in line)", "Supply Helicopter · 300 / 300 · | lead_source", "Bulldozer · 250 / 250 · ", "Rifleman · 180 / 180 · ", "Headquarters · 5000 / 5000 · "]
+const HUD_TEXTS: Array[String] = ["Rifleman · 156 / 180 · ", "Supply Helicopter · 300 / 300 · WAITING AT PILE", "Supply Helicopter · 300 / 300 · TO PILE", "Bulldozer · 250 / 250 · ", "Rifleman · 180 / 180 · ", "Headquarters · 5000 / 5000 · "]
 
 static func _panel_text(main, part: String) -> String:
 	var label: Label = main.get_node("HUD/Hud/SelectionPanel").find_child(part, true, false)
@@ -1021,7 +1020,7 @@ func test_hud_summaries_are_pinned(runner) -> bool:
 		main.orders.selected_ids.assign([row[0]] if row[0] != -1 else [])
 		main.orders.inspected_id = row[1]
 		main._show(view)
-		texts.append("%s · %s · %s" % [_panel_text(main, "Name"), _panel_text(main, "Health"), main.get_node("HUD/Status").text.strip_edges()])
+		texts.append("%s · %s · %s" % [_panel_text(main, "Name"), _panel_text(main, "Health"), _panel_text(main, "RightLabel")])
 		edges.append(main.hud.panel_edge() == View.owner_color(1 if row[1] == -1 else 2))
 	runner.check(texts == HUD_TEXTS, "HUD1 pinned panel and collector texts, got " + str(texts))
 	runner.check(not edges.has(false), "HUD1 each panel edge is its owner's colour, got %s" % [edges])

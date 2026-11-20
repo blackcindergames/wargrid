@@ -8,6 +8,7 @@ signal menu_pressed()
 signal attack_move_pressed()
 signal stop_pressed()
 signal unload_pressed()
+signal row_clicked(kind: String, shift: bool)
 
 # Wider notices wrap, so a long desync path grows down, clear of the chips at 1280.
 const NOTICE_WIDTH: float = 600.0
@@ -47,6 +48,13 @@ var _edge: Color = Color.WHITE
 var _keys: Dictionary = {}
 var _panel: PanelContainer
 var _panel_style: StyleBoxFlat
+var _many: BoxContainer
+var _rows: GridContainer
+var _row_looks: Dictionary = {}
+var _counts: Dictionary = {}
+var _labels: Dictionary = {}
+var _last: Array = []
+var _shape: Array = []
 
 func _init() -> void:
 	name = "Hud"
@@ -192,6 +200,9 @@ func setup(economy: VBoxContainer, status: Label) -> void:
 func reset() -> void:
 	note = ""
 	refusal = ""
+	_labels = {}
+	_last = []
+	_counts = {}
 	if _economy != null: _read_keys()
 
 # hud-v5-layout "Command card": the VBox lays out rows, the Hud pads, fills and edges it.
@@ -292,11 +303,18 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	_show_strip(view, selection, view_player)
 	set_esc_chip(selection.esc_opens_menu)
 	_show_notice(selection.notice)
-	_show_panel(HudModel.panel(view, selection, seat, faction), selection.bright_owners)
+	_show_selection(view, selection, seat, faction)
 	if _economy == null: menu_kinds = kinds
 	else: _economy_controls(view, building, selection, kinds, seat)
-	if _status == null: return
-	_status.text = _status_text(view, selection)
+	_count_rebuild(selection)
+	if _status != null: _status.text = note
+
+# Structural changes only; values patch in place.
+func _count_rebuild(selection: Dictionary) -> void:
+	var shape: Array = [selection.ids.duplicate(), selection.building_id, selection.inspected_id, _counts.keys(), _many.visible, _panel.visible, selection.placement_kind, selection.notice, refusal]
+	if shape == _shape: return
+	_shape = shape
+	rebuilds += 1
 
 func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictionary, kinds: Array, seat: int) -> void:
 	var edge: Color = View.owner_color(seat, selection.bright_owners)
@@ -350,15 +368,6 @@ func _tint(label: Label, text: String, warn: bool) -> void:
 	if label.has_theme_color_override("font_color") == warn: return
 	if warn: label.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 	else: label.remove_theme_color_override("font_color")
-
-# Only the collector phase is left here until the kind rows carry it (Task 11).
-func _status_text(view: Dictionary, selection: Dictionary) -> String:
-	var phase: String = ""
-	var i: int = view.units.index_of(selection.ids[0]) if selection.ids.size() == 1 else -1
-	if i != -1:
-		var unit: Dictionary = HudModel.unit_record(view.units, i)
-		if unit.collection != null and unit.collection.enabled: phase = _collection_suffix(view, unit)
-	return "%s\n%s" % [note, phase]
 
 func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: String) -> void:
 	menu_kinds = kinds
@@ -450,15 +459,6 @@ static func queue_parts(entry: Dictionary) -> PackedStringArray:
 	var percent: String = "" if entry.work == 0 else "%d %%" % (entry.work * 100 / (Definitions.unit(entry.kind).ticks * 1000))
 	return PackedStringArray([Registry.kind(entry.kind).display_name, percent])
 
-func _collection_suffix(view: Dictionary, unit: Dictionary) -> String:
-	var line: String = " | " + unit.collection.phase
-	if unit.collection.phase.begins_with("waiting_"): line += " (%s in line)" % _ordinal(View.line_position(view.units, view.units.index_of(unit.id)))
-	return line
-
-func _ordinal(n: int) -> String:
-	var suffix: String = "th" if n % 100 in [11, 12, 13] else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-	return str(n) + suffix
-
 # hud-v5-layout "Selection panel": x 0, 408 wide, bottom on H, height hugs; the 4 px owner edge is the style's left border.
 func _build_panel() -> void:
 	_panel = _slab("SelectionPanel", Vector2.ZERO)
@@ -474,6 +474,9 @@ func _build_panel() -> void:
 	_panel.grow_vertical = GROW_DIRECTION_BEGIN
 	_panel.custom_minimum_size.x = 408
 	_panel.draw.connect(_draw_panel_lines)
+	# PASS, not IGNORE: its own exit releases the row hold; unhandled clicks still reach the world.
+	_panel.mouse_filter = MOUSE_FILTER_PASS
+	_panel.mouse_exited.connect(_release_hold, CONNECT_DEFERRED)
 	# The title's line box is 18 against the page's 14, so 4 under it keeps the spec heights.
 	var box: BoxContainer = _box(_panel, "Box", VBoxContainer.new(), 4)
 	var top: BoxContainer = _box(box, "Top", HBoxContainer.new(), 8)
@@ -486,7 +489,31 @@ func _build_panel() -> void:
 	_label(pair, "Key", &"HudLabel").custom_minimum_size.x = 112
 	_label(pair, "Value", &"HudNumber")
 	_label(body, "Footer", &"HudHint", HudModel.RALLY)
+	_build_rows(box)
 	_panel.visible = false
+
+# hud-v5-layout "Kind rows": header row 18, rows 186 x 26 in two columns 4 apart, the rule line last.
+func _build_rows(box: BoxContainer) -> void:
+	_many = _box(box, "Many", VBoxContainer.new(), 8)
+	_label(_many, "Header", &"HudTitle")
+	_rows = GridContainer.new()
+	_rows.name = "Rows"
+	_rows.columns = 2
+	_rows.mouse_filter = MOUSE_FILTER_IGNORE
+	_rows.add_theme_constant_override("h_separation", GAP)
+	_rows.add_theme_constant_override("v_separation", GAP)
+	_many.add_child(_rows)
+	_label(_many, "Footer", &"HudHint", HudModel.ROWS_RULE)
+	_many.visible = false
+	for look: Array in [["normal", "btn", 0], ["hover", "panel2", 1], ["disabled", "quiet", 0]]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = get_theme_color(look[1], &"Tokens")
+		style.set_border_width_all(look[2])
+		style.border_color = get_theme_color("muted", &"Tokens")
+		_row_looks[look[0]] = style
+	_row_looks.pressed = _row_looks.hover
+	_row_looks.hover_pressed = _row_looks.hover
+	_row_looks.focus = StyleBoxEmpty.new()
 
 # A 160 x 6 bar on a `well` track, then its muted number 8 to the right.
 func _bar_row(parent: Control, row_name: String, bar_name: String, number_name: String) -> void:
@@ -514,20 +541,134 @@ func _draw_panel_lines() -> void:
 func panel_edge() -> Color:
 	return _panel_style.border_color
 
+func _show_selection(view: Dictionary, selection: Dictionary, seat: int, faction: String) -> void:
+	_last = [view, selection, seat, faction]
+	_labels = HudModel.collector_labels(view, selection.ids, seat, faction, _labels)
+	var many: bool = selection.building_id == -1 and (selection.ids.size() > 1 or (_holding() and not selection.ids.is_empty()))
+	_many.visible = many
+	_panel.get_node("Box/Top").visible = not many
+	_panel.get_node("Box/Body").visible = not many
+	if many: _show_rows(view, selection.ids, seat, selection.bright_owners)
+	else:
+		_counts = {}
+		_show_panel(HudModel.panel(view, selection, seat, faction, _labels), selection.bright_owners)
+
+# The row set holds while the pointer is over the panel, so a row never moves under it.
+func _holding() -> bool:
+	return _many.is_visible_in_tree() and _panel.get_global_rect().has_point(_panel.get_global_mouse_position())
+
+func _release_hold() -> void:
+	if not _holding() and not _last.is_empty(): _show_selection.callv(_last)
+
+func _show_rows(view: Dictionary, ids: Array[int], seat: int, bright: bool) -> void:
+	var live: Dictionary = HudModel.kind_rows(view, ids)
+	var kinds: Array = live.keys()
+	if _holding():
+		for kind: String in _counts:
+			if not kinds.has(kind): kinds.append(kind)
+	kinds.sort_custom(func(a: String, b: String) -> bool: return HudModel.roster_key(a) < HudModel.roster_key(b))
+	if kinds != _counts.keys():
+		for row: Node in _rows.get_children(): row.free()
+		for kind: String in kinds: _kind_row(kind)
+	_counts = {}
+	for kind: String in kinds:
+		var sums: Array = live.get(kind, [0, 0, 1])
+		_counts[kind] = sums[0]
+		_fill_row(_rows.get_node("Row_" + kind), sums[0], float(sums[1]) / sums[2])
+	var idle: int = _labels.values().count(HudModel.IDLE)
+	var header: String = "%d selected · %d %s" % [ids.size(), live.size(), "kind" if live.size() == 1 else "kinds"]
+	if idle > 0: header += " · %d idle %s" % [idle, "collector" if idle == 1 else "collectors"]
+	(_many.get_node("Header") as Label).text = header
+	_many.get_node("Footer").visible = kinds.size() > 1
+	_panel.visible = true
+	_set_edge(View.owner_color(seat, bright))
+
+func _kind_row(kind: String) -> void:
+	var row := Button.new()
+	row.name = "Row_" + kind
+	row.focus_mode = FOCUS_NONE
+	row.custom_minimum_size = Vector2(186, 26)
+	row.mouse_default_cursor_shape = CURSOR_POINTING_HAND
+	for look: String in _row_looks: row.add_theme_stylebox_override(look, _row_looks[look])
+	row.gui_input.connect(_row_input.bind(row, kind))
+	# Deferred: a row freed under the pointer exits during the rebuild itself.
+	row.mouse_exited.connect(_release_hold, CONNECT_DEFERRED)
+	row.mouse_entered.connect(_inset_track.bind(row, true))
+	row.mouse_exited.connect(_inset_track.bind(row, false))
+	_rows.add_child(row)
+	var title: Label = _label(row, "Name", &"HudRow", Registry.kind(kind).get("display_name", kind))
+	title.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	title.offset_left = 8
+	title.offset_right = -36
+	title.offset_bottom = -4
+	var count: Label = _label(row, "Count", &"HudNumber")
+	count.set_anchors_and_offsets_preset(PRESET_RIGHT_WIDE)
+	count.offset_left = -36
+	count.offset_right = -8
+	count.offset_bottom = -4
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var track := ColorRect.new()
+	track.name = "Track"
+	track.color = get_theme_color("well", &"Tokens")
+	track.mouse_filter = MOUSE_FILTER_IGNORE
+	track.set_anchors_and_offsets_preset(PRESET_BOTTOM_WIDE)
+	track.offset_top = -3
+	row.add_child(track)
+	var bar := ColorRect.new()
+	bar.name = "Bar"
+	bar.mouse_filter = MOUSE_FILTER_IGNORE
+	bar.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	track.add_child(bar)
+
+# A held row (its kind gone while the pointer is over the panel) reads 0, muted, with an empty bar.
+func _fill_row(row: Button, count: int, fraction: float) -> void:
+	(row.get_node("Count") as Label).text = str(count)
+	var held: bool = count == 0
+	if row.disabled != held:
+		row.disabled = held
+		row.mouse_default_cursor_shape = CURSOR_ARROW if held else CURSOR_POINTING_HAND
+		for part: String in ["Name", "Count"]:
+			if held: row.get_node(part).add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+			else: row.get_node(part).remove_theme_color_override("font_color")
+	var bar: ColorRect = row.get_node("Track/Bar")
+	var right: float = 0.0 if held else clampf(fraction, 0.0, 1.0)
+	if bar.anchor_right != right: bar.anchor_right = right
+	var colour: Color = View.health_color(right)
+	if bar.color != colour: bar.color = colour
+
+# The release reaches the pressed row wherever it lands, so only one inside that row counts.
+func _row_input(event: InputEvent, row: Button, kind: String) -> void:
+	var click := event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT or click.pressed or _counts.get(kind, 0) == 0: return
+	if not Rect2(Vector2.ZERO, row.size).has_point(click.position): return
+	# Deferred: the repaint it causes may free this row, which is still inside its own input.
+	row_clicked.emit.call_deferred(kind, click.shift_pressed)
+
+# The track would cover the hover frame's bottom edge.
+func _inset_track(row: Button, hovered: bool) -> void:
+	var inset: float = 1.0 if hovered and not row.disabled else 0.0
+	var track: Control = row.get_node("Track")
+	track.offset_left = inset
+	track.offset_right = -inset
+	track.offset_bottom = -inset
+	track.offset_top = -3.0 - inset
+
+func _set_edge(edge: Color) -> void:
+	if _panel_style.border_color == edge: return
+	_panel_style.border_color = edge
+	_panel.queue_redraw()
+
 func _show_panel(row: Dictionary, bright: bool) -> void:
 	_panel.visible = not row.is_empty()
 	if row.is_empty(): return
-	var edge: Color = get_theme_color("line", &"Tokens") if row.owner == -1 else View.owner_color(row.owner, bright)
-	if _panel_style.border_color != edge:
-		_panel_style.border_color = edge
-		_panel.queue_redraw()
+	_set_edge(get_theme_color("line", &"Tokens") if row.owner == -1 else View.owner_color(row.owner, bright))
 	_panel.get_node("Box/Top/Name").text = row.name
 	var right: Label = _panel.get_node("Box/Top/RightLabel")
 	right.visible = row.has("right")
 	_tint(right, row.get("right", ""), row.get("warn", false))
 	var body: Node = _panel.get_node("Box/Body")
 	_fill_bar(body.get_node("HealthRow"), row.has("health"), row.get("fraction", 0.0), View.health_color(row.get("fraction", 0.0)), row.get("health", ""))
-	var progress: Color = get_theme_color("muted", &"Tokens") if row.get("paused", false) else edge
+	var progress: Color = get_theme_color("muted", &"Tokens") if row.get("paused", false) else _panel_style.border_color
 	_fill_bar(body.get_node("ProgressRow"), row.has("percent"), row.get("percent", 0) / 100.0, progress, "%d %%" % row.get("percent", 0))
 	body.get_node("KeyRow").visible = row.has("key")
 	body.get_node("KeyRow/Key").text = row.get("key", "")

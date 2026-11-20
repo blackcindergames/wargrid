@@ -18,6 +18,7 @@ const Orders = preload("res://scripts/match/orders.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const Economy = preload("res://scripts/simulation/economy_definitions.gd")
 const Palette = preload("res://scripts/presentation/palette.gd")
+const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const LOW: String = "LOW POWER · DEFENCES OFF"
 const MINUS: String = "\u2212"
 const THEME_PATH: String = "res://ui/launcher_theme.tres"
@@ -27,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_idle_header, test_rebuild_count]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1280,6 +1281,7 @@ func _panel_world(main) -> Dictionary:
 	ids.hq = Fixture.add_completed(sim, 1, "usa_command_center", Vector2i(2, 24))
 	ids.pile = sim.add_supply_source(Vector2i(26, 2), 142)
 	ids.empty = sim.add_supply_source(Vector2i(26, 21), 0)
+	ids.collector = sim.spawn(1, Vector2(12.5, 28.5), "usa_collector")
 	main.driver.adopt(sim)
 	var view: Dictionary = main.driver.current().view
 	_site(view, ids.site, 1)
@@ -1304,6 +1306,20 @@ static func _panel_select(main, case: Array) -> void:
 	if case[5] != 0:
 		view = view.duplicate()
 		view.players = view.players.map(func(row: Dictionary) -> Dictionary: return row.merged({"power_demand": row.power_supply + 1}, true) if row.id == case[5] else row)
+	main._show(view)
+
+# Shows `id` as an own collector waiting at the drop-off, with the viewer playing `faction`.
+static func _waiting_collector(main, id: int, faction: String) -> void:
+	var view: Dictionary = main.driver.current().view.duplicate()
+	var units: RefCounted = view.units
+	var i: int = units.index_of(id)
+	if not units.phases.has("waiting_depot"): units.phases.append("waiting_depot")
+	units.phase[i] = units.phases.find("waiting_depot")
+	units.flags[i] |= ViewRows.COLLECTING
+	view.players = view.players.map(func(row: Dictionary) -> Dictionary: return row.merged({"faction": faction}, true) if row.id == 1 else row)
+	main.orders.selected_ids.assign([id])
+	main.orders.selected_building_id = -1
+	main.orders.inspected_id = -1
 	main._show(view)
 
 static func _pick(main, ids: Array, building: int, inspected: int) -> void:
@@ -1343,6 +1359,13 @@ func test_panel_states_layout(runner) -> bool:
 			var others: Dictionary = {"the strip": _rect(main, "HUD/Hud/TopStrip"), "the refusal line": refusal}
 			if main.get_node("HUD/Economy").is_visible_in_tree(): others["the slab"] = _rect(main, "HUD/Economy")
 			for other: String in others: runner.check(not panel.intersects(others[other]), "SP1 %s: clear of %s" % [at, other])
+			_panel_contained(runner, main, panel, at)
+		for longest: Array in [["usa", "WAITING AT SUPPLY DEPOT"], ["frc", "WAITING AT SUPPLY CACHE"]]:
+			_waiting_collector(main, ids.collector, longest[0])
+			await _frames(runner)
+			var at: String = "collector %s at %s" % [longest[0], size]
+			var panel: Rect2 = _rect(main, "HUD/Hud/SelectionPanel")
+			runner.check(_panel_texts(main).Name == "Supply Helicopter" and _panel_texts(main).RightLabel == longest[1] and absf(panel.size.y - 62.0) <= 1.0, "SP1 %s: the longest name beside %s, 62 high, got %s %.1f" % [at, longest[1], _panel_texts(main), panel.size.y])
 			_panel_contained(runner, main, panel, at)
 		_pick(main, [], -1, -1)
 		await _frames(runner)
@@ -1422,5 +1445,438 @@ func test_panel_edge_colours(runner) -> bool:
 	var body: Color = Palette.owner_colors(1, main._view._batch.bright_owners)[0]
 	runner.check(main._view._batch.bright_owners and body != View.owner_color(1) and main.hud.panel_edge() == body, "SP3 Neon on live: the edge is the body colour the batch draws, got %s against %s" % [main.hud.panel_edge(), body])
 	main._pause.neon_changed.emit(false)
+	main.free()
+	return true
+
+const ROSTERS: Dictionary = {
+	"usa": ["usa_light_vehicle", "usa_tank", "usa_rifle_infantry", "usa_rocket_infantry", "usa_collector", "usa_builder"],
+	"china": ["china_light_vehicle", "china_tank", "china_rifle_infantry", "china_rocket_infantry", "china_collector", "china_builder"],
+	"frc": ["frc_light_vehicle", "frc_tank", "frc_rifle_infantry", "frc_rocket_infantry", "frc_builder"],
+}
+const RULE: String = "Click a kind: select only that kind · Shift-click: deselect it"
+
+# Spawns [kind, count] groups for player 1 on a grid, shows them selected, and returns the ids per kind.
+static func _rows_world(main, groups: Array) -> Dictionary:
+	var sim = Fixture.make_world(50000, Vector2i(48, 48))
+	sim.add_player(2, 1000)
+	var ids := {}
+	var at: int = 0
+	for group: Array in groups:
+		var kind_ids: Array[int] = []
+		for n in group[1]:
+			kind_ids.append(sim.spawn(1, Vector2(8.5 + at % 24, 8.5 + floorf(at / 24.0)), group[0]))
+			at += 1
+		ids[group[0]] = kind_ids
+	main.driver.adopt(sim)
+	_pick(main, _all(ids), -1, -1)
+	return ids
+
+static func _all(ids: Dictionary) -> Array[int]:
+	var every: Array[int] = []
+	for kind: String in ids: every.append_array(ids[kind])
+	every.sort()
+	return every
+
+static func _many(main, part: String) -> Control:
+	return main.get_node_or_null("HUD/Hud/SelectionPanel/Box/Many/" + part)
+
+static func _row_names(main) -> Array:
+	var rows: Control = _many(main, "Rows")
+	return [] if rows == null else rows.get_children().filter(func(row: Control) -> bool: return row.visible).map(func(row: Control) -> String: return str(row.name))
+
+static func _row(main, kind: String) -> Button:
+	return _many(main, "Rows/Row_" + kind) as Button
+
+static func _panel_height(main) -> float:
+	return main.get_node("HUD/Hud/SelectionPanel").size.y
+
+static func _rows_height(kinds: int) -> float:
+	return [76.0, 98.0, 128.0, 128.0, 158.0, 158.0][kinds - 1]
+
+func test_kind_rows(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _rows_world(main, [["usa_builder", 1], ["usa_rifle_infantry", 1], ["usa_tank", 1]])
+	await _frames(runner)
+	runner.check(_row_names(main) == ["Row_usa_tank", "Row_usa_rifle_infantry", "Row_usa_builder"], "KR1 three USA kinds in roster order, got %s" % [_row_names(main)])
+	var header: Label = _many(main, "Header") as Label
+	runner.check(header != null and header.is_visible_in_tree() and header.text == "3 selected · 3 kinds", "KR1 header 3 selected · 3 kinds, got '%s'" % (header.text if header != null else "none"))
+	if header == null:
+		main.free()
+		return true
+	var first: Rect2 = _row(main, "usa_tank").get_global_rect()
+	var second: Rect2 = _row(main, "usa_rifle_infantry").get_global_rect()
+	var third: Rect2 = _row(main, "usa_builder").get_global_rect()
+	runner.check(first.size == Vector2(186, 26) and second.size == Vector2(186, 26) and is_equal_approx(second.position.x - first.position.x, 190.0) and is_equal_approx(second.position.y, first.position.y) and is_equal_approx(third.position.x, first.position.x) and is_equal_approx(third.position.y - first.position.y, 30.0), "KR1 two columns of 186x26 rows, 4 apart, got %s %s %s" % [first, second, third])
+	for faction: String in ROSTERS:
+		var groups: Array = []
+		for kind: String in ROSTERS[faction]: groups.append([kind, 1])
+		groups.reverse()
+		_rows_world(main, groups)
+		var expected: Array = ROSTERS[faction].map(func(kind: String) -> String: return "Row_" + kind)
+		runner.check(_row_names(main) == expected, "KR1 %s roster order %s, got %s" % [faction, expected, _row_names(main)])
+	_rows_world(main, [["china_tank", 12]])
+	await _frames(runner)
+	runner.check(header.text == "12 selected · 1 kind" and _row_names(main) == ["Row_china_tank"] and absf(_panel_height(main) - 76.0) <= 1.0 and not _many(main, "Footer").is_visible_in_tree(), "KR1 twelve of one kind: one row, 76 high, no footer, got '%s' %s %.1f" % [header.text, _row_names(main), _panel_height(main)])
+	runner.check(ids.size() == 3, "KR1 fixture")
+	main.free()
+	return true
+
+# Every visible label inside the panel's content rect and its parent; a row's name and count never meet.
+func _rows_contained(runner, main, label: String) -> void:
+	var panel: Rect2 = _rect(main, "HUD/Hud/SelectionPanel")
+	_panel_contained(runner, main, panel, label)
+	for row: Node in _many(main, "Rows").get_children():
+		var name_rect: Rect2 = (row.get_node("Name") as Control).get_global_rect()
+		var count_rect: Rect2 = (row.get_node("Count") as Control).get_global_rect()
+		runner.check(not name_rect.intersects(count_rect), "KR2 %s: %s name and count do not meet, got %s %s" % [label, row.name, name_rect, count_rect])
+
+func test_roster_fits(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await overlays._scene(runner, Skirmish, port)
+		var refusal := Rect2((size.x - 416.0) / 2.0, size.y - 204.0, 416.0, 28.0)
+		for faction: String in ROSTERS:
+			var roster: Array = ROSTERS[faction]
+			var groups: Array = roster.map(func(kind: String) -> Array: return [kind, 120 if kind.ends_with("rifle_infantry") else (2 if not Registry.collects(kind).is_empty() else 1)])
+			_rows_world(main, groups)
+			await _frames(runner)
+			var at: String = "%s at %s" % [faction, size]
+			var panel: Rect2 = _rect(main, "HUD/Hud/SelectionPanel")
+			var header: Label = _many(main, "Header") as Label
+			runner.check(header != null and header.text.ends_with(" · 2 idle collectors"), "KR2 %s: the header counts two idle collectors, got '%s'" % [at, header.text if header != null else "none"])
+			if header == null: break
+			runner.check(absf(panel.size.y - _rows_height(roster.size())) <= 1.0 and view.encloses(panel) and _many(main, "Footer").is_visible_in_tree(), "KR2 %s: %d kinds make %.0f high with the footer, inside the view, got %s" % [at, roster.size(), _rows_height(roster.size()), panel])
+			runner.check(not panel.intersects(refusal) and not panel.intersects(_rect(main, "HUD/Economy")), "KR2 %s: clear of the refusal line and the slab" % at)
+			_rows_contained(runner, main, at)
+		port.free()
+	overlays._end(saved)
+	return true
+
+func _port_scene(runner) -> Array:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var port: SubViewport = BaseScene.sized_port(runner, Vector2i(1280, 720), Vector2i(1280, 720))
+	var main = await overlays._scene(runner, Skirmish, port)
+	return [overlays, saved, port, main]
+
+static func _end_port(scene: Array) -> void:
+	scene[2].free()
+	scene[0]._end(scene[1])
+
+static func _move(port: Viewport, at: Vector2) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = at
+	motion.global_position = at
+	port.push_input(motion, true)
+
+static func _press(port: Viewport, at: Vector2, pressed: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	event.position = at
+	event.global_position = at
+	port.push_input(event, true)
+
+static func _row_click(port: Viewport, row: Control, shift: bool) -> void:
+	var at: Vector2 = row.get_global_rect().get_center()
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = pressed
+		event.shift_pressed = shift
+		event.position = at
+		event.global_position = at
+		port.push_input(event, true)
+
+func test_row_click_narrows_and_shift_removes(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _rows_world(main, [["usa_tank", 2], ["usa_rifle_infantry", 3], ["usa_rocket_infantry", 1]])
+	await _frames(runner)
+	var clicks: Array = []
+	if main.hud.has_signal("row_clicked"): main.hud.row_clicked.connect(func(kind: String, shift: bool) -> void: clicks.append([kind, shift]))
+	var row: Control = _row(main, "usa_rifle_infantry")
+	runner.check(row != null, "KR3 the rifle row shows")
+	if row == null:
+		_end_port(scene)
+		return true
+	_row_click(port, row, false)
+	await _frames(runner)
+	runner.check(clicks == [["usa_rifle_infantry", false]] and main.orders.selected_ids == ids.usa_rifle_infantry, "KR3 a click narrows to the riflemen, got %s %s" % [clicks, main.orders.selected_ids])
+	_pick(main, _all(ids), -1, -1)
+	_move(port, Vector2(900, 200))
+	await _frames(runner)
+	_row_click(port, _row(main, "usa_tank"), true)
+	await _frames(runner)
+	var rest: Array[int] = ids.usa_rifle_infantry + ids.usa_rocket_infantry
+	rest.sort()
+	runner.check(clicks.back() == ["usa_tank", true] and main.orders.selected_ids == rest, "KR3 a shift-click removes the tanks, got %s %s" % [clicks, main.orders.selected_ids])
+	_pick(main, _all(ids), -1, -1)
+	_move(port, Vector2(900, 200))
+	await _frames(runner)
+	var count: int = clicks.size()
+	var rifles: Control = _row(main, "usa_rifle_infantry")
+	_press(port, rifles.get_global_rect().get_center(), true)
+	_move(port, Vector2(900, 200))
+	_press(port, Vector2(900, 200), false)
+	await _frames(runner)
+	runner.check(clicks.size() == count and main.orders.selected_ids == _all(ids), "KR3 a press dragged off the row and released outside changes nothing, got %s %s" % [clicks, main.orders.selected_ids])
+	_press(port, rifles.get_global_rect().get_center(), true)
+	_press(port, _row(main, "usa_tank").get_global_rect().get_center(), false)
+	await _frames(runner)
+	runner.check(clicks.size() == count and main.orders.selected_ids == _all(ids), "KR3 a press on one row released on another changes nothing, got %s %s" % [clicks, main.orders.selected_ids])
+	_row_click(port, rifles, false)
+	runner.check(clicks.size() == count, "KR3 the click is emitted after the row's input, not inside it")
+	await _frames(runner)
+	runner.check(clicks.size() == count + 1, "KR3 the deferred click arrives on the next frame")
+	_end_port(scene)
+	return true
+
+func test_rows_hold_under_the_pointer(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _rows_world(main, [["usa_tank", 1], ["usa_rifle_infantry", 2]])
+	await _frames(runner)
+	var tank_row: Control = _row(main, "usa_tank")
+	runner.check(tank_row != null, "KR4 the tank row shows")
+	if tank_row == null:
+		_end_port(scene)
+		return true
+	_move(port, tank_row.get_global_rect().get_center())
+	await _frames(runner)
+	var sim = main.driver.pump.live()
+	sim.remove_object(ids.usa_tank[0])
+	BaseScene.publish(main)
+	await _frames(runner)
+	var held: Button = _row(main, "usa_tank")
+	var name_label: Label = held.get_node("Name") if held != null else null
+	runner.check(held != null and (held.get_node("Count") as Label).text == "0" and _colour(name_label) == _token("muted") and is_zero_approx((held.get_node("Track/Bar") as Control).anchor_right), "KR4 the last tank died under the pointer: its row holds at 0, muted, empty bar")
+	runner.check(_many(main, "Footer").is_visible_in_tree() and absf(_panel_height(main) - 98.0) <= 1.0, "KR7 a held 0-count row beside one live kind keeps the footer, got %.1f" % _panel_height(main))
+	if held == null:
+		_end_port(scene)
+		return true
+	var before: Array[int] = main.orders.selected_ids.duplicate()
+	_row_click(port, held, false)
+	await _frames(runner)
+	runner.check(main.orders.selected_ids == before, "KR4 a click on the held row changes nothing, got %s" % [main.orders.selected_ids])
+	_move(port, _row(main, "usa_rifle_infantry").get_global_rect().get_center())
+	await _frames(runner)
+	BaseScene.publish(main)
+	runner.check(_row(main, "usa_tank") != null, "KR4 moving to the next row keeps the hold")
+	sim.remove_object(ids.usa_rifle_infantry[1])
+	BaseScene.publish(main)
+	await _frames(runner)
+	runner.check(main.orders.selected_ids.size() == 1 and _row_names(main) == ["Row_usa_tank", "Row_usa_rifle_infantry"] and _many(main, "Header").is_visible_in_tree(), "KR4 one unit left: the rows hold, got %s" % [_row_names(main)])
+	_move(port, _many(main, "Header").get_global_rect().get_center())
+	await _frames(runner)
+	runner.check(_row(main, "usa_tank") != null, "KR4 the pointer on the header keeps the hold")
+	_move(port, Vector2(900, 200))
+	await _frames(runner)
+	runner.check(not _many(main, "Header").is_visible_in_tree() and _panel_texts(main).Name == "Rifleman" and absf(_panel_height(main) - 62.0) <= 1.0, "KR4 the pointer left through the header, no new view: the one-unit panel shows, got %s %.1f" % [_panel_texts(main), _panel_height(main)])
+	main.hud.reset()
+	runner.check(main.hud._last.is_empty() and main.hud._counts.is_empty(), "KR4 reset drops the held rows and the last inputs")
+	BaseScene.publish(main)
+	sim.remove_object(ids.usa_rifle_infantry[0])
+	BaseScene.publish(main)
+	await _frames(runner)
+	runner.check(not main.get_node("HUD/Hud/SelectionPanel").is_visible_in_tree(), "KR4 nothing left: the panel hides")
+	_end_port(scene)
+	return true
+
+func test_row_bar_is_the_health_sum(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _rows_world(main, [["usa_tank", 2], ["usa_rifle_infantry", 1]])
+	var view: Dictionary = main.driver.current().view
+	view.units.hp[view.units.index_of(ids.usa_tank[0])] = 240000
+	_pick(main, _all(ids), -1, -1)
+	var row: Button = _row(main, "usa_tank")
+	runner.check(row != null, "KR5 the tank row shows")
+	if row != null:
+		var bar: ColorRect = row.get_node("Track/Bar")
+		runner.check(is_equal_approx(bar.anchor_right, 0.75) and bar.color == View.health_color(0.75) and (row.get_node("Count") as Label).text == "2", "KR5 one tank at half: the bar is 720 / 960 in the health colour, got %.3f %s" % [bar.anchor_right, bar.color])
+	main.free()
+	return true
+
+func test_row_hover(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	_rows_world(main, [["usa_tank", 1], ["usa_rifle_infantry", 2]])
+	await _frames(runner)
+	var hovered: Button = _row(main, "usa_tank")
+	var other: Button = _row(main, "usa_rifle_infantry")
+	runner.check(hovered != null and other != null, "KR6 both rows show")
+	if hovered == null or other == null:
+		_end_port(scene)
+		return true
+	_move(port, hovered.get_global_rect().get_center())
+	await _frames(runner)
+	var look: StyleBoxFlat = hovered.get_theme_stylebox("hover") as StyleBoxFlat
+	var plain: StyleBoxFlat = other.get_theme_stylebox("normal") as StyleBoxFlat
+	runner.check(hovered.is_hovered() and hovered.get_draw_mode() == BaseButton.DRAW_HOVER and look != null and look.bg_color == _token("panel2") and look.border_color == _token("muted") and look.border_width_left == 1 and look.border_width_top == 1 and look.border_width_right == 1 and look.border_width_bottom == 1, "KR6 the hovered row: panel2 with a 1 px muted inset")
+	runner.check(hovered.mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND, "KR6 the hovered row shows the pointing hand")
+	var inner: Rect2 = hovered.get_global_rect().grow(-1.0)
+	var track: Rect2 = (hovered.get_node("Track") as Control).get_global_rect()
+	runner.check(inner.encloses(track) and is_equal_approx(track.size.y, 3.0) and is_equal_approx(track.end.y, inner.end.y), "KR6 the hovered row's track sits inside the 1 px frame, got %s in %s" % [track, inner])
+	var flush: Rect2 = (other.get_node("Track") as Control).get_global_rect()
+	runner.check(is_equal_approx(flush.size.x, 186.0) and is_equal_approx(flush.end.y, other.get_global_rect().end.y), "KR6 an unhovered row's track runs the full width at the bottom, got %s" % flush)
+	runner.check(not other.is_hovered() and other.get_draw_mode() == BaseButton.DRAW_NORMAL and plain != null and plain.bg_color == _token("btn") and plain.border_width_left == 0 and plain.border_width_top == 0, "KR6 an unhovered row has no inset")
+	_end_port(scene)
+	return true
+
+func test_rows_footer(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	_rows_world(main, [["usa_tank", 1], ["usa_rifle_infantry", 2]])
+	await _frames(runner)
+	var footer: Label = _many(main, "Footer") as Label
+	runner.check(footer != null and footer.is_visible_in_tree() and footer.text == RULE and footer.theme_type_variation == &"HudHint" and absf(_panel_height(main) - 98.0) <= 1.0, "KR7 two kinds: the footer reads the rule, 98 high, got %.1f" % _panel_height(main))
+	if footer == null:
+		main.free()
+		return true
+	var six: Array = ROSTERS.china.map(func(kind: String) -> Array: return [kind, 1])
+	_rows_world(main, six)
+	await _frames(runner)
+	runner.check(footer.is_visible_in_tree() and absf(_panel_height(main) - 158.0) <= 1.0, "KR7 six kinds: 158 high, got %.1f" % _panel_height(main))
+	_rows_world(main, [["usa_tank", 3]])
+	await _frames(runner)
+	runner.check(not footer.is_visible_in_tree() and absf(_panel_height(main) - 76.0) <= 1.0, "KR7 one kind: no footer, 76 high, got %.1f" % _panel_height(main))
+	main.free()
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], pair[1])
+		var at_size = await overlays._scene(runner, Skirmish, port)
+		_rows_world(at_size, [["usa_tank", 1], ["usa_rifle_infantry", 2]])
+		await _frames(runner)
+		var content: Rect2 = _rect(at_size, "HUD/Hud/SelectionPanel").grow_individual(-16.0, -12.0, -16.0, -12.0)
+		var rect: Rect2 = _many(at_size, "Footer").get_global_rect()
+		runner.check(content.grow(0.5).encloses(rect) and rect.size.x <= 376.0, "KR7 at %s the footer lies inside the panel content %s, got %s" % [pair[1], content, rect])
+		port.free()
+	overlays._end(saved)
+	return true
+
+# Synthetic unit rows for the label table; `collection` only when a phase is given.
+static func _unit_row(id: int, owner: int, kind: String, phase: String = "", collecting: bool = false, status: String = "idle", extra: Dictionary = {}) -> Dictionary:
+	var unit := {"id": id, "owner": owner, "kind": kind, "hp": 300000, "max_hp": 300000, "position": [4.5, 4.5], "status": status}
+	if not phase.is_empty(): unit.collection = {"enabled": collecting, "phase": phase, "target_id": null}
+	return unit.merged(extra)
+
+# Shows `units` on a bare Hud and returns the one-unit panel's right label, "" when hidden.
+func _label_on(runner, hud: Hud, units: Array, ids: Array, sources: Array = [], buildings: Array = [], faction: String = "usa", inspected: int = -1) -> String:
+	var view: Dictionary = _strip_view(0, 0, 0, faction)
+	view.units = ViewRows.from_units(units)
+	view.sources = sources
+	view.buildings = buildings
+	var selection: Dictionary = _armed("")
+	selection.ids.assign(ids)
+	selection.inspected_id = inspected
+	hud.update_hud(view, selection, 1, 1)
+	await runner.process_frame
+	var right: Label = hud.get_node("SelectionPanel").find_child("RightLabel", true, false)
+	return right.text if right.is_visible_in_tree() else ""
+
+const LABELS: Array = [["flying_source", "TO PILE"], ["lead_source", "TO PILE"], ["waiting_source", "WAITING AT PILE"], ["loading", "LOADING"], ["flying_depot", "TO SUPPLY DEPOT"], ["lead_depot", "TO SUPPLY DEPOT"], ["waiting_depot", "WAITING AT SUPPLY DEPOT"], ["unloading", "UNLOADING"]]
+
+func test_collector_label_table(runner) -> bool:
+	var hud: Hud = _bare_hud(runner)
+	var full: Array = [{"id": 30, "boxes": 4}]
+	var empty: Array = [{"id": 30, "boxes": 0}]
+	for row: Array in LABELS:
+		var got: String = await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", row[0], true)], [5], full)
+		runner.check(got == row[1], "CL1 collecting, %s reads %s, got '%s'" % [row[0], row[1], got])
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "idle", true)], [5], full) == "WAITING AT PILE", "CL1 collecting and idle while a pile holds boxes (busy-dock retry) reads WAITING AT PILE")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "idle", true)], [5], empty) == "IDLE", "CL1 collecting and idle with no pile holding boxes reads IDLE")
+	for status: String in ["moving", "path_pending"]:
+		runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "frc_builder", "idle", false, status)], [5], full) == "MOVING", "CL1 not collecting, %s reads MOVING" % status)
+	var site: Array = [{"id": 9, "owner": 1, "kind": "frc_barracks", "completed": false, "builder_id": 5}]
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "frc_builder", "idle")], [5], full, site) == "BUILDING", "CL1 the named builder of a site reads BUILDING")
+	var done: Array = [{"id": 9, "owner": 1, "kind": "frc_barracks", "completed": true, "builder_id": 5}]
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "frc_builder", "idle")], [5], full, done) == "IDLE", "CL1 a finished building's builder reads IDLE")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "frc_builder", "idle", false, "contained", {"container_id": 7})], [5], full) == "", "CL1 a collector inside a transport has no label")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "idle")], [5], full) == "IDLE", "CL1 not collecting, nothing else reads IDLE")
+	await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "loading", true)], [5])
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "seeking", true)], [5]) == "LOADING", "CL1 seeking holds the previous label")
+	await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "seeking", true)], [])
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "seeking", true)], [5]) == "", "CL1 seeking after a deselect and reselect has no label")
+	await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "loading", true)], [5])
+	hud.reset()
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "seeking", true)], [5]) == "", "CL1 seeking after a restart has no label")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "frc_builder", "flying_depot", true)], [5], full, [], "frc") == "TO SUPPLY CACHE", "CL1 FRC reads TO SUPPLY CACHE")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "frc_builder", "waiting_depot", true)], [5], full, [], "frc") == "WAITING AT SUPPLY CACHE", "CL1 FRC reads WAITING AT SUPPLY CACHE")
+	var enemy: String = await _label_on(runner, hud, [_unit_row(5, 2, "china_collector", "loading", true)], [], full, [], "usa", 5)
+	var enemy_view: Dictionary = _strip_view(0, 0, 0)
+	enemy_view.units = ViewRows.from_units([_unit_row(5, 2, "china_collector", "idle")])
+	var enemy_ids: Array[int] = [5]
+	runner.check(HudModel.collector_labels(enemy_view, enemy_ids, 1, "usa", {}).is_empty(), "CL1 collector_labels skips another owner's collector")
+	runner.check(enemy == "" and (hud.get_node("SelectionPanel").find_child("Name", true, false) as Label).text == "Supply Truck", "CL1 an inspected enemy collector shows no label, got '%s'" % enemy)
+	hud.get_parent().free()
+	return true
+
+func _header_on(runner, hud: Hud, units: Array) -> String:
+	var ids: Array = units.map(func(unit: Dictionary) -> int: return unit.id)
+	await _label_on(runner, hud, units, ids)
+	var header: Label = hud.get_node_or_null("SelectionPanel/Box/Many/Header")
+	return header.text if header != null and header.is_visible_in_tree() else ""
+
+func test_idle_header(runner) -> bool:
+	var hud: Hud = _bare_hud(runner)
+	var tanks: Array = range(4).map(func(n: int) -> Dictionary: return _unit_row(10 + n, 1, "china_tank"))
+	var working: Array = range(4).map(func(n: int) -> Dictionary: return _unit_row(20 + n, 1, "china_collector", "loading", true))
+	var idle: Array = [_unit_row(30, 1, "china_collector", "idle"), _unit_row(31, 1, "china_collector", "idle")]
+	var one: String = await _header_on(runner, hud, tanks + working + idle.slice(0, 1))
+	runner.check(one == "9 selected · 2 kinds · 1 idle collector", "CL3 one idle collector, got '%s'" % one)
+	var two: String = await _header_on(runner, hud, tanks + working.slice(0, 3) + idle)
+	runner.check(two == "9 selected · 2 kinds · 2 idle collectors", "CL3 two idle collectors, got '%s'" % two)
+	var none: String = await _header_on(runner, hud, tanks + working)
+	runner.check(none == "8 selected · 2 kinds", "CL3 none idle: no suffix, got '%s'" % none)
+	hud.get_parent().free()
+	return true
+
+static func _health_sum(view: Dictionary, ids: Array) -> float:
+	var hp: int = 0
+	var most: int = 0
+	for id: int in ids:
+		hp += view.units.hp[view.units.index_of(id)]
+		most += view.units.max_hp[view.units.index_of(id)]
+	return float(hp) / most
+
+static func _panel_nodes(main) -> Array:
+	return _controls(main.get_node("HUD/Hud/SelectionPanel")).map(func(node: Control) -> int: return node.get_instance_id())
+
+func test_rebuild_count(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _rows_world(main, [["usa_tank", 3], ["usa_rifle_infantry", 2]])
+	var sim = main.driver.pump.live()
+	var enemies: Array[int] = [sim.spawn(2, Vector2(12.5, 12.5), "usa_tank"), sim.spawn(2, Vector2(13.5, 12.5), "usa_tank")]
+	main._show(sim.view_state())
+	var rebuilds: int = main.hud.rebuilds
+	var nodes: Array = _panel_nodes(main)
+	var start: int = sim.view_state().units.hp[sim.view_state().units.index_of(ids.usa_tank[0])]
+	for tick in 60:
+		sim.step()
+		main._show(sim.view_state())
+	var view: Dictionary = sim.view_state()
+	var hurt: bool = false
+	for id: int in _all(ids): hurt = hurt or view.units.hp[view.units.index_of(id)] < view.units.max_hp[view.units.index_of(id)]
+	runner.check(hurt and _all(ids).all(func(id: int) -> bool: return view.units.index_of(id) != -1) and enemies.size() == 2 and start > 0, "HN3 fixture: the fight hurt a selected unit and killed none")
+	runner.check(main.hud.rebuilds == rebuilds and _panel_nodes(main) == nodes, "HN3 60 fight ticks with one selection rebuild nothing, got %d after %d" % [main.hud.rebuilds, rebuilds])
+	var tank_row: Button = _row(main, "usa_tank")
+	if tank_row != null:
+		runner.check(is_equal_approx((tank_row.get_node("Track/Bar") as Control).anchor_right, _health_sum(view, ids.usa_tank)), "HN3 the tank bar follows the fight")
+	view.units.hp[view.units.index_of(ids.usa_tank[1])] = 100000
+	view.players[0].credits += 500
+	main._show(view)
+	var bar: float = (tank_row.get_node("Track/Bar") as Control).anchor_right if tank_row != null else -1.0
+	runner.check(main.hud.rebuilds == rebuilds and _panel_nodes(main) == nodes and (main.get_node("HUD/Hud/TopStrip").find_child("Credits", true, false) as Label).text == str(view.players[0].credits) and is_equal_approx(bar, _health_sum(view, ids.usa_tank)), "HN3 credit and health changes patch the strip and the bar in place, no rebuild, got %d %.3f" % [main.hud.rebuilds, bar])
+	for change: Array in [ids.usa_tank, ids.usa_rifle_infantry, _all(ids)]:
+		var before: int = main.hud.rebuilds
+		_pick(main, change, -1, -1)
+		runner.check(main.hud.rebuilds == before + 1, "HN3 a selection change adds one rebuild, got %d after %d" % [main.hud.rebuilds, before])
 	main.free()
 	return true

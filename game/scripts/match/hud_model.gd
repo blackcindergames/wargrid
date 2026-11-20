@@ -147,8 +147,9 @@ const PAUSED := "PAUSED · NO BUILDER"
 const OFFLINE := "OFFLINE · LOW POWER"
 const RALLY := "Right-click ground: rally point"
 
-# The selection panel's one object: the building, else one unit, else the inspected object; several units are the kind rows' (Task 11).
-static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: String) -> Dictionary:
+# The selection panel's one object: the building, else one unit, else the inspected object; several units are the kind rows'.
+# `labels` holds the selected own collectors' labels (`collector_labels`).
+static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: String, labels: Dictionary = {}) -> Dictionary:
 	var id: int = selection.building_id
 	if id == -1 and selection.ids.size() == 1: id = selection.ids[0]
 	elif id == -1 and selection.ids.is_empty(): id = selection.inspected_id
@@ -158,7 +159,9 @@ static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: S
 		var credits: int = object.boxes * box_value(faction)
 		return {"name": "Supply Pile", "owner": -1, "key": "CREDITS LEFT", "value": str(credits) if credits > 0 else "Empty"}
 	var row: Dictionary = {"name": Registry.kind(object.kind).display_name, "owner": object.owner, "health": "%d / %d" % [ceili(object.hp / 1000.0), ceili(object.max_hp / 1000.0)], "fraction": float(object.hp) / object.max_hp}
-	if not object.has("completed"): return row
+	if not object.has("completed"):
+		if not labels.get(object.id, "").is_empty(): row.right = labels[object.id]
+		return row
 	var own: bool = object.owner == seat
 	if not object.completed:
 		var paused: bool = own and object.builder_id == null
@@ -183,3 +186,67 @@ static func box_value(faction: String) -> int:
 	for kind: String in kinds:
 		if not Registry.collects(kind).is_empty(): return Registry.collects(kind).box_value
 	return 0
+
+const ROWS_RULE := "Click a kind: select only that kind · Shift-click: deselect it"
+const IDLE := "IDLE"
+const WAITING_AT_PILE := "WAITING AT PILE"
+# Every phase the simulation publishes; seeking and idle are decided in `collector_label`.
+const PHASE_LABELS := {"flying_source": "TO PILE", "lead_source": "TO PILE", "waiting_source": WAITING_AT_PILE, "loading": "LOADING", "flying_depot": "TO <DROP-OFF>", "lead_depot": "TO <DROP-OFF>", "waiting_depot": "WAITING AT <DROP-OFF>", "unloading": "UNLOADING", "seeking": "", "idle": ""}
+static var _drop_offs: Dictionary = {}
+
+# Combat vehicles and aircraft, infantry, collectors, builders; then the kind id (the HUD v5 picture's order).
+static func roster_key(kind: String) -> String:
+	var row: Dictionary = Registry.kind(kind)
+	var group: int = 0
+	if not row.get("builds", []).is_empty(): group = 3
+	elif not Registry.collects(kind).is_empty(): group = 2
+	elif row.get("class", "") == "infantry": group = 1
+	return "%d %s" % [group, kind]
+
+# Kind to [count, sum of hp, sum of max_hp] over the selected units.
+static func kind_rows(view: Dictionary, ids: Array[int]) -> Dictionary:
+	var rows: Dictionary = {}
+	var units: RefCounted = view.units
+	for id: int in ids:
+		var i: int = units.index_of(id)
+		if i == -1: continue
+		var kind: String = units.kinds[units.kind[i]]
+		if not rows.has(kind): rows[kind] = [0, 0, 0]
+		var row: Array = rows[kind]
+		row[0] += 1
+		row[1] += units.hp[i]
+		row[2] += units.max_hp[i]
+	return rows
+
+# The uppercased name of the viewer faction's building that receives supply.
+static func drop_off(faction: String) -> String:
+	if not _drop_offs.has(faction):
+		var row: Dictionary = Registry.faction(faction)
+		var kinds: Array = Registry.kind(row.get("start_unit", "")).get("builds", []) + [row.get("start_building", "")]
+		_drop_offs[faction] = ""
+		for kind: String in kinds:
+			if Registry.kind(kind).get("receives_supply", false): _drop_offs[faction] = Registry.kind(kind).display_name.to_upper()
+	return _drop_offs[faction]
+
+# The selected own collectors' labels; `previous` carries the last label through a `seeking` tick.
+static func collector_labels(view: Dictionary, ids: Array[int], seat: int, faction: String, previous: Dictionary) -> Dictionary:
+	var labels: Dictionary = {}
+	var units: RefCounted = view.units
+	for id: int in ids:
+		var i: int = units.index_of(id)
+		if i != -1 and units.owner[i] == seat and not Registry.collects(units.kinds[units.kind[i]]).is_empty(): labels[id] = collector_label(view, i, previous.get(id, ""), faction)
+	return labels
+
+static func collector_label(view: Dictionary, i: int, previous: String, faction: String) -> String:
+	var units: RefCounted = view.units
+	if units.flags[i] & ViewRows.COLLECTING:
+		var phase: String = units.phases[units.phase[i]]
+		if phase == "seeking": return previous
+		# Idle while collecting is a retry at a busy dock while a pile still holds boxes.
+		if phase == "idle": return WAITING_AT_PILE if view.get("sources", []).any(func(source: Dictionary) -> bool: return source.boxes > 0) else IDLE
+		return PHASE_LABELS[phase].replace("<DROP-OFF>", drop_off(faction))
+	var status: int = units.status[i]
+	if status != ViewRows.NONE and ViewRows.STATUSES[status] in ["moving", "path_pending"]: return "MOVING"
+	for site: Dictionary in view.buildings:
+		if not site.completed and site.get("builder_id") == units.id[i]: return "BUILDING"
+	return "" if units.flags[i] & ViewRows.CONTAINED else IDLE

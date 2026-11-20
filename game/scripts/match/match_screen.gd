@@ -84,6 +84,7 @@ func _ready() -> void:
 	hud.attack_move_pressed.connect(orders.arm_attack_move)
 	hud.stop_pressed.connect(orders.stop_selected)
 	hud.unload_pressed.connect(orders._unload_selected)
+	hud.row_clicked.connect(_select_kind)
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()
@@ -390,6 +391,14 @@ func _take_results(state: Dictionary) -> void:
 				hud.refusal = result.error
 			_last_result_tick = result.tick
 			_last_result_sequence = result.sequence
+
+# A kind row narrows the selection to its kind; with Shift it drops that kind.
+func _select_kind(kind: String, shift: bool) -> void:
+	var units: RefCounted = shown_state.units
+	orders.selected_ids.assign(orders.selected_ids.filter(func(id: int) -> bool:
+		var i: int = units.index_of(id)
+		return (i != -1 and units.kinds[units.kind[i]] == kind) != shift))
+	_reshow()
 
 func _hud_selection(state: Dictionary) -> Dictionary:
 	var building: Dictionary = _building(state, orders.selected_building_id)

@@ -578,12 +578,6 @@ func _waiting_counts() -> Dictionary:
 		if (_rows.flags[i] & ViewRows.WAITING_SOURCE) != 0: counts[_rows.queue[i]] = counts.get(_rows.queue[i], 0) + 1
 	return counts
 
-static func line_position(units: RefCounted, i: int) -> int:
-	var place: int = 1
-	for other: int in range(i):
-		if units.queue[other] == units.queue[i]: place += 1
-	return place
-
 func _draw_cues() -> void:
 	for line: Dictionary in battery_target_lines(): draw_line(line.from, line.to, Color("ff3b30"), 1.5)
 
