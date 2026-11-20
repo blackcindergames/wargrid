@@ -256,6 +256,8 @@ type Catalog struct {
 	Index  []IndexEntry
 	Rounds map[string]*Round
 	Errors []string
+	// Warnings are for the author only (log, `open`): on the page a blind-letter warning would name the candidate.
+	Warnings []string
 }
 
 func (s *Step) IsChoice() bool { return slices.Contains(choiceKinds, s.Kind) }
@@ -354,6 +356,7 @@ func LoadCatalog(dir string) *Catalog {
 	}
 	c.checkPrefixes()
 	slices.Sort(c.Errors)
+	slices.Sort(c.Warnings)
 	return c
 }
 
@@ -437,6 +440,20 @@ func (c *Catalog) validateRound(r *Round) {
 	}
 	for i := range r.Loaded {
 		c.validateStep(r, &r.Loaded[i])
+	}
+	c.checkBlindLetters(r)
+}
+
+// checkBlindLetters warns when every blind step has Claude's pick at one letter: the owner would learn where the candidate sits.
+func (c *Catalog) checkBlindLetters(r *Round) {
+	var recs []string
+	for i := range r.Loaded {
+		if s := &r.Loaded[i]; s.Blind && s.Rec != "" {
+			recs = append(recs, s.Rec)
+		}
+	}
+	if len(recs) > 1 && len(slices.Compact(recs)) == 1 {
+		c.Warnings = append(c.Warnings, fmt.Sprintf("%s: every blind step has Claude's pick at %s; vary the letter", r.ID, recs[0]))
 	}
 }
 

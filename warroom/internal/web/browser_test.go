@@ -3,6 +3,7 @@
 package web
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -132,19 +133,6 @@ func TestLeavingWithUnsentPicksAsksFirst(t *testing.T) {
 	eventually(t, "the leave warning", asked.Load)
 }
 
-func TestTabbingOntoAQuietPickShowsItsTile(t *testing.T) {
-	s := newSite(t, siteOpts{})
-	s.open(t, "/r/demo/1?view=side")
-	s.wantClass(t, s.loc(".tile[data-opt=A]"), "sel")
-	failIf(t, s.loc(".tile[data-opt=B] > .pick").Focus())
-	s.wantClass(t, s.loc(".tile[data-opt=B]"), "sel")
-	s.press(t, "Enter")
-	s.wantURL(t, "/r/demo/2")
-	if got := s.entries(t)["demo:pictures"]; got.Pick == nil || *got.Pick != "B" {
-		t.Errorf("entry %+v, want B", got)
-	}
-}
-
 func TestNoteSurvivesLeavingTheStepAfterAFailure(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/1")
@@ -264,7 +252,7 @@ func TestReadOnlyLinkHasNoPickControls(t *testing.T) {
 		}
 	})
 	s.open(t, "/r/demo/1")
-	s.wantContains(t, s.loc("body"), "Read only")
+	s.wantText(t, s.loc("#readonly"), "View only: you can look around, nothing you do is recorded")
 	for _, sel := range []string{`[name=pick]`, `#answer`, `[data-key=enter]`, `#note`} {
 		s.wantCount(t, s.loc(sel), 0)
 	}
@@ -277,6 +265,10 @@ func TestReadOnlyLinkHasNoPickControls(t *testing.T) {
 	}
 	s.open(t, "/r/demo/1?t="+roundToken("demo"))
 	s.wantVisible(t, s.loc(`[data-key=enter]`))
+	// Step 10 is not blind and opens on Claude's option with show=C, so only the read-only rule keeps the tab off.
+	s.open(t, "/r/demo/10?show=C")
+	s.wantVisible(t, s.loc(".cpline .tag.cp"))
+	s.wantCount(t, s.loc(".ptab"), 0)
 }
 
 func TestHeldEnterRecordsOnePick(t *testing.T) {
@@ -336,7 +328,7 @@ func TestLetterEOnlyNamesItsDigit(t *testing.T) {
 
 func TestMeasureFromAForeignOriginOrANonFrameIsIgnored(t *testing.T) {
 	s := newSite(t, siteOpts{})
-	s.open(t, "/r/demo/10")
+	s.open(t, "/r/demo/10?show=C")
 	s.wantVisible(t, s.loc(`[data-measure=C] table`))
 	// localhost is another origin than 127.0.0.1, so this frame is on the page but foreign.
 	eval(t, s.Page, `(() => {
@@ -363,7 +355,7 @@ func TestMeasureFromAForeignOriginOrANonFrameIsIgnored(t *testing.T) {
 
 func TestMeasureRowsAreText(t *testing.T) {
 	s := newSite(t, siteOpts{})
-	s.open(t, "/r/demo/10")
+	s.open(t, "/r/demo/10?show=C")
 	s.wantVisible(t, s.loc(`[data-measure=C] table`))
 	eval(t, s.frameEnding(t, "outline=1"), `parent.postMessage({type: 'wr:measure', rows: [['k', '<b>x</b>']]}, location.origin)`)
 	s.wantText(t, s.loc(`[data-measure=C] td`), "<b>x</b>")
@@ -449,5 +441,387 @@ func TestTuneElementLeavesNoOrphanPaneWhenReconnected(t *testing.T) {
 	})()`)
 	if fmt.Sprint(got) != "[1 0 0]" {
 		t.Errorf("panes (connected, in document after removal, left in the element) = %v, want [1 0 0]", got)
+	}
+}
+
+// Token values as Firefox reports them: --text, --muted, --amber, --quiet, --well, --slab, --sel.
+const (
+	textRGB  = "rgb(223, 231, 236)"
+	mutedRGB = "rgb(147, 165, 176)"
+	amberRGB = "rgb(247, 200, 113)"
+	wellRGB  = "rgb(12, 20, 26)"
+	slabRGB  = "rgb(18, 28, 36)"
+	selRGB   = "rgb(96, 229, 237)"
+	quietRGB = "rgb(22, 33, 42)"
+)
+
+// cssOf reads one computed property of the first element matching sel, or of its pseudo element.
+func cssOf(t *testing.T, e interface {
+	Evaluate(string, ...any) (any, error)
+}, sel, pseudo, prop string,
+) any {
+	t.Helper()
+	return eval(t, e, fmt.Sprintf(`getComputedStyle(document.querySelector(%q), %q).getPropertyValue(%q)`, sel, pseudo, prop))
+}
+
+func TestNonBlindStepOpensOnANotOnClaudesPick(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10")
+	s.wantClass(t, s.loc(`.flipbar [data-show=A]`), "on")
+	s.wantVisible(t, s.loc(`.ostage[data-opt=A]`))
+	s.wantContains(t, s.loc(".cpline"), "Claude's pick")
+	s.press(t, "b")
+	s.press(t, "Enter")
+	s.wantURL(t, "/r/demo/summary")
+	s.open(t, "/r/demo/10")
+	s.wantClass(t, s.loc(`.flipbar [data-show=B]`), "on")
+}
+
+// badgeCheck lists what is wrong with every Claude's-pick tag matching sel: colours, case, contrast.
+const badgeCheck = `([sel, fg, bg]) => {
+	const lum = (c) => {
+		const v = c.match(/\d+/g).slice(0, 3).map((x) => { x /= 255; return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; });
+		return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+	};
+	const tags = [...document.querySelectorAll(sel)];
+	if (!tags.length) return 'none found';
+	return tags.map((e) => {
+		const c = getComputedStyle(e);
+		const [hi, lo] = [lum(c.backgroundColor), lum(c.color)].sort((a, b) => b - a);
+		const ratio = (hi + 0.05) / (lo + 0.05);
+		const bad = [];
+		if (c.backgroundColor !== bg || c.color !== fg) bad.push('colours ' + c.color + ' on ' + c.backgroundColor);
+		if (c.textTransform !== 'none' || e.textContent !== "Claude's pick") bad.push('text ' + c.textTransform + ' ' + e.textContent);
+		if (ratio < 7) bad.push('contrast ' + ratio.toFixed(1));
+		return bad.join(', ');
+	}).filter(Boolean).join('; ');
+}`
+
+func TestClaudesPickIsALightBadge(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10?show=C")
+	for _, sel := range []string{".cpline .tag.cp", ".act .ptab"} {
+		got, err := s.Page.Evaluate(badgeCheck, []any{sel, wellRGB, textRGB})
+		failIf(t, err)
+		if got != "" {
+			t.Errorf("%s: %v", sel, got)
+		}
+	}
+	s.wantCount(t, s.loc(".pic .tag"), 0)
+	// One at a time the Pick's tab says it, so the option header does not repeat it; side by side the tile header does.
+	s.wantCount(t, s.loc(".odetail .tag.cp"), 0)
+	s.open(t, "/r/demo/10?view=side")
+	s.wantCount(t, s.loc(".tile .ohd .tag.cp"), 1)
+	s.wantVisible(t, s.loc(".tile[data-opt=C] .ohd .tag.cp"))
+	got, err := s.Page.Evaluate(badgeCheck, []any{".tile .ohd .tag.cp", wellRGB, textRGB})
+	failIf(t, err)
+	if got != "" {
+		t.Errorf("tile header tag: %v", got)
+	}
+}
+
+// tabCheck says what is wrong with the Pick's tab: it must sit on the button's top edge, left-aligned, clear of the picture.
+const tabCheck = `(picture) => {
+	const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+	const tab = r('.act .ptab'), pick = r('.act .pick'), pic = r(picture);
+	const ok = Math.abs(tab.bottom - pick.top) < 1 && Math.abs(tab.left - pick.left) < 1 && tab.top > pic.bottom && pick.height === 44;
+	return ok ? '' : 'tab ' + tab.left + ',' + tab.top + ' to ' + tab.bottom + '; pick ' + pick.left + ',' + pick.top + ' h ' + pick.height + '; picture ends ' + pic.bottom;
+}`
+
+func TestPickButtonWearsClaudesTabWhileItsOptionIsShown(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10")
+	tab := s.loc(".act .ptab")
+	s.wantHidden(t, tab)
+	s.press(t, "c")
+	s.wantVisible(t, tab)
+	if got, err := s.Page.Evaluate(tabCheck, ".stage"); err != nil || got != "" {
+		t.Errorf("one view: %v %v", got, err)
+	}
+	s.press(t, "5")
+	s.wantHidden(t, tab)
+	s.open(t, "/r/demo/10?view=side")
+	s.wantHidden(t, tab)
+	s.click(t, ".tile[data-opt=C] .ohd")
+	s.wantVisible(t, tab)
+	if got, err := s.Page.Evaluate(tabCheck, ".tiles"); err != nil || got != "" {
+		t.Errorf("side view: %v %v", got, err)
+	}
+	s.open(t, "/r/demo/10?show=C")
+	s.wantVisible(t, tab)
+}
+
+func TestBlindStepHasNoBadgeBeforeThePick(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	for _, path := range []string{"/r/demo/1", "/r/demo/1?view=side", "/r/demo/1?show=B"} {
+		s.open(t, path)
+		s.wantVisible(t, s.loc("#main"))
+		s.wantCount(t, s.loc(".tag.cp"), 0)
+	}
+}
+
+func TestPhoneSideAndNeutralLiveInTheControlsSheet(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	// The demo step with the most stage controls that has a neutral answer.
+	phone := s.phoneFrame(t, "/r/demo-controls/1", ".phone [data-act=sheet]")
+	bar := phone.Locator(".phone .row")
+	s.wantCount(t, bar.Locator("[value=neither]"), 0)
+	s.wantHidden(t, phone.Locator(".nexplain"))
+	s.wantCount(t, bar.Locator("[data-keepview]"), 0)
+	s.wantText(t, phone.Locator("[data-act=sheet]"), "Controls")
+	failIf(t, phone.Locator("[data-act=sheet]").Click())
+	s.wantText(t, phone.Locator(".sheet > .ctlbar:first-child > a"), "Side")
+	neutral := phone.Locator(".sheet [value=neither]")
+	failIf(t, expect.Locator(neutral).ToBeInViewport(playwright.LocatorAssertionsToBeInViewportOptions{Ratio: playwright.Float(1)}))
+	edge, err := neutral.Evaluate(`(e) => getComputedStyle(e).borderTopColor`, nil)
+	failIf(t, err)
+	if edge != mutedRGB {
+		t.Errorf("sheet neutral edge %v, want --muted %s", edge, mutedRGB)
+	}
+	failIf(t, neutral.Click())
+	eventually(t, "the neutral answer recorded", func() bool {
+		got := s.entries(t)["demo-controls:hud-window"]
+		return got.Pick != nil && *got.Pick == "neither"
+	})
+}
+
+func TestTuneSliderKnobIsTextOnAMutedTrack(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/9")
+	s.wantVisible(t, s.loc("wr-tune .tp-sldv_k").First())
+	knob := cssOf(t, s.Page, "wr-tune .tp-sldv_k", "::after", "background-color")
+	track := cssOf(t, s.Page, "wr-tune .tp-sldv_t", "::before", "background-color")
+	if knob != textRGB || track != mutedRGB {
+		t.Errorf("knob %v, track %v; want --text %s on --muted %s", knob, track, textRGB, mutedRGB)
+	}
+}
+
+func TestTuneSliderShowsKeyboardFocus(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/9")
+	failIf(t, s.loc("wr-tune .tp-sldtxtv_t input").First().Click())
+	s.press(t, "Shift+Tab")
+	got := eval(t, s.Page, `(() => {
+		const e = document.activeElement, c = getComputedStyle(e);
+		return [e.className, c.outlineStyle, c.outlineWidth, c.outlineColor].join(' | ');
+	})()`)
+	if want := "tp-sldv_t | solid | 2px | " + textRGB; got != want {
+		t.Errorf("focused slider (class | outline) = %v, want %v", got, want)
+	}
+}
+
+func TestSideViewClickingATileSelectsItAndThePickFollows(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10?view=side")
+	s.wantCount(t, s.loc(".tile .pick"), 0)
+	pick := s.loc(".tiles + .act .pick")
+	s.wantText(t, pick.Locator(".pl"), "A")
+	// The tile's padding, away from its header and picture.
+	failIf(t, s.loc(".tile[data-opt=B]").Click(playwright.LocatorClickOptions{Position: &playwright.Position{X: 5, Y: 5}}))
+	s.wantClass(t, s.loc(".tile[data-opt=B]"), "sel")
+	s.wantText(t, pick.Locator(".pl"), "B")
+	s.press(t, "c")
+	s.wantText(t, pick.Locator(".pl"), "C")
+	s.press(t, "b")
+	s.press(t, "Enter")
+	s.wantURL(t, "/r/demo/summary")
+	if got := s.entries(t)["demo:many"]; got.Pick == nil || *got.Pick != "B" {
+		t.Errorf("entry %+v, want B", got)
+	}
+}
+
+func TestSideViewSharedPickRowIsCentredUnderTheGrid(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10?view=side")
+	row := s.loc(".tiles + .act")
+	s.wantVisible(t, row.Locator(".pick + .nwrap [value=neither]"))
+	got := eval(t, s.Page, `(() => {
+		const r = (e) => e.getBoundingClientRect();
+		const grid = r(document.querySelector('.tiles'));
+		const [pick, neutral] = [...document.querySelectorAll('.tiles + .act .btn')].map(r);
+		const off = Math.abs((pick.left - grid.left) - (grid.right - neutral.right));
+		const mids = [pick, neutral].map((x) => x.top + x.height / 2);
+		return off < 1 && Math.abs(mids[0] - mids[1]) < 1 ? '' : 'off centre by ' + off + ', middles ' + mids.join(' and ');
+	})()`)
+	if got != "" {
+		t.Errorf("pick row not one centred row under the grid: %v", got)
+	}
+	colours := fmt.Sprint(cssOf(t, s.Page, ".tiles + .act .pick", "", "background-color"), " ",
+		cssOf(t, s.Page, ".tiles + .act [value=neither]", "", "background-color"), " ",
+		cssOf(t, s.Page, ".tiles + .act [value=neither]", "", "border-top-color"))
+	if want := amberRGB + " " + quietRGB + " " + mutedRGB; colours != want {
+		t.Errorf("Pick fill, neutral fill, neutral edge = %s, want %s", colours, want)
+	}
+}
+
+// gaps measures, in px, picture to pick row, the neutral hint's row to the Large row, and the Pick button's height.
+func (s *site) gaps(t *testing.T, picture string) string {
+	t.Helper()
+	return fmt.Sprint(eval(t, s.Page, `((picture) => {
+		const r = (sel) => document.querySelector(sel)?.getBoundingClientRect();
+		const act = r(picture + ' + .act'), tools = r('.tools'), above = r('.act .nexplain') ?? act, pick = document.querySelector('.act .pick');
+		return [Math.round(act.top - r(picture).bottom), tools ? Math.round(tools.top - above.bottom) : '-', pick ? pick.offsetHeight : '-'].join(' ');
+	})('`+picture+`')`))
+}
+
+func TestPickRowsSit16PxFromThePictureAndTheLargeRow(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10")
+	if got := s.gaps(t, ".stage"); got != "16 16 44" {
+		t.Errorf("one view: stage to pick row, hint to Large row, Pick height = %s, want 16 16 44", got)
+	}
+	s.open(t, "/r/demo/10?view=side")
+	if got := s.gaps(t, ".tiles"); got != "16 - 44" {
+		t.Errorf("side view: tiles to pick row, -, Pick height = %s, want 16 - 44", got)
+	}
+}
+
+func TestNeutralAnswerIsExplainedUnderItsRow(t *testing.T) {
+	const hint = "Records no winner. Say why in the note."
+	s := newSite(t, siteOpts{secret: testSecret})
+	tok := "t=" + roundToken("demo")
+	for _, path := range []string{"/r/demo/10?" + tok, "/r/demo/10?view=side&" + tok, "/r/demo/9?" + tok} {
+		s.open(t, path)
+		s.wantText(t, s.loc(".act .nexplain"), hint)
+		if c := cssOf(t, s.Page, ".nexplain", "", "color"); c != mutedRGB {
+			t.Errorf("%s: hint colour %v, want --muted %s", path, c, mutedRGB)
+		}
+		place := eval(t, s.Page, `(() => {
+			const r = (e) => e.getBoundingClientRect();
+			const hint = r(document.querySelector('.act .nexplain')), btn = r(document.querySelector('.act [value=neither]'));
+			const hits = [...document.querySelectorAll('.btn')].map(r).filter((b) => b.width && b.left < hint.right && hint.left < b.right && b.top < hint.bottom && hint.top < b.bottom);
+			return Math.abs(hint.left - btn.left) < 1 && hint.top >= btn.bottom && hits.length === 0
+				? '' : 'hint ' + hint.left + ',' + hint.top + '; neutral ' + btn.left + ' to ' + btn.bottom + '; overlaps ' + hits.length + ' buttons';
+		})()`)
+		if place != "" {
+			t.Errorf("%s: hint not directly under the neutral answer: %v", path, place)
+		}
+	}
+	s.open(t, "/r/demo/2?"+tok)
+	s.wantVisible(t, s.loc(".act .pick"))
+	s.wantCount(t, s.loc(".nexplain"), 0)
+	s.open(t, "/r/demo/10")
+	s.wantVisible(t, s.loc("#readonly"))
+	s.wantCount(t, s.loc(".nexplain"), 0)
+}
+
+func TestTunePaneRowsHaveOneEvenGapAndTheRingStaysInItsRow(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/9")
+	s.wantVisible(t, s.loc("wr-tune .tp-rotv").First())
+	gaps := eval(t, s.Page, `(() => {
+		const rows = [...document.querySelectorAll('wr-tune .tp-rotv_c > *')].map((e) => e.getBoundingClientRect());
+		return [...new Set(rows.slice(1).map((r, i) => Math.round(r.top - rows[i].bottom)))].join(' ');
+	})()`)
+	if gaps != "8" {
+		t.Errorf("gaps between tune rows %v, want one gap of 8 px", gaps)
+	}
+	failIf(t, s.loc("wr-tune .tp-sldtxtv_t input").First().Click())
+	s.press(t, "Shift+Tab")
+	ring := eval(t, s.Page, `(() => {
+		const t = document.activeElement, c = getComputedStyle(t);
+		const grow = parseFloat(c.outlineWidth) + parseFloat(c.outlineOffset), r = t.getBoundingClientRect();
+		const ring = { l: r.left - grow, t: r.top - grow, r: r.right + grow, b: r.bottom + grow };
+		const row = t.closest('.tp-lblv').getBoundingClientRect(), box = t.closest('.tp-lblv').querySelector('.tp-sldtxtv_t').getBoundingClientRect();
+		const inRow = ring.t >= row.top && ring.b <= row.bottom && ring.l >= row.left;
+		const clear = ring.r < box.left;
+		return inRow && clear ? '' : 'ring ' + JSON.stringify(ring) + ', row ' + row.top + ' to ' + row.bottom + ', value box from ' + box.left;
+	})()`)
+	if ring != "" {
+		t.Errorf("focus ring leaves its row or touches the value box: %v", ring)
+	}
+}
+
+func TestSideViewPictureClickSelectsFirstThenOpensLarge(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10?view=side")
+	s.click(t, ".tile[data-opt=B] .pic")
+	s.wantClass(t, s.loc(".tile[data-opt=B]"), "sel")
+	s.settle(t)
+	s.wantHidden(t, s.loc("#over"))
+	s.click(t, ".tile[data-opt=B] .pic")
+	s.wantVisible(t, s.loc("#over .ov"))
+}
+
+func TestSideViewSelectionShowsInTheLetterAndThePick(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10?view=side")
+	pick := s.loc(".tiles + .act .pick")
+	s.wantText(t, pick.Locator(".pn"), "· No outline")
+	if c := cssOf(t, s.Page, ".tile.sel .let", "", "color"); c != selRGB {
+		t.Errorf("selected letter %v, want --sel %s", c, selRGB)
+	}
+	if c := cssOf(t, s.Page, ".tile:not(.sel) .let", "", "color"); c == selRGB {
+		t.Error("an unselected letter is --sel too")
+	}
+	s.click(t, ".tile[data-opt=B] .ohd")
+	s.wantText(t, pick.Locator(".pl"), "B")
+	s.wantText(t, pick.Locator(".pn"), "· Half a pixel")
+	eval(t, s.Page, `document.querySelector('.tile[data-opt=C] .ohd h2').textContent = 'A very long option name '.repeat(20)`)
+	s.press(t, "c")
+	s.wantText(t, pick.Locator(".pl"), "C")
+	fits := eval(t, s.Page, `(() => {
+		const b = document.querySelector('.tiles + .act .pick'), n = b.querySelector('.pn'), row = document.querySelector('.tiles + .act');
+		return b.offsetHeight === 44 && b.getBoundingClientRect().right <= row.getBoundingClientRect().right && n.scrollWidth > n.clientWidth
+			? '' : 'height ' + b.offsetHeight + ', right ' + b.getBoundingClientRect().right + ' of ' + row.getBoundingClientRect().right + ', name ' + n.scrollWidth + ' in ' + n.clientWidth;
+	})()`)
+	if fits != "" {
+		t.Errorf("a long name wraps or overflows the Pick: %v", fits)
+	}
+}
+
+func TestSideViewPlayOnAnotherTileSelectsIt(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/4")
+	s.wantClass(t, s.loc(".tile[data-opt=A]"), "sel")
+	s.click(t, ".tile[data-opt=B] [data-play]")
+	s.wantClass(t, s.loc(".tile[data-opt=B]"), "sel")
+	s.wantText(t, s.loc(".tiles + .act .pick .pl"), "B")
+}
+
+// recordClip makes a short VP8 WebM in the browser, since the repository tracks no video.
+func recordClip(t *testing.T, s *site) []byte {
+	t.Helper()
+	s.open(t, "/")
+	b64 := eval(t, s.Page, `(async () => {
+		const c = Object.assign(document.createElement('canvas'), { width: 64, height: 36 });
+		const g = c.getContext('2d');
+		const rec = new MediaRecorder(c.captureStream(25), { mimeType: 'video/webm;codecs=vp8' });
+		const parts = [];
+		rec.ondataavailable = (e) => parts.push(e.data);
+		const done = new Promise((r) => { rec.onstop = r; });
+		rec.start();
+		for (let i = 0; i < 30; i++) {
+			g.fillStyle = 'hsl(' + i * 12 + ' 80% 50%)';
+			g.fillRect(0, 0, 64, 36);
+			await new Promise((r) => setTimeout(r, 40));
+		}
+		rec.stop();
+		await done;
+		let out = '';
+		for (const x of new Uint8Array(await new Blob(parts).arrayBuffer())) out += String.fromCharCode(x);
+		return btoa(out);
+	})()`)
+	data, err := base64.StdEncoding.DecodeString(fmt.Sprint(b64))
+	failIf(t, err)
+	return data
+}
+
+func TestSideViewClickOnAnotherTilesClipSelectsItAndKeepsItPlaying(t *testing.T) {
+	clip := string(recordClip(t, newSite(t, siteOpts{})))
+	root := writeTree(t, map[string]string{"docs/a.webm": clip, "docs/b.webm": clip})
+	dir := writeTree(t, map[string]string{
+		"index.yaml":   "- {id: v, title: Clips}\n",
+		"v/round.yaml": "title: Clips\nsteps: [clips]\n",
+		"v/clips.yaml": "kind: pictures\nquestion: Q\nview: side\noptions:\n  A: {name: One, video: docs/a.webm}\n  B: {name: Two, video: docs/b.webm}\n",
+	})
+	s := newSite(t, siteOpts{rounds: dir, root: root})
+	s.open(t, "/r/v/1")
+	s.wantClass(t, s.loc(".tile[data-opt=A]"), "sel")
+	s.click(t, ".tile[data-opt=B] video")
+	s.wantClass(t, s.loc(".tile[data-opt=B]"), "sel")
+	s.settle(t)
+	if paused := eval(t, s.Page, `document.querySelector('.tile[data-opt=B] video').paused`); paused != false {
+		t.Errorf("B's clip paused = %v after the click that selected it, want playing", paused)
 	}
 }

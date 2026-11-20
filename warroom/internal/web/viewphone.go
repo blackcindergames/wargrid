@@ -7,7 +7,7 @@ import (
 	"wargrid/warroom/internal/stage"
 )
 
-// PhoneView is the bar at the bottom of a phone-sized page: two rows of buttons and the View sheet.
+// PhoneView is the bar at the bottom of a phone-sized page: two rows of buttons and the Controls sheet.
 type PhoneView struct {
 	Prev, Next          string
 	Flip                []FlipButton
@@ -37,7 +37,7 @@ type LegendView struct {
 }
 
 var legendKeys = []LegendRow{
-	{"A B C D or 1 to 8", "show that option (E to H: 5 to 8 only; side by side: highlight it)", false},
+	{"A B C D or 1 to 8", "show that option (E to H: 5 to 8 only; side by side: select it, or click its tile)", false},
 	{"Enter", "pick the shown option, record it and go on", false},
 	{"W", "one at a time / side by side", false},
 	{"← → (or [ ], Backspace)", "previous / next step without picking", false},
@@ -46,7 +46,7 @@ var legendKeys = []LegendRow{
 	{"Space", "play / stop the shown option's sound (nothing plays on its own)", false},
 	{"Esc", "close the large view or this list", false},
 	{"?", "this list", false},
-	{"", "Keys do nothing while you type in a note. On a phone: the buttons at the bottom (View: the stage controls, Whole screen and this list); tap the picture to zoom, swipe it to flip.", false},
+	{"", "Keys do nothing while you type in a note. On a phone: the buttons at the bottom (Controls: side by side, the neutral answer, the stage controls, Whole screen and this list); tap the picture to zoom (side by side, the first tap on another tile selects it), swipe it to flip.", false},
 }
 
 const maxLegendValues = 4

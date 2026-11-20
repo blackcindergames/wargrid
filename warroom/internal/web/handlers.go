@@ -120,6 +120,9 @@ func (s *Server) catalog() *rounds.Catalog {
 	for _, e := range c.Errors {
 		slog.Warn("rounds", "error", e)
 	}
+	for _, w := range c.Warnings {
+		slog.Warn("rounds", "warning", w)
+	}
 	return c
 }
 

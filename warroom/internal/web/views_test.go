@@ -270,10 +270,13 @@ func TestControlsStayPageWideInLinksAndRenderHashes(t *testing.T) {
 	}
 }
 
-func TestSideBySideRendersTilesWithPickButtons(t *testing.T) {
+func TestSideBySideRendersTilesWithOneSharedPick(t *testing.T) {
 	a := newShippedApp(t)
 	body := a.get("/r/demo/3").Body.String()
-	mustContain(t, "text step is side by side", body, `class="tiles"`, `name="pick" value="A"`, `name="pick" value="B"`, "Numbers read at a glance")
+	mustContain(t, "text step is side by side", body, `class="tiles"`, `name="pick" value="A" data-shown`, "Numbers read at a glance")
+	if strings.Contains(body, `name="pick" value="B"`) {
+		t.Error("side by side still has a Pick per tile")
+	}
 	flip := a.get("/r/demo/3?view=flip").Body.String()
 	if strings.Contains(flip, `class="tiles"`) || !strings.Contains(flip, `class="stage"`) {
 		t.Error("view=flip overrides the step's side default")
@@ -463,7 +466,7 @@ func TestOptionsPastDFlipWithDigitsOnlyAndSideBySideWraps(t *testing.T) {
 			t.Errorf("an option took the control key %s", taken)
 		}
 	}
-	mustContain(t, "side", a.get("/r/m/1?view=side").Body.String(), "--n:4", `value="F" class="pick btn"`)
+	mustContain(t, "side", a.get("/r/m/1?view=side").Body.String(), "--n:4", `data-opt="F"`)
 	mustContain(t, "phone", a.get("/r/m/1?phone=1").Body.String(), `class="row opts"`)
 	if strings.Contains(a.get("/r/m/2?phone=1").Body.String(), `class="row opts"`) {
 		t.Error("two options got their own phone row")

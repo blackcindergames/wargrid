@@ -10,7 +10,7 @@ look: >-
   scale 2; 1920 x 1080 is 1280 x 720 at 1.5.
 rec: A
 recWhy: demo only; any answer is fine.
-neutral: No difference
+neutral: Can't tell them apart
 crop: {x: 640, y: 300, w: 640, h: 420}
 controls:
   size: true

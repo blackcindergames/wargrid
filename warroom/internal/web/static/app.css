@@ -69,6 +69,8 @@
     height: 40px; padding-inline: 16px; font-size: 14px; font-weight: 600; text-align: center; white-space: nowrap;
     color: var(--text); background: var(--quiet); border: 1px solid var(--quiet); cursor: pointer; user-select: none;
     &:hover { background: var(--btn); border-color: var(--btn); }
+    /* A visible edge: --quiet on --well alone is 1.1:1. */
+    &.neutral { border-color: var(--muted); }
     &:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
     &.sm { height: 32px; padding-inline: 12px; font-size: 12px; }
     &.lg { height: 48px; padding-inline: 20px; font-size: 18px; }
@@ -82,7 +84,8 @@
   .tag {
     display: inline-flex; align-items: center; height: 20px; padding-inline: 6px; flex: none; white-space: nowrap;
     font-size: var(--label); font-weight: 700; vertical-align: middle; border: 1px solid transparent;
-    &.cp { color: var(--soft); border-color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-weight: 800; }
+    /* Light badge: --well on --text is 14.8:1, and no amber, which marks where to act. */
+    &.cp { color: var(--well); background: var(--text); }
     &.got { color: var(--on-sel); background: var(--sel); }
     &.rv { color: var(--text); border-color: currentColor; }
   }
@@ -168,12 +171,25 @@
     span { color: var(--muted); font-weight: 700; }
     select { height: 32px; padding-inline: 8px; font-size: 12px; background: var(--well); border: 1px solid var(--line); }
   }
+  .act, .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .act {
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    .pick { font-size: 16px; padding-inline: 22px; height: 44px; }
+    .pick { font-size: 16px; padding-inline: 22px; height: 44px; max-width: 100%; position: relative; }
+    /* Above the button in the 16 px gap, 14 px tall so it never reaches the picture. */
+    .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
+    .pn { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; &:empty { display: none; } }
+    &:empty { display: none; }
+  }
+  .tools {
     .scale { margin-left: auto; }
     .scale:empty + [data-act=large] { margin-left: auto; }
   }
+  :is(.v-flip, .v-side) :is(.stage, .tiles) + .act, .v-flip .act + .tools { margin-top: 16px; }
+  /* Out of flow so the buttons stay centred on one line. The row keeps room for it: the neutral button ends 2 px inside the 44 px row, then 4 px, the 16 px line and the 16 px gap. */
+  .nwrap { position: relative; display: inline-flex; }
+  .nexplain { position: absolute; left: 0; top: calc(100% + 4px); white-space: nowrap; color: var(--muted); font-size: var(--row); line-height: 16px; }
+  .act:has(.nexplain) { margin-bottom: 34px; }
+  .k-tune .act:has(.nexplain) { margin-bottom: 18px; }
+  .tiles + .act { justify-content: center; }
   .scale { color: var(--muted); font-size: var(--row); &:empty { display: none; } }
 
   .ohd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -188,13 +204,11 @@
   .tiles { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 14px; align-items: stretch; }
   .tile {
     background: var(--slab); border: 2px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 10px;
-    .ohd { cursor: pointer; min-height: 2.6em; flex-wrap: nowrap; }
+    .ohd { min-height: 2.6em; flex-wrap: nowrap; }
     .ohd h2 { flex: 1 1 0; }
     &.done { border-color: var(--amber); }
-    &.sel { border-color: var(--sel); }
-    > .pick { margin-top: auto; align-self: flex-start; }
-    /* Amber only on the pick Enter presses; the muted edge (6.8:1) keeps the others visible as buttons. */
-    &:not(.sel) > .pick { color: var(--text); background: var(--quiet); border-color: var(--muted); font-weight: 600; &:hover { background: var(--btn); } }
+    &.sel { border-color: var(--sel); .let { color: var(--sel); } }
+    cursor: pointer;
     details summary { color: var(--muted); font-size: var(--row); }
     &.reft { border-style: dashed; }
     &.reft h2 { font-size: 15px; color: var(--soft); }
@@ -291,6 +305,7 @@
     --tp-blade-border-radius: 0;
     --tp-base-font-family: var(--font);
     --tp-container-unit-size: 34px;
+    --tp-container-unit-spacing: 8px;
     --tp-blade-value-width: 55%;
     --tp-button-background-color: var(--line);
     --tp-button-background-color-hover: var(--panel2);
@@ -306,7 +321,11 @@
     --tp-label-foreground-color: var(--soft);
     .tp-rotv { font-size: 14px; }
     /* Knob only: the public --tp-button-* also fill the list, and Tweakpane resolves them once on .tp-rotv. */
-    .tp-sldv_k { --btn-bg: var(--muted); --btn-bg-h: var(--text); --btn-bg-f: var(--text); --btn-bg-a: var(--text); }
+    .tp-sldv_k { --btn-bg: var(--text); --btn-bg-h: var(--text); --btn-bg-f: var(--text); --btn-bg-a: var(--text); }
+    /* Track only: the public --tp-input-* also fill every text field. */
+    .tp-sldv_t { --in-bg: var(--muted); }
+    /* The knob looks the same focused, so arrow keys need a ring, inside the track so it never touches a neighbour; !important beats Tweakpane's unlayered outline: none. */
+    .tp-sldv_t:focus-visible { outline: 2px solid var(--text) !important; outline-offset: -2px; }
   }
 
   /* In flight: a page change dims the old page and shows a bar under the chips; note saves do not. */
@@ -415,7 +434,9 @@
       .verdict { order: 6; } .thumbs { order: 7; } .info { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
     }
     .head h1 { font-size: 20px; }
-    .flipbar, .stepnav, .inav, .stagecol > .ctlbar, .act .btn { display: none; }
+    .flipbar, .stepnav, .inav, .stagecol > .ctlbar, :is(.act, .tools) .btn { display: none; }
+    :is(.act, .tools) { margin-top: 0; margin-bottom: 0; }
+    .nexplain { display: none; }
     .tiles { grid-template-columns: minmax(0, 1fr); }
     :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: 100%; }
     .ref .pic { max-width: none; }

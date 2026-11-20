@@ -234,8 +234,8 @@ function scaleNote() {
 
 const flipLetters = () => $$('.flipbar [data-show]').map((b) => b.dataset.show);
 
-/** @param {string} letter */
-function showOption(letter) {
+/** @param {string} letter @param {HTMLVideoElement} [keep] a clip that just started in this option, left playing */
+function showOption(letter, keep) {
 	if (!flipLetters().includes(letter)) return;
 	$$('.ostage[data-opt], .odetail[data-opt]').forEach((el) => {
 		el.hidden = el.dataset.opt !== letter;
@@ -251,7 +251,14 @@ function showOption(letter) {
 	$$('.pl').forEach((el) => {
 		el.textContent = letter;
 	});
-	stopMedia();
+	const name = $(`.ohd[data-pick="${letter}"] h2, .odetail[data-opt="${letter}"] h2`)?.textContent ?? '';
+	$$('.ptab').forEach((el) => {
+		el.hidden = el.dataset.cp !== letter;
+	});
+	$$('.pn').forEach((el) => {
+		el.textContent = name && name !== letter ? `· ${name}` : '';
+	});
+	stopMedia(keep);
 	setParam('show', letter);
 	scaleNote();
 }
@@ -456,11 +463,12 @@ let audio = null;
 /** @type {string | undefined} */
 let playing;
 
-function stopMedia() {
+/** @param {HTMLVideoElement} [keep] */
+function stopMedia(keep) {
 	audio?.pause();
 	playing = undefined;
 	document.querySelectorAll('video').forEach((v) => {
-		v.pause();
+		if (v !== keep) v.pause();
 	});
 	$$('[data-play] span').forEach((el) => {
 		el.textContent = 'Play';
@@ -504,7 +512,7 @@ function playShown() {
 
 const sheetOpen = () => 'sheet' in rootEl.dataset;
 
-// With the View sheet open, keep the stage between the header and the bar, so a control's change shows.
+// With the Controls sheet open, keep the stage between the header and the bar, so a control's change shows.
 function keepStage() {
 	const st = $('.stagecol .stage, .stagecol .tiles');
 	if (!sheetOpen() || !isPhone() || !st) return;
@@ -593,7 +601,15 @@ const CLICKS = [
 			showOption(el.dataset.pick ?? '');
 		},
 	],
-	['[data-play]', togglePlay],
+	[
+		'[data-play]',
+		(el) => {
+			// Enter picks the selected tile, so the one whose sound plays must be it.
+			const opt = closestOf(el, '.tile[data-opt]:not(.sel)')?.dataset.opt;
+			if (opt) showOption(opt);
+			togglePlay(el);
+		},
+	],
 	[
 		'[data-act]',
 		(el) => {
@@ -621,6 +637,12 @@ function onClick(e) {
 			return;
 		}
 	}
+	const tile = closestOf(e.target, '.tile[data-opt]:not(.sel)')?.dataset.opt;
+	// A clip selects its tile from its play event (below), so this click must not pause it.
+	if (tile && !closestOf(e.target, 'video')) {
+		showOption(tile);
+		return;
+	}
 	const pic = closestOf(e.target, '.pic[data-large]');
 	if (pic && !closestOf(e.target, NOT_A_PICTURE_CLICK)) openLarge(pic);
 }
@@ -645,7 +667,7 @@ const keyName = (e) => (e.shiftKey && /^[a-z]$/i.test(e.key) ? `shift+${e.key.to
 /** @param {string} k */
 function clickKey(k) {
 	const key = KEY_ALIAS[k] ?? k;
-	const el = $$('[data-key]').find((x) => x.dataset.key === key) ?? (key === 'enter' ? $('.tile.sel > .pick') : null);
+	const el = $$('[data-key]').find((x) => x.dataset.key === key);
 	if (!el) return false;
 	el.click();
 	return true;
@@ -790,11 +812,16 @@ document.addEventListener('htmx:config:request', onConfigRequest);
 document.addEventListener('htmx:after:swap', onSwap);
 document.addEventListener('click', onClick);
 document.addEventListener('keydown', onKey);
-// Enter presses the focused Pick button, so its tile must be the amber one.
-document.addEventListener('focusin', (e) => {
-	const opt = closestOf(closestOf(e.target, '.tile:not(.sel) > .pick'), '.tile')?.dataset.opt;
-	if (opt) showOption(opt);
-});
+// Firefox's video controls keep the click, so a clip started in another tile selects that tile here.
+document.addEventListener(
+	'play',
+	(e) => {
+		const clip = e.target instanceof HTMLVideoElement ? e.target : undefined;
+		const opt = closestOf(clip ?? null, '.tile[data-opt]:not(.sel)')?.dataset.opt;
+		if (opt) showOption(opt, clip);
+	},
+	true,
+);
 document.addEventListener('touchstart', onTouch, { passive: true });
 document.addEventListener('touchend', onTouch);
 addEventListener('resize', () => {

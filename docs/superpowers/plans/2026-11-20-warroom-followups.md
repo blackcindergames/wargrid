@@ -10,7 +10,7 @@ Sessions (user, 2026-11-20: split into several sessions with a handoff between t
 | 2 | C, D | D committed: features the next packages need, each guarded by a browser test | test list with the change that turns each red |
 | 3 | G, E | quality gate green locally and in a pushed-branch CI run only if the owner approves the push; prototype deleted; reviews and fix round done | review findings left open, CI status |
 | 4 | F, owner questionnaire (Task H written) | docs point at War Room; owner's questionnaire answered | Task H, next first command |
-| 4b | H, owner look | answers built and reviewed; branch ready to merge | merge steps (squash, tag tip, AGENTS.md) |
+| 4b | H, I, owner look | answers built and reviewed; branch ready to merge | merge steps (squash, tag tip, AGENTS.md) |
 | 5 | Godot lab step: 15-minute checks, brainstorm, spec | spec approved | spec path, check results |
 | 6+ | lab step implementation | per its plan | per its plan |
 
@@ -118,7 +118,18 @@ Owner (user, 2026-11-20), each with a browser test proven red, then the player-e
 - Tune slider: knob `--text`, track `--muted`.
 - Side view: Neither / No difference centred under the grid; the selected tile's Pick stays amber (Enter target), the others neutral.
 - Blind steps keep authored order (shuffle deferred); the loader warns when every blind step of a round puts the candidate at the same letter.
+- Owner look (user, 2026-11-20), replacing the quiet tag above: Claude's pick is a light tag (`--well` on `--text`) in the question line and on side-view tile headers, plus a "Claude's pick" tab on the Pick button's top edge while Claude's option is shown; no badge on pictures. Side view has no per-tile Pick: a click selects a tile, a click on the selected tile's picture opens Large, one shared "Pick <letter> · <name>" with the neutral answer sits centred under the grid. 16 px from the picture to the Pick row and on to the Large row. The hint "Records no winner. Say why in the note." sits under the neutral button (desktop, also on tune); the demo's neutral label reads "Can't tell them apart". Tune rows 8 px apart, focus ring inside the track.
 - Later list (not built): a richer final page (decided, agent calls and deviations lists, a gallery at the chosen settings). Dropped: two-axis answers, audio extras, in-page checks, per-tile 100 %, `picks=` preview, light theme.
+
+## Task I: remaining package docs point at War Room (after H, before merge)
+
+Owner (user, 2026-11-20): planned package docs that still name labelled A/B pages for a future owner look say War Room round instead; P2.3a1 is excluded (its run is between gate B and gate C, done soon), finished specs and plans stay history. One-line edits linking `warroom/README.md`:
+- `docs/packages.md`: the P11 row ("Layout candidates on labelled A/B pages first") and the M9 lobby mention in the look-and-feel answers line ("a Play-page lobby candidate on the A/B pages").
+- `docs/blueprint.md` M9 section: "layout candidates are chosen by the same labelled A/B pages in Firefox as the sound spike used".
+- `docs/superpowers/specs/2026-11-16-online-teams-design.md` P11 line: "layout candidates on labelled A/B pages".
+Checks: `rg -n -i 'a/b page' docs/packages.md docs/blueprint.md docs/superpowers/specs/2026-11-16-online-teams-design.md` shows only history, `python3 tools/roadmap.py --check` and `sh tools/check_public.sh` exit 0.
+
+Done 2026-11-20: four lines edited; the remaining `A/B page` hits are M7.5 history (blueprint 656, 658, 666); roadmap check and check_public exit 0.
 
 ## Not in this batch
 

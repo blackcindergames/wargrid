@@ -123,6 +123,11 @@ func printOpen(w io.Writer, cfg web.Config) error {
 			return err
 		}
 	}
+	for _, msg := range c.Warnings {
+		if _, err := fmt.Fprintln(w, "warning:", msg); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

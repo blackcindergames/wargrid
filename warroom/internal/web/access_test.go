@@ -104,7 +104,7 @@ func TestUnsetSecretLeavesWritesAndReadBackOpen(t *testing.T) {
 	wantStatus(t, a.get("/history.jsonl"), http.StatusOK)
 	body := a.get("/r/r/1").Body.String()
 	mustContain(t, "open page", body, `name="pick"`)
-	if strings.Contains(body, "Read only") {
+	if strings.Contains(body, `id="readonly"`) {
 		t.Error("an open page says read only")
 	}
 }
@@ -223,7 +223,7 @@ func TestReadOnlyPagesOfEveryKindOfferNoPickOrNote(t *testing.T) {
 		}
 		mustContain(t, c.name, body, `data-key="arrowright"`)
 		rec := a.get("/r/" + c.round + "/" + c.step + sep(c.step) + "t=" + roundToken(c.round))
-		if strings.Contains(rec.Body.String(), "Read only") {
+		if strings.Contains(rec.Body.String(), `id="readonly"`) {
 			t.Errorf("%s: a valid token still shows the notice", c.name)
 		}
 	}
@@ -241,7 +241,7 @@ func TestReadOnlyWordingShowsTheDraftNotTheRecordedText(t *testing.T) {
 
 func TestRoundListHasNoNoticeAndTheSummaryDoes(t *testing.T) {
 	a := newApp(t).locked()
-	if strings.Contains(a.get("/").Body.String(), "Read only") {
+	if strings.Contains(a.get("/").Body.String(), `id="readonly"`) {
 		t.Error("the round list shows the notice")
 	}
 	mustContain(t, "summary", a.get("/r/r/summary").Body.String(), `id="readonly"`)

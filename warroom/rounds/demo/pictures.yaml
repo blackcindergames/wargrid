@@ -8,7 +8,7 @@ look: 'Where to look: the ground under the bottom-right slab.'
 rec: B
 recWhy: demo only; any answer is fine.
 blind: true
-neutral: No difference
+neutral: Can't tell them apart
 options:
   A:
     name: Backdrop one

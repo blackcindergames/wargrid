@@ -7,7 +7,7 @@ why: >-
   width, shown under the stage.
 rec: C
 recWhy: demo only; any answer is fine.
-neutral: No difference
+neutral: Can't tell them apart
 render:
   page: static/demo/scene.html
   w: 1280

@@ -74,6 +74,7 @@ func runWithBrowser(m *testing.M) int {
 
 type siteOpts struct {
 	rounds string // rounds directory; empty means the shipped rounds
+	root   string // repository root for /docs/, /game/, /web/; empty means this repository
 	secret string
 }
 
@@ -92,7 +93,7 @@ func newSite(t *testing.T, o siteOpts) *site {
 		o.rounds = "../../rounds"
 	}
 	picks := filepath.Join(t.TempDir(), "picks.json")
-	srv := NewServer(&Config{Root: "../../..", Picks: picks, Rounds: o.rounds, Secret: o.secret})
+	srv := NewServer(&Config{Root: cmp.Or(o.root, "../../.."), Picks: picks, Rounds: o.rounds, Secret: o.secret})
 	s := &site{testApp: &testApp{Server: srv, picks: picks}}
 	routes := srv.Routes()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

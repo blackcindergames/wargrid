@@ -5,7 +5,7 @@ why: >-
   An audio step: nothing plays on its own; Play or Space plays the shown option, and it stops when you
   flip or leave.
 rec: A
-neutral: No difference
+neutral: Can't tell them apart
 view: side
 options:
   A:

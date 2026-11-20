@@ -14,7 +14,7 @@ const (
 	tokenBytes = 16
 	readOnly   = "Read only: this link cannot record."
 	// Answers are the owner's: a page without the round's token shows the questions only.
-	readOnlyNotice = "Read only: answers are hidden and nothing is recorded. Open the round's write link to answer."
+	readOnlyNotice = "View only: you can look around, nothing you do is recorded"
 )
 
 // A var so a test can prove every check goes through it.

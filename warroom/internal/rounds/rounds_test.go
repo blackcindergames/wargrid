@@ -276,3 +276,21 @@ func TestAcceptsPick(t *testing.T) {
 		}
 	}
 }
+
+func TestLoaderWarnsWhenEveryBlindStepHasTheSameLetter(t *testing.T) {
+	blind := func(rec string) string { return strings.Replace(pictureStep, "rec: A", "rec: "+rec+"\nblind: true", 1) }
+	const warning = "every blind step has Claude's pick at"
+	same := oneRound(t, "steps: [a, b, open]\n", map[string]string{"a": blind("B"), "b": blind("B"), "open": pictureStep})
+	if want := []string{"r: " + warning + " B; vary the letter"}; !slices.Equal(same.Warnings, want) || len(same.Errors) > 0 {
+		t.Errorf("same letter: warnings %q, errors %q; want warnings %q, no errors", same.Warnings, same.Errors, want)
+	}
+	for name, steps := range map[string]map[string]string{
+		"varied":     {"a": blind("A"), "b": blind("B"), "open": pictureStep},
+		"one blind":  {"a": blind("B"), "b": pictureStep, "open": pictureStep},
+		"none blind": {"a": pictureStep, "b": pictureStep, "open": pictureStep},
+	} {
+		if c := oneRound(t, "steps: [a, b, open]\n", steps); len(c.Warnings) > 0 {
+			t.Errorf("%s: %q", name, c.Warnings)
+		}
+	}
+}

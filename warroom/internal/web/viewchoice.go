@@ -67,6 +67,10 @@ type CtlBarView struct {
 type ActView struct {
 	Confirm bool
 	Shown   string
+	// ShownName is "· name" for the Pick button, empty when the option has no name.
+	ShownName string
+	// Cp is Claude's pick when the page may show it; the Pick button wears a tab while that option is shown.
+	Cp      string
 	Neutral string
 }
 
@@ -102,12 +106,20 @@ type FormView struct{ Action, Step string }
 func (b *builder) shown(s *rounds.Step) string {
 	letters := s.OptionLetters()
 	pick := b.pickOf(b.round, s.Key)
-	for _, c := range []string{b.q.Show, pick, b.rec(s)} {
+	// Not Claude's pick: opening on it would anchor the owner on it.
+	for _, c := range []string{b.q.Show, pick} {
 		if slices.Contains(letters, c) {
 			return c
 		}
 	}
 	return letters[0]
+}
+
+func pickName(name string) string {
+	if name == "" {
+		return ""
+	}
+	return "· " + strings.ReplaceAll(name, "`", "")
 }
 
 func (b *builder) side(s *rounds.Step) bool {
@@ -125,7 +137,7 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 	v.Note = b.noteBox(s, hint)
 	v.Opts = b.options(st, s, v.Shown)
 	v.Ctl = b.ctlBar(n, st, s)
-	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, Neutral: s.Neutral}
+	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, ShownName: pickName(s.Options[v.Shown].Name), Cp: b.rec(s), Neutral: s.Neutral}
 	v.Flip = b.flipBar(s, v.Shown)
 	v.ViewHref, v.ViewLabel = b.viewToggle(n, s, v.Shown)
 	if s.Kind == "lab" {

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"wargrid/warroom/internal/rounds"
 	"wargrid/warroom/internal/store"
 )
 
@@ -506,4 +507,24 @@ func TestMissingRootIs404NotAPanic(t *testing.T) {
 	a := newApp(t)
 	a.cfg.Root = filepath.Join(t.TempDir(), "gone")
 	wantStatus(t, a.get("/docs/a.txt"), 404)
+}
+
+// blindRounds: two blind steps with Claude's pick at B, which the loader warns about.
+var blindRounds = map[string]string{
+	"index.yaml":   "- {id: b, title: Blind}\n",
+	"b/round.yaml": "title: Blind\nsteps: [one, two]\n",
+	"b/one.yaml":   "kind: pictures\nquestion: One?\nblind: true\nrec: B\noptions:\n  A: {name: a, img: a.png}\n  B: {name: b, img: b.png}\n",
+	"b/two.yaml":   "kind: pictures\nquestion: Two?\nblind: true\nrec: B\noptions:\n  A: {name: a, img: a.png}\n  B: {name: b, img: b.png}\n",
+}
+
+func TestBlindLetterWarningNeverReachesThePage(t *testing.T) {
+	a := newAppWith(t, blindRounds)
+	if w := rounds.LoadCatalog(a.cfg.Rounds).Warnings; len(w) == 0 {
+		t.Fatal("the fixture gives no warning, so the page check proves nothing")
+	}
+	for _, path := range []string{"/", "/r/b/1", "/r/b/2", "/r/b/summary"} {
+		if body := a.get(path).Body.String(); strings.Contains(body, `id="err"`) || strings.Contains(body, "every blind step") {
+			t.Errorf("%s shows the warning", path)
+		}
+	}
 }

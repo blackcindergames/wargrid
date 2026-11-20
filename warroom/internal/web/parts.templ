@@ -344,6 +344,16 @@ templ CtlBar(bar CtlBarView, sheet bool) {
 
 templ PhoneBar(p PhoneView) {
 	<div class="sheet">
+		if p.ViewHref != "" || p.Neutral != "" {
+			<div class="ctlbar">
+				if p.ViewHref != "" {
+					<a class="btn sm" href={ templ.SafeURL(p.ViewHref) } data-keepview>{ p.ViewLabel }</a>
+				}
+				if p.Neutral != "" {
+					<button type="submit" form="answer" name="pick" value="neither" class="neutral btn sm">{ p.Neutral }</button>
+				}
+			</div>
+		}
 		@CtlBar(p.Ctl, true)
 		<div class="ctlbar">
 			if p.Whole {
@@ -381,19 +391,13 @@ templ PhoneBar(p PhoneView) {
 		<a class="btn arrow" href={ templ.SafeURL(p.Next) } aria-label="Next step">›</a>
 	</div>
 	<div class="row">
-		if p.ViewHref != "" {
-			<a class="btn" href={ templ.SafeURL(p.ViewHref) } data-keepview>{ p.ViewLabel }</a>
-		}
 		if p.Confirm {
 			<button type="submit" form="answer" name="pick" value="change" class="btn">Change</button>
-		}
-		if p.Neutral != "" {
-			<button type="submit" form="answer" name="pick" value="neither" class="btn">{ p.Neutral }</button>
 		}
 		if p.Play {
 			<button type="button" class="btn" data-act="play">Play</button>
 		}
-		<button type="button" class="btn" data-act="sheet" aria-expanded="false">View</button>
+		<button type="button" class="btn" data-act="sheet" aria-expanded="false">Controls</button>
 		if p.Note {
 			<button type="button" class="btn" data-act="note">Note</button>
 		}

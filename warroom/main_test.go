@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -194,5 +195,26 @@ func TestOpenCommandListsRoundsWithUnansweredSteps(t *testing.T) {
 	got := out.String()
 	if strings.Contains(got, "p2-3a1-gate-1") || !strings.Contains(got, "p2-3a1-gate-2\t0 of ") || strings.Contains(got, "demo") {
 		t.Errorf("open printed %q, want only p2-3a1-gate-2 with 0 answered and no demo rounds", got)
+	}
+}
+
+func TestOpenCommandListsWarningsAsWarnings(t *testing.T) {
+	dir := t.TempDir()
+	step := "kind: pictures\nblind: true\nrec: B\noptions:\n  A: {name: a}\n  B: {name: b}\n"
+	for name, text := range map[string]string{"index.yaml": "- {id: b, title: B}\n", "b/round.yaml": "title: B\nsteps: [one, two]\n", "b/one.yaml": step, "b/two.yaml": step} {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var out bytes.Buffer
+	if err := printOpen(&out, web.Config{Picks: filepath.Join(dir, "picks.json"), Rounds: dir}); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.String(); !strings.Contains(got, "warning: b: every blind step") || strings.Contains(got, "load error") {
+		t.Errorf("open printed %q, want the blind-letter warning as a warning", got)
 	}
 }

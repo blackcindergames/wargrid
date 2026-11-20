@@ -11,7 +11,7 @@ checklist:
 - Is the Shift-drag (add) look clearly different?
 rec: A
 recWhy: demo only.
-neutral: No difference
+neutral: Can't tell them apart
 options:
   A:
     name: Clip A
