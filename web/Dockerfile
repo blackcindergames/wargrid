@@ -10,7 +10,7 @@ COPY og.png .
 # q9: the pack changes every commit and q11 saves only about 1 % of it (docs/reference/web-deploy-time.md).
 RUN for f in index.pck index.js index.html; do brotli -k -q 9 "$f" && gzip -k -9 "$f"; done
 
-FROM joseluisq/static-web-server:2.44.2
+FROM joseluisq/static-web-server:2.44.3
 COPY --from=compress /site /public
 COPY sws.toml /sws.toml
 ENV SERVER_PORT=8080 SERVER_HEALTH=true SERVER_COMPRESSION_STATIC=true SERVER_CACHE_CONTROL_HEADERS=false SERVER_CONFIG_FILE=/sws.toml
