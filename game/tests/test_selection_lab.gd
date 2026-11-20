@@ -2,7 +2,6 @@
 extends RefCounted
 
 const LabLook = preload("res://scripts/lab/lab_look.gd")
-const LabView = preload("res://scripts/lab/lab_view.gd")
 const LabArmy = preload("res://scripts/lab/lab_army.gd")
 const Palette = preload("res://scripts/presentation/palette.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
@@ -46,17 +45,13 @@ func test_token_sets(runner) -> bool:
 	return true
 
 func test_palette_a(runner) -> bool:
-	var one: PackedColorArray = LabLook.owner_colors_a(1)
+	var one: PackedColorArray = Palette.owner_colors(1)
 	runner.check(one[0] == Color("628ffa") and one[6] == Color("628ffa"), "LB2 owner 1 slots 0 and 6 are palette A blue")
 	runner.check(one[1] == Color("628ffa").darkened(0.25), "LB2 owner 1 slot 1 is darkened 0.25")
 	runner.check(one[2] == Color("1c2e39") and one[3] == Color("0e1b23"), "LB2 sides are the round 6 sides")
-	var plain: PackedColorArray = Palette.owner_colors(1)
-	for slot in [4, 5, 7]:
-		runner.check(one[slot] == plain[slot], "LB2 slot %d comes from Palette" % slot)
+	runner.check(one[4] == Palette.MACHINE and one[5] == Palette.SMOKE and one[7] == Palette.SKIN, "LB2 slots 4, 5 and 7 are machinery, smoke and skin")
 	for owner in range(1, 9):
-		runner.check(LabLook.owner_colors_a(owner)[0] == Color(SLOT_ONE_HEX[owner - 1]), "LB2 owner %d slot 0" % owner)
-	runner.check(LabLook.owner_colors_a(0) == Palette.owner_colors(0), "LB2 owner 0 is Palette's")
-	runner.check(LabLook.owner_colors_a(99) == Palette.owner_colors(99), "LB2 unknown owner is Palette's")
+		runner.check(Palette.owner_colors(owner)[0] == Color(SLOT_ONE_HEX[owner - 1]), "LB2 owner %d slot 0" % owner)
 	return true
 
 func test_bar_rules(runner) -> bool:
@@ -92,23 +87,11 @@ func test_number_font(runner) -> bool:
 	return true
 
 func test_palette_a_view(runner) -> bool:
-	var army = LabArmy.new()
-	var view = LabView.new()
-	runner.root.add_child(view)
-	view.set_state(LabArmy.view_copy(army.state), [] as Array[int])
-	await runner.process_frame
-	view.set_palette_a(true)
-	runner.check(view._batch.colors.has(Color("628ffa")), "LB5 palette A on draws A's owner 1 blue")
-	runner.check(not view._batch.colors.has(Palette.OWNER_BASE[0]), "LB5 palette A on drops today's owner 1 blue")
-	view.set_palette_a(false)
-	runner.check(not view._batch.colors.has(Color("628ffa")), "LB5 palette A off drops A's blue")
-	runner.check(view._batch.colors.has(Palette.OWNER_BASE[0]), "LB5 palette A off draws today's blue again")
 	var plain = View.new()
 	runner.root.add_child(plain)
-	plain.set_state(LabArmy.view_copy(army.state), [] as Array[int])
+	plain.set_state(LabArmy.view_copy(LabArmy.new().state), [] as Array[int])
 	await runner.process_frame
-	runner.check(plain._batch.colors.has(Palette.OWNER_BASE[0]) and not plain._batch.colors.has(Color("628ffa")), "LB5 a plain WorldView still draws today's blue")
-	view.free()
+	runner.check(plain._batch.colors.has(Color("628ffa")) and not plain._batch.colors.has(Color("376eac")), "LB5 a plain WorldView draws palette A's blue, no longer 376eac")
 	plain.free()
 	return true
 
@@ -453,7 +436,7 @@ func test_round_trip_to_old_question(runner) -> bool:
 	_press(lab, KEY_G)
 	await _frames(runner)
 	runner.check(view.selected_unit_lines().is_empty() and _marks(lab).selected.size() == 10, "LB17 the lab holds 10 selected but the view draws no production diamond")
-	runner.check(view._batch.palette_a and not view._smooth and selection._canvas.visible and not lab._ground.visible and not lab._top.visible, "LB17 token_set shows palette A, the canvas and no ab overlays")
+	runner.check(not view._smooth and selection._canvas.visible and not lab._ground.visible and not lab._top.visible, "LB17 token_set shows the canvas and no ab overlays")
 	runner.check(view._terrain._colors.ground == LabLook.DARK_GROUND and view._visuals == null, "LB17 G gives the dark ground; the frozen army draws no fight effects")
 	_press(lab, KEY_BRACKETLEFT)
 	runner.check(lab.current_question() == &"owner_palette" and view._terrain._colors.ground == ground_before, "LB17 one step back the old question's ground returns")
@@ -461,7 +444,7 @@ func test_round_trip_to_old_question(runner) -> bool:
 	await _frames(runner)
 	runner.check(lab.current_question() == &"biome" and lab._ground.visible and lab._top.visible, "LB17 back on biome the ab overlays and fog show")
 	runner.check(not selection._canvas.visible and not selection._panels[0].visible and not selection._panels[1].visible and not selection._drag.visible and not selection._over.visible, "LB17 canvas, panels, drag box and marks are hidden")
-	runner.check(not view._batch.palette_a and view._smooth and view._visuals == lab._visuals, "LB17 today's owner colours, interpolation and effects are back")
+	runner.check(view._smooth and view._visuals == lab._visuals, "LB17 interpolation and effects are back")
 	runner.check(view._terrain._colors.ground == ground_before and lab._camera.position == camera_before, "LB17 the biome ground and the camera are back")
 	runner.check(view._state.tick == lab.fight.simulation.tick() and view._state.map.size[0] == 40, "LB17 the live fight is shown")
 	var quality: int = lab.quality

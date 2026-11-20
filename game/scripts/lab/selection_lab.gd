@@ -84,7 +84,6 @@ func hide_all(view: Node2D) -> void:
 	_on = false
 	_dragging = false
 	_set_shown(false)
-	view.set_palette_a(false)
 	view.set_smooth(true)
 	view.set_visuals(visuals)
 	_camera.position = _camera_before
@@ -146,7 +145,6 @@ func _process(_delta: float) -> void:
 func _enter() -> void:
 	_on = true
 	_set_shown(true)
-	_view.set_palette_a(true)
 	_view.set_smooth(false)
 	_camera_before = _camera.position
 	_camera.position = Iso.world_to_plane(LabArmy.CAMERA_FOCUS)

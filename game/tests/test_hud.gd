@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1446,6 +1446,35 @@ func test_panel_edge_colours(runner) -> bool:
 	main._pause.neon_changed.emit(true)
 	var body: Color = Palette.owner_colors(1, main._view._batch.bright_owners)[0]
 	runner.check(main._view._batch.bright_owners and body != View.owner_color(1) and main.hud.panel_edge() == body, "SP3 Neon on live: the edge is the body colour the batch draws, got %s against %s" % [main.hud.panel_edge(), body])
+	main._pause.neon_changed.emit(false)
+	main.free()
+	return true
+
+func test_owner_colours_contrast(runner) -> bool:
+	var bg: Color = _token("bg")
+	for owner in range(1, 9):
+		var ratio: float = _contrast(Palette.owner_colors(owner)[0], bg)
+		runner.check(ratio >= 3.0, "PA1 owner %d against bg is %.2f:1, at least 3:1" % [owner, ratio])
+	return true
+
+# map-art-shapes.md P2.4 bar: the side band carries the outline, at least 3:1 against each ground.
+func test_side_band_contrast(runner) -> bool:
+	for ground: Color in [Palette.SAND, Palette.ground(0).ground]:
+		for side: Color in [Palette.OWNER_SIDE, Palette.OWNER_SIDE_DARK]:
+			var ratio: float = _contrast(side, ground)
+			runner.check(ratio >= 3.0, "PA3 side %s against ground %s is %.2f:1, at least 3:1" % [side.to_html(false), ground.to_html(false), ratio])
+	return true
+
+func test_panel_edge_is_the_body_colour(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _panel_world(main)
+	for bright in [false, true]:
+		main._pause.neon_changed.emit(bright)
+		await runner.process_frame
+		for case: Array in [[[ids.tank], -1, 1], [[], ids.enemy, 2]]:
+			_pick(main, case[0], -1, case[1])
+			var body: Color = Palette.owner_colors(case[2], bright)[0]
+			runner.check(main.hud.panel_edge() == body and main._view._batch.colors.has(body), "PA2 owner %d edge is the colour the batch draws (Neon %s), edge %s, body %s" % [case[2], bright, main.hud.panel_edge(), body])
 	main._pause.neon_changed.emit(false)
 	main.free()
 	return true

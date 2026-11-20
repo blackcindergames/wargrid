@@ -1,6 +1,5 @@
 extends RefCounted
 
-const Palette = preload("res://scripts/presentation/palette.gd")
 const WorldView = preload("res://scripts/presentation/world_view.gd")
 
 # hud-v5-layout.md token table; `hint` is lab-only and equals `muted` in A, so A's look is unchanged.
@@ -17,13 +16,6 @@ const SET_B_SOURCE := {
 	&"you": Color("628ffa"), &"enemy": Color("d6120c"), &"ally": Color("69ceaa"),
 }
 const DERIVED_ROLES: Array[StringName] = [&"panel2", &"quiet", &"well"]
-# map-art-shapes.md P2.3a, Palette A (slots 1-8) and the round 6 sides.
-const PALETTE_A: Array[Color] = [
-	Color("628ffa"), Color("d6120c"), Color("4ad49b"), Color("f8e425"),
-	Color("0e92a7"), Color("7242fe"), Color("ec8600"), Color("f79cef"),
-]
-const SIDE_A := Color("1c2e39")
-const SIDE_DARK_A := Color("0e1b23")
 
 # map-art-shapes.md P2.3a: white marks sit on this under-stroke, 2 px wider.
 const UNDER_STROKE := Color(14 / 255.0, 18 / 255.0, 22 / 255.0, 0.78)
@@ -49,12 +41,6 @@ static func derived_b(role: StringName) -> Color:
 	var slab: Color = SET_B_SOURCE[&"bg"]
 	var lightness: float = slab.ok_hsl_l + SET_A[role].ok_hsl_l - SET_A[&"bg"].ok_hsl_l
 	return Color(Color.from_ok_hsl(slab.ok_hsl_h, slab.ok_hsl_s, lightness).to_html(false))
-
-static func owner_colors_a(owner: int) -> PackedColorArray:
-	if owner < 1 or owner > PALETTE_A.size(): return Palette.owner_colors(owner)
-	var plain: PackedColorArray = Palette.owner_colors(owner)
-	var base: Color = PALETTE_A[owner - 1]
-	return PackedColorArray([base, base.darkened(0.25), SIDE_A, SIDE_DARK_A, plain[4], plain[5], base, plain[7]])
 
 static func bar_shown(rule: int, selected: bool, hovered: bool, hp: int, max_hp: int) -> bool:
 	match rule:
