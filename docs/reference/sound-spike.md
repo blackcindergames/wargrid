@@ -153,3 +153,5 @@ See the verification file, Measurements.
 ## Gate rulings
 
 Filled at the gates.
+
+- F30 (P2.3a2) raises one cue's `gain_db`, the refusal beep's, picked by ear: a per-cue exception to raising every level together (user, 2026-11-20).

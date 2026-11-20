@@ -42,6 +42,10 @@ The three run back to back, then P7; night 8 Play on after a leave takes the fir
 - **Wording table:** the refusal line speaks player words from one table for match and launcher (user, 2026-11-16 and 2026-11-17). Details in [Refusals](#refusals).
 - **F29:** the order voice and the order hint play only for accepted orders (user, 2026-11-16).
 - **F30:** the refusal beep's level, picked by ear (user, 2026-11-19).
+- **Sound rules** (user, 2026-11-20, from the P2.3a1 night's P2.3a2 research, private): local hints stay silent; one beep per frame across issue-time and due-time refusals; a 300 ms beep cooldown, judged by ear in P2.3a1's stop gate B batch; no beep while the result card shows; "Not enough credits" repeats with no cooldown, as in Zero Hour.
+- **Line rules** (user, 2026-11-20, same research): a repeated refusal restarts the 3 s timer; the neutral-line rules and placement reopening after a due-time refusal as the research words them; the P2.3a2 plan writes them out.
+- **Words** (user, 2026-11-20, same research): the plan takes the research's proposed lines for the launcher's connection and map-mismatch words, "your friend" in the launcher and rematch line versus "your opponent" in match, the shortened opponent-left line, the kept game-error line and "Order not possible" for an invalid producer; `Select a container` (F key only; China has no transports) reads "Nothing to unload", silent like the other local hints, and the simulation's empty-host refusal, if there is one, uses the same words; the player-experience reviewer checks the whole table there. No builder "can't build" voice. The raw refusal record keeps the simulation text without the `Rejected: ` prefix.
+- **Scope:** words only (user, 2026-11-20). Order behaviour that differs from Zero Hour is an Order controls rider in `packages.md`; "Cannot move there" keeps its beep until it lands.
 - **Relay words in the launcher** through the same table, including the flood case (user, 2026-11-17 and 2026-11-19).
 - **Esc menu** in the launcher Settings structure: two columns, opaque panel, the launcher's switches (user, 2026-11-14 and 2026-11-19).
 
@@ -194,8 +198,7 @@ One read-only function in the world view, `resolve_pick(plane_point, modifiers) 
 
 - about 3 s of wall time; a new refusal replaces it and restarts the timer (user, 2026-11-17); the next accepted order's answer clears it (user, 2026-11-19);
 - placement refusals show only after the click, never while hovering (user, 2026-11-17);
-- many refusals in one frame show the last reason once with exactly one beep (user, 2026-11-19);
-- the `Rejected: ` prefix stays in logs.
+- many refusals in one frame show the last reason once with exactly one beep (user, 2026-11-19).
 
 **P2.3a2: wording table.** A static table maps each raw command-answer text to one of three columns (draft rows in [Appendix A](#appendix-a-draft-wording-table)):
 
