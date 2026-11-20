@@ -27,7 +27,9 @@ function ground() {
   g.fillStyle = base; g.fillRect(0, 0, LW, LH);
   for (let x = -24; x < 24; x++) for (let y = -24; y < 24; y++) if ((x + y) & 1) poly([iso(x, y), iso(x + 1, y), iso(x + 1, y + 1), iso(x, y + 1)], shade(base, 0.95));
 }
+let drawn = 0;
 function unit(x, y, colour, size, heading, name) {
+  drawn++;
   const s = size * +(H.get('unit') || 1), line = +(H.get('outline') || 0), h = 28 * Z * s, [cx, cy] = iso(x, y), w = 44 * Z * s, d = 22 * Z * s;
   const top = [[cx, cy - d - h], [cx + w, cy - h], [cx, cy + d - h], [cx - w, cy - h]];
   poly([[cx - w, cy - h], [cx, cy + d - h], [cx, cy + d], [cx - w, cy]], shade('#3d515f', 1), line);
@@ -39,7 +41,13 @@ function unit(x, y, colour, size, heading, name) {
   if (H.get('glyph') === 'two') { g.lineWidth = 1.5; g.strokeStyle = '#11181d'; g.stroke(); }
   if (name && H.get('names') !== 'off') { g.fillStyle = '#eef3f5'; g.font = '600 12px "Public Sans", Arial'; g.textAlign = 'center'; g.fillText(name, cx, cy + d + 18); }
 }
+// War Room shows these rows under the stage; an outline under 1 px is flagged.
+function measure() {
+  const px = +(H.get('outline') || 0) * Z;
+  if (parent !== window) parent.postMessage({ type: 'wr:measure', rows: [['Units drawn', drawn], ['Outline', `${px} px`, px >= 1]] }, location.origin);
+}
 function scene() {
+  drawn = 0;
   const heading = +(H.get('heading') || 0), view = H.get('view') || 'base', [mine, theirs] = PAIRS[H.get('pair')] || PAIRS['usa-china'];
   ground();
   if (view === 'row') [you(), ...OTHERS].forEach((col, i) => unit(i - 4, 4 - i, col, 1, heading, `P${i + 1}`));
@@ -53,11 +61,14 @@ function scene() {
   g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(8, 8, 330, 22);
   g.fillStyle = '#eef3f5'; g.font = '600 13px Arial'; g.textAlign = 'left';
   g.fillText(`Demo scene: control wiring, not game art · ${LW}x${LH} at ${K}`, 14, 23);
+  measure();
 }
 scene();
 // The War Room tune step posts its knobs here; same origin and the embedding page only.
 addEventListener('message', (e) => {
-  if (e.origin !== location.origin || e.source !== parent || e.data?.type !== 'wr:params') return;
+  if (e.origin !== location.origin || e.source !== parent) return;
+  if (e.data?.type === 'wr:ask-measure') { measure(); return; }
+  if (e.data?.type !== 'wr:params') return;
   for (const k of TUNE) if (k in (e.data.params || {})) H.set(k, e.data.params[k]);
   scene();
 });

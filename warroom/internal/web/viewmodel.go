@@ -19,6 +19,8 @@ type Chip struct {
 }
 
 type HeadView struct {
+	Intro             string
+	IntroOpen         bool
 	Eyebrow, Question string
 	ClaudePick        *ClaudePick
 	Record            string
@@ -167,6 +169,7 @@ func (b *builder) head(n int, s *rounds.Step, record string) HeadView {
 		h.Question = s.Key
 	}
 	h.ClaudePick = b.claudePick(s)
+	h.Intro, h.IntroOpen = b.round.Intro, n == 1
 	return h
 }
 

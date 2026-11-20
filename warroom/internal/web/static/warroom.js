@@ -40,6 +40,17 @@ function flash(text) {
   box.hidden = false;
 }
 
+const TOAST_MS = 2000;
+let toastTimer = 0;
+
+function toast(text) {
+  const box = $('#toast');
+  box.textContent = text;
+  box.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { box.hidden = true; }, TOAST_MS);
+}
+
 function onFailure(evt) {
   const { ctx } = evt.detail;
   const el = ctx.sourceElement;
@@ -125,6 +136,7 @@ const flipLetters = () => $$('.flipbar [data-show]').map((b) => b.dataset.show);
 function showOption(letter) {
   if (!flipLetters().includes(letter)) return;
   $$('.ostage[data-opt], .odetail[data-opt]').forEach((el) => { el.hidden = el.dataset.opt !== letter; });
+  $$('.measures [data-measure]').forEach((el) => { el.hidden = el.dataset.measure !== letter; });
   $$('.tile[data-opt]').forEach((el) => el.classList.toggle('sel', el.dataset.opt === letter));
   $$('[data-show]').forEach((b) => b.classList.toggle('on', b.dataset.show === letter));
   $$('[data-shown]').forEach((b) => { b.value = letter; });
@@ -139,6 +151,54 @@ function flipBy(d) {
   if (!letters.length) return;
   const at = letters.indexOf($('.flipbar [data-show].on')?.dataset.show);
   showOption(letters[(at + d + letters.length) % letters.length]);
+}
+
+// ---------- measurements ----------
+
+const MAX_MEASURE_ROWS = 20;
+// By frame id, which follows the frame's address: a morph that keeps a frame keeps its rows, and a reloaded frame reports again.
+const measures = new Map();
+
+function measureRow([label, value, ok]) {
+  const tr = document.createElement('tr');
+  const cells = [['th', label], ['td', value]];
+  if (typeof ok === 'boolean') cells.push(['td', ok ? '✓' : '✗']);
+  for (const [tag, text] of cells) tr.append(Object.assign(document.createElement(tag), { textContent: String(text ?? '') }));
+  // Muted, not amber: amber is the pick's colour.
+  if (ok === false) tr.className = 'off';
+  return tr;
+}
+
+function renderMeasures() {
+  for (const [id, rows] of measures) {
+    const letter = document.getElementById(id)?.closest('.ostage, .tile')?.dataset.opt;
+    const out = letter && $(`[data-measure="${letter}"]`);
+    if (!out) continue;
+    const table = Object.assign(document.createElement('table'), { ariaLabel: `Measured, option ${letter}` });
+    table.append(document.createElement('tbody'));
+    table.tBodies[0].append(...rows.map(measureRow));
+    out.replaceChildren(table);
+  }
+}
+
+// Only frames on this page, from this origin: a render page reports rows of [label, value, ok?].
+function onMessage(e) {
+  if (e.origin !== location.origin || e.data?.type !== 'wr:measure' || !Array.isArray(e.data.rows)) return;
+  const frame = $$('iframe[id]').find((f) => f.contentWindow === e.source);
+  if (!frame) return;
+  measures.set(frame.id, e.data.rows.filter(Array.isArray).slice(0, MAX_MEASURE_ROWS));
+  renderMeasures();
+}
+
+// A frame that reported before this script listened is asked again; one still loading reports when it draws.
+function askMeasures() {
+  $$('iframe[id]').forEach((f) => f.contentWindow?.postMessage({ type: 'wr:ask-measure' }, location.origin));
+}
+
+function forgetGoneFrames() {
+  for (const id of [...measures.keys()]) {
+    if (!document.getElementById(id)) measures.delete(id);
+  }
 }
 
 // ---------- large view and phone zoom ----------
@@ -317,6 +377,7 @@ const ACTS = {
   note: focusNote,
   play: playShown,
   whole: () => { const pic = stagePic(); if (pic) openLarge(pic, true); },
+  large: () => { const pic = stagePic(); if (pic) openLarge(pic); },
 };
 
 const NOT_A_PICTURE_CLICK = 'a, summary, select, video, .pic.live';
@@ -342,7 +403,7 @@ function onClick(e) {
 }
 
 const KEYMAP = {
-  l: () => { const pic = stagePic(); if (pic) openLarge(pic); },
+  l: ACTS.large,
   ' ': playShown,
   '?': toggleLegend,
 };
@@ -361,6 +422,8 @@ function clickKey(k) {
 
 function onKey(e) {
   if (e.key === 'Escape') { closeOver(); return; }
+  // A held Enter would pick the next step's shown option too.
+  if (e.key === 'Enter' && e.repeat) return;
   if (['TEXTAREA', 'INPUT', 'SELECT'].includes(e.target.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
   // Tweakpane's sliders are focusable divs that take the arrow keys themselves.
   if (e.key !== 'Enter' && e.target.closest?.('wr-tune')) return;
@@ -370,8 +433,11 @@ function onKey(e) {
     if (k === '?') toggleLegend();
     return;
   }
-  const at = '1234'.includes(k) || 'abcd'.includes(k) ? '1234abcd'.indexOf(k) % 4 : -1;
-  if (at >= 0) { showOption(flipLetters()[at]); return; }
+  // A to D by letter or digit; E to H by digit only, since F, G and H are stage controls.
+  const letter = /^[1-8]$/.test(k) ? 'ABCDEFGH'[k - 1] : /^[a-d]$/.test(k) ? k.toUpperCase() : '';
+  if (letter) { showOption(letter); return; }
+  // E to H are digits only; a letter key says which digit and still does its own job (F, G, H are controls).
+  if (/^[e-h]$/.test(k) && flipLetters().includes(k.toUpperCase())) toast(`Option ${k.toUpperCase()} is key ${'abcdefgh'.indexOf(k) + 1}`);
   const handled = KEYMAP[k] ? (KEYMAP[k](), true) : clickKey(k);
   if (handled) e.preventDefault();
 }
@@ -425,6 +491,9 @@ function onSwap() {
 }
 
 function init() {
+  forgetGoneFrames();
+  renderMeasures();
+  askMeasures();
   trackImgs();
   observePics();
   rootEl.style.setProperty('--dpr', String(devicePixelRatio || 1));
@@ -439,6 +508,11 @@ function start() {
   document.fonts.ready.then(() => { scaleNote(); keepStage(); });
 }
 
+// A broken page script would otherwise fail silently: picks and keys just stop working.
+const RELOAD = ' — reload the page; picks may not record';
+addEventListener('error', (e) => flash(`Page script error: ${e.message} (${e.filename}:${e.lineno})${RELOAD}`));
+addEventListener('unhandledrejection', (e) => flash(`Page script error: ${e.reason?.message ?? e.reason}${RELOAD}`));
+addEventListener('message', onMessage);
 document.addEventListener('htmx:error', (e) => e.detail.ctx && onFailure(e));
 document.addEventListener('htmx:response:error', onFailure);
 document.addEventListener('htmx:after:request', onSuccess);

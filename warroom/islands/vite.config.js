@@ -9,5 +9,7 @@ export default defineConfig({
 		// The static folder holds the rest of the site; only islands.js is ours.
 		emptyOutDir: false,
 		minify: true,
+		// Library mode keeps whitespace in an ES bundle for other bundlers; this one goes straight to the browser.
+		rolldownOptions: { output: { minify: true } },
 	},
 });

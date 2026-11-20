@@ -119,7 +119,7 @@ func headingName(v string) string {
 	return strconv.Itoa(n*45) + "°"
 }
 
-var fixedAppKeys = []string{"a", "b", "c", "d", "1", "2", "3", "4", "w", "enter", "arrowleft", "arrowright", "[", "]", "backspace", "n", "p", "l", " ", "?", "k", "shift+r"}
+var fixedAppKeys = []string{"a", "b", "c", "d", "1", "2", "3", "4", "5", "6", "7", "8", "w", "enter", "arrowleft", "arrowright", "[", "]", "backspace", "n", "p", "l", " ", "?", "k", "shift+r"}
 
 func appKey(k string) bool {
 	if slices.Contains(fixedAppKeys, k) {

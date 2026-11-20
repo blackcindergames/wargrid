@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Which outline weight reads best?
+why: >-
+  A step with six options: A to D flip with their letters or 1 to 4, E to H only with 5 to 8 (F, G and H
+  are stage controls). Side by side (W) wraps after four. Each frame reports its unit count and outline
+  width, shown under the stage.
+rec: C
+recWhy: demo only; any answer is fine.
+neutral: No difference
+render:
+  page: static/demo/scene.html
+  w: 1280
+  h: 720
+  hash: shot=1
+options:
+  A:
+    name: No outline
+    render: {params: {outline: 0}}
+  B:
+    name: Half a pixel
+    render: {params: {outline: 0.5}}
+  C:
+    name: One pixel
+    render: {params: {outline: 1}}
+  D:
+    name: One and a half
+    render: {params: {outline: 1.5}}
+  E:
+    name: Two pixels
+    render: {params: {outline: 2}}
+  F:
+    name: Three pixels
+    render: {params: {outline: 3}}

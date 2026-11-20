@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"html"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -193,7 +194,7 @@ func TestReadOnlyPagesOfEveryKindOfferNoPickOrNote(t *testing.T) {
 	}
 	for _, c := range cases {
 		body := a.get("/r/" + c.round + "/" + c.step).Body.String()
-		mustContain(t, c.name, body, `id="readonly"`, "Read only: this link cannot record.")
+		mustContain(t, c.name, body, `id="readonly"`, html.EscapeString(readOnlyNotice))
 		for _, absent := range controlsOfRead {
 			if strings.Contains(body, absent) {
 				t.Errorf("%s: read-only page has %s", c.name, absent)
@@ -207,22 +208,49 @@ func TestReadOnlyPagesOfEveryKindOfferNoPickOrNote(t *testing.T) {
 	}
 }
 
-func TestReadOnlyWordingShowsTheText(t *testing.T) {
+func TestReadOnlyWordingShowsTheDraftNotTheRecordedText(t *testing.T) {
 	a := newApp(t).locked()
 	wantStatus(t, a.post("/r/r/wor/note?t="+roundToken("r"), url.Values{"note": {"my words"}, "sub": {"f1"}}), http.StatusOK)
 	body := a.get("/r/r/5").Body.String()
-	mustContain(t, "wording", body, "my words")
-	if strings.Contains(body, "<textarea") {
-		t.Error("read-only wording has a text area")
+	mustContain(t, "wording", body, "Drafted: t")
+	if strings.Contains(body, "my words") || strings.Contains(body, "<textarea") {
+		t.Error("read-only wording shows the recorded text or a text area")
 	}
 }
 
-func TestSummaryAndRoundListHaveNoNotice(t *testing.T) {
+func TestRoundListHasNoNoticeAndTheSummaryDoes(t *testing.T) {
 	a := newApp(t).locked()
-	for _, target := range []string{"/", "/r/r/summary"} {
-		if strings.Contains(a.get(target).Body.String(), "Read only") {
-			t.Errorf("%s shows the notice", target)
+	if strings.Contains(a.get("/").Body.String(), "Read only") {
+		t.Error("the round list shows the notice")
+	}
+	mustContain(t, "summary", a.get("/r/r/summary").Body.String(), `id="readonly"`)
+}
+
+func TestReadsWithoutATokenShowNoAnswers(t *testing.T) {
+	a := newTuneApp(t).locked()
+	tok := "?t=" + Token(testSecret, RoundScope("t"))
+	wantStatus(t, a.post("/r/t/tune/pick"+tok, url.Values{"pick": {"tuned"}, "value": {`{"outline":3.5,"unit":1.3,"you":"#112233","ground":"dark"}`}, "note": {"secret note"}}), http.StatusSeeOther)
+	r := newApp(t).locked()
+	w := "?t=" + roundToken("r")
+	for _, p := range []struct{ step, pick string }{{"pic", "B"}, {"gal", "changes"}} {
+		wantStatus(t, r.post("/r/r/"+p.step+"/pick"+w, url.Values{"pick": {p.pick}, "note": {"hidden " + p.step}}), http.StatusSeeOther)
+	}
+	wantStatus(t, r.post("/r/r/gal/note"+w, url.Values{"note": {"item words"}, "sub": {"a"}}), http.StatusOK)
+	wantStatus(t, r.post("/r/r/wor/note"+w, url.Values{"note": {"my words"}, "sub": {"f1"}}), http.StatusOK)
+	answers := []string{"hidden pic", "hidden gal", "item words", "my words", "secret note", "#112233", "3.5", "· B", "Picked", "changed", "B: Second", "Changes"}
+	pages := map[string]*testApp{"/r/r/1": r, "/r/r/1?view=side": r, "/r/r/3": r, "/r/r/5": r, "/r/r/summary": r, "/r/t/1": a, "/r/t/summary": a}
+	for target, app := range pages {
+		body := app.get(target).Body.String()
+		for _, ans := range answers {
+			if strings.Contains(body, ans) {
+				t.Errorf("%s without a token shows %q", target, ans)
+			}
 		}
+	}
+	mustContain(t, "summary questions", r.get("/r/r/summary").Body.String(), "Which one?", "Pass?")
+	mustContain(t, "with the token", r.get("/r/r/summary"+w).Body.String(), "hidden pic", "B: Second", "item words")
+	if loc := r.get("/r/r").Header().Get("Location"); loc != "/r/r/1" {
+		t.Errorf("without a token the round opens at %q, not step 1", loc)
 	}
 }
 

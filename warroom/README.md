@@ -1,6 +1,6 @@
 # War Room
 
-The owner's decision page: steps with options A to D on one stage, a click records the pick on the server and the page moves on. Go port of the Python prototype in `tools/decision_page/`, which keeps running in parallel (user, 2026-11-19). The page rules, keys and stage controls are the prototype's; what changed is below.
+The owner's decision page: steps with options A to H on one stage, a click records the pick on the server and the page moves on. Go port of the Python prototype in `tools/decision_page/`, which keeps running in parallel (user, 2026-11-19). The page rules, keys and stage controls are the prototype's; what changed is below.
 
 ## Run it
 
@@ -18,7 +18,7 @@ Then open `http://127.0.0.1:8780/` in Firefox. Paths are relative to the working
 | `WARROOM_ROUNDS` | `rounds` | The rounds folder |
 | `WARROOM_HOST`, `WARROOM_PORT` | `127.0.0.1`, `8780` | Where the server listens |
 | `WARROOM_SECRET` | unset | Signs the write tokens (see Tokens). Unset: every link can record and read back, and the log says so once |
-| `WARROOM_RUN_AS` | unset | A uid to drop to after handing the picks directory to it; only `fly/Dockerfile` sets it. Unset: no chown, no drop |
+| `WARROOM_RUN_AS` | unset | A uid to drop to after handing the picks directory to it; only `fly/Dockerfile` sets it. Set, the server refuses to start without `WARROOM_SECRET`, so a deploy is never open. Unset: no chown, no drop |
 
 Never use ports 8767 to 8772 (other servers run there).
 
@@ -29,7 +29,7 @@ On SIGINT or SIGTERM the server stops accepting, lets requests in flight finish 
 | Package | Job |
 |---|---|
 | `main.go` | Reads the environment, listens, shuts down on a signal; the `token` and `schema` commands; `go:generate` lines; `priv_linux.go` drops root when `WARROOM_RUN_AS` asks |
-| `internal/store` | The picks file and its history: one lock, atomic writes, key and size caps |
+| `internal/store` | The picks file and its history: one lock, atomic writes, a key cap per round, history rotation |
 | `internal/rounds` | Round and step YAML types, strict loading and validation, stage control definitions, tune params, the JSON Schema |
 | `internal/stage` | Stage controls resolved per request, the render-page hash, crops and window sizes, the numbers panel (contrast, CIE76) |
 | `internal/web` | Routes (stdlib `ServeMux`), tokens, request log and recovery, handlers, query parsing, view models, templ views, embedded `static/` |
@@ -62,39 +62,42 @@ WARROOM_SECRET=... go run . token p2-3a1-gate-2    # a round's write link is  /r
 WARROOM_SECRET=... go run . token admin            # curl "$HOST/picks.json?t=<token>"
 ```
 
-- A link without a valid token for its round is read only: step pages leave out the pick buttons, notes, the answer form and the phone bar's pick and note buttons, and say "Read only: this link cannot record." Keys that would pick find no button and do nothing. A POST without a valid token is 403.
+- A link without a valid token for its round is read only: step pages leave out the pick buttons, notes, the answer form and the phone bar's pick and note buttons, and say "Read only: answers are hidden and nothing is recorded. Open the round's write link to answer." Keys that would pick find no button and do nothing. A POST without a valid token is 403 ("Read only: this link cannot record.").
+- Reads of answers need a token too: without one, pages show the rounds, questions and pictures but no picks, notes, recorded wording texts or tune values (chips, Picked tags, the `uses` lines and the tune knobs start from the step's own defaults), the summary lists the questions only (no pick or note cells, no change counts, no "Not answered yet" links) and `/r/{round}` opens at step 1. A round's token also reads the earlier rounds' answers its summary and `uses` lines show; that is intended, since only the owner holds tokens. Writer identity is not recorded: only the owner writes for now (user, 2026-11-20).
 - The token is a query parameter like the stage controls: `Query.Carry()` puts it on every link, form action, `hx-get` and `hx-post` the server renders, on the redirects and on `HX-Push-Url`, so htmx navigation and Retry keep it. A link to another round (earlier rounds in the chips) drops it. The client adds nothing: `warroom.js` only rewrites the `phone` and view parameters of the address it was given.
 - A token longer than 64 bytes or with characters outside the control-value set is ignored.
-- Unset secret: no token is checked, nothing is read only, and `/picks.json` is open (local use).
+- Unset secret: no token is checked, nothing is read only, and `/picks.json` is open (local use only: with `WARROOM_RUN_AS` set the server does not start).
 
 ## History
 
-Each write that changes an entry appends `{"t": RFC 3339 UTC, "key", "pick", "note", "value"?}` to `picks.jsonl` next to `picks.json` (`O_APPEND`, fsync, under the store lock, before the state file is replaced). `picks.json` stays the current state in the old format. A write that changes nothing adds no line. The summary shows "changed N times" on a row with more than one line; there is no other history view. The history stops at 5 MiB: a write past it is 507 and changes nothing. A write whose state file then fails leaves its history line behind.
+Each write that changes an entry appends `{"t": RFC 3339 UTC, "key", "pick", "note", "value"?}` to `picks.jsonl` next to `picks.json` (`O_APPEND`, fsync, under the store lock, before the state file is replaced). `picks.json` stays the current state in the old format. A write that changes nothing adds no line. The summary shows "changed N times" on a row with more than one line; there is no other history view. When the next line would take `picks.jsonl` past 64 MiB, the file is renamed aside as `picks-<UTC time, to the nanosecond>.jsonl` and a new one started, so the history never refuses a write; "changed N times" and `/history.jsonl` read the current file only. A write whose state file then fails leaves its history line behind.
 
 ## Pick rules
 
-A body over 8 KiB is 400; the pick must be an option letter the step has, `neither` (step has a neutral answer), `yes` or `change` (confirm step), `pass` or `changes` (verdict), or `tuned` (tune step, with a `value` field); `change` without a note shows the step again asking for one; a `tuned` pick must carry `value`, a JSON object of at most 1 KiB with exactly the step's param ids (numbers in range and on the step grid from `min`, colours `#rrggbb`, choices from the list; anything else is 400) and the server stores it cleaned (grid-snapped, colours lower case); a note is at most 4000 characters; a new key past 500 keys is 507; a failed write, or a picks file that is not a JSON object of objects (left as it is), is 500. Writes are atomic (temporary file, fsync, rename) under one lock. Requests that stall for 15 s are dropped. A pick from a plain form post redirects (303) to the next step; from htmx it answers with the next step's page and `HX-Push-Url`.
+A form body over 64 KiB is 400 (`form body over 64 KiB`; a 4000-character note of 4-byte characters fits); the pick must be an option letter the step has, `neither` (step has a neutral answer), `yes` or `change` (confirm step), `pass` or `changes` (verdict), or `tuned` (tune step, with a `value` field); `change` without a note shows the step again asking for one; a `tuned` pick must carry `value`, a JSON object of at most 1 KiB with exactly the step's param ids (numbers in range and on the step grid from `min`, colours `#rrggbb`, choices from the list; anything else is 400) and the server stores it cleaned (grid-snapped, colours lower case); a note is at most 4000 characters (400 `note over 4000 characters or not UTF-8`); a new key past 500 keys of its round's prefix is 507 (`picks file is full: 500 keys per round`), and other rounds keep recording; a failed write, or a picks file that is not a JSON object of objects (left as it is), is 500. Writes are atomic (temporary file, fsync, rename, fsync of the directory) under one lock. Requests that stall for 15 s are dropped. A pick from a plain form post redirects (303) to the next step; from htmx it answers with the next step's page and `HX-Push-Url`.
 
 Query parameters (carried by the navigation links, so values stay page-wide): `show` (option), `view=side`, `item`, every stage control away from its first value (`size fit ground world zoom hud state tier owner set heading cvd marker x-<id>`), `numbers=0` (hide the numbers panel). A control value over 64 bytes or with characters other than letters, digits and ` ._,:+-` is dropped, as is any `x-` control past 16, since every link repeats them. Read only: `sheet=1` opens the phone's View sheet, `keys=1` the key list, `shot=1` the shown option alone at its frame size on black (`crop=step` keeps the step's crop), `lab=1` starts a lab step's build, `phone=1` asks for the phone crops (a phone-sized first load adds it itself).
 
-`picks.json` keeps the prototype's format, `{"<prefix>:<key>[:<sub>]": {"pick": str|null, "note": str}}`, so the old gate picks read back. A tune step's entry has one more optional field, `"value": {param id: number|string}`; entries without it stay valid.
+`picks.json` keeps the prototype's format, `{"<prefix>:<key>[:<sub>]": {"pick": str|null, "note": str}}`, so the old gate picks read back. A tune step's entry has one more optional field, `"value": {param id: number|string}`. A pick of an option letter also stores `"name"`, the option's name at pick time, so a later edit of the step's options cannot silently change what an old "B" meant; any other answer clears it, a note keeps it. Entries without these fields stay valid.
 
 ## Keys
 
 | Key | What |
 |---|---|
-| `A` `B` `C` `D` or `1` to `4` | Show that option on the stage (side by side: highlight it) |
+| `A` `B` `C` `D` or `1` to `8` | Show that option on the stage (side by side: highlight it). `E` to `H` have only their digits `5` to `8`: `F`, `G` and `H` stay stage controls (user, 2026-11-20) |
 | `Enter` | Pick the shown option, record it and go on |
 | `W` | One at a time / side by side |
 | `←` `→` (`[` `]`, `Backspace` back) | Previous / next step without picking |
 | `N` `P` | Next / previous item inside a step (gallery picture, or the state on a step with a state control) |
-| `L`, or a click on a picture | Large view; `Esc` or a click closes it |
+| `L`, the Large button at the right end of the row under the stage (desktop), or a click on a picture | Large view; `Esc` or a click closes it |
 | `Space` | Play / stop the shown option's sound or clip |
 | `?` | Key list, with the stage controls this step has |
 | `S` `F` `G` `⇧G` `Z` `H` `T` | Window size, fit / true 100 %, ground, backdrop, zoom, HUD layer, tier |
 | `O` `⇧O` `R` `⇧R` `⇧C` `M` `K` | Owner colour, colour set, unit heading (`⇧R` turns back), colour vision, small-change marker, numbers panel |
 
-A step's own `extra` controls may name a key; the ones the app uses are refused at load. Keys do nothing while a note or list has the focus or with Cmd, Ctrl or Alt. Each key is a `data-key` on the element it clicks, so the buttons and the keys cannot drift apart. Below 900 px wide or on a touch screen a two-row bar covers every key; its View button opens a sheet with the stage controls, Whole screen and the key list; a swipe on the picture flips the option (gallery: the item).
+A step's own `extra` controls may name a key; the ones the app uses (`5` to `8` included) are refused at load. `V`, `X` and `⇧F` are not app keys: they work only on a step whose own `extra` controls name them (the demo scene's View, Camera and Factions). Keys do nothing while a note or list has the focus or with Cmd, Ctrl or Alt. Each key is a `data-key` on the element it clicks, so the buttons and the keys cannot drift apart. Below 900 px wide or on a touch screen a two-row bar covers every key; its View button opens a sheet with the stage controls, Whole screen and the key list; a swipe on the picture flips the option (gallery: the item). A step with more than four options puts the option buttons in their own rows above the bar's first row. Side by side shows at most four options a row (a reference tile comes on top of that) and wraps the rest.
+
+A script error on the page (`window` `error` or `unhandledrejection`) shows as the red banner at the top ("Page script error: ... — reload the page; picks may not record"), so keys or picks that stop working say why; a click closes it. On a step that has option E, F, G or H, pressing that letter shows "Option F is key 6" for 2 s; F, G and H still do their control's job.
 
 ## Rounds: the data contract
 
@@ -106,9 +109,9 @@ rounds/<id>/round.yaml       the round
 rounds/<id>/<step-key>.yaml  one file per step
 ```
 
-`round.yaml`: `prefix` (key namespace, default the folder name; the gate rounds keep `p2-3a1-gate` and `p2-3a1-gate2` so old picks read back), `title`, `steps` (step keys in order; a missing file shows `[step missing: <key>]`), `earlier` (round ids whose picks the summary lists and `uses` can name), `render` (live-render recipe `{page, w, h, hash, pass}` over the app's default: `docs/images/hud-v5/source/p2-3a1-states.html`, 1280 x 720, `shot={state}&size=720&scale=1`), `controls`.
+`round.yaml`: `prefix` (key namespace, default the folder name; the gate rounds keep `p2-3a1-gate` and `p2-3a1-gate2` so old picks read back; two rounds sharing a prefix are a load error, since write tokens are per round and keys per prefix), `title`, `intro` (what holds for the whole round, such as judging conditions and what a neutral answer ships as; shown open above step 1 and on the summary, folded as "This round" in the same place on the other steps), `steps` (step keys in order; a missing file shows `[step missing: <key>]`), `earlier` (round ids whose picks the summary lists and `uses` can name), `render` (live-render recipe `{page, w, h, hash, pass}` over the app's default: `docs/images/hud-v5/source/p2-3a1-states.html`, 1280 x 720, `shot={state}&size=720&scale=1`), `controls`.
 
-Step fields: `kind`, `question`, `why`, `look`, `rec` and `recWhy`, `options` (map `A` to `D`; one option makes a confirm step: Yes, as drawn, or Change with a note), `uses`, `neutral` (label of a neutral answer, recorded as `neither`), `blind` (letters stay neutral; each option's `reveal` shows after the pick), `view: side`, `crop {x,y,w,h}`, `phoneCrop`, `ref {label, render|img}`, `notesLabel`, `controls`, `render`, `mark` (one or a list `{x,y,w,h,label,below?}`), `pairs` (`[name, '#hex', name, '#hex', 'vs'?]` for the numbers panel), `interactive`, `checklist`, `folds [{label, text, pics}]`.
+Step fields: `kind`, `question`, `why`, `look`, `rec` and `recWhy`, `options` (map `A` to `H`; one option makes a confirm step: Yes, as drawn, or Change with a note), `uses`, `neutral` (label of a neutral answer, recorded as `neither`), `blind` (letters stay neutral; each option's `reveal` shows after the pick), `view: side`, `crop {x,y,w,h}`, `phoneCrop`, `ref {label, render|img}`, `notesLabel`, `controls`, `render`, `mark` (one or a list `{x,y,w,h,label,below?}`), `pairs` (`[name, '#hex', name, '#hex', 'vs'?]` for the numbers panel), `interactive`, `checklist`, `folds [{label, text, pics}]`.
 
 Option fields: `name`, `notes`, `sees`, `changes`, `reveal`, `extra` (more pictures), `folds`, `mark`, and one body: `img` (`local: true` for a file never committed), `render {state, crop?, params?, page?, hash?, w?, h?}`, `video`, `text` or `audio` plus `level`.
 
@@ -120,13 +123,15 @@ Option fields: `name`, `notes`, `sees`, `changes`, `reveal`, `extra` (more pictu
 | `tune` | `target`, `params`, optional `neutral` | `<prefix>:<key>` = `tuned` with `value`, or `neither` |
 | `wording` | `fields [{id, label, text}]` | `<prefix>:<key>:<field id>`, the text as `note`, posted as you type |
 
-Rounds here: `demo` and `demo-controls` (marked `demo: true`: one step per kind, one step per render target with its controls; `demo` ends with a `tune` step) and the two P2.3a1 gate rounds.
+Rounds here: `demo` and `demo-controls` (marked `demo: true`: one step per kind, one step per render target with its controls; `demo` has an `intro`, then a `tune` step and `many`, six options on the demo scene with measurement tables) and the two P2.3a1 gate rounds.
 
 ## Stage controls
 
 `controls` on a round or step: `name: true` (every value) or a list (these values, the first is the start); a step's entry overrides the round's per control. `state` needs a list. Values: `size` (`1280x720`, `1280x800`, `1920x1080`, `3440x1440`), `fit` (`fit`, `100`), `ground` (`sand`, `dark`), `world` (`plain`, `none` and the named `docs/images/hud-v5/source/worlds/` scenes), `zoom` (`0.5`, `1`, `2`), `hud` (`on`, `off`, or a list of states laid over the picture), `tier` (`full`, `core`), `owner` (`drawn`, `1` to `8`), `set` (`default`, `neon`), `heading` (`0` to `7`), `cvd` (`normal`, `deut`, `prot`), `marker` (`on`, `off`). `extra: [{id, label, key?, values: [{v, label}], param?}]` adds the step's own controls, sent to the render page as `param` (default `id`).
 
 `fit`, `set`, `cvd` and `marker` are done by the app; the others reach the render page through `render.pass` (`{size: size, world: world, ground: ground, hud: hud, owner: you}` for `p2-3a1-states.html`). A control that neither does is a load error. The numbers panel prints WCAG contrast and CIE76 distance (normal, deuteranopia, protanopia; Machado 2009) for the step's `pairs`.
+
+Measurement tables: a render page may post `{type: 'wr:measure', rows: [[label, value, ok?], ...]}` to its parent (`parent.postMessage(msg, location.origin)`). `warroom.js` takes it only from its own origin and from a frame on the page, and on start and after every swap posts `{type: 'wr:ask-measure'}` to each frame, so a frame that reported before the script listened reports again (a frame still loading reports when it draws); keeps at most 20 rows per frame (by frame id, so a morph that keeps the frame keeps the table) and prints them as text in a table under the stage for that option (side by side: inside its tile); the table sits below the pick row, so the row does not move; `ok: false` is a muted row with "✗" (amber stays for the pick), `ok: true` gets "✓", no `ok` neither. A blind step has no tables until its pick reveals the letters, since numbers could tell the options apart. `static/demo/scene.html` reports the units it drew and its outline width (under 1 px flagged). Tune steps show none.
 
 `sh warroom/tools/shoot.sh '<path?query>' <out.png|out.webp> [WIDTHxHEIGHT]` screenshots a page with headless Firefox (`WR_URL` points at the server). Headless Firefox here plays only VP8 clips.
 
@@ -158,7 +163,7 @@ How it hangs together:
 
 ## Islands build
 
-`islands/` holds the Svelte sources, `package.json` with exact versions and `package-lock.json`. `npm run build` (Vite library mode, one ES module) writes `internal/web/static/islands.js`, which is committed and embedded like `app.css`, so `go build`, `go test` and the Docker build need no Node. `go generate ./...` runs `npm ci` and the build; `tools/check_generated.sh` rebuilds in a temporary copy and fails when `internal/web/static/islands.js` differs.
+`islands/` holds the Svelte sources, `package.json` with exact versions and `package-lock.json`. `npm run build` (Vite library mode, one minified ES module) writes `internal/web/static/islands.js`, which is committed and embedded like `app.css`, so `go build`, `go test` and the Docker build need no Node. `go generate ./...` runs `npm ci` and the build; `tools/check_generated.sh` rebuilds in a temporary copy and fails when `internal/web/static/islands.js` differs.
 
 ## Styles
 
@@ -217,7 +222,7 @@ These are not in CI or `tools/run_checks.sh` yet.
 `fly/` deploys War Room to the prototype's app, with the same volume, so picks survive restarts and redeploys. Every `fly` command needs the owner's approval.
 
 ```sh
-fly secrets set WARROOM_SECRET=... -a wargrid-lab-test   # once; without it every link can record and read back
+fly secrets set WARROOM_SECRET=... -a wargrid-lab-test   # once; the image sets WARROOM_RUN_AS, so without it the server refuses to start
 sh warroom/fly/sync.sh                                  # fly/site/: Go sources, rounds, referenced repository files
 fly volumes create decision_picks --region fra --size 1 -a wargrid-lab-test   # once; exists if the prototype was deployed
 fly deploy warroom/fly
@@ -236,7 +241,7 @@ container logs warroom-test                  # "running as uid 65534"
 container stop warroom-test && container rm warroom-test && container volume rm warroom-test-vol && container image rm warroom-test
 ```
 
-With the secret set, reading `/picks.json` or `/history.jsonl` needs the admin token and a pick needs the round's token (see Tokens); without it anyone with the URL can read the notes and overwrite a pick. Reading picks back is `curl "$HOST/picks.json?t=$(WARROOM_SECRET=... go run . token admin)"`, which needs the secret on the machine that asks.
+With the secret set, reading `/picks.json` or `/history.jsonl` needs the admin token and a pick needs the round's token (see Tokens), and a page shows answers only with the round's token. Reading picks back is `curl "$HOST/picks.json?t=$(WARROOM_SECRET=... go run . token admin)"`, which needs the secret on the machine that asks.
 
 ## Learning notes
 
@@ -258,5 +263,5 @@ Things that cost time with the pinned versions.
 - Runes: `$props()` values are reactive, so reading `params` inside the `$effect` rebuilds the pane when `data-params` changes; the values object handed to Tweakpane is a plain object, not `$state`, because Tweakpane writes into it.
 - Tweakpane 4.0.5 ships `.d.ts` files that import `@tweakpane/core`, which is not installed, so the editor has no types; the API (`new Pane({container})`, `addBinding`, `pane.on('change')`, `dispose`) was read from `dist/tweakpane.js`. Number steps count from the initial value, not from `min` (`StepConstraint(step, initialValue)`), which is why a loaded `value` must lie on the grid from `min` and the server snaps from `min`.
 - Tweakpane's slider is a focusable `div` with its own arrow-key handler that does not stop the event, so `warroom.js` would flip the step; it now ignores keys from inside `wr-tune` except Enter. Its text inputs are covered by the existing input rule. It injects its own `<style>` and is themed with `--tp-*` custom properties on `wr-tune` (`internal/web/static/app.css`), set from the page's tokens; its list is a native `<select>` that stays light grey unless `--tp-button-*` is set.
-- Vite library mode: `build.emptyOutDir` must be `false` because `outDir` is `static/`, which holds the rest of the site. The output keeps whitespace and comments (about 220 KB, 47 KB gzipped). The Svelte plugin's "no Svelte config found" line is harmless; the compiler option sits in `vite.config.js`.
+- Vite library mode: `build.emptyOutDir` must be `false` because `outDir` is `static/`, which holds the rest of the site. `build.minify` alone leaves whitespace in an ES library bundle (meant for another bundler), so `rolldownOptions.output.minify: true` forces full minification: 180 KB, 42 KB gzipped (was 219 KB, 47 KB); most of what is left is Tweakpane's injected stylesheet. The Svelte plugin's "no Svelte config found" line is harmless; the compiler option sits in `vite.config.js`.
 - Headless Firefox through WebDriver cannot be made narrower than 500 px wide; for a 390 px layout load the page in a same-origin `<iframe>` of that width. In a WebDriver test, `clear` on a Tweakpane text input fires `change` and the pane reverts it; select the text and type instead.

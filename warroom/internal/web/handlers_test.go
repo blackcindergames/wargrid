@@ -350,7 +350,7 @@ func TestNewKeysPastTheCapAre507(t *testing.T) {
 	a := newApp(t)
 	full := map[string]store.Entry{}
 	for i := range 500 {
-		full[fmt.Sprintf("old:k%d", i)] = store.Entry{}
+		full[fmt.Sprintf("pre:k%d", i)] = store.Entry{}
 	}
 	raw, err := json.Marshal(full)
 	if err != nil {
@@ -362,8 +362,42 @@ func TestNewKeysPastTheCapAre507(t *testing.T) {
 	if err := os.WriteFile(a.picks, raw, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	wantStatus(t, a.post("/r/r/pic/pick", url.Values{"pick": {"A"}}), http.StatusInsufficientStorage)
+	rec := a.post("/r/r/pic/pick", url.Values{"pick": {"A"}})
+	wantStatus(t, rec, http.StatusInsufficientStorage)
+	mustContain(t, "507", rec.Body.String(), "500 keys per round")
 	wantStatus(t, a.post("/r/r/pic/note", url.Values{"note": {"n"}}), http.StatusInsufficientStorage)
+	wantStatus(t, a.post("/r/d/x/pick", url.Values{"pick": {"A"}}), http.StatusSeeOther)
+}
+
+func TestBodyLimitFitsTheLongestNoteAndNamesItself(t *testing.T) {
+	a := newApp(t)
+	// Four bytes a character, twelve after URL encoding: the most a 4000-character note can take.
+	widest := strings.Repeat("\U0001D11E", maxNote)
+	wantStatus(t, a.post("/r/r/pic/pick", url.Values{"pick": {"A"}, "note": {widest}}), http.StatusSeeOther)
+	rec := a.post("/r/r/pic/note", url.Values{"note": {strings.Repeat("x", 65<<10)}})
+	wantStatus(t, rec, http.StatusBadRequest)
+	mustContain(t, "body limit", rec.Body.String(), "64 KiB")
+	rec = a.post("/r/r/pic/pick", url.Values{"pick": {"A"}, "note": {strings.Repeat("x", maxNote+1)}})
+	wantStatus(t, rec, http.StatusBadRequest)
+	mustContain(t, "note limit", rec.Body.String(), "4000 characters")
+}
+
+func TestPickRecordsTheOptionsName(t *testing.T) {
+	a := newApp(t)
+	wantStatus(t, a.post("/r/r/pic/pick", url.Values{"pick": {"B"}}), http.StatusSeeOther)
+	if got := a.saved(t)["pre:pic"]; got.Name != "Second" {
+		t.Fatalf("entry %+v, want name Second", got)
+	}
+	wantStatus(t, a.post("/r/r/pic/pick", url.Values{"pick": {"neither"}}), http.StatusSeeOther)
+	if got := a.saved(t)["pre:pic"]; got.Name != "" {
+		t.Fatalf("a neutral answer kept the name: %+v", got)
+	}
+	wantStatus(t, a.post("/r/r/pic/note", url.Values{"note": {"n"}}), http.StatusOK)
+	wantStatus(t, a.post("/r/r/pic/pick", url.Values{"pick": {"A"}}), http.StatusSeeOther)
+	wantStatus(t, a.post("/r/r/pic/note", url.Values{"note": {"m"}}), http.StatusOK)
+	if got := a.saved(t)["pre:pic"]; got.Name != "First" || got.Note != "m" {
+		t.Fatalf("a note dropped the name: %+v", got)
+	}
 }
 
 func TestFailedWriteIs500AndKeepsTheFile(t *testing.T) {

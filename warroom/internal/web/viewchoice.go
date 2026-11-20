@@ -3,6 +3,7 @@ package web
 import (
 	"cmp"
 	"slices"
+	"strconv"
 	"strings"
 	"wargrid/warroom/internal/rounds"
 	"wargrid/warroom/internal/stage"
@@ -27,6 +28,8 @@ type OptView struct {
 	Letter, Name, Reveal string
 	Cp, Picked           bool
 	On, Done             bool
+	// Measure: the option's measurement slot; a blind step has none until the pick, since numbers could tell the options apart.
+	Measure              bool
 	Pic                  *PicView
 	Card                 *CardView
 	Audio                *AudioView
@@ -37,8 +40,8 @@ type OptView struct {
 }
 
 type FlipButton struct {
-	Letter, Name string
-	On, Done     bool
+	Letter, Name, Key string
+	On, Done          bool
 }
 
 type CtlButton struct {
@@ -89,6 +92,8 @@ type ChoiceView struct {
 	Act                 ActView
 	Ref                 *FigureView
 	Form                FormView
+	// Large: the shown stage has a picture with a large view, so the desktop gets a Large button.
+	Large bool
 }
 
 // FormView is the answer form the pick buttons submit.
@@ -129,6 +134,7 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 	if side && s.Ref != nil {
 		v.Ref = &FigureView{s.Ref.Label, b.pics(st).pic(picOf(s.Ref), b.cropOf(s), s.Ref.Label, true)}
 	}
+	v.Large = !side && slices.ContainsFunc(v.Opts, func(o OptView) bool { return o.Pic != nil && o.Pic.Large })
 	return v
 }
 
@@ -149,9 +155,17 @@ func (b *builder) flipBar(s *rounds.Step, shown string) []FlipButton {
 	pick := b.pickOf(b.round, s.Key)
 	var out []FlipButton
 	for _, l := range s.OptionLetters() {
-		out = append(out, FlipButton{l, cmp.Or(s.Options[l].Name, l), l == shown, l == pick})
+		out = append(out, FlipButton{l, cmp.Or(s.Options[l].Name, l), flipKey(l), l == shown, l == pick})
 	}
 	return out
+}
+
+// flipKey: A to D keep their letters; E to H have only their digits, since F, G and H are stage controls.
+func flipKey(letter string) string {
+	if letter <= "D" {
+		return strings.ToLower(letter)
+	}
+	return strconv.Itoa(int(letter[0]-'A') + 1)
 }
 
 func (b *builder) viewToggle(n int, s *rounds.Step, shown string) (string, string) {
@@ -184,9 +198,11 @@ func (b *builder) options(st *stage.Stage, s *rounds.Step, shown string) []OptVi
 	for _, l := range s.OptionLetters() {
 		o := s.Options[l]
 		v := OptView{Letter: l, Name: cmp.Or(o.Name, l), Cp: s.Rec == l, Picked: pick == l, On: l == shown, Done: l == pick}
-		if s.Blind && (pick == "neither" || hasOption(s, pick)) {
+		revealed := pick == "neither" || hasOption(s, pick)
+		if s.Blind && revealed {
 			v.Reveal = o.Reveal
 		}
+		v.Measure = !s.Blind || revealed
 		b.fillBody(&v, pb, s, &o)
 		b.fillText(&v, pb, s, &o)
 		out = append(out, v)
@@ -291,9 +307,12 @@ func (b *builder) selectOf(c *stage.Ctl, cur string, n int) *SelectView {
 	return sel
 }
 
+// maxCols: past four options side by side the pictures get too small, so the grid wraps; the reference tile comes on top.
+const maxCols = 4
+
 func (v *ChoiceView) Cols() int {
 	if v.Ref != nil {
-		return len(v.Opts) + 1
+		return min(len(v.Opts), maxCols) + 1
 	}
-	return len(v.Opts)
+	return min(len(v.Opts), maxCols)
 }

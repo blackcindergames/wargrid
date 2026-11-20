@@ -22,6 +22,11 @@ type PhoneView struct {
 	Ctl                 CtlBarView
 }
 
+// maxFlipInRow: more option buttons than this get their own rows, so each stays a thumb wide.
+const maxFlipInRow = 4
+
+func (p *PhoneView) FlipRow() bool { return len(p.Flip) > maxFlipInRow }
+
 type LegendRow struct {
 	Keys, Text string
 	Off        bool
@@ -32,7 +37,7 @@ type LegendView struct {
 }
 
 var legendKeys = []LegendRow{
-	{"A B C D or 1 2 3 4", "show that option (side by side: highlight it)", false},
+	{"A B C D or 1 to 8", "show that option (E to H: 5 to 8 only; side by side: highlight it)", false},
 	{"Enter", "pick the shown option, record it and go on", false},
 	{"W", "one at a time / side by side", false},
 	{"← → (or [ ], Backspace)", "previous / next step without picking", false},

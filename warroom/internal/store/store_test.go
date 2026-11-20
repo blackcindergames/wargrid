@@ -268,22 +268,71 @@ func TestHistoryAppendsOneLinePerChange(t *testing.T) {
 	}
 }
 
-func TestHistoryCapRefusesTheWholeWrite(t *testing.T) {
+func TestHistoryRotatesAtTheCapAndNeverBlocksTheWrite(t *testing.T) {
 	s, path := newTestStore(t)
 	s.maxHistory = 200
-	var err error
-	n := 0
-	for ; err == nil && n < 20; n++ {
-		err = s.Update(fmt.Sprintf("demo:k%d", n), setEntry("A", ""))
+	tick := 0
+	s.now = func() time.Time { tick++; return time.Date(2026, 11, 20, 4, 5, 6, tick, time.UTC) }
+	for n := range 9 {
+		if err := s.Update(fmt.Sprintf("demo:k%d", n), setEntry("A", "")); err != nil {
+			t.Fatalf("write %d = %v", n, err)
+		}
 	}
-	if !errors.Is(err, ErrFull) || n < 2 {
-		t.Fatalf("after %d writes err = %v, want ErrFull past the cap", n, err)
+	if got := readFile(t, path); len(got) != 9 {
+		t.Fatalf("%d keys in picks.json, want all 9", len(got))
 	}
-	if got := readFile(t, path); len(got) != n-1 {
-		t.Fatalf("%d keys in picks.json, want the %d that fit", len(got), n-1)
+	if data, _ := s.History(); len(data) == 0 || len(data) > 200 {
+		t.Fatalf("current history is %d bytes, cap 200", len(data))
 	}
-	if data, _ := s.History(); len(data) > 200 {
-		t.Fatalf("history is %d bytes, cap 200", len(data))
+	aside, err := filepath.Glob(filepath.Join(filepath.Dir(path), "picks-*.jsonl"))
+	if err != nil || len(aside) != 2 || !strings.HasPrefix(filepath.Base(aside[0]), "picks-20261120T040506") {
+		t.Fatalf("rotated files = %v, %v", aside, err)
+	}
+	lines := 0
+	for _, f := range append(aside, s.history) {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		lines += strings.Count(string(data), "\n")
+	}
+	if lines != 9 {
+		t.Fatalf("%d history lines over %d files, want 9", lines, len(aside)+1)
+	}
+}
+
+func TestKeyCapCountsPerRoundPrefix(t *testing.T) {
+	s, _ := newTestStore(t)
+	s.maxKeys = 2
+	for _, key := range []string{"one:a", "one:b", "two:a", "two:b"} {
+		if err := s.Update(key, setEntry("A", "")); err != nil {
+			t.Fatalf("%s = %v", key, err)
+		}
+	}
+	err := s.Update("one:c", setEntry("A", ""))
+	if !errors.Is(err, ErrFull) || !strings.Contains(err.Error(), "2 keys per round") {
+		t.Fatalf("third key of round one = %v, want ErrFull naming the limit", err)
+	}
+}
+
+func TestWriteAtomicSyncsTheDirectoryAfterTheRename(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "picks.json")
+	var synced string
+	orig := syncDir
+	syncDir = func(d string) error {
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("directory synced before the rename: %v", err)
+		}
+		synced = d
+		return orig(d)
+	}
+	t.Cleanup(func() { syncDir = orig })
+	if err := writeAtomic(path, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	if synced != dir {
+		t.Fatalf("synced %q, want %q", synced, dir)
 	}
 }
 

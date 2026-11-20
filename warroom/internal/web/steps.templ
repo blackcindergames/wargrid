@@ -110,8 +110,11 @@ templ FlipBar(v ChoiceView) {
 	if len(v.Flip) > 0 {
 		<div class="flipbar">
 			for _, f := range v.Flip {
-				<button type="button" class={ "ob btn sm", templ.KV("on", f.On), templ.KV("done", f.Done) } data-show={ f.Letter } data-key={ strings.ToLower(f.Letter) }>
-					@Kbd(f.Letter)
+				<button type="button" class={ "ob btn sm", templ.KV("on", f.On), templ.KV("done", f.Done) } data-show={ f.Letter } data-key={ f.Key }>
+					@Kbd(strings.ToUpper(f.Key))
+					if f.Key != strings.ToLower(f.Letter) {
+						<b class="fl">{ f.Letter }</b>
+					}
 					<span>@Fmt(f.Name)</span>
 				</button>
 			}
@@ -144,6 +147,24 @@ templ Act(v ChoiceView) {
 			}
 		}
 		<span class="scale"></span>
+		if v.Large {
+			@LargeButton()
+		}
+	</div>
+}
+
+templ LargeButton() {
+	<button type="button" class="btn" data-act="large">@Kbd("L") Large</button>
+}
+
+// Measures holds what each option's render page reports over wr:measure; warroom.js fills it.
+templ Measures(opts []OptView) {
+	<div class="measures">
+		for _, o := range opts {
+			if o.Measure {
+				<div class="measure" data-measure={ o.Letter } hidden?={ !o.On }></div>
+			}
+		}
 	</div>
 }
 
@@ -175,6 +196,7 @@ templ FlipStage(v ChoiceView) {
 			}
 		</div>
 		@Act(v)
+		@Measures(v.Opts)
 	</section>
 }
 
@@ -202,6 +224,9 @@ templ Tile(o OptView) {
 			@Tags(o)
 		</div>
 		@OptBody(o)
+		if o.Measure {
+			<div class="measure" data-measure={ o.Letter }></div>
+		}
 		@OptText(o)
 		if len(o.Extras) > 0 {
 			<details>
@@ -305,7 +330,10 @@ templ GalleryMain(v GalleryView) {
 					<div class="stage gmain" data-swipe>
 						@Picture(v.Main)
 					</div>
-					<div class="scale"></div>
+					<div class="act">
+						<span class="scale"></span>
+						@LargeButton()
+					</div>
 				</section>
 				<section class="thumbs">
 					for _, t := range v.Thumbs {
@@ -382,9 +410,7 @@ templ WordingMain(v WordingView) {
 				for _, f := range v.Fields {
 					<div class="field">
 						<label for={ f.Note.ID } class="h">{ f.Note.Label }</label>
-						if isReadOnly(ctx) {
-							<p>{ f.Note.Value }</p>
-						} else {
+						if !isReadOnly(ctx) {
 							@NoteField(f.Note)
 						}
 						if f.Was != "" {
@@ -414,6 +440,19 @@ templ MissingMain(v MissingView) {
 templ SumTable(rows []SumRow) {
 	if len(rows) == 0 {
 		<p>Nothing recorded yet.</p>
+	} else if isReadOnly(ctx) {
+		<div class="scroll">
+			<table class="sum">
+				<thead>
+					<tr><th>Question</th></tr>
+				</thead>
+				<tbody>
+					for _, r := range rows {
+						<tr><td>@Fmt(r.Label)</td></tr>
+					}
+				</tbody>
+			</table>
+		</div>
 	} else {
 		<div class="scroll">
 			<table class="sum">
@@ -445,6 +484,7 @@ templ SummaryMain(v SummaryView, nav NavView) {
 			<span class="n">{ v.Eyebrow }</span>
 			<h1>{ v.Title }</h1>
 		</section>
+		@Intro(v.Intro, true)
 		<div id="sum">
 			<h2>{ v.Main.Title } <span class="cnt">{ v.Main.Count }</span></h2>
 			@SumTable(v.Main.Rows)
@@ -457,7 +497,7 @@ templ SummaryMain(v SummaryView, nav NavView) {
 						}
 					</span>
 				</p>
-			} else {
+			} else if !isReadOnly(ctx) {
 				<p class="close">You can close this tab.</p>
 			}
 			<p>

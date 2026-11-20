@@ -314,6 +314,9 @@
     "title": {
       "type": "string"
     },
+    "intro": {
+      "type": "string"
+    },
     "steps": {
       "items": {
         "type": "string"

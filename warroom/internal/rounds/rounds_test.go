@@ -121,7 +121,7 @@ func TestLoadErrors(t *testing.T) {
 		{"no kind", "steps: [s]\n", map[string]string{"s": "question: q\n"}, `unknown kind ""`},
 		{"no options", "steps: [s]\n", map[string]string{"s": "kind: text\n"}, "r/s: no options"},
 		{"rec not an option", "steps: [s]\n", map[string]string{"s": "kind: pictures\nrec: C\noptions: {A: {name: a}}\n"}, "rec C is not an option"},
-		{"option letter E", "steps: [s]\n", map[string]string{"s": "kind: pictures\noptions: {E: {name: a}}\n"}, "option E is not one of A to D"},
+		{"option letter I", "steps: [s]\n", map[string]string{"s": "kind: pictures\noptions: {I: {name: a}}\n"}, "option I is not one of A to H"},
 		{"uses not a step", "steps: [s]\n", map[string]string{"s": pictureStep + "uses: [nope]\n"}, "uses nope is not a step"},
 		{"uses a round not earlier", "steps: [s]\n", map[string]string{"s": pictureStep + "uses: [old/first]\n"}, "uses old/first is not a step"},
 		{"verdict clashes with a step", "steps: [s, verdict]\n", map[string]string{
@@ -145,6 +145,14 @@ func TestLoadErrors(t *testing.T) {
 		{"extra key taken", "steps: [s]\n", map[string]string{"s": pictureStep + "controls: {extra: [{id: v, key: g, values: [{v: a, label: A}]}]}\n"}, "extra control v key g is taken by the app"},
 		{"bad pair", "steps: [s]\n", map[string]string{"s": pictureStep + "pairs: [[a, red, b, '#000000']]\n"}, "colours must be #rrggbb"},
 	}
+	for _, k := range []string{"5", "6", "7", "8"} {
+		cases = append(cases, struct {
+			name  string
+			round string
+			steps map[string]string
+			want  string
+		}{"extra key " + k + " picks an option", "steps: [s]\n", map[string]string{"s": pictureStep + "controls: {extra: [{id: v, key: '" + k + "', values: [{v: a, label: A}]}]}\n"}, "extra control v key " + k + " is taken by the app"})
+	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			c := oneRound(t, tc.round, tc.steps)
@@ -166,6 +174,35 @@ func TestValidStepsAndControlsLoadClean(t *testing.T) {
 	s := c.Round("r").Step("s")
 	if len(s.Mark) != 1 || s.Mark[0].Label != "here" || s.Pairs[0].Kind != "vs" {
 		t.Fatalf("step = %+v", s)
+	}
+}
+
+func TestEightOptionsAndAnIntroLoad(t *testing.T) {
+	step := "kind: pictures\noptions:\n"
+	for _, l := range "ABCDEFGH" {
+		step += "  " + string(l) + ": {name: n" + string(l) + "}\n"
+	}
+	c := oneRound(t, "steps: [s]\nintro: Judge on a laptop; neutral ships as A.\n", map[string]string{"s": step})
+	if len(c.Errors) > 0 {
+		t.Fatalf("errors: %q", c.Errors)
+	}
+	r := c.Round("r")
+	if got := r.Step("s").OptionLetters(); !slices.Equal(got, []string{"A", "B", "C", "D", "E", "F", "G", "H"}) {
+		t.Errorf("letters = %v", got)
+	}
+	if r.Intro != "Judge on a laptop; neutral ships as A." {
+		t.Errorf("intro = %q", r.Intro)
+	}
+}
+
+func TestRoundsSharingAPrefixAreALoadError(t *testing.T) {
+	c := LoadCatalog(writeTree(t, map[string]string{
+		"index.yaml":   "- {id: a, title: A}\n- {id: b, title: B}\n",
+		"a/round.yaml": "prefix: same\nsteps: []\n",
+		"b/round.yaml": "prefix: same\nsteps: []\n",
+	}))
+	if !hasError(c, "rounds a and b share the prefix same") {
+		t.Fatalf("errors: %q", c.Errors)
 	}
 }
 

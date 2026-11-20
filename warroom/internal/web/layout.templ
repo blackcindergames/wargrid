@@ -70,7 +70,7 @@ templ Shell(p PageView) {
 			<div id="err" role="alert">{ strings.Join(p.Errors, "\n") }</div>
 		}
 		if p.ReadOnly {
-			<p id="readonly" role="status">{ readOnly }</p>
+			<p id="readonly" role="status">{ readOnlyNotice }</p>
 		}
 		if len(p.Chips) > 0 {
 			<header class="top">
@@ -117,6 +117,7 @@ templ Document(title string, p PageView) {
 			hx-status:5xx:inherited="swap:none"
 		>
 			<div id="flash" role="alert" hidden></div>
+			<div id="toast" role="status" hidden></div>
 			<div id="page">
 				@Shell(p)
 			</div>

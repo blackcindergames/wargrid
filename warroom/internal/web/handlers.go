@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	maxBody = 8192
+	// Room for a 4000-character note of 4-byte characters, URL-encoded, plus the other fields.
+	maxBody = 64 << 10
 	maxNote = 4000
 )
 
@@ -164,6 +165,10 @@ func (s *Server) openRound(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("picks", "error", err)
 	}
+	// Where the round opens would tell a reader which steps are answered.
+	if !s.canWrite(round.ID, r.URL.Query().Get(tokenParam)) {
+		entries = nil
+	}
 	target := url.URL{Path: "/r/" + round.ID + "/summary", RawQuery: r.URL.RawQuery}
 	if open := round.Open(entries); len(open) > 0 {
 		target.Path = "/r/" + round.ID + "/" + strconv.Itoa(open[0]+1)
@@ -181,6 +186,9 @@ func (s *Server) view(r *http.Request, c *rounds.Catalog, round *rounds.Round) (
 	}
 	b = &builder{cat: c, round: round, entries: entries, q: parseQuery(r.URL.Query())}
 	b.readOnly = !s.canWrite(round.ID, b.q.Token)
+	if b.readOnly {
+		b.entries = map[string]store.Entry{}
+	}
 	root, err := os.OpenRoot(s.cfg.Root)
 	if err != nil {
 		return b, errs, func() {}
@@ -215,24 +223,41 @@ func (s *Server) summary(w http.ResponseWriter, r *http.Request) {
 	}
 	b, errs, done := s.view(r, c, round)
 	defer done()
+	s.loadChanges(b)
+	respond(w, r, round.Title+" · War Room", b.summaryPageView(errs))
+}
+
+// loadChanges skips a read-only page, whose summary shows no counts.
+func (s *Server) loadChanges(b *builder) {
+	if b.readOnly {
+		return
+	}
 	var err error
 	if b.changes, err = s.store.Changes(); err != nil {
 		slog.Error("history", "error", err)
 	}
-	respond(w, r, round.Title+" · War Room", b.summaryPageView(errs))
 }
 
 func parseForm(w http.ResponseWriter, r *http.Request) (url.Values, bool) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxBody)
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad form", http.StatusBadRequest)
+		msg := "bad form"
+		if _, tooBig := errors.AsType[*http.MaxBytesError](err); tooBig {
+			msg = "form body over 64 KiB"
+		}
+		http.Error(w, msg, http.StatusBadRequest)
 		return nil, false
 	}
 	return r.PostForm, true
 }
 
-func validNote(note string) bool {
-	return utf8.ValidString(note) && utf8.RuneCountInString(note) <= maxNote
+// noteRefused answers a note that is too long or not UTF-8 and says whether it did.
+func noteRefused(w http.ResponseWriter, note string) bool {
+	if utf8.ValidString(note) && utf8.RuneCountInString(note) <= maxNote {
+		return false
+	}
+	http.Error(w, "note over 4000 characters or not UTF-8", http.StatusBadRequest)
+	return true
 }
 
 // stepOf finds the real step a request names and checks the write token; a missing step has no endpoint.
@@ -271,7 +296,10 @@ func (s *Server) pick(w http.ResponseWriter, r *http.Request) {
 	}
 	key := step.AnswerKey()
 	value, valueOK := step.TunedValue(pick, form.Get("value"))
-	if key == "" || !valueOK || !validNote(note) || (pick == "" && !hasNote) || (pick != "" && !step.AcceptsPick(pick)) {
+	if noteRefused(w, note) {
+		return
+	}
+	if key == "" || !valueOK || (pick == "" && !hasNote) || (pick != "" && !step.AcceptsPick(pick)) {
 		http.Error(w, "bad pick", http.StatusBadRequest)
 		return
 	}
@@ -281,7 +309,7 @@ func (s *Server) pick(w http.ResponseWriter, r *http.Request) {
 	}
 	err := s.store.Update(round.Prefix+":"+key, func(e store.Entry) store.Entry {
 		if pick != "" {
-			e.Pick, e.Value = &pick, value
+			e.Pick, e.Value, e.Name = &pick, value, step.Options[pick].Name
 		}
 		if hasNote {
 			e.Note = note
@@ -321,6 +349,7 @@ func (s *Server) answered(w http.ResponseWriter, r *http.Request, c *rounds.Cata
 	w.Header().Set("HX-Push-Url", target)
 	title := round.Title + " · War Room"
 	if next > len(round.Loaded) {
+		s.loadChanges(b)
 		respond(w, r, title, b.summaryPageView(errs))
 		return
 	}
@@ -347,7 +376,10 @@ func (s *Server) note(w http.ResponseWriter, r *http.Request) {
 	}
 	note := form.Get("note")
 	suffix := noteKey(step, form.Get("sub"))
-	if !form.Has("note") || !validNote(note) || suffix == "" {
+	if noteRefused(w, note) {
+		return
+	}
+	if !form.Has("note") || suffix == "" {
 		http.Error(w, "bad note", http.StatusBadRequest)
 		return
 	}
@@ -386,7 +418,7 @@ func recordFailed(w http.ResponseWriter, err error) bool {
 	case err == nil:
 		return false
 	case errors.Is(err, store.ErrFull):
-		http.Error(w, "picks file is full", http.StatusInsufficientStorage)
+		http.Error(w, err.Error(), http.StatusInsufficientStorage)
 	case errors.Is(err, store.ErrBadKey):
 		http.Error(w, "bad key", http.StatusBadRequest)
 	default:

@@ -342,9 +342,9 @@ func Shell(p PageView) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var17 string
-			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(readOnly)
+			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(readOnlyNotice)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/layout.templ`, Line: 73, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/layout.templ`, Line: 73, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -480,7 +480,7 @@ func Document(title string, p PageView) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<script>if(matchMedia(\"(max-width:900px),(pointer:coarse)\").matches&&!/[?&](phone|shot)=1/.test(location.search)){const u=new URL(location.href);u.searchParams.set(\"phone\",\"1\");location.replace(u)}</script><script src=\"/static/htmx.min.js\" defer></script><script src=\"/static/warroom.js\" defer></script><script type=\"module\" src=\"/static/islands.js\"></script></head><body hx-boost:inherited=\"true\" hx-target:inherited=\"#page\" hx-status:4xx:inherited=\"swap:none\" hx-status:5xx:inherited=\"swap:none\"><div id=\"flash\" role=\"alert\" hidden></div><div id=\"page\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<script>if(matchMedia(\"(max-width:900px),(pointer:coarse)\").matches&&!/[?&](phone|shot)=1/.test(location.search)){const u=new URL(location.href);u.searchParams.set(\"phone\",\"1\");location.replace(u)}</script><script src=\"/static/htmx.min.js\" defer></script><script src=\"/static/warroom.js\" defer></script><script type=\"module\" src=\"/static/islands.js\"></script></head><body hx-boost:inherited=\"true\" hx-target:inherited=\"#page\" hx-status:4xx:inherited=\"swap:none\" hx-status:5xx:inherited=\"swap:none\"><div id=\"flash\" role=\"alert\" hidden></div><div id=\"toast\" role=\"status\" hidden></div><div id=\"page\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -536,7 +536,7 @@ func ShotDocument(v ShotView) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templruntime.NewAttributeExpression(v.Cvd).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/layout.templ`, Line: 136, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/layout.templ`, Line: 137, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
 		if templ_7745c5c3_Err != nil {

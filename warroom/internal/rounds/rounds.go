@@ -24,7 +24,7 @@ var (
 
 	choiceKinds = []string{"pictures", "text", "audio", "lab"}
 	allKinds    = append([]string{"gallery", "verdict", "wording", "tune"}, choiceKinds...)
-	letters     = []string{"A", "B", "C", "D"}
+	letters     = []string{"A", "B", "C", "D", "E", "F", "G", "H"}
 )
 
 type IndexEntry struct {
@@ -242,6 +242,7 @@ type Round struct {
 	ID       string    `yaml:"-"`
 	Prefix   string    `yaml:"prefix"`
 	Title    string    `yaml:"title"`
+	Intro    string    `yaml:"intro"`
 	Steps    []string  `yaml:"steps"`
 	Earlier  []string  `yaml:"earlier"`
 	Render   *Render   `yaml:"render"`
@@ -351,8 +352,25 @@ func LoadCatalog(dir string) *Catalog {
 	for _, r := range c.Rounds {
 		c.validateRound(r)
 	}
+	c.checkPrefixes()
 	slices.Sort(c.Errors)
 	return c
+}
+
+// checkPrefixes refuses a shared prefix: picks keys are per prefix but write tokens per round, so one round's token could overwrite the other's picks.
+func (c *Catalog) checkPrefixes() {
+	owner := map[string]string{}
+	for _, e := range c.Index {
+		r := c.Rounds[e.ID]
+		if r == nil {
+			continue
+		}
+		if first, taken := owner[r.Prefix]; taken {
+			c.fail("rounds %s and %s share the prefix %s", first, r.ID, r.Prefix)
+			continue
+		}
+		owner[r.Prefix] = r.ID
+	}
 }
 
 func (c *Catalog) fail(format string, args ...any) {
@@ -457,7 +475,7 @@ func validateChoice(where string, s *Step) []string {
 	}
 	for l := range s.Options {
 		if !slices.Contains(letters, l) {
-			errs = append(errs, where+": option "+l+" is not one of A to D")
+			errs = append(errs, where+": option "+l+" is not one of A to H")
 		}
 	}
 	if _, ok := s.Options[s.Rec]; s.Rec != "" && !ok {

@@ -105,6 +105,10 @@ func printSchema(w io.Writer, args []string) error {
 func run() error {
 	cfg := configFromEnv(os.Getenv)
 	if cfg.RunAs != "" {
+		// A deploy must never go out with every link able to record and read back.
+		if cfg.Secret == "" {
+			return errors.New("WARROOM_RUN_AS is set (container mode) but WARROOM_SECRET is not")
+		}
 		uid, err := strconv.Atoi(cfg.RunAs)
 		if err != nil || uid <= 0 {
 			return fmt.Errorf("WARROOM_RUN_AS must be a positive uid, got %q", cfg.RunAs)

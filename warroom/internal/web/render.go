@@ -80,7 +80,7 @@ func (b *builder) summaryPageView(errs []string) *PageView {
 	nav := NavView{Prev: b.stepHref(steps), Next: b.stepHref(1), NextLabel: "Step 1"}
 	body := SummaryMain(b.summary(), nav)
 	phone := PhoneView{Prev: nav.Prev, Next: nav.Next, Copy: true}
-	return &PageView{Errors: errs, Cvd: "normal", Chips: b.chips(steps), Body: body, Phone: &phone, Legend: legendOf(nil, false), Keys: b.q.Keys}
+	return &PageView{ReadOnly: b.readOnly, Errors: errs, Cvd: "normal", Chips: b.chips(steps), Body: body, Phone: &phone, Legend: legendOf(nil, false), Keys: b.q.Keys}
 }
 
 // shotView is the shown option (gallery: item) alone, whole unless crop=step asks for the step's crop.

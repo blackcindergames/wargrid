@@ -414,3 +414,84 @@ func TestQueryDropsLongOddAndTooManyControlValues(t *testing.T) {
 		t.Fatalf("a long query value must not reach the page's links: %d bytes", n)
 	}
 }
+
+func manyOptionsApp(t *testing.T) *testApp {
+	t.Helper()
+	step := "kind: pictures\nquestion: Which of six?\noptions:\n"
+	for _, l := range "ABCDEF" {
+		step += "  " + string(l) + ": {name: n" + string(l) + ", img: docs/a.txt}\n"
+	}
+	return newAppWith(t, map[string]string{
+		"index.yaml":   "- {id: m, title: Round M}\n",
+		"m/round.yaml": "title: Round M\nintro: Judge at 100 %; a neutral answer ships option A.\nsteps: [six, txt, ref4]\n",
+		"m/ref4.yaml":  "kind: pictures\nquestion: Against today?\nref: {label: Today, img: docs/a.txt}\noptions:\n  A: {name: a, img: docs/a.txt}\n  B: {name: b, img: docs/a.txt}\n  C: {name: c, img: docs/a.txt}\n  D: {name: d, img: docs/a.txt}\n",
+		"m/six.yaml":   step,
+		"m/txt.yaml":   "kind: text\nquestion: Which words?\noptions: {A: {name: a, text: one}, B: {name: b, text: two}}\n",
+	})
+}
+
+func TestOptionsPastDFlipWithDigitsOnlyAndSideBySideWraps(t *testing.T) {
+	a := manyOptionsApp(t)
+	body := a.get("/r/m/1").Body.String()
+	mustContain(t, "flip", body, `data-show="E" data-key="5"`, `data-show="F" data-key="6"`, `data-show="D" data-key="d"`, "1 to 8")
+	for _, taken := range []string{`data-key="e"`, `data-key="f"`} {
+		if strings.Contains(body, taken) {
+			t.Errorf("an option took the control key %s", taken)
+		}
+	}
+	mustContain(t, "side", a.get("/r/m/1?view=side").Body.String(), "--n:4", `value="F" class="pick btn"`)
+	mustContain(t, "phone", a.get("/r/m/1?phone=1").Body.String(), `class="row opts"`)
+	if strings.Contains(a.get("/r/m/2?phone=1").Body.String(), `class="row opts"`) {
+		t.Error("two options got their own phone row")
+	}
+}
+
+func TestRoundIntroShowsAboveStepOneAndInTheSummary(t *testing.T) {
+	a := manyOptionsApp(t)
+	intro := "Judge at 100 %; a neutral answer ships option A."
+	mustContain(t, "step 1", a.get("/r/m/1").Body.String(), `<section class="intro"`, intro)
+	mustContain(t, "summary", a.get("/r/m/summary").Body.String(), intro)
+	mustContain(t, "step 2", a.get("/r/m/2").Body.String(), `<details class="intro"><summary>This round</summary>`, intro)
+	shipped := newShippedApp(t).locked()
+	mustContain(t, "demo step 4", shipped.get("/r/demo/4?t="+roundToken("demo")).Body.String(), `<details class="intro">`, "Demo only: judge on any screen.")
+}
+
+func TestSideBySideKeepsTheRefTileBesideFourOptions(t *testing.T) {
+	mustContain(t, "ref and four", manyOptionsApp(t).get("/r/m/3?view=side").Body.String(), "--n:5", "reft")
+}
+
+func TestBlindStepsShowNoMeasurementsBeforeThePick(t *testing.T) {
+	a := newShippedApp(t)
+	if strings.Contains(a.get("/r/demo/1").Body.String(), "data-measure") {
+		t.Error("a blind step offers measurements before the pick")
+	}
+	wantStatus(t, a.post("/r/demo/pictures/pick", url.Values{"pick": {"A"}}), http.StatusSeeOther)
+	for _, target := range []string{"/r/demo/1", "/r/demo/1?view=side"} {
+		mustContain(t, target, a.get(target).Body.String(), `data-measure="A"`, `data-measure="C"`)
+	}
+}
+
+func TestLargeButtonOnlyWhereThereIsAPicture(t *testing.T) {
+	a := manyOptionsApp(t)
+	mustContain(t, "pictures", a.get("/r/m/1").Body.String(), `data-act="large"`)
+	if strings.Contains(a.get("/r/m/2").Body.String(), `data-act="large"`) {
+		t.Error("a text step has a Large button")
+	}
+	mustContain(t, "gallery", newApp(t).get("/r/r/3").Body.String(), `data-act="large"`)
+}
+
+func TestEveryOptionHasAMeasureSlotAndTheDemoSceneReports(t *testing.T) {
+	a := newShippedApp(t)
+	for _, target := range []string{"/r/demo-controls/4", "/r/demo-controls/4?view=side"} {
+		mustContain(t, target, a.get(target).Body.String(), `data-measure="A"`, `data-measure="B"`)
+	}
+	mustContain(t, "scene", a.get("/static/demo/scene.html").Body.String(), "type: 'wr:measure'", "parent.postMessage(", "'wr:ask-measure'")
+	mustContain(t, "page script", a.get("/static/warroom.js").Body.String(), "type: 'wr:ask-measure'")
+}
+
+func TestHtmxLastPickSummaryShowsTheChangeCount(t *testing.T) {
+	a := newApp(t)
+	wantStatus(t, a.post("/r/r/gal/pick", url.Values{"pick": {"pass"}}), http.StatusSeeOther)
+	rec := a.fragment(http.MethodPost, "/r/r/gal/pick", url.Values{"pick": {"changes"}})
+	mustContain(t, "summary after the last pick", rec.Body.String(), "What the server recorded", "changed 2 times")
+}

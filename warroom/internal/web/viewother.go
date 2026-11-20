@@ -170,6 +170,7 @@ type SumLink struct{ Label, Href string }
 
 type SummaryView struct {
 	Eyebrow, Title string
+	Intro          string
 	Main           SumSection
 	Open           []SumLink
 	Earlier        []SumSection
@@ -259,6 +260,9 @@ func deref(p *string) string {
 }
 
 func (b *builder) section(r *rounds.Round) SumSection {
+	if b.readOnly {
+		return questionsOnly(r)
+	}
 	var rows []orderedRow
 	for key, e := range b.entries {
 		if local, ok := strings.CutPrefix(key, r.Prefix+":"); ok {
@@ -280,10 +284,30 @@ func (b *builder) section(r *rounds.Round) SumSection {
 	return sec
 }
 
-func (b *builder) summary() SummaryView {
-	v := SummaryView{Eyebrow: b.round.Title + " · Summary", Title: "What the server recorded", Main: b.section(b.round)}
+func questionsOnly(r *rounds.Round) SumSection {
+	sec := SumSection{Title: r.Title}
+	for i := range r.Loaded {
+		if s := &r.Loaded[i]; s.Kind != rounds.KindMissing {
+			sec.Rows = append(sec.Rows, SumRow{Label: cmp.Or(s.Question, s.Key)})
+		}
+	}
+	return sec
+}
+
+func (b *builder) openLinks() []SumLink {
+	var out []SumLink
 	for _, s := range b.unanswered(b.round) {
-		v.Open = append(v.Open, SumLink{s.Key, b.stepHref(indexOfStep(b.round, s.Key) + 1)})
+		out = append(out, SumLink{s.Key, b.stepHref(indexOfStep(b.round, s.Key) + 1)})
+	}
+	return out
+}
+
+func (b *builder) summary() SummaryView {
+	v := SummaryView{Eyebrow: b.round.Title + " · Summary", Title: "What the server recorded", Intro: b.round.Intro, Main: b.section(b.round)}
+	if b.readOnly {
+		v.Title = "Questions"
+	} else {
+		v.Open = b.openLinks()
 	}
 	sections := []SumSection{v.Main}
 	for _, id := range b.round.Earlier {
@@ -293,17 +317,22 @@ func (b *builder) summary() SummaryView {
 			sections = append(sections, sec)
 		}
 	}
-	v.Text = summaryText(sections)
+	v.Text = summaryText(sections, b.readOnly)
 	return v
 }
 
-func summaryText(sections []SumSection) string {
+func summaryText(sections []SumSection, questionsOnly bool) string {
 	var parts []string
 	for _, sec := range sections {
 		lines := []string{sec.Title + " (" + sec.Count + ")"}
+		if questionsOnly {
+			lines[0] = sec.Title
+		}
 		for _, r := range sec.Rows {
-			pick := cmp.Or(r.Pick, "(note)")
-			line := "- " + unmark(r.Label) + ": " + pick
+			line := "- " + unmark(r.Label)
+			if !questionsOnly {
+				line += ": " + cmp.Or(r.Pick, "(note)")
+			}
 			if r.Note != "" {
 				line += " | " + r.Note
 			}

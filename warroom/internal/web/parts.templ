@@ -146,7 +146,22 @@ templ StepNav(n NavView) {
 	</nav>
 }
 
+// Intro is open on step 1 and the summary, folded in the same place on the other steps.
+templ Intro(text string, open bool) {
+	if text != "" {
+		if open {
+			<section class="intro">
+				<span class="h">This round</span>
+				<p>@Fmt(text)</p>
+			</section>
+		} else {
+			<details class="intro"><summary>This round</summary><p>@Fmt(text)</p></details>
+		}
+	}
+}
+
 templ Head(h HeadView) {
+	@Intro(h.Intro, h.IntroOpen)
 	<section class="head">
 		<span class="n">{ h.Eyebrow }</span>
 		<h1>@Fmt(h.Question)</h1>
@@ -337,10 +352,15 @@ templ PhoneBar(p PhoneView) {
 			<button type="button" class="btn sm" data-act="legend">Keys</button>
 		</div>
 	</div>
+	if p.FlipRow() {
+		<div class="row opts">
+			@phoneFlips(p.Flip)
+		</div>
+	}
 	<div class="row">
 		<a class="btn arrow" href={ templ.SafeURL(p.Prev) } aria-label="Previous step">‹</a>
-		for _, f := range p.Flip {
-			<button type="button" class={ "ob btn", templ.KV("on", f.On) } data-show={ f.Letter }>{ f.Letter }</button>
+		if !p.FlipRow() {
+			@phoneFlips(p.Flip)
 		}
 		if p.Confirm {
 			<button type="submit" form="answer" name="pick" value="yes" class="pick btn">Yes</button>
@@ -378,6 +398,12 @@ templ PhoneBar(p PhoneView) {
 			<button type="button" class="btn" data-act="note">Note</button>
 		}
 	</div>
+}
+
+templ phoneFlips(flips []FlipButton) {
+	for _, f := range flips {
+		<button type="button" class={ "ob btn", templ.KV("on", f.On) } data-show={ f.Letter }>{ f.Letter }</button>
+	}
 }
 
 templ LegendBox(l LegendView) {
