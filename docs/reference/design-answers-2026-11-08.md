@@ -1381,6 +1381,17 @@ From the low-end performance budget report (unattended run, 2026-11-19, private)
 - **D6, honest no-threads sentence:** the ledger states the measured no-threads outcome at about 250 units on the Deck in Firefox (30 ticks per second, about 58 frames per second, per-frame CPU p95 31 ms, a quarter of frames over 25 ms; smooth with the worker) at the next docs pass.
 - **D1, D3-D5, D7-D13, D15-D18 deferred:** each is asked at the moment its row names (README change, SB6 plan, P3, P5, P6, night 13).
 
+### Low-end report loose ends (user, 2026-11-20)
+
+Owner questionnaire on the same report; each took the recommendation unless noted.
+
+- **D1, owner variant, through `tools/perf_chart.py`:** a row gets a pass/fail colour only where a known route to green exists; every other row shows trend only. Trend rows: no colour, no percent; one fixed scenario per row (or one line per scenario); change against the median of the last 3 same-method runs; inside the `NOISE_PCT` spread shown as same; size and raw Mac ms (for example "8 % faster since <date>, p95 2.94 ms"). Trend rows are the three red rows plus `open`/`dense` (stress) and the Mac goal rows, labelled headroom: 3v3 team-match upkeep from `team_match:profile`, and 3v3 simulation p95, sim-only and bots + sim, from the profile pass through a new `perf_record.py` parser. Pass/fail lives on the Deck real-scene row (D3's measures), "not measured yet" until the worker ships; that row needs D3 and D4, asked when this package is planned. Every limit stays in the [ledger](performance.md) and in the chart's verdicts; not a loosening, since regressions stay guarded by the pair gate's drift alarm. Known gap: nothing on the README can fail before SB6.
+- **D5 (a):** bots count inside the sim line; the bots + sim row is judged against 1.82 ms.
+- **Package:** D1 is built as its own small package with an owner check at the end, gap 12 (profiler overhead on the hand-off rows and in Wasm) included: night 14 Honest speed report in the night lane, not the day lane, since README rows block no player package (owner pick of the agent's recommendation, 2026-11-20).
+- **D14 in `docs/packages.md`:** no pre-SB5a Deck session; the attended look comes before SB6, whose rows run over SSH.
+- **Deferred decisions placed** on their package rows: D3, D4, D12, D15-D18 at the SB6 plan, D13 at the SB6 GO; D7 at P3; D8, D9 at night 13; D10 (with D5) before the P5 plan; D11 at P6.
+- **P2.3a2 gate rider:** HUD rebuilds on change, plus the match-bench pair `load=team&hud=off` against `load=team` (report section 8.7).
+
 ### P2.3a1 before gate B (user, 2026-11-20)
 
 The game director advised on both calls (agent advice, not a decision).

@@ -44,6 +44,7 @@ Where Wargrid stands: packages first, then finished work. Plans for packages: [p
 | night 11 | Lighter relay frames | Placed 2026-11-16 (user), no plan yet; between P8 and P13 (since 2026-11-16, backlog review); fewer relay frames and fly machine sizing | [packages](packages.md#night-lane) | [online teams](superpowers/specs/2026-11-16-online-teams-design.md) |
 | night 12 | Bot attack test | Placed 2026-11-16 (user), no plan yet; between P13 and P14 since 2026-11-18 (user; was between P9 and P10); evidence only, a rule ships only if it wins both columns | [packages](packages.md#night-lane) | [online teams](superpowers/specs/2026-11-16-online-teams-design.md#acceptance-gates-proposed-refined-in-each-package-plan) |
 | night 13 | Cheaper step | Placed 2026-11-15 (user), no plan yet; between P14 and P9 since 2026-11-16 (was night 7, then between P8 and P9), so the 3v3 gate measures it; four Deck-measured experiments | [packages](packages.md#night-lane) | [design answers](reference/design-answers-2026-11-08.md#cheaper-step-user-2026-11-15) |
+| night 14 | Honest speed report | Placed 2026-11-20 (user), no plan yet; the first free night gap after Play on after a leave; README speed rows coloured only where a route to green exists, trend elsewhere; gap 12 profiler overhead | [packages](packages.md#night-lane) | [design answers](reference/design-answers-2026-11-08.md#low-end-report-loose-ends-user-2026-11-20) |
 
 ## Findings list
 
