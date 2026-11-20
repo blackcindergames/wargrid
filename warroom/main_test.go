@@ -139,7 +139,7 @@ func TestTokenCommandPrintsTheTokenTheServerAccepts(t *testing.T) {
 
 func TestRunAsMustBeAPositiveUID(t *testing.T) {
 	t.Setenv("WARROOM_RUN_AS", "root")
-	t.Setenv("WARROOM_SECRET", "s")
+	t.Setenv("WARROOM_SECRET", strings.Repeat("s", minSecret))
 	t.Setenv("WARROOM_PORT", "0")
 	if err := run(); err == nil || !strings.Contains(err.Error(), "positive uid") {
 		t.Errorf("run() = %v", err)
@@ -153,6 +153,16 @@ func TestContainerModeRefusesToStartWithoutASecret(t *testing.T) {
 	t.Setenv("WARROOM_HOST", "256.0.0.1")
 	t.Setenv("WARROOM_PORT", "0")
 	if err := run(); err == nil || !strings.Contains(err.Error(), "WARROOM_SECRET") {
+		t.Errorf("run() = %v", err)
+	}
+}
+
+func TestContainerModeRefusesAShortSecret(t *testing.T) {
+	t.Setenv("WARROOM_RUN_AS", "65534")
+	t.Setenv("WARROOM_SECRET", strings.Repeat("s", minSecret-1))
+	t.Setenv("WARROOM_HOST", "256.0.0.1")
+	t.Setenv("WARROOM_PORT", "0")
+	if err := run(); err == nil || !strings.Contains(err.Error(), "at least 32 bytes") {
 		t.Errorf("run() = %v", err)
 	}
 }

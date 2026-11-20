@@ -60,6 +60,9 @@ func NewStore(path string) *Store {
 	}
 }
 
+// Close waits for a write in progress and keeps the lock, so no write is cut short or started before the process exits.
+func (s *Store) Close() { s.mu.Lock() }
+
 type historyLine struct {
 	T   string `json:"t"`
 	Key string `json:"key"`

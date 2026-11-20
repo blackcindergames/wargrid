@@ -357,7 +357,7 @@ func LoadCatalog(dir string) *Catalog {
 	return c
 }
 
-// checkPrefixes refuses a shared prefix: picks keys are per prefix but write tokens per round, so one round's token could overwrite the other's picks.
+// checkPrefixes drops the later round of a shared prefix: picks keys are per prefix but write tokens per round, so one round's token could overwrite the other's picks.
 func (c *Catalog) checkPrefixes() {
 	owner := map[string]string{}
 	for _, e := range c.Index {
@@ -367,6 +367,7 @@ func (c *Catalog) checkPrefixes() {
 		}
 		if first, taken := owner[r.Prefix]; taken {
 			c.fail("rounds %s and %s share the prefix %s", first, r.ID, r.Prefix)
+			delete(c.Rounds, r.ID)
 			continue
 		}
 		owner[r.Prefix] = r.ID
@@ -395,6 +396,10 @@ func loadRound(c *Catalog, dir, id string) *Round {
 	if r.Prefix == "" {
 		r.Prefix = id
 	}
+	if !idRE.MatchString(r.Prefix) {
+		c.fail("%s: bad prefix %q", id, r.Prefix)
+		return nil
+	}
 	for _, key := range r.Steps {
 		r.Loaded = append(r.Loaded, loadStep(c, dir, r, key))
 	}
@@ -422,9 +427,6 @@ func loadStep(c *Catalog, dir string, r *Round, key string) Step {
 }
 
 func (c *Catalog) validateRound(r *Round) {
-	if !idRE.MatchString(r.Prefix) {
-		c.fail("%s: bad prefix %q", r.ID, r.Prefix)
-	}
 	if d := firstDuplicate(r.Steps); d != "" {
 		c.fail("%s: step %s is listed twice", r.ID, d)
 	}

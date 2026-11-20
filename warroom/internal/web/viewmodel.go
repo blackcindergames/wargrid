@@ -151,7 +151,7 @@ func (b *builder) chips(current int) []Chip {
 }
 
 func (b *builder) claudePick(s *rounds.Step) *ClaudePick {
-	if s.Rec == "" || !s.IsChoice() {
+	if b.rec(s) == "" || !s.IsChoice() {
 		return nil
 	}
 	label := "Yes, as drawn"
@@ -261,7 +261,7 @@ func (b *builder) uses(s *rounds.Step) []UseLine {
 			continue
 		}
 		shown := "not picked yet, shown with the default"
-		if u.Rec != "" {
+		if u.Rec != "" && !u.Blind {
 			shown = "not picked yet, shown with " + pickLabel(u, u.Rec, false)
 		}
 		if p := b.pickOf(r, u.Key); p != "" {

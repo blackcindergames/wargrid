@@ -2,6 +2,8 @@ module wargrid/warroom
 
 go 1.27.4
 
+ignore ./islands/node_modules
+
 require (
 	github.com/a-h/templ v0.3.1100
 	github.com/goccy/go-yaml v1.19.2

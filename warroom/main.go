@@ -26,6 +26,7 @@ const (
 	requestTimeout = 15 * time.Second
 	// Inside Fly's kill_timeout, so the last picks are written before the machine is killed.
 	drainTimeout = 4 * time.Second
+	minSecret    = 32
 )
 
 type config struct {
@@ -109,6 +110,10 @@ func run() error {
 		if cfg.Secret == "" {
 			return errors.New("WARROOM_RUN_AS is set (container mode) but WARROOM_SECRET is not")
 		}
+		// A short secret could be guessed offline from one leaked link's token.
+		if len(cfg.Secret) < minSecret {
+			return fmt.Errorf("WARROOM_SECRET must be at least %d bytes in container mode", minSecret)
+		}
 		uid, err := strconv.Atoi(cfg.RunAs)
 		if err != nil || uid <= 0 {
 			return fmt.Errorf("WARROOM_RUN_AS must be a positive uid, got %q", cfg.RunAs)
@@ -130,7 +135,11 @@ func run() error {
 	defer stop()
 	go func() { <-ctx.Done(); stop() }() // a second signal exits at once
 	slog.Info("listening", "url", "http://"+ln.Addr().String()+"/")
-	return serve(ctx, ln, newServer(web.NewServer(&cfg.Config).Handler()), drainTimeout)
+	app := web.NewServer(&cfg.Config)
+	err = serve(ctx, ln, newServer(app.Handler()), drainTimeout)
+	// After a drain timeout a handler may still be writing picks.
+	app.Close()
+	return err
 }
 
 func newServer(h http.Handler) *http.Server {

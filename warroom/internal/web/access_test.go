@@ -67,6 +67,27 @@ func TestWritesNeedTheRoundsToken(t *testing.T) {
 	wantStatus(t, a.post("/r/r/pic/note?t="+roundToken("r"), url.Values{"note": {"n"}}), http.StatusOK)
 }
 
+func TestCrossSitePostsAreRefused(t *testing.T) {
+	a := newApp(t)
+	post := func(site string) int {
+		req := httptest.NewRequest(http.MethodPost, "/r/r/pic/pick", strings.NewReader("pick=A"))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Sec-Fetch-Site", site)
+		rec := httptest.NewRecorder()
+		a.h.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	if got := post("cross-site"); got != http.StatusForbidden {
+		t.Errorf("cross-site pick = %d, want 403", got)
+	}
+	if len(mustEntries(t, a)) != 0 {
+		t.Fatal("a cross-site pick was recorded")
+	}
+	if got := post("same-origin"); got != http.StatusSeeOther {
+		t.Errorf("same-origin pick = %d, want 303", got)
+	}
+}
+
 func mustEntries(t *testing.T, a *testApp) map[string]store.Entry {
 	t.Helper()
 	e, err := a.store.Entries()

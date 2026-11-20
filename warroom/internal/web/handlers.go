@@ -48,6 +48,9 @@ func NewServer(cfg *Config) *Server {
 	return &Server{cfg: cfg, store: store.NewStore(cfg.Picks)}
 }
 
+// Close waits for a picks write still running; call it last, before the process exits.
+func (s *Server) Close() { s.store.Close() }
+
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) { plain(w, http.StatusOK, "ok") })
@@ -66,7 +69,8 @@ func (s *Server) Routes() http.Handler {
 	for _, tree := range siteTrees {
 		mux.HandleFunc("GET /"+tree+"/{path...}", func(w http.ResponseWriter, r *http.Request) { s.serveTree(w, r, tree) })
 	}
-	return mux
+	// Without a secret any page the owner visits could post picks to a local War Room.
+	return http.NewCrossOriginProtection().Handler(mux)
 }
 
 // Handler is Routes with the request log and panic recovery, which tests leave out.

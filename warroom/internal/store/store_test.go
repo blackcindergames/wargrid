@@ -172,6 +172,31 @@ func TestStoreFailedWriteKeepsTheFile(t *testing.T) {
 	}
 }
 
+func TestCloseWaitsForAWriteInProgress(t *testing.T) {
+	s, _ := newTestStore(t)
+	writing, release := make(chan struct{}), make(chan struct{})
+	s.write = func(path string, data []byte) error {
+		close(writing)
+		<-release
+		return writeAtomic(path, data)
+	}
+	go func() { _ = s.Update("demo:a", setEntry("A", "")) }()
+	<-writing
+	closed := make(chan struct{})
+	go func() { s.Close(); close(closed) }()
+	select {
+	case <-closed:
+		t.Fatal("Close returned while a write was still running")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	select {
+	case <-closed:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Close did not return after the write finished")
+	}
+}
+
 func TestWriteAtomicLeavesNoTempFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "picks.json")

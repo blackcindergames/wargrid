@@ -15,6 +15,6 @@ RUN rm -rf /app/src
 FROM gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2
 COPY --from=build /warroom /warroom
 COPY --from=assets /app /app
-ENV WARROOM_ROOT=/app WARROOM_ROUNDS=/app/rounds WARROOM_HOST=0.0.0.0 WARROOM_RUN_AS=65534
+ENV WARROOM_ROOT=/app WARROOM_ROUNDS=/app/rounds WARROOM_PICKS=/data/picks.json WARROOM_HOST=0.0.0.0 WARROOM_RUN_AS=65534
 EXPOSE 8780
 ENTRYPOINT ["/warroom"]

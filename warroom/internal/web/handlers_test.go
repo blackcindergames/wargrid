@@ -282,6 +282,20 @@ func TestPickOnUnknownRoundOrStepIs404(t *testing.T) {
 	wantStatus(t, a.get("/r/r/pic/pick"), http.StatusMethodNotAllowed)
 }
 
+func TestRoundsWithASharedOrBadPrefixTakeNoPicks(t *testing.T) {
+	step := "kind: pictures\nquestion: Q\noptions: {A: {name: a}}\n"
+	a := newAppWith(t, map[string]string{
+		"index.yaml":   "- {id: a, title: A}\n- {id: b, title: B}\n- {id: c, title: C}\n",
+		"a/round.yaml": "prefix: same\nsteps: [x]\n", "a/x.yaml": step,
+		"b/round.yaml": "prefix: same\nsteps: [x]\n", "b/x.yaml": step,
+		"c/round.yaml": "prefix: 'c:d'\nsteps: [x]\n", "c/x.yaml": step,
+	})
+	wantStatus(t, a.post("/r/b/x/pick", url.Values{"pick": {"yes"}}), http.StatusNotFound)
+	wantStatus(t, a.post("/r/c/x/pick", url.Values{"pick": {"yes"}}), http.StatusNotFound)
+	mustContain(t, "banner", a.get("/").Body.String(), "share the prefix same", "bad prefix")
+	wantStatus(t, a.post("/r/a/x/pick", url.Values{"pick": {"yes"}}), http.StatusSeeOther)
+}
+
 func TestDemoRoundsAcceptPicks(t *testing.T) {
 	a := newApp(t)
 	wantStatus(t, a.post("/r/d/x/pick", url.Values{"pick": {"yes"}}), 303)

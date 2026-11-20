@@ -12,5 +12,5 @@ sh tools/check_generated.sh
 node --check internal/web/static/warroom.js
 
 cd islands
-[ -d node_modules ] || npm ci
+npm ci
 npm run quality

@@ -175,6 +175,30 @@ func TestBlindStepRevealsAfterThePick(t *testing.T) {
 	mustContain(t, "revealed", after, `tag rv">today&#39;s look`, `tag got">Picked`)
 }
 
+func TestBlindStepHidesClaudesPickUntilThePick(t *testing.T) {
+	a := newShippedApp(t)
+	before := a.get("/r/demo/1").Body.String()
+	for _, leak := range []string{"Claude's pick", `value="B" data-shown`} {
+		if strings.Contains(before, leak) {
+			t.Errorf("before the pick the blind step shows %s", leak)
+		}
+	}
+	mustContain(t, "opens on A", before, `value="A" data-shown`)
+	if uses := a.get("/r/demo/2").Body.String(); strings.Contains(uses, "shown with B") {
+		t.Error("a step using the blind step names Claude's pick before the pick")
+	}
+	wantStatus(t, a.post("/r/demo/pictures/pick", url.Values{"pick": {"C"}}), http.StatusSeeOther)
+	mustContain(t, "after the pick", a.get("/r/demo/1").Body.String(), `class="cpline"`, "B: Backdrop two", `class="tag cp"`)
+}
+
+func TestConfirmStepTagsNoOption(t *testing.T) {
+	body := newShippedApp(t).get("/r/demo/2").Body.String()
+	mustContain(t, "confirm", body, `class="cpline"`)
+	if n := strings.Count(body, `class="tag cp"`); n != 1 {
+		t.Errorf("%d Claude's-pick tags, want only the line under the question", n)
+	}
+}
+
 func TestNotePostAnswersWithTheRecordLine(t *testing.T) {
 	a := newApp(t)
 	rec := a.post("/r/r/gal/note", url.Values{"note": {"blurry"}, "sub": {"a"}})

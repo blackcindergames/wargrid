@@ -106,8 +106,11 @@ function onFailure(ctx) {
 		flash(`${why(status)}: ${ctx.request.action}`);
 		return;
 	}
+	const entry = entryOf(ctx);
+	// Re-added at the end, so Retry sends in the order the failures happened and the newest note lands last.
+	failed.delete(entry);
 	// The body as sent, so Retry resends the pick that failed, not the option shown now.
-	failed.set(entryOf(ctx), {
+	failed.set(entry, {
 		key: keyOf(el),
 		chip: chipOf(el),
 		url: ctx.request.action,
@@ -121,8 +124,21 @@ function onFailure(ctx) {
 /** @param {HtmxRequestCtx} ctx */
 function onSuccess(ctx) {
 	const status = ctx.response?.status;
-	if (!isRecorder(sourceOf(ctx)) || status === undefined || status >= 400 || !failed.delete(entryOf(ctx))) return;
+	const el = sourceOf(ctx);
+	if (!isRecorder(el) || status === undefined || status >= 400) return;
+	failed.delete(entryOf(ctx));
+	dropStaleNotes(keyOf(el));
 	renderFailures();
+}
+
+// Every recorded write carries the step's newest note, so a failed older one must not come back with Retry.
+/** @param {string} key */
+function dropStaleNotes(key) {
+	for (const [k, f] of failed) {
+		if (f.key !== key) continue;
+		if (f.pick) f.body.delete('note');
+		else failed.delete(k);
+	}
 }
 
 async function retry() {
@@ -757,6 +773,10 @@ addEventListener('unhandledrejection', (e) => {
 	flash(`Page script error: ${messageOf(e.reason)}${RELOAD}`);
 });
 addEventListener('message', onMessage);
+// Unsent picks and notes live only on this page.
+addEventListener('beforeunload', (e) => {
+	if (failed.size) e.preventDefault();
+});
 document.addEventListener('htmx:error', (e) => {
 	if (e.detail.ctx) onFailure(e.detail.ctx);
 });
@@ -770,6 +790,11 @@ document.addEventListener('htmx:config:request', onConfigRequest);
 document.addEventListener('htmx:after:swap', onSwap);
 document.addEventListener('click', onClick);
 document.addEventListener('keydown', onKey);
+// Enter presses the focused Pick button, so its tile must be the amber one.
+document.addEventListener('focusin', (e) => {
+	const opt = closestOf(closestOf(e.target, '.tile:not(.sel) > .pick'), '.tile')?.dataset.opt;
+	if (opt) showOption(opt);
+});
 document.addEventListener('touchstart', onTouch, { passive: true });
 document.addEventListener('touchend', onTouch);
 addEventListener('resize', () => {

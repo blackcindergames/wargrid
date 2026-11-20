@@ -5,6 +5,7 @@ package web
 import (
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -52,19 +53,95 @@ func TestPickRecordsAndMovesOn(t *testing.T) {
 }
 
 func TestFailedPickShowsRetryAndRetryRecordsTheFailedLetter(t *testing.T) {
+	for name, o := range map[string]struct{ secret, query string }{
+		"open":       {},
+		"with token": {testSecret, "?t=" + roundToken("demo")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s := newSite(t, siteOpts{secret: o.secret})
+			s.open(t, "/r/demo/1"+o.query)
+			s.press(t, "b")
+			s.failWrites.Store(true)
+			s.press(t, "Enter")
+			s.wantContains(t, s.loc("#rec .fail"), "Not recorded")
+			s.wantClass(t, s.loc("#chips [data-step=pictures]"), "unsent")
+			s.press(t, "a")
+			s.failWrites.Store(false)
+			s.click(t, "[data-retry]")
+			s.wantText(t, s.loc("#rec"), "Recorded: pictures.")
+			if got := s.entries(t)["demo:pictures"]; got.Pick == nil || *got.Pick != "B" {
+				t.Errorf("entry %+v, want the failed pick B, not the shown A", got)
+			}
+		})
+	}
+}
+
+func TestRetryNeverSendsANoteOlderThanARecordedOne(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/1")
 	s.press(t, "b")
 	s.failWrites.Store(true)
+	failIf(t, s.loc("#note").Fill("old"))
+	s.wantContains(t, s.loc("#rec .fail"), "Not recorded")
+	s.click(t, ".act [data-key=enter]")
+	s.settle(t)
+	s.failWrites.Store(false)
+	s.click(t, `a[data-key=arrowright]`)
+	s.wantURL(t, "/r/demo/2")
+	s.click(t, `a[data-key=arrowleft]`)
+	s.wantURL(t, "/r/demo/1")
+	failIf(t, s.loc("#note").Fill("new"))
+	eventually(t, "new note recorded", func() bool { return s.entries(t)["demo:pictures"].Note == "new" })
+	s.click(t, "[data-retry]")
+	s.wantContains(t, s.loc("#rec"), "Recorded: pictures.")
+	if got := s.entries(t)["demo:pictures"]; got.Note != "new" || got.Pick == nil || *got.Pick != "B" {
+		t.Errorf("entry %+v, want pick B with the newer note", got)
+	}
+}
+
+func TestARecordedPickDropsAnOlderFailedNote(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/1")
+	s.failWrites.Store(true)
+	failIf(t, s.loc("#note").Fill("old"))
+	s.wantContains(t, s.loc("#rec .fail"), "Not recorded")
+	s.failWrites.Store(false)
+	// No input event, so only the pick carries the new text.
+	eval(t, s.Page, `(() => { const n = document.querySelector('#note'); n.blur(); n.value = 'new'; })()`)
+	s.click(t, ".act [data-key=enter]")
+	s.wantURL(t, "/r/demo/2")
+	s.settle(t)
+	s.wantCount(t, s.loc("[data-retry]"), 0)
+	if got := s.entries(t)["demo:pictures"].Note; got != "new" {
+		t.Errorf("note %q, want new", got)
+	}
+}
+
+func TestLeavingWithUnsentPicksAsksFirst(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/1")
+	s.failWrites.Store(true)
 	s.press(t, "Enter")
 	s.wantContains(t, s.loc("#rec .fail"), "Not recorded")
-	s.wantClass(t, s.loc("#chips [data-step=pictures]"), "unsent")
-	s.press(t, "a")
-	s.failWrites.Store(false)
-	s.click(t, "[data-retry]")
-	s.wantText(t, s.loc("#rec"), "Recorded: pictures.")
+	var asked atomic.Bool
+	s.Page.OnDialog(func(d playwright.Dialog) {
+		asked.Store(d.Type() == "beforeunload")
+		_ = d.Dismiss()
+	})
+	failIf(t, s.Page.Close(playwright.PageCloseOptions{RunBeforeUnload: playwright.Bool(true)}))
+	eventually(t, "the leave warning", asked.Load)
+}
+
+func TestTabbingOntoAQuietPickShowsItsTile(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/1?view=side")
+	s.wantClass(t, s.loc(".tile[data-opt=A]"), "sel")
+	failIf(t, s.loc(".tile[data-opt=B] > .pick").Focus())
+	s.wantClass(t, s.loc(".tile[data-opt=B]"), "sel")
+	s.press(t, "Enter")
+	s.wantURL(t, "/r/demo/2")
 	if got := s.entries(t)["demo:pictures"]; got.Pick == nil || *got.Pick != "B" {
-		t.Errorf("entry %+v, want the failed pick B, not the shown A", got)
+		t.Errorf("entry %+v, want B", got)
 	}
 }
 
@@ -96,19 +173,54 @@ func TestPhoneViewSheetOpens(t *testing.T) {
 	failIf(t, expect.Locator(phone.Locator("[data-act=sheet]")).ToHaveAttribute("aria-expanded", "true"))
 }
 
-func TestPhoneBarNeverCoversThePageEnd(t *testing.T) {
-	s := newSite(t, siteOpts{})
-	s.open(t, "/_phone?src=/r/demo/10")
-	s.wantVisible(t, s.Page.FrameLocator("iframe").Locator(".phone .row.opts"))
-	var phone playwright.Frame
+// phoneFrame opens src in the 390 px frame and returns that frame once it is the phone page.
+func (s *site) phoneFrame(t *testing.T, src, ready string) playwright.Frame {
+	t.Helper()
+	s.open(t, "/_phone?src="+src)
+	s.wantVisible(t, s.Page.FrameLocator("iframe").Locator(ready))
 	for _, f := range s.Page.Frames() {
-		if strings.Contains(f.URL(), "/r/demo/10?phone=1") {
-			phone = f
+		if strings.Contains(f.URL(), "phone=1") {
+			return f
 		}
 	}
-	if phone == nil {
-		t.Fatal("no phone frame")
+	t.Fatal("no phone frame")
+	return nil
+}
+
+func TestPhoneBarStaysAtTheBottomBelowTheNote(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	phone := s.phoneFrame(t, "/r/demo/1", ".phone [data-act=sheet]")
+	const check = `(() => {
+		const end = document.documentElement.scrollHeight - innerHeight;
+		if (end < 20) return 'page fits the window, nothing to scroll';
+		scrollTo(0, end / 2);
+		const mid = document.querySelector('#phone').getBoundingClientRect().bottom;
+		scrollTo(0, end);
+		const bar = document.querySelector('#phone').getBoundingClientRect();
+		const note = document.querySelector('.notebox').getBoundingClientRect();
+		return mid === innerHeight && bar.bottom === innerHeight && note.bottom <= bar.top ? '' : 'mid-scroll bar to ' + mid + ', note to ' + note.bottom + ', bar ' + bar.top + ' to ' + bar.bottom + ', window ' + innerHeight;
+	})()`
+	if gap := eval(t, phone, check); gap != "" {
+		t.Errorf("sheet closed: %v", gap)
 	}
+	failIf(t, phone.Locator("[data-act=sheet]").Click())
+	s.wantVisible(t, phone.Locator(".sheet"))
+	if gap := eval(t, phone, check); gap != "" {
+		t.Errorf("sheet open: %v", gap)
+	}
+}
+
+func TestRoundListHasNoEmptyPhoneStrip(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	phone := s.phoneFrame(t, "/", ".rounds")
+	if got := eval(t, phone, `getComputedStyle(document.querySelector('#phone')).display`); got != "none" {
+		t.Errorf("empty phone bar display %v, want none", got)
+	}
+}
+
+func TestPhoneBarNeverCoversThePageEnd(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	phone := s.phoneFrame(t, "/r/demo/10", ".phone .row.opts")
 	// A taller bar without a resize event stands in for larger text.
 	gap := eval(t, phone, `(() => {
 		document.head.insertAdjacentHTML('beforeend', '<style>.phone .btn { min-height: 80px }</style>');

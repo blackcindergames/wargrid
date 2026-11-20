@@ -102,7 +102,7 @@ type FormView struct{ Action, Step string }
 func (b *builder) shown(s *rounds.Step) string {
 	letters := s.OptionLetters()
 	pick := b.pickOf(b.round, s.Key)
-	for _, c := range []string{b.q.Show, pick, s.Rec} {
+	for _, c := range []string{b.q.Show, pick, b.rec(s)} {
 		if slices.Contains(letters, c) {
 			return c
 		}
@@ -195,10 +195,12 @@ func (b *builder) options(st *stage.Stage, s *rounds.Step, shown string) []OptVi
 	var out []OptView
 	pick := b.pickOf(b.round, s.Key)
 	pb := b.pics(st)
+	revealed := b.revealed(s)
 	for _, l := range s.OptionLetters() {
 		o := s.Options[l]
-		v := OptView{Letter: l, Name: cmp.Or(o.Name, l), Cp: s.Rec == l, Picked: pick == l, On: l == shown, Done: l == pick}
-		revealed := pick == "neither" || hasOption(s, pick)
+		// On a confirm step the tag on the only option adds nothing; the Claude's-pick line under the question stays.
+		cp := b.rec(s) == l && !s.IsConfirm()
+		v := OptView{Letter: l, Name: cmp.Or(o.Name, l), Cp: cp, Picked: pick == l, On: l == shown, Done: l == pick}
 		if s.Blind && revealed {
 			v.Reveal = o.Reveal
 		}
@@ -211,6 +213,19 @@ func (b *builder) options(st *stage.Stage, s *rounds.Step, shown string) []OptVi
 }
 
 func hasOption(s *rounds.Step, letter string) bool { _, ok := s.Options[letter]; return ok }
+
+func (b *builder) revealed(s *rounds.Step) bool {
+	pick := b.pickOf(b.round, s.Key)
+	return pick == "neither" || hasOption(s, pick)
+}
+
+// rec is Claude's pick as the page may show it: none on a blind step before the pick, where it would hint at a letter.
+func (b *builder) rec(s *rounds.Step) string {
+	if s.Blind && !b.revealed(s) {
+		return ""
+	}
+	return s.Rec
+}
 
 func (b *builder) fillBody(v *OptView, pb picBuilder, s *rounds.Step, o *rounds.Option) {
 	switch s.Kind {
