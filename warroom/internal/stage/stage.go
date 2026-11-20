@@ -9,8 +9,6 @@ import (
 	"wargrid/warroom/internal/rounds"
 )
 
-// Stage controls and the render-page hash: the Go side of tools/decision_page/stage.js.
-
 type sizeSpec struct {
 	W, H int
 	K    float64

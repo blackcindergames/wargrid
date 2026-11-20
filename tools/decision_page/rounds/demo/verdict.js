@@ -1,7 +1,0 @@
-DP.step({
-  key: 'verdict',
-  kind: 'verdict',
-  question: 'Does the demo pass?',
-  why: 'A verdict step: Pass or Changes needed, with an overall note.',
-  labels: { pass: 'Pass', changes: 'Changes needed' },
-});

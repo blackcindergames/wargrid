@@ -501,7 +501,6 @@ function keepStage() {
 
 function syncPhone() {
 	for (const b of $$('[data-act=sheet]')) b.setAttribute('aria-expanded', String(sheetOpen()));
-	document.body.style.paddingBottom = isPhone() ? `${String(need('#phone').offsetHeight + 12)}px` : '';
 	keepStage();
 }
 

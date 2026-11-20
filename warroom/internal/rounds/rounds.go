@@ -14,7 +14,7 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// The data contract is tools/decision_page/README.md, "Rounds: the data contract".
+// The data contract is warroom/README.md, "Rounds: the data contract".
 
 const KindMissing = "missing"
 

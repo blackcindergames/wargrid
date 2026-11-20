@@ -96,6 +96,32 @@ func TestPhoneViewSheetOpens(t *testing.T) {
 	failIf(t, expect.Locator(phone.Locator("[data-act=sheet]")).ToHaveAttribute("aria-expanded", "true"))
 }
 
+func TestPhoneBarNeverCoversThePageEnd(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/_phone?src=/r/demo/10")
+	s.wantVisible(t, s.Page.FrameLocator("iframe").Locator(".phone .row.opts"))
+	var phone playwright.Frame
+	for _, f := range s.Page.Frames() {
+		if strings.Contains(f.URL(), "/r/demo/10?phone=1") {
+			phone = f
+		}
+	}
+	if phone == nil {
+		t.Fatal("no phone frame")
+	}
+	// A taller bar without a resize event stands in for larger text.
+	gap := eval(t, phone, `(() => {
+		document.head.insertAdjacentHTML('beforeend', '<style>.phone .btn { min-height: 80px }</style>');
+		scrollTo(0, document.documentElement.scrollHeight);
+		const bar = document.querySelector('#phone').getBoundingClientRect();
+		const end = Math.max(...[...document.querySelectorAll('#main *')].map((e) => e.getBoundingClientRect().bottom));
+		return bar.top >= end && bar.bottom === innerHeight ? '' : 'page end ' + end + ', bar ' + bar.top + ' to ' + bar.bottom + ', window ' + innerHeight;
+	})()`)
+	if gap != "" {
+		t.Errorf("phone bar covers the page or leaves the bottom: %v", gap)
+	}
+}
+
 func TestTuneSliderRedrawsWithoutReloadAndRecordsTheValue(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/9")
