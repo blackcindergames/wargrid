@@ -182,6 +182,7 @@ static func box_value(faction: String) -> int:
 const ROWS_RULE := "Click a kind: select only that kind · Shift-click: deselect it"
 const IDLE := "IDLE"
 const WAITING_AT_PILE := "WAITING AT PILE"
+const NO_DROP_OFF := "NO <DROP-OFF>"
 # Every phase the simulation publishes; seeking and idle are decided in `collector_label`.
 const PHASE_LABELS := {"flying_source": "TO PILE", "lead_source": "TO PILE", "waiting_source": WAITING_AT_PILE, "loading": "LOADING", "flying_depot": "TO <DROP-OFF>", "lead_depot": "TO <DROP-OFF>", "waiting_depot": "WAITING AT <DROP-OFF>", "unloading": "UNLOADING", "seeking": "", "idle": ""}
 static var _drop_offs: Dictionary = {}
@@ -229,20 +230,28 @@ static func collector_labels(view: Dictionary, ids: Array[int], seat: int, previ
 	if found.is_empty(): return labels
 	# One pass over buildings and piles per update, not one per collector.
 	var builders: Dictionary = {}
+	var has_drop_off: bool = false
 	for site: Dictionary in view.buildings:
 		if not site.completed: builders[site.get("builder_id")] = true
+		elif site.owner == seat and Registry.kind(site.kind).get("receives_supply", false): has_drop_off = true
 	var boxes_left: bool = view.get("sources", []).any(func(source: Dictionary) -> bool: return source.boxes > 0)
-	for i: int in found: labels[units.id[i]] = collector_label(view, i, previous.get(units.id[i], ""), builders, boxes_left)
+	for i: int in found: labels[units.id[i]] = collector_label(view, i, previous.get(units.id[i], ""), builders, boxes_left, has_drop_off)
 	return labels
 
-static func collector_label(view: Dictionary, i: int, previous: String, builders: Dictionary, boxes_left: bool) -> String:
+# The header counts these as idle collectors.
+static func is_idle(label: String) -> bool:
+	return label == IDLE or label.begins_with(NO_DROP_OFF.get_slice("<", 0))
+
+static func collector_label(view: Dictionary, i: int, previous: String, builders: Dictionary, boxes_left: bool, has_drop_off: bool) -> String:
 	var units: RefCounted = view.units
 	if units.flags[i] & ViewRows.COLLECTING:
 		var phase: String = units.phases[units.phase[i]]
 		if phase == "seeking": return previous
-		# Idle while collecting is a retry at a busy dock while a pile still holds boxes.
+		var drop: String = drop_off(player(view, units.owner[i]).get("faction", Registry.Factions.DEFAULT_FACTION))
+		# Idle while collecting is a retry at a busy dock while a pile still holds boxes; without a drop-off there is no dock to retry.
+		if phase == "idle" and not has_drop_off: return NO_DROP_OFF.replace("<DROP-OFF>", drop)
 		if phase == "idle": return WAITING_AT_PILE if boxes_left else IDLE
-		return PHASE_LABELS[phase].replace("<DROP-OFF>", drop_off(player(view, units.owner[i]).get("faction", Registry.Factions.DEFAULT_FACTION)))
+		return PHASE_LABELS[phase].replace("<DROP-OFF>", drop)
 	var status: int = units.status[i]
 	if status != ViewRows.NONE and ViewRows.STATUSES[status] in ["moving", "path_pending"]: return "MOVING"
 	if builders.has(units.id[i]): return "BUILDING"

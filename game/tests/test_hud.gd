@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_build_buttons_by_selection_and_price, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1864,8 +1864,9 @@ func test_collector_label_table(runner) -> bool:
 	for row: Array in LABELS:
 		var got: String = await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", row[0], true)], [5], full)
 		runner.check(got == row[1], "CL1 collecting, %s reads %s, got '%s'" % [row[0], row[1], got])
-	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "idle", true)], [5], full) == "WAITING AT PILE", "CL1 collecting and idle while a pile holds boxes (busy-dock retry) reads WAITING AT PILE")
-	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "idle", true)], [5], empty) == "IDLE", "CL1 collecting and idle with no pile holding boxes reads IDLE")
+	var depot: Array = [{"id": 40, "owner": 1, "kind": "china_supply_center", "completed": true, "builder_id": null}]
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "idle", true)], [5], full, depot) == "WAITING AT PILE", "CL1 collecting and idle while a pile holds boxes (busy-dock retry) reads WAITING AT PILE")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "china_collector", "idle", true)], [5], empty, depot) == "IDLE", "CL1 collecting and idle with no pile holding boxes reads IDLE")
 	for status: String in ["moving", "path_pending"]:
 		runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "frc_builder", "idle", false, status)], [5], full) == "MOVING", "CL1 not collecting, %s reads MOVING" % status)
 	var site: Array = [{"id": 9, "owner": 1, "kind": "frc_barracks", "completed": false, "builder_id": 5}]
@@ -1892,6 +1893,33 @@ func test_collector_label_table(runner) -> bool:
 	hud.get_parent().free()
 	return true
 
+func test_no_drop_off_label(runner) -> bool:
+	var hud: Hud = _bare_hud(runner)
+	var full: Array = [{"id": 30, "boxes": 4}]
+	var empty: Array = [{"id": 30, "boxes": 0}]
+	var idle_truck: Array = [_unit_row(5, 1, "usa_collector", "idle", true)]
+	var depot: Dictionary = {"id": 40, "owner": 1, "kind": "usa_supply_center", "completed": true, "builder_id": null}
+	var depot_site: Dictionary = depot.merged({"completed": false, "builder_id": 6, "work": 0}, true)
+	var enemy_depot: Dictionary = depot.merged({"id": 41, "owner": 2}, true)
+	var barracks: Dictionary = {"id": 42, "owner": 1, "kind": "usa_barracks", "completed": true, "builder_id": null}
+	runner.check(await _label_on(runner, hud, idle_truck, [5], full, [barracks]) == "NO SUPPLY DEPOT", "CL5 collecting and idle, owner has no finished drop-off, a pile holds boxes: NO SUPPLY DEPOT wins over WAITING AT PILE")
+	var right: Label = hud.get_node("SelectionPanel").find_child("RightLabel", true, false)
+	runner.check(not right.has_theme_color_override("font_color"), "CL5 NO SUPPLY DEPOT is muted like IDLE, no warn tint")
+	runner.check(await _label_on(runner, hud, idle_truck, [5], empty) == "NO SUPPLY DEPOT", "CL5 collecting and idle, no drop-off and no pile holding boxes reads NO SUPPLY DEPOT")
+	runner.check(await _label_on(runner, hud, idle_truck, [5], full, [depot_site]) == "NO SUPPLY DEPOT", "CL5 an unfinished own drop-off site is no drop-off")
+	runner.check(await _label_on(runner, hud, idle_truck, [5], full, [enemy_depot]) == "NO SUPPLY DEPOT", "CL5 another owner's finished drop-off is no drop-off")
+	runner.check(await _label_on(runner, hud, idle_truck, [5], full, [depot]) == "WAITING AT PILE", "CL5 with a finished own drop-off the busy-dock retry still reads WAITING AT PILE")
+	runner.check(await _label_on(runner, hud, idle_truck, [5], empty, [depot]) == "IDLE", "CL5 with a finished own drop-off and no boxes left it reads IDLE")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "usa_collector", "flying_source", true)], [5], full) == "TO PILE", "CL5 only the idle phase reads NO SUPPLY DEPOT")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "usa_collector", "idle")], [5], full) == "IDLE", "CL5 a collector not collecting reads IDLE without a drop-off")
+	runner.check(await _label_on(runner, hud, [_unit_row(5, 1, "frc_builder", "idle", true)], [5], full, [], "frc") == "NO SUPPLY CACHE", "CL5 FRC reads NO SUPPLY CACHE")
+	var trucks: Array = [_unit_row(20, 1, "usa_collector", "idle", true), _unit_row(21, 1, "usa_collector", "idle", true), _unit_row(22, 1, "usa_collector", "loading", true), _unit_row(23, 1, "usa_tank")]
+	await _label_on(runner, hud, trucks, [20, 21, 22, 23], full)
+	var header: String = (hud.get_node("SelectionPanel/Box/Many/Header") as Label).text
+	runner.check(header == "4 selected · 2 kinds · 2 idle collectors", "CL5 the header counts NO SUPPLY DEPOT rows as idle collectors while a pile holds boxes, got '%s'" % header)
+	hud.get_parent().free()
+	return true
+
 func test_collector_labels_in_a_mixed_army(runner) -> bool:
 	var states: Array = [["loading", true, "idle", {}, "LOADING"], ["flying_depot", true, "idle", {}, "TO SUPPLY DEPOT"], ["idle", true, "idle", {}, "WAITING AT PILE"], ["seeking", true, "idle", {}, "UNLOADING"], ["idle", false, "moving", {}, "MOVING"], ["idle", false, "idle", {}, "BUILDING"], ["idle", false, "idle", {}, "IDLE"], ["idle", false, "contained", {"container_id": 7}, ""]]
 	var units: Array = []
@@ -1905,7 +1933,8 @@ func test_collector_labels_in_a_mixed_army(runner) -> bool:
 		if state[0] == "seeking": previous[id] = state[4]
 		if state[4] == "BUILDING": buildings.append({"id": 500 + n, "owner": 1, "kind": "china_barracks", "completed": false, "builder_id": id})
 		expected[id] = state[4]
-	for n in 26: buildings.append({"id": 600 + n, "owner": 1, "kind": "china_barracks", "completed": true, "builder_id": 100 + n})
+	for n in 25: buildings.append({"id": 600 + n, "owner": 1, "kind": "china_barracks", "completed": true, "builder_id": 100 + n})
+	buildings.append({"id": 625, "owner": 1, "kind": "china_supply_center", "completed": true, "builder_id": null})
 	for n in 86: units.append(_unit_row(200 + n, 1, "china_tank"))
 	units.append(_unit_row(300, 2, "china_collector", "loading", true))
 	units.append(_unit_row(301, 2, "china_tank"))

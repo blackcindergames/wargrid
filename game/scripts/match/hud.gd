@@ -627,7 +627,7 @@ func _show_rows(view: Dictionary, ids: Array[int], seat: int, bright: bool) -> v
 		var sums: Array = live.get(kind, [0, 0, 1])
 		_counts[kind] = sums[0]
 		_fill_row(_rows.get_node("Row_" + kind), sums[0], float(sums[1]) / sums[2])
-	var idle: int = _labels.values().count(HudModel.IDLE)
+	var idle: int = _labels.values().filter(HudModel.is_idle).size()
 	var header: String = "%d selected · %d %s" % [ids.size(), live.size(), "kind" if live.size() == 1 else "kinds"]
 	if idle > 0: header += " · %d idle %s" % [idle, "collector" if idle == 1 else "collectors"]
 	(_many.get_node("Header") as Label).text = header
