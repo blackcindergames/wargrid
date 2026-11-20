@@ -6,9 +6,12 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+	"wargrid/warroom/internal/rounds"
+	"wargrid/warroom/internal/store"
 	"wargrid/warroom/internal/web"
 )
 
@@ -170,5 +173,26 @@ func TestContainerModeRefusesAShortSecret(t *testing.T) {
 func TestUnknownCommandIsAnError(t *testing.T) {
 	if runCommand([]string{"nope"}) == nil {
 		t.Error("an unknown command succeeded")
+	}
+}
+
+func TestOpenCommandListsRoundsWithUnansweredSteps(t *testing.T) {
+	picks := filepath.Join(t.TempDir(), "picks.json")
+	cfg := web.Config{Picks: picks, Rounds: "rounds"}
+	round := rounds.LoadCatalog("rounds").Rounds["p2-3a1-gate-1"]
+	st := store.NewStore(picks)
+	for _, i := range round.Open(nil) {
+		pick := "A"
+		if err := st.Update(round.Prefix+":"+round.Loaded[i].AnswerKey(), func(e store.Entry) store.Entry { e.Pick = &pick; return e }); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var out bytes.Buffer
+	if err := printOpen(&out, cfg); err != nil {
+		t.Fatal(err)
+	}
+	got := out.String()
+	if strings.Contains(got, "p2-3a1-gate-1") || !strings.Contains(got, "p2-3a1-gate-2\t0 of ") || strings.Contains(got, "demo") {
+		t.Errorf("open printed %q, want only p2-3a1-gate-2 with 0 answered and no demo rounds", got)
 	}
 }

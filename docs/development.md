@@ -13,6 +13,7 @@ Developed with AI coding agents (Claude Code). [AGENTS.md](../AGENTS.md), the [b
 - [Codebase guide](guide/README.md): how Wargrid works and why, one-page TL;DR then 13 chapters from the big picture to testing.
 - [Status](STATUS.md): package and milestone state, the findings list and finished work. [Packages](packages.md): the plan for P1 to P6 and the rough rest.
 - [Kickoff](kickoff.md) and [wrap-up](wrapup.md): `/kickoff` and `/wrapup` in Claude Code; portable instructions for any agent.
+- [War Room](../warroom/README.md): the owner's decision rounds (art, UI, sound), steps with options A to H; `cd warroom && go run .`, then `http://127.0.0.1:8780/`.
 - Session notes and handoff prompts: working files, kept in a private notes repository. Documents here mention them by file name, marked "private".
 - [Blueprint](blueprint.md): scope, architecture and milestone gates; the M0 task plan (old §7.1) is archived in [blueprint archive](reference/blueprint-archive.md).
 - [Design questions](questions/README.md): researched wizard questions; answers go to the blueprint and the [design answers](reference/design-answers-2026-11-08.md).
@@ -75,6 +76,7 @@ python3 tools/zh_ini.py dump   # Zero Hour INI blocks to build/zh_ini/inizh.json
 python3 tools/zh_w3d.py dump   # Zero Hour model sizes (mesh boxes, body box, bone positions) to build/zh_w3d/w3d.jsonl (gitignored, never committed); needs the local retail archives
 sh tools/run_python_checks.sh   # ruff format + lint, mypy, Python tests; creates `tools/.venv` with uv on the first run and updates it when `tools/requirements-dev.txt` changes (`tools/ensure_venv.sh`)
 sh tools/run_shell_checks.sh   # ShellCheck on every tracked *.sh (shellcheck-py from the same venv; .shellcheckrc)
+sh warroom/tools/quality.sh   # War Room's gate (Go and island checks); cd warroom && go run . open lists unanswered rounds
 python3 tools/roadmap.py   # regenerate the README roadmap from docs/packages.md and docs/STATUS.md (--check only verifies)
 actionlint   # GitHub workflows, with shellcheck on run: blocks; needs: brew install actionlint shellcheck
 sh tools/check_public.sh   # no home paths, hostnames, LAN addresses, session ids or working files in tracked files (AGENTS.md, public repository rule)

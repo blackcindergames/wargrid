@@ -28,7 +28,7 @@ On SIGINT or SIGTERM the server stops accepting, lets requests in flight finish 
 
 | Package | Job |
 |---|---|
-| `main.go` | Reads the environment, listens, shuts down on a signal; the `token` and `schema` commands; `go:generate` lines; `priv_linux.go` drops root when `WARROOM_RUN_AS` asks |
+| `main.go` | Reads the environment, listens, shuts down on a signal; the `token`, `schema` and `open` commands; `go:generate` lines; `priv_linux.go` drops root when `WARROOM_RUN_AS` asks |
 | `internal/store` | The picks file and its history: one lock, atomic writes, a key cap per round, history rotation |
 | `internal/rounds` | Round and step YAML types, strict loading and validation, stage control definitions, tune params, the JSON Schema |
 | `internal/stage` | Stage controls resolved per request, the render-page hash, crops and window sizes, the numbers panel (contrast, CIE76) |
@@ -61,6 +61,8 @@ State lives in the address, not in a hash, so every view is a link.
 WARROOM_SECRET=... go run . token p2-3a1-gate-2    # a round's write link is  /r/p2-3a1-gate-2?t=<token>
 WARROOM_SECRET=... go run . token admin            # curl "$HOST/picks.json?t=<token>"
 ```
+
+`go run . open` prints each round (demos left out) that still has unanswered steps, as `<round>\t<N> of <M> answered`, from the local picks file; kickoff runs it.
 
 - A link without a valid token for its round is read only: step pages leave out the pick buttons, notes, the answer form and the phone bar's pick and note buttons, and say "Read only: answers are hidden and nothing is recorded. Open the round's write link to answer." Keys that would pick find no button and do nothing. A POST without a valid token is 403 ("Read only: this link cannot record.").
 - Reads of answers need a token too: without one, pages show the rounds, questions and pictures but no picks, notes, recorded wording texts or tune values (chips, Picked tags, the `uses` lines and the tune knobs start from the step's own defaults), the summary lists the questions only (no pick or note cells, no change counts, no "Not answered yet" links) and `/r/{round}` opens at step 1. A round's token also reads the earlier rounds' answers its summary and `uses` lines show; that is intended, since only the owner holds tokens. Writer identity is not recorded: only the owner writes for now (user, 2026-11-20).

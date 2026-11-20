@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 	"wargrid/warroom/internal/rounds"
+	"wargrid/warroom/internal/store"
 	"wargrid/warroom/internal/web"
 )
 
@@ -75,8 +76,10 @@ func runCommand(args []string) error {
 		return printToken(os.Stdout, os.Getenv("WARROOM_SECRET"), args[1:])
 	case "schema":
 		return printSchema(os.Stdout, args[1:])
+	case "open":
+		return printOpen(os.Stdout, configFromEnv(os.Getenv).Config)
 	}
-	return fmt.Errorf("unknown command %q (token <round>|admin, schema round|step)", args[0])
+	return fmt.Errorf("unknown command %q (token <round>|admin, schema round|step, open)", args[0])
 }
 
 func printToken(w io.Writer, secret string, args []string) error {
@@ -89,6 +92,38 @@ func printToken(w io.Writer, secret string, args []string) error {
 	}
 	_, err := fmt.Fprintln(w, web.Token(secret, scope))
 	return err
+}
+
+// printOpen lists the rounds, demos left out, that still have unanswered steps.
+func printOpen(w io.Writer, cfg web.Config) error {
+	c := rounds.LoadCatalog(cfg.Rounds)
+	entries, err := store.NewStore(cfg.Picks).Entries()
+	if err != nil {
+		return err
+	}
+	for _, e := range c.Index {
+		r := c.Rounds[e.ID]
+		if r == nil || e.Demo {
+			continue
+		}
+		total := 0
+		for i := range r.Loaded {
+			if r.Loaded[i].AnswerKey() != "" {
+				total++
+			}
+		}
+		if open := len(r.Open(entries)); open > 0 {
+			if _, err := fmt.Fprintf(w, "%s\t%d of %d answered\n", r.ID, total-open, total); err != nil {
+				return err
+			}
+		}
+	}
+	for _, msg := range c.Errors {
+		if _, err := fmt.Fprintln(w, "load error:", msg); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func printSchema(w io.Writer, args []string) error {

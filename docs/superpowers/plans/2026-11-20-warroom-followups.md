@@ -9,7 +9,8 @@ Sessions (user, 2026-11-20: split into several sessions with a handoff between t
 | 1 (2026-11-19/20) | port, tune spike, 0, A, B | B committed | branch tip, open findings, next session's first command |
 | 2 | C, D | D committed: features the next packages need, each guarded by a browser test | test list with the change that turns each red |
 | 3 | G, E | quality gate green locally and in a pushed-branch CI run only if the owner approves the push; prototype deleted; reviews and fix round done | review findings left open, CI status |
-| 4 | F, owner look | docs point at War Room; owner's questionnaire on the set-aside features answered; branch ready to merge | merge steps (squash, tag tip, AGENTS.md) |
+| 4 | F, owner questionnaire (Task H written) | docs point at War Room; owner's questionnaire answered | Task H, next first command |
+| 4b | H, owner look | answers built and reviewed; branch ready to merge | merge steps (squash, tag tip, AGENTS.md) |
 | 5 | Godot lab step: 15-minute checks, brainstorm, spec | spec approved | spec path, check results |
 | 6+ | lab step implementation | per its plan | per its plan |
 
@@ -105,6 +106,19 @@ Owner (user, 2026-11-20): art labs and decision rounds go through War Room from 
 - `docs/development.md`: War Room in the commands and Start here list; the codebase guide's tooling chapter gets a short War Room section with its `Checked against` footer.
 - Session notes are private (`~/projects/wargrid-private/docs/session-notes.md`): the coordinator adds the War Room line there, not in this repo.
 These files are also edited on `main` by other runs; keep each edit to a few lines so the merge stays small. Checks: links and paths resolve, `python3 tools/roadmap.py` leaves the README consistent, `sh tools/check_public.sh` exit 0. A fresh Opus review of the docs' code claims before the commit.
+
+Done 2026-11-20: the docs above point at War Room; kickoff lists open rounds with the new `go run . open` (no index-page counts existed); fresh Opus review of the code claims, fixes applied.
+
+## Task H: owner answers from the session 4 questionnaire (before merge)
+
+Owner (user, 2026-11-20), each with a browser test proven red, then the player-experience reviewer:
+- Non-blind steps open on A (or the existing pick); Claude's pick stays visible but quiet. Authoring rule in the README: vary the recommended letter.
+- Claude's-pick tag: sentence case, `--muted`, no box.
+- Phone: Side and No difference move from the bar into the sheet; the sheet's "View" button becomes "Controls"; the read-only notice reads "View only: you can look around, nothing you do is recorded".
+- Tune slider: knob `--text`, track `--muted`.
+- Side view: Neither / No difference centred under the grid; the selected tile's Pick stays amber (Enter target), the others neutral.
+- Blind steps keep authored order (shuffle deferred); the loader warns when every blind step of a round puts the candidate at the same letter.
+- Later list (not built): a richer final page (decided, agent calls and deviations lists, a gallery at the chosen settings). Dropped: two-axis answers, audio extras, in-page checks, per-tile 100 %, `picks=` preview, light theme.
 
 ## Not in this batch
 
