@@ -180,6 +180,10 @@ A prerelease tag (`v0.7.0-rc.1`) skips both fly deploys and publishes a GitHub p
 
 M5 measurements of the Kotlin relay and the native decision: [M5 verification](reference/m5-verification.md). Findings and M9 list: [M5 findings](reference/m5-online.md).
 
+## After a merge
+
+Run `sh tools/run_benchmark.sh` on `main`: it records itself on a clean `main` (`PERF_LABEL` forces a record elsewhere, `PERF_RECORD=0` turns it off; [performance ledger](reference/performance.md)); if the load average is above 2.5, say so and run it later. A `CEILING ALARM` line on `main` goes into wrap-up's Pending user action, so kickoff lists it in "Open for you" (report only, never a reason to loosen). If the merge changed `game/scripts/presentation/` or `game/scripts/match/` after the newest rendered row in `perf-history.csv`, a rendered rerun is owed: ask for the window in the same turn and record it (`python3 tools/perf_record.py <log> --label "<merge>"`); until it runs, kickoff lists it in "Open for you". The status table blocks in `README.md` and the ledger are generated: never hand-edit them; fix `docs/reference/perf-history.csv` or `tools/perf_chart.py` and rerun `python3 tools/perf_chart.py`.
+
 ## Local references
 
 - EA source: `~/projects/CnC_Generals_Zero_Hour`; research Zero Hour under `GeneralsMD/`.
