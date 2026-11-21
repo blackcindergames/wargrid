@@ -4,7 +4,7 @@ extends RefCounted
 const Runner = preload("res://tests/run_tests.gd")
 
 func cases() -> Array[Callable]:
-	return [test_shards_cover_every_suite_once, test_no_shard_runs_everything, test_bad_shard_runs_nothing, test_only_filter, test_shards_by_cost]
+	return [test_shards_cover_every_suite_once, test_no_shard_runs_everything, test_bad_shard_runs_nothing, test_only_filter, test_shards_by_cost, test_case_stat_line]
 
 func test_shards_cover_every_suite_once(runner) -> bool:
 	var seen: Array[int] = []
@@ -36,4 +36,11 @@ func test_shards_by_cost(runner) -> bool:
 	var equal := PackedFloat64Array([1.0, 1, 1, 1, 1])
 	runner.check(Runner.shard(5, PackedStringArray(["--shard=0/2"]), equal) == [0, 2, 4], "R5 equal costs keep the modulo deal, shard 0")
 	runner.check(Runner.shard(5, PackedStringArray(["--shard=1/2"]), equal) == [1, 3], "R5 equal costs keep the modulo deal, shard 1")
+	return true
+
+func test_case_stat_line(runner) -> bool:
+	runner.check(Runner.stat_line("test_x", 1234, 7) == "CASE_STAT test_x 1.2 7", "R6 the stat line has the case, one-decimal seconds and its checks")
+	runner.check(Runner.stat_line("test_x", 44860, 0) == "CASE_STAT test_x 44.9 0", "R6 seconds round to one decimal")
+	runner.check(Runner.stats_enabled("1"), "R6 WARGRID_CASE_STATS=1 turns stats on")
+	runner.check(not Runner.stats_enabled("") and not Runner.stats_enabled("0"), "R6 stats stay off otherwise")
 	return true

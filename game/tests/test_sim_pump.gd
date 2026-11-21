@@ -41,7 +41,7 @@ class PairTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -657,6 +657,17 @@ func test_sb4_ring_query(runner) -> bool:
 	job.want_ring = false
 	runner.check(pump.query(job).ring.is_empty(), "SB4 a query without want_ring has no ring")
 	runner.check(is_same(pump.current(), current) and pump.live().tick() == 40 and pump.drain().size() == 40, "SB4 the ring query leaves the slots and the note queue alone")
+	return true
+
+func test_th_pump_tick_hash_on_request(runner) -> bool:
+	var pump = SimPump.new(Skirmish.create(true, "human"))
+	pump.start()
+	var plain = pump.query(_job())
+	runner.check(plain.get("tick_hash") == "", "TH pump: a job without want_tick_hash has an empty tick_hash")
+	var job = _job()
+	job.want_tick_hash = true
+	var asked = pump.query(job)
+	runner.check(asked.get("tick_hash") == pump.live().tick_hash() and not asked.tick_hash.is_empty(), "TH pump: want_tick_hash fills the live tick hash after the step")
 	return true
 
 func test_ph_sequence_stamp_only_on_request(runner) -> bool:

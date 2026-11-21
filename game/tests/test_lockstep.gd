@@ -80,7 +80,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -445,6 +445,39 @@ func test_hash_ring_shape(runner) -> bool:
 	runner.check(rows == b.hash_ring(), "HR2 identical sims give identical rings")
 	var short: PackedStringArray = _ring_world(10).hash_ring()
 	runner.check(short.size() == 10 and short[0].begins_with("1\t") and short[9].begins_with("10\t"), "HR2 a young sim holds rows 1..10")
+	return true
+
+func test_tick_hash_matches_ring_row(runner) -> bool:
+	var sim = Skirmish.create(true, "ai")
+	runner.check(sim.has_method("tick_hash"), "TH1 the simulation has a public tick_hash")
+	if not sim.has_method("tick_hash"): return true
+	var pattern := RegEx.create_from_string("^[0-9a-f]{16}$")
+	var equal: int = 0
+	for i in 90:
+		Skirmish.issue_opponents(sim, [1, 2])
+		sim.step()
+		if (i + 1) % 30 == 0 and sim.tick_hash() == sim.hash_ring()[-1].get_slice("\t", 1) and pattern.search(sim.tick_hash()) != null: equal += 1
+	runner.check(equal == 3, "TH1 tick_hash equals the newest ring row's hash at ticks 30, 60 and 90 (%d of 3)" % equal)
+	sim.set_hash_ring(false)
+	sim.step()
+	runner.check(pattern.search(sim.tick_hash()) != null and sim.hash_ring().is_empty(), "TH1 tick_hash works with the ring off")
+	return true
+
+func test_tick_hash_reads_do_not_change_outcome(runner) -> bool:
+	var asked = Skirmish.create(true, "ai")
+	var quiet = Skirmish.create(true, "ai")
+	asked.set_hash_ring(false)
+	quiet.set_hash_ring(false)
+	if not asked.has_method("tick_hash"):
+		runner.check(false, "TH2 the simulation has a public tick_hash")
+		return true
+	for i in 300:
+		Skirmish.issue_opponents(asked, [1, 2])
+		Skirmish.issue_opponents(quiet, [1, 2])
+		asked.step()
+		quiet.step()
+		if (i + 1) % 30 == 0: asked.tick_hash()
+	runner.check(asked.tick() == 300 and StateHash.digest(asked.snapshot()) == StateHash.digest(quiet.snapshot()), "TH2 reading tick_hash every 30 ticks leaves the 300-tick digest unchanged")
 	return true
 
 func test_hash_ring_outside_snapshot(runner) -> bool:

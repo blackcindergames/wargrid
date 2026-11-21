@@ -1439,3 +1439,27 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-21,2f40b1a4,auto d13e7ccf,dev,plumbing,combat_hordes300:profile,2,,,1.9232,P1,1.49,log sha256:e3bbd4017ca3
 2026-11-21,2f40b1a4,auto d13e7ccf,dev,plumbing,team_match:profile,2,,,1.1251,P1,1.49,log sha256:e3bbd4017ca3
 2026-11-21,2f40b1a4,auto d13e7ccf,dev,plumbing,team_match_pump:profile,2,,,1.1196,P1,1.49,log sha256:e3bbd4017ca3
+2026-11-20,4563d72a,Tooling night gate,dev,movement_tick,open,1,0.761,0.835,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,movement_tick,dense,1,0.738,0.88,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,open,1,1.884,2.242,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,dense,1,1.846,2.192,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,contact,1,1.192,1.561,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,skirmish3v3,1,1.345,1.452,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,transports,1,1.119,1.224,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,defences,1,0.772,2.112,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,docks,1,0.581,0.601,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,hordes300,1,2.892,3.393,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,ramp,1,0.652,1.213,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,combat_tick,frc,1,0.883,1.076,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,lockstep_overhead,contact,1,0.016,0.067,,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,movement_open:profile,1,,,1.3038,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,movement_dense:profile,1,,,1.3068,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,combat_contact:profile,1,,,0.3316,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5338,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,combat_open:profile,1,,,0.8963,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,skirmish_match:profile,1,,,0.2434,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,large_196:profile,1,,,1.6926,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,combat_dense:profile,1,,,0.7736,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,combat_hordes300:profile,1,,,1.926,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,team_match:profile,1,,,1.1139,P1,1.39,log sha256:ab15d3cb91e2
+2026-11-20,4563d72a,Tooling night gate,dev,plumbing,team_match_pump:profile,1,,,1.115,P1,1.39,log sha256:ab15d3cb91e2

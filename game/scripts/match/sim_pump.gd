@@ -15,6 +15,7 @@ class Job:
 	var step: bool = true
 	var want_digest: bool = false
 	var want_ring: bool = false
+	var want_tick_hash: bool = false
 	var want_log: bool = false
 	var preview: Dictionary = {}
 	var stamp_sequence: bool = false
@@ -30,6 +31,7 @@ class Note:
 	var snapshot: Dictionary = {}
 	var digest: String = ""
 	var ring: PackedStringArray = PackedStringArray()
+	var tick_hash: String = ""
 	@warning_ignore("shadowed_global_identifier")
 	var log: Array[Dictionary] = []
 	var preview: Dictionary = {}
@@ -159,6 +161,7 @@ static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job
 		note.snapshot = sim.snapshot()
 		note.digest = StateHash.digest(note.snapshot)
 	if job.want_ring: note.ring = sim.hash_ring()
+	if job.want_tick_hash: note.tick_hash = sim.tick_hash()
 	if job.want_log: note.log.assign(command_recorder.commands().duplicate(true))
 	if slot != null:
 		slot.tick = sim.tick()

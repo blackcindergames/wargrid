@@ -21,7 +21,7 @@ class OracleClient extends Client:
 		pass
 
 func cases() -> Array[Callable]:
-	return [test_recorder_logs_accepted_commands, test_bot_through_recorder_keeps_memory, test_log_lines_format, test_offline_scene_replays_to_same_digest, test_restart_starts_new_record, test_oracle_factions_arg, test_oracle_state_rows, test_oracle_ring_log]
+	return [test_recorder_logs_accepted_commands, test_bot_through_recorder_keeps_memory, test_log_lines_format, test_offline_scene_replays_to_same_digest, test_replay_names_first_differing_row, test_offline_record_tick_hashes, test_restart_starts_new_record, test_oracle_factions_arg, test_oracle_state_rows, test_oracle_ring_log]
 
 func _stop(sim, sequence: int, tick: int = 0) -> Dictionary:
 	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1)[0].id
@@ -98,6 +98,26 @@ func _replay(lines: PackedStringArray, args: Dictionary):
 	DirAccess.remove_absolute(log_path)
 	return client
 
+func test_offline_record_tick_hashes(runner) -> bool:
+	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var main = await _scene(runner, {1: "frc", 2: "china"}, "dry_wells", 7)
+	_step_main(main, 20)
+	var early = main.playtest_match().get("tick_hashes", null)
+	runner.check(early != null and early.is_empty(), "TH3 a match recorded before tick 30 has an empty tick_hashes list, got %s" % [early])
+	_step_main(main, 75)
+	var rows = main.playtest_match().get("tick_hashes", null)
+	runner.check(rows != null and rows.size() == 3, "TH3 a match at tick 95 has three tick_hashes rows, got %s" % [rows])
+	if rows != null and rows.size() == 3:
+		var pattern := RegEx.create_from_string("^\\d+\t[0-9a-f]{16}$")
+		runner.check(Array(rows).map(func(row: String) -> String: return row.get_slice("\t", 0)) == ["30", "60", "90"], "TH3 the rows are at ticks 30, 60, 90, got %s" % [rows])
+		runner.check(Array(rows).all(func(row: String) -> bool: return pattern.search(row) != null), "TH3 every row is '<tick>\\t<16 hex>', got %s" % [rows])
+	main.free()
+	SkirmishMain.factions = before[0]
+	SkirmishMain.map_path = before[1]
+	SkirmishMain.starts = before[2]
+	SkirmishMain.match_seed = before[3]
+	return true
+
 func test_offline_scene_replays_to_same_digest(runner) -> bool:
 	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
 	var main = await _scene(runner, {1: "frc", 2: "china"}, "dry_wells", 7)
@@ -126,6 +146,66 @@ func test_offline_scene_replays_to_same_digest(runner) -> bool:
 	client = _replay(without, args)
 	runner.check(StateHash.digest(client._sim.snapshot()) != record.end_digest, "RP4 a dropped command line changes the digest")
 	client.free()
+	main.free()
+	SkirmishMain.factions = before[0]
+	SkirmishMain.map_path = before[1]
+	SkirmishMain.starts = before[2]
+	SkirmishMain.match_seed = before[3]
+	return true
+
+func _ring_rows(lines: PackedStringArray, args: Dictionary) -> PackedStringArray:
+	var path := "user://rp-hash-ring-%d.tsv" % OS.get_process_id()
+	var client = _replay(lines, args.merged({"ring-log": path}))
+	var rows: PackedStringArray = FileAccess.get_file_as_string(path).split("\n", false)
+	DirAccess.remove_absolute(path)
+	client.free()
+	return rows
+
+func _compare_output(recorded: PackedStringArray, ring: PackedStringArray) -> Array:
+	var files: Array[String] = []
+	for rows: PackedStringArray in [recorded, ring]:
+		var path := ProjectSettings.globalize_path("user://rp-compare-%d-%d.tsv" % [OS.get_process_id(), files.size()])
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string("".join(Array(rows).map(func(row: String) -> String: return row + "\n")))
+		file.close()
+		files.append(path)
+	var output: Array = []
+	var root := OS.get_environment("WARGRID_VECTORS").path_join("../..") if OS.has_environment("WARGRID_VECTORS") else ProjectSettings.globalize_path("res://").path_join("..")
+	var script := root.path_join("tools/playtest_session.py")
+	var python := OS.get_environment("PYTHON") if OS.has_environment("PYTHON") else "python3"
+	var code := OS.execute(python, [script, "--compare-hashes", files[0], files[1]], output)
+	for path in files: DirAccess.remove_absolute(path)
+	return [code, "".join(output).strip_edges()]
+
+func test_replay_names_first_differing_row(runner) -> bool:
+	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var main = await _scene(runner, {1: "frc", 2: "china"}, "dry_wells", 7)
+	_step_main(main, STEPS, _send_move.bind(main))
+	var record: Dictionary = main.playtest_match()
+	var lines: PackedStringArray = record.commands
+	var args := {"map": "dry_wells", "seed": "7", "factions": "frc,china", "oracle-ticks": str(STEPS)}
+	var ring := _ring_rows(lines, args)
+	var by_tick: Dictionary = {}
+	for row in ring: by_tick[row.get_slice("\t", 0)] = row
+	var recorded: PackedStringArray = record.tick_hashes
+	runner.check(recorded.size() == roundi(STEPS / 30.0) and Array(recorded).all(func(row: String) -> bool: return by_tick.get(row.get_slice("\t", 0), "") == row), "RH5 every recorded row is in the replay's ring rows, got %d recorded" % recorded.size())
+	var same := _compare_output(recorded, ring)
+	runner.check(same == [0, ""], "RH5 the compare accepts the replay of the same commands, got %s" % [same])
+	var without := PackedStringArray()
+	for line in lines:
+		var message: Dictionary = Wire.decode(line).message
+		var kept: Array = message.commands.filter(func(command: Dictionary) -> bool: return not (command.player == 1 and command.type == "move"))
+		if not kept.is_empty(): without.append(Wire.encode(Wire.tick_message(0, message.tick, kept, null)))
+	var mutated := _ring_rows(without, args)
+	var first := 0
+	for i in mini(ring.size(), mutated.size()):
+		if ring[i] != mutated[i]:
+			first = i + 1
+			break
+	runner.check(first > MOVE_STEP, "RH5 the dropped move first changes a ring row after tick %d, got tick %d" % [MOVE_STEP, first])
+	var expected := "first differing row at tick %d, last equal row at tick %d" % [ceili(first / 30.0) * 30, ceili(first / 30.0) * 30 - 30]
+	var differs := _compare_output(recorded, mutated)
+	runner.check(differs == [1, expected], "RH5 the compare names '%s', got %s" % [expected, differs])
 	main.free()
 	SkirmishMain.factions = before[0]
 	SkirmishMain.map_path = before[1]

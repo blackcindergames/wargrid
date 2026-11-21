@@ -3,7 +3,7 @@ class_name WargridTestRunner
 extends SceneTree
 
 const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
-const SUITES = [preload("res://tests/test_combat.gd"), preload("res://tests/test_combat_navigation.gd"), preload("res://tests/test_base_scene.gd"), preload("res://tests/test_supply.gd"), preload("res://tests/test_production.gd"), preload("res://tests/test_construction.gd"), preload("res://tests/test_economy.gd"), preload("res://tests/test_simulation.gd"), preload("res://tests/test_isometric.gd"), preload("res://tests/test_navigation.gd"), preload("res://tests/test_movement.gd"), preload("res://tests/test_view.gd"), preload("res://tests/test_scene.gd"), preload("res://tests/test_replay.gd"), preload("res://tests/test_skirmish.gd"), preload("res://tests/test_skirmish_match.gd"), preload("res://tests/test_skirmish_scene.gd"), preload("res://tests/test_groups.gd"), preload("res://tests/test_repath.gd"), preload("res://tests/test_benchmark.gd"), preload("res://tests/test_state_hash.gd"), preload("res://tests/test_wire.gd"), preload("res://tests/test_lockstep.gd"), preload("res://tests/test_relay_transport.gd"), preload("res://tests/test_online_scene.gd"), preload("res://tests/test_profiler.gd"), preload("res://tests/test_map.gd"), preload("res://tests/test_teams.gd"), preload("res://tests/test_team_match.gd"), preload("res://tests/test_locomotion.gd"), preload("res://tests/test_allocation.gd"), preload("res://tests/test_navigation_incremental.gd"), preload("res://tests/test_factions.gd"), preload("res://tests/test_containers.gd"), preload("res://tests/test_defences.gd"), preload("res://tests/test_skirmish_waves.gd"), preload("res://tests/test_horde.gd"), preload("res://tests/test_ramp.gd"), preload("res://tests/test_perf_overlay.gd"), preload("res://tests/test_pause_menu.gd"), preload("res://tests/test_runner.gd"), preload("res://tests/test_logo.gd"), preload("res://tests/test_rebuild_holes.gd"), preload("res://tests/test_salvage.gd"), preload("res://tests/test_tunnels.gd"), preload("res://tests/test_supply_parity.gd"), preload("res://tests/test_sound.gd"), preload("res://tests/test_announcer.gd"), preload("res://tests/test_audio_settings.gd"), preload("res://tests/test_start_spots.gd"), preload("res://tests/test_match_settings.gd"), preload("res://tests/test_credits.gd"), preload("res://tests/test_shapes.gd"), preload("res://tests/test_shape_audit.gd"), preload("res://tests/test_world_batch.gd"), preload("res://tests/test_visual.gd"), preload("res://tests/test_graphics_settings.gd"), preload("res://tests/test_art_lab.gd"), preload("res://tests/test_presentation_clock.gd"), preload("res://tests/test_view_rows.gd"), preload("res://tests/test_playtest_replay.gd"), preload("res://tests/test_playtest.gd"), preload("res://tests/test_playtest_overlay.gd"), preload("res://tests/test_income_openings.gd"), preload("res://tests/test_dock_lock.gd"), preload("res://tests/test_order_voice.gd"), preload("res://tests/test_join_link.gd"), preload("res://tests/test_launcher.gd"), preload("res://tests/test_match_stats.gd"), preload("res://tests/test_sim_pump.gd"), preload("res://tests/test_selection_lab.gd"), preload("res://tests/test_lab_panel.gd"), preload("res://tests/test_hud.gd"), preload("res://tests/test_view_caps.gd")]
+const SUITES = [preload("res://tests/test_combat.gd"), preload("res://tests/test_combat_navigation.gd"), preload("res://tests/test_base_scene.gd"), preload("res://tests/test_supply.gd"), preload("res://tests/test_production.gd"), preload("res://tests/test_construction.gd"), preload("res://tests/test_economy.gd"), preload("res://tests/test_simulation.gd"), preload("res://tests/test_isometric.gd"), preload("res://tests/test_navigation.gd"), preload("res://tests/test_movement.gd"), preload("res://tests/test_view.gd"), preload("res://tests/test_scene.gd"), preload("res://tests/test_replay.gd"), preload("res://tests/test_skirmish.gd"), preload("res://tests/test_skirmish_match.gd"), preload("res://tests/test_skirmish_scene.gd"), preload("res://tests/test_groups.gd"), preload("res://tests/test_repath.gd"), preload("res://tests/test_benchmark.gd"), preload("res://tests/test_state_hash.gd"), preload("res://tests/test_wire.gd"), preload("res://tests/test_lockstep.gd"), preload("res://tests/test_relay_transport.gd"), preload("res://tests/test_online_scene.gd"), preload("res://tests/test_profiler.gd"), preload("res://tests/test_map.gd"), preload("res://tests/test_teams.gd"), preload("res://tests/test_team_match.gd"), preload("res://tests/test_locomotion.gd"), preload("res://tests/test_allocation.gd"), preload("res://tests/test_navigation_incremental.gd"), preload("res://tests/test_factions.gd"), preload("res://tests/test_containers.gd"), preload("res://tests/test_defences.gd"), preload("res://tests/test_skirmish_waves.gd"), preload("res://tests/test_horde.gd"), preload("res://tests/test_ramp.gd"), preload("res://tests/test_perf_overlay.gd"), preload("res://tests/test_pause_menu.gd"), preload("res://tests/test_runner.gd"), preload("res://tests/test_logo.gd"), preload("res://tests/test_rebuild_holes.gd"), preload("res://tests/test_salvage.gd"), preload("res://tests/test_tunnels.gd"), preload("res://tests/test_supply_parity.gd"), preload("res://tests/test_sound.gd"), preload("res://tests/test_announcer.gd"), preload("res://tests/test_audio_settings.gd"), preload("res://tests/test_start_spots.gd"), preload("res://tests/test_match_settings.gd"), preload("res://tests/test_credits.gd"), preload("res://tests/test_shapes.gd"), preload("res://tests/test_shape_audit.gd"), preload("res://tests/test_world_batch.gd"), preload("res://tests/test_visual.gd"), preload("res://tests/test_graphics_settings.gd"), preload("res://tests/test_art_lab.gd"), preload("res://tests/test_presentation_clock.gd"), preload("res://tests/test_view_rows.gd"), preload("res://tests/test_playtest_replay.gd"), preload("res://tests/test_playtest.gd"), preload("res://tests/test_playtest_overlay.gd"), preload("res://tests/test_income_openings.gd"), preload("res://tests/test_dock_lock.gd"), preload("res://tests/test_order_voice.gd"), preload("res://tests/test_join_link.gd"), preload("res://tests/test_launcher.gd"), preload("res://tests/test_match_stats.gd"), preload("res://tests/test_sim_pump.gd"), preload("res://tests/test_selection_lab.gd"), preload("res://tests/test_lab_panel.gd"), preload("res://tests/test_hud.gd"), preload("res://tests/test_view_caps.gd"), preload("res://tests/test_definitions_lint.gd")]
 var checks: int = 0
 var failures: int = 0
 var case_count: int = 0
@@ -13,7 +13,7 @@ var _watchdog := Thread.new()
 var _watchdog_stop: bool = false
 var _case_lock := Mutex.new()
 # The slowest process bounds the run, so the long cases are dealt first and spread.
-const CASE_SECONDS := {"test_team_match_prefix": 44.8, "test_frc_skirmish_match": 11.7, "test_mirror_match_script": 8.2, "test_china_skirmish_match": 4.7, "test_horde_render_layout": 4.2, "test_skirmish_core_series": 4.2, "test_settled_matches_snapshot_predicate": 4.2, "test_rows_equal_snapshot": 3.8, "test_openings_deposit": 3.0, "test_report_rows": 2.9, "test_multi_collector_rates": 2.8, "test_combat_fixtures": 1.9, "test_bot_counts_queued_collectors": 1.9, "test_team_match_pair": 1.1, "test_view_reads_digest_is_pinned": 1.1}
+const CASE_SECONDS := {"test_team_match_prefix": 52.6, "test_frc_skirmish_match": 14.2, "test_china_skirmish_match": 11.0, "test_mirror_match_script": 9.4, "test_match_stats_mirror_and_replay": 8.2, "test_report_rows": 6.6, "test_settled_matches_snapshot_predicate": 5.2, "test_horde_render_layout": 5.1, "test_rows_equal_snapshot": 4.8, "test_skirmish_core_series": 4.7, "test_openings_deposit": 4.0, "test_multi_collector_rates": 3.9, "test_bot_counts_queued_collectors": 2.4, "test_chip_stack": 2.4, "test_combat_fixtures": 2.2, "test_hordes300_home_allocations_match_full_scan": 2.0, "test_panel_states_layout": 1.5, "test_team_match_pair": 1.5, "test_view_state_other_keys": 1.3, "test_view_batch_equals_snapshot_batch": 1.2, "test_view_reads_digest_is_pinned": 1.2, "test_choose_faction_online_frc_same_hash": 1.1, "test_defences_fixture": 1.1, "test_incremental_matches_rebuild": 1.1, "test_four_helicopters_reported": 1.0}
 
 func check(condition: bool, message: String) -> void:
 	checks += 1
@@ -53,6 +53,12 @@ static func shard(count: int, args: PackedStringArray, costs: PackedFloat64Array
 static func _cost(costs: PackedFloat64Array, i: int) -> float:
 	return costs[i] if i < costs.size() else 1.0
 
+static func stat_line(method: String, msec: int, added: int) -> String:
+	return "CASE_STAT %s %.1f %d" % [method, msec / 1000.0, added]
+
+static func stats_enabled(value: String) -> bool:
+	return value == "1"
+
 static func only_filter(args: PackedStringArray) -> String:
 	for arg in args:
 		if arg.begins_with("--only="):
@@ -87,6 +93,9 @@ func _run() -> void:
 		for test in selected:
 			if only.is_empty() or suite_script.resource_path.contains(only) or test.get_method().contains(only):
 				tests.append(test)
+	var stats: bool = stats_enabled(OS.get_environment("WARGRID_CASE_STATS"))
+	if stats and not only.is_empty():
+		print("CASE_FILTER ", only) # tools/case_times.py refuses to regenerate the table from a filtered run
 	var costs: PackedFloat64Array = PackedFloat64Array()
 	for test in tests:
 		costs.append(CASE_SECONDS.get(test.get_method(), 0.1))
@@ -98,7 +107,10 @@ func _run() -> void:
 		case_count += 1
 		DirAccess.remove_absolute(AudioSettings.path) # remembered launcher picks must not leak into the next case
 		var before: int = checks
+		var started: int = Time.get_ticks_msec()
 		var completed: Variant = await test.call(self)
+		if stats:
+			print(stat_line(test.get_method(), Time.get_ticks_msec() - started, checks - before))
 		if completed is not bool or completed != true or checks == before:
 			failures += 1
 			print("FAIL: incomplete/empty case ", test.get_method())

@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import playtest_session as ps
@@ -157,12 +158,14 @@ class PlaytestSessionTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("unsupported session format", err.getvalue())
 
-    def _replay(self, client_exit, extra=""):
+    def _replay(self, client_exit, extra="", rows=None, final="aa", count=1):
         one = session()
-        one["matches"] = one["matches"][:1]
+        one["matches"] = one["matches"][:1] * count
+        if rows is not None:
+            one["matches"][0]["tick_hashes"] = rows
         self.path.write_text(json.dumps(one))
         fake = Path(self._tmp.name) / "fake_client.sh"
-        fake.write_text(f"#!/bin/sh\necho 'ORACLE FINAL 60 aa'\n{extra}exit {client_exit}\n")
+        fake.write_text(f"#!/bin/sh\necho 'ORACLE FINAL 60 {final}'\n{extra}exit {client_exit}\n")
         fake.chmod(0o755)
         script = Path(__file__).resolve().parent / "replay_session.sh"
         env = {**os.environ, "WARGRID_CLIENT": str(fake), "PYTHON": sys.executable}
@@ -176,6 +179,138 @@ class PlaytestSessionTest(unittest.TestCase):
         self.assertNotIn("REPLAY MATCHED", crashed.stdout)
         errored = self._replay(0, "echo 'SCRIPT ERROR: boom'\n")
         self.assertEqual((errored.returncode, "REPLAY MATCHED" in errored.stdout), (1, False), errored.stdout)
+
+    def _hash_files(self, recorded, ring):
+        rec, rng = Path(self._tmp.name) / "rec.hashes", Path(self._tmp.name) / "ring.tsv"
+        rec.write_text("".join(f"{r}\n" for r in recorded))
+        rng.write_text("".join(f"{r}\n" for r in ring))
+        return rec, rng
+
+    def _compare(self, recorded, ring):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = ps.main(["--compare-hashes", *map(str, self._hash_files(recorded, ring))])
+        return code, out.getvalue()
+
+    @staticmethod
+    def _ring(changed_from=None, ticks=90):
+        return [f"{t}\t{'bad' if changed_from and t >= changed_from else 'h%d' % t}" for t in range(1, ticks + 1)]
+
+    RECORDED = ("30\th30", "60\th60", "90\th90")
+
+    def test_compare_hashes_equal_rows_print_nothing(self):
+        self.assertEqual(self._compare(self.RECORDED, self._ring()), (0, ""))
+        self.assertEqual(self._compare([], self._ring()), (0, ""), "a match under 30 ticks has no rows")
+
+    def test_compare_hashes_names_first_differing_row(self):
+        self.assertEqual(
+            self._compare(self.RECORDED, self._ring(changed_from=90)),
+            (1, "first differing row at tick 90, last equal row at tick 60\n"),
+        )
+
+    def test_compare_hashes_edge_rows(self):
+        malformed = self._compare(("30\th30", "oops"), self._ring())
+        self.assertEqual(malformed, (2, "malformed hash row 2 in rec.hashes\n"))
+        bad_ring = self._compare(self.RECORDED, ["1\th1", "2"])
+        self.assertEqual(bad_ring, (2, "malformed hash row 2 in ring.tsv\n"))
+        first = self._compare(self.RECORDED, self._ring(changed_from=30))
+        self.assertEqual(first, (1, "first differing row at tick 30, no earlier recorded row\n"))
+        later = self._compare(("60\th60", "90\th90"), self._ring(changed_from=60))
+        self.assertEqual(later, (1, "first differing row at tick 60, no earlier recorded row\n"))
+        gap = self._compare(("30\th30", "90\th90"), self._ring(changed_from=90))
+        self.assertEqual(gap, (1, "first differing row at tick 90, last equal row at tick 30\n"))
+        undecodable = Path(self._tmp.name) / "bin.hashes"
+        undecodable.write_bytes(b"\xff\xfe\n")
+        self.assertEqual(ps.compare_hashes(undecodable, self._hash_files((), ())[1])[0], 2)
+        early = self._compare(self.RECORDED, self._ring(ticks=75))
+        self.assertEqual(early, (1, "replay ended before tick 90\n"))
+        self.assertEqual(self._compare(self.RECORDED, []), (1, "replay ended before tick 30\n"))
+
+    def test_compare_hashes_blank_ring_lines_are_no_rows(self):
+        rec, ring = self._hash_files((), ())
+        self.assertEqual(ps.main(["--compare-hashes", str(rec), str(ring)]), 0)
+        ring.write_text("\n")
+        self.assertEqual(ps.main(["--compare-hashes", str(rec), str(ring)]), 0, "a ring with no rows is one newline")
+
+    def test_compare_hashes_missing_file_is_a_tool_failure(self):
+        rec, ring = self._hash_files(self.RECORDED, self._ring())
+        gone = Path(self._tmp.name) / "gone.hashes"
+        for args in [(gone, ring), (rec, gone)]:
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = ps.main(["--compare-hashes", *map(str, args)])
+            self.assertEqual(code, 2, out.getvalue())
+            self.assertIn("gone.hashes", out.getvalue())
+
+    def test_compare_hashes_crash_is_a_tool_failure(self):
+        out = io.StringIO()
+        with (
+            mock.patch.object(ps, "_parse_hash_rows", side_effect=RuntimeError("boom")),
+            contextlib.redirect_stdout(out),
+        ):
+            code = ps.main(["--compare-hashes", "a", "b"])
+        self.assertEqual(code, 2)
+        self.assertIn("boom", out.getvalue())
+
+    def test_replay_rows_write_and_delete_hashes_file(self):
+        data = session()
+        data["matches"][0]["tick_hashes"] = ["30\th30", "60\th60"]
+        data["matches"][1]["tick_hashes"] = []
+        path = self._write(data)
+        ps.replay_rows(ps.load_session(path), path)
+        self.assertEqual(path.with_name("plain-m1.hashes").read_text(), "30\th30\n60\th60\n")
+        self.assertEqual(path.with_name("plain-m2.hashes").read_text(), "", "empty rows still write the file")
+        path = self._write(session())
+        rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
+        self.assertEqual(
+            rows[0][:9],
+            ["1", str(path.parent / "plain-m1.cmd"), "offline", "skirmish", "7", "frc,china", "60", "aa", "30,60"],
+        )
+        self.assertFalse(path.with_name("plain-m1.hashes").exists(), "a stale file from an earlier run is deleted")
+        self.assertFalse(path.with_name("plain-m2.hashes").exists())
+
+    RING_WRITER = (
+        'while [ $# -gt 0 ]; do [ "$1" = --ring-log ] && ring=$2; shift; done\n'
+        'for t in $(seq 1 60); do printf "%s\\th%s\\n" "$t" "$t"; done > "$ring"\n'
+    )
+
+    def test_replay_wrapper_compares_hash_rows(self):
+        rows = ["30\th30", "60\th60"]
+        same = self._replay(0, self.RING_WRITER, rows=rows)
+        self.assertEqual((same.returncode, same.stdout), (0, "REPLAY MATCHED 1\n"), same.stdout)
+        changed = self._replay(0, self.RING_WRITER, rows=["30\th30", "60\tzz"])
+        self.assertEqual(changed.returncode, 1, changed.stdout)
+        self.assertIn("REPLAY DIFFERS 1 first differing row at tick 60, last equal row at tick 30", changed.stdout)
+        self.assertNotIn("REPLAY MATCHED", changed.stdout)
+        unhashed = self._replay(0, self.RING_WRITER, rows=rows, final="cc")
+        self.assertEqual(unhashed.returncode, 1, unhashed.stdout)
+        self.assertIn("REPLAY DIFFERS 1 recorded=aa replayed=cc", unhashed.stdout)
+        self.assertIn(
+            "no recorded row differs (last row tick 60); the difference is after tick 60 or in unhashed state",
+            unhashed.stdout,
+        )
+        short = self._replay(0, self.RING_WRITER, rows=["30\th30"], final="cc")
+        self.assertEqual(short.returncode, 1, short.stdout)
+        self.assertIn("no recorded row differs (last row tick 30); the difference is after tick 30", short.stdout)
+        empty = self._replay(0, self.RING_WRITER, rows=[], final="cc")
+        self.assertEqual(empty.returncode, 1, empty.stdout)
+        self.assertIn("no hash rows recorded", empty.stdout)
+        self.assertNotIn("no recorded row differs", empty.stdout)
+        norows = self._replay(0, final="cc")
+        self.assertEqual(norows.returncode, 1, norows.stdout)
+        self.assertNotIn("recorded row", norows.stdout)
+        broken = self._replay(0, self.RING_WRITER, rows=["30\th30", "oops"])
+        self.assertEqual(broken.returncode, 1, broken.stdout)
+        self.assertIn("REPLAY FAILED 1: malformed hash row 2 in sess-m1.hashes", broken.stdout)
+
+    def test_replay_wrapper_empties_the_ring_per_match(self):
+        once = Path(self._tmp.name) / "wrote"
+        parse, write = self.RING_WRITER.splitlines()
+        first_only = f'{parse}\n[ -f "{once}" ] || {{ touch "{once}"; {write}; }}\n'
+        two = self._replay(0, first_only, rows=["30\th30", "60\th60"], count=2)
+        self.assertEqual(two.returncode, 1, two.stdout)
+        self.assertIn("REPLAY MATCHED 1", two.stdout)
+        self.assertIn("REPLAY DIFFERS 2 replay ended before tick 30", two.stdout)
 
 
 if __name__ == "__main__":
