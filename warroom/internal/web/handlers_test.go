@@ -522,6 +522,28 @@ func TestEmbeddedStaticFiles(t *testing.T) {
 	}
 }
 
+func TestStaticFilesRevalidate(t *testing.T) {
+	a := newApp(t)
+	rec := a.get("/static/app.css")
+	if got := rec.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Errorf("Cache-Control = %q, want no-cache", got)
+	}
+	tag := rec.Header().Get("ETag")
+	if tag == "" {
+		t.Fatal("no ETag on /static/app.css")
+	}
+	req := httptest.NewRequest(http.MethodGet, "/static/app.css", nil)
+	req.Header.Set("If-None-Match", tag)
+	again := httptest.NewRecorder()
+	a.h.ServeHTTP(again, req)
+	if again.Code != http.StatusNotModified || again.Body.Len() != 0 {
+		t.Errorf("If-None-Match = %d with %d body bytes, want 304 and none", again.Code, again.Body.Len())
+	}
+	if got := a.get("/docs/a.txt").Header().Get("Cache-Control"); got != "no-cache" {
+		t.Errorf("/docs Cache-Control = %q, want no-cache", got)
+	}
+}
+
 func TestMissingRootIs404NotAPanic(t *testing.T) {
 	a := newApp(t)
 	a.cfg.Root = filepath.Join(t.TempDir(), "gone")

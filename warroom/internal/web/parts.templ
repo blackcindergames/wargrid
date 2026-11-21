@@ -116,6 +116,9 @@ templ NoteField(n NoteView) {
 		if n.Placeholder != "" {
 			placeholder={ n.Placeholder }
 		}
+		if n.Label != "" {
+			aria-label={ n.Label }
+		}
 		autofocus?={ n.Hint != "" }
 		hx-post={ n.Post }
 		hx-target="#rec"
@@ -131,9 +134,7 @@ templ NoteField(n NoteView) {
 templ NoteBox(n NoteView) {
 	if !isReadOnly(ctx) {
 		<section class="notebox">
-			<label for={ n.ID } class="h">{ n.Label }</label>
 			@NoteField(n)
-			<p class="nhint" id="nhint">{ n.Hint }</p>
 		</section>
 	}
 }
@@ -146,42 +147,78 @@ templ StepNav(n NavView) {
 	</nav>
 }
 
-// Intro is open on step 1 and the summary, folded in the same place on the other steps.
+// Open only on the summary: on a step the question and "Look at" come first.
 templ Intro(text string, open bool) {
 	if text != "" {
-		if open {
-			<section class="intro">
-				<span class="h">This round</span>
-				<p>@Fmt(text)</p>
-			</section>
-		} else {
-			<details class="intro"><summary>This round</summary><p>@Fmt(text)</p></details>
-		}
+		<details class="intro" open?={ open }><summary>This round</summary><p>@Fmt(text)</p></details>
 	}
 }
 
-templ Head(h HeadView) {
-	@Intro(h.Intro, h.IntroOpen)
+// Head is the left panel: the question and "Look at" stay in view, everything longer folds away closed.
+templ Head(h HeadView, i InfoView) {
 	<section class="head">
-		<span class="n">{ h.Eyebrow }</span>
+		<span class="n" title={ h.Eyebrow }>{ h.Eyebrow }</span>
 		<h1>@Fmt(h.Question)</h1>
-		if h.ClaudePick != nil {
-			<p class="cpline">
-				<span class="tag cp">Claude's pick</span>
-				<b>@Fmt(h.ClaudePick.Label)</b>
-				if h.ClaudePick.Why != "" {
-					· @Fmt(h.ClaudePick.Why)
-				}
-			</p>
-		}
 		<p id="rec" class="rec" aria-live="polite">{ h.Record }</p>
+	</section>
+	if i.Look != "" {
+		<p class="look">@Fmt(i.Look)</p>
+	}
+	<section class="folds">
+		if i.Why != "" {
+			<details class="why">
+				<summary>Why this question</summary>
+				<p>@Fmt(i.Why)</p>
+			</details>
+		}
+		if h.ClaudePick != nil {
+			<details class="cpwhy">
+				<summary>Claude's reason</summary>
+				<p>
+					<b>@Fmt(h.ClaudePick.Label)</b>
+					if h.ClaudePick.Why != "" {
+						· @Fmt(h.ClaudePick.Why)
+					}
+				</p>
+			</details>
+		}
+		{ children... }
+		@Intro(h.Intro, false)
+		if i.Ref != nil {
+			<details class="ref">
+				<summary>@Fmt(i.Ref.Label)</summary>
+				@Picture(i.Ref.Pic)
+			</details>
+		}
+		if len(i.Checklist) > 0 {
+			<details class="check">
+				<summary>What to judge</summary>
+				<ul>
+					for _, c := range i.Checklist {
+						<li>@Fmt(c)</li>
+					}
+				</ul>
+			</details>
+		}
+		if len(i.Uses) > 0 {
+			<details class="uses">
+				<summary>Shown with your earlier picks</summary>
+				<ul>
+					for _, u := range i.Uses {
+						<li>{ useText(u) }: <b>@Fmt(u.Pick)</b></li>
+					}
+				</ul>
+			</details>
+		}
+		@NumbersPanel(i.Numbers)
+		@Folds(i.Folds)
 	</section>
 }
 
 templ NumbersPanel(rows []NumbersRow) {
 	if len(rows) > 0 {
-		<section class="numbers">
-			<span class="h">Numbers (K hides)</span>
+		<details class="numbers">
+			<summary>Numbers (K hides)</summary>
 			<div class="scroll">
 				<table>
 					<thead>
@@ -204,60 +241,12 @@ templ NumbersPanel(rows []NumbersRow) {
 				</table>
 			</div>
 			<p>Contrast: WCAG, for a colour on its background, under 3:1 marked; – for two colours that only need to differ. ΔE: CIE76 distance as seen normally and with simulated deuteranopia and protanopia (Machado 2009), under 20 marked.</p>
-		</section>
+		</details>
 	}
 }
 
 templ NumberCellView(c NumberCell) {
 	<td class={ templ.KV("low", c.Low) }>{ c.Text }</td>
-}
-
-templ Info(i InfoView, side bool) {
-	if i.Why != "" {
-		<details class="why" open?={ !side && !i.Phone }>
-			<summary>Why this question</summary>
-			<p>@Fmt(i.Why)</p>
-		</details>
-	}
-	if i.HasCue() {
-		<section class="cue">
-			if i.Look != "" {
-				<p class="look">@Fmt(i.Look)</p>
-			}
-			if i.Ref != nil {
-				<details class="ref" open?={ !i.Phone }>
-					<summary>@Fmt(i.Ref.Label)</summary>
-					@Picture(i.Ref.Pic)
-				</details>
-			}
-		</section>
-	}
-	if i.HasInfo() {
-		<section class="info">
-			if len(i.Checklist) > 0 {
-				<div class="check">
-					<span class="h">What to judge</span>
-					<ul>
-						for _, c := range i.Checklist {
-							<li>@Fmt(c)</li>
-						}
-					</ul>
-				</div>
-			}
-			if len(i.Uses) > 0 {
-				<div class="uses">
-					<span class="h">Shown with your earlier picks</span>
-					<ul>
-						for _, u := range i.Uses {
-							<li>{ useText(u) }: <b>@Fmt(u.Pick)</b></li>
-						}
-					</ul>
-				</div>
-			}
-			@NumbersPanel(i.Numbers)
-			@Folds(i.Folds)
-		</section>
-	}
 }
 
 func useText(u UseLine) string {
@@ -350,7 +339,7 @@ templ PhoneBar(p PhoneView) {
 					<a class="btn sm" href={ templ.SafeURL(p.ViewHref) } data-keepview>{ p.ViewLabel }</a>
 				}
 				if p.Neutral != "" {
-					<button type="submit" form="answer" name="pick" value="neither" class="neutral btn sm">{ p.Neutral }</button>
+					<button type="submit" form="answer" name="pick" value="neither" class="neutral btn sm" title={ neutralTitle }>{ p.Neutral }</button>
 				}
 			</div>
 		}
@@ -376,7 +365,12 @@ templ PhoneBar(p PhoneView) {
 			<button type="submit" form="answer" name="pick" value="yes" class="pick btn">Yes</button>
 		}
 		if p.Pick {
-			<button type="submit" form="answer" name="pick" value={ p.Shown } data-shown class="pick btn">Pick <span class="pl">{ p.Shown }</span></button>
+			<button type="submit" form="answer" name="pick" value={ p.Shown } data-shown class="pick btn">
+				Pick <span class="pl">{ p.Shown }</span>
+				if p.Cp != "" {
+					<span class="tag cp ptab" data-cp={ p.Cp } hidden?={ p.Cp != p.Shown }>Claude's pick</span>
+				}
+			</button>
 		}
 		if p.Tuned {
 			<button type="submit" form="answer" name="pick" value="tuned" class="pick btn">Use these</button>

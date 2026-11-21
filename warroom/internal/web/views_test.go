@@ -186,7 +186,7 @@ func TestBlindStepRevealsAfterThePick(t *testing.T) {
 func TestBlindStepHidesClaudesPickUntilThePick(t *testing.T) {
 	a := newShippedApp(t)
 	before := a.get("/r/demo/1").Body.String()
-	for _, leak := range []string{"Claude's pick", `value="B" data-shown`} {
+	for _, leak := range []string{"Claude's pick", "Claude's reason", `value="B" data-shown`} {
 		if strings.Contains(before, leak) {
 			t.Errorf("before the pick the blind step shows %s", leak)
 		}
@@ -196,14 +196,14 @@ func TestBlindStepHidesClaudesPickUntilThePick(t *testing.T) {
 		t.Error("a step using the blind step names Claude's pick before the pick")
 	}
 	wantStatus(t, a.post("/r/demo/pictures/pick", url.Values{"pick": {"C"}}), http.StatusSeeOther)
-	mustContain(t, "after the pick", a.get("/r/demo/1").Body.String(), `class="cpline"`, "B: Backdrop two", `class="tag cp"`)
+	mustContain(t, "after the pick", a.get("/r/demo/1").Body.String(), `class="cpwhy"`, "B: Backdrop two", `class="tag cp ptab" data-cp="B"`)
 }
 
 func TestConfirmStepTagsNoOption(t *testing.T) {
 	body := newShippedApp(t).get("/r/demo/2").Body.String()
-	mustContain(t, "confirm", body, `class="cpline"`)
-	if n := strings.Count(body, `class="tag cp"`); n != 1 {
-		t.Errorf("%d Claude's-pick tags, want only the line under the question", n)
+	mustContain(t, "confirm", body, `class="cpwhy"`, "Yes, as drawn")
+	if n := strings.Count(body, `tag cp`); n != 0 {
+		t.Errorf("%d Claude's-pick tags or tabs, want none: Claude's reason says it", n)
 	}
 }
 
@@ -474,25 +474,30 @@ func TestOptionsPastDFlipWithDigitsOnlyAndSideBySideWraps(t *testing.T) {
 			t.Errorf("an option took the control key %s", taken)
 		}
 	}
-	mustContain(t, "side", a.get("/r/m/1?view=side").Body.String(), "--n:4", `data-opt="F"`)
+	mustContain(t, "side", a.get("/r/m/1?view=side").Body.String(), "--n:3", `data-opt="F"`)
 	mustContain(t, "phone", a.get("/r/m/1?phone=1").Body.String(), `class="row opts"`)
 	if strings.Contains(a.get("/r/m/2?phone=1").Body.String(), `class="row opts"`) {
 		t.Error("two options got their own phone row")
 	}
 }
 
-func TestRoundIntroShowsAboveStepOneAndInTheSummary(t *testing.T) {
+func TestStepIntroStartsClosed(t *testing.T) {
 	a := manyOptionsApp(t)
 	intro := "Judge at 100 %; a neutral answer ships option A."
-	mustContain(t, "step 1", a.get("/r/m/1").Body.String(), `<section class="intro"`, intro)
-	mustContain(t, "summary", a.get("/r/m/summary").Body.String(), intro)
-	mustContain(t, "step 2", a.get("/r/m/2").Body.String(), `<details class="intro"><summary>This round</summary>`, intro)
+	for _, step := range []string{"/r/m/1", "/r/m/2"} {
+		body := a.get(step).Body.String()
+		mustContain(t, step, body, `<details class="intro"><summary>This round</summary>`, intro)
+		if strings.Contains(body, `<details class="intro" open`) {
+			t.Errorf("%s shows the intro open", step)
+		}
+	}
+	mustContain(t, "summary", a.get("/r/m/summary").Body.String(), `<details class="intro" open>`, intro)
 	shipped := newShippedApp(t).locked()
 	mustContain(t, "demo step 4", shipped.get("/r/demo/4?t="+roundToken("demo")).Body.String(), `<details class="intro">`, "Demo only: judge on any screen.")
 }
 
-func TestSideBySideKeepsTheRefTileBesideFourOptions(t *testing.T) {
-	mustContain(t, "ref and four", manyOptionsApp(t).get("/r/m/3?view=side").Body.String(), "--n:5", "reft")
+func TestSideBySideCountsTheRefTileInItsGrid(t *testing.T) {
+	mustContain(t, "ref and four", manyOptionsApp(t).get("/r/m/3?view=side").Body.String(), "--n:3", "reft")
 }
 
 func TestBlindStepsShowNoMeasurementsBeforeThePick(t *testing.T) {
@@ -529,4 +534,101 @@ func TestHtmxLastPickSummaryShowsTheChangeCount(t *testing.T) {
 	wantStatus(t, a.post("/r/r/gal/pick", url.Values{"pick": {"pass"}}), http.StatusSeeOther)
 	rec := a.fragment(http.MethodPost, "/r/r/gal/pick", url.Values{"pick": {"changes"}})
 	mustContain(t, "summary after the last pick", rec.Body.String(), "What the server recorded", "changed 2 times")
+}
+
+// choiceOf builds one step's choice view from a one-step round, with a root holding docs/a.txt.
+func choiceOf(t *testing.T, stepYAML, rawQuery string) (*builder, ChoiceView) {
+	t.Helper()
+	c := rounds.LoadCatalog(writeTree(t, map[string]string{
+		"index.yaml":   "- {id: x, title: X}\n",
+		"x/round.yaml": "title: X\nsteps: [s]\n",
+		"x/s.yaml":     stepYAML,
+	}))
+	if len(c.Errors) > 0 {
+		t.Fatal(c.Errors)
+	}
+	root, err := os.OpenRoot(writeTree(t, map[string]string{"docs/a.txt": "doc"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = root.Close() })
+	q, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := &builder{cat: c, round: c.Rounds["x"], q: parseQuery(q), root: root}
+	v := b.choice(1, &b.round.Loaded[0], "", "")
+	return b, v
+}
+
+func TestMissingLocalExtraIsLeftOut(t *testing.T) {
+	_, v := choiceOf(t, "kind: pictures\nquestion: Q\noptions:\n  A: {name: a, img: docs/a.txt, extra: [{label: mine, img: docs/nope.webp, local: true}, {label: lost, img: docs/lost.webp}]}\n", "")
+	got := v.Opts[0].Extras
+	if len(got) != 1 || got[0].Label != "lost" || got[0].Pic.Kind != "missing" {
+		t.Errorf("extras %+v, want only the committed one, shown as missing", got)
+	}
+}
+
+func TestRefFeedsTodayNotInfo(t *testing.T) {
+	const step = "kind: pictures\nquestion: Q\nref: {label: Today, img: docs/a.txt}\noptions:\n  A: {name: a, img: docs/a.txt}\n  B: {name: b, img: docs/a.txt}\n"
+	for _, q := range []string{"", "view=side"} {
+		if _, v := choiceOf(t, step, q); v.Ref == nil || v.Info.Ref != nil {
+			t.Errorf("%q: choice ref %v, info ref %v; want the ref on the Today row only", q, v.Ref, v.Info.Ref)
+		}
+	}
+	b, _ := choiceOf(t, step, "")
+	s := &b.round.Loaded[0]
+	s.Kind = "verdict"
+	if b.info(b.stage(s), s).Ref == nil {
+		t.Error("a step kind without option rows lost its reference fold")
+	}
+}
+
+func TestStatusListsOnlyViewValues(t *testing.T) {
+	bar := CtlBarView{Buttons: []CtlButton{
+		{Name: "size", Value: "1280 x 720"},
+		{Name: "fit", Value: "Fit"},
+		{Name: "world", Value: "n/a with a backdrop", Disabled: true},
+		{Name: "numbers", Value: "shown"},
+	}}
+	var names []string
+	for _, b := range bar.StatusItems() {
+		names = append(names, b.Value)
+	}
+	if got := strings.Join(names, " · "); got != "1280 x 720 · Fit" {
+		t.Errorf("status %q, want only the view values", got)
+	}
+	if got := bar.Vision(); got != "Normal vision" {
+		t.Errorf("vision %q without a colour-vision control, want Normal vision", got)
+	}
+	bar.Buttons = append(bar.Buttons, CtlButton{Name: "cvd", Value: "Deuteranopia"})
+	if got := bar.Vision(); got != "Deuteranopia vision" || len(bar.StatusItems()) != 2 {
+		t.Errorf("vision %q and %d items, want Deuteranopia vision kept out of the list", got, len(bar.StatusItems()))
+	}
+}
+
+func TestLabStepHasNoTodayRow(t *testing.T) {
+	_, v := choiceOf(t, "kind: lab\nquestion: Q\nurl: docs/a.txt\nref: {label: Today, img: docs/a.txt}\noptions:\n  A: {name: a}\n  B: {name: b}\n", "")
+	var out strings.Builder
+	if err := Options(v).Render(t.Context(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), `data-show="today"`) {
+		t.Error("a lab step shows a Today row, but its stage has no Today picture")
+	}
+}
+
+func TestNoteHasAPlaceholderNotALabel(t *testing.T) {
+	a := newShippedApp(t)
+	for path, want := range map[string]string{
+		"/r/demo/10": `placeholder="Note for Claude (optional)"`,
+		"/r/demo/2":  `placeholder="Note (say what to change, or anything else)"`,
+	} {
+		body := a.get(path).Body.String()
+		mustContain(t, path, body, want, `aria-label="`)
+		if strings.Contains(body, `<label for="note"`) {
+			t.Errorf("%s: the note still has a visible label", path)
+		}
+	}
+	mustContain(t, "/r/demo/10", a.get("/r/demo/10").Body.String(), `aria-label="Optional note for Claude (saved with your pick)"`)
 }

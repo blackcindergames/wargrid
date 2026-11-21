@@ -41,24 +41,25 @@ func render(w http.ResponseWriter, r *http.Request, page templ.Component) {
 
 func (b *builder) stepBody(n int, s *rounds.Step, record, hint string) (templ.Component, *PhoneView) {
 	plain := b.phoneBase(n, CtlBarView{})
+	chips := b.chips(n - 1)
 	switch s.Kind {
 	case rounds.KindMissing:
-		return MissingMain(b.missing(n, s)), &plain
+		return MissingMain(b.missing(n, s), chips), &plain
 	case "gallery":
 		v := b.gallery(n, s, record)
-		return GalleryMain(v), b.galleryPhone(n, &v)
+		return GalleryMain(v, chips), b.galleryPhone(n, &v)
 	case "verdict":
 		plain.Note = true
-		return VerdictMain(b.verdictStep(n, s, record)), &plain
+		return VerdictMain(b.verdictStep(n, s, record), chips), &plain
 	case "wording":
 		plain.Note = true
-		return WordingMain(b.wording(n, s, record)), &plain
+		return WordingMain(b.wording(n, s, record), chips), &plain
 	case "tune":
 		plain.Note, plain.Tuned, plain.Neutral = true, true, s.Neutral
-		return TuneMain(b.tune(n, s, record, hint)), &plain
+		return TuneMain(b.tune(n, s, record, hint), chips), &plain
 	}
 	v := b.choice(n, s, record, hint)
-	return ChoiceMain(v), b.choicePhone(n, s, &v)
+	return ChoiceMain(v, chips), b.choicePhone(n, s, &v)
 }
 
 func (b *builder) stepPageView(errs []string, n int, record, hint string) *PageView {
@@ -70,7 +71,7 @@ func (b *builder) stepPageView(errs []string, n int, record, hint string) *PageV
 		phone.Pick, phone.Confirm, phone.Tuned, phone.Neutral, phone.Note = false, false, false, "", false
 	}
 	return &PageView{
-		ReadOnly: b.readOnly, Errors: errs, Cvd: cvd, True100: st.Value("fit") == "100", Chips: b.chips(n - 1), Body: body,
+		ReadOnly: b.readOnly, Errors: errs, Cvd: cvd, True100: st.Value("fit") == "100", Body: body,
 		Phone: phone, Legend: legendOf(st, len(s.Pairs) > 0), Keys: b.q.Keys,
 	}
 }
@@ -78,9 +79,9 @@ func (b *builder) stepPageView(errs []string, n int, record, hint string) *PageV
 func (b *builder) summaryPageView(errs []string) *PageView {
 	steps := b.steps()
 	nav := NavView{Prev: b.stepHref(steps), Next: b.stepHref(1), NextLabel: "Step 1"}
-	body := SummaryMain(b.summary(), nav)
+	body := SummaryMain(b.summary(), nav, b.chips(steps))
 	phone := PhoneView{Prev: nav.Prev, Next: nav.Next, Copy: true}
-	return &PageView{ReadOnly: b.readOnly, Errors: errs, Cvd: "normal", Chips: b.chips(steps), Body: body, Phone: &phone, Legend: legendOf(nil, false), Keys: b.q.Keys}
+	return &PageView{ReadOnly: b.readOnly, Errors: errs, Cvd: "normal", Body: body, Phone: &phone, Legend: legendOf(nil, false), Keys: b.q.Keys}
 }
 
 // shotView is the shown option (gallery: item) alone, whole unless crop=step asks for the step's crop.
