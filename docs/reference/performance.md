@@ -10,9 +10,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 216% | 🔺 2% worse | 2026-11-21 |
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 161% | 🔺 1% worse | 2026-11-21 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 142% | 🔻 1% better | 2026-11-21 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 76% | 🔺 10% worse (busy host) | 2026-11-20 |
-| Drawing the screen | 🟢 OK | ███████░░░ 75% | 🔺 5% worse (busy host) | 2026-11-20 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-21 |
+| Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 3% worse | 2026-11-21 |
 | Unit movement | 🟢 OK | ████░░░░░░ 41% | ➖ same | 2026-11-21 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | ➖ same | 2026-11-21 |
@@ -29,8 +29,8 @@ Details:
 - combat stress p95: 161% of budget, exceeded (auto 63a6b97c, 2026-11-21), 1% slower than Tooling night gate (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 142% of budget, exceeded (auto 63a6b97c, 2026-11-21), 1% faster than Tooling night gate (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 216% of budget, exceeded (auto 63a6b97c, 2026-11-21), 2% slower than Tooling night gate (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 75% of budget (P2.3a1 gate C, 2026-11-20), 5% slower than P2.3a1 (worst vs worst); run-to-run spread not measured, busy host (load 3.1)
-- Ashfall tick-frame p95: 76% of budget (P2.3a1 gate C, 2026-11-20), 10% slower than P2.3a1 (worst vs worst); run-to-run spread not measured, busy host (load 3.1)
+- rendered tick-frame p95: 73% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 74% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (auto 63a6b97c, 2026-11-21), 4% slower than Tooling night gate (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 

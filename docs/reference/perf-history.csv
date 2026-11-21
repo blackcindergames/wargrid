@@ -1487,3 +1487,11 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-21,b038f19e,auto 63a6b97c,dev,plumbing,combat_hordes300:profile,1,,,1.9664,P1,2.2,log sha256:5642433428b5
 2026-11-21,b038f19e,auto 63a6b97c,dev,plumbing,team_match:profile,1,,,1.1337,P1,2.2,log sha256:5642433428b5
 2026-11-21,b038f19e,auto 63a6b97c,dev,plumbing,team_match_pump:profile,1,,,1.1473,P1,2.2,log sha256:5642433428b5
+2026-11-21,9a7d34c9,tooling-night merge,dev,frame_interval,open,1,0.437,1.949,,P1,1.71,log sha256:dd70c7d32700
+2026-11-21,9a7d34c9,tooling-night merge,dev,tick_frame,open,1,2.214,2.356,,tick-frame,1.71,log sha256:dd70c7d32700
+2026-11-21,9a7d34c9,tooling-night merge,dev,frame_interval,dense,1,0.493,2.294,,P1,1.71,log sha256:dd70c7d32700
+2026-11-21,9a7d34c9,tooling-night merge,dev,tick_frame,dense,1,2.243,2.375,,tick-frame,1.71,log sha256:dd70c7d32700
+2026-11-21,9a7d34c9,tooling-night merge,dev,frame_interval,ashfall,1,2.041,2.909,,P1,1.71,log sha256:dd70c7d32700
+2026-11-21,9a7d34c9,tooling-night merge,dev,tick_frame,ashfall,1,2.267,2.459,,tick-frame,1.71,log sha256:dd70c7d32700
+2026-11-21,9a7d34c9,tooling-night merge,dev,frame_interval,horde,1,1.618,4.423,,P1,1.71,log sha256:dd70c7d32700
+2026-11-21,9a7d34c9,tooling-night merge,dev,tick_frame,horde,1,4.933,5.312,,tick-frame,1.71,log sha256:dd70c7d32700
