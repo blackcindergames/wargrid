@@ -241,7 +241,7 @@ func test_opponent_attack_policy(runner) -> bool:
 	while sim.tick() < Skirmish.FIRST_WAVE_TICK - 1:
 		Skirmish.issue_opponent(sim)
 		sim.step()
-	runner.check(_attack_targets(sim, army).is_empty(), "A3 no attack orders before tick 4500")
+	runner.check(_attack_targets(sim, army).is_empty(), "A3 no attack orders before FIRST_WAVE_TICK")
 	_bot_until_attack(sim, army, Skirmish.FIRST_WAVE_TICK + 4000)
 	runner.check(_attack_targets(sim, army) == [first, first, first, first], "A3 the wave shares the best-scored target, a builder, got " + str(_attack_targets(sim, army)))
 	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))

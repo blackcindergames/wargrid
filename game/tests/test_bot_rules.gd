@@ -104,7 +104,7 @@ func test_no_enemy_building_attack_before_first_wave(runner) -> bool:
 	_play(sim, rec, Skirmish.FIRST_WAVE_TICK)
 	runner.check(rec.launches.is_empty(), "BR2 no attack order before tick %d, got %s" % [Skirmish.FIRST_WAVE_TICK, rec.launches])
 	_play(sim, rec, Skirmish.FIRST_WAVE_TICK + Skirmish.DECISION_TICKS)
-	runner.check(rec.launches.size() == 1 and rec.launches[0].tick == _first_decision_from(Skirmish.FIRST_WAVE_TICK), "BR2 wave 0 leaves at the first decision from tick 4500 once the ready cost reaches the target, got %s" % [rec.launches.map(func(row: Dictionary) -> int: return row.tick)])
+	runner.check(rec.launches.size() == 1 and rec.launches[0].tick == _first_decision_from(Skirmish.FIRST_WAVE_TICK), "BR2 wave 0 leaves at the first decision from FIRST_WAVE_TICK once the ready cost reaches the target, got %s" % [rec.launches.map(func(row: Dictionary) -> int: return row.tick)])
 	return true
 
 func test_wave_gaps_90_then_60(runner) -> bool:
@@ -120,7 +120,7 @@ func test_wave_gaps_90_then_60(runner) -> bool:
 	var ticks: Array = rec.launches.map(func(row: Dictionary) -> int: return row.tick)
 	var gaps: Array = []
 	for i in range(1, ticks.size()): gaps.append(ticks[i] - ticks[i - 1])
-	runner.check(ticks.size() == 5 and ticks[0] == _first_decision_from(Skirmish.FIRST_WAVE_TICK), "BR2 five waves left, the first at the first decision from 4500, got %s" % [ticks])
+	runner.check(ticks.size() == 5 and ticks[0] == _first_decision_from(Skirmish.FIRST_WAVE_TICK), "BR2 five waves left, the first at the first decision from FIRST_WAVE_TICK, got %s" % [ticks])
 	runner.check(gaps == [2700, 2700, 1800, 1800], "BR2 waves 0 and 1 are followed by 2700 ticks, later waves by 1800, got %s" % [gaps])
 	return true
 

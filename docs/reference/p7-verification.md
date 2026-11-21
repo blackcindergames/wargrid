@@ -3,15 +3,15 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 13:42)
-Branch / base commit / working-tree state: p7-enemy-bots / 0fbb4838 (T1-3 committed) / T1-4 changes uncommitted (see changed paths)
-Last green task / next incomplete task: T1-4 (BR2, BR3 with the lone-bot team entry, reviewer fix round applied, red set as expected, not committed) / T1-5 (kill check B, probe at the T1-4 tip)
-Changed paths since last commit: game/scripts/simulation/skirmish.gd, game/tests/test_bot_rules.gd, game/tests/test_sim_pump.gd, game/tests/test_skirmish.gd, game/tests/test_skirmish_waves.gd, game/tests/test_skirmish_scene.gd, game/tests/test_team_match.gd, docs/reference/sim-interface.md, this file
-Last command / cases / checks / failures / exit / marker: full suite on the T1-4 fix-round tree: CASES 1271 CHECKS 152810 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, the T1-3 set, all on the re-pin list); lint 0, warnings 0 (190 files); test_sim_boundary and test_sim_math OK
+Resume record (updated 2026-11-21 15:40)
+Branch / base commit / working-tree state: p7-enemy-bots / 91a32827 (T1-4) / T1-5b uncommitted: skirmish.gd FIRST_WAVE_TICK 5400, test_sim_pump.gd, test_skirmish.gd, test_bot_rules.gd messages, this file, plan
+Last green task / next incomplete task: T1-5 closed by owner decisions (user, 2026-11-21) and T1-5b / T1-6
+Changed paths since last commit: game/scripts/simulation/skirmish.gd, game/tests/test_sim_pump.gd, game/tests/test_skirmish.gd, game/tests/test_bot_rules.gd, docs/reference/p7-verification.md, docs/superpowers/plans/2026-11-21-p7-enemy-bots.md
+Last command / cases / checks / failures / exit / marker: full suite on the T1-5b tree: CASES 1271 CHECKS 152810 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, re-pin list only)
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
-Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate
+Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); (a) local commit per green task, (b) one branch push at the gate; open: commit-rule kill check before T1-7, wave growth at T1-8, 1v2 floor after T1-6
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: commit T1-4 (fix round done), then T1-5 (update p7_probe.gd to BOT_TEAM_META first)
+Next exact action: T1-6 (BR4, BR5); move the "timer" release test to a team-level field (T1-4 reviewer note a)
 ```
 
 ## Red ledger
@@ -21,6 +21,7 @@ Next exact action: commit T1-4 (fix round done), then T1-5 (update p7_probe.gd t
 | T1-2 | TB3 final digest (tick 20000); TB4 team core series; S1 core series; Fm1 pinned outcome (27098, winner 2); Cs1 pinned outcome (10343, winner 2); VR1 view reads digest and VR1 same digest through set_view; S1 pinned outcome (-1 ongoing); S1 terminal inside the six-minute window; S1 economy, production and combat | yes, all (T1-10) |
 | T1-3 | TB3 final digest (tick 20000); TB4 team core series; S1 core series; Fm1 pinned outcome (27098, winner 2); Cs1 pinned outcome (10343, winner 2); VR1 view reads digest and VR1 same digest through set_view; S1 pinned outcome (9958, winner 1); HUD1 pinned panel and collector texts. Left the list: S1 terminal inside the six-minute window, S1 economy, production and combat (green again under human unit rules). | yes, all (T1-10) |
 | T1-4 | Same nine names as T1-3. Values moved: TB3 final digest (ee11652fc94fa901 to d149879bbdb5e517); TB4 team core series (3893643193399489437 to 6523963049782461399); S1 core series (523144223445027603 to 5372631221812398523); S1 pinned outcome (9958 to 9320, winner 1, inside 7000-17999); Fm1 (27098 to 20553, winner 2); Cs1 (10343 to 20812, winner 2). Unchanged: VR1 digest (both checks), HUD1 texts. | yes, all (T1-10) |
+| T1-5b | as T1-4; moved: TB3 digest 8ab8cdf6cc4aa01c, TB4 core series, S1 core series, S1 pinned outcome (9062, winner 1), Fm1 (29710, winner 2), Cs1 (29359, winner 2), VR1 digest, HUD1 texts | yes, all (T1-10) |
 
 ## Evidence
 
@@ -76,3 +77,54 @@ Interpretations taken: (1) `released_by` is "timer", "size" or "wait_cap"; "time
 Reviewer notes for later tasks: (a) T1-6 must move `prev` (the "timer" release test) to a team-level field, since the spec means the first decision of any team bot; (b) a target-sized group arriving after due + `WAVE_WAIT` when nothing was ready at the cap is labelled "size" (the spec has no label for it); T1-5 reads the 150 s rule count with that in mind.
 
 Fix round: `test_wave_capped_by_cost_rest_guards_home` now plays on to the next `due` (three tanks added, 7,200 against 6,372) and asserts wave 1 leaves at `due` with the five home tanks; mutation (wave records all ready units, so the extras are never re-gathered) failed it: `FAIL: BR3 the five home tanks leave with wave 1 (6372), got [{ "tick": 2, "ids": [4, 5, 6, 7, 8] }, { "tick": 32, "ids": [9, 10, 11, 12, 13] }]`, then reverted. SK20 writes `prev` (the removed `since` was still written). `sim-interface.md` lists `Skirmish.team_memory`.
+
+### T1-5 kill check B
+
+Result: BLOCKED. Two stop conditions fired (the 7-13 floor on every map, night-12 columns 1 and 2); wave 0 held. No source in this worktree changed; nothing run from a scratch export.
+
+Tree: `p7-enemy-bots` at `91a32827` (T1-4 committed), clean. No variant, `ctrl=human`. Probe `p7_probe.gd` updated to read the team entry through `Skirmish.team_memory` (per wave: `wave_index`, `released_by`, `due`, launch tick, units, cost; the T1-1 version is kept as `p7_probe_t11.gd`). Matrix, 603 matches, all rows parsed: `BL` sets (Dry Wells 1,2; Ashfall 2,6; Ashfall 3,7; 9 faction pairs, bot vs bot 5 seeds, idle seat both slots 3 seeds) 297; Broken Crown 2v2 teams [1,1,2,2], both slot orders, 5 seeds, 90 plus 1v1 idle 135 = 225; Broken Crown 1v2 idle 81. Compared with T1-1's stock `ctrl=human` rows (522). Raw rows, `t15.py`, `an-t15.txt`: `~/projects/wargrid-private/docs/better-bots/probe/p7/` (`out-t14-{bl,bc,bc12}.jsonl`).
+
+**Minute 6 (tick 10,800) fighting units, median (mean), stock to T1-4 tip:** `BL` seat 1 25 (24.4) to 44 (38.9); `BL` seat 2 34.5 (33.2) to 46 (43.3); Broken Crown 2v2 team 1 14 (16.2) to 49.5 (45.2); team 2 16 (16.8) to 50 (45.0).
+
+**Wave 0 per team (hard bar 16):** max 12 units (Ashfall 3,7 idle row; Broken Crown 1v1 12; Dry Wells 9; Broken Crown 2v2 team 8, since the second bot does not join before T1-6); wave 0 cost median 3,900 (max 4,375). Holds. Stock first waves summed 24 median, 47 max.
+
+**Waves (team waves, all rows):** launch-to-launch gap after wave 0 median 2,700 (max 3,150), after wave 1 3,210, from wave 2 on 3,600 (min 1,800, max 6,000). `released_by`, wave 0: timer 765, size 63. Wave 1: timer 586, size 200. Wave 2: wait cap 219, timer 201, size 81. Waves 3 to 13: wait cap dominates (wave 3 292 of 449, wave 6 386 of 416, wave 8 273 of 275). Unit and cost medians: wave 0 8 and 3,900; wave 1 22 and 6,200; wave 2 28 and 7,100; wave 5 21 and 5,150; wave 8 8 and 1,800 (later waves shrink because the army is spent). **Timer share of waves 1 on: 977 of 4,285 = 0.228** (excluding Broken Crown 2v2: 449 of 2,498). Not above half: the 150 s rerun was not run. The "size" label caveat of T1-4 (a group arriving after the cap with nothing ready) is in these counts.
+
+**Reach** (waves whose units hit an enemy building): stock 3,660 of 12,862 = 0.285 (excluding Broken Crown 2v2 0.246); T1-4 tip 1,952 of 5,113 = 0.382 (excluding Broken Crown 2v2 1,056 of 3,146 = 0.336; Broken Crown 2v2 0.456). By wave index 0 to 5: 504/828, 305/786, 122/501, 185/449, 190/444, 203/437. Correction (diagnosis): the "excluding Broken Crown 2v2" figures include idle rows; on bot-vs-bot rows reach is flat, 0.225 stock to 0.224.
+
+**Idle seat defeat tick, min (stock 1v1 min = floor), first building lost min in brackets:**
+
+| Map | Floor | T1-4 tip 1v1 | T1-4 tip 1v2 |
+|---|---|---|---|
+| Dry Wells 1,2 | 7,414 | 6,783 (4,937) | none run |
+| Ashfall 2,6 | 10,698 | 10,241 (6,528) | none run |
+| Ashfall 3,7 | 10,314 | 9,682 (6,446) | none run |
+| Broken Crown | 7,887 | 7,406 (5,084) | 7,583 (5,106) |
+
+Every row is below the floor (by 631, 457, 632, 481 and 304 ticks). Stock first building lost mins were 5,839, 7,428, 7,348, 5,964; the new rules lose a building 0.6 to 0.9 minutes earlier. All idle matches end with a winner (0 of 378 not won). The stock set has no 1v2 row (the floor is the 1v1 minimum), and the 1v2 set exists on Broken Crown only.
+
+**No-winner (status other than won):** `BL` bot vs bot 31 of 135 (stock 34); Broken Crown 2v2 37 of 90 (stock 12); idle 0.
+
+**Night 12 against stock `human`** (hard bars; both fail):
+
+| | Column 1: seats failing under stock that damage a building now | Column 2: stock-ended matches that still end | Seats that damaged under stock and no longer do |
+|---|---|---|---|
+| Whole matrix | 125 of 190 | 131 of 179 (lost 48) | 25 |
+| Excluding Broken Crown 2v2 (pre-T1-6 team behaviour) | 46 of 107 | 81 of 101 (lost 20) | 16 |
+
+Excluding Broken Crown 2v2, column 2 losses by map: Ashfall 2,6 8, Dry Wells 6, Ashfall 3,7 6; column 1 seats still failing: Ashfall 3,7 36, Ashfall 2,6 16, Dry Wells 9. By group (stock ended to T1-4 ended; no-damage seats stock to T1-4): Dry Wells 38 to 39 and 27 to 14; Ashfall 2,6 30 to 33 and 36 to 21; Ashfall 3,7 33 to 32 and 44 to 42; Broken Crown 2v2 1,2,3,4 39 to 23 and 43 to 6; 2v2 3,4,1,2 39 to 30 and 40 to 7.
+
+Reading: the first wave is now the bar's 8 to 12 units at 4,500 and the idle seat falls 0.3 to 0.6 minutes earlier than stock everywhere, so BR2 and BR3 as built shift the idle-defeat time below the 7-13 floor before BR4 to BR6 or any constant tuning exist. Column 1 stays open on Ashfall 3,7 (42 of 44 seats still never damage a building). The Broken Crown 2v2 rows (37 of 90 not ending) carry the stranded second-bot units until T1-6 and are not a fair read of the final rules. Per the stop rule nothing was widened or tuned; the owner decides (T1-6 to T1-8 order, constants, or the floor).
+
+**Diagnosis** (two independent fresh-context runs, Opus high and Fable high, same brief; full numbers private: `~/projects/wargrid-overnight-work/p7-enemy-bots/t1-5-diagnosis.md` and `t1-5-diagnosis-b.md`; scratch exports of `91a32827` with one constant changed, both reproduced the T1-5 rows):
+- Floor: caused by `FIRST_WAVE_TICK` 4,500 alone; the first building falls exactly 900 ticks earlier on every map, walk times unchanged, and on Dry Wells wave 0 alone ends the match. `FIRST_WAVE_TICK` 5,400 restores every row (378 idle rows, both runs identical): Dry Wells 7,683, Ashfall 2,6 11,141, Ashfall 3,7 10,582, Broken Crown 1v1 8,128, 1v2 8,483. `WAVE_SIZES[0]` 4 at 4,500 still fails Dry Wells and Broken Crown 1v1.
+- Column 1: waves die to enemy wave units before reaching a building (Ashfall 3,7: every loss to enemy wave units, about 1:1 trades); 29 of the 42 failing seats are losers of decided matches. Offsetting one team's clock does not help (42 to 44 failing seats). BR4/BR5 change nothing in 1v1 and BR6 counts only FRC's defence. A confounded variant (`DEFENCE_RADIUS` 0, waves never stop for units, home defence also off) moved Ashfall 3,7 from 8 of 28 to 25 of 28.
+- Column 2: the unchanged stock bot on shifted seeds keeps only 87-88 of 101 ended rows (Broken Crown 2v2 71-72 of 78), so the column as worded cannot pass for any rule set. Excluding Broken Crown 2v2, losses are mostly same-faction stalemates (`usa,usa` 13 ended on stock, 2 now).
+- BR3 growth: from wave 3 on, 0 of 1,357 waves met their target (income about 3,770 per 3,600 ticks against targets of 10,620-16,992); waves from wave 2 on leave at the wait cap, a 3,600-tick cycle.
+- 5,400 on bot-vs-bot rows: minute-6 units 47/48, reach 0.209, column 1 39 of 107, column 2 80 of 101.
+
+**Owner decisions (user, 2026-11-21):** (1) first wave at 180 s, `FIRST_WAVE_TICK` 5,400 (reopens 7-3; 7-13 floor kept); (2) night-12 column 2 is judged against stock seed noise: per map group, the new rules keep at least as many stock-ended matches ending as stock against itself on shifted seeds (widens 7-12's wording; column 1 unchanged); (3) T1-6 next; before T1-7 a clean kill check of a "commit" wave rule (home defence left on), then the owner decides whether it enters the design; (4) wave growth (targets never met from wave 3) is decided at T1-8 with the full probe and the window check.
+
+### T1-5b First wave at 180 s
+
+Tree: `91a32827` plus `FIRST_WAVE_TICK` 5,400 (`skirmish.gd:13`, the same one-constant change as the diagnosis exports, whose idle rows are this tree's floor evidence). Tests: `test_pump_bot_first_wave_at_4500` renamed `..._at_5400` and its loop runs to `FIRST_WAVE_TICK + DECISION_TICKS + 70` (it stopped at 4,600, before the first wave: `got []`); messages naming 4500 now name `FIRST_WAVE_TICK`. Full suite: CASES 1271 CHECKS 152810 FAILURES 9, exit 1 (no `TESTS PASSED`), the T1-4 names, all on the re-pin list; S1 ends at 9062 (winner 1), inside 7000-17999.
