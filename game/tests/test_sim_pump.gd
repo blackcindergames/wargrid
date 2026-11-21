@@ -889,7 +889,7 @@ func test_pal_note_carries_survivors(runner) -> bool:
 	sim.begin_setup([1, 2, 3] as Array[int])
 	var pump = SimPump.new(sim)
 	var first = pump.start()
-	runner.check(first.survivors.is_empty(), "PAL a setup sim has no survivors yet")
+	runner.check(first.survivors == [1, 2, 3], "PAL a setup sim counts every seat as a survivor, got %s" % [first.survivors])
 	var job = SimPump.Job.new()
 	for seat in [1, 2, 3]: job.commands.append({"type": "choose_faction", "faction": "usa", "player": seat, "tick": 0, "sequence": 0})
 	pump.post(job)

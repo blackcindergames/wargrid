@@ -39,7 +39,7 @@ Status: describes the code at e3a4b2b plus the view rows change, task 2 (2026-11
 - `step() -> void`: run one tick. `simulation.gd`
 - `tick() -> int`: current tick. `simulation.gd`
 - `match_over() -> bool`. `simulation.gd`
-- `survivors() -> Array[int]`: the players that still own a victory building; empty without a match. Lockstep uses it to tell a defeated leaver from a live one. `simulation.gd`
+- `survivors() -> Array[int]`: every match player during faction setup, then the players that still own a victory building; empty without a match. Lockstep uses it to tell a defeated leaver from a live one. `simulation.gd`
 - Lockstep no longer touches these in the game: the online driver posts each tick as a pump job, with the commands from `take(tick, quiet, survivors)`, and hands the job's note to `record(tick, issued)` and `finish_tick(tick, state, digest)`. `take` and `finish_tick` refuse out-of-order calls: `take` must be asked for the next tick (any other tick ends the lockstep as `ended_protocol`, quiet or not), and `finish_tick` must send the next own frame (a gap or repeat ends it as `ended_protocol`); both do nothing once the lockstep has ended. `advance(sim)` composes `take`, issue, `record` and `step` for the headless client, the lockstep benchmark and the lockstep tests. `net/lockstep.gd`
 
 ## State out

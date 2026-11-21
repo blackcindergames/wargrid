@@ -195,6 +195,10 @@ func match_over() -> bool:
 func survivors() -> Array[int]:
 	var found: Array[int] = []
 	if _match == null: return found
+	# Nobody is defeated before the match starts.
+	if _match.status == "setup":
+		found.assign(_match.players)
+		return found
 	for player: int in _match.players:
 		if _survives(player): found.append(player)
 	return found

@@ -79,7 +79,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_leave_during_setup_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -856,6 +856,27 @@ func test_pal_before_start_ends(runner) -> bool:
 	ls.receive(Wire.encode({"type": "left", "seat": 3, "after_tick": 3}))
 	_run_out(sim, ls)
 	runner.check(ls.status() == "ended_left" and ls.left_before_start() and ls.left_seat() == 3 and not ls.opponent_left(), "PAL a leave before the start ends with three seats (status %s, seat %d, before start %s)" % [ls.status(), ls.left_seat(), ls.left_before_start()])
+	return true
+
+func test_pal_leave_during_setup_ends(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats:
+		var seat_rows: Array[Dictionary] = []
+		for row_seat in seats: seat_rows.append({"seat": row_seat, "team": row_seat, "controller": "human", "credits": Skirmish.START_CREDITS, "defer": true})
+		var sim: RefCounted = Skirmish.MapData.create(Skirmish.MapData.load("res://data/maps/broken_crown.json"), seat_rows)
+		sim.begin_setup(seats)
+		var client := net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+		client.ls.submit({"type": "choose_faction", "faction": "usa" if seat != 3 else "no_such_faction"})
+	net.clients[2].target = 10
+	net.clients[0].target = 12
+	net.clients[1].target = 12
+	net.connect_all()
+	for client: Client in [net.clients[0], net.clients[1]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 3, "after_tick": 10})])
+	net.run()
+	var a: Client = net.clients[0]
+	runner.check(a.sim.snapshot().match.status == "setup", "PAL setup: seat 3's refused faction keeps the match in setup (status %s)" % [a.sim.snapshot().match.status])
+	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 3, "PAL a leave during setup ends the match (status %s, seat %d, tick %d, match %s)" % [a.ls.status(), a.ls.left_seat(), a.sim.tick(), a.sim.snapshot().match.status])
 	return true
 
 func test_pal_bot_players_play_on(runner) -> bool:

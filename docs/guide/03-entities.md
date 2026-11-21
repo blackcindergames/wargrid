@@ -176,7 +176,7 @@ Checked by `rg` over `game/scripts/simulation` at the commit below; the presenta
 | `prerequisite` | completed building kind needed first | `_has_prerequisite` |
 | `power`, `powered` | power supplied or drawn; a defence that needs power | `_player_snapshots`, `combat.gd` |
 | `footprint`, `slot` | cells a building covers; its start slot on the map | `construction.gd`, `map_data.gd` |
-| `counts_for_victory` | a seat survives while it owns one | `_survives`, `survivors()` |
+| `counts_for_victory` | a seat survives while it owns one (every seat survives during faction setup) | `_survives`, `survivors()` |
 | `receives_supply`, `collects` | depot; a hauler with capacity and cycle times | `supply_collection.gd`, `production.gd` |
 | `spawns_on_complete` | units a finished building adds | `_spawn_on_complete` |
 | `quantity` | units per production order | `production.gd` |
