@@ -5,15 +5,15 @@ Evidence file and resume record for night 8, [Play on after a leave](../superpow
 ## Resume record
 
 ```text
-Resume record (updated 2026-11-21, Task 4b GREEN, uncommitted)
-Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD 9c5a5f77 (Task 4a committed); Task 4b changes staged, uncommitted
-Last green task / next incomplete task: Task 4b (command and removal rows, tests only) / Task 4c (three-seat Skirmish.create and starts); Task 5 needs 3, 4a, 4c
-Changed paths since last commit: game/tests/test_lockstep.gd (7 test_pal_ cases, _trio_sim(seat_two)), docs/reference/play-on-after-a-leave-verification.md
-Last command / cases / checks / failures / exit / marker: SUITE(t4b) / 1269 / 152802 / 0 / 0 / TESTS PASSED 152802; TRACES(t4b) four REPLAYS MATCHED (1200, 1200, 1200, 100); STATIC(t4b) lint 0, warnings 0 (189 files), python 0; ONLY(test_pal_) 19 / 41 / 0 / exit 0 before the suite; every case green on 4a at the first run; mutations on lockstep.gd: `_defeated` ignoring survivors (A) and `_defeated` always false (B) each exit 1, between them every new case except match_end red; dropping the match_over line in advance (C) killed test_pal_match_end_at_a_is_normal; REVERT exit 0
+Resume record (updated 2026-11-21, Task 4c GREEN, uncommitted)
+Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD bb16b62b (Task 4b committed); Task 4c changes uncommitted
+Last green task / next incomplete task: Task 4c (three-seat Skirmish.create and starts) / Task 5 (online driver passes the note); 6a needs 4c
+Changed paths since last commit: game/scripts/simulation/skirmish.gd (create seat_count), game/scripts/match_settings.gd (starts teams), game/tests/test_online_scene.gd (3 test_pal_ cases), docs/reference/play-on-after-a-leave-verification.md
+Last command / cases / checks / failures / exit / marker: SUITE(t4c) / 1272 / 152806 / 0 / 0 / TESTS PASSED 152806; TRACES(t4c) four REPLAYS MATCHED (1200, 1200, 1200, 100); STATIC(t4c) lint 0, warnings 0 (189 files), python 0; NET(t4c, match) and rematch NETPLAY PASSED at 9013, NETEQ REPLAYS MATCHED 301 x2, cmp silent; NET(t4c, maps) NETPLAY PASSED; red first: ONLY(test_pal_three_seat) exit 1 on the two named checks, the guard green; Step 0 ONLY(test_online_scene) 85 / 3211 / 0
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: owner answers Q2 a, Q3 a, Q4 a, Q5 a, Q6 a, Q7 b, Q8 a, Q9 a, Q10 b, Q11 b, Q12 a, Q20 a (user, 2026-11-21); Q19 a (user, 2026-11-19); Q1, Q13-Q18 moot; backup B1 F42 spike only (user, 2026-11-21). Pre-authorized: one local commit per GREEN task (handoff). Deferred: merge decision, rendered rerun after a merge (game/scripts/match/ changes), CI wall times of the four new netplay scenarios (need the owner's push).
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: coordinator commits Task 4b, then Task 4c
+Next exact action: coordinator commits Task 4c, then Task 5
 ```
 
 Ledger, rulings and morning summary: `ledger.md`, `morning-summary.md` in the run's work folder `~/projects/wargrid-overnight-work/play-on/` (private). Logs: `logs/` there.
@@ -57,8 +57,8 @@ Filled by Task 1 Step 3 (`rg -n '^(static )?(func|var|const|class) <name>\b' <fi
 | 2 | Reproduce the overwrite (red by design) | GREEN (red as specified, reproduced) | (coordinator commits) |
 | 3 | `Simulation.survivors()`, `Note.survivors` | GREEN (suite red only by design, uncommitted) | (coordinator commits) |
 | 4a | Lockstep left-seat set and decision (incl. P7 shape, Q20) | GREEN | 9c5a5f77 |
-| 4b | Command and removal rows | GREEN (tests only, uncommitted) | (coordinator commits) |
-| 4c | Three-seat `Skirmish.create` and starts | not started | |
+| 4b | Command and removal rows | GREEN (tests only) | bb16b62b |
+| 4c | Three-seat `Skirmish.create` and starts | GREEN (uncommitted) | (coordinator commits) |
 | 5 | Online driver passes the note | not started | |
 | 6a | Headless client: three seats, `--defeat` | not started | |
 | 6b | Headless client: `--pump` with the credit clamp | not started | |
