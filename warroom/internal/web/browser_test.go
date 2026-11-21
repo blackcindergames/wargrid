@@ -909,6 +909,32 @@ func TestRowClickSelectsAndMoreOfAndAboutFollow(t *testing.T) {
 	s.wantHidden(t, s.loc(`.about[data-opt=A]`))
 }
 
+func TestControlSwapKeepsRowMoreOfAndAboutOnTheShownLetter(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/p2-3b-dock/1")
+	s.press(t, "b")
+	s.press(t, "0")
+	s.wantVisible(t, s.loc(`.ostage[data-opt=today]`))
+	s.press(t, "s")
+	s.wantContains(t, s.loc(`[data-key=s]`).First(), "1280 x 800")
+	s.wantClass(t, s.loc(`.orow[data-show=B]`), "sel")
+	s.wantCount(t, s.loc(`.orow.sel`), 1)
+	s.wantVisible(t, s.loc(`.moreof [data-opt=B]`))
+	s.wantVisible(t, s.loc(`.about[data-opt=B]`))
+	s.wantHidden(t, s.loc(`.ostage[data-opt=today]`))
+	pick := s.loc(".rpanel button.pick")
+	failIf(t, expect.Locator(pick).ToBeEnabled())
+	s.wantContains(t, pick, "Pick B")
+	s.press(t, "0")
+	s.press(t, "w")
+	s.wantClass(t, s.loc(`.tile[data-opt=B]`), "sel")
+	s.wantClass(t, s.loc(`.orow[data-show=B]`), "sel")
+	s.wantVisible(t, s.loc(`.moreof [data-opt=B]`))
+	s.wantVisible(t, s.loc(`.about[data-opt=B]`))
+	failIf(t, expect.Locator(pick).ToBeEnabled())
+	s.wantContains(t, pick, "Pick B")
+}
+
 // tabCheck says what is wrong with the Pick's tab: it must sit on the button's top edge, left-aligned, clear of the option rows.
 const tabCheck = `() => {
 	const r = (sel) => document.querySelector(sel).getBoundingClientRect();
