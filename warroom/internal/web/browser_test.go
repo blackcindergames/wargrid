@@ -596,56 +596,44 @@ func TestSideViewClickingATileSelectsItAndThePickFollows(t *testing.T) {
 	}
 }
 
-func TestSideViewSharedPickRowIsCentredUnderTheGrid(t *testing.T) {
-	t.Skip("rewritten in Task 4")
+func TestSideViewSharesThePickInTheRightPanel(t *testing.T) {
 	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10")
+	flip := s.rect(t, ".rpanel button.pick")
 	s.open(t, "/r/demo/10?view=side")
-	row := s.loc(".tiles + .act")
-	s.wantVisible(t, row.Locator(".pick + .nwrap [value=neither]"))
-	got := eval(t, s.Page, `(() => {
-		const r = (e) => e.getBoundingClientRect();
-		const grid = r(document.querySelector('.tiles'));
-		const [pick, neutral] = [...document.querySelectorAll('.tiles + .act .btn')].map(r);
-		const off = Math.abs((pick.left - grid.left) - (grid.right - neutral.right));
-		const mids = [pick, neutral].map((x) => x.top + x.height / 2);
-		return off < 1 && Math.abs(mids[0] - mids[1]) < 1 ? '' : 'off centre by ' + off + ', middles ' + mids.join(' and ');
-	})()`)
-	if got != "" {
-		t.Errorf("pick row not one centred row under the grid: %v", got)
+	s.wantVisible(t, s.loc(".rpanel .act .pick + .nwrap [value=neither]"))
+	s.wantCount(t, s.loc(".cpanel .act"), 0)
+	if side := s.rect(t, ".rpanel button.pick"); !near(side, flip) {
+		t.Errorf("Pick at %+v side by side, %+v one at a time", side, flip)
 	}
-	colours := fmt.Sprint(cssOf(t, s.Page, ".tiles + .act .pick", "", "background-color"), " ",
-		cssOf(t, s.Page, ".tiles + .act [value=neither]", "", "background-color"), " ",
-		cssOf(t, s.Page, ".tiles + .act [value=neither]", "", "border-top-color"))
+	colours := fmt.Sprint(cssOf(t, s.Page, ".rpanel .act .pick", "", "background-color"), " ",
+		cssOf(t, s.Page, ".rpanel .act [value=neither]", "", "background-color"), " ",
+		cssOf(t, s.Page, ".rpanel .act [value=neither]", "", "border-top-color"))
 	if want := amberRGB + " " + quietRGB + " " + mutedRGB; colours != want {
 		t.Errorf("Pick fill, neutral fill, neutral edge = %s, want %s", colours, want)
 	}
 }
 
-// gaps measures, in px, picture to pick row, the neutral hint's row to the Large row, and the Pick button's height.
-func (s *site) gaps(t *testing.T, picture string) string {
-	t.Helper()
-	return fmt.Sprint(eval(t, s.Page, `((picture) => {
-		const r = (sel) => document.querySelector(sel)?.getBoundingClientRect();
-		const act = r(picture + ' + .act'), tools = r('.tools'), above = r('.act .nexplain') ?? act, pick = document.querySelector('.act .pick');
-		return [Math.round(act.top - r(picture).bottom), tools ? Math.round(tools.top - above.bottom) : '-', pick ? pick.offsetHeight : '-'].join(' ');
-	})('`+picture+`')`))
-}
+// stackCheck says what is wrong with the right panel's order under the list: Pick, neutral and its hint, note, nav, each at most 16 px below the one before.
+const stackCheck = `() => {
+	const parts = ['.opts', '.act .pick', '.act [value=neither]', '.act .nexplain', '.notebox', '.stepnav'];
+	const r = parts.map((sel) => document.querySelector('.rpanel ' + sel).getBoundingClientRect());
+	const gaps = r.slice(1).map((x, i) => Math.round(x.top - r[i].bottom));
+	const ok = gaps.every((g) => g >= 0 && g <= 16) && r[1].height === 44;
+	return ok ? '' : 'gaps ' + gaps.join(' ') + ' between ' + parts.join(', ') + '; Pick height ' + r[1].height;
+}`
 
-func TestPickRowsSit16PxFromThePictureAndTheLargeRow(t *testing.T) {
-	t.Skip("rewritten in Task 4")
+func TestPickNeutralNoteAndNavFollowTheListWithNoSpacer(t *testing.T) {
 	s := newSite(t, siteOpts{})
-	s.open(t, "/r/demo/10")
-	if got := s.gaps(t, ".stage"); got != "16 16 44" {
-		t.Errorf("one view: stage to pick row, hint to Large row, Pick height = %s, want 16 16 44", got)
-	}
-	s.open(t, "/r/demo/10?view=side")
-	if got := s.gaps(t, ".tiles"); got != "16 - 44" {
-		t.Errorf("side view: tiles to pick row, -, Pick height = %s, want 16 - 44", got)
+	for _, path := range []string{"/r/demo/10", "/r/demo/10?view=side", "/r/p2-3b-dock/5"} {
+		s.open(t, path)
+		if got := eval(t, s.Page, stackCheck); got != "" {
+			t.Errorf("%s: %v", path, got)
+		}
 	}
 }
 
 func TestNeutralAnswerIsExplainedUnderItsRow(t *testing.T) {
-	t.Skip("rewritten in Task 4")
 	const hint = "Records no winner. Say why in the note."
 	s := newSite(t, siteOpts{secret: testSecret})
 	tok := "t=" + roundToken("demo")
@@ -659,7 +647,7 @@ func TestNeutralAnswerIsExplainedUnderItsRow(t *testing.T) {
 			const r = (e) => e.getBoundingClientRect();
 			const hint = r(document.querySelector('.act .nexplain')), btn = r(document.querySelector('.act [value=neither]'));
 			const hits = [...document.querySelectorAll('.btn')].map(r).filter((b) => b.width && b.left < hint.right && hint.left < b.right && b.top < hint.bottom && hint.top < b.bottom);
-			return Math.abs(hint.left - btn.left) < 1 && hint.top >= btn.bottom && hits.length === 0
+			return Math.abs(hint.left - btn.left) < 1 && hint.top >= btn.bottom && hint.top - btn.bottom <= 8 && hits.length === 0
 				? '' : 'hint ' + hint.left + ',' + hint.top + '; neutral ' + btn.left + ' to ' + btn.bottom + '; overlaps ' + hits.length + ' buttons';
 		})()`)
 		if place != "" {
@@ -1008,19 +996,142 @@ func TestDetailsFoldsStartClosed(t *testing.T) {
 
 func TestTodayAndExtrasSitInTheSamePlaceOnEveryStep(t *testing.T) {
 	s := newSite(t, siteOpts{})
-	var rects []any
-	for _, step := range []string{"/r/p2-3b-dock/1", "/r/p2-3b-dock/2"} {
+	var strips, todays []playwright.Rect
+	// Step 5 crops 460 x 260 and has no extras, so neither the picture's shape nor an empty strip may move them.
+	for _, step := range []string{"/r/p2-3b-dock/1", "/r/p2-3b-dock/2", "/r/p2-3b-dock/5"} {
 		s.open(t, step)
-		s.wantVisible(t, s.loc(".moreof [data-opt]:not([hidden]) .extras"))
+		if step != "/r/p2-3b-dock/5" {
+			s.wantVisible(t, s.loc(".moreof [data-opt]:not([hidden]) .extras"))
+		}
 		failIf(t, expect.Locator(s.loc(".opts .orow").First()).ToHaveAttribute("data-show", "today"))
 		if stray := eval(t, s.Page, `[...document.querySelectorAll('.extras')].filter((e) => !e.closest('.moreof, .fold')).length`); stray != 0 {
 			t.Errorf("%s: %v extras outside the More of strip", step, stray)
 		}
-		rects = append(rects, eval(t, s.Page, `JSON.stringify(document.querySelector('.moreof').getBoundingClientRect())`))
+		strips = append(strips, s.rect(t, ".moreof"))
+		today := s.rect(t, ".orow[data-show=today]")
+		// Its height follows the label's length; its place must not.
+		today.Height = 0
+		todays = append(todays, today)
 	}
-	if rects[0] != rects[1] {
-		t.Errorf("More of strip moved between steps: %v, then %v", rects[0], rects[1])
+	for i := 1; i < len(strips); i++ {
+		if !near(strips[i], strips[0]) || !near(todays[i], todays[0]) {
+			t.Errorf("step %d: More of %+v and Today %+v, step 1: %+v and %+v", i+1, strips[i], todays[i], strips[0], todays[0])
+		}
 	}
+}
+
+func TestStageZoneIsTheSameForACropAndAFullFrame(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	for _, vp := range [][2]int{{1440, 900}, {1280, 800}} {
+		s.viewport(t, vp[0], vp[1])
+		var zones []playwright.Rect
+		for _, step := range []string{"/r/p2-3b-dock/1", "/r/p2-3b-dock/5"} {
+			s.open(t, step)
+			zone := s.rect(t, ".zone")
+			zones = append(zones, zone)
+			pic := s.rect(t, ".ostage:not([hidden]) .pic")
+			dx, dy := (pic.X-zone.X)-(zone.X+zone.Width-pic.X-pic.Width), (pic.Y-zone.Y)-(zone.Y+zone.Height-pic.Y-pic.Height)
+			if pic.Width > zone.Width+1 || pic.Height > zone.Height+1 || dx > 2 || dx < -2 || dy > 2 || dy < -2 {
+				t.Errorf("%dx%d %s: picture %+v not centred inside the zone %+v", vp[0], vp[1], step, pic, zone)
+			}
+		}
+		if !near(zones[0], zones[1]) {
+			t.Errorf("%dx%d: zone %+v on a full frame, %+v on a crop", vp[0], vp[1], zones[0], zones[1])
+		}
+	}
+}
+
+func TestPickNeverMovesBetweenOptionsAndSteps(t *testing.T) {
+	const pick = ".rpanel button.pick"
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/p2-3b-dock/1")
+	s.wantContains(t, s.loc(pick), "Pick A")
+	want := s.rect(t, pick)
+	s.open(t, "/r/p2-3b-dock/5")
+	for _, key := range []string{"a", "b", "c", "d"} {
+		s.press(t, key)
+		s.wantContains(t, s.loc(pick), "Pick "+strings.ToUpper(key))
+		if got := s.rect(t, pick); !near(got, want) {
+			t.Errorf("step 5, option %s: Pick at %+v, step 1 option A at %+v", key, got, want)
+		}
+	}
+}
+
+func TestStageFitsItsColumnAtTrue100(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1280, 800)
+	s.open(t, "/r/p2-3b-dock/1?size=1280x800")
+	s.press(t, "f")
+	s.wantClass(t, s.loc("#view"), "true100")
+	s.settle(t)
+	zone, col, panel, stage := s.rect(t, ".zone"), s.rect(t, ".cpanel"), s.rect(t, ".rpanel"), s.rect(t, ".zone .stage")
+	if zone.X+zone.Width > col.X+col.Width+0.5 {
+		t.Errorf("zone %+v leaves its column %+v", zone, col)
+	}
+	if stage.X < zone.X-0.5 || stage.Y < zone.Y-0.5 || stage.X+stage.Width > zone.X+zone.Width+0.5 || stage.Y+stage.Height > zone.Y+zone.Height+0.5 {
+		t.Errorf("stage %+v leaves the zone %+v", stage, zone)
+	}
+	if panel.X < 0 || panel.Y < 0 || panel.X+panel.Width > 1280.5 || panel.Y+panel.Height > 800.5 {
+		t.Errorf("Options panel %+v not inside the 1280 x 800 viewport", panel)
+	}
+	if zone.X+zone.Width > panel.X+0.5 {
+		t.Errorf("zone ends at %v, past the Options panel at %v", zone.X+zone.Width, panel.X)
+	}
+	if scrolls := eval(t, s.Page, `(() => { const st = document.querySelector('.zone .stage'); return st.scrollWidth > st.clientWidth; })()`); scrolls != true {
+		t.Errorf("a 1280 px picture in a narrower stage does not scroll inside it")
+	}
+	rows, err := s.loc(".rpanel .orow").All()
+	failIf(t, err)
+	for _, row := range rows {
+		s.wantVisible(t, row)
+		if r, err := row.BoundingBox(); err != nil || r == nil || r.X < zone.X+zone.Width-0.5 {
+			t.Errorf("row %+v (%v) under the zone ending at %v", r, err, zone.X+zone.Width)
+		}
+	}
+}
+
+func TestPickVisibleWithoutScrolling(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	inside := func(path string, w, h float64) {
+		t.Helper()
+		r := s.rect(t, ".rpanel button.pick")
+		if r.X < 0 || r.Y < 0 || r.X+r.Width > w || r.Y+r.Height > h {
+			t.Errorf("%s at %vx%v: Pick at %+v", path, w, h, r)
+		}
+	}
+	s.viewport(t, 1440, 900)
+	for _, path := range []string{"/r/p2-3b-dock/1", "/r/p2-3b-dock/2", "/r/p2-3b-dock/3", "/r/p2-3b-dock/4", "/r/p2-3b-dock/5", "/r/p2-3b-dock/6", "/r/demo/10"} {
+		s.open(t, path)
+		inside(path, 1440, 900)
+	}
+	// Short enough that six options cannot fit, so the list must scroll inside the panel.
+	s.viewport(t, 1280, 600)
+	s.open(t, "/r/demo/10")
+	inside("/r/demo/10", 1280, 600)
+	if scrolls := eval(t, s.Page, `(() => { const o = document.querySelector('.rpanel .opts'); return o.scrollHeight > o.clientHeight; })()`); scrolls != true {
+		t.Errorf("six options at 1280 x 600 do not scroll inside the Options list")
+	}
+}
+
+func TestSideViewTilesStayInTheZone(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/p2-3b-dock/1")
+	flip := s.rect(t, ".zone")
+	s.open(t, "/r/p2-3b-dock/1?view=side")
+	s.wantVisible(t, s.loc(".zone .tile.reft"))
+	if side := s.rect(t, ".zone"); !near(side, flip) {
+		t.Errorf("zone %+v side by side, %+v one at a time", side, flip)
+	}
+	s.wantCount(t, s.loc(".zone .tile .ohd"), 4)
+	s.wantCount(t, s.loc(".tile :is(p, details, .extras)"), 0)
+	if dup := eval(t, s.Page, `(() => { const ids = [...document.querySelectorAll('[id]')].map((e) => e.id); return ids.filter((x, i) => ids.indexOf(x) !== i).join(' '); })()`); dup != "" {
+		t.Errorf("ids used twice: %v", dup)
+	}
+	s.click(t, ".tile[data-opt=C] .ohd")
+	s.wantVisible(t, s.loc(".moreof [data-opt=C] .extras"))
+	s.wantHidden(t, s.loc(".moreof [data-opt=A]"))
 }
 
 func TestConfirmStepPicksFromTheRightPanel(t *testing.T) {

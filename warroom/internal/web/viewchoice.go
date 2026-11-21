@@ -35,7 +35,6 @@ type OptView struct {
 	Card                 *CardView
 	Audio                *AudioView
 	Sees, Notes, Changes string
-	NotesHead            string
 	Folds                []FoldView
 	Extras               []FigureView
 }
@@ -274,9 +273,6 @@ func textCard(s *rounds.Step, o *rounds.Option) *CardView {
 
 func (b *builder) fillText(v *OptView, pb picBuilder, s *rounds.Step, o *rounds.Option) {
 	v.Sees, v.Notes, v.Changes = o.Sees, o.Notes, o.Changes
-	if o.Sees != "" || s.NotesLabel != "" {
-		v.NotesHead = cmp.Or(s.NotesLabel, "Notes")
-	}
 	crop := s.Crop
 	if o.Render != nil && o.Render.Crop != nil {
 		crop = o.Render.Crop

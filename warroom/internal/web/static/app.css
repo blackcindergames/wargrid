@@ -120,8 +120,12 @@
   :is(.lpanel, .cpanel, .rpanel) { min-width: 0; display: flex; flex-direction: column; }
   :is(.lpanel, .rpanel) { background: var(--slab); padding: 16px 20px 24px; }
   .lpanel { border-right: 1px solid var(--line); gap: 12px; }
-  .cpanel { padding: 20px; }
-  .rpanel { border-left: 1px solid var(--line); gap: 6px; }
+  /* The bars under the stage have fixed heights, so the stage zone is the same on every step and option. */
+  .cpanel { padding: 20px; --status: 60px; --more: 172px; --bars: calc(40px + var(--status) + var(--more)); }
+  /* Pinned to the viewport, so Pick stays put and in view however long the question or list is. */
+  .rpanel { border-left: 1px solid var(--line); gap: 6px; position: sticky; top: 0; height: 100dvh; }
+  .zone { height: calc(100dvh - var(--bars)); overflow: auto; }
+  .zone .stage { height: 100%; align-items: safe center; overflow: auto; }
   .lpanel {
     .top { position: relative; background: none; border: 0; }
     .chips { flex-wrap: wrap; padding: 0; overflow: visible; }
@@ -167,8 +171,9 @@
   .stepnav [data-act=legend] { margin-left: auto; }
 
   .status {
-    display: flex; align-items: center; gap: 6px; padding: 8px 0 12px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 6px; height: var(--status); padding: 8px 0 12px; border-bottom: 1px solid var(--line);
     .stxt { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--row); color: var(--muted); }
+    :is(.stxt, .scale) { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .scale { display: block; }
     .btn { height: 32px; padding-inline: 12px; font-size: 12px; }
   }
@@ -182,13 +187,16 @@
     }
   }
   .moreof {
-    height: 172px; padding-top: 12px; overflow: hidden;
+    height: var(--more); padding-top: 12px; overflow: hidden;
     .extras { display: flex; gap: 12px; margin: 0; overflow-x: auto; }
     figure { flex: 0 0 180px; min-width: 0; }
     figcaption { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   }
 
-  .rpanel .opts { display: flex; flex-direction: column; gap: 6px; }
+  /* Fills the panel and scrolls, so Pick's place never depends on the list; the line marks where a long list is cut. */
+  .rpanel .opts { display: flex; flex-direction: column; gap: 6px; flex: 1 1 0; min-height: 0; overflow-y: auto; padding-block: 4px; border-bottom: 1px solid var(--line); }
+  /* Inside the row, so the scrolling list never clips it. */
+  .rpanel .orow:focus-visible { outline-offset: -2px; }
   .orow {
     display: block; width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
     background: var(--quiet); border-left: 3px solid transparent;
@@ -204,8 +212,8 @@
     &.today.sel { border-color: var(--sel); }
   }
   .rpanel {
-    /* 20 px on top leaves room for the Pick's 14 px tab under the line. */
-    .act { flex-direction: column; align-items: stretch; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--line); }
+    /* With the panel's 6 px gap, 10 px on top holds the Pick's 14 px tab clear of the list. */
+    .act { flex-direction: column; align-items: stretch; padding-top: 10px; }
     .act .pick { width: 100%; }
     .nwrap { display: flex; flex-direction: column; gap: 4px; .btn { width: 100%; } }
     .nexplain { position: static; white-space: normal; }
@@ -242,8 +250,7 @@
   .ohd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .let { font-size: 28px; font-weight: 800; line-height: 1; }
   .ohd h2 { margin: 0; font-size: 18px; font-weight: 700; flex: 1 1 200px; min-width: 0; }
-  .tile p { margin: 8px 0 0; color: var(--soft); font-size: 14px; max-width: 1000px; }
-  :is(.about, .tile) p.sees { color: var(--text); }
+  .about p.sees { color: var(--text); }
   .chg { font-size: var(--row); }
   .extras { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
   .extras figcaption { text-transform: none; letter-spacing: 0; font-size: var(--row); font-weight: 600; }
@@ -256,7 +263,6 @@
     &.done { border-color: var(--amber); }
     &.sel { border-color: var(--sel); .let { color: var(--sel); } }
     cursor: pointer;
-    details summary { color: var(--muted); font-size: var(--row); }
     &.reft { border-style: dashed; }
     &.reft h2 { font-size: 15px; color: var(--soft); }
   }
@@ -385,7 +391,8 @@
 
 @layer stage {
   figure { margin: 0; }
-  .stage { background: var(--stage); display: flex; justify-content: center; min-height: 120px; }
+  /* Safe: a picture larger than the stage starts at its scrollable edge instead of spilling past both. */
+  .stage { background: var(--stage); display: flex; justify-content: safe center; min-height: 120px; }
   .ostage { width: 100%; display: flex; justify-content: center; }
   .ref .pic { max-width: 420px; }
 
@@ -402,8 +409,9 @@
     &.vid video { display: block; width: 100%; height: auto; background: var(--stage); }
     .hudlayer { position: absolute; border: 0; pointer-events: none; background: transparent; }
   }
-  :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: min(100%, calc((100vh - 280px) * var(--ar))); }
-  :is(.v-flip .stage, .k-gallery .gmain) .pic.img img { width: auto; max-width: 100%; max-height: calc(100vh - 280px); margin: 0 auto; }
+  /* Without a zone (gallery, tune) 280 px stands in for the page above and below the stage. */
+  :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: min(100%, calc((100dvh - var(--bars, 280px)) * var(--ar))); }
+  :is(.v-flip .stage, .k-gallery .gmain) .pic.img img { width: auto; max-width: 100%; max-height: calc(100dvh - var(--bars, 280px)); margin: 0 auto; }
   .k-tune .stagecol { display: flex; flex-direction: column; gap: 14px; }
 
   .card {
@@ -453,7 +461,7 @@
   [data-cvd=deut] :is(.pic > .sc, .pic img, .pic video) { filter: url(#dp-deut); }
   [data-cvd=prot] :is(.pic > .sc, .pic img, .pic video) { filter: url(#dp-prot); }
   .true100 {
-    :is(.v-flip .stage, .k-gallery .gmain) { overflow: auto; justify-content: flex-start; max-height: calc(100vh - 220px); }
+    .k-gallery .gmain { overflow: auto; justify-content: flex-start; max-height: calc(100vh - 220px); }
     :is(.v-flip .stage, .k-gallery .gmain) .pic[data-cw] { width: calc(var(--cw) * 1px / var(--dpr, 1)); flex: none; }
     :is(.v-flip .stage, .k-gallery .gmain) .pic.img { width: auto; flex: none; }
     :is(.v-flip .stage, .k-gallery .gmain) .pic.img img { width: calc(var(--nw, 1280) * 1px / var(--dpr, 1)); max-width: none; max-height: none; }
@@ -494,7 +502,9 @@
     .verdict .vb { flex: 1 1 40%; padding-inline: 8px; }
     .opens { flex-basis: 100%; }
     .thumbs { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
-    .true100 :is(.v-flip .stage, .k-gallery .gmain) { max-height: none; }
+    .true100 .k-gallery .gmain { max-height: none; }
+    :is(.zone, .zone .stage) { height: auto; overflow: visible; }
+    .rpanel .opts { flex: none; overflow: visible; padding: 0; border: 0; }
     .keys { padding: 14px; }
     .keys th { white-space: normal; width: 34%; padding-right: 10px; }
     wr-tune { max-width: none; }

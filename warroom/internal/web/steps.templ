@@ -58,24 +58,6 @@ templ Tags(o OptView) {
 	}
 }
 
-templ OptText(o OptView) {
-	if o.Sees != "" {
-		<p class="sees"><span class="h">What you see</span>@Fmt(o.Sees)</p>
-	}
-	if o.Notes != "" {
-		<p class="notes">
-			if o.NotesHead != "" {
-				<span class="h">{ o.NotesHead }</span>
-			}
-			@Fmt(o.Notes)
-		</p>
-	}
-	if o.Changes != "" {
-		<p class="chg">@Fmt(o.Changes)</p>
-	}
-	@Folds(o.Folds)
-}
-
 templ OptBody(o OptView) {
 	switch {
 		case o.Card != nil:
@@ -196,13 +178,6 @@ templ Tile(o OptView) {
 		@OptBody(o)
 		if o.Measure {
 			<div class="measure" data-measure={ o.Letter }></div>
-		}
-		@OptText(o)
-		if len(o.Extras) > 0 {
-			<details>
-				<summary>{ strconv.Itoa(len(o.Extras)) } more pictures</summary>
-				@Figures(o.Extras)
-			</details>
 		}
 	</div>
 }

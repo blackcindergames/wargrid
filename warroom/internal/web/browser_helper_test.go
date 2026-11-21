@@ -140,6 +140,26 @@ func (s *site) entries(t *testing.T) map[string]store.Entry {
 
 func (s *site) loc(sel string) playwright.Locator { return s.Page.Locator(sel) }
 
+func (s *site) rect(t *testing.T, sel string) playwright.Rect {
+	t.Helper()
+	r, err := s.loc(sel).First().BoundingBox()
+	if err != nil || r == nil {
+		t.Fatalf("no box for %s: %v", sel, err)
+	}
+	return *r
+}
+
+func (s *site) viewport(t *testing.T, w, h int) {
+	t.Helper()
+	failIf(t, s.Page.SetViewportSize(w, h))
+}
+
+// near allows the 1 px a fractional layout rounds differently between pages.
+func near(a, b playwright.Rect) bool {
+	d := func(x, y float64) bool { return x-y <= 1 && y-x <= 1 }
+	return d(a.X, b.X) && d(a.Y, b.Y) && d(a.Width, b.Width) && d(a.Height, b.Height)
+}
+
 func (s *site) press(t *testing.T, key string) {
 	t.Helper()
 	if err := s.Page.Keyboard().Press(key); err != nil {
