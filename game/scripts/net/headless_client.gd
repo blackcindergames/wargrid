@@ -31,6 +31,7 @@ var _match_map: String = MatchSettings.TEST_MAP
 var _chosen: Array[int] = []
 var _match_seed: int = 0
 var _rematch_state: String = ""
+var _defeats: Dictionary = {}
 var state_rows := PackedStringArray()
 
 func _ready() -> void:
@@ -43,6 +44,7 @@ func _ready() -> void:
 	if _args.has("replay-log"):
 		_replay_oracle()
 		return
+	_defeats = _parse_defeats(str(_args.get("defeat", "")))
 	_transport = RelayTransport.new()
 	var url: String = _args.get("relay", _args.get("probe-relay", ""))
 	_connect_msec = Time.get_ticks_msec()
@@ -120,9 +122,12 @@ func _start(message: Dictionary) -> void:
 	var id: String = message.settings.map
 	_match_map = id
 	_match_seed = message.seed
-	_chosen = MatchSettings.starts(id, _match_seed)
+	var count: int = message.seats.size()
+	var teams: Array[int] = []
+	for seat in range(1, count + 1): teams.append(seat)
+	_chosen = MatchSettings.starts(id, _match_seed, teams)
 	print("NETCLIENT MAP ", id, " SEED ", message.seed, " STARTS ", ",".join(_chosen.map(str)) if not _chosen.is_empty() else "-")
-	_sim = _match_sim(id, _chosen)
+	_sim = _match_sim(id, _chosen, count)
 	_lockstep = Lockstep.for_start(_seat, message)
 	_lockstep.session_handler = _on_session
 	_lockstep.send = _transport.send_text
@@ -138,8 +143,8 @@ func _on_session(message: Dictionary) -> bool:
 	_start(message) # swap now so the peer's tick 4 in the same poll batch reaches the new lockstep
 	return true
 
-func _match_sim(id: String, chosen: Array[int]) -> Simulation:
-	return Skirmish.create(true, "human", {}, MatchSettings.map_path(id), chosen)
+func _match_sim(id: String, chosen: Array[int], count: int = 2) -> Simulation:
+	return Skirmish.create(true, "human", {}, MatchSettings.map_path(id), chosen, count)
 
 func _oracle_sim() -> Simulation:
 	var id: String = _map_id()
@@ -194,6 +199,7 @@ func _run_script() -> void:
 
 func _test_hooks(tick: int) -> bool:
 	if _int_arg("perturb-at-tick") == tick: _sim._players[_seat].credits += 1
+	_apply_defeats(tick)
 	if _int_arg("stop-at-tick") == tick:
 		_finish("stopped", "")
 		return true
@@ -206,6 +212,30 @@ func _test_hooks(tick: int) -> bool:
 		OS.delay_msec(int(float(_args.get("stall-seconds", "1")) * 1000.0))
 		_receive(_transport.poll())
 	return false
+
+func _apply_defeats(tick: int) -> void:
+	for seat: int in _defeats.get(tick, []):
+		while _remove_buildings(seat): pass
+		print("NETCLIENT DEFEAT ", seat, " AT ", tick)
+	_defeats.erase(tick)
+
+# Repeated because removed FRC buildings open rebuild holes, which count for victory.
+func _remove_buildings(seat: int) -> bool:
+	var removed: bool = false
+	for building: Dictionary in _sim.snapshot().buildings:
+		if building.owner == seat:
+			_sim.remove_object(building.id)
+			removed = true
+	return removed
+
+func _parse_defeats(spec: String) -> Dictionary:
+	var parsed: Dictionary = {}
+	for entry in spec.split(",", false):
+		var parts: PackedStringArray = entry.split("@")
+		if parts.size() != 2: continue
+		var tick: int = int(parts[1])
+		parsed[tick] = parsed.get(tick, []) + [int(parts[0])]
+	return parsed
 
 func _finish(status: String, reason: String) -> void:
 	if _ending: return
