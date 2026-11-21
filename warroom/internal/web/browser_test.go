@@ -1733,6 +1733,40 @@ func TestAnswerButtonsShareOneStyle(t *testing.T) {
 			t.Errorf("%s answers (primary top left width height, secondary left width height, gap | fonts, secondary border and fill, key, keycap)\n got %v\nwant %v", c.path, got, want)
 		}
 	}
+	// The summary's one answer, Copy summary, sits where the primary does and looks like a secondary.
+	slot := `(() => {
+		const p = document.querySelector('.rpanel :is(.act .pick, .copy .btn)'), q = document.querySelector('.rpanel :is(.act .btn:not(.pick), .copy .btn)');
+		const a = p.getBoundingClientRect(), c = getComputedStyle(q);
+		return [a.top, a.left, a.width, a.height].map(Math.round).join(' ') + ' | ' + [c.height, c.fontSize, c.fontWeight, c.borderTopColor, c.backgroundColor].join(' ');
+	})()`
+	s.open(t, "/r/demo/1")
+	want = eval(t, s.Page, slot)
+	s.open(t, "/r/demo/summary")
+	if got := eval(t, s.Page, slot); got != want {
+		t.Errorf("Copy summary (top left width height | height font weight border fill)\n got %v\nwant %v", got, want)
+	}
+}
+
+func TestSelectedRowHasTheBrighterFrame(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/1")
+	got := eval(t, s.Page, `(() => {
+		const lum = (c) => { const l = c.match(/[\d.]+/g).slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2]; };
+		const edge = (sel) => (lum(getComputedStyle(document.querySelector(sel)).borderTopColor) + 0.05) / (lum(getComputedStyle(document.querySelector('.rpanel')).backgroundColor) + 0.05);
+		return edge('.orow.sel') > edge('.orow:not(.sel)');
+	})()`)
+	if got != true {
+		t.Error("the selected row's frame is no brighter than an unselected row's")
+	}
+}
+
+func TestKeycapInsideAButtonHasNoBorder(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/1")
+	got := eval(t, s.Page, `[...document.querySelectorAll('kbd')].filter((k) => k.getClientRects().length).map((k) => (k.closest('.btn, .orow') ? 'in ' : 'out ') + (getComputedStyle(k).borderTopColor === 'rgba(0, 0, 0, 0)' ? 'none' : 'edge')).filter((x, i, a) => a.indexOf(x) === i).sort().join(', ')`)
+	if got := got.(string); strings.Contains(got, "in edge") || strings.Contains(got, "out none") {
+		t.Errorf("keycaps: %v, want none bordered inside a button and every one outside bordered", got)
+	}
 }
 
 func TestEnterPassesAVerdictButNotFromItsNote(t *testing.T) {
@@ -1785,7 +1819,7 @@ const contrastScript = `(() => {
 		if (edge < 3 || (text !== null && el.textContent.trim() !== '' && text < 4.5))
 			bad.push(name + ' "' + (el.textContent.trim().slice(0, 20) || el.className) + '" edge ' + edge.toFixed(2) + (text === null ? '' : ' label ' + text.toFixed(2)));
 	};
-	for (const sel of ['.btn', '.orow', 'textarea']) for (const el of document.querySelectorAll(sel)) check(el, null, sel);
+	for (const sel of ['.btn', '.orow', 'textarea', 'wr-tune input', 'wr-tune select']) for (const el of document.querySelectorAll(sel)) check(el, null, sel);
 	for (const el of document.querySelectorAll('wr-tune .tp-sldv_t')) check(el, '::before', 'slider track');
 	for (const el of document.querySelectorAll('wr-tune .tp-sldv_k')) check(el, '::after', 'slider knob');
 	return bad.join('\n');

@@ -84,6 +84,8 @@
     kbd { margin-inline: 4px; }
     &[aria-disabled=true] { color: var(--muted); background: transparent; border-color: var(--quiet); pointer-events: none; }
   }
+  /* No box inside a box: the control's edge frames its keycap already. */
+  :is(.btn, .orow) kbd { border-color: transparent; }
 
   .tag {
     display: inline-flex; align-items: center; height: 20px; padding-inline: 6px; flex: none; white-space: nowrap;
@@ -141,15 +143,15 @@
   .rpanel {
     border-left: 1px solid var(--line); gap: 6px; position: sticky; top: 0; height: var(--vh);
     /* With the panel's gap, 10 px on top holds the Pick's 14 px tab clear of the list; the height leaves room for Pick or Yes and a second button, so Pick keeps one height with or without the neutral answer. */
-    .act { flex-direction: column; align-items: stretch; padding-top: 10px; min-height: calc(10px + 44px + 8px + 44px); }
-    /* Every kind's answers share one size: yellow primary, outlined secondary. */
-    :is(.act .btn, .verdict .vb) { width: 100%; height: 44px; padding-inline: 22px; font-size: 16px; font-weight: 800; }
-    :is(.act, .verdict) .btn:not(.pick) { border-color: var(--muted); }
+    :is(.act, .copy) { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding-top: 10px; min-height: calc(10px + 44px + 8px + 44px); }
+    /* Every kind's answers share one size: yellow primary, outlined secondary; the summary's Copy is its answer. */
+    :is(.act .btn, .verdict .vb, .copy .btn) { width: 100%; height: 44px; padding-inline: 22px; font-size: 16px; font-weight: 800; }
+    :is(.act, .verdict, .copy) .btn:not(.pick) { border-color: var(--muted); }
     /* With no list above, the answer drops to where Pick sits on a choice step; a gallery's item block takes the list's room. */
     > :first-child { margin-top: auto; }
     > .gside { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-    /* Wording has no note here: keep the gap, margin and height a note takes, so Done, next sits at Pick's height. */
-    > .act:not(:has(~ .notebox)) { margin-bottom: calc(6px + 8px + 72px); }
+    /* Wording and the summary have no note here: keep the gap, margin and height a note takes, so their answer sits at Pick's height. */
+    > :is(.act, .copy):not(:has(~ .notebox)) { margin-bottom: calc(6px + 8px + 72px); }
     /* Pass and Changes take Pick's and the neutral answer's heights, and the note sits where a choice step's note does. */
     .verdict { gap: 8px; padding-top: 10px; .vb { flex: 1 1 100%; min-height: 0; } textarea { margin-top: 6px; } }
     /* Over the list's last 28 px, cancelling the panel's gap, so Pick keeps its place whether it shows or not. */
@@ -236,7 +238,7 @@
     &:hover { background: var(--btn); }
     /* Inside the row, so the scrolling list never clips it. */
     &:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
-    &.sel { background: var(--panel2); border-left-color: var(--sel); }
+    &.sel { background: var(--panel2); border-color: var(--muted); border-left-color: var(--sel); }
     .ot { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; font-weight: 700; }
     .ot > :is(kbd, .tag) { margin-top: 2px; }
     .nm { flex: 1 1 auto; min-width: 0; }
@@ -257,8 +259,10 @@
   .ctlsel {
     display: inline-flex; align-items: center; gap: 4px; font-size: var(--row); font-weight: 600; white-space: nowrap;
     span { color: var(--muted); font-weight: 700; }
-    select { height: 32px; padding-inline: 8px; font-size: 12px; background: var(--well); border: 1px solid var(--edge); }
+    select { height: 32px; padding-inline: 8px; font-size: 12px; }
   }
+  /* A field looks like a field: a well framed by a control edge; !important beats Tweakpane's unlayered styles. */
+  :is(.ctlbar select, wr-tune :is(.tp-txtv_i, .tp-lstv_s)) { background: var(--well) !important; border: 1px solid var(--edge) !important; }
   .act, .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   /* Out of flow on the button's top edge, so the Pick keeps its size and place with or without it. */
   .pick .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
@@ -412,6 +416,8 @@
     /* Track only: the public --tp-input-* also fill every text field. */
     .tp-sldv_t { --in-bg: var(--muted); }
     /* The knob looks the same focused, so arrow keys need a ring, inside the track so it never touches a neighbour; !important beats Tweakpane's unlayered outline: none. */
+    /* The drag stub beside each number only repeats the slider. */
+    .tp-txtv_k { display: none; }
     .tp-sldv_t:focus-visible { outline: 2px solid var(--text) !important; outline-offset: -2px; }
   }
 
@@ -535,7 +541,7 @@
     .verdict { gap: 10px; padding-top: 0; .vb { flex: 1 1 40%; height: 48px; padding-inline: 8px; min-height: 48px; font-size: 18px; } kbd { display: none; } textarea { margin-top: 0; } }
     .cpanel > :is(.fields, .missing) { width: auto; margin-inline: 0; }
     /* Cancels the step's gap, so Copy keeps the spacing it had inside the summary block. */
-    .copy { margin-block: -12px; }
+    .copy { margin-block: -12px; padding-top: 0; min-height: 0; }
     .opens { flex-basis: 100%; }
     .thumbs { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
     .true100 .k-gallery .gmain { max-height: none; }
