@@ -192,6 +192,13 @@ func _evaluate_match() -> void:
 func match_over() -> bool:
 	return _match != null and _match.status in ["won","draw"]
 
+func survivors() -> Array[int]:
+	var found: Array[int] = []
+	if _match == null: return found
+	for player: int in _match.players:
+		if _survives(player): found.append(player)
+	return found
+
 func issue_command(command: Dictionary) -> Dictionary:
 	if match_over(): return {"ok":false,"error":"Match ended"}
 	var error: String = _validate(command)

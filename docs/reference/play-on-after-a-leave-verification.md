@@ -5,15 +5,15 @@ Evidence file and resume record for night 8, [Play on after a leave](../superpow
 ## Resume record
 
 ```text
-Resume record (updated 2026-11-21, Task 2 GREEN, red by design)
+Resume record (updated 2026-11-21, Task 3 GREEN after fix round, red by design)
 Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; the next commit on the branch is the prep commit adding the plan and this file (hash: <prep commit, filled by the prep session>), the only commit on top of 6bd58ff3; tree clean. Task 1 matches git log --oneline -3 against this line
-Last green task / next incomplete task: Task 2 (Reproduce the overwrite, red by design) / Task 3 (`Simulation.survivors()`, `Note.survivors`)
-Changed paths since last commit: game/tests/test_lockstep.gd, docs/reference/play-on-after-a-leave-verification.md
-Last command / cases / checks / failures / exit / marker: ONLY(t2red, test_pal_two_leaves) / 1 / 1 / 1 / 1 / FAIL: PAL two leaves never hang (status waiting, seat 3, tick 21); test_lockstep alone CASES 29 CHECKS 123 FAILURES 1; lint exit 0
-Known red case or blocker: none; Task 2 adds test_pal_two_leaves_never_hang red by design until Task 4a: a baseline with exactly one FAIL:, "PAL two leaves never hang", is expected until then; any other failure is a blocker
+Last green task / next incomplete task: Task 3 (`Simulation.survivors()`, `Note.survivors`) / Task 4a (Lockstep left-seat set and decision)
+Changed paths since last commit: game/scripts/simulation/simulation.gd, game/scripts/match/sim_pump.gd, game/tests/test_sim_pump.gd, docs/reference/play-on-after-a-leave-verification.md
+Last command / cases / checks / failures / exit / marker: SUITE(t3) / 1253 / 152768 / 1 / 1 / one FAIL: PAL two leaves never hang (status waiting, seat 3, tick 21); four traces REPLAYS MATCHED; lint 0, warnings 0 (189 files), python 0; mutation m1 (note.survivors before the step) killed by test_pal_note_carries_survivors, REVERT exit 0; fix round (review P2-1 `_pump_free_sim` inlined, P3-1 start() note check added): ONLY(t3-fix, test_sim_pump) 31 / 141 / 0 / exit 0, ONLY(t3-fix, test_pal_) 3 / 8 / 1 / exit 1 (only PAL two leaves never hang), lint 0, warnings 0; full suite not rerun
+Known red case or blocker: none; Task 2 added test_pal_two_leaves_never_hang red by design until Task 4a: a baseline with exactly one FAIL:, "PAL two leaves never hang", is expected until then; any other failure is a blocker
 Approved decisions, pre-authorizations used, deferred gates: owner answers Q2 a, Q3 a, Q4 a, Q5 a, Q6 a, Q7 b, Q8 a, Q9 a, Q10 b, Q11 b, Q12 a, Q20 a (user, 2026-11-21); Q19 a (user, 2026-11-19); Q1, Q13-Q18 moot; backup B1 F42 spike only (user, 2026-11-21). Pre-authorized: one local commit per GREEN task on play-on-after-a-leave (handoff); none used yet. Deferred: merge decision, rendered rerun after a merge (game/scripts/match/ changes), CI wall times of the four new netplay scenarios (need the owner's push).
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: Task 3 (`Simulation.survivors()`, `Note.survivors`)
+Next exact action: Task 4a (Lockstep left-seat set and decision)
 ```
 
 Ledger, rulings and morning summary: `ledger.md`, `morning-summary.md` in the run's work folder `~/projects/wargrid-overnight-work/play-on/` (private). Logs: `logs/` there.
@@ -55,7 +55,7 @@ Filled by Task 1 Step 3 (`rg -n '^(static )?(func|var|const|class) <name>\b' <fi
 |---|---|---|---|
 | 1 | Base and line map | GREEN | (coordinator commits) |
 | 2 | Reproduce the overwrite (red by design) | GREEN (red as specified, reproduced) | (coordinator commits) |
-| 3 | `Simulation.survivors()`, `Note.survivors` | not started | |
+| 3 | `Simulation.survivors()`, `Note.survivors` | GREEN (suite red only by design, uncommitted) | (coordinator commits) |
 | 4a | Lockstep left-seat set and decision (incl. P7 shape, Q20) | not started | |
 | 4b | Command and removal rows | not started | |
 | 4c | Three-seat `Skirmish.create` and starts | not started | |

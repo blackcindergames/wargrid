@@ -41,7 +41,7 @@ class PairTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -816,4 +816,48 @@ func test_ph_nested_cache_freeze(runner) -> bool:
 	Registry.add_test_kind("ph_probe", _rifle_row("rifle"))
 	runner.check(not Registry.unit_view("ph_probe").is_read_only(), "PH a test kind resets to writable caches")
 	Registry.clear_test_kinds()
+	return true
+
+func _trio_sim() -> RefCounted:
+	var seats: Array[Dictionary] = []
+	for seat in [1, 2, 3]:
+		seats.append({"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "faction": "usa"})
+	var sim: RefCounted = MapData.create(MapData.load("res://data/maps/broken_crown.json"), seats)
+	sim.start_match([1, 2, 3] as Array[int])
+	return sim
+
+func _defeat(sim: RefCounted, seat: int) -> void:
+	for building: Dictionary in sim.snapshot().buildings:
+		if building.owner == seat: sim.remove_object(building.id)
+	for unit: Dictionary in sim.snapshot().entities:
+		if unit.owner == seat: sim.remove_object(unit.id)
+
+func test_pal_survivors_query(runner) -> bool:
+	var sim := _trio_sim()
+	var digest: String = StateHash.digest(sim.snapshot())
+	runner.check(sim.survivors() == [1, 2, 3], "PAL every seat with a victory building survives, got %s" % [sim.survivors()])
+	runner.check(StateHash.digest(sim.snapshot()) == digest, "PAL the query leaves the digest unchanged")
+	_defeat(sim, 2)
+	runner.check(sim.survivors() == [1, 3], "PAL a seat without a victory building drops out, got %s" % [sim.survivors()])
+	var seats: Array[Dictionary] = []
+	for seat in [1, 2]:
+		seats.append({"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "faction": "usa"})
+	runner.check(MapData.create(MapData.load("res://data/maps/broken_crown.json"), seats).survivors().is_empty(), "PAL no match has no survivors")
+	return true
+
+func test_pal_note_carries_survivors(runner) -> bool:
+	var seats: Array[Dictionary] = []
+	for seat in [1, 2, 3]:
+		seats.append({"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "defer": true})
+	var sim: RefCounted = MapData.create(MapData.load("res://data/maps/broken_crown.json"), seats)
+	sim.begin_setup([1, 2, 3] as Array[int])
+	var pump = SimPump.new(sim)
+	var first = pump.start()
+	runner.check(first.survivors.is_empty(), "PAL a setup sim has no survivors yet")
+	var job = SimPump.Job.new()
+	for seat in [1, 2, 3]: job.commands.append({"type": "choose_faction", "faction": "usa", "player": seat, "tick": 0, "sequence": 0})
+	pump.post(job)
+	var note = pump.drain()[0]
+	runner.check(note.survivors == [1, 2, 3], "PAL the job's note carries the survivors after its step, got %s" % [note.survivors])
+	runner.check(SimPump.new(_trio_sim()).start().survivors == [1, 2, 3], "PAL a note from a job without a step carries survivors")
 	return true
