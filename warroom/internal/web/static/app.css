@@ -176,7 +176,6 @@
     .pick { font-size: 16px; padding-inline: 22px; height: 44px; max-width: 100%; position: relative; }
     /* Above the button in the 16 px gap, 14 px tall so it never reaches the picture. */
     .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
-    .pn { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; &:empty { display: none; } }
     &:empty { display: none; }
   }
   .tools {
