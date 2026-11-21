@@ -71,6 +71,7 @@ Status: describes the code at e3a4b2b plus the view rows change, task 2 (2026-11
 - `preview_build(player, builder_id, kind, origin) -> Dictionary`: placement check for the HUD. `simulation.gd`. The drivers call it (`request_preview`), at most once per step call, for the latest requested ghost position (online, on the last tick job of the call); the placement code never does.
 - `team_of(player) -> int`. `simulation.gd`
 - `occupied_cells() -> Dictionary`: called only inside the folder (`containers.gd`, `production.gd`); `spawn` uses it. `simulation.gd`
+- `Skirmish.team_memory(sim, team) -> Dictionary`: a copy of the team's wave clock; not in the snapshot, never hashed (bot memory stays out of the snapshot on purpose). `skirmish.gd`
 
 ## Not interface
 - Every `_`-prefixed member. Known leaks: `scripts/debug/combat_workload.gd` and `movement_workload.gd` read and write sim privates (`_entities`, `_buildings`, `_pending`, `_next_entity_id`, `_replace_union`), and `scripts/net/headless_client.gd` `_test_hooks` writes `_sim._players`.

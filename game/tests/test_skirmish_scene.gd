@@ -1235,7 +1235,7 @@ func test_offline_driver_no_tick_hash_rows_after_the_end(runner) -> bool:
 func test_offline_driver_bot_memory_on_simulation(runner) -> bool:
 	var driver = OfflineDriver.new(1)
 	driver.adopt(Skirmish.create())
-	while driver.pump.live().tick() < Skirmish.next_decision(Skirmish.ATTACK_TICK, 2): driver.pump.live().step()
+	while driver.pump.live().tick() < Skirmish.next_decision(Skirmish.FIRST_WAVE_TICK, 2): driver.pump.live().step()
 	driver.step()
 	runner.check(driver.pump.live().has_meta(Skirmish.BOT_META) and not driver.has_meta(Skirmish.BOT_META), "OD2 bot memory lives on the simulation, not the driver")
 	return true

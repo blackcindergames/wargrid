@@ -9,16 +9,36 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 
 const START_CREDITS: int = 10000
 const DECISION_TICKS: int = 30
-const ATTACK_TICK: int = 5400
 const DEFENCE_RADIUS: float = 10.0
-const WAVE_MIN: int = 6
-const WAVE_TIMEOUT: int = 1800
+const FIRST_WAVE_TICK: int = 4500
+const WAVE_GAPS: Array[int] = [2700, 2700, 1800]
+const WAVE_WAIT: int = 1800
+const WAVE_SIZES: Array[int] = [8, 12, 16, 20, 24, 28, 32]
+const WAVE0_UNITS: int = 16
 const RALLY_RADIUS: float = 6.0
 const DISTANCE_STEP: float = 4.0
 const BOT_META := &"skirmish_bot"
+const BOT_TEAM_META := &"skirmish_bot_team"
 const MAP_PATH := "res://data/maps/skirmish.json"
 
 static var _skirmish_map: Dictionary = {}
+
+# Cost per unit: a quantity order (Militia) pays for several units at once.
+static func unit_cost(kind: String) -> int:
+	var row: Dictionary = Registry.kind(kind)
+	@warning_ignore("integer_division")
+	return int(row.get("cost", 0)) / int(row.get("quantity", 1))
+
+# Integer mean over the faction's build list, never scaled.
+static func faction_unit_cost(faction_id: String) -> int:
+	var kinds: Array = []
+	var producers: Dictionary = Registry.faction(faction_id).units_for
+	for producer: String in producers: kinds.append_array(producers[producer])
+	@warning_ignore("integer_division")
+	return _cost_sum(kinds) / kinds.size()
+
+static func team_memory(seat_or_sim: RefCounted, team: int) -> Dictionary:
+	return _real(seat_or_sim).get_meta(BOT_TEAM_META, {}).get(team, {}).duplicate(true)
 
 static func default_faction() -> String:
 	return Registry.Factions.DEFAULT_FACTION
@@ -67,10 +87,10 @@ static func create(with_match: bool = true, second_controller: String = "human",
 	else: sim.start_match([1, 2] as Array[int])
 	return sim
 
-static func issue_opponent(sim: RefCounted, player: int = 2, attack_tick: int = ATTACK_TICK) -> void:
+static func issue_opponent(sim: RefCounted, player: int = 2, attack_tick: int = FIRST_WAVE_TICK) -> void:
 	issue_opponents(sim, [player], attack_tick)
 
-static func issue_opponents(sim: RefCounted, players: Array[int], attack_tick: int = ATTACK_TICK) -> void:
+static func issue_opponents(sim: RefCounted, players: Array[int], attack_tick: int = FIRST_WAVE_TICK) -> void:
 	for player in players:
 		if not decides(sim.tick(), player): continue
 		var zone: int = Profiler.begin()
@@ -84,7 +104,7 @@ static func decides(tick: int, player: int) -> bool:
 static func next_decision(tick: int, player: int) -> int:
 	return tick + 1 + posmod(player - tick - 1, DECISION_TICKS)
 
-static func decide(sim: RefCounted, player: int, attack_tick: int = ATTACK_TICK) -> void:
+static func decide(sim: RefCounted, player: int, attack_tick: int = FIRST_WAVE_TICK) -> void:
 	_decide(sim, player, attack_tick, _real(sim).bot_state())
 
 # A seat wrapper or command recorder is rebuilt every decision; memory and state live on the simulation.
@@ -101,12 +121,15 @@ static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dicti
 	var teams := {}
 	for entry: Dictionary in state.players: teams[entry.id] = entry.team
 	var ctx := {"sim": sim, "player": player, "tick": state.tick, "sequence": sequence, "credits": credits, "teams": teams}
+	var bot: Dictionary = _bot(sim, player)
+	var wave_clock: Dictionary = _team_entry(sim, teams.get(player, player), attack_tick)
 	var buildings: Array = state.buildings.filter(func(building: Dictionary) -> bool: return building.owner == player)
 	var faction: String = _faction(state, player)
 	_build(ctx, state, buildings, faction)
 	_produce(ctx, state, buildings, faction)
 	var defending: Dictionary = _defend(ctx, state, buildings)
-	if state.tick >= attack_tick: _attack(ctx, state, defending)
+	if wave_clock.wave > 0 or state.tick >= wave_clock.due: _attack(ctx, state, defending, wave_clock)
+	bot.prev = state.tick
 
 static func _send(ctx: Dictionary, payload: Dictionary) -> bool:
 	payload.tick = ctx.tick
@@ -168,7 +191,7 @@ static func _faction(state: Dictionary, player: int) -> String:
 		if entry.id == player: return entry.get("faction", Registry.Factions.DEFAULT_FACTION)
 	return Registry.Factions.DEFAULT_FACTION
 
-static func _attack(ctx: Dictionary, state: Dictionary, skip: Dictionary = {}) -> void:
+static func _attack(ctx: Dictionary, state: Dictionary, skip: Dictionary, wave_clock: Dictionary) -> void:
 	var enemies: Array = state.entities.filter(func(unit: Dictionary) -> bool: return _hostile(ctx, unit.owner) and not Registry.air_kinds.has(unit.kind) and not unit.has("container_id"))
 	enemies.append_array(state.buildings.filter(func(building: Dictionary) -> bool: return _hostile(ctx, building.owner) and not Combat.masked(building)))
 	var mine := {}
@@ -176,12 +199,19 @@ static func _attack(ctx: Dictionary, state: Dictionary, skip: Dictionary = {}) -
 		if unit.owner == ctx.player: mine[unit.id] = unit
 	var bot: Dictionary = _bot(ctx.sim, ctx.player)
 	_drive_waves(ctx, bot, mine, enemies, skip)
-	_gather(ctx, bot, mine, enemies, skip)
+	_gather(ctx, state, bot, mine, enemies, skip, wave_clock)
 
-static func _bot(seat_or_sim: RefCounted, player: int) -> Dictionary:
+static func _memory(seat_or_sim: RefCounted, key: StringName) -> Dictionary:
 	var sim: RefCounted = _real(seat_or_sim)
-	if not sim.has_meta(BOT_META): sim.set_meta(BOT_META, {})
-	return sim.get_meta(BOT_META).get_or_add(player, {"since": -1, "waves": []})
+	if not sim.has_meta(key): sim.set_meta(key, {})
+	return sim.get_meta(key)
+
+# Creating the entry is what makes a seat a live bot, so it happens before any gate.
+static func _bot(seat_or_sim: RefCounted, player: int) -> Dictionary:
+	return _memory(seat_or_sim, BOT_META).get_or_add(player, {"prev": -1, "waves": []})
+
+static func _team_entry(seat_or_sim: RefCounted, team: int, first_due: int) -> Dictionary:
+	return _memory(seat_or_sim, BOT_TEAM_META).get_or_add(team, {"wave": 0, "due": first_due, "released_by": "", "launched_at": -1, "objective": null, "attacked_at": {}, "left_cost": 0, "left_units": 0, "joiners": []})
 
 static func _drive_waves(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary) -> void:
 	var live: Array = []
@@ -201,7 +231,7 @@ static func _drive_waves(ctx: Dictionary, bot: Dictionary, mine: Dictionary, ene
 		if not pool.is_empty(): _send(ctx, {"type": "attack", "entity_ids": pool, "target_id": wave.target})
 	bot.waves = live
 
-static func _gather(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary) -> void:
+static func _gather(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary, wave_clock: Dictionary) -> void:
 	var waving := {}
 	for wave: Dictionary in bot.waves:
 		for id: int in wave.ids: waving[id] = true
@@ -213,15 +243,61 @@ static func _gather(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies:
 		var at := Vector2(mine[id].position[0], mine[id].position[1])
 		(ready if at.distance_to(rally) <= RALLY_RADIUS else walking).append(id)
 	if not walking.is_empty(): _send(ctx, {"type": "move", "entity_ids": walking, "target": [rally.x, rally.y]})
-	if ready.is_empty():
-		bot.since = -1
-		return
-	if bot.since < 0: bot.since = ctx.tick
-	if ready.size() < WAVE_MIN and ctx.tick - bot.since < WAVE_TIMEOUT: return
-	var target: Variant = _pick(_centre(ready, mine), enemies)
-	if target == null or not _send(ctx, {"type": "attack", "entity_ids": ready, "target_id": target}): return
-	bot.waves.append({"ids": ready, "target": target})
-	bot.since = -1
+	if not ready.is_empty(): _launch(ctx, state, bot, mine, enemies, ready, wave_clock)
+
+static func _launch(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, wave_clock: Dictionary) -> void:
+	var live: Array[int] = _live_bots(ctx, state)
+	if not live.has(ctx.player) or ctx.tick < wave_clock.due: return
+	@warning_ignore("integer_division")
+	var share: int = _wave_target(wave_clock.wave, state, live) / live.size()
+	var worth: int = _cost_sum(ready.map(func(id: int) -> String: return mine[id].kind))
+	if worth < share and ctx.tick < wave_clock.due + WAVE_WAIT: return
+	@warning_ignore("integer_division")
+	var limit: int = WAVE0_UNITS / live.size() if wave_clock.wave == 0 else ready.size()
+	var take: Array = _take(ready, mine, share, limit)
+	var target: Variant = _pick(_centre(take, mine), enemies)
+	if target == null or not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": target}): return
+	bot.waves.append({"ids": take, "target": target})
+	wave_clock.released_by = "wait_cap" if worth < share else ("timer" if bot.prev < wave_clock.due else "size")
+	wave_clock.launched_at = ctx.tick
+	wave_clock.due = ctx.tick + WAVE_GAPS[mini(wave_clock.wave, WAVE_GAPS.size() - 1)]
+	wave_clock.wave += 1
+
+# A seat is a live bot once it has decided and while it still owns a building that keeps it in the match.
+static func _live_bots(ctx: Dictionary, state: Dictionary) -> Array[int]:
+	var decided: Dictionary = _memory(ctx.sim, BOT_META)
+	var live: Array[int] = []
+	for entry: Dictionary in state.players:
+		if ctx.teams[entry.id] != ctx.teams[ctx.player] or not decided.has(entry.id): continue
+		if state.buildings.any(func(building: Dictionary) -> bool: return building.owner == entry.id and Registry.kind(building.kind).counts_for_victory): live.append(entry.id)
+	return live
+
+static func _wave_target(wave: int, state: Dictionary, live: Array[int]) -> int:
+	var mean: int = 0
+	for player in live: mean += faction_unit_cost(_faction(state, player))
+	@warning_ignore("integer_division")
+	return WAVE_SIZES[mini(wave, WAVE_SIZES.size() - 1)] * live.size() * (mean / live.size())
+
+static func _cost_sum(kinds: Array) -> int:
+	var sum: int = 0
+	for kind: String in kinds: sum += unit_cost(kind)
+	return sum
+
+# Highest unit cost first, ties lowest id, until the summed cost first reaches the share.
+static func _take(ready: Array, mine: Dictionary, share: int, limit: int) -> Array:
+	var order: Array = ready.duplicate()
+	order.sort_custom(func(a: int, b: int) -> bool:
+		var cost_a: int = unit_cost(mine[a].kind)
+		var cost_b: int = unit_cost(mine[b].kind)
+		return cost_a > cost_b or (cost_a == cost_b and a < b))
+	var taken: Array = []
+	var sum: int = 0
+	for id: int in order:
+		if sum >= share or taken.size() >= limit: break
+		taken.append(id)
+		sum += unit_cost(mine[id].kind)
+	taken.sort()
+	return taken
 
 static func _rally(ctx: Dictionary) -> Vector2:
 	var map: Dictionary = ctx.sim.map_data()

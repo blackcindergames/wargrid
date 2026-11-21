@@ -3,15 +3,15 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 13:09)
-Branch / base commit / working-tree state: p7-enemy-bots / 0e2e613f / T1-3 changes uncommitted (see changed paths)
-Last green task / next incomplete task: T1-3 (UR1, red set as expected, not committed) / T1-4
-Changed paths since last commit: game/scripts/simulation/skirmish.gd, game/scripts/match/offline_driver.gd, game/scripts/match/match_screen.gd, game/scripts/debug/team_match.gd, game/scripts/lab/readme_capture.gd, game/scripts/net/headless_client.gd, game/tests/test_bot_rules.gd, game/tests/test_combat.gd, game/tests/test_playtest.gd, game/tests/test_playtest_replay.gd, game/tests/test_skirmish_scene.gd, tools/playtest_session.py, tools/replay_session.sh, tools/test_playtest_session.py, tools/test_no_production_create_passes_ai.py (new), this file
-Last command / cases / checks / failures / exit / marker: full suite on the T1-3 tree: CASES 1254 CHECKS 152764 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, 9 failing checks, all on the re-pin list); lint 0, warnings 0 (190 files); python checks and shell checks exit 0
+Resume record (updated 2026-11-21 13:42)
+Branch / base commit / working-tree state: p7-enemy-bots / 0fbb4838 (T1-3 committed) / T1-4 changes uncommitted (see changed paths)
+Last green task / next incomplete task: T1-4 (BR2, BR3 with the lone-bot team entry, reviewer fix round applied, red set as expected, not committed) / T1-5 (kill check B, probe at the T1-4 tip)
+Changed paths since last commit: game/scripts/simulation/skirmish.gd, game/tests/test_bot_rules.gd, game/tests/test_sim_pump.gd, game/tests/test_skirmish.gd, game/tests/test_skirmish_waves.gd, game/tests/test_skirmish_scene.gd, game/tests/test_team_match.gd, docs/reference/sim-interface.md, this file
+Last command / cases / checks / failures / exit / marker: full suite on the T1-4 fix-round tree: CASES 1271 CHECKS 152810 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, the T1-3 set, all on the re-pin list); lint 0, warnings 0 (190 files); test_sim_boundary and test_sim_math OK
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: review and commit T1-3, then T1-4
+Next exact action: commit T1-4 (fix round done), then T1-5 (update p7_probe.gd to BOT_TEAM_META first)
 ```
 
 ## Red ledger
@@ -20,6 +20,7 @@ Next exact action: review and commit T1-3, then T1-4
 |---|---|---|
 | T1-2 | TB3 final digest (tick 20000); TB4 team core series; S1 core series; Fm1 pinned outcome (27098, winner 2); Cs1 pinned outcome (10343, winner 2); VR1 view reads digest and VR1 same digest through set_view; S1 pinned outcome (-1 ongoing); S1 terminal inside the six-minute window; S1 economy, production and combat | yes, all (T1-10) |
 | T1-3 | TB3 final digest (tick 20000); TB4 team core series; S1 core series; Fm1 pinned outcome (27098, winner 2); Cs1 pinned outcome (10343, winner 2); VR1 view reads digest and VR1 same digest through set_view; S1 pinned outcome (9958, winner 1); HUD1 pinned panel and collector texts. Left the list: S1 terminal inside the six-minute window, S1 economy, production and combat (green again under human unit rules). | yes, all (T1-10) |
+| T1-4 | Same nine names as T1-3. Values moved: TB3 final digest (ee11652fc94fa901 to d149879bbdb5e517); TB4 team core series (3893643193399489437 to 6523963049782461399); S1 core series (523144223445027603 to 5372631221812398523); S1 pinned outcome (9958 to 9320, winner 1, inside 7000-17999); Fm1 (27098 to 20553, winner 2); Cs1 (10343 to 20812, winner 2). Unchanged: VR1 digest (both checks), HUD1 texts. | yes, all (T1-10) |
 
 ## Evidence
 
@@ -59,3 +60,19 @@ Results: `test_bot_rules` CASES 2 CHECKS 6 FAILURES 0; `test_playtest*` CASES 91
 Found, not fixed: `godot --headless --path game --script res://benchmarks/run_recorded_match.gd` reports `RECORDED MATCH DIFFERS tick=6694 recorded=972a057c40053661 replayed=7aa31eab0a71558b` identically on `main` `194048e0` and `0e2e613f`; it matched at `278480b2` (the fixture commit), and the first differing commit on `main` is `56cfcb2c` ("Budget path searches by route cells"). Nothing runs it (no tool or CI step; `performance.md` labels it report-only), so it fails no gate. Not re-recorded in P7: re-pinning would no longer replay the owner's match; re-pin or a new fixture is an owner choice for a separate commit on `main`.
 
 UR1 also reaches `benchmarks/run_profile.gd:104` (`Skirmish.create()` default): the `skirmish_match` profile in `run_benchmark.sh` now runs human unit rules, so the gate's profile row is not comparable to earlier rows. Review fix: the UR1 test gained a positive control (an enemy 3 cells away, inside reach, is acquired); `test_bot_rules` CASES 2 CHECKS 7 FAILURES 0.
+
+### T1-4 BR2, BR3
+
+Tree: `p7-enemy-bots` at `0fbb4838` (T1-3 committed) plus the uncommitted T1-4 changes. Baseline skipped: the T1-3 full suite ran on the T1-3 tree and only a test positive control and docs followed, so the T1-3 red set is the starting point (the resume record named `0e2e613f` and an uncommitted tree; the commit `0fbb4838` is that tree).
+
+Red first, on behaviour: `skirmish.gd` got the new constants and stub accessors (`unit_cost`, `faction_unit_cost`, `team_memory`) first, so every new test failed on a check, not a parse error (`test_bot_rules` CASES 17 CHECKS 47 FAILURES 30; `test_pump_bot_first_wave_at_4500` 1 failure, no attack before the old 5400). `test_wave_leaves_at_wait_cap` first passed by chance with three tanks (the old timeout is also 1800), so it was changed to seven riflemen, which the old count rule released at once. Change: `ATTACK_TICK`, `WAVE_MIN`, `WAVE_TIMEOUT` and the per-bot `since` are gone; `FIRST_WAVE_TICK` 4500, `WAVE_GAPS` [2700, 2700, 1800], `WAVE_WAIT` 1800, `WAVE_SIZES`, `WAVE0_UNITS` 16, `BOT_TEAM_META` entry per team with the BR4 layout; a seat is a live bot after its first `decide` and while it owns a `counts_for_victory` building; `_gather` ends in `_launch`: target = size x live bots x team unit cost, a launching bot takes its own ready units (highest unit cost first, ties lowest id) up to its share, wave 0 up to `16 / live bots`.
+
+Rewrites (R2): `test_skirmish_waves.gd` (W1, W2, W4 and the `FULL` wave as five tanks, 4,500 against the 4,248 target; W2 now asserts the cost target, W4 the next wave's wait cap), `test_skirmish.gd` (A3, W1-W4, D2, D3 constants; bot worlds got a victory building for seat 2 because a seat without one is not live, placed at (0, 28) or (0, 29) so `_defend` never fires; A3's `lone` removes the headquarters too), `test_team_match.gd` TB1 (`WAVE_WAIT`), `test_skirmish_scene.gd` OD2 (`FIRST_WAVE_TICK`). All green.
+
+Results: `test_bot_rules` CASES 18 CHECKS 49 FAILURES 0; `test_skirmish*` green but for the re-pin names; `test_pump_bot_first_wave_at_4500` 1/2/0. Mutation checks on the final code (each made a named test fail, then reverted): no wave-0 cap, tie by highest id, `>` instead of `>=` at the take and at the release gate (the last two needed `test_wave_stops_at_exact_target`, added because the first version survived). Full suite: CASES 1271 CHECKS 152809 FAILURES 9, exit 1 (no `TESTS PASSED`), the T1-3 names, all on the re-pin list (values above). `sh tools/run_lint.sh` exit 0; `sh tools/run_warnings.sh` exit 0, 190 files; `tools/test_sim_boundary.py` and `tools/test_sim_math.py` OK.
+
+Interpretations taken: (1) `released_by` is "timer", "size" or "wait_cap"; "timer" means the bot's previous decision was before `due` (per bot memory `prev`, not a team field); a target met at or after the cap decision counts as "size" when it is not the first decision from due. (2) Tests read the team entry through `Skirmish.team_memory(sim, team)` (a copy), not `get_meta`, because `released_by` and `due` are in no snapshot. (3) Until BR4 (T1-6) the team clock is shared but each bot judges only its own ready units against its share `target / live bots` and a teammate's units wait for a launch of their own: in a team of two or more a later wave is launched by whichever bot decides first after `due`, normally the same one. (4) A seat that is not live (no victory building) neither gathers a wave nor launches one. (5) Unit cost per unit is `cost / quantity` with integer division, also for units outside the build list.
+
+Reviewer notes for later tasks: (a) T1-6 must move `prev` (the "timer" release test) to a team-level field, since the spec means the first decision of any team bot; (b) a target-sized group arriving after due + `WAVE_WAIT` when nothing was ready at the cap is labelled "size" (the spec has no label for it); T1-5 reads the 150 s rule count with that in mind.
+
+Fix round: `test_wave_capped_by_cost_rest_guards_home` now plays on to the next `due` (three tanks added, 7,200 against 6,372) and asserts wave 1 leaves at `due` with the five home tanks; mutation (wave records all ready units, so the extras are never re-gathered) failed it: `FAIL: BR3 the five home tanks leave with wave 1 (6372), got [{ "tick": 2, "ids": [4, 5, 6, 7, 8] }, { "tick": 32, "ids": [9, 10, 11, 12, 13] }]`, then reverted. SK20 writes `prev` (the removed `since` was still written). `sim-interface.md` lists `Skirmish.team_memory`.

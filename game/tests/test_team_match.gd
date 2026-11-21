@@ -34,7 +34,7 @@ func test_bot_never_targets_ally(runner) -> bool:
 	sim.start_match([1, 2, 3] as Array[int])
 	var attacks: int = 0
 	var bad: int = 0
-	for tick in range(Skirmish.WAVE_TIMEOUT + Skirmish.DECISION_TICKS * 30):
+	for tick in range(Skirmish.WAVE_WAIT + Skirmish.DECISION_TICKS * 30):
 		sim.step()
 		Skirmish.issue_opponent(sim, 1, 0)
 		for command in sim.snapshot().pending_commands:
