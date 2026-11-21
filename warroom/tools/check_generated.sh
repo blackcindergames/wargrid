@@ -8,7 +8,8 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 mkdir "$tmp/warroom"
-tar --exclude=picks.json --exclude=picks.jsonl --exclude=node_modules -cf - . | tar -xf - -C "$tmp/warroom"
+# fly/site is the ignored deploy copy; its _templ.go files have no .templ sources to regenerate from.
+tar --exclude=picks.json --exclude=picks.jsonl --exclude=node_modules --exclude=./fly/site -cf - . | tar -xf - -C "$tmp/warroom"
 static=internal/web/static
 find "$tmp/warroom" -name '*_templ.go' -delete
 rm -f "$tmp/warroom/$static/islands.js" "$tmp/warroom/$static/htmx.min.js" "$tmp/warroom"/rounds/*.schema.json
@@ -18,7 +19,7 @@ rm -f "$tmp/warroom/$static/islands.js" "$tmp/warroom/$static/htmx.min.js" "$tmp
 }
 
 status=0
-generated=$(find . -name '*_templ.go' -not -path './islands/node_modules/*'; echo "./$static/islands.js" "./$static/htmx.min.js"; ls rounds/*.schema.json)
+generated=$(find . -name '*_templ.go' -not -path './islands/node_modules/*' -not -path './fly/site/*'; echo "./$static/islands.js" "./$static/htmx.min.js"; ls rounds/*.schema.json)
 for f in $generated; do
 	if ! cmp -s "$f" "$tmp/warroom/$f"; then
 		echo "check_generated: $f is out of date; run 'go generate ./...' in warroom/" >&2

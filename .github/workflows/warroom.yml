@@ -49,5 +49,5 @@ jobs:
         with:
           go-version-file: warroom/go.mod
           cache-dependency-path: warroom/go.sum
-      - run: go run github.com/mxschmitt/playwright-go/cmd/playwright install --with-deps firefox
+      - run: go run github.com/mxschmitt/playwright-go/cmd/playwright install firefox
       - run: go test -tags browser ./...
