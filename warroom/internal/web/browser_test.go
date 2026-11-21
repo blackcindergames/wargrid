@@ -1178,7 +1178,8 @@ func wantLeftPanel(t *testing.T, s *site, path, title string, chips int) {
 		s.wantCount(t, s.loc("#chips"), 1)
 		s.wantText(t, s.loc(".lpanel .head h1"), title)
 		s.wantCount(t, s.loc(".lpanel details[open]"), 0)
-		s.wantCount(t, s.loc(":is(.lpanel, .rpanel) .stepnav"), 1)
+		s.wantCount(t, s.loc(".rpanel .stepnav"), 1)
+		s.wantCount(t, s.loc(".lpanel :is(.stepnav, .notebox, .verdict, .gside, .act)"), 0)
 	})
 }
 
@@ -1293,25 +1294,52 @@ func TestNeutralAnswerIsExplainedInItsTooltip(t *testing.T) {
 	failIf(t, expect.Locator(phone.Locator(".sheet [value=neither]")).ToHaveAttribute("title", hint))
 }
 
-func TestVerdictSitsInTheCentreAtReadingWidth(t *testing.T) {
-	s := newSite(t, siteOpts{})
-	s.viewport(t, 1440, 900)
-	s.open(t, "/r/demo/8")
-	s.wantVisible(t, s.loc(".cpanel .verdict .vb.pick"))
-	s.wantVisible(t, s.loc(".cpanel .verdict textarea"))
-	if r := s.rect(t, ".cpanel .verdict"); r.Width > 640 || r.Y+r.Height > 900 {
-		t.Errorf("verdict %+v, want at most 640 px wide and above the fold", r)
-	}
-	s.wantCount(t, s.loc(".lpanel .stepnav"), 1)
-	s.wantCount(t, s.loc(".lpanel .verdict"), 0)
+func galleryWithVerdict(t *testing.T) *site {
+	t.Helper()
 	dir := writeTree(t, map[string]string{
 		"index.yaml":   "- {id: g, title: G}\n",
 		"g/round.yaml": "title: G\nsteps: [gal]\n",
 		"g/gal.yaml":   "kind: gallery\nquestion: Look\nitems: [{id: a, label: A}, {id: b, label: B}]\nverdict: {key: gv, pass: Pass, changes: Changes}\n",
 	})
-	g := newSite(t, siteOpts{rounds: dir})
+	return newSite(t, siteOpts{rounds: dir})
+}
+
+func TestVerdictSitsInTheRightPanel(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/demo/8")
+	s.wantVisible(t, s.loc(".rpanel .verdict .vb.pick"))
+	s.wantVisible(t, s.loc(".rpanel .verdict textarea"))
+	s.wantCount(t, s.loc(":is(.lpanel, .cpanel) .verdict"), 0)
+	if r := s.rect(t, ".rpanel .stepnav"); r.Y+r.Height > 900 {
+		t.Errorf("step buttons end at %v, below the fold", r.Y+r.Height)
+	}
+	g := galleryWithVerdict(t)
 	g.open(t, "/r/g/1")
-	g.wantCount(t, g.loc(".lpanel .verdict"), 1)
+	g.wantCount(t, g.loc(".rpanel .verdict"), 1)
+}
+
+// The first answer button of every kind sits where a choice step's Pick does, inside the right panel.
+func TestEveryAnswerSitsAtThePickHeight(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	g := galleryWithVerdict(t)
+	s.viewport(t, 1440, 900)
+	g.viewport(t, 1440, 900)
+	s.open(t, "/r/demo/1")
+	pick := s.rect(t, ".rpanel .act .pick")
+	for _, c := range []struct {
+		p         *site
+		path, sel string
+	}{{s, "/r/demo/8", ".vb.pick"}, {s, "/r/demo/9", ".act .pick"}, {g, "/r/g/1", ".verdict .vb"}} {
+		c.p.open(t, c.path)
+		got, panel := c.p.rect(t, ".rpanel "+c.sel), c.p.rect(t, ".rpanel")
+		if got.Y-pick.Y > 1 || pick.Y-got.Y > 1 {
+			t.Errorf("%s: answer top %v, choice Pick top %v", c.path, got.Y, pick.Y)
+		}
+		if got.X < panel.X || got.X+got.Width > panel.X+panel.Width {
+			t.Errorf("%s: answer x %v..%v outside the right panel %v..%v", c.path, got.X, got.X+got.Width, panel.X, panel.X+panel.Width)
+		}
+	}
 }
 
 func TestPhonePickHasOneWidthOnEveryStep(t *testing.T) {
@@ -1418,6 +1446,14 @@ func TestSummaryIntroSitsInTheCentre(t *testing.T) {
 	s.open(t, "/r/demo/summary")
 	s.wantContains(t, s.loc(".cpanel details[open].intro"), "Demo only")
 	s.wantCount(t, s.loc(".lpanel .intro"), 0)
+	s.wantCount(t, s.loc(".rpanel [data-copy-from]"), 1)
+	s.viewport(t, 1920, 1080)
+	left := s.rect(t, "#sum").X
+	for _, sel := range []string{".intro", "h2", ":is(p, .scroll)", ".close"} {
+		if x := s.rect(t, "#sum > "+sel).X; x-left > 1 || left-x > 1 {
+			t.Errorf("summary %s starts at x=%v, the block at x=%v", sel, x, left)
+		}
+	}
 	if w := s.rect(t, ".cpanel .intro").Width; w < 400 || w > 700 {
 		t.Errorf("intro %v px wide, want a reading width", w)
 	}
@@ -1530,5 +1566,70 @@ func TestLoadingBarSpansTheViewportTop(t *testing.T) {
 	})()`)
 	if got != "fixed 0px 1440px" {
 		t.Errorf("loading bar %v, want fixed 0px 1440px", got)
+	}
+}
+
+func TestEveryPageKeepsTheChoiceStepColumns(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	dir := writeTree(t, map[string]string{
+		"index.yaml":   "- {id: m, title: Missing}\n",
+		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
+		"m/ok.yaml":    "kind: verdict\nquestion: Still fine?\n",
+	})
+	m := newSite(t, siteOpts{rounds: dir})
+	cols := func(p *site, path string) [3]playwright.Rect {
+		p.open(t, path)
+		return [3]playwright.Rect{p.rect(t, ".step > .lpanel"), p.rect(t, ".step > .cpanel"), p.rect(t, ".step > .rpanel")}
+	}
+	sameColumn := func(a, b playwright.Rect) bool {
+		a.Y, a.Height, b.Y, b.Height = 0, 0, 0, 0
+		return near(a, b)
+	}
+	for _, vp := range [][2]int{{1440, 900}, {1920, 1080}, {2560, 1440}} {
+		s.viewport(t, vp[0], vp[1])
+		m.viewport(t, vp[0], vp[1])
+		want := cols(s, "/r/demo/1")
+		pages := map[string][3]playwright.Rect{"/r/m/2 (missing)": cols(m, "/r/m/2")}
+		for _, path := range []string{"/r/demo/summary", "/r/demo/5", "/r/demo/7", "/r/demo/8", "/r/demo/9"} {
+			pages[path] = cols(s, path)
+		}
+		for path, got := range pages {
+			for i, name := range []string{"left", "centre", "right"} {
+				if !sameColumn(got[i], want[i]) {
+					t.Errorf("%dx%d %s: %s column x=%v w=%v, choice step x=%v w=%v", vp[0], vp[1], path, name, got[i].X, got[i].Width, want[i].X, want[i].Width)
+				}
+			}
+		}
+	}
+}
+
+func TestCentreBlocksSitInTheMiddleOfTheColumn(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	dir := writeTree(t, map[string]string{
+		"index.yaml":   "- {id: m, title: Missing}\n",
+		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
+		"m/ok.yaml":    "kind: verdict\nquestion: Still fine?\n",
+	})
+	m := newSite(t, siteOpts{rounds: dir})
+	mid := func(r playwright.Rect) float64 { return r.X + r.Width/2 }
+	for _, vp := range [][2]int{{1440, 900}, {1920, 1080}} {
+		s.viewport(t, vp[0], vp[1])
+		m.viewport(t, vp[0], vp[1])
+		for _, c := range []struct {
+			p           *site
+			path, block string
+		}{
+			{s, "/r/demo/5", ".fields"},
+			{s, "/r/demo/summary", "#sum"},
+			{s, "/r/demo/9", "wr-tune"},
+			{s, "/r/demo/9", ".stage .pic"},
+			{m, "/r/m/2", ".missing"},
+		} {
+			c.p.open(t, c.path)
+			want, got := mid(c.p.rect(t, ".step > .cpanel")), mid(c.p.rect(t, ".cpanel "+c.block))
+			if got-want > 2 || want-got > 2 {
+				t.Errorf("%dx%d %s: %s centre x=%v, column centre x=%v", vp[0], vp[1], c.path, c.block, got, want)
+			}
+		}
 	}
 }

@@ -114,9 +114,8 @@
 
   .step { max-width: 1680px; margin: 0 auto; padding: 16px 24px 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
 
-  /* Every step kind shares the left panel; choice steps add the Options panel, and no panel moves between steps or options. */
-  .step:has(> .lpanel) { max-width: none; min-height: var(--vh); padding: 0; gap: 0; align-items: stretch; grid-template-columns: 260px minmax(0, 1fr); }
-  .step.choice { grid-template-columns: 260px minmax(0, 1fr) 340px; }
+  /* Every step kind keeps the choice step's three columns, so no zone moves between pages: question left, what you judge centre, your answer right. */
+  .step:has(> .lpanel) { max-width: none; min-height: var(--vh); padding: 0; gap: 0; align-items: stretch; grid-template-columns: 260px minmax(0, 1fr) 340px; }
   :is(.lpanel, .cpanel, .rpanel) { min-width: 0; display: flex; flex-direction: column; }
   :is(.lpanel, .rpanel) { background: var(--slab); padding: 16px 20px 24px; }
   .lpanel {
@@ -127,11 +126,11 @@
     .head h1 { font-size: 22px; }
   }
   .cpanel { padding: 20px; gap: 14px; }
-  /* Forms and nav at a reading width; only the stage takes the whole column. */
-  .cpanel > :is(.fields, .stepnav) { max-width: 720px; }
-  .cpanel > .verdict { max-width: 640px; }
-  .k-summary .cpanel > .intro { max-width: 65ch; }
-  .cpanel > .missing { padding: 0; }
+  /* Blocks at a reading width sit centred in the column, their text left-aligned; only the stage takes the whole column. */
+  .cpanel > :is(.fields, #sum, .missing), wr-tune { width: 100%; margin-inline: auto; }
+  .cpanel > .fields { max-width: 720px; }
+  #sum > .intro { max-width: 65ch; }
+  .cpanel > .missing { padding: 0; width: fit-content; }
   /* The bars under the stage have fixed heights, so the stage zone is the same on every step and option. */
   .choice .cpanel { gap: 0; --status: 60px; --more: 200px; --bars: calc(40px + var(--status) + var(--more)); }
   /* Pinned to the viewport, so Pick stays put and in view however long the question or list is. */
@@ -140,6 +139,11 @@
     /* With the panel's gap, 10 px on top holds the Pick's 14 px tab clear of the list; the height leaves room for Pick or Yes and a second button, so Pick keeps one height with or without the neutral answer. */
     .act { flex-direction: column; align-items: stretch; padding-top: 10px; min-height: calc(10px + 44px + 8px + 40px); }
     .act .pick { width: 100%; }
+    /* With no list above, the answer drops to where Pick sits on a choice step; a gallery's item block takes the list's room. */
+    > :first-child { margin-top: auto; }
+    > .gside { flex: 1 1 auto; }
+    /* Pass and Changes take Pick's and the neutral answer's heights, and the note sits where a choice step's note does. */
+    .verdict { gap: 8px; padding-top: 10px; .vb { flex: 1 1 100%; min-height: 40px; } .vb.pick { min-height: 44px; } textarea { margin-top: 6px; } }
     /* Over the list's last 28 px, cancelling the panel's gap, so Pick keeps its place whether it shows or not. */
     .omore {
       position: relative; z-index: 1; height: 28px; margin-top: -34px; padding-top: 8px; pointer-events: none;
@@ -234,11 +238,10 @@
     &.today { background: transparent; border: 1px dashed var(--line); .ot { font-weight: 600; color: var(--soft); } }
     &.today.sel { border-color: var(--sel); }
   }
-  :is(.lpanel, .rpanel) {
+  .rpanel {
     :is(.notebox, .stepnav) { margin-top: 8px; }
     .stepnav { flex-wrap: wrap; gap: 6px; .btn { padding-inline: 10px; } }
   }
-  .lpanel .verdict .vb { flex: 1 1 auto; padding-inline: 14px; }
   .ctlbar {
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
     .btn span { color: var(--muted); font-weight: 700; }
@@ -324,9 +327,9 @@
     :is(thead tr, tbody tr:not(:last-child)) > * { border-bottom: 1px solid var(--quiet); }
   }
   #sum {
+    max-width: 1200px;
     h2 { font-size: 18px; margin: 16px 0 0; font-weight: 700; }
     .cnt { margin-left: 8px; }
-    .sum { max-width: 1200px; }
     p { margin: 1em 0; }
     .scroll { margin: 8px 0 20px; }
   }
@@ -508,7 +511,7 @@
     .step :is(.lpanel, .cpanel, .rpanel) { display: contents; }
     .step {
       :is(.top, .intro, .head) { order: 1; } .look { order: 2; } .stagecol { order: 4; }
-      :is(.rpanel > .h, .opts, .gside, .fields, #sum, .close, .rounds, .cpanel > .missing) { order: 5; }
+      :is(.rpanel > .h, .opts, .gside, .fields, #sum, .close, .copy, .rounds, .cpanel > .missing) { order: 5; }
       :is(.moreof, .measures, .verdict) { order: 6; } .thumbs { order: 7; } .folds { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
     }
     .lpanel .top { position: sticky; z-index: 10; margin: -12px -16px 0; background: var(--well); border-bottom: 1px solid var(--line); }
@@ -520,7 +523,8 @@
     :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: 100%; }
     .ref .pic { max-width: none; }
     .extras { grid-template-columns: minmax(0, 1fr); }
-    .verdict .vb { flex: 1 1 40%; padding-inline: 8px; }
+    .verdict { gap: 10px; padding-top: 0; .vb { flex: 1 1 40%; padding-inline: 8px; min-height: 48px; } textarea { margin-top: 0; } }
+    .cpanel > :is(.fields, #sum, .missing) { width: auto; margin-inline: 0; }
     .opens { flex-basis: 100%; }
     .thumbs { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
     .true100 .k-gallery .gmain { max-height: none; }

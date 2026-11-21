@@ -66,7 +66,7 @@ Today `Info` opens `why` on desktop, and step 1 opens the intro. Both change to 
 - "Claude's pick" shows only as the tab on the Pick button while Claude's option is shown, placed so Pick's width never changes. Rows and tiles carry no tag (user, 2026-11-21).
 - Confirm steps (one option) show the single row plus Yes/Change in the same place.
 
-**Other kinds** (`gallery`, `verdict`, `tune`, `wording`, missing, summary) use the same left panel. Their picture or fields go in the centre. Their own controls (item note, Previous/Next, the note and nav) sit in the left panel under the Details folds, so they stay above the fold (controller ruling 2026-11-21: under the centre they fell below the fold at 1440 x 900). The verdict step's Pass, Changes and note sit in the centre at reading width (user, 2026-11-21). They get no right panel unless that kind already has a list (builder's call, kept minimal).
+**Other kinds** (`gallery`, `verdict`, `tune`, `wording`, missing, summary) keep the same three columns as a choice step (owner look, user, 2026-11-21): left = the question and folds, centre = what you judge (picture, sliders centred under it, fields, summary), right = your answer at Pick's height plus the note and nav. Verdict buttons, the gallery's verdict, item note and Previous/Next, tune's Use/None, and every page's Back/Skip sit in the right panel (user, 2026-11-21: "Yes, every kind").
 
 ## Phone (the existing phone breakpoint, tested at 390 x 844)
 
