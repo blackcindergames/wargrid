@@ -28,11 +28,10 @@ class Net extends RefCounted:
 	var max_delay: int = 0
 	var rng := RandomNumberGenerator.new()
 
-	func add(seat: int, _controller_seat_two: String, clock: Callable = Time.get_ticks_usec) -> Client:
+	func add(seat: int, _controller_seat_two: String, clock: Callable = Time.get_ticks_usec, seats: Array[int] = [1, 2], sim: RefCounted = null) -> Client:
 		var c := Client.new()
 		c.seat = seat
-		c.sim = Skirmish.create(true, "human")
-		var seats: Array[int] = [1, 2]
+		c.sim = sim if sim != null else Skirmish.create(true, "human")
 		c.ls = Lockstep.new(seat, seats, 4, 30, clock)
 		c.seat_sim = SeatSim.new(c.sim, c.ls)
 		clients.append(c)
@@ -80,7 +79,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -653,4 +652,35 @@ func test_own_frame_checked(runner) -> bool:
 	ls.finish_tick(1, null)
 	runner.check(ls.status() == "ended_protocol" and ls.end_reason().begins_with("own frame"), "L20 an undecodable own frame ends the match, got " + ls.end_reason())
 	runner.check(sent.is_empty(), "L20 nothing is sent")
+	return true
+
+func _trio_sim() -> RefCounted:
+	var seats: Array[Dictionary] = []
+	for seat in [1, 2, 3]:
+		seats.append({"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "faction": "usa"})
+	var sim: RefCounted = Skirmish.MapData.create(Skirmish.MapData.load("res://data/maps/broken_crown.json"), seats)
+	sim.start_match([1, 2, 3] as Array[int])
+	return sim
+
+func _defeat(sim: RefCounted, seat: int) -> void:
+	for building: Dictionary in sim.snapshot().buildings:
+		if building.owner == seat: sim.remove_object(building.id)
+	for unit: Dictionary in sim.snapshot().entities:
+		if unit.owner == seat: sim.remove_object(unit.id)
+
+func test_pal_two_leaves_never_hang(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats:
+		var sim := _trio_sim()
+		_defeat(sim, 2)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[2].target = 21
+	net.connect_all()
+	var a: Client = net.clients[0]
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 3, "after_tick": 25})])
+	net.run()
+	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 3 and a.sim.tick() == 26, "PAL two leaves never hang: ended_left by seat 3 at 26 (status %s, seat %d, tick %d)" % [a.ls.status(), a.ls.left_seat(), a.sim.tick()])
 	return true
