@@ -32,6 +32,7 @@ Commands use absolute paths (`<abs $L>`); tracked files use `~/...` only. The ha
   - New `test_pal_*` cases, appended to `cases()` (`test_lockstep.gd:82`, `test_sim_pump.gd:43`, `test_online_scene.gd:67`; only listed cases run). No suite file or existing case contains `test_pal_`.
   - Helpers `_trio_sim`, `_defeat` (one copy each in `test_lockstep.gd`, `test_sim_pump.gd`), `_quad_sim` (`test_lockstep.gd`).
   - In `test_sim_pump.gd`: `TrioRelay` plus a per-seat `TrioEnd` transport (`poll`, `send_text`, `closed`, `silent`, `close`, `rtt_samples`, `patient`), one `RelayFrameOrder` (`game/tests/relay_frame_order.gd`) each.
+  - Test-only helpers used by the new `test_pal_*` cases (user, 2026-11-21, after Task 5).
   - New top-level `const` preloads in the three suites for `MapData`, `Registry`, `MatchSettings` (or `Skirmish.MapData`, `Skirmish.Registry`).
   - No existing assertion changes; L7, L10, L14-L17, N16, N28, N29 and the SB4 leave cases stay as they are (Q8 a).
 - **Untouched paths:** those in `UNTOUCHED` (empty at every gate), and in `game/scripts/simulation/` all but `simulation.gd` `survivors()` and `skirmish.gd` `create`.
