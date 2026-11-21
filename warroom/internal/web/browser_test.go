@@ -747,7 +747,9 @@ func TestSideViewSelectionShowsInTheLetterAndThePick(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10?view=side")
 	pick := s.loc(".tiles + .act .pick")
-	s.wantText(t, pick.Locator(".pn"), "· No outline")
+	s.wantCount(t, pick.Locator(".pn"), 0)
+	width := `document.querySelector('.tiles + .act .pick').offsetWidth`
+	wantWidth := eval(t, s.Page, width)
 	if c := cssOf(t, s.Page, ".tile.sel .let", "", "color"); c != selRGB {
 		t.Errorf("selected letter %v, want --sel %s", c, selRGB)
 	}
@@ -756,17 +758,12 @@ func TestSideViewSelectionShowsInTheLetterAndThePick(t *testing.T) {
 	}
 	s.click(t, ".tile[data-opt=B] .ohd")
 	s.wantText(t, pick.Locator(".pl"), "B")
-	s.wantText(t, pick.Locator(".pn"), "· Half a pixel")
 	eval(t, s.Page, `document.querySelector('.tile[data-opt=C] .ohd h2').textContent = 'A very long option name '.repeat(20)`)
 	s.press(t, "c")
 	s.wantText(t, pick.Locator(".pl"), "C")
-	fits := eval(t, s.Page, `(() => {
-		const b = document.querySelector('.tiles + .act .pick'), n = b.querySelector('.pn'), row = document.querySelector('.tiles + .act');
-		return b.offsetHeight === 44 && b.getBoundingClientRect().right <= row.getBoundingClientRect().right && n.scrollWidth > n.clientWidth
-			? '' : 'height ' + b.offsetHeight + ', right ' + b.getBoundingClientRect().right + ' of ' + row.getBoundingClientRect().right + ', name ' + n.scrollWidth + ' in ' + n.clientWidth;
-	})()`)
-	if fits != "" {
-		t.Errorf("a long name wraps or overflows the Pick: %v", fits)
+	// The owner asked for a Pick that never changes width between options (2026-11-21).
+	if got := eval(t, s.Page, width); got != wantWidth {
+		t.Errorf("Pick width %v on C, want %v as on A", got, wantWidth)
 	}
 }
 

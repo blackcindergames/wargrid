@@ -251,12 +251,8 @@ function showOption(letter, keep) {
 	$$('.pl').forEach((el) => {
 		el.textContent = letter;
 	});
-	const name = $(`.ohd[data-pick="${letter}"] h2, .odetail[data-opt="${letter}"] h2`)?.textContent ?? '';
 	$$('.ptab').forEach((el) => {
 		el.hidden = el.dataset.cp !== letter;
-	});
-	$$('.pn').forEach((el) => {
-		el.textContent = name && name !== letter ? `· ${name}` : '';
 	});
 	stopMedia(keep);
 	setParam('show', letter);

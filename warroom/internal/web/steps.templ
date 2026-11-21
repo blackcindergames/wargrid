@@ -137,7 +137,7 @@ templ Act(v ChoiceView) {
 				Change (say what in the note)
 			}
 		} else if !isReadOnly(ctx) {
-			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span><span class="pn">{ v.Act.ShownName }</span> @Kbd("Enter")
+			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")
 				if v.Act.Cp != "" {
 					<span class="tag cp ptab" data-cp={ v.Act.Cp } hidden?={ v.Act.Cp != v.Act.Shown }>Claude's pick</span>
 				}
