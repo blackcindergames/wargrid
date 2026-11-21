@@ -67,6 +67,29 @@ func TestStageControlKeepsOpenFoldsOpen(t *testing.T) {
 	}
 }
 
+func TestOpenAboutFollowsTheFlip(t *testing.T) {
+	s := newSite(t, siteOpts{rounds: "../../testdata/rounds"})
+	s.open(t, "/r/p2-3a1-gate-2/1")
+	s.click(t, `.about[data-opt=A] summary`)
+	s.press(t, "b")
+	s.wantVisible(t, s.loc(`.about[data-opt=B] summary`))
+	if eval(t, s.Page, "document.querySelector('.about[data-opt=B]').open") != true {
+		t.Error("About B closed after flipping from an open About A")
+	}
+	s.click(t, `.about[data-opt=B] summary`)
+	s.press(t, "a")
+	if eval(t, s.Page, "document.querySelector('.about[data-opt=A]').open") != false {
+		t.Error("About A open after flipping from a closed About B")
+	}
+	s.click(t, `.about[data-opt=A] summary`)
+	s.press(t, "0")
+	s.press(t, "b")
+	s.wantVisible(t, s.loc(`.about[data-opt=B] summary`))
+	if eval(t, s.Page, "document.querySelector('.about[data-opt=B]').open") != true {
+		t.Error("About B closed after flipping through Today from an open About A")
+	}
+}
+
 func TestPickRecordsAndMovesOn(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/1")

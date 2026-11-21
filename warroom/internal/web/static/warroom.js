@@ -264,9 +264,16 @@ const flipLetters = () => $$('.opts .orow:not(.today)').map((b) => b.dataset.sho
 function showOption(letter, keep) {
 	const today = letter === 'today';
 	if (today ? !$('.opts .orow.today') : !flipLetters().includes(letter)) return;
+	// A reader comparing options with About open expects the next option's About open too.
+	const aboutOpen = /** @type {HTMLDetailsElement | null} */ ($('.about[data-opt]:not([hidden])'))?.open;
 	$$('.ostage[data-opt], .moreof [data-opt], .about[data-opt]').forEach((el) => {
 		el.hidden = el.dataset.opt !== letter;
 	});
+	if (aboutOpen !== undefined) {
+		/** @type {HTMLDetailsElement[]} */ ($$('.about[data-opt]')).forEach((d) => {
+			d.open = aboutOpen;
+		});
+	}
 	$$('.measures [data-measure]').forEach((el) => {
 		el.hidden = el.dataset.measure !== letter;
 	});
