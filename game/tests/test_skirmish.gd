@@ -243,12 +243,15 @@ func test_opponent_attack_policy(runner) -> bool:
 		sim.step()
 	runner.check(_attack_targets(sim, army).is_empty(), "A3 no attack orders before FIRST_WAVE_TICK")
 	_bot_until_attack(sim, army, Skirmish.FIRST_WAVE_TICK + 4000)
-	runner.check(_attack_targets(sim, army) == [first, first, first, first], "A3 the wave shares the best-scored target, a builder, got " + str(_attack_targets(sim, army)))
+	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+	Skirmish.decide(sim, 2)
+	sim.step()
+	runner.check(_attack_targets(sim, army) == [second, second, second, second], "A3 the wave shares the best-scored target, a builder, got " + str(_attack_targets(sim, army)))
 	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
 	Skirmish.decide(sim, 2)
 	runner.check(sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "attack").is_empty(), "A3 attackers are not reissued")
 	sim.remove_object(1)
-	for expected in [first, second, barracks, reactor, depot, 2]:
+	for expected in [second, first, barracks, reactor, depot, 2]:
 		_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
 		Skirmish.decide(sim, 2)
 		sim.step()
@@ -276,6 +279,9 @@ func test_wave_targets_base_unless_enemy_near(runner) -> bool:
 		var world: Array = _wave_world(case[0])
 		_to_tick(world[0], Skirmish.FIRST_WAVE_TICK)
 		_bot_until_attack(world[0], world[1], Skirmish.FIRST_WAVE_TICK + 4000)
+		_to_tick(world[0], Skirmish.next_decision(world[0].tick(), 2))
+		Skirmish.decide(world[0], 2)
+		world[0].step()
 		var expected: int = world[case[1]]
 		runner.check(_attack_targets(world[0], world[1]) == [expected, expected, expected, expected], "W1 enemy unit at " + str(case[0]) + ": wave targets " + str(expected) + ", got " + str(_attack_targets(world[0], world[1])))
 	return true
@@ -600,9 +606,9 @@ func test_bot_state_survives_seat_wrapper(runner) -> bool:
 	var sim = Skirmish.create()
 	var lockstep = Lockstep.new(2, [1, 2] as Array[int], 2)
 	var first: Dictionary = Skirmish._bot(SeatSim.new(sim, lockstep), 2)
-	first.prev = 77
-	runner.check(Skirmish._bot(SeatSim.new(sim, lockstep), 2).prev == 77, "SK20 a fresh seat wrapper sees the bot state of the earlier one")
-	runner.check(Skirmish._bot(sim, 2).prev == 77, "SK20 the real simulation holds the same bot state")
+	first.waves = [77]
+	runner.check(Skirmish._bot(SeatSim.new(sim, lockstep), 2).waves == [77], "SK20 a fresh seat wrapper sees the bot state of the earlier one")
+	runner.check(Skirmish._bot(sim, 2).waves == [77], "SK20 the real simulation holds the same bot state")
 	return true
 
 func test_headless_client_rejects_unknown_faction(runner) -> bool:

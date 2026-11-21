@@ -5,12 +5,18 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Economy = preload("res://tests/economy_fixture.gd")
+const MapData = preload("res://scripts/simulation/map_data.gd")
 
 const RALLY := Vector2(43.5, 14.5)
 const SEAT: int = 2
+const CROWN := "res://data/maps/broken_crown.json"
+const ASHFALL := "res://data/maps/ashfall.json"
+const A: int = 3
+const B: int = 4
+const DUE: int = 1000
 
 func cases() -> Array[Callable]:
-	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_takes_highest_cost_first, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave]
+	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_takes_highest_cost_first, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_engaged_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision]
 
 func _world() -> RefCounted:
 	var sim = Simulation.new([], Vector2i(48, 32))
@@ -22,12 +28,35 @@ func _world() -> RefCounted:
 	return sim
 
 func _ready(sim: RefCounted, kind: String, count: int) -> Array:
+	return _around(sim, SEAT, RALLY, kind, count)
+
+static func _around(sim: RefCounted, seat: int, centre: Vector2, kind: String, count: int) -> Array:
 	var ids: Array = []
 	for i in range(63):
 		if ids.size() == count: break
-		var id: int = sim.spawn(SEAT, RALLY + Vector2(i % 9 - 4, floori(i / 9.0) - 4), kind)
+		var id: int = sim.spawn(seat, centre + Vector2(i % 9 - 4, floori(i / 9.0) - 4), kind)
 		if id >= 0: ids.append(id)
 	return ids
+
+static func stock(sim: RefCounted, seat: int, kind: String, count: int) -> Array:
+	return _around(sim, seat, Vector2(MapData.start_cell(sim.map_data(), seat)) + Vector2(0.5, 0.5), kind, count)
+
+# Seats are [seat, team] or [seat, team, faction]; every seat starts with its headquarters and no credits.
+static func arena(map_path: String, seats: Array) -> RefCounted:
+	var rows: Array[Dictionary] = []
+	var ids: Array[int] = []
+	for entry: Array in seats:
+		rows.append({"seat": entry[0], "team": entry[1], "controller": "human", "faction": entry[2] if entry.size() > 2 else "usa", "credits": 0})
+		ids.append(entry[0])
+	var sim: RefCounted = MapData.create(MapData.load(map_path), rows)
+	sim.start_match(ids)
+	return sim
+
+func _crown() -> RefCounted:
+	var sim: RefCounted = arena(CROWN, [[1, 1], [2, 1], [A, 2], [B, 2]])
+	Economy.add_completed(sim, 1, "usa_barracks", Vector2i(20, 18))
+	Economy.add_completed(sim, 2, "usa_barracks", Vector2i(94, 18))
+	return sim
 
 func _log() -> Dictionary:
 	return {"seen": {}, "launches": []}
@@ -52,8 +81,8 @@ func _play(sim: RefCounted, rec: Dictionary, until: int, attack_tick: int = Skir
 func _memory(sim: RefCounted) -> Dictionary:
 	return Skirmish.team_memory(sim, SEAT)
 
-func _first_decision_from(tick: int) -> int:
-	return Skirmish.next_decision(tick - 1, SEAT)
+func _first_decision_from(tick: int, seat: int = SEAT) -> int:
+	return Skirmish.next_decision(tick - 1, seat)
 
 func _attacking(sim: RefCounted, ids: Array) -> Array:
 	var found: Array = []
@@ -314,4 +343,256 @@ func test_bot_without_building_launches_no_wave(runner) -> bool:
 	var rec: Dictionary = _log()
 	_play(sim, rec, Skirmish.WAVE_WAIT + 100, 0)
 	runner.check(rec.launches.is_empty(), "BR4 a seat with no victory building is not a live bot and launches no wave")
+	return true
+
+# Every attack order a bot sends on its decision tick; a launch is one that names a unit no earlier order named.
+func _team_play(sim: RefCounted, rec: Dictionary, until: int, seats: Array[int], attack_tick: int = DUE, remove: bool = true) -> void:
+	if not rec.has("orders"): rec.orders = []
+	while sim.tick() < until:
+		Skirmish.issue_opponents(sim, seats, attack_tick)
+		var gone: Array = []
+		for command in sim.snapshot().pending_commands:
+			if command.type != "attack" or not seats.has(command.player) or not Skirmish.decides(sim.tick(), command.player): continue
+			var ids: Array = command.entity_ids.duplicate()
+			ids.sort()
+			var order := {"tick": sim.tick(), "player": command.player, "target": command.target_id, "ids": ids}
+			rec.orders.append(order)
+			if ids.all(func(id: int) -> bool: return rec.seen.has(id)): continue
+			for id in ids: rec.seen[id] = true
+			rec.launches.append(order)
+			gone.append_array(ids)
+		sim.step()
+		if remove:
+			for id in gone: sim.remove_object(id)
+
+func _both(sim: RefCounted, rec: Dictionary, until: int, remove: bool = true) -> void:
+	_team_play(sim, rec, until, [A, B], DUE, remove)
+
+func _owner_of(sim: RefCounted, building: Variant) -> int:
+	for entry in sim.snapshot().buildings:
+		if entry.id == building: return entry.owner
+	return -1
+
+func _of(rec: Dictionary, player: int) -> Array:
+	return rec.launches.filter(func(row: Dictionary) -> bool: return row.player == player)
+
+func test_team_bots_leave_within_one_round(runner) -> bool:
+	var sim = _crown()
+	var four: Array = stock(sim, A, "usa_tank", 4)
+	var six: Array = stock(sim, B, "usa_tank", 6)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + 2 * Skirmish.DECISION_TICKS)
+	var first: int = _first_decision_from(DUE, A)
+	var ticks: Array = rec.launches.map(func(row: Dictionary) -> int: return row.tick)
+	runner.check(rec.launches.size() == 2 and ticks.all(func(tick: int) -> bool: return tick >= first and tick < first + Skirmish.DECISION_TICKS), "BR4 both bots leave inside one round from the first decision after due although seat 3 alone is below the share, got %s" % [rec.launches.map(func(row: Dictionary) -> String: return "%d:%d" % [row.player, row.tick])])
+	runner.check(four.size() == 4 and six.size() == 6 and _of(rec, A).size() == 1 and _of(rec, B).size() == 1, "BR4 each bot sends one order, got %d and %d" % [_of(rec, A).size(), _of(rec, B).size()])
+	return true
+
+func test_team_wave_takes_from_every_live_bot(runner) -> bool:
+	var sim = _crown()
+	var few: Array = stock(sim, A, "usa_tank", 3)
+	var many: Array = stock(sim, B, "usa_tank", 8)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + 2 * Skirmish.DECISION_TICKS)
+	runner.check(_of(rec, A).size() == 1 and _of(rec, A)[0].ids == few, "BR4 the launching bot sends all three of its tanks, got %s" % [_of(rec, A)])
+	runner.check(_of(rec, B).size() == 1 and _of(rec, B)[0].ids == many.slice(0, 7), "BR4 the joiner takes up to what is left of the target (8496 less 2700): seven tanks, not its half share of five, got %s" % [_of(rec, B)])
+	var rich = _crown()
+	var a_tanks: Array = stock(rich, A, "usa_tank", 12)
+	var b_tanks: Array = stock(rich, B, "usa_tank", 12)
+	var rich_rec: Dictionary = _log()
+	_both(rich, rich_rec, DUE + 2 * Skirmish.DECISION_TICKS)
+	runner.check(_of(rich_rec, A).size() == 1 and _of(rich_rec, A)[0].ids == a_tanks.slice(0, 5) and _of(rich_rec, B).size() == 1 and _of(rich_rec, B)[0].ids == b_tanks.slice(0, 5), "BR4 two bots that each hold more than half the target send five tanks each, got %s" % [rich_rec.launches])
+	return true
+
+func test_team_target_sums_cost_of_live_bots(runner) -> bool:
+	var sim: RefCounted = arena(CROWN, [[1, 1], [2, 1], [A, 2, "usa"], [B, 2, "china"]])
+	stock(sim, A, "usa_tank", 5)
+	stock(sim, B, "usa_tank", 4)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + 100)
+	runner.check(rec.launches.is_empty(), "BR3 nine tanks (8100) stay below the team target 8 x 2 x 521 = 8336, got %s" % [rec.launches])
+	stock(sim, B, "usa_tank", 1)
+	_both(sim, rec, DUE + 200)
+	var total: int = 0
+	for row in rec.launches: total += row.ids.size()
+	runner.check(rec.launches.size() == 2 and total == 10 and rec.launches[0].tick >= DUE + 100, "BR3 the tenth tank (9000) releases the team wave, got %s" % [rec.launches])
+	return true
+
+func test_teammate_without_first_decision_not_counted(runner) -> bool:
+	var sim = _crown()
+	var lead: Array = stock(sim, A, "usa_tank", 5)
+	stock(sim, B, "usa_tank", 12)
+	var rec: Dictionary = _log()
+	_team_play(sim, rec, DUE + 100, [A])
+	runner.check(rec.launches.size() == 1 and rec.launches[0].ids == lead, "BR4 a seat that has not decided is not live: seat 3 alone meets a target of 4248, got %s" % [rec.launches])
+	var objective: Variant = Skirmish.team_memory(sim, 2).objective
+	runner.check(objective != null and objective == rec.launches[0].target, "BR5 the launch wrote the team objective %s" % [objective])
+	_both(sim, rec, DUE + 200)
+	runner.check(_of(rec, B).is_empty(), "BR4 the late seat is no joiner of a wave already formed, got %s" % [_of(rec, B)])
+	return true
+
+func test_team_waves_share_objective(runner) -> bool:
+	var sim = _crown()
+	stock(sim, A, "usa_tank", 5)
+	stock(sim, B, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + 100)
+	var objective: Variant = Skirmish.team_memory(sim, 2).objective
+	runner.check(rec.launches.size() == 2 and rec.launches[0].target == rec.launches[1].target and rec.launches[0].target == objective, "BR5 both waves target the one team objective, got %s, objective %s" % [rec.launches.map(func(row: Dictionary) -> Variant: return row.target), objective])
+	runner.check(_owner_of(sim, objective) == 1, "BR5 the objective is a building of the lowest-id enemy when none was attacked, got owner %d" % _owner_of(sim, objective))
+	return true
+
+func test_defeated_enemy_with_defence_is_no_victim(runner) -> bool:
+	var sim = _crown()
+	var origin := Vector2i(-1, -1)
+	for entry in sim.snapshot().buildings:
+		if entry.owner != 1: continue
+		if entry.kind == "usa_command_center": origin = Vector2i(entry.origin[0], entry.origin[1])
+		sim.remove_object(entry.id)
+	var battery: int = Economy.add_completed(sim, 1, "usa_defence", origin)
+	stock(sim, A, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_team_play(sim, rec, DUE + 100, [A])
+	var objective: Variant = Skirmish.team_memory(sim, 2).objective
+	runner.check(battery >= 0 and rec.launches.size() == 1 and _owner_of(sim, objective) == 2, "BR5 a player left with only a defence is not live; the wave goes to live player 2, got objective %s owner %d" % [objective, _owner_of(sim, objective)])
+	return true
+
+func test_team_waves_alternate_human_target(runner) -> bool:
+	var sim = _crown()
+	var rec: Dictionary = _log()
+	var owners: Array = []
+	for wave in range(3):
+		stock(sim, A, "usa_tank", 10)
+		stock(sim, B, "usa_tank", 10)
+		_both(sim, rec, Skirmish.team_memory(sim, 2).get("due", DUE) + 2 * Skirmish.DECISION_TICKS)
+		owners.append(_owner_of(sim, Skirmish.team_memory(sim, 2).objective))
+	runner.check(owners == [1, 2, 1], "BR5 waves go to the enemy attacked least recently: 1, 2, 1, got %s" % [owners])
+	return true
+
+func test_three_enemies_least_recent_first(runner) -> bool:
+	var sim: RefCounted = arena(ASHFALL, [[1, 1], [2, 1], [8, 1], [4, 2], [5, 3], [6, 4]])
+	var rec: Dictionary = _log()
+	var owners: Array = []
+	for wave in range(4):
+		for seat in [1, 2, 8]: stock(sim, seat, "usa_tank", 10)
+		var due: int = Skirmish.team_memory(sim, 1).get("due", DUE)
+		_team_play(sim, rec, due + 3 * Skirmish.DECISION_TICKS + 10, [1, 2, 8])
+		owners.append(_owner_of(sim, Skirmish.team_memory(sim, 1).objective))
+	runner.check(owners == [4, 5, 6, 4], "BR5 three enemy players are attacked least recent first, ties lowest id: 4, 5, 6, 4, got %s" % [owners])
+	return true
+
+func test_objective_repicked_once_for_team(runner) -> bool:
+	var sim = _crown()
+	stock(sim, A, "usa_tank", 5)
+	stock(sim, B, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_both(sim, rec, _first_decision_from(DUE, A) + 1, false)
+	var old: Variant = Skirmish.team_memory(sim, 2).objective
+	runner.check(old != null and rec.launches.size() == 1, "BR5 seat 3 formed the wave and wrote the objective, got %s, %s" % [old, rec.launches])
+	if old != null: sim.remove_object(old)
+	_both(sim, rec, DUE + 100, false)
+	var fresh: Variant = Skirmish.team_memory(sim, 2).objective
+	var later: Array = rec.orders.filter(func(row: Dictionary) -> bool: return row.tick > _first_decision_from(DUE, A))
+	runner.check(fresh != null and fresh != old and later.size() >= 2 and later.all(func(row: Dictionary) -> bool: return row.target == fresh), "BR5 the first bot to notice stores one new objective and every wave follows it, got %s, objective %s" % [later.map(func(row: Dictionary) -> Variant: return row.target), fresh])
+	return true
+
+func test_engaged_wave_returns_to_team_objective(runner) -> bool:
+	var sim = _crown()
+	stock(sim, A, "usa_tank", 5)
+	stock(sim, B, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + 100, false)
+	var objective: Variant = Skirmish.team_memory(sim, 2).objective
+	var at: int = Skirmish.next_decision(sim.tick(), A)
+	_both(sim, rec, at, false)
+	var lead: Dictionary = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == A and unit.kind == "usa_tank")[0]
+	var intruder: int = -1
+	for step in [Vector2(0, -3), Vector2(0, 3), Vector2(-3, 0), Vector2(3, 0)]:
+		if intruder < 0: intruder = sim.spawn(1, Vector2(lead.position[0], lead.position[1]) + step, "usa_rifle_infantry")
+	_both(sim, rec, at + 1, false)
+	var engaged: Array = rec.orders.filter(func(row: Dictionary) -> bool: return row.tick == at and row.player == A)
+	runner.check(intruder >= 0 and engaged.size() == 1 and engaged[0].target == intruder, "BR5 a wave with an enemy unit in reach turns on it, got %s" % [engaged])
+	runner.check(Skirmish.team_memory(sim, 2).objective == objective, "BR5 the engaged re-pick never writes the team objective")
+	sim.remove_object(intruder)
+	_both(sim, rec, at + Skirmish.DECISION_TICKS + 1, false)
+	var back: Array = rec.orders.filter(func(row: Dictionary) -> bool: return row.tick == at + Skirmish.DECISION_TICKS and row.player == A)
+	runner.check(back.size() == 1 and back[0].target == objective, "BR5 when the unit is gone the wave returns to the team objective, got %s, objective %s" % [back, objective])
+	return true
+
+func test_lone_bot_is_team_of_one(runner) -> bool:
+	var sim = _world()
+	_ready(sim, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_play(sim, rec, 100, 0)
+	var memory: Dictionary = _memory(sim)
+	runner.check(rec.launches.size() == 1 and memory.joiners == [] and memory.left_cost == 0, "BR4 a lone bot launches by itself and leaves no joiner, got %s" % [memory])
+	runner.check(memory.objective != null and _owner_of(sim, memory.objective) == 1 and memory.attacked_at.get(1, -1) == rec.launches[0].tick, "BR5 a lone bot writes its objective and the attacked tick of that enemy, got %s" % [memory])
+	return true
+
+func test_dead_teammate_does_not_hold_clock(runner) -> bool:
+	var sim = _crown()
+	for entry in sim.snapshot().buildings:
+		if entry.owner == B and entry.kind == "usa_command_center": sim.remove_object(entry.id)
+	var lone: Array = stock(sim, A, "usa_tank", 5)
+	stock(sim, B, "usa_tank", 12)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + 100)
+	runner.check(rec.launches.size() == 1 and rec.launches[0].player == A and rec.launches[0].ids == lone and rec.launches[0].tick == _first_decision_from(DUE, A), "BR4 a defeated teammate neither holds the clock nor raises the target: seat 3 leaves at the first decision with five tanks, got %s" % [rec.launches])
+	runner.check(Skirmish.team_memory(sim, 2).joiners == [] and Skirmish.team_memory(sim, 2).objective != null, "BR4 no joiner is waited for, got %s" % [Skirmish.team_memory(sim, 2)])
+	return true
+
+func test_last_live_joiner_takes_up_to_left(runner) -> bool:
+	var sim: RefCounted = arena(ASHFALL, [[1, 1], [2, 1], [8, 1], [4, 2]])
+	stock(sim, 1, "usa_tank", 5)
+	stock(sim, 2, "usa_tank", 5)
+	var last: Array = stock(sim, 8, "usa_tank", 12)
+	var rec: Dictionary = _log()
+	var first: int = _first_decision_from(DUE, 1)
+	_team_play(sim, rec, first + 1, [1, 2, 8])
+	for entry in sim.snapshot().buildings:
+		if entry.owner == 2 and entry.kind == "usa_command_center": sim.remove_object(entry.id)
+	_team_play(sim, rec, DUE + 100, [1, 2, 8])
+	var rows: Array = rec.launches.filter(func(row: Dictionary) -> bool: return row.player == 8)
+	runner.check(rec.launches[0].player == 1 and rec.launches[0].tick == first and rows.size() == 1 and rows[0].ids == last.slice(0, 10), "BR4 seat 2 is defeated before it joins, so seat 8 is the last live joiner and takes up to the 8244 left: ten tanks, got %s" % [rec.launches.map(func(row: Dictionary) -> String: return "%d:%d:%d" % [row.player, row.tick, row.ids.size()])])
+	return true
+
+func test_rally_units_sent_to_defend_skip_the_join(runner) -> bool:
+	var sim = _crown()
+	stock(sim, A, "usa_tank", 4)
+	var home: Array = stock(sim, B, "usa_tank", 6)
+	var rec: Dictionary = _log()
+	_both(sim, rec, _first_decision_from(DUE, A) + 1, false)
+	var intruder: int = sim.spawn(1, Vector2(18.5, 79.5), "usa_rifle_infantry")
+	_both(sim, rec, DUE + 100, false)
+	var from_b: Array = rec.orders.filter(func(row: Dictionary) -> bool: return row.player == B)
+	runner.check(intruder >= 0 and not from_b.is_empty() and from_b.all(func(row: Dictionary) -> bool: return row.target == intruder) and Skirmish.team_memory(sim, 2).joiners == [], "BR4 units that go to _defend at the join are skipped, the wave leaves short, got %s" % [from_b])
+	runner.check(home.size() == 6 and Skirmish.team_memory(sim, 2).objective != null, "BR5 seat 3's launch still wrote the objective")
+	return true
+
+func test_team_forms_on_either_side_of_due(runner) -> bool:
+	for due in [_first_decision_from(DUE, A), _first_decision_from(DUE, A) + 1]:
+		var sim = _crown()
+		stock(sim, A, "usa_tank", 5)
+		stock(sim, B, "usa_tank", 5)
+		var rec: Dictionary = _log()
+		_team_play(sim, rec, due + 2 * Skirmish.DECISION_TICKS, [A, B], due)
+		var ticks: Array = rec.launches.map(func(row: Dictionary) -> int: return row.tick)
+		var forming: int = A if due == _first_decision_from(DUE, A) else B
+		runner.check(rec.launches.size() == 2 and rec.launches[0].player == forming and ticks[1] - ticks[0] <= Skirmish.DECISION_TICKS - 1 and rec.launches[0].target == rec.launches[1].target, "BR4 due %d: seat %d forms, the other joins at its next decision with the same objective, got %s" % [due, forming, rec.launches])
+	return true
+
+func test_released_by_is_first_team_decision(runner) -> bool:
+	var sim = _crown()
+	stock(sim, A, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	var due: int = _first_decision_from(DUE, A) - 3
+	_team_play(sim, rec, _first_decision_from(DUE, A) + 1, [A, B], due)
+	stock(sim, B, "usa_tank", 5)
+	_team_play(sim, rec, due + 100, [A, B], due)
+	runner.check(rec.launches.size() == 2 and Skirmish.team_memory(sim, 2).released_by == "size", "BR4 target met by seat 4 after seat 3 already decided past due is released by size, got %s" % [Skirmish.team_memory(sim, 2).released_by])
+	var timer = _crown()
+	stock(timer, A, "usa_tank", 5)
+	stock(timer, B, "usa_tank", 5)
+	_team_play(timer, _log(), DUE + 100, [A, B])
+	runner.check(Skirmish.team_memory(timer, 2).released_by == "timer", "BR4 target met at the first team decision from due is released by timer, got %s" % [Skirmish.team_memory(timer, 2).released_by])
 	return true

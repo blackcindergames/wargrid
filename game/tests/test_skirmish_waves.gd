@@ -5,6 +5,7 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Economy = preload("res://tests/economy_fixture.gd")
 const Combat = preload("res://scripts/simulation/combat.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
+const BotRules = preload("res://tests/test_bot_rules.gd")
 
 const RALLY := Vector2(43.5, 14.5)
 const FULL: int = 5
@@ -104,12 +105,13 @@ func test_late_units_form_next_wave(runner) -> bool:
 	runner.check(_targets(sim, late)[0] != null, "W4 the late unit attacks once its own wave waited WAVE_WAIT after due, got " + str(_targets(sim, late)))
 	return true
 
-func _released_target(runner, build: Callable, label: String) -> int:
+func _released_target(runner, build: Callable, label: String, later: bool = false) -> int:
 	var sim = _world()
 	build.call(sim)
 	var ids: Array = _full_wave(sim)
 	_run(sim, Skirmish.FIRST_WAVE_TICK)
 	_decide(sim)
+	if later: _run(sim, sim.tick() + Skirmish.DECISION_TICKS)
 	var targets: Array = _targets(sim, ids)
 	runner.check(targets.all(func(target) -> bool: return target == targets[0]), label + " one shared target, got " + str(targets))
 	return targets[0] if targets[0] != null else -1
@@ -147,7 +149,7 @@ func test_target_score_classes(runner) -> bool:
 	ids.clear()
 	picked = _released_target(runner, func(sim) -> void:
 		ids.append(Economy.add_completed(sim, 1, "usa_power_plant", Vector2i(38, 23)))
-		ids.append(sim.spawn(1, Vector2(43.5, 23.5), "usa_tank")), "T5")
+		ids.append(sim.spawn(1, Vector2(43.5, 23.5), "usa_tank")), "T5", true)
 	runner.check(picked == ids[1], "T5 a vehicle (28) ranks above a power plant (27) one cell farther, got " + str(picked) + " of " + str(ids))
 	return true
 
@@ -159,6 +161,15 @@ func test_waves_deterministic(runner) -> bool:
 		_rally_units(sim, 5)
 		_run(sim, Skirmish.FIRST_WAVE_TICK + Skirmish.WAVE_WAIT + 600)
 	runner.check(a.snapshot() == b.snapshot(), "W5 two runs over the same ticks end in equal state")
+	var teams: Array = []
+	for run in range(2):
+		var sim: RefCounted = BotRules.arena(BotRules.CROWN, [[1, 1], [2, 1], [3, 2], [4, 2]])
+		for seat in [3, 4]: BotRules.stock(sim, seat, "usa_tank", 12)
+		while sim.tick() < Skirmish.FIRST_WAVE_TICK + 2 * Skirmish.WAVE_WAIT:
+			Skirmish.issue_opponents(sim, [3, 4] as Array[int])
+			sim.step()
+		teams.append([sim.snapshot(), Skirmish.team_memory(sim, 2)])
+	runner.check(teams[0] == teams[1] and teams[0][1].wave >= 1, "W5 two team runs end in equal state and equal wave clock, got wave %s" % [teams[0][1].get("wave")])
 	return true
 
 func test_wave_leaves_masked_hole(runner) -> bool:
