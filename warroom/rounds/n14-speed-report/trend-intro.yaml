@@ -19,7 +19,7 @@ options:
       they move: the last run against the median of the three runs before it, with a change inside the
       run-to-run spread shown as same. Stress = far more units than a real match; headroom = a real 3v3
       match on this Mac. Every limit is in the ledger.
-    notes: Honest about the miss; four sentences.
+    notes: Honest about the miss; three sentences.
   B:
     name: Neutral
     text: >-
