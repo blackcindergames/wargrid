@@ -387,9 +387,9 @@ class PerfChartTest(unittest.TestCase):
 
     def test_trend_against_median_of_last_three(self) -> None:
         rows = [
-            self.pl("a", 5.0, date="2026-11-01"),
-            self.pl("b", 1.0, date="2026-11-02"),
-            self.pl("c", 1.2, date="2026-11-03"),
+            self.pl("a", 0.5, date="2026-11-01"),
+            self.pl("b", 1.3, date="2026-11-02"),
+            self.pl("c", 1.0, date="2026-11-03"),
             self.pl("d", 1.1, date="2026-11-04"),
             self.pl("e", 1.21, date="2026-11-05"),
         ]
@@ -446,9 +446,16 @@ class PerfChartTest(unittest.TestCase):
             assert text is not None
             self.assertTrue(text.isascii())
             self.assertNotIn("budget", text)
-        busy = self.trend([self.pl("a", 1.0, load="3.1")])
-        assert busy is not None
-        self.assertTrue(busy.endswith(" (busy host)"))
+        busy_runs = [
+            [self.pl("a", 1.0, load="3.1")],
+            [self.pl("a", 5.0, method="pre-P1", date="2026-11-01"), self.pl("b", 1.0, load="3.1")],
+            [self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 1.004, load="3.1")],
+            [self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 1.21, load="3.1")],
+        ]
+        for rows in busy_runs:
+            busy = self.trend(rows)
+            assert busy is not None
+            self.assertTrue(busy.endswith(" (busy host)"), busy)
 
     def test_trend_zero_baseline_is_first_run(self) -> None:
         rows = [self.pl("a", 0.0, date="2026-11-01"), self.pl("b", 1.0, date="2026-11-02")]
