@@ -233,6 +233,20 @@ Notes per host (docs):
 
 **Unverified.** Delivery times and compressed sizes on every alternative (no accounts used); which hosts serve our build-time `.br` copies as stored, and bunny.net's compression size limit; Netlify's per-file limit and brotli support; deploy atomicity on bunny.net, Vercel and Cloudflare; bunny.net Edge Rules through its API; the fly.io proxy reference page (not read).
 
+## Aiven managed Postgres and Valkey (spiked 2026-11-21)
+
+An input for the M9 hosting comparison in the [blueprint](../blueprint.md#m9--3v3-online), for accounts, match history, statistics and ranking (Postgres) and presence, sessions and matchmaking (Valkey). Plain Postgres and Valkey protocols, so it keeps the cloud-agnostic rule. Labels: **measured**, **docs** (aiven.io service pricing page and pricing pages, read 2026-11-21), **CLI** (`avn service plans`, aiven-client 4.19.0).
+
+| Plan, Frankfurt | Postgres | Valkey | Terms (docs) |
+|---|---|---|---|
+| Free (DigitalOcean or UpCloud `fra`) | $0; 1 GB disk, `max_connections` 20 (measured) | $0; 1 GB RAM | may be powered off "with no continuative activity"; "Single backup only"; no SLA stated |
+| Developer (DigitalOcean `fra`) | $5/month, 8 GB | $15/month, 4 GB | "not automatically powered off when inactive"; single backup only, no point-in-time restore, no SLA stated |
+| Startup (cheapest with full backups and the 99.99 % SLA) | Startup-4 $75 (DigitalOcean) to $115 (AWS) | Startup-1 $19 to $30 | billed per hour while powered on; network traffic not billed separately |
+
+**Measured** from a throwaway fly.io machine in `fra` to a free Postgres 18.7 service: the service landed in `do-fra` as requested, although the docs say free and developer plans "Cannot select a specific cloud or region". A query on an open connection took 14.6-15.4 ms (20 queries); a new `psql` process with TLS, login and one query took 150-184 ms (nine of ten runs; the first took 2.3 s). aiven-client 4.19.0 prints the literal `<redacted>` instead of the password in `service_uri` and `user-get`, so set one with `avn service user-password-reset --new-password`.
+
+**Assessment (Claude, not a user decision).** Developer Postgres at $5 is the cheapest always-on managed option seen so far, but a single backup is thin for accounts and rankings. The tier with real backups costs about four to six times Neon Launch. Valkey earns nothing before there is more than one relay machine (see [high availability options](#high-availability-options-proposed-2026-11-05)); the relay's memory holds presence and matchmaking until then.
+
 ## Unverified
 
 - fly: public hostname per worker as one app per worker (cost, deploy commands); the actual bill; `performance-1x` under our relay load (planned for M9, user 2026-11-05). Docs, fetched 2026-11-05 (fly.io/docs/about/pricing, /machines/cpu-performance): `shared` baseline 5 ms per 80 ms (6.25 %), `performance` 100 %; `performance-1x` 2 GB $33/month and `performance-2x` 4 GB $66/month at the lowest-priced regions, `fra` costs more (its 1 GB shared example is $7.73 against $6.70 in `iad`); stopped or suspended machines pay only $0.15 per GB of rootfs per month. Unknown: `performance` price in `fra`, whether `shared-cpu-2x` doubles the baseline.
