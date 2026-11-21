@@ -5,15 +5,15 @@ Evidence file and resume record for night 8, [Play on after a leave](../superpow
 ## Resume record
 
 ```text
-Resume record (updated 2026-11-21, Task 6b GREEN after review fix round, uncommitted)
-Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD 25fb4721 (Task 5 committed); Task 6b game/scripts/net/headless_client.gd uncommitted
-Last green task / next incomplete task: Task 6b (headless client --pump) / Task 7
-Changed paths since last commit: game/scripts/net/headless_client.gd, docs/reference/play-on-after-a-leave-verification.md
-Last command / cases / checks / failures / exit / marker: SUITE(t6bf) / 1275 / 152814 / 0 / 0 / TESTS PASSED 152814; STATIC(t6bf) lint 0, warnings 0 (189 files); NET match 9013 and left-mid PASSED; by hand with --pump on s1: left-mid PASSED, defeat 2@300 on both seats ends both at 301 with both DEFEAT lines (5 of 5 runs, 2 with s2 stalled at 295), match PASSED 9013 with --seat-script human
+Resume record (updated 2026-11-21, Task 7 GREEN, uncommitted)
+Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD 9b7816f3 (Task 6b committed); Task 7 tools/run_netplay.sh, .github/workflows/ci.yml, this file uncommitted
+Last green task / next incomplete task: Task 7 (netplay scenarios) / Task 8
+Changed paths since last commit: tools/run_netplay.sh, .github/workflows/ci.yml, docs/reference/play-on-after-a-leave-verification.md
+Last command / cases / checks / failures / exit / marker: NET trio-play-on 2.7 s (5 more runs 5 of 5), trio-left-first 2.5 s, trio-result 3.1 s (3 more runs 3 of 3, both clients 1201), left-mid-pump 2.2 s, each NETPLAY PASSED; wall sum 10.5 s under load 6-8 (host under load); m1 (_defeated never true) red, s3 ended_left 325; m2 (take third argument null) red, ends 325-330; REVERT exit 0 each; run_shell_checks exit 0; actionlint exit 0; run_checks.sh CHECKS PASSED 5
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: owner answers Q2 a, Q3 a, Q4 a, Q5 a, Q6 a, Q7 b, Q8 a, Q9 a, Q10 b, Q11 b, Q12 a, Q20 a (user, 2026-11-21); Q19 a (user, 2026-11-19); test-only helpers used by new test_pal_* cases allowed (user, 2026-11-21); Q1, Q13-Q18 moot; backup B1 F42 spike only (user, 2026-11-21). Pre-authorized: one local commit per GREEN task (handoff). Deferred: merge decision, rendered rerun after a merge (game/scripts/match/ changes), CI wall times of the four new netplay scenarios (need the owner's push).
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: coordinator commits Task 6b, then Task 7
+Next exact action: coordinator commits Task 7, then Task 8
 ```
 
 Ledger, rulings and morning summary: `ledger.md`, `morning-summary.md` in the run's work folder `~/projects/wargrid-overnight-work/play-on/` (private). Logs: `logs/` there.
@@ -62,7 +62,7 @@ Filled by Task 1 Step 3 (`rg -n '^(static )?(func|var|const|class) <name>\b' <fi
 | 5 | Online driver passes the note | GREEN (uncommitted), reapplied after the helper ruling; review fix round done (P3-1: closes-room case pins `notice() == ""`, killed by the `_close_room` relay-loss mutant; `_single_until` merged into `_trio_until`) | (coordinator commits) |
 | 6a | Headless client: three seats, `--defeat` | GREEN, review fix round done (P2-1: removal repeats until FRC rebuild holes are gone) | ba4cc3ee |
 | 6b | Headless client: `--pump` with the credit clamp | GREEN (uncommitted), review fix round done (P1-1/P2-1: one tick per call, only after that tick's hooks and script ran; pumped `match` back at 9013); `--pump` exercised by hand, scenarios in Task 7 | (coordinator commits) |
-| 7 | Netplay scenarios (trio x3, `left-mid-pump`) | not started | |
+| 7 | Netplay scenarios (trio x3, `left-mid-pump`) | GREEN (uncommitted); each `NETPLAY PASSED`, m1 and m2 red near 325, `run_checks.sh` 5 of 5 | (coordinator commits) |
 | 8 | Docs | not started | |
 | 9 | Gate (checks, netplay, benchmark, reviews) | not started | |
 | 10 | Review fixes, stop gate | not started | |
