@@ -5,15 +5,15 @@ Evidence file and resume record for night 8, [Play on after a leave](../superpow
 ## Resume record
 
 ```text
-Resume record (updated 2026-11-21, Task 7 GREEN, uncommitted)
-Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD 9b7816f3 (Task 6b committed); Task 7 tools/run_netplay.sh, .github/workflows/ci.yml, this file uncommitted
-Last green task / next incomplete task: Task 7 (netplay scenarios) / Task 8
-Changed paths since last commit: tools/run_netplay.sh, .github/workflows/ci.yml, docs/reference/play-on-after-a-leave-verification.md
-Last command / cases / checks / failures / exit / marker: NET trio-play-on 2.7 s (5 more runs 5 of 5), trio-left-first 2.5 s, trio-result 3.1 s (3 more runs 3 of 3, both clients 1201), left-mid-pump 2.2 s, each NETPLAY PASSED; wall sum 10.5 s under load 6-8 (host under load); m1 (_defeated never true) red, s3 ended_left 325; m2 (take third argument null) red, ends 325-330; REVERT exit 0 each; run_shell_checks exit 0; actionlint exit 0; run_checks.sh CHECKS PASSED 5
+Resume record (updated 2026-11-21, Task 8 GREEN, docs fix round done, uncommitted)
+Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD a939ae22 (Task 7 committed); Task 8 docs uncommitted
+Last green task / next incomplete task: Task 8 (docs) / Task 9 (gate)
+Changed paths since last commit: docs/guide/01-big-picture.md, 03-entities.md, 04-the-tick.md (fix round), 11-multiplayer.md, 13-testing-and-tooling.md, docs/development.md, docs/reference/sim-interface.md (the three contract items plus "and tests"), docs/STATUS.md (night 8 row), this file
+Last command / cases / checks / failures / exit / marker: sh tools/check_public.sh exit 0 (log t8-check-public.log); rg on every touched path and link; footers of the five chapters at a939ae22 (the docs commit is one later); fix round: check_public.sh exit 0 (log t8f-check-public.log)
 Known red case or blocker: none
-Approved decisions, pre-authorizations used, deferred gates: owner answers Q2 a, Q3 a, Q4 a, Q5 a, Q6 a, Q7 b, Q8 a, Q9 a, Q10 b, Q11 b, Q12 a, Q20 a (user, 2026-11-21); Q19 a (user, 2026-11-19); test-only helpers used by new test_pal_* cases allowed (user, 2026-11-21); Q1, Q13-Q18 moot; backup B1 F42 spike only (user, 2026-11-21). Pre-authorized: one local commit per GREEN task (handoff). Deferred: merge decision, rendered rerun after a merge (game/scripts/match/ changes), CI wall times of the four new netplay scenarios (need the owner's push).
+Approved decisions, pre-authorizations used, deferred gates: owner answers Q2 a, Q3 a, Q4 a, Q5 a, Q6 a, Q7 b, Q8 a, Q9 a, Q10 b, Q11 b, Q12 a, Q20 a (user, 2026-11-21); Q19 a (user, 2026-11-19); test-only helpers used by new test_pal_* cases allowed (user, 2026-11-21); Q1, Q13-Q18 moot; backup B1 F42 spike only (user, 2026-11-21). Pre-authorized: one local commit per GREEN task (handoff). Deferred: merge decision, rendered rerun after a merge (game/scripts/match/ changes), CI wall times of the four new netplay scenarios (need the owner's push); the docs review (Opus, one fix round) belongs to the coordinator.
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: coordinator commits Task 7, then Task 8
+Next exact action: coordinator commits Task 8, then Task 9
 ```
 
 Ledger, rulings and morning summary: `ledger.md`, `morning-summary.md` in the run's work folder `~/projects/wargrid-overnight-work/play-on/` (private). Logs: `logs/` there.
@@ -59,11 +59,11 @@ Filled by Task 1 Step 3 (`rg -n '^(static )?(func|var|const|class) <name>\b' <fi
 | 4a | Lockstep left-seat set and decision (incl. P7 shape, Q20) | GREEN | 9c5a5f77 |
 | 4b | Command and removal rows | GREEN (tests only) | bb16b62b |
 | 4c | Three-seat `Skirmish.create` and starts | GREEN | eb2c3ffa |
-| 5 | Online driver passes the note | GREEN (uncommitted), reapplied after the helper ruling; review fix round done (P3-1: closes-room case pins `notice() == ""`, killed by the `_close_room` relay-loss mutant; `_single_until` merged into `_trio_until`) | (coordinator commits) |
+| 5 | Online driver passes the note | GREEN, reapplied after the helper ruling; review fix round done (P3-1: closes-room case pins `notice() == ""`, killed by the `_close_room` relay-loss mutant; `_single_until` merged into `_trio_until`) | 25fb4721 |
 | 6a | Headless client: three seats, `--defeat` | GREEN, review fix round done (P2-1: removal repeats until FRC rebuild holes are gone) | ba4cc3ee |
-| 6b | Headless client: `--pump` with the credit clamp | GREEN (uncommitted), review fix round done (P1-1/P2-1: one tick per call, only after that tick's hooks and script ran; pumped `match` back at 9013); `--pump` exercised by hand, scenarios in Task 7 | (coordinator commits) |
-| 7 | Netplay scenarios (trio x3, `left-mid-pump`) | GREEN (uncommitted); each `NETPLAY PASSED`, m1 and m2 red near 325, `run_checks.sh` 5 of 5 | (coordinator commits) |
-| 8 | Docs | not started | |
+| 6b | Headless client: `--pump` with the credit clamp | GREEN, review fix round done (P1-1/P2-1: one tick per call, only after that tick's hooks and script ran; pumped `match` back at 9013); `--pump` exercised by hand, scenarios in Task 7 | 9b7816f3 |
+| 7 | Netplay scenarios (trio x3, `left-mid-pump`) | GREEN; each `NETPLAY PASSED`, m1 and m2 red near 325, `run_checks.sh` 5 of 5 | a939ae22 |
+| 8 | Docs | GREEN, docs fix round done, uncommitted; guide chapters 01, 03, 04 (fix round), 11, 13, development notes, sim-interface (three items), STATUS row; `check_public.sh` exit 0; Opus docs review: 1 P1, 5 P2 (two owner items: sim-interface `take` signature, blueprint `_left_seat` sentence), fix round done | (coordinator commits) |
 | 9 | Gate (checks, netplay, benchmark, reviews) | not started | |
 | 10 | Review fixes, stop gate | not started | |
 | B1 | F42 spike (evidence only, private note) | not started | none (no repo change) |
