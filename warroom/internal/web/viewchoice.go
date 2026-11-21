@@ -35,14 +35,13 @@ type OptView struct {
 	Card                 *CardView
 	Audio                *AudioView
 	Sees, Notes, Changes string
-	// LongNotes: past the loader's limit the row's two lines may cut the notes, so About repeats them.
-	LongNotes bool
-	Folds     []FoldView
-	Extras    []FigureView
+	Folds                []FoldView
+	Extras               []FigureView
 }
 
+// HasAbout counts notes because About repeats them when the row's two lines cut them; warroom.js decides that.
 func (o *OptView) HasAbout() bool {
-	return o.Sees != "" || o.Changes != "" || len(o.Folds) > 0 || o.LongNotes
+	return o.Sees != "" || o.Changes != "" || len(o.Folds) > 0 || o.Notes != ""
 }
 
 type FlipButton struct {
@@ -287,7 +286,6 @@ func textCard(s *rounds.Step, o *rounds.Option) *CardView {
 
 func (b *builder) fillText(v *OptView, pb picBuilder, s *rounds.Step, o *rounds.Option) {
 	v.Sees, v.Notes, v.Changes = o.Sees, o.Notes, o.Changes
-	v.LongNotes = rounds.TextLen(o.Notes) > rounds.MaxNotesLen
 	crop := s.Crop
 	if o.Render != nil && o.Render.Crop != nil {
 		crop = o.Render.Crop

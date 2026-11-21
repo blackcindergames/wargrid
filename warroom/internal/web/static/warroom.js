@@ -239,6 +239,17 @@ function scaleNote() {
 
 // ---------- options ----------
 
+// About repeats exactly the notes a row's two lines cut, which only layout knows.
+function markCutNotes() {
+	for (const row of $$('.orow[data-show]')) {
+		const note = $('.onote', row);
+		$(`.about[data-opt="${row.dataset.show ?? ''}"]`)?.classList.toggle(
+			'cut',
+			!!note && note.scrollHeight > note.clientHeight + 1,
+		);
+	}
+}
+
 // The fade says the list goes on below its box.
 function markMoreOpts() {
 	const list = $('.rpanel .opts');
@@ -813,6 +824,7 @@ function init() {
 	fitBanners();
 	showCurrentChip();
 	markMoreOpts();
+	markCutNotes();
 	forgetGoneFrames();
 	renderMeasures();
 	askMeasures();
@@ -828,6 +840,7 @@ function start() {
 	if (new URLSearchParams(location.search).get('sheet') === '1') rootEl.dataset.sheet = '';
 	init();
 	void document.fonts.ready.then(() => {
+		markCutNotes();
 		scaleNote();
 		keepStage();
 	});
@@ -874,6 +887,7 @@ document.addEventListener('touchend', onTouch);
 addEventListener('resize', () => {
 	fitBanners();
 	markMoreOpts();
+	markCutNotes();
 	scaleNote();
 	syncPhone();
 });

@@ -257,7 +257,7 @@ templ About(opts []OptView) {
 		if o.HasAbout() {
 			<details class="about" data-opt={ o.Letter } hidden?={ !o.On }>
 				<summary>About { o.Letter }</summary>
-				if o.LongNotes {
+				if o.Notes != "" {
 					<p class="onotes">@Fmt(o.Notes)</p>
 				}
 				if o.Sees != "" {

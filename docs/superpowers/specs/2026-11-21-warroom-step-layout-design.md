@@ -37,7 +37,7 @@ The step page shows too much text, and its areas run into each other (user, 2026
 
 **Left panel (~260 px), the same on every step kind:**
 - named step tabs: today's chips, with the step key or short question as the name, plus Summary;
-- eyebrow (round, step n of m) and the question;
+- eyebrow ("Step n of m · round title", one line) and the question;
 - the always-visible "Look at" callout, in amber, shown in full and never clamped;
 - Details fold-outs, all closed by default: "Why this question" (`why`), "Claude's reason" (`recWhy`), "This round" (round `intro`);
 - the existing info blocks (checklist, uses, numbers, folds), also under Details, closed by default.
@@ -55,18 +55,18 @@ Today `Info` opens `why` on desktop, and step 1 opens the intro. Both change to 
 **Right panel (~340 px), choice steps (`pictures`, `text`, `audio`, `lab`):**
 - **Options list.**
   - First comes "Today" (from `ref`): a muted, dashed row on key 0, labelled `ref.label`. Choosing it shows the Today render on the full stage; it is viewing only, never a pick. T stays the built-in `tier` control, and digits 1 to 8 already pick A to H (user, 2026-11-21). While Today is shown, Pick is disabled and Enter does nothing, so no option can be recorded unseen. Showing Today is client-only, not URL state (my call).
-  - Then a row for each of A to H: the keycap, the name, and `notes` as an always-visible line. The selected row is marked with `--sel`.
+  - Then a row for each of A to H: the keycap, the name, and `notes` as an always-visible line, clamped to two lines (user, 2026-11-21). The selected row is marked with `--sel`.
 - **Under the list, at one fixed position on every step** (the list scrolls in its own box and clamps `notes` to two lines; ruling and owner answer 2026-11-21):
   - `Pick X (Enter)`, letter only (cherry-picked `0158eb3c`; its width stays constant);
-  - the neutral button with its hint;
-  - the note field (`NoteBox`, moved here from the left);
+  - the neutral button, its hint in a tooltip (user, 2026-11-21);
+  - the note field (`NoteBox`, moved here from the left), with a placeholder instead of a label (user, 2026-11-21);
   - Back/Skip (`StepNav`, moved here).
-- Option text beyond `notes` (`sees`, `changes`, the option's own `folds`) goes in a left Details fold-out, "About <letter>", that follows the selected option and is closed by default (user, 2026-11-21). The right-hand `Details` section goes away.
+- Option text beyond `notes` (`sees`, `changes`, the option's own `folds`) goes in a left Details fold-out, "About <letter>", that follows the selected option and is closed by default (user, 2026-11-21). About also repeats a `notes` line the list clamp cuts, so nothing is lost. The right-hand `Details` section goes away.
 - Today's flip bar above the stage goes away, because the Options list replaces it.
 - "Claude's pick" shows only as the tab on the Pick button while Claude's option is shown, placed so Pick's width never changes. Rows and tiles carry no tag (user, 2026-11-21).
 - Confirm steps (one option) show the single row plus Yes/Change in the same place.
 
-**Other kinds** (`gallery`, `verdict`, `tune`, `wording`, missing, summary) use the same left panel. Their picture or fields go in the centre. Their own controls (item note, Previous/Next, verdict buttons, the note and nav) sit in the left panel under the Details folds, so they stay above the fold (controller ruling 2026-11-21: under the centre they fell below the fold at 1440 x 900). They get no right panel unless that kind already has a list (builder's call, kept minimal).
+**Other kinds** (`gallery`, `verdict`, `tune`, `wording`, missing, summary) use the same left panel. Their picture or fields go in the centre. Their own controls (item note, Previous/Next, the note and nav) sit in the left panel under the Details folds, so they stay above the fold (controller ruling 2026-11-21: under the centre they fell below the fold at 1440 x 900). The verdict step's Pass, Changes and note sit in the centre at reading width (user, 2026-11-21). They get no right panel unless that kind already has a list (builder's call, kept minimal).
 
 ## Phone (the existing phone breakpoint, tested at 390 x 844)
 

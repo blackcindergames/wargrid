@@ -352,7 +352,7 @@ func TestReadOnlyLinkHasNoPickControls(t *testing.T) {
 	// Step 10 is not blind and opens on Claude's option with show=C, so only the read-only rule keeps the tab off.
 	s.open(t, "/r/demo/10?show=C")
 	s.wantVisible(t, s.loc(".orow[data-show=C]"))
-	for _, sel := range []string{`.ptab`, `.tag.cp`, `.rpanel [name=pick]`, `.rpanel [data-note]`, `.nexplain`} {
+	for _, sel := range []string{`.ptab`, `.tag.cp`, `.rpanel [name=pick]`, `.rpanel [data-note]`, `[value=neither]`} {
 		s.wantCount(t, s.loc(sel), 0)
 	}
 }
@@ -925,14 +925,17 @@ func TestSideViewHasNoTodayRowAndZeroDoesNothing(t *testing.T) {
 	}
 }
 
+// A note the row shows whole is never repeated, and a fold with nothing else to say stays out of sight.
 func TestAboutFoldNeverRepeatsTheNotes(t *testing.T) {
 	s := newTodaySite(t)
 	s.wantContains(t, s.loc(".about[data-opt=A]"), "a look")
-	s.wantAbsent(t, s.loc(".about[data-opt=A]"), "first")
+	s.click(t, ".about[data-opt=A] summary")
+	s.wantContains(t, s.loc(".about[data-opt=A] .sees"), "a look")
+	s.wantHidden(t, s.loc(".about[data-opt=A] .onotes"))
 	s = newSite(t, siteOpts{})
 	s.open(t, "/r/demo/2")
 	s.wantVisible(t, s.loc(".orow[data-show=A] .onote"))
-	s.wantCount(t, s.loc(".about"), 0)
+	s.wantCount(t, s.loc(".about:visible"), 0)
 }
 
 func TestRowClickSelectsAndMoreOfAndAboutFollow(t *testing.T) {
@@ -1286,8 +1289,15 @@ func TestLongNotesClampAndShowInAbout(t *testing.T) {
 		s.wantHidden(t, s.loc(".omore"))
 	}
 	s.press(t, "b")
-	s.wantContains(t, s.loc(".about[data-opt=B]"), "rather than names")
-	s.wantContains(t, s.loc(".about[data-opt=A]"), "slot row")
+	s.click(t, ".about[data-opt=B] summary")
+	s.wantVisible(t, s.loc(".about[data-opt=B] .onotes"))
+	s.wantContains(t, s.loc(".about[data-opt=B] .onotes"), "rather than names")
+	// 85 characters, under the loader's limit, yet two lines at 1440 x 900 still cut it.
+	s.open(t, "/r/p2-3b-dock/5")
+	s.press(t, "b")
+	s.click(t, ".about[data-opt=B] summary")
+	s.wantVisible(t, s.loc(".about[data-opt=B] .onotes"))
+	s.wantContains(t, s.loc(".about[data-opt=B] .onotes"), "until you hover")
 }
 
 func TestNeutralAnswerIsExplainedInItsTooltip(t *testing.T) {

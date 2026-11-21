@@ -453,7 +453,7 @@ func (c *Catalog) validateRound(r *Round) {
 
 const (
 	maxQuestionLen = 70
-	MaxNotesLen    = 90
+	maxNotesLen    = 90
 	maxLookLen     = 120
 )
 
@@ -467,17 +467,14 @@ func (c *Catalog) checkLengths(r *Round) {
 		where := r.ID + "/" + s.Key
 		c.warnLength(where, "question", s.Question, maxQuestionLen)
 		for _, l := range s.OptionLetters() {
-			c.warnLength(where+" option "+l, "notes", s.Options[l].Notes, MaxNotesLen)
+			c.warnLength(where+" option "+l, "notes", s.Options[l].Notes, maxNotesLen)
 		}
 		c.warnLength(where, "look", s.Look, maxLookLen)
 	}
 }
 
-// TextLen counts what a reader sees: backticks are markup.
-func TextLen(text string) int { return utf8.RuneCountInString(strings.ReplaceAll(text, "`", "")) }
-
 func (c *Catalog) warnLength(where, field, text string, limit int) {
-	if n := TextLen(text); n > limit {
+	if n := utf8.RuneCountInString(strings.ReplaceAll(text, "`", "")); n > limit {
 		c.Warnings = append(c.Warnings, fmt.Sprintf("%s: %s is %d characters; keep it to one line (%d)", where, field, n, limit))
 	}
 }

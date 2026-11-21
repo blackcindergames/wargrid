@@ -1470,7 +1470,7 @@ func About(opts []OptView) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				if o.LongNotes {
+				if o.Notes != "" {
 					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 121, "<p class=\"onotes\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
