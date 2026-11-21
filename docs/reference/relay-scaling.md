@@ -247,6 +247,20 @@ An input for the M9 hosting comparison in the [blueprint](../blueprint.md#m9--3v
 
 **Assessment (Claude, not a user decision).** Developer Postgres at $5 is the cheapest always-on managed option seen so far, but a single backup is thin for accounts and rankings. The tier with real backups costs about four to six times Neon Launch. Valkey earns nothing before there is more than one relay machine (see [high availability options](#high-availability-options-proposed-2026-11-05)); the relay's memory holds presence and matchmaking until then.
 
+## MongoDB Atlas (spiked 2026-11-21)
+
+Same uses and labels as the Aiven spike above; **docs** are mongodb.com pricing, Free and Flex limits and Flex costs, read 2026-11-21.
+
+| Tier | Price | Storage | Limits (docs) | Backups (docs) |
+|---|---|---|---|---|
+| Free (M0) | $0, "Free forever" | 0.5 GB | 500 connections, 100 operations per second, 10 GB in and out per seven days; paused "after 30 days of inactivity"; one per project | "only available as a private preview feature" |
+| Flex | $8/month base, "capped at $30 per month" by operations per second | 5 GB | 500 connections, 500 operations per second; no charge for outgoing transfer | "a single daily snapshot", no point-in-time restore |
+| M10 (dedicated) | from $56.94/month on the pricing page, "Starts at $60" on the costs page; hourly | 10-128 GB | 2 vCPUs, 2 GB RAM | not read |
+
+**Measured** from a throwaway fly.io machine in `fra` to a free MongoDB 8.0 cluster in AWS `EU_CENTRAL_1`, which Atlas accepted for the free tier: an insert plus a find on an open connection took 5.9-7.5 ms (19 of 20; one 19.7 ms), so about 3 ms per round trip against Aiven's 15 ms. A new client with TLS, login and a ping took 144-181 ms. The `mongodb+srv` address of a new cluster had no SRV record for several minutes, so clients hung; the plain `mongodb://` host list worked at once.
+
+**Assessment (Claude, not a user decision).** The fastest and the most generous free tier of the three, but the wrong shape: accounts, match history, statistics and rankings are relational (joins, leaderboards with window functions), and MongoDB's protocol and query language exist on fewer hosts than Postgres, which weakens the cloud-agnostic rule. It also replaces neither Valkey nor a relational store, so it would add a store rather than replace one.
+
 ## Unverified
 
 - fly: public hostname per worker as one app per worker (cost, deploy commands); the actual bill; `performance-1x` under our relay load (planned for M9, user 2026-11-05). Docs, fetched 2026-11-05 (fly.io/docs/about/pricing, /machines/cpu-performance): `shared` baseline 5 ms per 80 ms (6.25 %), `performance` 100 %; `performance-1x` 2 GB $33/month and `performance-2x` 4 GB $66/month at the lowest-priced regions, `fra` costs more (its 1 GB shared example is $7.73 against $6.70 in `iad`); stopped or suspended machines pay only $0.15 per GB of rootfs per month. Unknown: `performance` price in `fra`, whether `shared-cpu-2x` doubles the baseline.
