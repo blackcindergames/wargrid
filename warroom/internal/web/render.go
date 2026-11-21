@@ -69,8 +69,13 @@ func (b *builder) stepPageView(errs []string, n int, record, hint string) *PageV
 	if b.readOnly {
 		phone.Pick, phone.Confirm, phone.Tuned, phone.Neutral, phone.Note = false, false, false, "", false
 	}
+	var chips []Chip
+	// A choice step draws its chips at the top of its left panel.
+	if !s.IsChoice() {
+		chips = b.chips(n - 1)
+	}
 	return &PageView{
-		ReadOnly: b.readOnly, Errors: errs, Cvd: cvd, True100: st.Value("fit") == "100", Chips: b.chips(n - 1), Body: body,
+		ReadOnly: b.readOnly, Errors: errs, Cvd: cvd, True100: st.Value("fit") == "100", Chips: chips, Body: body,
 		Phone: phone, Legend: legendOf(st, len(s.Pairs) > 0), Keys: b.q.Keys,
 	}
 }

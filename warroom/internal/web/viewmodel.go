@@ -20,7 +20,6 @@ type Chip struct {
 
 type HeadView struct {
 	Intro             string
-	IntroOpen         bool
 	Eyebrow, Question string
 	ClaudePick        *ClaudePick
 	Record            string
@@ -61,20 +60,14 @@ type NumbersRow struct {
 }
 
 type InfoView struct {
-	// Phone: the folds start closed so the stage is on the first screen.
-	Phone     bool
-	Why       string
-	Look      string
+	Why  string
+	Look string
+	// Ref is the reference fold of a step kind without option rows; a choice step shows it as its Today row.
 	Ref       *FigureView
 	Checklist []string
 	Uses      []UseLine
 	Numbers   []NumbersRow
 	Folds     []FoldView
-}
-
-func (i *InfoView) HasCue() bool { return i.Look != "" || i.Ref != nil }
-func (i *InfoView) HasInfo() bool {
-	return len(i.Checklist) > 0 || len(i.Uses) > 0 || len(i.Numbers) > 0 || len(i.Folds) > 0
 }
 
 type builder struct {
@@ -169,7 +162,7 @@ func (b *builder) head(n int, s *rounds.Step, record string) HeadView {
 		h.Question = s.Key
 	}
 	h.ClaudePick = b.claudePick(s)
-	h.Intro, h.IntroOpen = b.round.Intro, n == 1
+	h.Intro = b.round.Intro
 	return h
 }
 
@@ -195,7 +188,12 @@ func (b *builder) figures(pb picBuilder, list []rounds.Pic, crop *rounds.Crop, w
 	var out []FigureView
 	for i := range list {
 		e := &list[i]
-		out = append(out, FigureView{e.Label, pb.pic(picOf(e), crop, who+": "+e.Label, true)})
+		p := pb.pic(picOf(e), crop, who+": "+e.Label, true)
+		// A file that lives only on the author's machine says nothing to anyone else.
+		if p.Kind == "missing" && p.Local {
+			continue
+		}
+		out = append(out, FigureView{e.Label, p})
 	}
 	return out
 }
@@ -208,10 +206,10 @@ func (b *builder) folds(pb picBuilder, list []rounds.Fold, crop *rounds.Crop, wh
 	return out
 }
 
-func (b *builder) info(st *stage.Stage, s *rounds.Step, side bool) InfoView {
+func (b *builder) info(st *stage.Stage, s *rounds.Step) InfoView {
 	pb := b.pics(st)
-	v := InfoView{Phone: b.q.Phone, Why: s.Why, Look: s.Look, Checklist: s.Checklist, Uses: b.uses(s), Numbers: b.numbers(s), Folds: b.folds(pb, s.Folds, s.Crop, "Step")}
-	if s.Ref != nil && !side {
+	v := InfoView{Why: s.Why, Look: s.Look, Checklist: s.Checklist, Uses: b.uses(s), Numbers: b.numbers(s), Folds: b.folds(pb, s.Folds, s.Crop, "Step")}
+	if s.Ref != nil && !s.IsChoice() {
 		v.Ref = &FigureView{s.Ref.Label, pb.pic(picOf(s.Ref), b.cropOf(s), s.Ref.Label, true)}
 	}
 	return v

@@ -79,7 +79,7 @@ func (b *builder) itemIndex(s *rounds.Step) int {
 
 func (b *builder) gallery(n int, s *rounds.Step, record string) GalleryView {
 	st := b.stage(s)
-	v := GalleryView{Head: b.head(n, s, record), Info: b.info(st, s, false), Nav: b.nav(n, "Skip"), Ctl: b.ctlBar(n, st, s), Form: FormView{pickURL(b.round, s, b.carry()), s.ChipKey()}}
+	v := GalleryView{Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n, "Skip"), Ctl: b.ctlBar(n, st, s), Form: FormView{pickURL(b.round, s, b.carry()), s.ChipKey()}}
 	if len(s.Items) == 0 {
 		v.Empty = true
 		return v
@@ -129,14 +129,14 @@ func (b *builder) verdictStep(n int, s *rounds.Step, record string) VerdictStepV
 		labels = *s.Labels
 	}
 	return VerdictStepView{
-		Head: b.head(n, s, record), Info: b.info(st, s, false), Nav: b.nav(n, "Skip"),
+		Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n, "Skip"),
 		Verdict: b.verdictBox(s, s.Key, labels.Pass, labels.Changes), Form: FormView{pickURL(b.round, s, b.carry()), s.ChipKey()},
 	}
 }
 
 func (b *builder) wording(n int, s *rounds.Step, record string) WordingView {
 	st := b.stage(s)
-	v := WordingView{Head: b.head(n, s, record), Info: b.info(st, s, false), Nav: b.nav(n, "Done, next")}
+	v := WordingView{Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n, "Done, next")}
 	for _, f := range s.Fields {
 		key := s.Key + ":" + f.ID
 		note := b.note(s, key, "f-"+f.ID, cmp.Or(f.Label, f.ID))

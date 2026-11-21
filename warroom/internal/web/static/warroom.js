@@ -232,38 +232,42 @@ function scaleNote() {
 
 // ---------- options ----------
 
-const flipLetters = () => $$('.flipbar [data-show]').map((b) => b.dataset.show);
+const flipLetters = () => $$('.opts .orow').map((b) => b.dataset.show);
 
-/** @param {string} letter @param {HTMLVideoElement} [keep] a clip that just started in this option, left playing */
+/** @param {string} letter an option letter or today @param {HTMLVideoElement} [keep] a clip that just started in this option, left playing */
 function showOption(letter, keep) {
 	if (!flipLetters().includes(letter)) return;
-	$$('.ostage[data-opt], .odetail[data-opt]').forEach((el) => {
+	$$('.ostage[data-opt], .moreof [data-opt], .about[data-opt]').forEach((el) => {
 		el.hidden = el.dataset.opt !== letter;
 	});
 	$$('.measures [data-measure]').forEach((el) => {
 		el.hidden = el.dataset.measure !== letter;
 	});
 	$$('.tile[data-opt]').forEach((el) => el.classList.toggle('sel', el.dataset.opt === letter));
-	$$('[data-show]').forEach((b) => b.classList.toggle('on', b.dataset.show === letter));
+	$$('.orow[data-show]').forEach((el) => el.classList.toggle('sel', el.dataset.show === letter));
+	$$('.ob[data-show]').forEach((b) => b.classList.toggle('on', b.dataset.show === letter));
+	stopMedia(keep);
+	scaleNote();
+	// Today is for looking only, so nothing may be recorded while it is shown.
+	const today = letter === 'today';
+	/** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll('button.pick[name=pick]')).forEach((b) => {
+		b.disabled = today;
+	});
+	if (today) return;
 	/** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('[data-shown]')).forEach((b) => {
 		b.value = letter;
 	});
 	$$('.pl').forEach((el) => {
 		el.textContent = letter;
 	});
-	$$('.ptab').forEach((el) => {
-		el.hidden = el.dataset.cp !== letter;
-	});
-	stopMedia(keep);
 	setParam('show', letter);
-	scaleNote();
 }
 
 /** @param {number} d */
 function flipBy(d) {
 	const letters = flipLetters();
 	if (!letters.length) return;
-	const at = letters.indexOf($('.flipbar [data-show].on')?.dataset.show);
+	const at = letters.indexOf($('.opts .orow.sel')?.dataset.show);
 	const next = letters[(at + d + letters.length) % letters.length];
 	if (next) showOption(next);
 }
@@ -588,6 +592,8 @@ const CLICKS = [
 	[
 		'[data-show]',
 		(el) => {
+			// A row kept focused by a click would take the next Enter instead of Pick.
+			if (!el.matches(':focus-visible')) el.blur();
 			showOption(el.dataset.show ?? '');
 		},
 	],

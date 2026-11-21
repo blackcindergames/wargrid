@@ -57,6 +57,16 @@ templ ChipLink(c Chip) {
 	>{ c.Label }</a>
 }
 
+templ ChipNav(chips []Chip) {
+	<header class="top">
+		<nav id="chips" class="chips" aria-label="Steps">
+			for _, c := range chips {
+				@ChipLink(c)
+			}
+		</nav>
+	</header>
+}
+
 templ pageHead(title string) {
 	<meta charset="utf-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -73,13 +83,7 @@ templ Shell(p PageView) {
 			<p id="readonly" role="status">{ readOnlyNotice }</p>
 		}
 		if len(p.Chips) > 0 {
-			<header class="top">
-				<nav id="chips" class="chips" aria-label="Steps">
-					for _, c := range p.Chips {
-						@ChipLink(c)
-					}
-				</nav>
-			</header>
+			@ChipNav(p.Chips)
 		}
 		@p.Body
 		<div id="phone" class="phone">

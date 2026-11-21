@@ -26,6 +26,7 @@ type AudioView struct {
 
 type OptView struct {
 	Letter, Name, Reveal string
+	Key                  string
 	Cp, Picked           bool
 	On, Done             bool
 	// Measure: the option's measurement slot; a blind step has none until the pick, since numbers could tell the options apart.
@@ -39,9 +40,13 @@ type OptView struct {
 	Extras               []FigureView
 }
 
+func (o *OptView) HasText() bool {
+	return o.Sees != "" || o.Notes != "" || o.Changes != "" || len(o.Folds) > 0
+}
+
 type FlipButton struct {
-	Letter, Name, Key string
-	On, Done          bool
+	Letter string
+	On     bool
 }
 
 type CtlButton struct {
@@ -64,11 +69,17 @@ type CtlBarView struct {
 	Buttons []CtlButton
 }
 
+func (c CtlBarView) Status() string {
+	values := make([]string, len(c.Buttons))
+	for i := range c.Buttons {
+		values[i] = c.Buttons[i].Value
+	}
+	return strings.Join(values, " · ")
+}
+
 type ActView struct {
 	Confirm bool
 	Shown   string
-	// Cp is Claude's pick when the page may show it; the Pick button wears a tab while that option is shown.
-	Cp      string
 	Neutral string
 }
 
@@ -79,6 +90,7 @@ type LabView struct {
 }
 
 type ChoiceView struct {
+	Chips               []Chip
 	Head                HeadView
 	Info                InfoView
 	Note                NoteView
@@ -122,19 +134,19 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 	st := b.stage(s)
 	side := b.side(s)
 	v := ChoiceView{
-		Head: b.head(n, s, record), Info: b.info(st, s, side), Nav: b.nav(n, "Skip"), Side: side, Kind: s.Kind,
+		Chips: b.chips(n - 1), Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n, "Skip"), Side: side, Kind: s.Kind,
 		Shown: b.shown(s), Form: FormView{pickURL(b.round, s, b.carry()), s.ChipKey()},
 	}
 	v.Note = b.noteBox(s, hint)
 	v.Opts = b.options(st, s, v.Shown)
 	v.Ctl = b.ctlBar(n, st, s)
-	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, Cp: b.rec(s), Neutral: s.Neutral}
+	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, Neutral: s.Neutral}
 	v.Flip = b.flipBar(s, v.Shown)
 	v.ViewHref, v.ViewLabel = b.viewToggle(n, s, v.Shown)
 	if s.Kind == "lab" {
 		v.Lab = b.lab(n, s)
 	}
-	if side && s.Ref != nil {
+	if s.Ref != nil {
 		v.Ref = &FigureView{s.Ref.Label, b.pics(st).pic(picOf(s.Ref), b.cropOf(s), s.Ref.Label, true)}
 	}
 	v.Large = !side && slices.ContainsFunc(v.Opts, func(o OptView) bool { return o.Pic != nil && o.Pic.Large })
@@ -155,10 +167,9 @@ func (b *builder) flipBar(s *rounds.Step, shown string) []FlipButton {
 	if s.IsConfirm() {
 		return nil
 	}
-	pick := b.pickOf(b.round, s.Key)
 	var out []FlipButton
 	for _, l := range s.OptionLetters() {
-		out = append(out, FlipButton{l, cmp.Or(s.Options[l].Name, l), flipKey(l), l == shown, l == pick})
+		out = append(out, FlipButton{l, l == shown})
 	}
 	return out
 }
@@ -201,9 +212,9 @@ func (b *builder) options(st *stage.Stage, s *rounds.Step, shown string) []OptVi
 	revealed := b.revealed(s)
 	for _, l := range s.OptionLetters() {
 		o := s.Options[l]
-		// On a confirm step the tag on the only option adds nothing; the Claude's-pick line under the question stays.
+		// On a confirm step the tag on the only option adds nothing; Claude's reason says it.
 		cp := b.rec(s) == l && !s.IsConfirm()
-		v := OptView{Letter: l, Name: cmp.Or(o.Name, l), Cp: cp, Picked: pick == l, On: l == shown, Done: l == pick}
+		v := OptView{Letter: l, Key: flipKey(l), Name: cmp.Or(o.Name, l), Cp: cp, Picked: pick == l, On: l == shown, Done: l == pick}
 		if s.Blind && revealed {
 			v.Reveal = o.Reveal
 		}

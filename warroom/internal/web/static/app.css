@@ -112,14 +112,30 @@
 
   .step { max-width: 1680px; margin: 0 auto; padding: 16px 24px 48px; display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 24px; align-items: start; }
   .step .left, .step .right { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-  .step.v-side, .step.k-summary, .step.k-index, .step.k-missing { grid-template-columns: minmax(0, 1fr); }
-  .step.v-side { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
-  .step.v-side .left, .step.v-side .right { display: contents; }
-  .v-side {
-    :is(.intro, .head) { order: 1; } .why { order: 2; } .cue { order: 3; } .stagecol { order: 4; } .info { order: 5; } .notebox { order: 6; } .stepnav { order: 7; }
-    :is(.why, .cue, .info, .notebox) { max-width: 1100px; }
-  }
+  .step.k-summary, .step.k-index, .step.k-missing { grid-template-columns: minmax(0, 1fr); }
   .step .right:empty { display: none; }
+
+  /* Choice steps: three panels whose places never change between steps or options. */
+  .step.choice { max-width: none; min-height: 100dvh; padding: 0; gap: 0; align-items: stretch; grid-template-columns: 260px minmax(0, 1fr) 340px; }
+  :is(.lpanel, .cpanel, .rpanel) { min-width: 0; display: flex; flex-direction: column; }
+  :is(.lpanel, .rpanel) { background: var(--slab); padding: 16px 20px 24px; }
+  .lpanel { border-right: 1px solid var(--line); gap: 12px; }
+  .cpanel { padding: 20px; }
+  .rpanel { border-left: 1px solid var(--line); gap: 6px; }
+  .lpanel {
+    .top { position: relative; background: none; border: 0; }
+    .chips { flex-wrap: wrap; padding: 0; overflow: visible; }
+    .chip { padding: 3px 8px; font-size: var(--label); }
+    .head h1 { font-size: 22px; }
+  }
+  .look { margin: 0; padding: 10px 12px; font-size: 14px; color: var(--text); background: var(--quiet); border-left: 3px solid var(--amber); }
+  .folds {
+    &:empty { display: none; }
+    > details { padding: 10px 0; background: none; border: 0; border-top: 1px solid var(--line); }
+    > details > summary { color: var(--soft); font-size: 14px; font-weight: 600; text-transform: none; letter-spacing: 0; margin: 0; }
+    > details[open] > summary { margin-bottom: 6px; }
+    p { margin: 0 0 8px; color: var(--soft); font-size: 14px; }
+  }
 
   .head {
     .n { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
@@ -132,17 +148,12 @@
     .fail { color: var(--amber); font-weight: 700; }
     button { margin-left: 6px; }
   }
-  .cpline { color: var(--soft); font-size: 14px; }
   .intro {
     max-width: 1100px; padding: 10px 14px; background: var(--slab); border-left: 3px solid var(--line);
     p { margin: 0; color: var(--text); font-size: 14px; }
     summary { font-size: var(--label); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
     &[open] summary { margin-bottom: 4px; }
   }
-  :is(.info, .cue, .why) p { margin: 0 0 10px; color: var(--soft); font-size: 14px; }
-  .cue p.look { color: var(--amber); margin-bottom: 6px; }
-  :is(.why, .ref) summary { font-size: var(--label); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-  .ref summary { text-transform: none; letter-spacing: 0; font-size: var(--row); font-weight: 600; }
   .fold {
     margin-top: 10px; border-top: 1px solid var(--line); padding-top: 6px;
     summary { color: var(--soft); font-weight: 700; font-size: 14px; }
@@ -155,12 +166,50 @@
   .stepnav, .inav { display: flex; gap: 8px; align-items: center; }
   .stepnav [data-act=legend] { margin-left: auto; }
 
-  .flipbar {
-    display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch;
-    .ob { max-width: 320px; }
-    .ob span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status {
+    display: flex; align-items: center; gap: 6px; padding: 8px 0 12px; border-bottom: 1px solid var(--line);
+    .stxt { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--row); color: var(--muted); }
+    .scale { display: block; }
+    .btn { height: 32px; padding-inline: 12px; font-size: 12px; }
+  }
+  .viewmenu {
+    position: relative;
+    summary { list-style: none; &::-webkit-details-marker { display: none; } &::after { content: "▾"; } }
+    &[open] summary { color: var(--on-sel); background: var(--sel); border-color: var(--sel); }
+    > .ctlbar {
+      position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; width: max-content; max-width: min(560px, 80vw);
+      flex-direction: column; align-items: stretch; padding: 10px; background: var(--slab); border: 1px solid var(--line);
+    }
+  }
+  .moreof {
+    height: 172px; padding-top: 12px; overflow: hidden;
+    .extras { display: flex; gap: 12px; margin: 0; overflow-x: auto; }
+    figure { flex: 0 0 180px; min-width: 0; }
+    figcaption { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  }
+
+  .rpanel .opts { display: flex; flex-direction: column; gap: 6px; }
+  .orow {
+    display: block; width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
+    background: var(--quiet); border-left: 3px solid transparent;
+    &:hover { background: var(--btn); }
+    &:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+    &.sel { background: var(--panel2); border-left-color: var(--sel); }
+    .ot { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; font-weight: 700; }
+    .ot > :is(kbd, .tag) { margin-top: 2px; }
+    .nm { flex: 1 1 auto; min-width: 0; }
     .fl { font-weight: 800; }
-    .vt { margin-left: auto; }
+    .onote { display: block; margin: 3px 0 0 26px; font-size: var(--row); color: var(--soft); }
+    &.today { background: transparent; border: 1px dashed var(--line); .ot { font-weight: 600; color: var(--soft); } }
+    &.today.sel { border-color: var(--sel); }
+  }
+  .rpanel {
+    .act { flex-direction: column; align-items: stretch; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .act .pick { width: 100%; }
+    .nwrap { display: flex; flex-direction: column; gap: 4px; .btn { width: 100%; } }
+    .nexplain { position: static; white-space: normal; }
+    :is(.notebox, .stepnav) { margin-top: 8px; }
+    .stepnav { flex-wrap: wrap; gap: 6px; .btn { padding-inline: 10px; } }
   }
   .ctlbar {
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
@@ -173,29 +222,25 @@
   }
   .act, .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .act {
-    .pick { font-size: 16px; padding-inline: 22px; height: 44px; max-width: 100%; position: relative; }
-    /* Above the button in the 16 px gap, 14 px tall so it never reaches the picture. */
-    .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
+    .pick { font-size: 16px; padding-inline: 22px; height: 44px; max-width: 100%; }
+    .pick:disabled { opacity: .45; cursor: not-allowed; }
     &:empty { display: none; }
   }
   .tools {
     .scale { margin-left: auto; }
     .scale:empty + [data-act=large] { margin-left: auto; }
   }
-  :is(.v-flip, .v-side) :is(.stage, .tiles) + .act, .v-flip .act + .tools { margin-top: 16px; }
   /* Out of flow so the buttons stay centred on one line. The row keeps room for it: the neutral button ends 2 px inside the 44 px row, then 4 px, the 16 px line and the 16 px gap. */
   .nwrap { position: relative; display: inline-flex; }
   .nexplain { position: absolute; left: 0; top: calc(100% + 4px); white-space: nowrap; color: var(--muted); font-size: var(--row); line-height: 16px; }
-  .act:has(.nexplain) { margin-bottom: 34px; }
   .k-tune .act:has(.nexplain) { margin-bottom: 18px; }
-  .tiles + .act { justify-content: center; }
   .scale { color: var(--muted); font-size: var(--row); &:empty { display: none; } }
 
   .ohd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .let { font-size: 28px; font-weight: 800; line-height: 1; }
   .ohd h2 { margin: 0; font-size: 18px; font-weight: 700; flex: 1 1 200px; min-width: 0; }
-  :is(.detail, .tile) p { margin: 8px 0 0; color: var(--soft); font-size: 14px; max-width: 1000px; }
-  :is(.detail, .tile) p.sees { color: var(--text); }
+  .tile p { margin: 8px 0 0; color: var(--soft); font-size: 14px; max-width: 1000px; }
+  :is(.about, .tile) p.sees { color: var(--text); }
   .chg { font-size: var(--row); }
   .extras { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
   .extras figcaption { text-transform: none; letter-spacing: 0; font-size: var(--row); font-weight: 600; }
@@ -425,17 +470,19 @@
     /* 16 px keeps iOS Safari from zooming the page when a note gets the focus. */
     textarea { font-size: 16px; }
     .chips { padding: 8px 16px; }
-    .step { display: flex; flex-direction: column; align-items: stretch; width: 100%; padding: 12px 16px 24px; gap: 12px; }
+    .step { display: flex; flex-direction: column; align-items: stretch; width: 100%; min-height: 0; padding: 12px 16px 24px; gap: 12px; }
     .step.v-side { gap: 14px; }
-    .step .left, .step .right { display: contents; }
+    .step :is(.left, .right, .lpanel, .cpanel, .rpanel) { display: contents; }
     .step {
-      :is(.intro, .head) { order: 1; } .cue { order: 2; } .why { order: 3; } .stagecol { order: 4; }
-      :is(.detail, .gside, .fields, #sum, .close, .rounds) { order: 5; }
-      .verdict { order: 6; } .thumbs { order: 7; } .info { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
+      :is(.top, .intro, .head) { order: 1; } .look { order: 2; } .stagecol { order: 4; }
+      :is(.moreof, .measures, .rpanel > .h, .opts, .gside, .fields, #sum, .close, .rounds) { order: 5; }
+      .verdict { order: 6; } .thumbs { order: 7; } .folds { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
     }
+    .lpanel .top { position: sticky; z-index: 10; margin: -12px -16px 0; background: var(--well); border-bottom: 1px solid var(--line); }
+    .lpanel .chips { flex-wrap: nowrap; overflow-x: auto; }
     .head h1 { font-size: 20px; }
-    .flipbar, .stepnav, .inav, .stagecol > .ctlbar, :is(.act, .tools) .btn { display: none; }
-    :is(.act, .tools) { margin-top: 0; margin-bottom: 0; }
+    .status, .act, .stepnav, .inav, .stagecol > .ctlbar, .tools .btn { display: none; }
+    .tools { margin-top: 0; margin-bottom: 0; }
     .nexplain { display: none; }
     .tiles { grid-template-columns: minmax(0, 1fr); }
     :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: 100%; }

@@ -48,8 +48,10 @@ templ PickButton(value, class, key string) {
 	}
 }
 
-// No Claude's-pick tag here: one at a time it would repeat the Pick's tab.
 templ Tags(o OptView) {
+	if o.Cp {
+		<span class="tag cp">Claude's pick</span>
+	}
 	if o.Picked {
 		<span class="tag got">Picked</span>
 	}
@@ -104,28 +106,6 @@ templ OptBody(o OptView) {
 	}
 }
 
-templ FlipBar(v ChoiceView) {
-	if len(v.Flip) > 0 {
-		<div class="flipbar">
-			for _, f := range v.Flip {
-				<button type="button" class={ "ob btn sm", templ.KV("on", f.On), templ.KV("done", f.Done) } data-show={ f.Letter } data-key={ f.Key }>
-					@Kbd(strings.ToUpper(f.Key))
-					if f.Key != strings.ToLower(f.Letter) {
-						<b class="fl">{ f.Letter }</b>
-					}
-					<span>@Fmt(f.Name)</span>
-				</button>
-			}
-			if v.ViewHref != "" {
-				<a class="vt btn sm" href={ templ.SafeURL(v.ViewHref) } data-key="w" data-keepview>
-					@Kbd("W")
-					{ v.ViewLabel }
-				</a>
-			}
-		</div>
-	}
-}
-
 templ Act(v ChoiceView) {
 	<div class="act">
 		if v.Act.Confirm {
@@ -137,20 +117,10 @@ templ Act(v ChoiceView) {
 				Change (say what in the note)
 			}
 		} else if !isReadOnly(ctx) {
-			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")
-				if v.Act.Cp != "" {
-					<span class="tag cp ptab" data-cp={ v.Act.Cp } hidden?={ v.Act.Cp != v.Act.Shown }>Claude's pick</span>
-				}
-			</button>
+			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")</button>
 		}
 		@NeutralAnswer(v.Act.Neutral)
 	</div>
-	if v.Large {
-		<div class="tools">
-			<span class="scale"></span>
-			@LargeButton()
-		</div>
-	}
 }
 
 // NeutralAnswer is the neutral button with the line under it that says what it records.
@@ -193,13 +163,16 @@ templ LabBox(l LabView) {
 }
 
 templ FlipStage(v ChoiceView) {
-	<section class="stagecol">
-		@FlipBar(v)
-		@CtlBar(v.Ctl, false)
+	<div class="zone stagecol">
 		<div class="stage" data-swipe>
 			if v.Lab != nil {
 				@LabBox(*v.Lab)
 			} else {
+				if v.Ref != nil {
+					<div class="ostage" data-opt="today" hidden>
+						@Picture(v.Ref.Pic)
+					</div>
+				}
 				for _, o := range v.Opts {
 					<div class="ostage" data-opt={ o.Letter } hidden?={ !o.On }>
 						@OptBody(o)
@@ -207,25 +180,7 @@ templ FlipStage(v ChoiceView) {
 				}
 			}
 		</div>
-		@Act(v)
-		@Measures(v.Opts)
-	</section>
-}
-
-templ Details(v ChoiceView) {
-	<section class="detail">
-		for _, o := range v.Opts {
-			<div class="odetail" data-opt={ o.Letter } hidden?={ !o.On }>
-				<div class="ohd">
-					<span class="let">{ o.Letter }</span>
-					<h2>@Fmt(o.Name)</h2>
-					@Tags(o)
-				</div>
-				@OptText(o)
-				@Figures(o.Extras)
-			</div>
-		}
-	</section>
+	</div>
 }
 
 templ Tile(o OptView) {
@@ -233,9 +188,6 @@ templ Tile(o OptView) {
 		<div class="ohd" data-pick={ o.Letter }>
 			<span class="let">{ o.Letter }</span>
 			<h2>@Fmt(o.Name)</h2>
-			if o.Cp {
-				<span class="tag cp">Claude's pick</span>
-			}
 			@Tags(o)
 		</div>
 		@OptBody(o)
@@ -253,9 +205,7 @@ templ Tile(o OptView) {
 }
 
 templ Tiles(v ChoiceView) {
-	<section class="stagecol">
-		@FlipBar(v)
-		@CtlBar(v.Ctl, false)
+	<div class="zone stagecol">
 		<div class="tiles" style={ colsStyle(v.Cols()) }>
 			if v.Ref != nil {
 				<div class="tile reft">
@@ -267,26 +217,119 @@ templ Tiles(v ChoiceView) {
 				@Tile(o)
 			}
 		</div>
-		@Act(v)
+	</div>
+}
+
+// StatusLine says how the stage is set; the View menu holds the controls, whose keys work with it closed.
+templ StatusLine(v ChoiceView) {
+	<div class="status">
+		<p class="stxt">
+			{ v.Ctl.Status() }
+			<span class="scale"></span>
+		</p>
+		if v.ViewHref != "" {
+			<a class="btn sm" href={ templ.SafeURL(v.ViewHref) } data-key="w" data-keepview>
+				@Kbd("W")
+				{ v.ViewLabel }
+			</a>
+		}
+		if v.Large {
+			@LargeButton()
+		}
+		if len(v.Ctl.Buttons) > 0 {
+			<details class="viewmenu">
+				<summary class="btn sm">View</summary>
+				@CtlBar(v.Ctl, false)
+			</details>
+		}
+	</div>
+}
+
+// MoreOf draws a block for every option, empty ones too, so the strip's height never depends on the shown option.
+templ MoreOf(v ChoiceView) {
+	<section class="moreof">
+		for _, o := range v.Opts {
+			<div data-opt={ o.Letter } hidden?={ !o.On }>
+				if len(o.Extras) > 0 {
+					<span class="h">More of { o.Letter }</span>
+					@Figures(o.Extras)
+				}
+			</div>
+		}
 	</section>
 }
 
-templ ChoiceMain(v ChoiceView) {
-	<main id="main" class={ "step", "k-" + v.Kind, viewClass(v.Side) }>
-		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, v.Side)
-			@NoteBox(v.Note)
-			@StepNav(v.Nav)
+templ About(opts []OptView) {
+	for _, o := range opts {
+		if o.HasText() {
+			<details class="about" data-opt={ o.Letter } hidden?={ !o.On }>
+				<summary>About { o.Letter }</summary>
+				@OptText(o)
+			</details>
+		}
+	}
+}
+
+templ OptRow(o OptView) {
+	<button type="button" class={ "orow", templ.KV("sel", o.On) } data-show={ o.Letter } data-key={ o.Key }>
+		<span class="ot">
+			@Kbd(strings.ToUpper(o.Key))
+			if o.Key != strings.ToLower(o.Letter) {
+				<b class="fl">{ o.Letter }</b>
+			}
+			<span class="nm">@Fmt(o.Name)</span>
+			@Tags(o)
+		</span>
+		if o.Notes != "" {
+			<span class="onote">@Fmt(o.Notes)</span>
+		}
+	</button>
+}
+
+// Options is the right panel: Today and the option rows, with Pick, the note and the step buttons directly under them.
+templ Options(v ChoiceView) {
+	<div class="rpanel">
+		<span class="h">Options</span>
+		<div class="opts" role="group" aria-label="Options">
+			if v.Ref != nil {
+				<button type="button" class="orow today" data-show="today" data-key="0">
+					<span class="ot">
+						@Kbd("0")
+						<span class="nm">@Fmt(v.Ref.Label)</span>
+					</span>
+				</button>
+			}
+			for _, o := range v.Opts {
+				@OptRow(o)
+			}
 		</div>
-		<div class="right">
+		@Act(v)
+		@NoteBox(v.Note)
+		@StepNav(v.Nav)
+	</div>
+}
+
+templ ChoiceMain(v ChoiceView) {
+	<main id="main" class={ "step", "choice", "k-" + v.Kind, viewClass(v.Side) }>
+		<div class="lpanel">
+			@ChipNav(v.Chips)
+			@Head(v.Head, v.Info) {
+				@About(v.Opts)
+			}
+		</div>
+		<div class="cpanel">
 			if v.Side {
 				@Tiles(v)
 			} else {
 				@FlipStage(v)
-				@Details(v)
+			}
+			@StatusLine(v)
+			@MoreOf(v)
+			if !v.Side {
+				@Measures(v.Opts)
 			}
 		</div>
+		@Options(v)
 	</main>
 	@AnswerForm(v.Form)
 }
@@ -305,8 +348,7 @@ templ VerdictBox(v VerdictView) {
 templ GalleryMain(v GalleryView) {
 	<main id="main" class="step k-gallery">
 		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, false)
+			@Head(v.Head, v.Info)
 			if !v.Empty {
 				<section class="gside">
 					<span class="cnt">{ v.Count }</span>
@@ -358,8 +400,7 @@ templ GalleryMain(v GalleryView) {
 templ VerdictMain(v VerdictStepView) {
 	<main id="main" class="step k-verdict">
 		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, false)
+			@Head(v.Head, v.Info)
 			@StepNav(v.Nav)
 		</div>
 		<div class="right">
@@ -372,8 +413,7 @@ templ VerdictMain(v VerdictStepView) {
 templ TuneMain(v TuneView) {
 	<main id="main" class="step k-tune">
 		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, false)
+			@Head(v.Head, v.Info)
 			@NoteBox(v.Note)
 			@StepNav(v.Nav)
 		</div>
@@ -400,8 +440,7 @@ templ TuneMain(v TuneView) {
 templ WordingMain(v WordingView) {
 	<main id="main" class="step k-wording">
 		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, false)
+			@Head(v.Head, v.Info)
 			@StepNav(v.Nav)
 		</div>
 		<div class="right">

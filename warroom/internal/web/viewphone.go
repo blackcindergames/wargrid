@@ -38,6 +38,7 @@ type LegendView struct {
 
 var legendKeys = []LegendRow{
 	{"A B C D or 1 to 8", "show that option (E to H: 5 to 8 only; side by side: select it, or click its tile)", false},
+	{"0", "show Today, the picture as it is now (only to look: Pick waits until you show an option)", false},
 	{"Enter", "pick the shown option, record it and go on", false},
 	{"W", "one at a time / side by side", false},
 	{"← → (or [ ], Backspace)", "previous / next step without picking", false},

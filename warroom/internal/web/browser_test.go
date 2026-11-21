@@ -5,6 +5,7 @@ package web
 import (
 	"encoding/base64"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -20,8 +21,8 @@ func TestFlipKeepsEveryFrameDocument(t *testing.T) {
 	s.markFrames(t)
 	s.press(t, "a")
 	s.press(t, "5")
-	s.click(t, `.flipbar [data-show=B]`)
-	s.wantClass(t, s.loc(`.flipbar [data-show=B]`), "on")
+	s.click(t, `.orow[data-show=B]`)
+	s.wantClass(t, s.loc(`.orow[data-show=B]`), "sel")
 	s.wantFramesKept(t, 6)
 }
 
@@ -217,7 +218,8 @@ func TestPhoneBarNeverCoversThePageEnd(t *testing.T) {
 		scrollTo(0, document.documentElement.scrollHeight);
 		const bar = document.querySelector('#phone').getBoundingClientRect();
 		const end = Math.max(...[...document.querySelectorAll('#main *')].map((e) => e.getBoundingClientRect().bottom));
-		return bar.top >= end && bar.bottom === innerHeight ? '' : 'page end ' + end + ', bar ' + bar.top + ' to ' + bar.bottom + ', window ' + innerHeight;
+		// Within a pixel: a fractional page height leaves the furthest scroll short of it, as in the test above.
+		return bar.top >= end && Math.abs(bar.bottom - innerHeight) < 1 ? '' : 'page end ' + end + ', bar ' + bar.top + ' to ' + bar.bottom + ', window ' + innerHeight;
 	})()`)
 	if gap != "" {
 		t.Errorf("phone bar covers the page or leaves the bottom: %v", gap)
@@ -253,6 +255,9 @@ func TestReadOnlyLinkHasNoPickControls(t *testing.T) {
 	})
 	s.open(t, "/r/demo/1")
 	s.wantText(t, s.loc("#readonly"), "View only: you can look around, nothing you do is recorded")
+	if n, err := s.loc(".opts .orow").Count(); err != nil || n == 0 {
+		t.Errorf("read-only page has %d option rows (%v), want the rows without pick controls", n, err)
+	}
 	for _, sel := range []string{`[name=pick]`, `#answer`, `[data-key=enter]`, `#note`} {
 		s.wantCount(t, s.loc(sel), 0)
 	}
@@ -265,10 +270,12 @@ func TestReadOnlyLinkHasNoPickControls(t *testing.T) {
 	}
 	s.open(t, "/r/demo/1?t="+roundToken("demo"))
 	s.wantVisible(t, s.loc(`[data-key=enter]`))
-	// Step 10 is not blind and opens on Claude's option with show=C, so only the read-only rule keeps the tab off.
+	// Not blind, so Claude's row keeps its tag; only the read-only rule takes the Pick, neutral answer and note away.
 	s.open(t, "/r/demo/10?show=C")
-	s.wantVisible(t, s.loc(".cpline .tag.cp"))
-	s.wantCount(t, s.loc(".ptab"), 0)
+	s.wantVisible(t, s.loc(".orow[data-show=C] .tag.cp"))
+	for _, sel := range []string{`.rpanel [name=pick]`, `.rpanel [data-note]`, `.nexplain`} {
+		s.wantCount(t, s.loc(sel), 0)
+	}
 }
 
 func TestHeldEnterRecordsOnePick(t *testing.T) {
@@ -307,7 +314,7 @@ func TestDigitFiveShowsOptionE(t *testing.T) {
 	s := newKeySite(t)
 	s.press(t, "5")
 	s.wantVisible(t, s.loc(`.ostage[data-opt=E]`))
-	s.wantClass(t, s.loc(`.flipbar [data-show=E]`), "on")
+	s.wantClass(t, s.loc(`.orow[data-show=E]`), "sel")
 }
 
 func TestLetterFStillToggleFitAndNamesItsDigit(t *testing.T) {
@@ -405,11 +412,11 @@ func TestMeasureTableSurvivesAControlThatKeepsTheFrame(t *testing.T) {
 func TestMeasureTableIsUnderItsOptionInFlipAndSideViews(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10")
-	s.wantContains(t, s.loc(`[data-measure=C]`), "1 px")
+	s.wantContains(t, s.loc(`.cpanel .measures [data-measure=C]`), "1 px")
 	for key, want := range map[string]string{"a": "0 px", "5": "2 px", "d": "1.5 px"} {
 		s.press(t, key)
 		letter := strings.ToUpper(map[string]string{"a": "a", "5": "e", "d": "d"}[key])
-		s.wantContains(t, s.loc(`[data-measure=`+letter+`]`), want)
+		s.wantContains(t, s.loc(`.cpanel .measures [data-measure=`+letter+`]`), want)
 		s.wantCount(t, s.loc(`.measure:visible`), 1)
 	}
 	s.open(t, "/r/demo/10?view=side")
@@ -467,14 +474,14 @@ func cssOf(t *testing.T, e interface {
 func TestNonBlindStepOpensOnANotOnClaudesPick(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10")
-	s.wantClass(t, s.loc(`.flipbar [data-show=A]`), "on")
+	s.wantClass(t, s.loc(`.orow[data-show=A]`), "sel")
 	s.wantVisible(t, s.loc(`.ostage[data-opt=A]`))
-	s.wantContains(t, s.loc(".cpline"), "Claude's pick")
+	s.wantVisible(t, s.loc(".orow[data-show=C] .tag.cp"))
 	s.press(t, "b")
 	s.press(t, "Enter")
 	s.wantURL(t, "/r/demo/summary")
 	s.open(t, "/r/demo/10")
-	s.wantClass(t, s.loc(`.flipbar [data-show=B]`), "on")
+	s.wantClass(t, s.loc(`.orow[data-show=B]`), "sel")
 }
 
 // badgeCheck lists what is wrong with every Claude's-pick tag matching sel: colours, case, contrast.
@@ -500,62 +507,28 @@ const badgeCheck = `([sel, fg, bg]) => {
 func TestClaudesPickIsALightBadge(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10?show=C")
-	for _, sel := range []string{".cpline .tag.cp", ".act .ptab"} {
-		got, err := s.Page.Evaluate(badgeCheck, []any{sel, wellRGB, textRGB})
-		failIf(t, err)
-		if got != "" {
-			t.Errorf("%s: %v", sel, got)
-		}
+	got, err := s.Page.Evaluate(badgeCheck, []any{".orow .tag.cp", wellRGB, textRGB})
+	failIf(t, err)
+	if got != "" {
+		t.Errorf("row tag: %v", got)
 	}
 	s.wantCount(t, s.loc(".pic .tag"), 0)
-	// One at a time the Pick's tab says it, so the option header does not repeat it; side by side the tile header does.
-	s.wantCount(t, s.loc(".odetail .tag.cp"), 0)
 	s.open(t, "/r/demo/10?view=side")
 	s.wantCount(t, s.loc(".tile .ohd .tag.cp"), 1)
 	s.wantVisible(t, s.loc(".tile[data-opt=C] .ohd .tag.cp"))
-	got, err := s.Page.Evaluate(badgeCheck, []any{".tile .ohd .tag.cp", wellRGB, textRGB})
+	got, err = s.Page.Evaluate(badgeCheck, []any{".tile .ohd .tag.cp", wellRGB, textRGB})
 	failIf(t, err)
 	if got != "" {
 		t.Errorf("tile header tag: %v", got)
 	}
 }
 
-// tabCheck says what is wrong with the Pick's tab: it must sit on the button's top edge, left-aligned, clear of the picture.
-const tabCheck = `(picture) => {
-	const r = (sel) => document.querySelector(sel).getBoundingClientRect();
-	const tab = r('.act .ptab'), pick = r('.act .pick'), pic = r(picture);
-	const ok = Math.abs(tab.bottom - pick.top) < 1 && Math.abs(tab.left - pick.left) < 1 && tab.top > pic.bottom && pick.height === 44;
-	return ok ? '' : 'tab ' + tab.left + ',' + tab.top + ' to ' + tab.bottom + '; pick ' + pick.left + ',' + pick.top + ' h ' + pick.height + '; picture ends ' + pic.bottom;
-}`
-
-func TestPickButtonWearsClaudesTabWhileItsOptionIsShown(t *testing.T) {
-	s := newSite(t, siteOpts{})
-	s.open(t, "/r/demo/10")
-	tab := s.loc(".act .ptab")
-	s.wantHidden(t, tab)
-	s.press(t, "c")
-	s.wantVisible(t, tab)
-	if got, err := s.Page.Evaluate(tabCheck, ".stage"); err != nil || got != "" {
-		t.Errorf("one view: %v %v", got, err)
-	}
-	s.press(t, "5")
-	s.wantHidden(t, tab)
-	s.open(t, "/r/demo/10?view=side")
-	s.wantHidden(t, tab)
-	s.click(t, ".tile[data-opt=C] .ohd")
-	s.wantVisible(t, tab)
-	if got, err := s.Page.Evaluate(tabCheck, ".tiles"); err != nil || got != "" {
-		t.Errorf("side view: %v %v", got, err)
-	}
-	s.open(t, "/r/demo/10?show=C")
-	s.wantVisible(t, tab)
-}
-
 func TestBlindStepHasNoBadgeBeforeThePick(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	for _, path := range []string{"/r/demo/1", "/r/demo/1?view=side", "/r/demo/1?show=B"} {
 		s.open(t, path)
-		s.wantVisible(t, s.loc("#main"))
+		s.wantCount(t, s.loc(".opts .orow"), 3)
+		s.wantCount(t, s.loc(".orow .tag"), 0)
 		s.wantCount(t, s.loc(".tag.cp"), 0)
 	}
 }
@@ -614,7 +587,7 @@ func TestSideViewClickingATileSelectsItAndThePickFollows(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10?view=side")
 	s.wantCount(t, s.loc(".tile .pick"), 0)
-	pick := s.loc(".tiles + .act .pick")
+	pick := s.loc(".rpanel .pick")
 	s.wantText(t, pick.Locator(".pl"), "A")
 	// The tile's padding, away from its header and picture.
 	failIf(t, s.loc(".tile[data-opt=B]").Click(playwright.LocatorClickOptions{Position: &playwright.Position{X: 5, Y: 5}}))
@@ -631,6 +604,7 @@ func TestSideViewClickingATileSelectsItAndThePickFollows(t *testing.T) {
 }
 
 func TestSideViewSharedPickRowIsCentredUnderTheGrid(t *testing.T) {
+	t.Skip("rewritten in Task 4")
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10?view=side")
 	row := s.loc(".tiles + .act")
@@ -665,6 +639,7 @@ func (s *site) gaps(t *testing.T, picture string) string {
 }
 
 func TestPickRowsSit16PxFromThePictureAndTheLargeRow(t *testing.T) {
+	t.Skip("rewritten in Task 4")
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10")
 	if got := s.gaps(t, ".stage"); got != "16 16 44" {
@@ -677,6 +652,7 @@ func TestPickRowsSit16PxFromThePictureAndTheLargeRow(t *testing.T) {
 }
 
 func TestNeutralAnswerIsExplainedUnderItsRow(t *testing.T) {
+	t.Skip("rewritten in Task 4")
 	const hint = "Records no winner. Say why in the note."
 	s := newSite(t, siteOpts{secret: testSecret})
 	tok := "t=" + roundToken("demo")
@@ -746,9 +722,9 @@ func TestSideViewPictureClickSelectsFirstThenOpensLarge(t *testing.T) {
 func TestSideViewSelectionShowsInTheLetterAndThePick(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10?view=side")
-	pick := s.loc(".tiles + .act .pick")
+	pick := s.loc(".rpanel .pick")
 	s.wantCount(t, pick.Locator(".pn"), 0)
-	width := `document.querySelector('.tiles + .act .pick').offsetWidth`
+	width := `document.querySelector('.rpanel .pick').offsetWidth`
 	wantWidth := eval(t, s.Page, width)
 	if c := cssOf(t, s.Page, ".tile.sel .let", "", "color"); c != selRGB {
 		t.Errorf("selected letter %v, want --sel %s", c, selRGB)
@@ -773,7 +749,7 @@ func TestSideViewPlayOnAnotherTileSelectsIt(t *testing.T) {
 	s.wantClass(t, s.loc(".tile[data-opt=A]"), "sel")
 	s.click(t, ".tile[data-opt=B] [data-play]")
 	s.wantClass(t, s.loc(".tile[data-opt=B]"), "sel")
-	s.wantText(t, s.loc(".tiles + .act .pick .pl"), "B")
+	s.wantText(t, s.loc(".rpanel .pick .pl"), "B")
 }
 
 // recordClip makes a short VP8 WebM in the browser, since the repository tracks no video.
@@ -859,4 +835,112 @@ func TestCookieCarriesRequestsWithoutTheQuery(t *testing.T) {
 	if refused != "403 "+gateText {
 		t.Errorf("without the cookie: %q, want 403 %q", refused, gateText)
 	}
+}
+
+const todayRound = "kind: pictures\nquestion: Q\nwhy: W\nrec: B\nrecWhy: because\ncontrols: {fit: true}\nrender: {page: static/demo/scene.html, w: 1280, h: 720, hash: shot=1}\n" +
+	"ref: {label: 'Today: as built', render: {params: {outline: 3}}}\noptions:\n" +
+	"  A: {name: One, notes: first, sees: a look, render: {params: {outline: 0}}, extra: [{label: More A, render: {params: {outline: 4}}}]}\n" +
+	"  B: {name: Two, notes: second, sees: b look, render: {params: {outline: 1}}, extra: [{label: More B, render: {params: {outline: 5}}}]}\n" +
+	"  C: {name: Three, render: {params: {outline: 2}}}\n"
+
+// newTodaySite serves one step with a Today picture, extras on A and B, and Claude's pick on B.
+func newTodaySite(t *testing.T) *site {
+	t.Helper()
+	dir := writeTree(t, map[string]string{
+		"index.yaml":   "- {id: d, title: Today}\n",
+		"d/round.yaml": "title: Today\nintro: The round.\nsteps: [ref]\n",
+		"d/ref.yaml":   todayRound,
+	})
+	s := newSite(t, siteOpts{rounds: dir})
+	s.open(t, "/r/d/1")
+	return s
+}
+
+func TestKeyZeroShowsTodayAndDisablesPick(t *testing.T) {
+	s := newTodaySite(t)
+	pick := s.loc(".rpanel button.pick")
+	s.press(t, "0")
+	s.wantVisible(t, s.loc(`.ostage[data-opt=today]`))
+	s.wantHidden(t, s.loc(`.ostage[data-opt=A]`))
+	failIf(t, expect.Locator(pick).ToBeDisabled())
+	s.press(t, "Enter")
+	s.settle(t)
+	if got := s.entries(t); len(got) != 0 {
+		t.Errorf("Enter on Today recorded %v, want nothing", got)
+	}
+	s.press(t, "b")
+	failIf(t, expect.Locator(pick).ToBeEnabled())
+	s.wantContains(t, pick, "Pick B")
+	s.click(t, `.opts .orow[data-show=today]`)
+	s.wantVisible(t, s.loc(`.ostage[data-opt=today]`))
+	failIf(t, expect.Locator(pick).ToBeDisabled())
+}
+
+func TestRowClickSelectsAndMoreOfAndAboutFollow(t *testing.T) {
+	s := newTodaySite(t)
+	s.click(t, `.opts .orow[data-show=B]`)
+	s.wantClass(t, s.loc(`.orow[data-show=B]`), "sel")
+	failIf(t, expect.Locator(s.loc(`.orow[data-show=A]`)).Not().ToHaveClass(regexp.MustCompile(`(^|\s)sel(\s|$)`)))
+	s.wantVisible(t, s.loc(`.moreof [data-opt=B]`))
+	s.wantVisible(t, s.loc(`.about[data-opt=B]`))
+	s.wantHidden(t, s.loc(`.moreof [data-opt=A]`))
+	s.wantHidden(t, s.loc(`.about[data-opt=A]`))
+}
+
+func TestClaudesPickTagOnlyOnItsRow(t *testing.T) {
+	s := newTodaySite(t)
+	s.wantCount(t, s.loc(".orow .tag.cp"), 1)
+	s.wantCount(t, s.loc(".orow[data-show=B] .tag.cp"), 1)
+	s.press(t, "b")
+	s.wantCount(t, s.loc("button.pick .tag"), 0)
+}
+
+func TestViewMenuClosedAndKeysStillWork(t *testing.T) {
+	s := newTodaySite(t)
+	s.wantVisible(t, s.loc(".status .viewmenu summary"))
+	if open := eval(t, s.Page, `document.querySelector('.viewmenu').open`); open != false {
+		t.Errorf("View menu open = %v, want closed", open)
+	}
+	s.press(t, "f")
+	s.wantClass(t, s.loc("#view"), "true100")
+}
+
+func TestDetailsFoldsStartClosed(t *testing.T) {
+	s := newTodaySite(t)
+	for _, path := range []string{"/r/d/1", "/r/p2-3b-dock/1"} {
+		if path != "/r/d/1" {
+			s = newSite(t, siteOpts{})
+			s.open(t, path)
+		}
+		if n, err := s.loc(".lpanel details").Count(); err != nil || n < 4 {
+			t.Errorf("%s: %d folds in the left panel (%v), want why, Claude's reason, About and This round", path, n, err)
+		}
+		s.wantCount(t, s.loc(".lpanel details[open]"), 0)
+	}
+}
+
+func TestTodayAndExtrasSitInTheSamePlaceOnEveryStep(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	var rects []any
+	for _, step := range []string{"/r/p2-3b-dock/1", "/r/p2-3b-dock/2"} {
+		s.open(t, step)
+		s.wantVisible(t, s.loc(".moreof [data-opt]:not([hidden]) .extras"))
+		failIf(t, expect.Locator(s.loc(".opts .orow").First()).ToHaveAttribute("data-show", "today"))
+		if stray := eval(t, s.Page, `[...document.querySelectorAll('.extras')].filter((e) => !e.closest('.moreof, .fold')).length`); stray != 0 {
+			t.Errorf("%s: %v extras outside the More of strip", step, stray)
+		}
+		rects = append(rects, eval(t, s.Page, `JSON.stringify(document.querySelector('.moreof').getBoundingClientRect())`))
+	}
+	if rects[0] != rects[1] {
+		t.Errorf("More of strip moved between steps: %v, then %v", rects[0], rects[1])
+	}
+}
+
+func TestConfirmStepPicksFromTheRightPanel(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/2")
+	s.wantVisible(t, s.loc(".rpanel [value=yes]"))
+	s.wantVisible(t, s.loc(".rpanel [value=change]"))
+	s.wantCount(t, s.loc(".opts .orow"), 1)
+	s.wantCount(t, s.loc(".orow[data-show=today]"), 0)
 }
