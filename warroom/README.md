@@ -52,7 +52,7 @@ State lives in the address, not in a hash, so every view is a link.
 | `GET /picks.json?t=<admin token>` | All picks, for reading back (`Cache-Control: no-store`) |
 | `GET /history.jsonl?t=<admin token>` | Every recorded change, one JSON line each |
 | `GET /health` | `200 ok` |
-| `/static/{path...}`, `/docs/...`, `/game/...`, `/web/...` | Embedded assets; repository files (no listings, no links out of the root) |
+| `/static/{path...}`, `/docs/...`, `/game/...`, `/web/...` | Embedded assets; repository files (no listings, no links out of the root). Always `Cache-Control: no-cache`, so a restart or redeploy shows the new file at once; `/static/` also has an ETag (a 304 when unchanged) |
 
 ## Tokens
 
