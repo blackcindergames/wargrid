@@ -3,15 +3,15 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 19:16)
-Branch / base commit / working-tree state: p7-enemy-bots / 7049a64b (source equals T1-6 300d2283 plus T1-6b) / T1-6b written, uncommitted: skirmish.gd, simulation.gd (bot_state `hp`), test_bot_rules.gd, test_skirmish.gd, test_skirmish_waves.gd, sim-interface.md, this file
-Last green task / next incomplete task: T1-6b done, awaiting review and the owner's commit approval / T1-7
-Changed paths since last commit: game/scripts/simulation/skirmish.gd, game/scripts/simulation/simulation.gd, game/tests/test_bot_rules.gd, game/tests/test_skirmish.gd, game/tests/test_skirmish_waves.gd, docs/reference/sim-interface.md, docs/reference/p7-verification.md
+Resume record (updated 2026-11-21 19:25)
+Branch / base commit / working-tree state: p7-enemy-bots / 4c47c973 (T1-6b committed) / clean but for this record
+Last green task / next incomplete task: T1-6b (reviewed, fix round applied, committed 4c47c973) / T1-7
+Changed paths since last commit: docs/reference/p7-verification.md (this record)
 Last command / cases / checks / failures / exit / marker: full suite on the T1-6b fix-round tree CASES 1301 CHECKS 152873 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, the T1-6 names); lint exit 0, warnings exit 0 (190 files), check_public passed
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
-Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); kill check D: T1-6b builds R (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate; open: 1v2 floor fails on every tree (T1-8 `WAVE0_UNITS`), wave growth at T1-8
+Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); kill checks C and D decisions (user, 2026-11-21; plan "After kill check C/D"); gate review Gemini Neon high plus Opus high (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate; open: 1v2 floor fails on every tree (T1-8 `WAVE0_UNITS`), wave growth at T1-8, fast-unit chipping watched at the T1-8 window check, Fm1 winner at T1-10
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: T1-6b fix round done; local commit with approval item (a); then T1-7
+Next exact action: fresh session from the private handoff p7-enemy-bots-prompt.txt; T1-7 (BR6), baseline skipped (full suite ran on 4c47c973's source tree)
 ```
 
 ## Red ledger
