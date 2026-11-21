@@ -249,7 +249,7 @@ The island is TypeScript (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPr
 
 ## Browser tests
 
-`internal/web/browser_test.go` drives the real page in headless Firefox through playwright-go: keys, option flips, picks and Retry, the phone sheet, tune sliders, measurement tables, the error banner, the read-only link. They sit behind the build tag `browser`, so `go test ./...` needs neither playwright nor a browser, and `go.mod` carries the module only for the tagged files. Each test starts the whole server in-process (`httptest`, a temp picks file) and opens a fresh page on it; the shipped rounds (`demo`, `demo-controls`) are the fixtures.
+`internal/web/browser_test.go` drives the real page in headless Firefox through playwright-go: keys, option flips, picks and Retry, the phone sheet, tune sliders, measurement tables, the error banner, the read-only link. They sit behind the build tag `browser`, so `go test ./...` needs neither playwright nor a browser, and `go.mod` carries the module only for the tagged files. Each test starts the whole server in-process (`httptest`, a temp picks file) and opens a fresh page on it; the shipped rounds (`demo`, `demo-controls`) are the fixtures. The layout geometry tests read the shipped round `rounds/p2-3b-dock` (steps 1, 2 and 5: their crops, `ref` and long texts), so changing that round can break them.
 
 ```sh
 cd warroom
