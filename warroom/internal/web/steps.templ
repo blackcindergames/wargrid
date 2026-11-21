@@ -48,10 +48,8 @@ templ PickButton(value, class, key string) {
 	}
 }
 
+// No Claude's-pick tag here: only the Pick button's tab names it (user, 2026-11-21).
 templ Tags(o OptView) {
-	if o.Cp {
-		<span class="tag cp">Claude's pick</span>
-	}
 	if o.Picked {
 		<span class="tag got">Picked</span>
 	}
@@ -117,7 +115,12 @@ templ Act(v ChoiceView) {
 				Change (say what in the note)
 			}
 		} else if !isReadOnly(ctx) {
-			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")</button>
+			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">
+				Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")
+				if v.Act.Cp != "" {
+					<span class="tag cp ptab" data-cp={ v.Act.Cp } hidden?={ v.Act.Cp != v.Act.Shown }>Claude's pick</span>
+				}
+			</button>
 		}
 		@NeutralAnswer(v.Act.Neutral)
 	</div>

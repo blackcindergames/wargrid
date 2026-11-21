@@ -24,8 +24,8 @@
   - 1–8 and a–d pick A–H as today.
   - Enter picks the shown option, and does nothing while Today is shown.
   - W toggles side view and L opens Large. Every stage-control key works with View ▾ closed.
-- Pick names only the letter (`Pick B`), and its width never changes between options. The `ptab` "Claude's pick" tab inside the Pick button is removed.
-- "Claude's pick" shows only as a tag on Claude's own option row (and on its side-view tile header). Never on the row being viewed unless that row is Claude's.
+- Pick names only the letter (`Pick B`), and its width never changes between options. "Claude's pick" shows only as a tab on the Pick button while Claude's option is shown, placed so the button's width never changes (user, 2026-11-21).
+- No "Claude's pick" tag on option rows or side-view tiles (user, 2026-11-21: "I only need Claude's pick on the pick button"). The "Claude's reason" fold names the pick in words.
 - Details fold-outs ("Why this question", "Claude's reason", "This round", "About <letter>", and the existing info blocks) start closed on every step. The summary keeps its intro open.
 - "Look at" (`look`) is always visible and never clamped or cut.
 - Loader warnings go to the log and `go run . open` only, never to the page. Lengths are counted after removing backticks. Limits: question 70, option `notes` 90, `look` 120 characters.

@@ -24,7 +24,7 @@ The step page shows too much text, and its areas run into each other (user, 2026
 
 - Anything that cuts the "Look at" text.
 - Anything that lets the stage collapse or overflow its column.
-- Any Claude's-pick marker that can be read as "the option you are viewing".
+- Any Claude's-pick marker away from the Pick button.
 - Pick and its controls jumping between options.
 
 ## Approaches
@@ -50,12 +50,12 @@ Today `Info` opens `why` on desktop, and step 1 opens the intro. Both change to 
 - **One strip, "More of <option>".** It shows the selected option's `extra` pictures and follows the selection; a click opens Large. It is hidden when the option has none.
   - An extra with `local: true` whose file is missing is left out, and today's "Your mock (local, not committed)" placeholder goes.
   - If nothing is left, the strip is not drawn. Its space stays reserved, so the stage zone height does not depend on the option.
-- **Side by side (W).** It keeps today's side view (the Today tile plus all option tiles, one shared Pick) inside the stage zone at the same fixed size. The right Options panel stays, with Pick in it. Tiles show only the picture and a header (letter, name, Claude's pick tag), because the panel carries the text. "More of" follows the selected tile. With more than four tiles the zone scrolls inside itself (my calls). Correction: the approval message said "two tiles"; the owner's pick was "keep today's side view … with Today pairable", and today's side view already shows the Today tile next to every option.
+- **Side by side (W).** It keeps today's side view (the Today tile plus all option tiles, one shared Pick) inside the stage zone at the same fixed size. The right Options panel stays, with Pick in it. Tiles show only the picture and a header (letter, name), because the panel carries the text. "More of" follows the selected tile. With more than four tiles the zone scrolls inside itself (my calls). Correction: the approval message said "two tiles"; the owner's pick was "keep today's side view … with Today pairable", and today's side view already shows the Today tile next to every option.
 
 **Right panel (~340 px), choice steps (`pictures`, `text`, `audio`, `lab`):**
 - **Options list.**
   - First comes "Today" (from `ref`): a muted, dashed row on key 0, labelled `ref.label`. Choosing it shows the Today render on the full stage; it is viewing only, never a pick. T stays the built-in `tier` control, and digits 1 to 8 already pick A to H (user, 2026-11-21). While Today is shown, Pick is disabled and Enter does nothing, so no option can be recorded unseen. Showing Today is client-only, not URL state (my call).
-  - Then a row for each of A to H: the keycap, the name, a "Claude's pick" tag on Claude's own row only, and `notes` as an always-visible line. The selected row is marked with `--sel`.
+  - Then a row for each of A to H: the keycap, the name, and `notes` as an always-visible line. The selected row is marked with `--sel`.
 - **Directly under the list, with no spacer:**
   - `Pick X (Enter)`, letter only (cherry-picked `0158eb3c`; its width stays constant);
   - the neutral button with its hint;
@@ -63,7 +63,7 @@ Today `Info` opens `why` on desktop, and step 1 opens the intro. Both change to 
   - Back/Skip (`StepNav`, moved here).
 - Option text beyond `notes` (`sees`, `changes`, the option's own `folds`) goes in a left Details fold-out, "About <letter>", that follows the selected option and is closed by default (user, 2026-11-21). The right-hand `Details` section goes away.
 - Today's flip bar above the stage goes away, because the Options list replaces it.
-- The `ptab` "Claude's pick" tab inside the Pick button goes too, since the row tag carries the pick (builder: confirm it isn't needed elsewhere).
+- "Claude's pick" shows only as the tab on the Pick button while Claude's option is shown, placed so Pick's width never changes. Rows and tiles carry no tag (user, 2026-11-21).
 - Confirm steps (one option) show the single row plus Yes/Change in the same place.
 
 **Other kinds** (`gallery`, `verdict`, `tune`, `wording`, missing, summary) use the same left panel. Their own main content goes in the centre, and the note and nav sit under it. They get no right panel unless that kind already has a list (builder's call, kept minimal).

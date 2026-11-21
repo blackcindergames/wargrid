@@ -270,10 +270,10 @@ func TestReadOnlyLinkHasNoPickControls(t *testing.T) {
 	}
 	s.open(t, "/r/demo/1?t="+roundToken("demo"))
 	s.wantVisible(t, s.loc(`[data-key=enter]`))
-	// Not blind, so Claude's row keeps its tag; only the read-only rule takes the Pick, neutral answer and note away.
+	// Step 10 is not blind and opens on Claude's option with show=C, so only the read-only rule keeps the tab off.
 	s.open(t, "/r/demo/10?show=C")
-	s.wantVisible(t, s.loc(".orow[data-show=C] .tag.cp"))
-	for _, sel := range []string{`.rpanel [name=pick]`, `.rpanel [data-note]`, `.nexplain`} {
+	s.wantVisible(t, s.loc(".orow[data-show=C]"))
+	for _, sel := range []string{`.ptab`, `.tag.cp`, `.rpanel [name=pick]`, `.rpanel [data-note]`, `.nexplain`} {
 		s.wantCount(t, s.loc(sel), 0)
 	}
 }
@@ -476,7 +476,8 @@ func TestNonBlindStepOpensOnANotOnClaudesPick(t *testing.T) {
 	s.open(t, "/r/demo/10")
 	s.wantClass(t, s.loc(`.orow[data-show=A]`), "sel")
 	s.wantVisible(t, s.loc(`.ostage[data-opt=A]`))
-	s.wantVisible(t, s.loc(".orow[data-show=C] .tag.cp"))
+	failIf(t, expect.Locator(s.loc(".act .ptab")).ToHaveAttribute("data-cp", "C"))
+	s.wantHidden(t, s.loc(".act .ptab"))
 	s.press(t, "b")
 	s.press(t, "Enter")
 	s.wantURL(t, "/r/demo/summary")
@@ -507,20 +508,12 @@ const badgeCheck = `([sel, fg, bg]) => {
 func TestClaudesPickIsALightBadge(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/10?show=C")
-	got, err := s.Page.Evaluate(badgeCheck, []any{".orow .tag.cp", wellRGB, textRGB})
+	got, err := s.Page.Evaluate(badgeCheck, []any{".act .ptab", wellRGB, textRGB})
 	failIf(t, err)
 	if got != "" {
-		t.Errorf("row tag: %v", got)
+		t.Errorf("Pick's tab: %v", got)
 	}
 	s.wantCount(t, s.loc(".pic .tag"), 0)
-	s.open(t, "/r/demo/10?view=side")
-	s.wantCount(t, s.loc(".tile .ohd .tag.cp"), 1)
-	s.wantVisible(t, s.loc(".tile[data-opt=C] .ohd .tag.cp"))
-	got, err = s.Page.Evaluate(badgeCheck, []any{".tile .ohd .tag.cp", wellRGB, textRGB})
-	failIf(t, err)
-	if got != "" {
-		t.Errorf("tile header tag: %v", got)
-	}
 }
 
 func TestBlindStepHasNoBadgeBeforeThePick(t *testing.T) {
@@ -529,7 +522,7 @@ func TestBlindStepHasNoBadgeBeforeThePick(t *testing.T) {
 		s.open(t, path)
 		s.wantCount(t, s.loc(".opts .orow"), 3)
 		s.wantCount(t, s.loc(".orow .tag"), 0)
-		s.wantCount(t, s.loc(".tag.cp"), 0)
+		s.wantCount(t, s.loc(".tag.cp, .ptab"), 0)
 	}
 }
 
@@ -916,12 +909,51 @@ func TestRowClickSelectsAndMoreOfAndAboutFollow(t *testing.T) {
 	s.wantHidden(t, s.loc(`.about[data-opt=A]`))
 }
 
-func TestClaudesPickTagOnlyOnItsRow(t *testing.T) {
+// tabCheck says what is wrong with the Pick's tab: it must sit on the button's top edge, left-aligned, clear of the option rows.
+const tabCheck = `() => {
+	const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+	const tab = r('.act .ptab'), pick = r('.act .pick'), rows = r('.opts');
+	const ok = Math.abs(tab.bottom - pick.top) < 1 && Math.abs(tab.left - pick.left) < 1 && tab.top > rows.bottom && pick.height === 44;
+	return ok ? '' : 'tab ' + tab.left + ',' + tab.top + ' to ' + tab.bottom + '; pick ' + pick.left + ',' + pick.top + ' h ' + pick.height + '; rows end ' + rows.bottom;
+}`
+
+func TestClaudesPickIsATabOnPickOnly(t *testing.T) {
 	s := newTodaySite(t)
-	s.wantCount(t, s.loc(".orow .tag.cp"), 1)
-	s.wantCount(t, s.loc(".orow[data-show=B] .tag.cp"), 1)
+	tab := s.loc(".rpanel .act .ptab")
+	width := `document.querySelector('.rpanel button.pick').getBoundingClientRect().width`
+	s.wantCount(t, s.loc(".orow .tag.cp"), 0)
+	s.wantHidden(t, tab)
+	without := eval(t, s.Page, width)
 	s.press(t, "b")
-	s.wantCount(t, s.loc("button.pick .tag"), 0)
+	s.wantVisible(t, tab)
+	if got := eval(t, s.Page, tabCheck); got != "" {
+		t.Errorf("one at a time: %v", got)
+	}
+	if with := eval(t, s.Page, width); with != without {
+		t.Errorf("Pick width %v with the tab, %v without", with, without)
+	}
+	s.press(t, "a")
+	s.wantHidden(t, tab)
+	s.press(t, "b")
+	s.press(t, "0")
+	s.wantHidden(t, tab)
+	s.open(t, "/r/d/1?view=side")
+	s.wantCount(t, s.loc(".tile .tag.cp"), 0)
+	s.wantHidden(t, tab)
+	s.click(t, ".tile[data-opt=B] .ohd")
+	s.wantVisible(t, tab)
+	if got := eval(t, s.Page, tabCheck); got != "" {
+		t.Errorf("side view: %v", got)
+	}
+	s.open(t, "/r/d/1?show=B")
+	s.wantVisible(t, tab)
+}
+
+func TestConfirmStepHasNoPickTab(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/2")
+	s.wantVisible(t, s.loc(".rpanel [value=yes]"))
+	s.wantCount(t, s.loc(".ptab"), 0)
 }
 
 func TestViewMenuClosedAndKeysStillWork(t *testing.T) {

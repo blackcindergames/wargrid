@@ -254,6 +254,9 @@ function showOption(letter, keep) {
 	/** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll('button.pick[name=pick]')).forEach((b) => {
 		b.disabled = today;
 	});
+	$$('.ptab').forEach((el) => {
+		el.hidden = el.dataset.cp !== letter;
+	});
 	if (today) return;
 	/** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('[data-shown]')).forEach((b) => {
 		b.value = letter;

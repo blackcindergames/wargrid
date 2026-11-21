@@ -204,7 +204,8 @@
     &.today.sel { border-color: var(--sel); }
   }
   .rpanel {
-    .act { flex-direction: column; align-items: stretch; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+    /* 20 px on top leaves room for the Pick's 14 px tab under the line. */
+    .act { flex-direction: column; align-items: stretch; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--line); }
     .act .pick { width: 100%; }
     .nwrap { display: flex; flex-direction: column; gap: 4px; .btn { width: 100%; } }
     .nexplain { position: static; white-space: normal; }
@@ -222,7 +223,9 @@
   }
   .act, .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .act {
-    .pick { font-size: 16px; padding-inline: 22px; height: 44px; max-width: 100%; }
+    .pick { font-size: 16px; padding-inline: 22px; height: 44px; max-width: 100%; position: relative; }
+    /* Out of flow on the button's top edge, so the Pick keeps its size and place with or without it. */
+    .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
     .pick:disabled { opacity: .45; cursor: not-allowed; }
     &:empty { display: none; }
   }

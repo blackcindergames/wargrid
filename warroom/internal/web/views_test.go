@@ -196,14 +196,14 @@ func TestBlindStepHidesClaudesPickUntilThePick(t *testing.T) {
 		t.Error("a step using the blind step names Claude's pick before the pick")
 	}
 	wantStatus(t, a.post("/r/demo/pictures/pick", url.Values{"pick": {"C"}}), http.StatusSeeOther)
-	mustContain(t, "after the pick", a.get("/r/demo/1").Body.String(), `class="cpwhy"`, "B: Backdrop two", `class="tag cp"`)
+	mustContain(t, "after the pick", a.get("/r/demo/1").Body.String(), `class="cpwhy"`, "B: Backdrop two", `class="tag cp ptab" data-cp="B"`)
 }
 
 func TestConfirmStepTagsNoOption(t *testing.T) {
 	body := newShippedApp(t).get("/r/demo/2").Body.String()
 	mustContain(t, "confirm", body, `class="cpwhy"`, "Yes, as drawn")
-	if n := strings.Count(body, `class="tag cp"`); n != 0 {
-		t.Errorf("%d Claude's-pick tags, want none: Claude's reason says it", n)
+	if n := strings.Count(body, `tag cp`); n != 0 {
+		t.Errorf("%d Claude's-pick tags or tabs, want none: Claude's reason says it", n)
 	}
 }
 

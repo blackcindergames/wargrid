@@ -27,7 +27,7 @@ type AudioView struct {
 type OptView struct {
 	Letter, Name, Reveal string
 	Key                  string
-	Cp, Picked           bool
+	Picked               bool
 	On, Done             bool
 	// Measure: the option's measurement slot; a blind step has none until the pick, since numbers could tell the options apart.
 	Measure              bool
@@ -83,6 +83,8 @@ func (c CtlBarView) Status() string {
 type ActView struct {
 	Confirm bool
 	Shown   string
+	// Cp is Claude's pick when the page may show it; the Pick button wears a tab while that option is shown.
+	Cp      string
 	Neutral string
 }
 
@@ -143,7 +145,7 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 	v.Note = b.noteBox(s, hint)
 	v.Opts = b.options(st, s, v.Shown)
 	v.Ctl = b.ctlBar(n, st, s)
-	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, Neutral: s.Neutral}
+	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, Cp: b.rec(s), Neutral: s.Neutral}
 	v.Flip = b.flipBar(s, v.Shown)
 	v.ViewHref, v.ViewLabel = b.viewToggle(n, s, v.Shown)
 	if s.Kind == "lab" {
@@ -215,9 +217,7 @@ func (b *builder) options(st *stage.Stage, s *rounds.Step, shown string) []OptVi
 	revealed := b.revealed(s)
 	for _, l := range s.OptionLetters() {
 		o := s.Options[l]
-		// On a confirm step the tag on the only option adds nothing; Claude's reason says it.
-		cp := b.rec(s) == l && !s.IsConfirm()
-		v := OptView{Letter: l, Key: flipKey(l), Name: cmp.Or(o.Name, l), Cp: cp, Picked: pick == l, On: l == shown, Done: l == pick}
+		v := OptView{Letter: l, Key: flipKey(l), Name: cmp.Or(o.Name, l), Picked: pick == l, On: l == shown, Done: l == pick}
 		if s.Blind && revealed {
 			v.Reveal = o.Reveal
 		}
