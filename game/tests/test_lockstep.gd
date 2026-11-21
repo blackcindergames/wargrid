@@ -79,7 +79,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_bot_players_play_on]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -683,4 +683,173 @@ func test_pal_two_leaves_never_hang(runner) -> bool:
 	a.inbox.append([0, Wire.encode({"type": "left", "seat": 3, "after_tick": 25})])
 	net.run()
 	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 3 and a.sim.tick() == 26, "PAL two leaves never hang: ended_left by seat 3 at 26 (status %s, seat %d, tick %d)" % [a.ls.status(), a.ls.left_seat(), a.sim.tick()])
+	return true
+
+func _quad_sim() -> RefCounted:
+	var seats: Array[Dictionary] = []
+	for seat in [1, 2, 3, 4]:
+		seats.append({"seat": seat, "team": 1 if seat <= 2 else 2, "controller": "human", "credits": Skirmish.START_CREDITS, "faction": "usa"})
+	var sim: RefCounted = Skirmish.MapData.create(Skirmish.MapData.load("res://data/maps/broken_crown.json"), seats)
+	sim.start_match([1, 2, 3, 4] as Array[int])
+	return sim
+
+func test_pal_same_after_tick_ends(runner) -> bool:
+	var expected := {2: 3, 0: 2}
+	for defeated: int in expected:
+		for order: Array in [[2, 3], [3, 2]]:
+			var net := Net.new()
+			var seats: Array[int] = [1, 2, 3]
+			for seat in seats:
+				var sim := _trio_sim()
+				if defeated != 0: _defeat(sim, defeated)
+				net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+			net.clients[1].target = 16
+			net.clients[2].target = 16
+			net.connect_all()
+			var a: Client = net.clients[0]
+			for left: int in order: a.inbox.append([0, Wire.encode({"type": "left", "seat": left, "after_tick": 20})])
+			net.run()
+			runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == expected[defeated] and a.sim.tick() == 21, "PAL same after_tick, seat %d defeated, left order %s: ended_left names the lower alive seat %d at 21 (status %s, seat %d, tick %d)" % [defeated, order, expected[defeated], a.ls.status(), a.ls.left_seat(), a.sim.tick()])
+	return true
+
+func test_pal_arrival_order_irrelevant(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats:
+		var sim := _trio_sim()
+		_defeat(sim, 2)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[2].target = 21
+	net.connect_all()
+	var a: Client = net.clients[0]
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 3, "after_tick": 25})])
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 3 and a.sim.tick() == 26, "PAL left frames in reverse order: ended_left by seat 3 at 26 (status %s, seat %d, tick %d)" % [a.ls.status(), a.ls.left_seat(), a.sim.tick()])
+	return true
+
+func test_pal_undefeated_first_ends(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats:
+		var sim := _trio_sim()
+		_defeat(sim, 3)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[2].target = 21
+	net.connect_all()
+	var a: Client = net.clients[0]
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 3, "after_tick": 25})])
+	net.run()
+	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 2 and a.sim.tick() == 21, "PAL an undefeated leave first ends at its own tick 21 (status %s, seat %d, tick %d)" % [a.ls.status(), a.ls.left_seat(), a.sim.tick()])
+	return true
+
+func test_pal_repeated_left_protocol_error(runner) -> bool:
+	var pair: Array = _fresh()
+	pair[1].receive(Wire.encode({"type": "left", "seat": 2, "after_tick": 20}))
+	runner.check(pair[1].status() == "running", "PAL the first left for a seat is accepted")
+	pair[1].receive(Wire.encode({"type": "left", "seat": 2, "after_tick": 25}))
+	runner.check(pair[1].status() == "ended_protocol" and pair[1].end_reason() == "repeated left for seat 2", "PAL a second left for the same seat ends the match as a protocol error, got %s: %s" % [pair[1].status(), pair[1].end_reason()])
+	return true
+
+func test_pal_hash_tick_after_play_on(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats:
+		var sim := _trio_sim()
+		_defeat(sim, 2)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[0].target = 40
+	net.clients[2].target = 40
+	net.connect_all()
+	for c: Client in [net.clients[0], net.clients[2]]: c.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	var a: Client = net.clients[0]
+	var c: Client = net.clients[2]
+	runner.check(a.ls.status() == "running" and c.ls.status() == "running" and a.sim.tick() == 40 and c.sim.tick() == 40, "PAL both remaining seats play through the hash tick 30 after seat 2 left at 20 (seat 1 %s at %d, seat 3 %s at %d)" % [a.ls.status(), a.sim.tick(), c.ls.status(), c.sim.tick()])
+	runner.check(a.ls.hash_rows() == c.ls.hash_rows() and a.ls.hash_rows().size() == 2, "PAL the remaining seats hold equal hash rows for ticks 0 and 30")
+	net = Net.new()
+	for seat in seats:
+		var sim := _trio_sim()
+		_defeat(sim, 2)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[0].target = 40
+	net.clients[2].target = 40
+	net.clients[2].hook = func(client, tick: int) -> void:
+		if tick != 25: return
+		for unit: Dictionary in client.sim.snapshot().entities:
+			if unit.owner == 3:
+				client.sim.remove_object(unit.id)
+				return
+	net.connect_all()
+	for client: Client in [net.clients[0], net.clients[2]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	a = net.clients[0]
+	runner.check(a.ls.status() == "ended_desync" and a.ls.desync_report().tick == 30 and a.sim.tick() == 34, "PAL a desync after the play-on is caught at the take of packet tick 34 (status %s, hash tick %d, tick %d)" % [a.ls.status(), a.ls.desync_report().tick, a.sim.tick()])
+	return true
+
+func test_pal_no_fact_ends(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats:
+		var sim := _trio_sim()
+		_defeat(sim, 2)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[0].target = 21
+	net.clients[2].target = 21
+	net.connect_all()
+	var a: Client = net.clients[0]
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	runner.check(a.sim.tick() == 21 and a.ls.status() == "running", "PAL no-fact setup: seat 1 stands at tick 21 undecided (tick %d, status %s)" % [a.sim.tick(), a.ls.status()])
+	a.ls.take(21)
+	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 2, "PAL a decision without a survivors fact ends the match even for a defeated seat (status %s, seat %d)" % [a.ls.status(), a.ls.left_seat()])
+	return true
+
+func test_pal_alive_leave_ends(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats: net.add(seat, "human", Time.get_ticks_usec, seats, _trio_sim())
+	net.clients[1].target = 21
+	net.clients[2].target = 16
+	net.connect_all()
+	var a: Client = net.clients[0]
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 3, "after_tick": 20})])
+	net.run()
+	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 3 and a.sim.tick() == 21 and not a.ls.opponent_left(), "PAL an undefeated seat leaving ends at 21 with no opponent_left (status %s, seat %d, tick %d)" % [a.ls.status(), a.ls.left_seat(), a.sim.tick()])
+	return true
+
+func test_pal_before_start_ends(runner) -> bool:
+	var seat_rows: Array[Dictionary] = []
+	for seat in [1, 2, 3]: seat_rows.append({"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "defer": true})
+	var sim: RefCounted = Skirmish.MapData.create(Skirmish.MapData.load("res://data/maps/broken_crown.json"), seat_rows)
+	sim.begin_setup([1, 2, 3] as Array[int])
+	var seats: Array[int] = [1, 2, 3]
+	var ls = Lockstep.new(1, seats)
+	ls.start(sim.snapshot())
+	ls.receive(Wire.encode({"type": "left", "seat": 3, "after_tick": 3}))
+	_run_out(sim, ls)
+	runner.check(ls.status() == "ended_left" and ls.left_before_start() and ls.left_seat() == 3 and not ls.opponent_left(), "PAL a leave before the start ends with three seats (status %s, seat %d, before start %s)" % [ls.status(), ls.left_seat(), ls.left_before_start()])
+	return true
+
+func test_pal_bot_players_play_on(runner) -> bool:
+	var net := Net.new()
+	var relay_seats: Array[int] = [1, 2]
+	for seat in relay_seats:
+		var sim := _quad_sim()
+		_defeat(sim, 2)
+		net.add(seat, "human", Time.get_ticks_usec, relay_seats, sim)
+	net.clients[1].target = 16
+	net.clients[0].target = 60
+	net.connect_all()
+	var a: Client = net.clients[0]
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	runner.check(a.sim.survivors() == [1, 3, 4], "PAL P7 shape: survivors include the sim-only players, got %s" % [a.sim.survivors()])
+	net.run()
+	runner.check(a.ls.status() == "running" and a.sim.tick() == 60 and a.ls.left_seat() == 2 and not a.ls.opponent_left(), "PAL P7 shape: the host plays on alone after a defeated guest leaves (status %s, tick %d, seat %d)" % [a.ls.status(), a.sim.tick(), a.ls.left_seat()])
 	return true
