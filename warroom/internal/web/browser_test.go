@@ -334,6 +334,25 @@ func TestTuneSliderRedrawsWithoutReloadAndRecordsTheValue(t *testing.T) {
 	}
 }
 
+func TestEnterOnTuneRecordsTunedAndMovesOn(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/9")
+	s.wantVisible(t, s.loc("wr-tune .tp-rotv"))
+	s.press(t, "Enter")
+	s.wantURL(t, "/r/demo/10")
+	if got := s.entries(t)["demo:tune"]; got.Pick == nil || *got.Pick != "tuned" {
+		t.Errorf("entry %+v, want tuned", got)
+	}
+}
+
+func TestEnterOnWordingMovesOn(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/5")
+	s.wantVisible(t, s.loc(`.act [data-key=enter]`))
+	s.press(t, "Enter")
+	s.wantURL(t, "/r/demo/6")
+}
+
 func TestReadOnlyLinkHasNoPickControls(t *testing.T) {
 	s := newSite(t, siteOpts{secret: testSecret})
 	var posts int
