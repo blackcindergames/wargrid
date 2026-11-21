@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'Nothing selected: what does the command card show?'
+why: >-
+  Zero Hour shows an empty command bar with nothing selected (EA source @0a05454, ControlBar.cpp:1727-1730). Two of our
+  records disagree: the HUD v5 layout says no card for nothing (user, 2026-11-16), and gate A kept
+  today's build buttons with nothing selected (user, 2026-11-19). Your pick settles P2.3b's card task and
+  corrects the record that loses. A key press follows the picture: in A nothing happens, in B `Q` puts
+  `Select a builder` on the refusal line with the refusal beep, in C the key arms a building.
+look: >-
+  Where to look: the bottom right. Nothing is selected, so there is no selection panel. Under B, the same
+  with the pointer on `Q`.
+rec: A
+recWhy: >-
+  Zero Hour's and v5's answer, and the world stays clear whenever you click the ground. This departs from
+  the P2.3b draft, which recommends B: B's hint costs a full-height card of empty wells. The costs of A:
+  a newcomer gets no hint to select the Bulldozer (the Full tier's idle-builder chip answers that later),
+  and it is uneven with two builders selected, which show a blocked `Q` with `Select one builder` (decided).
+neutral: None of these
+options:
+  A:
+    name: No card (v5, Zero Hour)
+    render: {state: p23b-none}
+    sees: >-
+      Nothing bottom right: the card appears once something with commands is selected.
+    notes: One rule everywhere (no commands, no card), and nothing covers the world.
+  B:
+    name: Only `Q Build ›`, blocked
+    render: {state: p23b-none-build}
+    sees: >-
+      The card with one cell, `Q Build ›`, in the blocked look (quiet fill, muted name). The card keeps
+      its full height, since `Q` sits in the top row, so the other eleven places are dark wells. Hovering
+      it shows `Select a builder`.
+    notes: >-
+      Teaches where building starts and keeps `Q` meaning Build; covers 432 x 204 of the world for one
+      disabled cell whenever nothing is selected.
+    extra:
+    - label: Pointer on `Q`
+      render: {state: p23b-none-build-hover}
+  C:
+    name: The build menu, as today
+    render: {state: p23b-none-menu}
+    sees: >-
+      The build cells `Q W E R A` as with a Bulldozer selected, without `V` Back. Today's slab does this
+      with nothing selected.
+    notes: >-
+      Fastest to build with: no selection step. But the game must pick a builder for you, which needs the
+      later Order controls rider, and `Q` means Power Plant here but Build with a Bulldozer selected.

@@ -1,0 +1,66 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'Factory queue: where does it live?'
+why: >-
+  Zero Hour gives the queue its own row of nine buttons in the control bar, beside the selected unit's
+  picture, with a clock on the first only (ControlBar.h:414, limit 9 in ProductionUpdate.cpp:109). The
+  packages list decided the v5 form, nine slots in the factory's selection panel (user, 2026-11-16);
+  P2.3a1 then built name rows in the slab, and gate B put them above the buttons (design answers, gate
+  B). Your pick sets P2.3b's queue task. It also settles the progress bar on the producing cell: none
+  when the queue sits above the cells, a 4 px bar when the queue is away from them. In every option a
+  click on an entry cancels it and refunds its price, tooltip `Cancel · refunds 800` (decided, not drawn).
+  Not offered: OpenRA's queue on the cell alone (a count and a bar, no list), since the order of a mixed
+  queue would not show and cancelling would hide behind the cell.
+look: >-
+  Where to look: the bottom of the screen, the Vehicle Factory panel on the left and its card on the
+  right, four tanks queued. Under each option, the same with a full queue of nine.
+rec: A
+recWhy: >-
+  names read without glyphs and sit next to the cells that made them, as the game does today; the cost
+  is the tallest block over the world when the queue is long.
+neutral: None of these
+ref:
+  label: 'Today: the P2.3a1 slab with its queue rows'
+  render: {state: queue-a}
+options:
+  A:
+    name: Name rows above the card cells (as built)
+    render: {state: p23b-queue-above}
+    sees: >-
+      Today's queue rows, moved onto the new card: a `QUEUE` header, then one 32 px row per entry,
+      newest on top, the one in production lowest with `42 %`, a 2 px own-colour line and an ×. The card
+      grows upward to hold them, 12 px above the cells, which never move: 374 px tall with four queued,
+      410 with nine (204 without a queue). From six entries the rows collapse to four under `Show N more
+      queued`. No bar on the producing cell.
+    notes: >-
+      Readable without glyphs; keeps P2.3a1's tested hold rule (rows never reflow under the pointer).
+      Departs from the packages list's panel slots and from Zero Hour's slot row.
+    extra:
+    - label: "Nine queued, collapsed; the cells are blocked: `Queue full`"
+      render: {state: p23b-queue-above-full}
+  B:
+    name: Nine slots in the factory panel (v5, packages list)
+    render: {state: p23b-queue-slots}
+    sees: >-
+      Under the factory's name and health, nine 36 px slots in a row. A filled slot shows the key of the
+      cell that made it (`Q Q W Q`); empty slots are dark wells; the first carries the progress bar. The
+      producing cell `Q` gets a 4 px own-colour bar along its bottom.
+    notes: >-
+      Closest to Zero Hour and to the decision of 2026-11-16, and the smallest block (panel 128 px, card
+      204). Key letters stand in
+      for glyphs until the Full tier, so a newcomer reads `Q W Q` rather than names.
+    extra:
+    - label: "Nine queued; the cells are blocked: `Queue full`"
+      render: {state: p23b-queue-slots-full}
+  C:
+    name: Name rows in the factory panel
+    render: {state: p23b-queue-panel}
+    sees: >-
+      Today's rows and cap, but inside the selection panel under the factory's name, 408 px wide; the
+      card holds only the cells. The producing cell gets the 4 px bar, as in B.
+    notes: >-
+      Names and the panel place together; the panel grows to 250 px (286 with nine) on the left, where
+      the minimap lands later, and the rows sit far from the cells that fill them.
+    extra:
+    - label: "Nine queued, collapsed; the cells are blocked: `Queue full`"
+      render: {state: p23b-queue-panel-full}

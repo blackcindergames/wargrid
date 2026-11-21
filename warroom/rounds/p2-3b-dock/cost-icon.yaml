@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'Advisory: which dollar mark reads best?'
+why: >-
+  Follows your picks in the cost step: `warn` plus a money mark, a coin with `$` (user, 2026-11-21), but
+  the 11 px coin was too small to read. These make the `$` larger. The mark sits 4 px after the cost in
+  `warn`; F switches to true 100 % for the real size.
+look: >-
+  Where to look: `R` Vehicle Yard, 2,500, short of credits. Shift+C for colour vision.
+rec: C
+recWhy: >-
+  a solid shape with the sign cut out reads best at small sizes; the cost is the heaviest mark in a
+  quiet cell.
+neutral: None of these
+crop: {x: 820, y: 460, w: 460, h: 260}
+controls:
+  cvd: true
+ref:
+  label: 'The 11 px dollar coin'
+  render: {state: p23b-cost-coin-dollar}
+options:
+  A:
+    name: Larger outline coin with `$`
+    render: {state: p23b-cost-dollar-big}
+    notes: 15 px, 2 px strokes; the `$` reads, its bar pieces show as small dots.
+  B:
+    name: Bare `$`, no coin
+    render: {state: p23b-cost-dollar-bare}
+    notes: The crispest, as sharp as the digits; reads as a unit after the price (`2500 $`), not a mark.
+  C:
+    name: Solid coin, `$` cut out
+    render: {state: p23b-cost-dollar-solid}
+    notes: 15 px; reads as a money token at a glance, the heaviest of the three.
