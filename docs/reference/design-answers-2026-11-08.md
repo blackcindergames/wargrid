@@ -1477,3 +1477,118 @@ War Room round `p2-3b-dock` (`warroom/rounds/p2-3b-dock/`), drawn as `p23b-*` st
 - **Counter line (3-12):** on the cell card only, line 2, as Zero Hour's build tooltips; no line in the one-unit or inspected-enemy panels.
 - **Cost you cannot afford (3-2, advisory):** `warn` plus a non-colour mark about money, not the warning triangle: a solid 15 px `warn` coin with `$` cut out in the cell's fill, 4 px after the cost (the owner found the 11 px outline coin's `$` too small to read). Cost numbers stay bare.
 - **War Room:** the Pick button names only the letter (`Pick B`), so its width never changes. The step page gets fixed zones (a fixed-height stage with the picture centred, so the Pick row never moves) with the War Room layout package.
+
+## Fun-first prep (user, 2026-11-21)
+
+Owner answers for night 8 Play on after a leave and the three fun-first packages (P2.3b, P7, P15). Before answering the 71 fun-first rows, three research passes ran first, over primary web sources, the reference engines and Zero Hour's code and data (user, 2026-11-21; private reports `research-web.md`, `research-projects.md`, `research-zh.md`); the rows are in the private `owner-questions-v2.md`, each with the Zero Hour default and a recommendation. Its 54 "accept as recommended" rows were accepted as recommended (user, 2026-11-21) and are listed below with the asked rows. Row 3-1 and the War Room pictures are in [P2.3b War Room round](#p23b-war-room-round-user-2026-11-21) and not repeated here.
+
+### Night 8
+
+Plan: branch `play-on-after-a-leave`, `docs/superpowers/plans/2026-11-21-play-on-after-a-leave.md` (not on `main` yet); questions and research in private night-8 notes (`questions.md`, `q2-alive-source.md`, `q10-q11-tests.md`). The run starts from its private handoff, never from these answers.
+
+- **Base (Q1):** moot; Pump hardening is merged, so night 8 starts from `main` (user, 2026-11-21).
+- **Alive source (Q2 a):** `Simulation.survivors()` is a loop over the match's players calling `_survives`, plus a P7-shaped row (2 seats and 2 bots, guest defeated, play on) (user, 2026-11-21, after `q2-alive-source.md`).
+- **Leave before the start (Q3 a):** ends the match as today (user, 2026-11-21).
+- **Leftovers (Q4 a):** a defeated leaver's units and defences stay and act on their own (user, 2026-11-21).
+- **No `seat_left` command (Q5 a):** not before P10 (user, 2026-11-21).
+- **Which leave is named (Q6 a):** the leave that ended the match; before any end, the lowest seat that left (user, 2026-11-21).
+- **Second `left` for a seat (Q7 b):** ends the match as a protocol error (user, 2026-11-21).
+- **Today's leave tests (Q8 a):** unchanged; new tests sit beside them (user, 2026-11-21).
+- **Player-visible text (Q9 a):** none in night 8; P7 writes it (user, 2026-11-21).
+- **Tests (Q10 b):** in-process tests plus three 3-client relay scenarios with a defeat hook (user, 2026-11-21, after `q10-q11-tests.md`).
+- **Scene-path rider (Q11 b):** `--pump` on seat 1 in `trio-play-on`, with the credit clamp before a `--defeat` tick; `left-mid-pump` stays; a mutation where the driver always passes `null` must turn `trio-play-on` red (user, 2026-11-21, after `q10-q11-tests.md`).
+- **CI (Q12 a):** the new netplay scenarios join the CI list (user, 2026-11-21).
+- **Bot stand-ins (Q20 a):** one in-process lockstep case with 2 relay seats plus non-relay simulation players (stand-ins for P7's host-run bots), guest leaves defeated, play on (user, 2026-11-21).
+- **Rate the bot dropped (Q13-Q18 moot):** no bot-rating evening (user, 2026-11-20, director round); supersedes the Rate the bot backup of night 8 in [Bot plan round](#bot-plan-round-user-2026-11-18).
+- **Worktree setup (Q19 a):** the prep session creates the worktree and branch and writes a proposed night-settings copy with a copy line for the owner (user, 2026-11-19); it stands for the night 8 worktree (user, 2026-11-21).
+- **Backup:** one, the F42 spike (evidence only: the gap between the paced and unpaced match benchmark on the Mac); no second backup (user, 2026-11-21).
+- **Benchmarks beside another session:** another session's Godot does not stop the run; before each benchmark the run lists Godot and Zero Hour processes and the load; above load 2.5 it runs anyway, tags the row "host under load" and lists an evening rerun in the morning summary (user, 2026-11-21; overrides [night run](../night-run.md) start step 4, which stops a benchmark run, for night 8).
+
+### P2.3b (decisions beyond the round)
+
+Plan: branch `p2-3b-build-from-the-dock`, `docs/superpowers/plans/2026-11-21-p2-3b-build-from-the-dock.md` (not on `main` yet); private inputs `p23b-hud-decisions.md`, `zh-controls-defaults.md`, `p23b-final-review.md`.
+
+- **Plan approved:** for one attended build session on branch `p2-3b-build-from-the-dock` in its own worktree; pre-authorized one local commit per green task and one push of the branch at the gate; never `main`, merge, tag or rebase (user, 2026-11-21).
+- **Credits short (3-8):** a key press or click on a cell blocked by credits gives a short disabled click and a `150 credits short` line on every press, and the `insufficient_funds` voice through a new 900-tick (30 s) announcer cooldown (user, 2026-11-21); supersedes "no beep" in [P2.3a design round](#p23a-design-round-user-2026-11-19).
+- **Edge scroll over the HUD (3-26):** the pointer over HUD panels counts at every edge, dock included; edge scroll at the Back chip's corner goes on the playtest card (user, 2026-11-21); keeps "Edge scrolling against the dock" in [HUD (M7.6)](#hud-m76).
+- **Advisory batch (3-31):** accepted with corrected labels: full refunds, 0.667 s double tap, one group per object, allied line priority 6 and 30 s as Zero Hour; units-only groups and the `H` tie-break are Wargrid's own (user, 2026-11-21).
+- **Refusal with nothing selected:** names the faction's builder (`Select a Bulldozer`, `Select a Laborer`, from the start unit); refines the round's `Select a builder` (user, 2026-11-21).
+- **Two or more builders (3-7):** blocked `Q`, reason `Select one builder` (user, 2026-11-21).
+- **Queue overflow and cancel:** `+N more` is a muted, borderless, tooltip-only tile listing the hidden entries; right-click on a production cell cancels the newest entry of that kind (OpenRA; not in Zero Hour) (user, 2026-11-21).
+- **Two blockers:** a cell missing both prerequisite and credits shows the prerequisite look (muted cost, no coin, `Needs X`); the coin shows only when credits are the sole blocker (user, 2026-11-21).
+- **Cell card counter line:** line 2 when ready, line 3 under a blocked reason; refines the round's line 2 (user, 2026-11-21).
+- **Counter claims:** a claim prints only if the damage numbers hold and it is in the role's intended counter table; mismatches (rifle `Beats tanks`, tanks `Weak against infantry`) become one STATUS balance finding; no balance change in P2.3b (user, 2026-11-21).
+- **Forecast line (3-4):** dropped from the cell card; the top strip previews the purchase on hover (user, 2026-11-21).
+- **LOW POWER preview (3-5):** `LOW POWER · DEFENCES OFF` only when the purchase flips power low; already low, the numbers turn `warn` (user, 2026-11-21).
+- **Refused placement (3-9):** an X on every footprint cell; per-cell reasons only if playtests ask (user, 2026-11-21).
+- **Missing prerequisite (3-10):** hovering a blocked cell highlights the missing prerequisite (user, 2026-11-21).
+- **FRC's empty slot (3-13):** FRC's build `Q` cell stays empty, so a key means one role in every faction (user, 2026-11-21).
+- **As-recorded calls (3-14):** confirmed: no Stop on builders, lone-builder `A` inert, layout key labels, Back chip `V`, 1 px well outline (user, 2026-11-21).
+- **Groups (3-15 to 3-19):** a double tap centres on the live members' centroid; `Shift+N` adds the selection to group N; no `Alt+N` view-only recall; `Shift+Ctrl+N` is the save fallback if browsers take `Ctrl+N`; digits are groups, no build alias (user, 2026-11-21).
+- **Clearing a group:** `Ctrl+N` with nothing selected clears group N; with only a building selected it leaves the group unchanged (user, 2026-11-21).
+- **Group saved (3-27):** bottom centre `Group 1 · 12 units` for 2 s (user, 2026-11-21).
+- **`Space` (3-20 to 3-22):** jumps to own and allied base hits only; with both, the own event if younger than the voice cooldown, else the newest; with no recent attack, the last attack at any age (user, 2026-11-21).
+- **Allied hit (3-23, 3-24):** its own new voice from `tools/audio/`; a one-line seed of the top-left feed at (8, 48) for 4 s, own and allied (user, 2026-11-21).
+- **Edge scroll band (3-25):** 3 px, window and browser, focus only, no toggle (user, 2026-11-21).
+- **After a placement (3-28):** the card shows the build sub-grid again (user, 2026-11-21).
+- **Web pass (3-29):** in the owner batch; the fly deploy it needs is approved (user, 2026-11-21).
+- **Builder lost (3-30, F23):** a builder dying while placing gives the refusal `Builder lost` (user, 2026-11-21).
+- **Idle-builder trigger:** measured on the focus card from the first deselect (time to the next build, seconds with no card while affordable, an observer question) (user, 2026-11-21).
+- **F38 rider:** the HUD refresh layout work (2560x1080 HUD frame p95 3.06-3.22 ms against the report-only 3.04 ms) rides on P2.3b, which rebuilds the card and queue rows (user, 2026-11-21).
+
+### P7 part 1
+
+Plan: branch `p7-enemy-bots`, `docs/superpowers/plans/2026-11-21-p7-enemy-bots.md` (not on `main` yet); private inputs `zh-ai-defaults.md`, `p7-bot-baseline.md`, `research-bots.md`, `p7-part1-review.md`.
+
+- **Plan approved:** for an attended session on branch `p7-enemy-bots` in its own worktree; pre-authorized one local commit per green task and one push of `p7-enemy-bots` at the gate, never `main` (user, 2026-11-21).
+- **Human unit rules (7-1):** bot units on human unit rules inside the one re-pin; old records replay as `"ai"` (user, 2026-11-21).
+- **Economy (7-2):** one more collector per supply centre is the lever (user, 2026-11-21).
+- **First wave (7-3):** due at 150 s (user, 2026-11-21).
+- **Wave gap (7-4):** Zero Hour Normal's timer, 90 s, then 60 s from wave 3, gated by the wave-size target and its 60 s wait cap; if the probe shows the timer releasing most waves, 150 s is tested too (user, 2026-11-21, after `research-bots.md`).
+- **Waves in cost:** wave size and the defence check count unit cost, not unit count, with a per-faction mean unit cost of the bot build list (USA 531, China 512, FRC 387 on 2026-11-21; P15's heavies raise it) (user, 2026-11-21, after `research-bots.md`).
+- **Capped waves (7-5, 7-6):** waves are capped, extras guard home and join the next wave; sizes per live bot 8, 12, 16, 20, then +4 up to 32, a deliberate step above Zero Hour (user, 2026-11-21).
+- **Wave 0:** at most 16 units per team, no raise for defences, units taken highest cost first (user, 2026-11-21, part 1 review P1-1).
+- **Short waves and late units (7-7, 7-8):** a wave leaves short after at most 60 s past due (Wargrid's own); units reaching the rally after a wave left wait for the next one, as Zero Hour (user, 2026-11-21).
+- **Target (7-9):** the bot team hits the human attacked least recently (user, 2026-11-21).
+- **Defences in the way (7-10):** near the objective or on the straight route, `DEF_UNITS` 4 and `DEF_REACH` 8, tuned at the probe task (user, 2026-11-21).
+- **No standoff, no tech escalation (7-11)** (user, 2026-11-21).
+- **Pass bar (7-12):** hard: both night-12 columns (every seat damages an enemy building where stock fails; rows that end today still end), the 7-13 floor, wave 0 at most 16 per team; reach and the minute-6 army are reported only (user, 2026-11-21); keeps the both-columns rule of [Online teams refinement](#online-teams-refinement-user-2026-11-16).
+- **Idle-human floor (7-13):** an idle human falls to two bots no earlier than today's 4.3-6.4 min (user, 2026-11-21).
+- **Offline 1v1 (7-14):** the 1v1 bot runs the same new rules (user, 2026-11-21).
+- **Merge order (7-15, review P1-5):** part 1 re-pins and gates on `main`; after night 8 lands, `main` is merged in, no rebase; pins must come out equal and night 8's create-default guard test switches to `"human"`; the squash merge waits for night 8 (user, 2026-11-21).
+
+### P7 part 2
+
+Plan not written; part 2 waits for part 1 and night 8.
+
+- **Play page (7-16):** one row `vs Bot · vs Friend · With a friend vs 2 bots`, no A/B (user, 2026-11-21); replaces the Play page A/B of [Online teams refinement](#online-teams-refinement-user-2026-11-16) and of the [online teams design](../superpowers/specs/2026-11-16-online-teams-design.md).
+- **Version mismatch (7-17):** a static mock-up checked by the player-experience reviewer, no A/B (user, 2026-11-21); replaces the version-message A/B of the online teams design.
+- **Who left (7-20):** "<name> left the match" for every leave; the reasons (quit, connection lost, did not return in 60 s) come with P8 (user, 2026-11-21); defers the reasons of the online teams design's teammate-quit rule to P8; the panel still names who left.
+- **Stall text (7-18):** "Waiting for your teammate…" (user, 2026-11-21).
+- **Bot marker (7-19):** `P3 FRC (bot)` in lists (user, 2026-11-21).
+- **Host left (7-21):** "The host left. The match is over." (user, 2026-11-21).
+- **Bot slot faction (7-22):** the remembered pick, else the default (user, 2026-11-21).
+- **Ping input (7-23):** a Ping button or a ping key, then a click; Alt+click as an extra; the key is picked at design and checked in browsers (user, 2026-11-21).
+- **Ping sound (7-24):** a short tone through the announcer cooldown, below the base alarm (user, 2026-11-21).
+- **Team colours (7-25):** by team in presentation: teammates two blues, bots orange and red; the colour difference is rechecked; `(bot)` stays the non-colour mark (user, 2026-11-21).
+- **Waiting view (7-26):** lists every bot slot (user, 2026-11-21).
+- **Hidden remembered map (7-27):** a muted line says so (user, 2026-11-21).
+- **Invite link (7-28):** carries no settings (user, 2026-11-21).
+- **Start countdown (7-29):** none; it stays P11 (user, 2026-11-21).
+- **Quit panel (7-30):** heading "Match ended", no winner, after a teammate quits (user, 2026-11-21).
+
+### P15
+
+Plan not written; private input `p15-data.md`.
+
+- **Prerequisites (15-1):** all three heavies from the existing factory, no new code (user, 2026-11-21).
+- **Ids (15-2):** `usa_heavy_tank`, `china_heavy_tank`, `frc_heavy_tank`, `frc_suicide_infantry`, with the names in the packages list (user, 2026-11-21).
+- **Bot lists (15-3):** heavies as a third `units_for` entry, one in three, tuned in playtests (user, 2026-11-21).
+- **Paladin (15-4):** a Wargrid-own +10 % HP until its laser lands, tuned in playtests (user, 2026-11-21); the no-laser departure of the packages list stays.
+- **Overlord (15-5):** primary splash only, no secondary (user, 2026-11-21).
+- **Terrorist blast (15-6):** the 500-damage 0.72 ring only (user, 2026-11-21).
+- **Terrorist scope (15-7):** stays the stretch (user, 2026-11-21; as the packages list).
+- **Terrorist chains (15-8):** a `not_similar` token in the Terrorist blast's `affects` plus one guarded line in `splash_victims` spares allied Terrorists only, enemy ones still die, as Zero Hour's NOT_SIMILAR; an armour row against the blast was rejected because it would have made batteries and rockets useless against Terrorists (user, 2026-11-21, after private `terrorist-armour.md` and the player-experience review).
+- **Terrorist for bots (15-9):** not in the bots' barracks list, human only for now (user, 2026-11-21).
+- **Kind-row cap (15-10):** first in the package, roster order unchanged (user, 2026-11-21).
+- **Card slot (15-11):** the heavy goes last on the factory card, keys stay put (user, 2026-11-21).
