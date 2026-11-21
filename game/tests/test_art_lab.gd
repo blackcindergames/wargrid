@@ -10,6 +10,7 @@ const Palette = preload("res://scripts/presentation/palette.gd")
 const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 const SCENE = preload("res://scenes/art_lab.tscn")
+const ReadmeCapture = preload("res://scripts/lab/readme_capture.gd")
 
 static func _ids() -> Array[int]:
 	return []
@@ -18,7 +19,7 @@ static func _events() -> Array[Dictionary]:
 	return []
 
 func cases() -> Array[Callable]:
-	return [test_lab_fight_shows_every_state, test_every_variant_draws, test_b_variants_change_the_picture, test_events_drive_the_effects, test_lab_keys_and_no_match_keys]
+	return [test_lab_fight_shows_every_state, test_every_variant_draws, test_b_variants_change_the_picture, test_events_drive_the_effects, test_lab_keys_and_no_match_keys, test_readme_clash_point]
 
 class BodySpyView extends View:
 	var body_draws: int = 0
@@ -190,4 +191,17 @@ func test_lab_keys_and_no_match_keys(runner) -> bool:
 	lab._unhandled_input(_key(KEY_SPACE))
 	runner.check(lab.paused, "AB7 Space pauses")
 	lab.free()
+	return true
+
+static func _army(owner: int, centre: Vector2, count: int) -> Array:
+	var rows: Array = []
+	for i in count: rows.append({"owner": owner, "position": [centre.x + (i % 3) - 1.0, centre.y + float(i) / 3.0 - 1.0]})
+	return rows
+
+func test_readme_clash_point(runner) -> bool:
+	var centre := Vector2(40, 40)
+	var hit: Variant = ReadmeCapture.clash_point(_army(1, centre, 8) + _army(2, centre, 8), 8, 8.0)
+	runner.check(hit is Vector2 and (hit as Vector2).distance_to(centre) < 3.0, "two full armies at one point clash there, got %s" % [hit])
+	runner.check(ReadmeCapture.clash_point(_army(1, centre, 8) + _army(2, Vector2(80, 80), 8), 8, 8.0) == null, "armies far apart do not clash")
+	runner.check(ReadmeCapture.clash_point(_army(1, centre, 8) + _army(2, centre, 7), 8, 8.0) == null, "seven of one side is not a clash")
 	return true
