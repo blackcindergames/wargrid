@@ -39,9 +39,10 @@ var state_rows := PackedStringArray()
 
 func _ready() -> void:
 	_args = _parse(OS.get_cmdline_user_args())
-	var faction_error: String = _faction_error()
-	if faction_error != "":
-		printerr(faction_error)
+	var arg_error: String = _faction_error()
+	if arg_error == "": arg_error = _defeat_error()
+	if arg_error != "":
+		printerr(arg_error)
 		get_tree().quit(2)
 		return
 	if _args.has("replay-log"):
@@ -375,6 +376,13 @@ func _faction_error() -> String:
 	if listed != "": return listed
 	var faction: String = _args.get("faction", Skirmish.default_faction())
 	return "" if not Registry.faction(faction).is_empty() else "Unknown --faction '%s'; expected one of: %s" % [faction, ", ".join(Registry.Factions.FACTIONS.keys())]
+
+func _defeat_error() -> String:
+	if not _args.has("defeat"): return ""
+	var entry := RegEx.create_from_string("^[1-9][0-9]*@[1-9][0-9]*$")
+	for spec: String in str(_args.defeat).split(","):
+		if entry.search(spec) == null: return "Bad --defeat entry '%s'; expected SEAT@TICK[,SEAT@TICK] with seat and tick above 0" % spec
+	return ""
 
 func _parse(raw: PackedStringArray) -> Dictionary:
 	var parsed: Dictionary = {}

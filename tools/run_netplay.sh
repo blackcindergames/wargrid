@@ -83,7 +83,7 @@ proxies_accepted() {
 proxy_ms() { awk -v e="$2" '$4 == e {print $2; exit}' "$out/proxy-seat$1.log"; }
 
 # between LABEL VALUE LOW HIGH
-between() { [ "$2" -ge "$3" ] && [ "$2" -le "$4" ] || fail "$1: $2 ms is outside $3 to $4"; }
+between() { [ "$2" -ge "$3" ] && [ "$2" -le "$4" ] || fail "$1: $2 is outside $3 to $4"; }
 
 # same_prefix A B: the seats stop at different ticks when one leaves, so compare the rows both have
 same_prefix() {

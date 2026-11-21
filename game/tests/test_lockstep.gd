@@ -792,6 +792,25 @@ func test_pal_hash_tick_after_play_on(runner) -> bool:
 	net.run()
 	a = net.clients[0]
 	runner.check(a.ls.status() == "ended_desync" and a.ls.desync_report().tick == 30 and a.sim.tick() == 34, "PAL a desync after the play-on is caught at the take of packet tick 34 (status %s, hash tick %d, tick %d)" % [a.ls.status(), a.ls.desync_report().tick, a.sim.tick()])
+	net = Net.new()
+	for seat in seats:
+		var sim := _trio_sim()
+		_defeat(sim, 2)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 36
+	net.clients[0].target = 40
+	net.clients[2].target = 40
+	net.clients[1].hook = func(client, tick: int) -> void:
+		if tick != 25: return
+		for unit: Dictionary in client.sim.snapshot().entities:
+			if unit.owner == 3:
+				client.sim.remove_object(unit.id)
+				return
+	net.connect_all()
+	for client: Client in [net.clients[0], net.clients[2]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 40})])
+	net.run()
+	a = net.clients[0]
+	runner.check(a.ls.status() == "ended_desync" and a.ls.desync_report().tick == 30 and a.ls.end_reason().ends_with("(seat 2)"), "PAL the leaver's own hash before its leave is still checked (status %s, hash tick %d, reason %s)" % [a.ls.status(), a.ls.desync_report().tick, a.ls.end_reason()])
 	return true
 
 func test_pal_no_fact_ends(runner) -> bool:
