@@ -18,6 +18,8 @@ Written into the rules below: **7-1** UR1 (inside the one re-pin; old records re
 
 **After kill check C (user, 2026-11-21; evidence `p7-verification.md` Kill check C):** commit unless hit is adopted as task T1-6b before T1-7 (rewrites BR5's engaged re-pick: a wave re-picks a unit only when one of its units lost hit points since the bot's previous decision); T1-8 may also tune `WAVE0_UNITS` (at most 16) until the Broken Crown 1v2 floor holds (the 7-13 bar stands); night-12 column 1 excludes seats that lose a decided match (widens 7-12); column 2 passes when a map group's count is at least the lowest of stock's shifted-seed counts, Broken Crown 2v2 judged as one group.
 
+**After kill check D (user, 2026-11-21; evidence `p7-verification.md` Kill check D):** T1-6b builds "commit, answer locally, let go" in place of the probed variant: a launched wave keeps the team objective; at its bot's decision a wave is hit when one of its units has fewer hit points than at the previous decision, or died; a hit wave with no detour takes one, the best `_pick` score from the centre of its hit units among enemy armed units and armed buildings within `DETOUR_REACH` 10 cells of that centre that it has not let go in the last `LET_GO_TICKS` 300 (none: it carries on); the whole wave attacks the detour target and keeps it until it dies, the wave has not been hit for `DETOUR_CALM` 90 ticks, or it is farther than `DETOUR_REACH` from every wave unit (this last case stamps a let go); then back to the team objective; an enemy that does not hit the wave is ignored. Reference diff (private): `~/projects/wargrid-private/docs/better-bots/probe/p7/kcd-R.diff`.
+
 ### Open (part 1)
 
 - With 150 s tested, which gap ships: owner pick at T1-8 from the two probe rows and the window check.

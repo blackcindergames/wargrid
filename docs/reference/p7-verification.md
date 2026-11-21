@@ -3,15 +3,15 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 17:15)
-Branch / base commit / working-tree state: p7-enemy-bots / 300d2283 (T1-6) / kill check C written, uncommitted: this file only
-Last green task / next incomplete task: T1-6 committed (re-pin list red only); kill check C done / T1-7 (waits for the owner's call on commit unless hit and the 1v2 floor)
+Resume record (updated 2026-11-21 18:35)
+Branch / base commit / working-tree state: p7-enemy-bots / 300d2283 (T1-6) / kill checks C and D written, uncommitted: this file only
+Last green task / next incomplete task: T1-6 committed (re-pin list red only); kill checks C and D done / T1-6b (waits for the owner's call between A, commit unless hit, and R, commit, answer locally, let go)
 Changed paths since last commit: docs/reference/p7-verification.md
-Last command / cases / checks / failures / exit / marker: kill check C probe, 1,206 matches on two scratch exports of 300d2283, all rows parsed (no suite run; no source changed); last suite: T1-6 fix-round tree CASES 1287 CHECKS 152842 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, re-pin list only)
+Last command / cases / checks / failures / exit / marker: kill check D probe, 1,206 matches plus 156 pull rows (84 of them information) on four scratch exports of 300d2283, all rows parsed (no suite run; no source changed); last suite: T1-6 fix-round tree CASES 1287 CHECKS 152842 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, re-pin list only)
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
-Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); (a) local commit per green task, (b) one branch push at the gate; open: owner decides whether commit unless hit enters the design (kill check C), 1v2 floor fails on the T1-6 tip, wave growth at T1-8
+Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); (a) local commit per green task, (b) one branch push at the gate; open: owner picks A or R for T1-6b (kill check D: decision-table row 1 says keep A, but only R passes column 2 on Broken Crown 2v2), 1v2 floor fails on every tree (T1-8 `WAVE0_UNITS`), wave growth at T1-8
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: owner reads kill check C and decides on commit unless hit and the Broken Crown 1v2 floor; then T1-7
+Next exact action: owner reads kill check D and picks the T1-6b wave rule (A or R); then T1-6b, T1-7
 ```
 
 ## Red ledger
@@ -178,3 +178,31 @@ Column 2 noise ranges are the four seed shifts (lowest to highest). Same-faction
 Reading: the variant passes column 2 on Dry Wells and both Ashfall sets, column 1 completely on Dry Wells and Ashfall 2,6, and holds every 1v1 floor (margins on Ashfall 2,6 and Broken Crown 1v1 shrink to 256 and 158). Still failing in the variant: column 1 as worded (12 seats, 11 of them losers of decided matches), column 2 on Broken Crown 2v2 (68 of 78 against 71-72; the 1,2,3,4 order equals the lowest shift, 36, and is 1 under the highest), and the Broken Crown 1v2 floor, which already fails on the T1-6 tip (15 of 81 rows below 7,887, lowest starts 1,2,4 with an FRC pair; the variant makes it 47 ticks worse). Open for the owner: whether commit unless hit enters the design (BR5's engaged re-pick sentence; bots then read unit HP), the 1v2 floor, and whether Broken Crown 2v2 is judged as one group or per slot order.
 
 **Owner decisions after kill check C:** commit unless hit is adopted as task T1-6b before T1-7 (rewrites BR5's engaged re-pick: a wave re-picks a unit only when one of its units lost hit points since the bot's previous decision); T1-8 may also tune `WAVE0_UNITS` (at most 16) until the Broken Crown 1v2 floor holds (the 7-13 bar stands); night-12 column 1 excludes seats that lose a decided match (widens 7-12); column 2 passes when a map group's count is at least the lowest of stock's shifted-seed counts, Broken Crown 2v2 judged as one group.
+
+### Kill check D (commit, answer locally, let go)
+
+Result: evidence for the owner; nothing decided, no source in this worktree changed. Full numbers private: `kc-d.md` (`~/projects/wargrid-overnight-work/p7-enemy-bots/`, rule and decision table in `en-route-verdict.md` there); raw rows, `kcd.py`, `kcd_pull.gd`, the diffs `kcd-R.diff` and `kcd-Rall.diff`: `~/projects/wargrid-private/docs/better-bots/probe/p7/` (`out-kcd-*`).
+
+Tree: four scratch exports (`git archive`) of `300d2283`, deleted afterwards: **base** unchanged, **A** commit unless hit (kill check C's variant), **R** = A plus "commit, answer locally, let go": a hit wave takes one detour, the best `_pick` score among enemy armed units and armed buildings within 10 cells of its hurt units that it has not let go in the last 300 ticks, keeps it until the target dies, 90 ticks pass without a hit, or the target is more than 10 cells from every wave unit (a let go), then returns to the team objective; **R-all** = R with every enemy kind as candidate. Smoke first: base and A reproduce the kill check C rows exactly. Part 1: the T1-5 job set (603) on R and R-all, `ctrl=human`, unchanged `p7_probe.gd`, compared with kill check C's A and base rows and stock; 1,206 new rows, all parsed (two rows interleaved by parallel appends were split and rejoined). Part 2: scripted pull, Dry Wells 1,2, a lone bot (usa, china, frc; seeds 0-2) against an unresisting FRC seat; at wave 0's launch one Armed Pickup is spawned 12 cells from the bot's rally on the rally-objective line; every 30 ticks it moves 8 cells sideways when a wave unit is within 7 cells, else attacks the nearest wave unit; against a no-kiter control on the same tree.
+
+| Bar | Floor / noise | A | R | R-all |
+|---|---|---|---|---|
+| 7-13 floor DW / A26 / A37 / BC 1v1 | 7,414 / 10,698 / 10,314 / 7,887 | 7,683 / 10,954 / 10,582 / 8,045 | same as A | same as A |
+| 7-13 floor Broken Crown 1v2 | 7,887 | **7,574 (fails)** | **7,574 (fails)** | **7,574 (fails)** |
+| Column 1 excluding seats that lose a decided match | all | 64/65 (fails) | 77/77 | 69/69 |
+| Column 1 as worded (information) | all | 178/190 | 176/190 | 183/190 |
+| Column 2 DW / A26 / A37 | 34 / 22 / 29 lowest shift | 37 / 29 / 31 | 38 / 27 / 32 | 36 / 30 / 29 |
+| Column 2 BC 2v2 one group | 71 lowest shift /78 | **68 (fails)** | 76 | 71 |
+| Largest seat or team win share (stock 0.77) | 0.77 | 0.69 | 0.60 | **0.80, 0.82 (BC 2v2)** |
+| No winner by the cap, BB /135, BC 2v2 /90 (stock 34, 12) | - | 6, 15 | 4, 4 | 11, 10 |
+| Median end tick of won, DW / A26 / A37 (stock 18,161 / 33,597 / 29,853) | - | 26,896 / 27,128 / 34,473 | 23,479 / 29,826 / 32,019 | 23,712 / 29,024 / 30,769 |
+| Wave 0 max per team | 16 | 16 | 16 | 16 |
+| Reach, bot vs bot BB / BC 2v2 | - | 0.557 / 0.609 | 0.514 / 0.602 | 0.564 / 0.658 |
+| Pull: first building hit after the control, usa / china / frc (bar 450) | 450 ticks | +50 / +0 / +45 | +47 / +0 / +45 | +47 / +0 / +45 |
+| Pull: largest distance of the wave centre off the line (bar 12; control 0.64 / 3.61 / 4.12) | 12 cells | 0.67 / 3.61 / 4.16 | 0.67 / 3.61 / 4.16 | 0.67 / 3.61 / 4.16 |
+
+Pull rows are seed-independent (seeds 0-2 identical per faction), so the 27 specified rows are nine outcomes; base gives the same rows as R. The kiter dies 3-7 s after the launch on every row, to the wave and the bot's home units (on china before it fires); no wave unit is lost before the hit. Information runs (seed 0): kiters at the edge of their own reach (every 10 or 5 ticks, fleeing within 6.5 or 6.2) and kiters spawned mid-road (35 cells) stay within +229 ticks and 6.43 cells on every tree; a kiter fleeing within 9 never fires on A, R or R-all, and pulls only base (+1,079 ticks, 13.16 cells; base re-picks on proximity). The Armed Pickup reaches 6 cells against the wave's cannon at 6 and rockets at 7, so no kiter in these runs survives the return fire; a human with a faster or longer-reaching unit, or several kiters, is not covered.
+
+Decision table (`en-route-verdict.md`): row 1 holds (A is not pulled: within 450 ticks of the control on every row), which reads "keep A, build nothing new"; rows 2-4 do not hold (R keeps every bar R-all keeps and R-all shows a Broken Crown 2v2 base race; R fails no bar A keeps; R is not pulled). Not foreseen by the table: under the owner's bars A fails column 2 on Broken Crown 2v2 (68 of 78 against 71) and column 1 by one seat, while R passes both and every other bar except the Broken Crown 1v2 floor, which all three trees miss by 313 (unchanged against an unresisting seat, where no wave is hit). Open for the owner: keep A per row 1, or adopt R for its bars although the pull it answers was not shown. Not checked: human play, R or R-all against their own shifted seeds, which part of R makes the gain, tests and lint for the rule.
+
+**Owner decision after kill check D (user, 2026-11-21):** T1-6b builds R ("commit, answer locally, let go"), the only tree passing every night-12 bar; the plan's "After kill check D" paragraph holds the rule text. The Broken Crown 1v2 floor stays with the `WAVE0_UNITS` tuning at T1-8.
