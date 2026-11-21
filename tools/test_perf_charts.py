@@ -469,7 +469,8 @@ class PerfRecordTest(unittest.TestCase):
         self.assertAlmostEqual(s["plumbing", "team_match:profile"].mean_ms or 0, 0.4 + 0.05 + 0.67)
 
     def test_team_rows_need_the_profile_marker(self) -> None:
-        log = TEAM_PROFILE_LOG.replace("PROFILE COMPLETE 11\n", "")
+        lines = [x for x in TEAM_PROFILE_LOG.splitlines() if "zone=view" not in x and "COMPLETE" not in x]
+        log = "\n".join(lines) + "\n"
         with self.assertRaisesRegex(ValueError, "missing marker: PROFILE COMPLETE 11"):
             perf_record.parse_log(log)
 
