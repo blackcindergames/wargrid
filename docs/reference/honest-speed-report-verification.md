@@ -3,15 +3,15 @@
 Plan: [honest speed report](../superpowers/plans/2026-11-21-honest-speed-report.md). Decisions: [design answers, low-end report loose ends (user, 2026-11-20)](design-answers-2026-11-08.md#low-end-report-loose-ends-user-2026-11-20); owner rulings for the plan (user, 2026-11-21) in the plan header. Night lane item 14 in [packages](../packages.md#night-lane).
 
 ```text
-Resume record (updated 2026-11-22, Task 6 green, uncommitted)
-Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 1afd6416 (Tasks 1 to 4 committed), Task 5 changes uncommitted
-Last green task / next incomplete task: Task 6 (awaiting the coordinator's commit) / Task 7
-Changed paths since last commit: README.md, docs/reference/perf-history.csv, docs/reference/performance.md, docs/images/speed-report/readme-blocks.html (rerun; Task 5 files still uncommitted), warroom/rounds/index.yaml, warroom/rounds/n14-speed-report/round.yaml (h 1000 to 1100 for Task 6's two extra rows), warroom/internal/rounds/rounds_test.go, this file
-Last command / cases / checks / failures / exit / marker: sh warroom/tools/quality.sh / exit 0; sh tools/check_public.sh / exit 0, PUBLIC CHECK PASSED; go test ./internal/rounds/ ./internal/web/ / exit 0; baseline skipped (no GDScript changed since the Task 1 suite pass TESTS PASSED 152754)
+Resume record (updated 2026-11-22, Task 7 green, uncommitted)
+Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 6e054df6 (Tasks 1 to 6 committed), Task 7 changes uncommitted
+Last green task / next incomplete task: Task 7 (awaiting the coordinator's commit) / Task 8
+Changed paths since last commit: docs/reference/performance.md, this file (the patched copies live outside the repo in night-14/gap12)
+Last command / cases / checks / failures / exit / marker: python3 -I gap12_digest.py mac / exit 0 / GAP12 DIGEST OK; six run_profile.gd runs exit 0, PROFILE_END team_match identical in all six; no repo code changed
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: one local commit per green task (pre-authorized); no push, PR, merge or fly deploy; D3 and D4 at the SB6 plan; the plan's owner answers (user, 2026-11-21) all took the recommendations
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: coordinator commits Tasks 5 and 6, then starts Task 7
+Next exact action: coordinator commits "Record gap 12, Mac half", then starts Task 8
 ```
 
 ## Tasks
@@ -22,9 +22,9 @@ Next exact action: coordinator commits Tasks 5 and 6, then starts Task 7
 | 2 | The trend rule and the goal lines | Sonnet high | green | 3b94d9d1 |
 | 3 | The README block (checked and tracked tables, Deck row) | Sonnet high | green | 4363cba3 |
 | 4 | Docs (ledger paragraph, guide 12 and 13, STATUS) | Sonnet high | green | 1afd6416 |
-| 5 | War Room round page (`n14-speed-report`) | Sonnet high | green, uncommitted | |
-| 6 | Gate benchmark | Sonnet low | green, uncommitted | |
-| 7 | Gap 12, Mac half | Sonnet high | not started | |
+| 5 | War Room round page (`n14-speed-report`) | Sonnet high | green | 590b968b |
+| 6 | Gate benchmark | Sonnet low | green | 6e054df6 |
+| 7 | Gap 12, Mac half | Sonnet high | green, uncommitted | |
 | 8 | Gap 12, Wasm half on the Steam Deck | Sonnet high | not started | |
 | Gate | Reviews, fix round, stop at the advisory round | Opus high and the gate set | not started | |
 
@@ -47,6 +47,7 @@ Next exact action: coordinator commits Tasks 5 and 6, then starts Task 7
 | 2026-11-22 | 5 | `sh warroom/tools/quality.sh`; `sh tools/check_public.sh` | exit 0 (all steps incl. network ones); `PUBLIC CHECK PASSED` | honest-speed-report 1afd6416 plus Task 5 changes |
 | 2026-11-22 | 6 | `sh tools/run_checks.sh`; `sh tools/run_tests.sh` | both exit 0; `TESTS PASSED 152754` | honest-speed-report 990ac6f5 |
 | 2026-11-22 | 6 | `wait-quiet.sh` then `PERF_LABEL="night 14 honest speed report" sh tools/run_benchmark.sh` alone; `tools/.venv/bin/python3 tools/perf_chart.py` | exit 0; `LOCKSTEP BUDGET PASS`, `PROFILE COMPLETE 11`, `BUDGET EXCEEDED open dense hordes300`, `recorded 26 rows`; uptime load 2.36 at start (00:17), 2.30 at end (00:22); step p95 2.174, team_tick p95 2.878, plumbing mean 1.1163 | honest-speed-report 990ac6f5 plus Task 6 changes |
+| 2026-11-22 | 7 | `copy-tree.sh` twice, patch of `run_profile.gd` `_team_match()` (flag and label differ only), `godot --import` both, six runs `on off on off on off` alone; `python3 -I gap12_digest.py mac <g12> ~/projects/wargrid-wt-speed` | all exit 0; `GAP12 DIGEST OK`; `PROFILE_END team_match` same in all 6 (`ticks=38786 status=won peak_entities=268`); timed hand-off off 1.1416 ms, on 1.1589 ms, overhead +0.0173 ms (+1.5%); zone sum on 1.1154 ms (Task 6 row: 1.1163); uptime load 1.82 at start (00:23), 2.10 at end (00:49), max 2.31 | honest-speed-report 6e054df6 (copies in night-14/gap12) |
 
 ## Rulings
 
