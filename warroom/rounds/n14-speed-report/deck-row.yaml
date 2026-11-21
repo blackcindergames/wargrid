@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: text
+question: 'Advisory: how should the Deck row show it has no numbers yet?'
+why: >-
+  The Steam Deck real-scene row (D3) is the only planned pass/fail row for the goal. Its measures and
+  thresholds are set at the SB6 plan (D3, D4), so until the worker thread ships it has no numbers.
+rec: B
+recWhy: a row in the checked table shows where the goal's verdict will live, at the cost of one empty row.
+neutral: Keep the built text
+card:
+  title: Checked table, last row
+  lines:
+  - null
+options:
+  A:
+    name: A line under the table
+    text: 'Steam Deck pass mark: not measured yet (needs the worker thread)'
+    notes: No empty row; easy to miss under the caption.
+  B:
+    name: Row, short (as built)
+    text: '| Smooth on a Steam Deck in Firefox, 3v3 match | Not measured yet | | | |'
+    notes: Sits with the checked rows; empty cells until it is measured.
+  C:
+    name: Row with the reason
+    text: '| Smooth on a Steam Deck in Firefox, 3v3 match | Not measured yet (after the worker thread) | | | |'
+    notes: Says why; a wide Status cell.

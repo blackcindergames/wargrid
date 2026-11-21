@@ -1386,12 +1386,24 @@ From the low-end performance budget report (unattended run, 2026-11-19, private)
 
 Owner questionnaire on the same report; each took the recommendation unless noted.
 
-- **D1, owner variant, through `tools/perf_chart.py`:** a row gets a pass/fail colour only where a known route to green exists; every other row shows trend only. Trend rows: no colour, no percent; one fixed scenario per row (or one line per scenario); change against the median of the last 3 same-method runs; inside the `NOISE_PCT` spread shown as same; size and raw Mac ms (for example "8 % faster since <date>, p95 2.94 ms"). Trend rows are the three red rows plus `open`/`dense` (stress) and the Mac goal rows, labelled headroom: 3v3 team-match upkeep from `team_match:profile`, and 3v3 simulation p95, sim-only and bots + sim, from the profile pass through a new `perf_record.py` parser. Pass/fail lives on the Deck real-scene row (D3's measures), "not measured yet" until the worker ships; that row needs D3 and D4, asked when this package is planned. Every limit stays in the [ledger](performance.md) and in the chart's verdicts; not a loosening, since regressions stay guarded by the pair gate's drift alarm. Known gap: nothing on the README can fail before SB6.
+- **D1, owner variant, through `tools/perf_chart.py`:** a row gets a pass/fail colour only where a known route to green exists; every other row shows trend only. Trend rows: no colour, no percent; one fixed scenario per row (or one line per scenario); change against the median of the last 3 same-method runs; inside the `NOISE_PCT` spread shown as same; size and raw Mac ms (for example "8 % faster since <date>, p95 2.94 ms"). Trend rows are the three red rows plus `open`/`dense` (stress) and the Mac goal rows, labelled headroom: 3v3 team-match upkeep from `team_match:profile`, and 3v3 simulation p95, sim-only and bots + sim, from the profile pass through a new `perf_record.py` parser. Pass/fail lives on the Deck real-scene row (D3's measures), "not measured yet" until the worker ships; that row needs D3 and D4, asked at the SB6 plan as the placement bullet below says (user, 2026-11-21, settling the conflict at the night 14 prep). Every limit stays in the [ledger](performance.md) and in the chart's verdicts; not a loosening, since regressions stay guarded by the pair gate's drift alarm. Known gap: nothing on the README can fail before SB6.
 - **D5 (a):** bots count inside the sim line; the bots + sim row is judged against 1.82 ms.
 - **Package:** D1 is built as its own small package with an owner check at the end, gap 12 (profiler overhead on the hand-off rows and in Wasm) included: night 14 Honest speed report in the night lane, not the day lane, since README rows block no player package (owner pick of the agent's recommendation, 2026-11-20).
 - **D14 in `docs/packages.md`:** no pre-SB5a Deck session; the attended look comes before SB6, whose rows run over SSH.
 - **Deferred decisions placed** on their package rows: D3, D4, D12, D15-D18 at the SB6 plan, D13 at the SB6 GO; D7 at P3; D8, D9 at night 13; D10 (with D5) before the P5 plan; D11 at P6.
 - **P2.3a2 gate rider:** HUD rebuilds on change, plus the match-bench pair `load=team&hud=off` against `load=team` (report section 8.7).
+
+### Night 14 prep (user, 2026-11-21)
+
+Owner questionnaire at the night 14 Honest speed report prep; each took the recommendation.
+
+- **D3 and D4 at the SB6 plan:** night 14 builds the Deck real-scene pass/fail row as "not measured yet", with no thresholds.
+- **Gap 12 both halves:** the Mac half first, the Deck Web Bench x3 (Wasm) as night 14's last task; an unreachable Deck parks only that half.
+- **Busy host:** benchmark steps wait for load under 2.5 and no other session's Godot; other tasks go first; at 05:00 they run anyway, tagged "host under load", with an evening rerun owed.
+- **Night 8 gate benchmark 9c:** its labelled benchmark rows may be committed locally on `play-on-after-a-leave`; no push.
+- **Owner check:** an advisory War Room round with the old against the new README speed block.
+- **Plan questions** ([plan](../superpowers/plans/2026-11-21-honest-speed-report.md)): the README rows that pass today keep their colour; `movement_dense` is the one "armies on the move" row; combat stress `open` and `dense` get a row each; `combat_hordes300:profile` is the one "huge crowds" row; today's `NOISE_PCT` spreads stay (stress rows read "same" under about 41 %, narrower spreads are a later calibration item); with fewer than 3 earlier runs a row compares with the median of those there are; the gate adds silent-failure-hunter and pr-test-analyzer; gap 12 adds a profiler-on arm with the same timing code on the Mac and the Deck, 3 runs each.
+- **Backups, in order:** a fresh review of `167f45ea` with a drafted diff for the stale P7 and online-teams lines; the P15 player-experience and Opus reviews; the suite check-count wobble (two runs with `WARGRID_CASE_STATS=1`).
 
 ### P2.3a1 before gate B (user, 2026-11-20)
 

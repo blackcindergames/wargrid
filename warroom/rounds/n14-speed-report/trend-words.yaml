@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: text
+question: 'Advisory: how should a tracked row read?'
+why: >-
+  A tracked row compares the last run with the median of the three runs before it. Inside the run-to-run
+  spread it reads "same as <date>". The ms number is the raw Mac value: p95 for the simulation rows, mean
+  for the upkeep rows.
+rec: A
+recWhy: the change first, then the raw number, in plain words with no colour or arrow.
+neutral: Keep the built text
+card:
+  title: Tracked row, change column
+  lines:
+  - null
+options:
+  A:
+    name: Change, date, number (as built)
+    text: '8% slower since 2026-11-18, p95 2.94 ms'
+    notes: Plain words; the date is the run it is compared with.
+  B:
+    name: Number first
+    text: 'p95 2.94 ms, 8% slower than the median of the last three runs'
+    notes: Says how the comparison works, longer in every row.
+  C:
+    name: Arrow
+    text: '↑ 8% since 2026-11-18 (p95 2.94 ms)'
+    notes: Shortest; an arrow can read as good or bad depending on the row.
