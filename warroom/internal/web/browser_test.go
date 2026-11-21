@@ -43,6 +43,30 @@ func TestStageControlReloadsTheFramesWithTheNewHash(t *testing.T) {
 	})
 }
 
+func TestStageControlKeepsOpenFoldsOpen(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo-controls/4")
+	s.click(t, `.why summary`)
+	s.click(t, `.cpwhy summary`)
+	s.press(t, "g")
+	eventually(t, "frames reloaded with ground=dark", func() bool {
+		scenes := s.sceneFrames()
+		return len(scenes) == 2 && strings.Contains(scenes[0].URL(), "ground=dark")
+	})
+	s.settle(t)
+	for _, sel := range []string{`.why`, `.cpwhy`} {
+		if eval(t, s.Page, "document.querySelector('"+sel+"')?.open") != true {
+			t.Errorf("%s closed after the stage control", sel)
+		}
+	}
+	s.press(t, "ArrowRight")
+	s.wantURL(t, "/r/demo-controls/5?ground=dark")
+	s.wantVisible(t, s.loc(".why summary"))
+	if eval(t, s.Page, "document.querySelector('.why').open") != false {
+		t.Error(".why still open on the next step")
+	}
+}
+
 func TestPickRecordsAndMovesOn(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/1")
