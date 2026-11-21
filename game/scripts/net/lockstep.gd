@@ -106,7 +106,7 @@ func waiting_for_tick(sim_tick: int) -> Array[int]:
 	return missing
 
 # quiet: the caller cannot tell yet whether the tick before ended the match, so a wait, leave or hash refusal keeps the status; a wrong tick always ends.
-# survivors: match players owning a victory building after step(tick - 1); null means the caller cannot tell, so a leave ends the match.
+# survivors: match players still in the match after step(tick - 1) (every player during faction setup); null means the caller cannot tell, so a leave ends the match.
 func take(tick: int, quiet: bool = false, survivors: Variant = null) -> Variant:
 	if _ended(): return null
 	if tick != _next_tick:
