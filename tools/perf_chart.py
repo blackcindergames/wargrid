@@ -48,6 +48,17 @@ LOCKSTEP = Budget(3.3, 0.6, "p99")
 GATED = ("contact", "skirmish3v3", "transports", "defences", "docks", "ramp", "frc")
 
 RENDERED_METRICS = ("tick_frame", "frame_interval")
+GOAL = (
+    Line("3v3 upkeep", ("plumbing",), PLUMBING, ("team_match:profile",), "3v3 match, background upkeep (headroom)"),
+    Line("3v3 sim p95", ("step",), SIM_P95, ("team_match:profile",), "3v3 match, simulation (headroom)"),
+    Line(
+        "3v3 bots + sim p95",
+        ("team_tick",),
+        SIM_P95,
+        ("team_match:profile",),
+        "3v3 match, bots and simulation (headroom)",
+    ),
+)
 LINES = (
     Line("movement p95", ("movement_tick",), SIM_P95, ("open", "dense"), "Unit movement"),
     Line("movement p99", ("movement_tick",), SIM_P99, ("open", "dense"), "Unit movement, slowest moments"),
@@ -71,6 +82,7 @@ LINES = (
     Line("rendered tick-frame p95", RENDERED_METRICS, FRAME, ("open", "dense"), "Drawing the screen"),
     Line("Ashfall tick-frame p95", RENDERED_METRICS, FRAME, ("ashfall",), "Drawing the screen, big map (Ashfall)"),
     Line("lockstep p99", ("lockstep_overhead",), LOCKSTEP, ("contact",), "Online play overhead"),
+    *GOAL,
 )
 _REF = Path(__file__).resolve().parent.parent / "docs" / "reference"
 DEFAULT_CSV = _REF / "perf-history.csv"
@@ -140,6 +152,28 @@ NOISE_PCT: dict[str, float] = {
     "combat stress p95": _STRESS_SPREAD,
 }
 
+# A trend line keeps its source line's title, so its NOISE_PCT entry applies unchanged.
+TRENDS = (
+    Line(
+        "plumbing, horde",
+        ("plumbing",),
+        PLUMBING,
+        ("combat_hordes300:profile",),
+        "Background upkeep, huge crowds (stress)",
+    ),
+    Line("combat stress p95", ("combat_tick",), SIM_P95, ("hordes300",), "Combat, huge battles (stress)"),
+    Line(
+        "plumbing, movement layouts",
+        ("plumbing",),
+        PLUMBING,
+        ("movement_dense:profile",),
+        "Background upkeep, armies on the move (stress)",
+    ),
+    Line("combat stress p95", ("combat_tick",), SIM_P95, ("open",), "Combat, big armies in the open (stress)"),
+    Line("combat stress p95", ("combat_tick",), SIM_P95, ("dense",), "Combat, big armies packed close (stress)"),
+    *GOAL,
+)
+
 
 class Change(NamedTuple):
     kind: str  # "new", "method" or "pct"
@@ -153,6 +187,28 @@ def _change(latest: Point, prev: Point | None) -> Change:
     if prev.method != latest.method:
         return Change("method", prev=prev)
     return Change("pct", (latest.worst_pct / prev.worst_pct - 1) * 100, prev)
+
+
+def trend_text(rows: list[dict[str, str]], line: Line) -> str | None:
+    points = series(rows, line)
+    if not points:
+        return None
+    latest = points[-1]
+    value = f"{line.budget.stat} {latest.worst_pct * line.budget.dev_ms / 100:.2f} ms"
+    busy = " (busy host)" if latest.busy else ""
+    if len(points) == 1:
+        return f"first run, {value}{busy}"
+    earlier = [p for p in points[:-1] if p.method == latest.method][-3:]
+    if not earlier:
+        return f"first run of method {latest.method}, {value}{busy}"
+    base = sorted(earlier, key=lambda p: p.worst_pct)[(len(earlier) - 1) // 2]
+    if base.worst_pct == 0:
+        return f"first run, {value}{busy}"
+    pct = (latest.worst_pct / base.worst_pct - 1) * 100
+    noise = NOISE_PCT.get(line.title)
+    if abs(pct) <= noise if noise is not None else f"{abs(pct):.0f}" == "0":
+        return f"same as {base.date}, {value}{busy}"
+    return f"{abs(pct):.0f}% {'slower' if pct > 0 else 'faster'} since {base.date}, {value}{busy}"
 
 
 def areas(rows: list[dict[str, str]]) -> list[tuple[Line, Point, Change]]:

@@ -312,6 +312,111 @@ class PerfChartTest(unittest.TestCase):
         busy = self.table_row([mv("a", "1.0", load="3.1")], "Unit movement")
         self.assertTrue(busy.endswith("\U0001f195 first run (busy host) | 2026-11-09 |"))
 
+    def pl(self, label: str, mean: float, **kw: str) -> dict[str, str]:
+        return row(label=label, metric="plumbing", scenario="combat_hordes300:profile", mean_ms=str(mean), **kw)
+
+    def trend_line(self, name: str = "Background upkeep, huge crowds (stress)") -> perf_chart.Line:
+        return next(t for t in perf_chart.TRENDS if t.name == name)
+
+    def trend(self, rows: list[dict[str, str]]) -> str | None:
+        return perf_chart.trend_text(rows, self.trend_line())
+
+    def test_trend_against_median_of_last_three(self) -> None:
+        rows = [
+            self.pl("a", 5.0, date="2026-11-01"),
+            self.pl("b", 1.0, date="2026-11-02"),
+            self.pl("c", 1.2, date="2026-11-03"),
+            self.pl("d", 1.1, date="2026-11-04"),
+            self.pl("e", 1.21, date="2026-11-05"),
+        ]
+        self.assertEqual(self.trend(rows), "10% slower since 2026-11-04, mean 1.21 ms")
+
+    def test_trend_skips_other_methods(self) -> None:
+        rows = [
+            self.pl("b", 1.0, date="2026-11-02"),
+            self.pl("c", 9.0, date="2026-11-03", method="pre-P1"),
+            self.pl("d", 1.1, date="2026-11-04"),
+            self.pl("e", 1.21, date="2026-11-05"),
+        ]
+        self.assertEqual(self.trend(rows), "21% slower since 2026-11-02, mean 1.21 ms")
+
+    def test_trend_inside_noise_reads_same(self) -> None:
+        line = self.trend_line("Combat, huge battles (stress)")
+
+        def combat(label: str, p95: str, date: str) -> dict[str, str]:
+            return row(label=label, date=date, metric="combat_tick", scenario="hordes300", p95_ms=p95)
+
+        base = [combat("a", "2.90", "2026-11-01"), combat("b", "2.90", "2026-11-02"), combat("c", "2.90", "2026-11-03")]
+        self.assertEqual(
+            perf_chart.trend_text([*base, combat("d", "3.90", "2026-11-04")], line), "same as 2026-11-02, p95 3.90 ms"
+        )
+        self.assertEqual(
+            perf_chart.trend_text([*base, combat("d", "4.21", "2026-11-04")], line),
+            "45% slower since 2026-11-02, p95 4.21 ms",
+        )
+
+    def test_trend_without_noise_rounds_to_same(self) -> None:
+        first = self.pl("a", 1.0, date="2026-11-01")
+        same = self.trend([first, self.pl("b", 1.004, date="2026-11-02")])
+        self.assertIsNotNone(same)
+        assert same is not None
+        self.assertTrue(same.startswith("same as "))
+        faster = self.trend([first, self.pl("b", 0.98, date="2026-11-02")])
+        assert faster is not None
+        self.assertTrue(faster.startswith("2% faster since "))
+
+    def test_trend_first_runs(self) -> None:
+        self.assertEqual(self.trend([self.pl("a", 1.0)]), "first run, mean 1.00 ms")
+        rows = [self.pl("a", 5.0, date="2026-11-01", method="pre-P1"), self.pl("b", 1.0, date="2026-11-02")]
+        self.assertEqual(self.trend(rows), "first run of method P1, mean 1.00 ms")
+        self.assertIsNone(self.trend([]))
+
+    def test_trend_text_has_no_colour_or_limit(self) -> None:
+        texts = [
+            self.trend([self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 1.21, date="2026-11-02")]),
+            self.trend([self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 1.004, date="2026-11-02")]),
+            self.trend([self.pl("a", 1.0)]),
+            self.trend([self.pl("a", 5.0, method="pre-P1", date="2026-11-01"), self.pl("b", 1.0, date="2026-11-02")]),
+        ]
+        for text in texts:
+            assert text is not None
+            self.assertTrue(text.isascii())
+            self.assertNotIn("budget", text)
+        busy = self.trend([self.pl("a", 1.0, load="3.1")])
+        assert busy is not None
+        self.assertTrue(busy.endswith(" (busy host)"))
+
+    def test_trend_zero_baseline_is_first_run(self) -> None:
+        rows = [self.pl("a", 0.0, date="2026-11-01"), self.pl("b", 1.0, date="2026-11-02")]
+        self.assertEqual(self.trend(rows), "first run, mean 1.00 ms")
+
+    def test_goal_lines_judged_against_their_limits(self) -> None:
+        rows = [row(label="a", metric="team_tick", scenario="team_match:profile", p95_ms="2.861")]
+        self.assertTrue(any(s.startswith("3v3 bots + sim p95: 157% of budget") for s in perf_chart.summary_lines(rows)))
+        goal = {g.title: g for g in perf_chart.GOAL}
+        self.assertEqual(goal["3v3 bots + sim p95"].budget, perf_chart.SIM_P95)
+        self.assertEqual(goal["3v3 sim p95"].budget, perf_chart.SIM_P95)
+        self.assertEqual(goal["3v3 upkeep"].budget, perf_chart.PLUMBING)
+
+    def test_limits_unchanged(self) -> None:
+        self.assertEqual(perf_chart.SIM_P95, perf_chart.Budget(10.0, 1.82, "p95"))
+        self.assertEqual(perf_chart.SIM_P99, perf_chart.Budget(20.0, 3.64, "p99"))
+        self.assertEqual(perf_chart.PLUMBING, perf_chart.Budget(5.0, 0.91, "mean"))
+        self.assertEqual(perf_chart.FRAME, perf_chart.Budget(16.7, 3.04, "p95"))
+        self.assertEqual(perf_chart.LOCKSTEP, perf_chart.Budget(3.3, 0.6, "p99"))
+        self.assertEqual(
+            perf_chart.NOISE_PCT,
+            {
+                "movement p95": 50.3,
+                "movement p99": 50.3,
+                "combat gated p95": 57.5,
+                "combat gated p99": 57.5,
+                "combat stress p95": 40.7,
+            },
+        )
+        self.assertEqual(perf_chart.BUSY_LOAD, 2.5)
+        self.assertEqual(perf_chart.CLOSE_PCT, 85)
+
 
 class PerfRecordTest(unittest.TestCase):
     def setUp(self) -> None:
