@@ -127,7 +127,9 @@
   }
   .cpanel { padding: 20px; gap: 14px; }
   /* Blocks at a reading width sit centred in the column, their text left-aligned; only the stage takes the whole column. */
-  .cpanel > :is(.fields, .sumblock, .missing), wr-tune { width: 100%; margin-inline: auto; }
+  .cpanel > :is(.fields, .missing), wr-tune { width: 100%; margin-inline: auto; }
+  /* One column as wide as the widest summary block, centred, so every block shares its left edge. */
+  .k-summary .cpanel { display: grid; grid-template-columns: fit-content(min(1200px, 100%)); justify-content: center; align-content: start; }
   .cpanel > .fields { max-width: 720px; }
   .sumblock > .intro { max-width: 65ch; }
   .cpanel > .missing { padding: 0; width: fit-content; }
@@ -527,7 +529,7 @@
     .ref .pic { max-width: none; }
     .extras { grid-template-columns: minmax(0, 1fr); }
     .verdict { gap: 10px; padding-top: 0; .vb { flex: 1 1 40%; padding-inline: 8px; min-height: 48px; } textarea { margin-top: 0; } }
-    .cpanel > :is(.fields, .sumblock, .missing) { width: auto; margin-inline: 0; }
+    .cpanel > :is(.fields, .missing) { width: auto; margin-inline: 0; }
     /* Cancels the step's gap, so Copy keeps the spacing it had inside the summary block. */
     .copy { margin-block: -12px; }
     .opens { flex-basis: 100%; }

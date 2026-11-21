@@ -1679,3 +1679,33 @@ func TestPhoneSummaryKeepsCopyBeforeEarlierRounds(t *testing.T) {
 		t.Errorf("Copy sits %v px under Not answered yet and above Earlier rounds, want 20 28", got)
 	}
 }
+
+// The summary's content, not a fixed-width box around it, sits in the middle of the column.
+func TestSummaryContentIsCentredWithOneLeftEdge(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	check := func(when string) {
+		for _, vp := range [][2]int{{1440, 900}, {1920, 1080}} {
+			s.viewport(t, vp[0], vp[1])
+			s.open(t, "/r/demo/summary")
+			// Each block's own content (text, chips, table), so a block stretched wider than its content cannot pass; the intro is a framed box.
+			got := eval(t, s.Page, `(() => {
+				const rs = [...document.querySelectorAll('.cpanel .sumblock > :not([hidden])')].map((e) => { if (e.matches('.intro')) return e.getBoundingClientRect(); const r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect(); }).filter((r) => r.width > 0);
+				const c = document.querySelector('.step > .cpanel').getBoundingClientRect();
+				const l = Math.min(...rs.map((r) => r.left)), rt = Math.max(...rs.map((r) => r.right));
+				return [(l + rt) / 2 - (c.left + c.right) / 2, Math.max(...rs.map((r) => r.left)) - l].map((x) => x.toFixed(1)).join(' ');
+			})()`).(string)
+			var off, spread float64
+			if _, err := fmt.Sscan(got, &off, &spread); err != nil {
+				t.Fatal(err)
+			}
+			if off > 2 || off < -2 || spread > 1 {
+				t.Errorf("%s at %dx%d: content centre %v px off the column centre, left edges %v px apart", when, vp[0], vp[1], off, spread)
+			}
+		}
+	}
+	check("nothing answered")
+	s.open(t, "/r/demo/8")
+	s.click(t, ".vb.pick")
+	s.wantURL(t, "/r/demo/9")
+	check("one answer")
+}
