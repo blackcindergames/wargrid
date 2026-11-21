@@ -79,7 +79,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_bot_players_play_on]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -654,10 +654,12 @@ func test_own_frame_checked(runner) -> bool:
 	runner.check(sent.is_empty(), "L20 nothing is sent")
 	return true
 
-func _trio_sim() -> RefCounted:
+func _trio_sim(seat_two: Dictionary = {}) -> RefCounted:
 	var seats: Array[Dictionary] = []
 	for seat in [1, 2, 3]:
-		seats.append({"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "faction": "usa"})
+		var row: Dictionary = {"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "faction": "usa"}
+		if seat == 2: row.merge(seat_two, true)
+		seats.append(row)
 	var sim: RefCounted = Skirmish.MapData.create(Skirmish.MapData.load("res://data/maps/broken_crown.json"), seats)
 	sim.start_match([1, 2, 3] as Array[int])
 	return sim
@@ -852,4 +854,158 @@ func test_pal_bot_players_play_on(runner) -> bool:
 	runner.check(a.sim.survivors() == [1, 3, 4], "PAL P7 shape: survivors include the sim-only players, got %s" % [a.sim.survivors()])
 	net.run()
 	runner.check(a.ls.status() == "running" and a.sim.tick() == 60 and a.ls.left_seat() == 2 and not a.ls.opponent_left(), "PAL P7 shape: the host plays on alone after a defeated guest leaves (status %s, tick %d, seat %d)" % [a.ls.status(), a.sim.tick(), a.ls.left_seat()])
+	return true
+
+func test_pal_removed_in_step_a_plays_on(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats: net.add(seat, "human", Time.get_ticks_usec, seats, _trio_sim())
+	net.clients[1].target = 16
+	net.clients[0].target = 40
+	net.clients[2].target = 40
+	for client: Client in [net.clients[0], net.clients[2]]:
+		client.hook = func(c, tick: int) -> void:
+			if tick == 20: _defeat(c.sim, 2)
+	net.connect_all()
+	for client: Client in [net.clients[0], net.clients[2]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	var a: Client = net.clients[0]
+	var c: Client = net.clients[2]
+	runner.check(a.ls.status() == "running" and c.ls.status() == "running" and a.sim.tick() == 40 and c.sim.tick() == 40 and a.ls.left_seat() == 2, "PAL a leaver's last objects removed before step(A) are defeated: both others play on to 40 (seat 1 %s at %d, seat 3 %s at %d)" % [a.ls.status(), a.sim.tick(), c.ls.status(), c.sim.tick()])
+	runner.check(a.ls.hash_rows() == c.ls.hash_rows(), "PAL the seats that played on hold equal hash rows")
+	return true
+
+func test_pal_build_site_at_a_ends(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats:
+		var sim := _trio_sim()
+		sim.remove_object(4)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[0].target = 40
+	net.clients[2].target = 40
+	net.clients[1].hook = func(c, tick: int) -> void:
+		if tick == 15: c.ls.submit({"type": "build", "builder_id": 3, "building_kind": "usa_power_plant", "origin": [88, 13]})
+	net.connect_all()
+	for client: Client in [net.clients[0], net.clients[2]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	var a: Client = net.clients[0]
+	var sites: Array = a.sim.snapshot().buildings.filter(func(b: Dictionary) -> bool: return b.owner == 2 and not b.completed)
+	var builds: Array = a.ls.command_log().filter(func(m: Dictionary) -> bool: return m.player == 2 and m.type == "build" and m.tick == 20)
+	runner.check(builds.size() == 1 and sites.size() == 1, "PAL the leaver's build at A is applied and leaves a site (builds %d, sites %d)" % [builds.size(), sites.size()])
+	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 2 and a.sim.tick() == 21, "PAL a site placed at A counts as a victory object: ended_left at 21 (status %s, seat %d, tick %d)" % [a.ls.status(), a.ls.left_seat(), a.sim.tick()])
+	return true
+
+func test_pal_refused_build_at_a_plays_on(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	for seat in seats:
+		var sim := _trio_sim({"credits": 0})
+		sim.remove_object(4)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[0].target = 40
+	net.clients[2].target = 40
+	net.clients[1].hook = func(c, tick: int) -> void:
+		if tick == 15: c.ls.submit({"type": "build", "builder_id": 3, "building_kind": "usa_power_plant", "origin": [88, 13]})
+	net.connect_all()
+	for client: Client in [net.clients[0], net.clients[2]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	var a: Client = net.clients[0]
+	var c: Client = net.clients[2]
+	var builds: Array = a.ls.command_log().filter(func(m: Dictionary) -> bool: return m.player == 2 and m.type == "build" and m.tick == 20)
+	var owned: Array = a.sim.snapshot().buildings.filter(func(b: Dictionary) -> bool: return b.owner == 2)
+	runner.check(builds.size() == 1 and owned.is_empty(), "PAL the leaver's build at A reached the tick and was refused for credits (builds %d, buildings %d)" % [builds.size(), owned.size()])
+	runner.check(a.ls.status() == "running" and c.ls.status() == "running" and a.sim.tick() == 40 and c.sim.tick() == 40 and a.ls.left_seat() == 2, "PAL a refused build leaves the leaver defeated: both others play on to 40 (seat 1 %s at %d, seat 3 %s at %d)" % [a.ls.status(), a.sim.tick(), c.ls.status(), c.sim.tick()])
+	return true
+
+func test_pal_cancel_last_site_at_a_plays_on(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	var counted: Array[bool] = []
+	for seat in seats:
+		var sim := _trio_sim()
+		sim.remove_object(4)
+		net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+	net.clients[1].target = 16
+	net.clients[0].target = 40
+	net.clients[2].target = 40
+	net.clients[1].hook = func(c, tick: int) -> void:
+		if tick == 5: c.ls.submit({"type": "build", "builder_id": 3, "building_kind": "usa_power_plant", "origin": [88, 13]})
+		if tick == 15: c.ls.submit({"type": "cancel_build", "building_id": c.sim.snapshot().buildings.filter(func(b: Dictionary) -> bool: return b.owner == 2)[0].id})
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick == 19: counted.append(c.sim.survivors().has(2))
+	net.connect_all()
+	for client: Client in [net.clients[0], net.clients[2]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	var a: Client = net.clients[0]
+	var c: Client = net.clients[2]
+	var cancels: Array = a.ls.command_log().filter(func(m: Dictionary) -> bool: return m.player == 2 and m.type == "cancel_build" and m.tick == 20)
+	runner.check(counted == [true] and cancels.size() == 1, "PAL the site counted before A and the cancel is due at A (counted %s, cancels %d)" % [counted, cancels.size()])
+	runner.check(a.ls.status() == "running" and c.ls.status() == "running" and a.sim.tick() == 40 and c.sim.tick() == 40 and a.ls.left_seat() == 2, "PAL cancelling the last site at A defeats the leaver: both others play on to 40 (seat 1 %s at %d, seat 3 %s at %d)" % [a.ls.status(), a.sim.tick(), c.ls.status(), c.sim.tick()])
+	return true
+
+func test_pal_other_commands_keep_verdict(runner) -> bool:
+	var expected := {false: "running", true: "ended_left"}
+	for alive: bool in expected:
+		var net := Net.new()
+		var seats: Array[int] = [1, 2, 3]
+		for seat in seats:
+			var sim := _trio_sim()
+			if not alive: sim.remove_object(4)
+			net.add(seat, "human", Time.get_ticks_usec, seats, sim)
+		net.clients[1].target = 16
+		net.clients[0].target = 40
+		net.clients[2].target = 40
+		net.clients[1].hook = func(c, tick: int) -> void:
+			if tick != 15: return
+			var own: Dictionary = _own(c.sim.snapshot(), 2)
+			for type: String in ["move", "stop", "attack_move", "gather", "attack", "produce", "cancel_production", "set_rally", "resume_build"]: c.ls.submit(_make(type, own))
+			c.ls.submit({"type": "enter", "entity_ids": [3], "target_id": 4})
+			c.ls.submit({"type": "unload", "target_id": 4})
+			c.ls.submit({"type": "defence_attack", "building_id": 4, "target_id": 2})
+		net.connect_all()
+		for client: Client in [net.clients[0], net.clients[2]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+		net.run()
+		var a: Client = net.clients[0]
+		var due: Array = a.ls.command_log().filter(func(m: Dictionary) -> bool: return m.player == 2 and m.tick == 20)
+		runner.check(due.size() == 12, "PAL seat 2 (alive %s): all twelve other commands were due at A (%d)" % [alive, due.size()])
+		runner.check(a.ls.status() == expected[alive] and a.ls.left_seat() == 2, "PAL seat 2 (alive %s): twelve other commands at A leave the verdict %s (status %s, seat %d)" % [alive, expected[alive], a.ls.status(), a.ls.left_seat()])
+	return true
+
+func test_pal_frc_hole_counts_ends(runner) -> bool:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2, 3]
+	var held: Array[bool] = []
+	for seat in seats: net.add(seat, "human", Time.get_ticks_usec, seats, _trio_sim({"faction": "frc"}))
+	net.clients[1].target = 16
+	net.clients[0].target = 40
+	net.clients[2].target = 40
+	for client: Client in [net.clients[0], net.clients[2]]:
+		client.hook = func(c, tick: int) -> void:
+			if tick != 20: return
+			c.sim.remove_object(4)
+			if c.seat == 1: held.append(c.sim.survivors().has(2))
+	net.connect_all()
+	for client: Client in [net.clients[0], net.clients[2]]: client.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	var a: Client = net.clients[0]
+	var holes: Array = a.sim.snapshot().buildings.filter(func(b: Dictionary) -> bool: return b.owner == 2 and b.kind == "frc_hole_3")
+	runner.check(held == [true] and holes.size() == 1, "PAL the FRC headquarters falling at A leaves a hole that counts (survivors had seat 2 %s, holes %d)" % [held, holes.size()])
+	runner.check(a.ls.status() == "ended_left" and a.ls.left_seat() == 2 and a.sim.tick() == 21, "PAL an FRC leaver whose last building fell at A is not defeated: ended_left at 21 (status %s, seat %d, tick %d)" % [a.ls.status(), a.ls.left_seat(), a.sim.tick()])
+	return true
+
+func test_pal_match_end_at_a_is_normal(runner) -> bool:
+	var net := _pair(runner)
+	net.clients[1].target = 16
+	net.clients[0].target = 21
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick == 20: _defeat(c.sim, 2)
+	net.connect_all()
+	var a: Client = net.clients[0]
+	a.inbox.append([0, Wire.encode({"type": "left", "seat": 2, "after_tick": 20})])
+	net.run()
+	runner.check(a.sim.match_over() and a.sim.snapshot().match.status == "won" and a.sim.tick() == 21, "PAL the leaver's defeat at A ends the match at 21 (tick %d)" % a.sim.tick())
+	runner.check(not a.ls.advance(a.sim) and a.ls.status() == "running" and not a.ls.opponent_left(), "PAL the match ended normally: the leave decision is never reached (status %s)" % a.ls.status())
 	return true
