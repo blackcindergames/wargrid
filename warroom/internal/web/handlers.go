@@ -47,6 +47,8 @@ type Config struct {
 type Server struct {
 	cfg   *Config
 	store *store.Store
+	// The catalog reloads on every request, note autosaves included; each loader message logs once per server.
+	logged sync.Map
 }
 
 func NewServer(cfg *Config) *Server {
@@ -144,10 +146,14 @@ func serveFile(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) 
 func (s *Server) catalog() *rounds.Catalog {
 	c := rounds.LoadCatalog(s.cfg.Rounds)
 	for _, e := range c.Errors {
-		slog.Warn("rounds", "error", e)
+		if _, seen := s.logged.LoadOrStore("error "+e, true); !seen {
+			slog.Warn("rounds", "error", e)
+		}
 	}
 	for _, w := range c.Warnings {
-		slog.Warn("rounds", "warning", w)
+		if _, seen := s.logged.LoadOrStore("warning "+w, true); !seen {
+			slog.Warn("rounds", "warning", w)
+		}
 	}
 	return c
 }

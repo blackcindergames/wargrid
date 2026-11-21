@@ -1,9 +1,11 @@
 package web
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -556,6 +558,25 @@ var blindRounds = map[string]string{
 	"b/round.yaml": "title: Blind\nsteps: [one, two]\n",
 	"b/one.yaml":   "kind: pictures\nquestion: One?\nblind: true\nrec: B\noptions:\n  A: {name: a, img: a.png}\n  B: {name: b, img: b.png}\n",
 	"b/two.yaml":   "kind: pictures\nquestion: Two?\nblind: true\nrec: B\noptions:\n  A: {name: a, img: a.png}\n  B: {name: b, img: b.png}\n",
+}
+
+func TestEachLoaderWarningIsLoggedOnce(t *testing.T) {
+	var logged bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
+	t.Cleanup(func() { slog.SetDefault(old) })
+	a := newAppWith(t, blindRounds)
+	warnings := rounds.LoadCatalog(a.cfg.Rounds).Warnings
+	if len(warnings) == 0 {
+		t.Fatal("the fixture gives no warning")
+	}
+	a.get("/r/b/1")
+	a.get("/r/b/2")
+	for _, w := range warnings {
+		if n := strings.Count(logged.String(), fmt.Sprintf("warning=%q", w)); n != 1 {
+			t.Errorf("%q logged %d times, want 1", w, n)
+		}
+	}
 }
 
 func TestBlindLetterWarningNeverReachesThePage(t *testing.T) {

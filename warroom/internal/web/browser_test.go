@@ -43,6 +43,53 @@ func TestStageControlReloadsTheFramesWithTheNewHash(t *testing.T) {
 	})
 }
 
+func TestStageControlKeepsOpenFoldsOpen(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo-controls/4")
+	s.click(t, `.why summary`)
+	s.click(t, `.cpwhy summary`)
+	s.press(t, "g")
+	eventually(t, "frames reloaded with ground=dark", func() bool {
+		scenes := s.sceneFrames()
+		return len(scenes) == 2 && strings.Contains(scenes[0].URL(), "ground=dark")
+	})
+	s.settle(t)
+	for _, sel := range []string{`.why`, `.cpwhy`} {
+		if eval(t, s.Page, "document.querySelector('"+sel+"')?.open") != true {
+			t.Errorf("%s closed after the stage control", sel)
+		}
+	}
+	s.press(t, "ArrowRight")
+	s.wantURL(t, "/r/demo-controls/5?ground=dark")
+	s.wantVisible(t, s.loc(".why summary"))
+	if eval(t, s.Page, "document.querySelector('.why').open") != false {
+		t.Error(".why still open on the next step")
+	}
+}
+
+func TestOpenAboutFollowsTheFlip(t *testing.T) {
+	s := newSite(t, siteOpts{rounds: "../../testdata/rounds"})
+	s.open(t, "/r/p2-3a1-gate-2/1")
+	s.click(t, `.about[data-opt=A] summary`)
+	s.press(t, "b")
+	s.wantVisible(t, s.loc(`.about[data-opt=B] summary`))
+	if eval(t, s.Page, "document.querySelector('.about[data-opt=B]').open") != true {
+		t.Error("About B closed after flipping from an open About A")
+	}
+	s.click(t, `.about[data-opt=B] summary`)
+	s.press(t, "a")
+	if eval(t, s.Page, "document.querySelector('.about[data-opt=A]').open") != false {
+		t.Error("About A open after flipping from a closed About B")
+	}
+	s.click(t, `.about[data-opt=A] summary`)
+	s.press(t, "0")
+	s.press(t, "b")
+	s.wantVisible(t, s.loc(`.about[data-opt=B] summary`))
+	if eval(t, s.Page, "document.querySelector('.about[data-opt=B]').open") != true {
+		t.Error("About B closed after flipping through Today from an open About A")
+	}
+}
+
 func TestPickRecordsAndMovesOn(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/1")
@@ -308,6 +355,25 @@ func TestTuneSliderRedrawsWithoutReloadAndRecordsTheValue(t *testing.T) {
 	if got.Pick == nil || *got.Pick != "tuned" || got.Value["outline"] != 2.0 {
 		t.Errorf("entry %+v, want tuned with outline 2", got)
 	}
+}
+
+func TestEnterOnTuneRecordsTunedAndMovesOn(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/9")
+	s.wantVisible(t, s.loc("wr-tune .tp-rotv"))
+	s.press(t, "Enter")
+	s.wantURL(t, "/r/demo/10")
+	if got := s.entries(t)["demo:tune"]; got.Pick == nil || *got.Pick != "tuned" {
+		t.Errorf("entry %+v, want tuned", got)
+	}
+}
+
+func TestEnterOnWordingMovesOn(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/5")
+	s.wantVisible(t, s.loc(`.act [data-key=enter]`))
+	s.press(t, "Enter")
+	s.wantURL(t, "/r/demo/6")
 }
 
 func TestReadOnlyLinkHasNoPickControls(t *testing.T) {

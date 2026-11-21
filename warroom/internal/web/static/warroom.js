@@ -264,9 +264,16 @@ const flipLetters = () => $$('.opts .orow:not(.today)').map((b) => b.dataset.sho
 function showOption(letter, keep) {
 	const today = letter === 'today';
 	if (today ? !$('.opts .orow.today') : !flipLetters().includes(letter)) return;
+	// A reader comparing options with About open expects the next option's About open too.
+	const aboutOpen = /** @type {HTMLDetailsElement | null} */ ($('.about[data-opt]:not([hidden])'))?.open;
 	$$('.ostage[data-opt], .moreof [data-opt], .about[data-opt]').forEach((el) => {
 		el.hidden = el.dataset.opt !== letter;
 	});
+	if (aboutOpen !== undefined) {
+		/** @type {HTMLDetailsElement[]} */ ($$('.about[data-opt]')).forEach((d) => {
+			d.open = aboutOpen;
+		});
+	}
 	$$('.measures [data-measure]').forEach((el) => {
 		el.hidden = el.dataset.measure !== letter;
 	});
@@ -792,7 +799,38 @@ function onConfigRequest(evt) {
 /** @type {HTMLElement | null} */
 let lastMain = null;
 
+const FOLDS = '#main details:not(.viewmenu)';
+/** @param {HTMLElement} el */
+const foldKey = (el) =>
+	`${el.classList[0] ?? ''} ${el.dataset.opt ?? ''} ${el.querySelector('summary')?.textContent ?? ''}`;
+const stepOf = () => $('#chips [aria-current=step]')?.dataset.step ?? location.pathname;
+/** @type {{ step: string, open: Set<string> } | null} */
+let openFolds = null;
+
+// The server renders every fold closed, so a stage control's morph would shut the ones the reader opened.
+function rememberFolds() {
+	openFolds = {
+		step: stepOf(),
+		open: new Set(
+			$$(FOLDS)
+				.filter((d) => d.hasAttribute('open'))
+				.map(foldKey),
+		),
+	};
+}
+
+function restoreFolds() {
+	if (openFolds?.step === stepOf()) {
+		const { open } = openFolds;
+		$$(FOLDS).forEach((d) => {
+			if (open.has(foldKey(d))) d.setAttribute('open', '');
+		});
+	}
+	openFolds = null;
+}
+
 function onSwap() {
+	restoreFolds();
 	const main = $('#main');
 	if (main !== lastMain) {
 		lastMain = main;
@@ -864,6 +902,7 @@ document.addEventListener('htmx:after:request', (e) => {
 	onSuccess(e.detail.ctx);
 });
 document.addEventListener('htmx:config:request', onConfigRequest);
+document.addEventListener('htmx:before:swap', rememberFolds);
 document.addEventListener('htmx:after:swap', onSwap);
 document.addEventListener('click', onClick);
 document.addEventListener('keydown', onKey);
