@@ -3,15 +3,15 @@
 Plan: [honest speed report](../superpowers/plans/2026-11-21-honest-speed-report.md). Decisions: [design answers, low-end report loose ends (user, 2026-11-20)](design-answers-2026-11-08.md#low-end-report-loose-ends-user-2026-11-20); owner rulings for the plan (user, 2026-11-21) in the plan header. Night lane item 14 in [packages](../packages.md#night-lane).
 
 ```text
-Resume record (updated 2026-11-22, Task 3 green, uncommitted)
-Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 0e128cc0 (Tasks 1 and 2 committed), Task 3 changes uncommitted
-Last green task / next incomplete task: Task 3 (awaiting the coordinator's commit) / Task 4
-Changed paths since last commit: tools/perf_chart.py, tools/test_perf_charts.py, README.md and docs/reference/performance.md (generated blocks only), this file
-Last command / cases / checks / failures / exit / marker: sh tools/run_python_checks.sh / 96 perf chart tests (4 new RB1-RB4) / 0 failures / exit 0 / PYTHON TESTS PASSED; perf_chart.py regenerated, roadmap --check 0, check_public PUBLIC CHECK PASSED; no GDScript touched, suite last passed on Task 1 tree (TESTS PASSED 152754)
+Resume record (updated 2026-11-22, Task 4 green, uncommitted)
+Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 4363cba3 (Tasks 1 to 3 committed), Task 4 changes uncommitted
+Last green task / next incomplete task: Task 4 (awaiting the coordinator's commit) / Task 5
+Changed paths since last commit: docs/reference/performance.md, docs/guide/12-performance-and-platforms.md, docs/guide/13-testing-and-tooling.md, docs/STATUS.md, this file
+Last command / cases / checks / failures / exit / marker: python3 tools/roadmap.py --check / exit 0; sh tools/check_public.sh / exit 0, PUBLIC CHECK PASSED; link targets of the added lines exist; docs only, no code run, baseline skipped (no GDScript or Python changed since the Task 1 suite pass TESTS PASSED 152754)
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: one local commit per green task (pre-authorized); no push, PR, merge or fly deploy; D3 and D4 at the SB6 plan; the plan's owner answers (user, 2026-11-21) all took the recommendations
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: coordinator commits Task 3, then starts Task 4 (Sonnet high)
+Next exact action: coordinator commits Task 4, then starts Task 5 (Sonnet high)
 ```
 
 ## Tasks
@@ -20,8 +20,8 @@ Next exact action: coordinator commits Task 3, then starts Task 4 (Sonnet high)
 |---|---|---|---|---|
 | 1 | Record the 3v3 profile rows (`step`, `team_tick`) | Sonnet high | green | fbd54a6f |
 | 2 | The trend rule and the goal lines | Sonnet high | green | 3b94d9d1 |
-| 3 | The README block (checked and tracked tables, Deck row) | Sonnet high | green, uncommitted | |
-| 4 | Docs (ledger paragraph, guide 12 and 13, STATUS) | Sonnet high | not started | |
+| 3 | The README block (checked and tracked tables, Deck row) | Sonnet high | green | 4363cba3 |
+| 4 | Docs (ledger paragraph, guide 12 and 13, STATUS) | Sonnet high | green, uncommitted | |
 | 5 | War Room round page (`n14-speed-report`) | Sonnet high | not started | |
 | 6 | Gate benchmark | Sonnet low | not started | |
 | 7 | Gap 12, Mac half | Sonnet high | not started | |
@@ -40,6 +40,7 @@ Next exact action: coordinator commits Task 3, then starts Task 4 (Sonnet high)
 | 2026-11-22 | 3 | `tools/.venv/bin/python3 tools/test_perf_charts.py` after the new tests, before the change | Red: RB1 errors (no `PASS_FAIL`), RB2 and RB3 fail; RB4 passes (guard, ledger unchanged, as planned) | honest-speed-report 0e128cc0 plus the test edits |
 | 2026-11-22 | 3 | same command after the change; `sh tools/run_python_checks.sh` (after `ruff format`) | 96 tests OK; exit 0; ruff, mypy clean; `PYTHON TESTS PASSED` | honest-speed-report 0e128cc0 plus Task 3 changes |
 | 2026-11-22 | 3 | `tools/.venv/bin/python3 tools/perf_chart.py`; `python3 tools/roadmap.py --check`; `sh tools/check_public.sh` | exit 0 each; `PUBLIC CHECK PASSED`; diff touches only the two generated blocks (README 7 checked rows plus Deck row, 6 tracked rows; ledger 11 rows, 4 over) | honest-speed-report 0e128cc0 plus Task 3 changes |
+| 2026-11-22 | 4 | `python3 tools/roadmap.py --check`; `sh tools/check_public.sh`; link targets of the added lines checked by hand | exit 0 each; `PUBLIC CHECK PASSED`; every linked file exists and `#rule-per-milestone` is a heading in the ledger; claims checked against `tools/perf_chart.py` (`PASS_FAIL` 7 rows, `TRENDS` 8, `NOISE_PCT` unchanged) | honest-speed-report 4363cba3 plus Task 4 changes |
 
 ## Rulings
 
