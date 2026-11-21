@@ -261,10 +261,16 @@ templ MoreOf(v ChoiceView) {
 
 templ About(opts []OptView) {
 	for _, o := range opts {
-		if o.HasText() {
+		if o.HasAbout() {
 			<details class="about" data-opt={ o.Letter } hidden?={ !o.On }>
 				<summary>About { o.Letter }</summary>
-				@OptText(o)
+				if o.Sees != "" {
+					<p class="sees"><span class="h">What you see</span>@Fmt(o.Sees)</p>
+				}
+				if o.Changes != "" {
+					<p class="chg">@Fmt(o.Changes)</p>
+				}
+				@Folds(o.Folds)
 			</details>
 		}
 	}
@@ -286,12 +292,12 @@ templ OptRow(o OptView) {
 	</button>
 }
 
-// Options is the right panel: Today and the option rows, with Pick, the note and the step buttons directly under them.
+// Options is the right panel: Today (one at a time only; side by side has its tile) and the option rows, with Pick, the note and the step buttons directly under them.
 templ Options(v ChoiceView) {
 	<div class="rpanel">
 		<span class="h">Options</span>
 		<div class="opts" role="group" aria-label="Options">
-			if v.Ref != nil {
+			if v.Ref != nil && !v.Side {
 				<button type="button" class="orow today" data-show="today" data-key="0">
 					<span class="ot">
 						@Kbd("0")

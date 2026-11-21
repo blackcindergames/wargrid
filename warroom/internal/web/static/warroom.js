@@ -232,11 +232,13 @@ function scaleNote() {
 
 // ---------- options ----------
 
-const flipLetters = () => $$('.opts .orow').map((b) => b.dataset.show);
+// Option letters only: Today is never a flip or swipe step, just key 0 or its own row.
+const flipLetters = () => $$('.opts .orow:not(.today)').map((b) => b.dataset.show);
 
 /** @param {string} letter an option letter or today @param {HTMLVideoElement} [keep] a clip that just started in this option, left playing */
 function showOption(letter, keep) {
-	if (!flipLetters().includes(letter)) return;
+	const today = letter === 'today';
+	if (today ? !$('.opts .orow.today') : !flipLetters().includes(letter)) return;
 	$$('.ostage[data-opt], .moreof [data-opt], .about[data-opt]').forEach((el) => {
 		el.hidden = el.dataset.opt !== letter;
 	});
@@ -249,7 +251,6 @@ function showOption(letter, keep) {
 	stopMedia(keep);
 	scaleNote();
 	// Today is for looking only, so nothing may be recorded while it is shown.
-	const today = letter === 'today';
 	/** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll('button.pick[name=pick]')).forEach((b) => {
 		b.disabled = today;
 	});
@@ -268,7 +269,8 @@ function flipBy(d) {
 	const letters = flipLetters();
 	if (!letters.length) return;
 	const at = letters.indexOf($('.opts .orow.sel')?.dataset.show);
-	const next = letters[(at + d + letters.length) % letters.length];
+	// From Today (not in the list) a swipe goes to the first or the last option.
+	const next = at < 0 ? letters.at(d > 0 ? 0 : -1) : letters[(at + d + letters.length) % letters.length];
 	if (next) showOption(next);
 }
 

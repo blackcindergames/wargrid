@@ -40,8 +40,9 @@ type OptView struct {
 	Extras               []FigureView
 }
 
-func (o *OptView) HasText() bool {
-	return o.Sees != "" || o.Notes != "" || o.Changes != "" || len(o.Folds) > 0
+// HasAbout leaves out notes: the option's row already shows them.
+func (o *OptView) HasAbout() bool {
+	return o.Sees != "" || o.Changes != "" || len(o.Folds) > 0
 }
 
 type FlipButton struct {
@@ -70,9 +71,11 @@ type CtlBarView struct {
 }
 
 func (c CtlBarView) Status() string {
-	values := make([]string, len(c.Buttons))
+	var values []string
 	for i := range c.Buttons {
-		values[i] = c.Buttons[i].Value
+		if b := &c.Buttons[i]; b.Name != "numbers" && !b.Disabled {
+			values = append(values, b.Value)
+		}
 	}
 	return strings.Join(values, " · ")
 }

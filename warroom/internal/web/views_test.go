@@ -583,3 +583,15 @@ func TestRefFeedsTodayNotInfo(t *testing.T) {
 		t.Error("a step kind without option rows lost its reference fold")
 	}
 }
+
+func TestStatusListsOnlyViewValues(t *testing.T) {
+	bar := CtlBarView{Buttons: []CtlButton{
+		{Name: "size", Value: "1280 x 720"},
+		{Name: "fit", Value: "Fit"},
+		{Name: "world", Value: "n/a with a backdrop", Disabled: true},
+		{Name: "numbers", Value: "shown"},
+	}}
+	if got := bar.Status(); got != "1280 x 720 · Fit" {
+		t.Errorf("status %q, want only the view values", got)
+	}
+}

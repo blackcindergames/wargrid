@@ -874,6 +874,35 @@ func TestKeyZeroShowsTodayAndDisablesPick(t *testing.T) {
 	s.click(t, `.opts .orow[data-show=today]`)
 	s.wantVisible(t, s.loc(`.ostage[data-opt=today]`))
 	failIf(t, expect.Locator(pick).ToBeDisabled())
+	s.press(t, "Enter")
+	s.settle(t)
+	if got := s.entries(t); len(got) != 0 {
+		t.Errorf("Enter after a click on the Today row recorded %v, want nothing", got)
+	}
+}
+
+func TestSideViewHasNoTodayRowAndZeroDoesNothing(t *testing.T) {
+	s := newTodaySite(t)
+	s.open(t, "/r/d/1?view=side")
+	s.wantVisible(t, s.loc(".tile.reft"))
+	s.wantCount(t, s.loc(".orow[data-show=today]"), 0)
+	s.press(t, "0")
+	s.settle(t)
+	failIf(t, expect.Locator(s.loc(".rpanel button.pick")).ToBeEnabled())
+	s.wantClass(t, s.loc(".tile[data-opt=A]"), "sel")
+	if got := eval(t, s.Page, `[...document.querySelectorAll('.opts .orow')].map((r) => r.dataset.show).join(' ')`); got != "A B C" {
+		t.Errorf("side view rows %v, want A B C", got)
+	}
+}
+
+func TestAboutFoldNeverRepeatsTheNotes(t *testing.T) {
+	s := newTodaySite(t)
+	s.wantContains(t, s.loc(".about[data-opt=A]"), "a look")
+	s.wantAbsent(t, s.loc(".about[data-opt=A]"), "first")
+	s = newSite(t, siteOpts{})
+	s.open(t, "/r/demo/2")
+	s.wantVisible(t, s.loc(".orow[data-show=A] .onote"))
+	s.wantCount(t, s.loc(".about"), 0)
 }
 
 func TestRowClickSelectsAndMoreOfAndAboutFollow(t *testing.T) {
