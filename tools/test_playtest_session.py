@@ -158,7 +158,7 @@ class PlaytestSessionTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("unsupported session format", err.getvalue())
 
-    def _replay(self, client_exit, extra="", rows=None, final="aa", count=1):
+    def _replay(self, client_exit, extra="", rows=None, final="aa", count=1, python=sys.executable):
         one = session()
         one["matches"] = one["matches"][:1] * count
         if rows is not None:
@@ -168,7 +168,7 @@ class PlaytestSessionTest(unittest.TestCase):
         fake.write_text(f"#!/bin/sh\necho 'ORACLE FINAL 60 {final}'\n{extra}exit {client_exit}\n")
         fake.chmod(0o755)
         script = Path(__file__).resolve().parent / "replay_session.sh"
-        env = {**os.environ, "WARGRID_CLIENT": str(fake), "PYTHON": sys.executable}
+        env = {**os.environ, "WARGRID_CLIENT": str(fake), "PYTHON": python}
         return subprocess.run(["sh", str(script), str(self.path)], env=env, capture_output=True, text=True, check=False)
 
     def test_replay_wrapper_needs_client_success(self):
@@ -225,6 +225,11 @@ class PlaytestSessionTest(unittest.TestCase):
         early = self._compare(self.RECORDED, self._ring(ticks=75))
         self.assertEqual(early, (1, "replay ended before tick 90\n"))
         self.assertEqual(self._compare(self.RECORDED, []), (1, "replay ended before tick 30\n"))
+
+    def test_compare_hashes_blank_recorded_line_is_malformed(self):
+        self.assertEqual(
+            self._compare(("30\th30", "", "60\th60"), self._ring()), (2, "malformed hash row 2 in rec.hashes\n")
+        )
 
     def test_compare_hashes_blank_ring_lines_are_no_rows(self):
         rec, ring = self._hash_files((), ())
@@ -302,6 +307,17 @@ class PlaytestSessionTest(unittest.TestCase):
         broken = self._replay(0, self.RING_WRITER, rows=["30\th30", "oops"])
         self.assertEqual(broken.returncode, 1, broken.stdout)
         self.assertIn("REPLAY FAILED 1: malformed hash row 2 in sess-m1.hashes", broken.stdout)
+
+    def test_replay_wrapper_python_dying_before_main_is_a_failure(self):
+        dead = Path(self._tmp.name) / "dead_python.sh"
+        dead.write_text(
+            f'#!/bin/sh\n[ "$2" != --compare-hashes ] || {{ echo SyntaxError >&2; exit 1; }}\nexec {sys.executable} "$@"\n'
+        )
+        dead.chmod(0o755)
+        died = self._replay(0, self.RING_WRITER, rows=["30\th30"], python=str(dead))
+        self.assertEqual(died.returncode, 1, died.stdout)
+        self.assertIn("REPLAY FAILED 1: hash compare gave no result", died.stdout)
+        self.assertNotIn("REPLAY DIFFERS", died.stdout)
 
     def test_replay_wrapper_empties_the_ring_per_match(self):
         once = Path(self._tmp.name) / "wrote"

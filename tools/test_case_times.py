@@ -101,8 +101,9 @@ class CaseTimesTests(unittest.TestCase):
         stat = ["CASE_STAT test_a 3.0 1", "CASES 1 CHECKS 1 FAILURES 0", "TESTS PASSED 1"]
         target = self.target(OLD)
         for error in ["ERROR: leaked node", "SCRIPT ERROR: Parse Error"]:
-            code, _, _ = self.run_main(self.log("e.log", [*stat, error]), "--write", target)
+            code, _, err = self.run_main(self.log("e.log", [*stat, error]), "--write", target)
             self.assertEqual(code, 2, error)
+            self.assertIn("ERROR: line", err)
             self.assertEqual(target.read_text(), OLD)
 
     def test_ct6_print_mode_names_the_problem_and_still_prints(self):

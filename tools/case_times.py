@@ -46,7 +46,7 @@ class Logs:
         if self.filtered:
             return "filtered (WARGRID_TEST_ONLY) run"
         if self.failed or self.case_lines == 0 or self.passed != self.case_lines:
-            return "run did not pass (FAIL line, or a CASES line without TESTS PASSED)"
+            return "run did not pass (FAIL or ERROR: line, or a CASES line without TESTS PASSED)"
         if self.total != self.lines:
             return f"{self.lines} CASE_STAT lines for CASES total {self.total}: partial run"
         return None

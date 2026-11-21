@@ -77,10 +77,10 @@ def _write_hashes(match: dict, hashes: Path) -> None:
         hashes.write_text("".join(row + "\n" for row in rows))
 
 
-def _parse_hash_rows(path: Path) -> list[tuple[int, str]]:
+def _parse_hash_rows(path: Path, skip_blank: bool = False) -> list[tuple[int, str]]:
     rows = []
     for n, line in enumerate(path.read_text().splitlines(), 1):
-        if not line:
+        if skip_blank and not line:
             continue
         tick, sep, digest = line.partition("\t")
         if not (sep and tick.isdigit() and digest):
@@ -92,7 +92,7 @@ def _parse_hash_rows(path: Path) -> list[tuple[int, str]]:
 def compare_hashes(recorded: Path, ring: Path) -> tuple[int, str]:
     """Exit code and one line: 0 all recorded rows equal, 1 first problem, 2 malformed row or unreadable file."""
     try:
-        rows, replayed = _parse_hash_rows(recorded), dict(_parse_hash_rows(ring))
+        rows, replayed = _parse_hash_rows(recorded), dict(_parse_hash_rows(ring, skip_blank=True))
     except (ValueError, OSError) as err:  # UnicodeError is a ValueError
         return 2, str(err)
     last_equal = None

@@ -39,6 +39,7 @@ while IFS=$tab read -r k cmd mode map seed factions end_tick end_digest marker_t
 	run_client "$@" >"$log" 2>&1
 	client_status=$?
 	compare_status=0
+	compare=""
 	[ ! -f "$hashes" ] || compare=$(${PYTHON:-python3} "$repo_root/tools/playtest_session.py" --compare-hashes "$hashes" "$ring") || compare_status=$?
 	grep '^ORACLE STATE' "$log"
 	replayed=$(sed -n 's/^ORACLE FINAL [0-9]* //p' "$log")
@@ -49,6 +50,9 @@ while IFS=$tab read -r k cmd mode map seed factions end_tick end_digest marker_t
 	elif [ -z "$replayed" ]; then
 		echo "REPLAY FAILED $k ($mode): no ORACLE FINAL line"
 		grep -E 'ERROR|SCRIPT|Unknown|needs' "$log" | head -5
+		status=1
+	elif [ "$compare_status" -ne 0 ] && [ -z "$compare" ]; then
+		echo "REPLAY FAILED $k: hash compare gave no result (exit $compare_status)"
 		status=1
 	elif [ "$compare_status" -eq 1 ]; then
 		echo "REPLAY DIFFERS $k $compare (recorded on build $build)"
