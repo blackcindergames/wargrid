@@ -230,10 +230,10 @@
     select { height: 32px; padding-inline: 8px; font-size: 12px; background: var(--well); border: 1px solid var(--line); }
   }
   .act, .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  /* Out of flow on the button's top edge, so the Pick keeps its size and place with or without it. */
+  .pick .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
   .act {
     .pick { font-size: 16px; padding-inline: 22px; height: 44px; max-width: 100%; position: relative; }
-    /* Out of flow on the button's top edge, so the Pick keeps its size and place with or without it. */
-    .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
     .pick:disabled { opacity: .45; cursor: not-allowed; }
     &:empty { display: none; }
   }
@@ -486,8 +486,8 @@
     .step :is(.left, .right, .lpanel, .cpanel, .rpanel) { display: contents; }
     .step {
       :is(.top, .intro, .head) { order: 1; } .look { order: 2; } .stagecol { order: 4; }
-      :is(.moreof, .measures, .rpanel > .h, .opts, .gside, .fields, #sum, .close, .rounds) { order: 5; }
-      .verdict { order: 6; } .thumbs { order: 7; } .folds { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
+      :is(.rpanel > .h, .opts, .gside, .fields, #sum, .close, .rounds) { order: 5; }
+      :is(.moreof, .measures, .verdict) { order: 6; } .thumbs { order: 7; } .folds { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
     }
     .lpanel .top { position: sticky; z-index: 10; margin: -12px -16px 0; background: var(--well); border-bottom: 1px solid var(--line); }
     .lpanel .chips { flex-wrap: nowrap; overflow-x: auto; }
@@ -503,7 +503,15 @@
     .opens { flex-basis: 100%; }
     .thumbs { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
     .true100 .k-gallery .gmain { max-height: none; }
-    :is(.zone, .zone .stage) { height: auto; overflow: visible; }
+    /* One box on every step and option, so the options under it never jump. */
+    .zone { aspect-ratio: 4 / 3; height: auto; width: 100%; container-type: inline-size; }
+    /* Full width, or full height for a picture taller than the box. */
+    .v-flip .zone .pic[data-cw] { width: min(100%, 75cqw * var(--ar)); }
+    .v-flip .zone .pic.img img { max-height: 75cqw; }
+    /* Tiles stack in one column, so the page scrolls them rather than a box a third of the screen high. */
+    .v-side .zone { aspect-ratio: auto; overflow: visible; }
+    /* The page scrolls on a phone, so the strip needs no reserved height. */
+    .moreof { height: auto; padding-top: 0; }
     .rpanel .opts { flex: none; overflow: visible; padding: 0; border: 0; }
     .keys { padding: 14px; }
     .keys th { white-space: normal; width: 34%; padding-right: 10px; }
@@ -517,7 +525,9 @@
       .row { display: flex; gap: 6px; }
       .row .btn { flex: 1 1 0; min-width: 0; min-height: 48px; height: auto; padding: 4px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .row .arrow { flex: 0 0 52px; font-size: 22px; }
-      .row .pick { flex-grow: 2; }
+      .row .pick { flex-grow: 2; position: relative; overflow: visible; }
+      /* Room above Pick for Claude's tab, kept on every option so the bar never moves. */
+      .row:has(.ptab) { margin-top: 10px; }
       .row:last-child { flex-wrap: wrap; }
       .row:last-child .btn { flex: 1 1 auto; padding: 4px 10px; }
       .row.opts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }

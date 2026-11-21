@@ -371,7 +371,12 @@ templ PhoneBar(p PhoneView) {
 			<button type="submit" form="answer" name="pick" value="yes" class="pick btn">Yes</button>
 		}
 		if p.Pick {
-			<button type="submit" form="answer" name="pick" value={ p.Shown } data-shown class="pick btn">Pick <span class="pl">{ p.Shown }</span></button>
+			<button type="submit" form="answer" name="pick" value={ p.Shown } data-shown class="pick btn">
+				Pick <span class="pl">{ p.Shown }</span>
+				if p.Cp != "" {
+					<span class="tag cp ptab" data-cp={ p.Cp } hidden?={ p.Cp != p.Shown }>Claude's pick</span>
+				}
+			</button>
 		}
 		if p.Tuned {
 			<button type="submit" form="answer" name="pick" value="tuned" class="pick btn">Use these</button>

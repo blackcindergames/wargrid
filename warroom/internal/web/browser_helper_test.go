@@ -103,7 +103,7 @@ func newSite(t *testing.T, o siteOpts) *site {
 		case r.URL.Path == "/_phone":
 			// headless Firefox cannot be narrower than 500 px, so a phone is a 390 px same-origin frame
 			src := cmp.Or(r.URL.Query().Get("src"), "/r/demo-controls/4")
-			_, _ = io.WriteString(w, `<!doctype html><iframe src="`+html.EscapeString(src)+`" style="width:390px;height:800px;border:0"></iframe>`)
+			_, _ = io.WriteString(w, `<!doctype html><iframe src="`+html.EscapeString(src)+`" style="width:390px;height:844px;border:0"></iframe>`)
 		default:
 			routes.ServeHTTP(w, r)
 		}

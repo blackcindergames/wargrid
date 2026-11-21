@@ -226,6 +226,85 @@ func TestPhoneBarNeverCoversThePageEnd(t *testing.T) {
 	}
 }
 
+var phoneSteps = []string{"/r/p2-3b-dock/1", "/r/p2-3b-dock/5"}
+
+func TestPhoneHasNoSideScroll(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	for _, step := range phoneSteps {
+		phone := s.phoneFrame(t, step, ".zone")
+		if got := eval(t, phone, `(() => { const d = document.documentElement; return d.scrollWidth <= d.clientWidth ? '' : d.scrollWidth + ' > ' + d.clientWidth; })()`); got != "" {
+			t.Errorf("%s scrolls sideways: %v", step, got)
+		}
+	}
+}
+
+func TestPhoneShowsQuestionLookAndPickBar(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	for _, step := range phoneSteps {
+		phone := s.phoneFrame(t, step, ".zone")
+		got := eval(t, phone, `(() => {
+			scrollTo(0, 0);
+			const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+			const q = r('.head h1'), look = r('.look'), pick = r('.phone .pick'), bar = r('#phone');
+			const bad = [];
+			if (q.top < 0 || q.bottom > bar.top) bad.push('question ' + q.top + ' to ' + q.bottom);
+			if (look.bottom > bar.top) bad.push('look ends ' + look.bottom);
+			if (pick.top < bar.top || pick.bottom > innerHeight) bad.push('pick ' + pick.top + ' to ' + pick.bottom);
+			if (Math.abs(bar.bottom - innerHeight) >= 1) bad.push('bar ends ' + bar.bottom + ' in a window of ' + innerHeight);
+			return bad.join(', ') + (bad.length ? ', bar top ' + bar.top : '');
+		})()`)
+		if got != "" {
+			t.Errorf("%s at the top: %v", step, got)
+		}
+	}
+}
+
+func TestPhoneStageIsAFixedFourByThreeBox(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	var heights []any
+	for _, step := range phoneSteps {
+		phone := s.phoneFrame(t, step, ".zone")
+		if got := eval(t, phone, `(() => {
+			const z = document.querySelector('.zone').getBoundingClientRect(), page = document.documentElement.clientWidth;
+			return Math.abs(z.height - z.width * 3 / 4) <= 1 && z.width >= page - 32 - 1 ? '' : z.width + ' x ' + z.height + ' in a page ' + page + ' wide';
+		})()`); got != "" {
+			t.Errorf("%s stage %v, want 4:3 at full width less the 16 px gutters", step, got)
+		}
+		heights = append(heights, eval(t, phone, `String(document.querySelector('.zone').getBoundingClientRect().height)`))
+	}
+	if heights[0] != heights[1] {
+		t.Errorf("stage heights %v, want the same on both steps", heights)
+	}
+}
+
+func TestPhonePickWearsClaudesTab(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	// Claude's pick on this step is A, and the step opens on A.
+	phone := s.phoneFrame(t, "/r/p2-3b-dock/1", ".phone .pick")
+	tab := phone.Locator(".phone .pick .ptab")
+	s.wantVisible(t, tab)
+	width := `document.querySelector('.phone .pick').getBoundingClientRect().width`
+	with := eval(t, phone, width)
+	got := eval(t, phone, `(() => {
+		const r = (e) => e.getBoundingClientRect();
+		const tab = r(document.querySelector('.phone .ptab')), pick = r(document.querySelector('.phone .pick')), bar = r(document.querySelector('#phone'));
+		const hit = [...document.querySelectorAll('.phone .btn:not(.pick)')].map(r).some((b) => b.width && tab.left < b.right && tab.right > b.left && tab.top < b.bottom && tab.bottom > b.top);
+		const ok = Math.abs(tab.bottom - pick.top) < 2 && Math.abs(tab.left - pick.left) < 2 && tab.top >= bar.top && tab.right <= innerWidth && !hit;
+		return ok ? '' : 'tab ' + tab.left + ',' + tab.top + ' to ' + tab.right + ',' + tab.bottom + '; pick ' + pick.left + ',' + pick.top + '; bar top ' + bar.top + '; covers a button ' + hit;
+	})()`)
+	if got != "" {
+		t.Errorf("tab not on Pick's top edge inside the bar: %v", got)
+	}
+	failIf(t, phone.Locator(".phone .ob[data-show=B]").Click())
+	s.wantHidden(t, tab)
+	s.wantContains(t, phone.Locator(".phone .pick"), "Pick B")
+	if without := eval(t, phone, width); without != with {
+		t.Errorf("phone Pick width %v with the tab, %v without", with, without)
+	}
+	failIf(t, phone.Locator(".phone .ob[data-show=A]").Click())
+	s.wantVisible(t, tab)
+}
+
 func TestTuneSliderRedrawsWithoutReloadAndRecordsTheValue(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo/9")
