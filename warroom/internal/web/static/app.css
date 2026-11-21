@@ -127,9 +127,9 @@
   }
   .cpanel { padding: 20px; gap: 14px; }
   /* Blocks at a reading width sit centred in the column, their text left-aligned; only the stage takes the whole column. */
-  .cpanel > :is(.fields, #sum, .missing), wr-tune { width: 100%; margin-inline: auto; }
+  .cpanel > :is(.fields, .sumblock, .missing), wr-tune { width: 100%; margin-inline: auto; }
   .cpanel > .fields { max-width: 720px; }
-  #sum > .intro { max-width: 65ch; }
+  .sumblock > .intro { max-width: 65ch; }
   .cpanel > .missing { padding: 0; width: fit-content; }
   /* The bars under the stage have fixed heights, so the stage zone is the same on every step and option. */
   .choice .cpanel { gap: 0; --status: 60px; --more: 200px; --bars: calc(40px + var(--status) + var(--more)); }
@@ -141,7 +141,9 @@
     .act .pick { width: 100%; }
     /* With no list above, the answer drops to where Pick sits on a choice step; a gallery's item block takes the list's room. */
     > :first-child { margin-top: auto; }
-    > .gside { flex: 1 1 auto; }
+    > .gside { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    /* Wording has no note here: keep the gap, margin and height a note takes, so Done, next sits at Pick's height. */
+    > .act:not(:has(~ .notebox)) { margin-bottom: calc(6px + 8px + 72px); }
     /* Pass and Changes take Pick's and the neutral answer's heights, and the note sits where a choice step's note does. */
     .verdict { gap: 8px; padding-top: 10px; .vb { flex: 1 1 100%; min-height: 40px; } .vb.pick { min-height: 44px; } textarea { margin-top: 6px; } }
     /* Over the list's last 28 px, cancelling the panel's gap, so Pick keeps its place whether it shows or not. */
@@ -259,9 +261,10 @@
     .pick:disabled { opacity: .45; cursor: not-allowed; }
     &:empty { display: none; }
   }
+  /* A choice step's status line: the scale text left, a small Large at the right edge. */
   .tools {
-    .scale { margin-left: auto; }
-    .scale:empty + [data-act=large] { margin-left: auto; }
+    padding: 8px 0 12px; border-bottom: 1px solid var(--line);
+    .btn { height: 32px; padding-inline: 12px; font-size: 12px; margin-left: auto; }
   }
   .scale { color: var(--muted); font-size: var(--row); &:empty { display: none; } }
 
@@ -298,7 +301,7 @@
     textarea { height: 90px; }
     .inav { margin-top: 8px; }
   }
-  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fit, 150px); justify-content: center; gap: 8px; }
   .th {
     border: 2px solid transparent; background: var(--slab); padding: 2px; display: block;
     &.on { border-color: var(--sel); }
@@ -326,7 +329,7 @@
     thead { color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; }
     :is(thead tr, tbody tr:not(:last-child)) > * { border-bottom: 1px solid var(--quiet); }
   }
-  #sum {
+  .sumblock {
     max-width: 1200px;
     h2 { font-size: 18px; margin: 16px 0 0; font-weight: 700; }
     .cnt { margin-left: 8px; }
@@ -512,19 +515,21 @@
     .step {
       :is(.top, .intro, .head) { order: 1; } .look { order: 2; } .stagecol { order: 4; }
       :is(.rpanel > .h, .opts, .gside, .fields, #sum, .close, .copy, .rounds, .cpanel > .missing) { order: 5; }
-      :is(.moreof, .measures, .verdict) { order: 6; } .thumbs { order: 7; } .folds { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
+      :is(.moreof, .measures, .verdict, .earlier) { order: 6; } .thumbs { order: 7; } .folds { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
     }
     .lpanel .top { position: sticky; z-index: 10; margin: -12px -16px 0; background: var(--well); border-bottom: 1px solid var(--line); }
     .lpanel .chips { flex-wrap: nowrap; overflow-x: auto; }
     .head h1 { font-size: 20px; }
     .status, .act, .stepnav, .inav, .stagecol > .ctlbar, .tools .btn { display: none; }
-    .tools { margin-top: 0; margin-bottom: 0; }
+    .tools { margin-top: 0; margin-bottom: 0; padding: 0; border: 0; }
     .tiles { grid-template-columns: minmax(0, 1fr); }
     :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: 100%; }
     .ref .pic { max-width: none; }
     .extras { grid-template-columns: minmax(0, 1fr); }
     .verdict { gap: 10px; padding-top: 0; .vb { flex: 1 1 40%; padding-inline: 8px; min-height: 48px; } textarea { margin-top: 0; } }
-    .cpanel > :is(.fields, #sum, .missing) { width: auto; margin-inline: 0; }
+    .cpanel > :is(.fields, .sumblock, .missing) { width: auto; margin-inline: 0; }
+    /* Cancels the step's gap, so Copy keeps the spacing it had inside the summary block. */
+    .copy { margin-block: -12px; }
     .opens { flex-basis: 100%; }
     .thumbs { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
     .true100 .k-gallery .gmain { max-height: none; }

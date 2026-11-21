@@ -470,7 +470,13 @@ templ WordingMain(v WordingView, chips []Chip) {
 				}
 			</section>
 		</div>
-		@RightPanel(v.Nav)
+		@RightPanel(v.Nav) {
+			if !isReadOnly(ctx) {
+				<div class="act">
+					<a class="pick btn" href={ templ.SafeURL(v.Nav.Next) } data-key="enter">Done, next @Kbd("Enter")</a>
+				</div>
+			}
+		}
 	</main>
 }
 
@@ -541,13 +547,13 @@ templ SummaryMain(v SummaryView, nav NavView, chips []Chip) {
 			</section>
 		</div>
 		<div class="cpanel">
-			<div id="sum">
+			<div id="sum" class="sumblock">
 				@Intro(v.Intro, true)
 				<h2>{ v.Main.Title } <span class="cnt">{ v.Main.Count }</span></h2>
 				@SumTable(v.Main.Rows)
 				if len(v.Open) > 0 {
 					<p class="close">
-						Not answered yet:
+						<span class="h">Not answered yet</span>
 						<span class="opens">
 							for _, l := range v.Open {
 								<a class="btn" href={ templ.SafeURL(l.Href) }>{ l.Label }</a>
@@ -558,14 +564,16 @@ templ SummaryMain(v SummaryView, nav NavView, chips []Chip) {
 					<p class="close">You can close this tab.</p>
 				}
 				<pre id="summary-text" hidden>{ v.Text }</pre>
-				if len(v.Earlier) > 0 {
+			</div>
+			if len(v.Earlier) > 0 {
+				<div class="sumblock earlier">
 					<h3 class="sec">Earlier rounds</h3>
 					for _, e := range v.Earlier {
 						<h2>{ e.Title } <span class="cnt">{ e.Count }</span></h2>
 						@SumTable(e.Rows)
 					}
-				}
-			</div>
+				</div>
+			}
 		</div>
 		@RightPanel(nav) {
 			<p class="copy">

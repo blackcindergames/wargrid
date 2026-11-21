@@ -167,7 +167,8 @@ func (b *builder) head(n int, s *rounds.Step, record string) HeadView {
 	return h
 }
 
-func (b *builder) nav(n int, nextLabel string) NavView {
+func (b *builder) nav(n int) NavView {
+	nextLabel := "Skip"
 	if n >= b.steps() {
 		nextLabel = "Summary"
 	}

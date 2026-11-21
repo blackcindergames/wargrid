@@ -1196,12 +1196,7 @@ func TestEveryStepKindHasTheLeftPanel(t *testing.T) {
 	// The summary keeps the round's intro open, in the centre column.
 	wantLeftPanel(t, s, "/r/demo/summary", "What the server recorded", 11)
 	s.wantContains(t, s.loc(".cpanel details[open].intro"), "Demo only")
-	dir := writeTree(t, map[string]string{
-		"index.yaml":   "- {id: m, title: Missing}\n",
-		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
-		"m/ok.yaml":    "kind: verdict\nquestion: Still fine?\n",
-	})
-	wantLeftPanel(t, newSite(t, siteOpts{rounds: dir}), "/r/m/2", "[step missing: gone]", 3)
+	wantLeftPanel(t, missingStep(t), "/r/m/2", "[step missing: gone]", 3)
 	wantLeftPanel(t, s, "/r/p2-3b-dock/1", "Factory queue: where does it live?", 7)
 }
 
@@ -1304,6 +1299,17 @@ func galleryWithVerdict(t *testing.T) *site {
 	return newSite(t, siteOpts{rounds: dir})
 }
 
+// missingStep serves round m, whose step 2 has no file.
+func missingStep(t *testing.T) *site {
+	t.Helper()
+	dir := writeTree(t, map[string]string{
+		"index.yaml":   "- {id: m, title: Missing}\n",
+		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
+		"m/ok.yaml":    "kind: verdict\nquestion: Still fine?\n",
+	})
+	return newSite(t, siteOpts{rounds: dir})
+}
+
 func TestVerdictSitsInTheRightPanel(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.viewport(t, 1440, 900)
@@ -1330,7 +1336,7 @@ func TestEveryAnswerSitsAtThePickHeight(t *testing.T) {
 	for _, c := range []struct {
 		p         *site
 		path, sel string
-	}{{s, "/r/demo/8", ".vb.pick"}, {s, "/r/demo/9", ".act .pick"}, {g, "/r/g/1", ".verdict .vb"}} {
+	}{{s, "/r/demo/8", ".vb.pick"}, {s, "/r/demo/9", ".act .pick"}, {s, "/r/demo/5", ".act .pick"}, {g, "/r/g/1", ".verdict .vb"}} {
 		c.p.open(t, c.path)
 		got, panel := c.p.rect(t, ".rpanel "+c.sel), c.p.rect(t, ".rpanel")
 		if got.Y-pick.Y > 1 || pick.Y-got.Y > 1 {
@@ -1447,6 +1453,12 @@ func TestSummaryIntroSitsInTheCentre(t *testing.T) {
 	s.wantContains(t, s.loc(".cpanel details[open].intro"), "Demo only")
 	s.wantCount(t, s.loc(".lpanel .intro"), 0)
 	s.wantCount(t, s.loc(".rpanel [data-copy-from]"), 1)
+	style := func(sel string) any {
+		return eval(t, s.Page, `(() => { const c = getComputedStyle(document.querySelector('`+sel+`')); return [c.fontSize, c.fontWeight, c.textTransform].join(' '); })()`)
+	}
+	if label, count := style(".close .h"), style("#sum h2 .cnt"); label != count {
+		t.Errorf("Not answered yet reads %v, the answered count %v; want the same small-caps label", label, count)
+	}
 	s.viewport(t, 1920, 1080)
 	left := s.rect(t, "#sum").X
 	for _, sel := range []string{".intro", "h2", ":is(p, .scroll)", ".close"} {
@@ -1571,12 +1583,7 @@ func TestLoadingBarSpansTheViewportTop(t *testing.T) {
 
 func TestEveryPageKeepsTheChoiceStepColumns(t *testing.T) {
 	s := newSite(t, siteOpts{})
-	dir := writeTree(t, map[string]string{
-		"index.yaml":   "- {id: m, title: Missing}\n",
-		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
-		"m/ok.yaml":    "kind: verdict\nquestion: Still fine?\n",
-	})
-	m := newSite(t, siteOpts{rounds: dir})
+	m := missingStep(t)
 	cols := func(p *site, path string) [3]playwright.Rect {
 		p.open(t, path)
 		return [3]playwright.Rect{p.rect(t, ".step > .lpanel"), p.rect(t, ".step > .cpanel"), p.rect(t, ".step > .rpanel")}
@@ -1605,12 +1612,7 @@ func TestEveryPageKeepsTheChoiceStepColumns(t *testing.T) {
 
 func TestCentreBlocksSitInTheMiddleOfTheColumn(t *testing.T) {
 	s := newSite(t, siteOpts{})
-	dir := writeTree(t, map[string]string{
-		"index.yaml":   "- {id: m, title: Missing}\n",
-		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
-		"m/ok.yaml":    "kind: verdict\nquestion: Still fine?\n",
-	})
-	m := newSite(t, siteOpts{rounds: dir})
+	m := missingStep(t)
 	mid := func(r playwright.Rect) float64 { return r.X + r.Width/2 }
 	for _, vp := range [][2]int{{1440, 900}, {1920, 1080}} {
 		s.viewport(t, vp[0], vp[1])
@@ -1624,12 +1626,56 @@ func TestCentreBlocksSitInTheMiddleOfTheColumn(t *testing.T) {
 			{s, "/r/demo/9", "wr-tune"},
 			{s, "/r/demo/9", ".stage .pic"},
 			{m, "/r/m/2", ".missing"},
+			{s, "/r/demo/7", ".gmain"},
+			{s, "/r/demo/7", ".thumbs > *"},
 		} {
 			c.p.open(t, c.path)
-			want, got := mid(c.p.rect(t, ".step > .cpanel")), mid(c.p.rect(t, ".cpanel "+c.block))
+			// Both ends of a run of blocks, so a row of thumbs counts as one block.
+			ends := eval(t, c.p.Page, `[...document.querySelectorAll('.cpanel :is(`+c.block+`)')].map((e) => e.getBoundingClientRect()).reduce((a, r) => [Math.min(a[0], r.left), Math.max(a[1], r.right)], [1e9, -1e9]).join(' ')`).(string)
+			var l, r float64
+			if _, err := fmt.Sscan(ends, &l, &r); err != nil {
+				t.Fatalf("%s: %q: %v", c.block, ends, err)
+			}
+			want, got := mid(c.p.rect(t, ".step > .cpanel")), (l+r)/2
 			if got-want > 2 || want-got > 2 {
 				t.Errorf("%dx%d %s: %s centre x=%v, column centre x=%v", vp[0], vp[1], c.path, c.block, got, want)
 			}
 		}
+		m.open(t, "/r/m/2")
+		if w, col := m.rect(t, ".cpanel > .missing").Width, m.rect(t, ".step > .cpanel").Width; w > col/2 {
+			t.Errorf("%dx%d missing message %v px wide in a %v px column, want its own width", vp[0], vp[1], w, col)
+		}
+	}
+}
+
+func TestGalleryLargeLooksLikeTheStatusLineLarge(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	look := `(() => { const b = document.querySelector(':is(.status, .tools) [data-act=large]'), r = b.getBoundingClientRect(), st = document.querySelector('.cpanel').getBoundingClientRect(), c = getComputedStyle(b);
+		return [r.height, c.fontSize, Math.round(st.right - r.right)].join(' '); })()`
+	s.open(t, "/r/demo/1")
+	want := eval(t, s.Page, look)
+	s.open(t, "/r/demo/7")
+	if got := eval(t, s.Page, look); got != want {
+		t.Errorf("gallery Large (height, font, gap to the column's right) %v, choice step's %v", got, want)
+	}
+}
+
+func TestPhoneSummaryKeepsCopyBeforeEarlierRounds(t *testing.T) {
+	dir := writeTree(t, map[string]string{
+		"index.yaml":   "- {id: a, title: A}\n- {id: b, title: B}\n",
+		"a/round.yaml": "title: A\nsteps: [v]\n",
+		"a/v.yaml":     "kind: verdict\nquestion: Old?\n",
+		"b/round.yaml": "title: B\nsteps: [v]\nearlier: [a]\n",
+		"b/v.yaml":     "kind: verdict\nquestion: New?\n",
+	})
+	phone := newSite(t, siteOpts{rounds: dir}).phoneFrame(t, "/r/b/summary", ".close")
+	// The gaps it had inside the summary block before Copy moved to the right panel.
+	got := eval(t, phone, `(() => {
+		const copy = document.querySelector('.copy').getBoundingClientRect();
+		return [copy.top - document.querySelector('.close').getBoundingClientRect().bottom, document.querySelector('.sec').getBoundingClientRect().top - copy.bottom].map(Math.round).join(' ');
+	})()`)
+	if got != "20 28" {
+		t.Errorf("Copy sits %v px under Not answered yet and above Earlier rounds, want 20 28", got)
 	}
 }

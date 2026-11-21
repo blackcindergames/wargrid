@@ -147,7 +147,7 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 	st := b.stage(s)
 	side := b.side(s)
 	v := ChoiceView{
-		Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n, "Skip"), Side: side, Kind: s.Kind,
+		Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n), Side: side, Kind: s.Kind,
 		Shown: b.shown(s), Form: FormView{pickURL(b.round, s, b.carry()), s.ChipKey()},
 	}
 	v.Note = b.noteBox(s, hint)
