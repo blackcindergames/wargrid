@@ -354,7 +354,21 @@ templ VerdictBox(v VerdictView) {
 	if !isReadOnly(ctx) {
 		<section class="verdict">
 			for _, b := range v.Buttons {
-				<button type="submit" form="answer" name="pick" value={ b.Value } class={ "vb btn lg", templ.KV("pick", b.Value == "pass"), templ.KV("done", b.Done) }>{ b.Label }</button>
+				<button
+					type="submit"
+					form="answer"
+					name="pick"
+					value={ b.Value }
+					class={ "vb btn lg", templ.KV("pick", b.Value == "pass"), templ.KV("done", b.Done) }
+					if b.Value == "pass" {
+						data-key="enter"
+					}
+				>
+					{ b.Label }
+					if b.Value == "pass" {
+						@Kbd("Enter")
+					}
+				</button>
 			}
 			@NoteField(v.Note)
 		</section>

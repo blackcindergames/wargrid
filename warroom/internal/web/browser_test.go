@@ -1709,3 +1709,101 @@ func TestSummaryContentIsCentredWithOneLeftEdge(t *testing.T) {
 	s.wantURL(t, "/r/demo/9")
 	check("one answer")
 }
+
+// Primary and secondary answers look and sit the same on every kind that has them.
+func TestAnswerButtonsShareOneStyle(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	g := galleryWithVerdict(t)
+	s.viewport(t, 1440, 900)
+	g.viewport(t, 1440, 900)
+	look := `(() => {
+		const p = document.querySelector('.rpanel :is(.act .pick, .verdict .vb.pick)'), q = document.querySelector('.rpanel :is(.act .btn:not(.pick), .verdict .vb:not(.pick))');
+		const a = p.getBoundingClientRect(), b = q.getBoundingClientRect(), cp = getComputedStyle(p), cq = getComputedStyle(q);
+		return [a.top, a.left, a.width, a.height, b.left, b.width, b.height, b.top - a.bottom].map(Math.round).join(' ')
+			+ ' | ' + [cp.fontSize, cp.fontWeight, cq.fontSize, cq.fontWeight, cq.borderTopColor, cq.backgroundColor, p.dataset.key, p.querySelector('kbd')?.textContent].join(' ');
+	})()`
+	s.open(t, "/r/demo/1")
+	want := eval(t, s.Page, look)
+	for _, c := range []struct {
+		p    *site
+		path string
+	}{{s, "/r/demo/2"}, {s, "/r/demo/8"}, {s, "/r/demo/9"}, {g, "/r/g/1"}} {
+		c.p.open(t, c.path)
+		if got := eval(t, c.p.Page, look); got != want {
+			t.Errorf("%s answers (primary top left width height, secondary left width height, gap | fonts, secondary border and fill, key, keycap)\n got %v\nwant %v", c.path, got, want)
+		}
+	}
+}
+
+func TestEnterPassesAVerdictButNotFromItsNote(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/8")
+	failIf(t, s.loc(".rpanel .verdict textarea").Click())
+	s.press(t, "Enter")
+	s.settle(t)
+	s.wantURL(t, "/r/demo/8")
+	if v := eval(t, s.Page, `document.querySelector('.rpanel .verdict textarea').value`); v != "\n" {
+		t.Errorf("note %q after Enter, want a new line", v)
+	}
+	failIf(t, s.loc(".rpanel .verdict textarea").Blur())
+	failIf(t, s.loc(".rpanel .verdict textarea").Fill(""))
+	eval(t, s.Page, `document.activeElement.blur()`)
+	s.press(t, "Enter")
+	s.wantURL(t, "/r/demo/9")
+	passed := false
+	for _, e := range s.entries(t) {
+		passed = passed || (e.Pick != nil && *e.Pick == "pass")
+	}
+	if !passed {
+		t.Errorf("entries %v, want a pass", s.entries(t))
+	}
+}
+
+// Every control's edge reads at 3:1 against what it sits on and its label at 4.5:1 (WCAG 1.4.11 and 1.4.3).
+const contrastScript = `(() => {
+	const rgba = (c) => { const m = c.match(/[\d.]+/g).map(Number); return [m[0], m[1], m[2], m.length > 3 ? m[3] : 1]; };
+	const over = (top, under) => top.slice(0, 3).map((v, i) => v * top[3] + under[i] * (1 - top[3])).concat(1);
+	const lum = (c) => { const l = c.slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2]; };
+	const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+	const behind = (el) => {
+		const stack = [];
+		for (let a = el; a; a = a.parentElement) { const c = rgba(getComputedStyle(a).backgroundColor); if (c[3] > 0) stack.push(c); if (c[3] === 1) break; }
+		return stack.reverse().reduce((u, c) => over(c, u), [0, 0, 0, 1]);
+	};
+	const bad = [];
+	const check = (el, pseudo, name) => {
+		const r = el.getBoundingClientRect();
+		if (!r.width || !r.height || getComputedStyle(el).visibility === 'hidden' || el.matches(':disabled, [aria-disabled=true]')) return;
+		const bg = behind(el.parentElement), st = getComputedStyle(el, pseudo), fillC = rgba(st.backgroundColor);
+		const fill = fillC[3] > 0 ? over(fillC, bg) : null;
+		let edge = fill ? ratio(fill, bg) : 1;
+		for (const side of ['Top', 'Right', 'Bottom', 'Left']) {
+			const c = rgba(st['border' + side + 'Color']);
+			if (parseFloat(st['border' + side + 'Width']) > 0 && st['border' + side + 'Style'] !== 'none' && c[3] > 0) edge = Math.max(edge, ratio(over(c, bg), bg));
+		}
+		const text = pseudo ? null : ratio(over(rgba(st.color), fill ?? bg), fill ?? bg);
+		if (edge < 3 || (text !== null && el.textContent.trim() !== '' && text < 4.5))
+			bad.push(name + ' "' + (el.textContent.trim().slice(0, 20) || el.className) + '" edge ' + edge.toFixed(2) + (text === null ? '' : ' label ' + text.toFixed(2)));
+	};
+	for (const sel of ['.btn', '.orow', 'textarea']) for (const el of document.querySelectorAll(sel)) check(el, null, sel);
+	for (const el of document.querySelectorAll('wr-tune .tp-sldv_t')) check(el, '::before', 'slider track');
+	for (const el of document.querySelectorAll('wr-tune .tp-sldv_k')) check(el, '::after', 'slider knob');
+	return bad.join('\n');
+})()`
+
+func TestControlsMeetContrast(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	for _, path := range []string{"/r/demo/1", "/r/demo/8", "/r/demo/9", "/r/demo/summary"} {
+		s.open(t, path)
+		if path == "/r/demo/9" {
+			s.wantVisible(t, s.loc("wr-tune .tp-sldv_k").First())
+		}
+		if bad := eval(t, s.Page, contrastScript); bad != "" {
+			t.Errorf("%s below 3:1 edge or 4.5:1 label:\n%v", path, bad)
+		}
+	}
+	if bad := eval(t, s.phoneFrame(t, "/r/demo/1", ".phone [data-act=sheet]"), contrastScript); bad != "" {
+		t.Errorf("phone /r/demo/1 below 3:1 edge or 4.5:1 label:\n%v", bad)
+	}
+}

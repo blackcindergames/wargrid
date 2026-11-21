@@ -29,6 +29,8 @@
     --btn: #223241;
     --panel2: #26384a;
     --line: #2e3f4b;
+    /* A control's edge: 3.4:1 on --slab and 3.7:1 on --well, the WCAG 1.4.11 floor, where --line is 1.6:1. */
+    --edge: #5e717e;
     /* Softer than the HUD's #eef3f5 so page text never outshines the picture. */
     --text: #dfe7ec;
     --soft: #b9c6ce;
@@ -53,7 +55,7 @@
   body { background: var(--well); color: var(--text); font: 15px/1.45 var(--font); }
   textarea {
     display: block; width: 100%; padding: 8px 12px; font-size: 14px;
-    background: var(--well); border: 1px solid var(--line);
+    background: var(--well); border: 1px solid var(--edge);
     &:focus { outline: 2px solid var(--muted); outline-offset: 2px; }
   }
   kbd {
@@ -69,8 +71,8 @@
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: nowrap;
     height: 40px; padding-inline: 16px; font-size: 14px; font-weight: 600; text-align: center; white-space: nowrap;
-    color: var(--text); background: var(--quiet); border: 1px solid var(--quiet); cursor: pointer; user-select: none;
-    &:hover { background: var(--btn); border-color: var(--btn); }
+    color: var(--text); background: var(--quiet); border: 1px solid var(--edge); cursor: pointer; user-select: none;
+    &:hover { background: var(--btn); }
     /* A visible edge: --quiet on --well alone is 1.1:1. */
     &.neutral { border-color: var(--muted); }
     &:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
@@ -139,15 +141,17 @@
   .rpanel {
     border-left: 1px solid var(--line); gap: 6px; position: sticky; top: 0; height: var(--vh);
     /* With the panel's gap, 10 px on top holds the Pick's 14 px tab clear of the list; the height leaves room for Pick or Yes and a second button, so Pick keeps one height with or without the neutral answer. */
-    .act { flex-direction: column; align-items: stretch; padding-top: 10px; min-height: calc(10px + 44px + 8px + 40px); }
-    .act .pick { width: 100%; }
+    .act { flex-direction: column; align-items: stretch; padding-top: 10px; min-height: calc(10px + 44px + 8px + 44px); }
+    /* Every kind's answers share one size: yellow primary, outlined secondary. */
+    :is(.act .btn, .verdict .vb) { width: 100%; height: 44px; padding-inline: 22px; font-size: 16px; font-weight: 800; }
+    :is(.act, .verdict) .btn:not(.pick) { border-color: var(--muted); }
     /* With no list above, the answer drops to where Pick sits on a choice step; a gallery's item block takes the list's room. */
     > :first-child { margin-top: auto; }
     > .gside { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     /* Wording has no note here: keep the gap, margin and height a note takes, so Done, next sits at Pick's height. */
     > .act:not(:has(~ .notebox)) { margin-bottom: calc(6px + 8px + 72px); }
     /* Pass and Changes take Pick's and the neutral answer's heights, and the note sits where a choice step's note does. */
-    .verdict { gap: 8px; padding-top: 10px; .vb { flex: 1 1 100%; min-height: 40px; } .vb.pick { min-height: 44px; } textarea { margin-top: 6px; } }
+    .verdict { gap: 8px; padding-top: 10px; .vb { flex: 1 1 100%; min-height: 0; } textarea { margin-top: 6px; } }
     /* Over the list's last 28 px, cancelling the panel's gap, so Pick keeps its place whether it shows or not. */
     .omore {
       position: relative; z-index: 1; height: 28px; margin-top: -34px; padding-top: 8px; pointer-events: none;
@@ -228,7 +232,7 @@
   .rpanel .opts { display: flex; flex-direction: column; gap: 6px; flex: 1 1 0; min-height: 0; overflow-y: auto; padding-block: 4px; border-bottom: 1px solid var(--line); }
   .orow {
     display: block; width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
-    background: var(--quiet); border-left: 3px solid transparent;
+    background: var(--quiet); border: 1px solid var(--edge); border-left: 3px solid transparent;
     &:hover { background: var(--btn); }
     /* Inside the row, so the scrolling list never clips it. */
     &:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
@@ -239,7 +243,7 @@
     .fl { font-weight: 800; }
     /* Two lines keep every row in the list's box; About repeats notes past the loader's limit. */
     .onote { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 3px 0 0 26px; font-size: var(--row); color: var(--soft); }
-    &.today { background: transparent; border: 1px dashed var(--line); .ot { font-weight: 600; color: var(--soft); } }
+    &.today { background: transparent; border: 1px dashed var(--edge); .ot { font-weight: 600; color: var(--soft); } }
     &.today.sel { border-color: var(--sel); }
   }
   .rpanel {
@@ -253,7 +257,7 @@
   .ctlsel {
     display: inline-flex; align-items: center; gap: 4px; font-size: var(--row); font-weight: 600; white-space: nowrap;
     span { color: var(--muted); font-weight: 700; }
-    select { height: 32px; padding-inline: 8px; font-size: 12px; background: var(--well); border: 1px solid var(--line); }
+    select { height: 32px; padding-inline: 8px; font-size: 12px; background: var(--well); border: 1px solid var(--edge); }
   }
   .act, .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   /* Out of flow on the button's top edge, so the Pick keeps its size and place with or without it. */
@@ -528,7 +532,7 @@
     :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: 100%; }
     .ref .pic { max-width: none; }
     .extras { grid-template-columns: minmax(0, 1fr); }
-    .verdict { gap: 10px; padding-top: 0; .vb { flex: 1 1 40%; padding-inline: 8px; min-height: 48px; } textarea { margin-top: 0; } }
+    .verdict { gap: 10px; padding-top: 0; .vb { flex: 1 1 40%; height: 48px; padding-inline: 8px; min-height: 48px; font-size: 18px; } kbd { display: none; } textarea { margin-top: 0; } }
     .cpanel > :is(.fields, .missing) { width: auto; margin-inline: 0; }
     /* Cancels the step's gap, so Copy keeps the spacing it had inside the summary block. */
     .copy { margin-block: -12px; }
