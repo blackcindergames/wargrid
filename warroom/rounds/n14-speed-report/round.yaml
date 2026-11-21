@@ -11,5 +11,5 @@ steps: [block, headline, trend-words, labels, deck-row, trend-intro]
 render:
   page: docs/images/speed-report/readme-blocks.html
   w: 1280
-  h: 1000
+  h: 1100
   hash: 'shot={state}'

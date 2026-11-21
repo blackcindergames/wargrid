@@ -3,15 +3,15 @@
 Plan: [honest speed report](../superpowers/plans/2026-11-21-honest-speed-report.md). Decisions: [design answers, low-end report loose ends (user, 2026-11-20)](design-answers-2026-11-08.md#low-end-report-loose-ends-user-2026-11-20); owner rulings for the plan (user, 2026-11-21) in the plan header. Night lane item 14 in [packages](../packages.md#night-lane).
 
 ```text
-Resume record (updated 2026-11-22, Task 4 green, uncommitted)
-Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 4363cba3 (Tasks 1 to 3 committed), Task 4 changes uncommitted
-Last green task / next incomplete task: Task 4 (awaiting the coordinator's commit) / Task 5
-Changed paths since last commit: docs/reference/performance.md, docs/guide/12-performance-and-platforms.md, docs/guide/13-testing-and-tooling.md, docs/STATUS.md, this file
-Last command / cases / checks / failures / exit / marker: python3 tools/roadmap.py --check / exit 0; sh tools/check_public.sh / exit 0, PUBLIC CHECK PASSED; link targets of the added lines exist; docs only, no code run, baseline skipped (no GDScript or Python changed since the Task 1 suite pass TESTS PASSED 152754)
+Resume record (updated 2026-11-22, Task 5 green, uncommitted)
+Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 1afd6416 (Tasks 1 to 4 committed), Task 5 changes uncommitted
+Last green task / next incomplete task: Task 5 (awaiting the coordinator's commit) / Task 6
+Changed paths since last commit: docs/images/speed-report/readme-blocks.html (new), warroom/rounds/index.yaml, warroom/rounds/n14-speed-report/round.yaml (h 1000 to 1100 for Task 6's two extra rows), warroom/internal/rounds/rounds_test.go, this file
+Last command / cases / checks / failures / exit / marker: sh warroom/tools/quality.sh / exit 0; sh tools/check_public.sh / exit 0, PUBLIC CHECK PASSED; go test ./internal/rounds/ ./internal/web/ / exit 0; baseline skipped (no GDScript changed since the Task 1 suite pass TESTS PASSED 152754)
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: one local commit per green task (pre-authorized); no push, PR, merge or fly deploy; D3 and D4 at the SB6 plan; the plan's owner answers (user, 2026-11-21) all took the recommendations
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: coordinator commits Task 4, then starts Task 5 (Sonnet high)
+Next exact action: coordinator commits Task 5, then starts Task 6 (Sonnet low); Task 6 Step 6 reruns blocks_page.py
 ```
 
 ## Tasks
@@ -21,8 +21,8 @@ Next exact action: coordinator commits Task 4, then starts Task 5 (Sonnet high)
 | 1 | Record the 3v3 profile rows (`step`, `team_tick`) | Sonnet high | green | fbd54a6f |
 | 2 | The trend rule and the goal lines | Sonnet high | green | 3b94d9d1 |
 | 3 | The README block (checked and tracked tables, Deck row) | Sonnet high | green | 4363cba3 |
-| 4 | Docs (ledger paragraph, guide 12 and 13, STATUS) | Sonnet high | green, uncommitted | |
-| 5 | War Room round page (`n14-speed-report`) | Sonnet high | not started | |
+| 4 | Docs (ledger paragraph, guide 12 and 13, STATUS) | Sonnet high | green | 1afd6416 |
+| 5 | War Room round page (`n14-speed-report`) | Sonnet high | green, uncommitted | |
 | 6 | Gate benchmark | Sonnet low | not started | |
 | 7 | Gap 12, Mac half | Sonnet high | not started | |
 | 8 | Gap 12, Wasm half on the Steam Deck | Sonnet high | not started | |
@@ -41,6 +41,10 @@ Next exact action: coordinator commits Task 4, then starts Task 5 (Sonnet high)
 | 2026-11-22 | 3 | same command after the change; `sh tools/run_python_checks.sh` (after `ruff format`) | 96 tests OK; exit 0; ruff, mypy clean; `PYTHON TESTS PASSED` | honest-speed-report 0e128cc0 plus Task 3 changes |
 | 2026-11-22 | 3 | `tools/.venv/bin/python3 tools/perf_chart.py`; `python3 tools/roadmap.py --check`; `sh tools/check_public.sh` | exit 0 each; `PUBLIC CHECK PASSED`; diff touches only the two generated blocks (README 7 checked rows plus Deck row, 6 tracked rows; ledger 11 rows, 4 over) | honest-speed-report 0e128cc0 plus Task 3 changes |
 | 2026-11-22 | 4 | `python3 tools/roadmap.py --check`; `sh tools/check_public.sh`; link targets of the added lines checked by hand | exit 0 each; `PUBLIC CHECK PASSED`; every linked file exists and `#rule-per-milestone` is a heading in the ledger; claims checked against `tools/perf_chart.py` (`PASS_FAIL` 7 rows, `TRENDS` 8, `NOISE_PCT` unchanged) | honest-speed-report 4363cba3 plus Task 4 changes |
+| 2026-11-22 | 5 | `python3 -I ~/projects/wargrid-overnight-work/night-14/round/blocks_page.py docs/images/speed-report/readme-blocks.html`; headless Firefox screenshots of `#shot=old` and `#shot=new` (needs `--profile <empty dir>`; without it Firefox exits 1) | exit 0; 1280 x 1000 shots, the new state ends at about 950 px with both tables whole; no absolute path in the page. Task 6 adds two tracked rows (about 1025 px), so `h` is 1100 | honest-speed-report 1afd6416 plus Task 5 changes |
+| 2026-11-22 | 5 | `go test ./internal/rounds/` with the index entry, before the count change | Red: `index 4, rounds 4, want 3 and 3` | honest-speed-report 1afd6416 plus the index entry |
+| 2026-11-22 | 5 | `go test ./internal/rounds/ ./internal/web/`; `go run . open`; built option texts compared with `TREND_INTRO`, `DECK_ROW` and the headline, labels and row names in `tools/perf_chart.py` | exit 0; `n14-speed-report 0 of 6 answered, advisory: answer when you like`, no `warning: n14-speed-report/` line (the 16 warnings are p2-3b-dock's, as before); texts equal | honest-speed-report 1afd6416 plus Task 5 changes |
+| 2026-11-22 | 5 | `sh warroom/tools/quality.sh`; `sh tools/check_public.sh` | exit 0 (all steps incl. network ones); `PUBLIC CHECK PASSED` | honest-speed-report 1afd6416 plus Task 5 changes |
 
 ## Rulings
 
