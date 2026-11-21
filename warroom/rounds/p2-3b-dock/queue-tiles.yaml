@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'Queue in the factory panel: which tiles?'
+why: >-
+  Follows your pick of B in step 1 and your answers after it (user, 2026-11-21): one row of tiles in the
+  factory panel, `NOW` on the first and no position digits (digits are control groups in P2.3b), the card
+  cell's key chip instead of a picture until the Full tier's glyphs, full names wrapping to two lines, a
+  `+N` spot when more than fit. Each tile is the card's item cell narrowed to 91 px, so the queue reads as
+  the same kind of thing as the cells that fill it. The Full tier later adds a 22 px glyph at the left of
+  line 1, as the cells do; Zero Hour's tank pictures would be its place. A click on a tile cancels one
+  entry and refunds it; the tiles hold still while the pointer is in the row, so a finishing unit never
+  slides a different one under your click.
+look: >-
+  Where to look: the factory panel bottom left, four tanks queued. Under each option, nine queued, a mixed
+  queue where grouping pays off, the cancel hover and the empty queue.
+rec: B
+recWhy: >-
+  repeats fold into one tile with the same `×3` you see on the cell, so a long queue still shows what it
+  holds in one row; the cost is that cancelling a group's tile removes one of its entries, not the tile.
+neutral: None of these
+ref:
+  label: 'Step 1 B: the v5 key-letter slots'
+  render: {state: p23b-queue-slots}
+options:
+  A:
+    name: One tile per entry (your mock)
+    render: {state: p23b-qt-each}
+    sees: >-
+      Four tiles: `NOW` Medium Tank with its progress bar, then Medium Tank, Rotary Gun Tank, Medium Tank.
+      From five entries the fourth spot shows `+N more`.
+    notes: Every entry has its own tile; from five queued most of the queue hides behind `+N`.
+    extra:
+    - label: Nine queued
+      render: {state: p23b-qt-each-full}
+    - label: Empty queue
+      render: {state: p23b-qt-empty}
+  B:
+    name: Repeats share a tile with `×N`
+    render: {state: p23b-qt-run}
+    sees: >-
+      The same row, but waiting entries of one kind next to each other share a tile with the cell's `×N`
+      badge. Four alternating tanks still take four tiles; six as Medium, then three Medium and two Rotary
+      take three.
+    notes: Shows a long queue's makeup in one row; the hidden rest only when kinds alternate a lot.
+    extra:
+    - label: Nine queued, alternating (worst case)
+      render: {state: p23b-qt-run-full}
+    - label: Six queued, Medium ×3 and Rotary ×2
+      render: {state: p23b-qt-run-mixed}
+    - label: Pointer on a tile, cancel
+      render: {state: p23b-qt-hover}
+    - label: Empty queue
+      render: {state: p23b-qt-empty}

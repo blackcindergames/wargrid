@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'Advisory: how does a cost you cannot afford look?'
+why: >-
+  Advisory: P2.3b builds D unless you pick another. Zero Hour greys a cell you cannot afford exactly like
+  one missing a building (its can't-afford state is commented out, ControlBarCommand.cpp:1161-1166).
+  Three of our records disagree: amber (user, 2026-11-16), muted (an agent correction, 2026-11-19) and
+  `warn` (gate A, user, 2026-11-19, as built). Accessibility guides say colour alone must not carry it:
+  XAG 103, "Color alone should never be used to represent information". D adds one small mark to `warn`;
+  the mark works with any colour, so for muted or amber plus the mark, pick D and say so in the note.
+  The cell card says `900 credits short` on hover in every option.
+look: >-
+  Where to look: the build cells of one FRC Laborer at 1,600 credits (FRC, because China and USA cannot
+  show the two causes apart: their prerequisite-blocked buildings always cost more). `R` Vehicle Yard 2,500
+  is short of credits only, `A` Tunnel Hub 800 lacks its Barracks only, `W` and `E` are ready, `Q` stays
+  empty for FRC. Shift+C shows deuteranopia and protanopia.
+rec: D
+recWhy: >-
+  the two causes stay apart in colour and the shortfall still reads in colour-blind vision or a glance;
+  the cost is one more mark on a small cell.
+neutral: None of these
+crop: {x: 820, y: 460, w: 460, h: 260}
+controls:
+  cvd: true
+ref:
+  label: 'Today: the P2.3a1 slab short of credits'
+  render: {state: slab-poor}
+options:
+  A:
+    name: Amber
+    render: {state: p23b-cost-amber}
+    notes: >-
+      The 2026-11-16 record. Amber also marks where to act (the armed pick, alerts), so a cell you cannot
+      use reads like one asking for a click.
+  B:
+    name: Muted, like a missing prerequisite (Zero Hour)
+    render: {state: p23b-cost-muted}
+    notes: Quietest; you cannot tell "short of credits" from "needs a building" until you hover.
+  C:
+    name: '`warn` (as built)'
+    render: {state: p23b-cost-warn}
+    notes: Today's look; the two causes differ in colour only.
+  D:
+    name: '`warn` plus a small mark'
+    render: {state: p23b-cost-cue}
+    notes: >-
+      A 9 px `warn` triangle after the cost: the shortfall shows by shape too, and costs stay aligned.

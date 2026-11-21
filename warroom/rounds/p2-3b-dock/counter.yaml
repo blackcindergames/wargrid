@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'Counter line: only on the cell card, or also in the unit panels?'
+why: >-
+  Zero Hour prints `Strong vs. … / Weak vs. …` in the build tooltips only, never in the selected-unit or
+  enemy panel (its CONTROLBAR:ToolTip…Build… strings). The director's sketch put the line on the cell
+  card and in the one-unit and inspected-enemy panels (packages list, P2.3b rider); P15 asks only for
+  the card line. Every option keeps the card line; the question is the panels. The words are
+  illustrative: P2.3b derives each claim from the damage tables by a test and softens a failing one to
+  `Good against X`.
+look: >-
+  Where to look: the bottom left panel, one own Rotary Gun Tank selected. Under each option, an inspected
+  enemy tank and the cell card while hovering `W` in a Vehicle Factory (the same in both).
+rec: B
+recWhy: >-
+  the card is where you choose what to build, which is when the line matters; the panels stay at their
+  tested height. The cost: you cannot check a matchup on a unit you already own or face; C is the
+  option if picking a counter to an enemy army you are looking at matters more.
+neutral: None of these
+options:
+  A:
+    name: Card plus a muted line in the unit panels
+    render: {state: p23b-counter-one-line}
+    sees: >-
+      The one-unit panel adds a muted 12 px line under the name, `Beats infantry · weak against tanks`; the
+      panel grows by about 18 px. An inspected enemy unit shows its own line the same way.
+    notes: >-
+      Tells you in battle what your unit or the enemy's is good for; a taller panel and a second place for
+      words that must stay true as balance changes.
+    extra:
+    - label: Inspected enemy, with its line
+      render: {state: p23b-counter-enemy-line}
+    - label: Cell card on `W` (same in all)
+      render: {state: p23b-counter-card}
+  B:
+    name: Cell card only (Zero Hour)
+    render: {state: p23b-counter-one}
+    sees: >-
+      The one-unit and enemy panels as today. The line appears only on the cell card, line 2, while you
+      hover a unit to build.
+    notes: Zero Hour's place, one place to keep true, no panel change.
+    extra:
+    - label: Inspected enemy, no line
+      render: {state: p23b-counter-enemy}
+    - label: Cell card on `W` (same in all)
+      render: {state: p23b-counter-card}
+  C:
+    name: Card plus the enemy panel only
+    render: {state: p23b-counter-one}
+    sees: >-
+      Your own unit's panel as today (shown); an inspected enemy unit adds its muted counter line (under
+      this option), the panel 18 px taller.
+    notes: >-
+      Answers "what do I build against that?" while you look at the enemy; your own unit's line would only
+      repeat what you chose when you built it.
+    extra:
+    - label: Inspected enemy, with its line
+      render: {state: p23b-counter-enemy-line}
+    - label: Cell card on `W` (same in all)
+      render: {state: p23b-counter-card}
