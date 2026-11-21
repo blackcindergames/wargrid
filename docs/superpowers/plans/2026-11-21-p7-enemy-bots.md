@@ -16,6 +16,8 @@ Written into the rules below: **7-1** UR1 (inside the one re-pin; old records re
 
 **After kill check B (user, 2026-11-21; evidence `p7-verification.md` T1-5):** first wave at 180 s, `FIRST_WAVE_TICK` 5,400 (replaces 4,500 in 7-3; the 7-13 floor stands); night-12 column 2 is judged per map group against stock seed noise (the new rules keep at least as many stock-ended matches ending as stock against itself on shifted seeds; widens 7-12's wording); before T1-7, a clean kill check of a "commit" wave rule (waves do not stop for every unit near their path, home defence on), then the owner decides whether it enters the design. The variant is **commit unless hit** (user, 2026-11-21): a launched wave keeps its objective and re-picks a unit only when one of its units lost hit points since its last decision (bot memory, integer HP; `combat_events` is cleared every tick, `simulation.gd:596`); wave units with an attack order never retaliate on their own (`combat.gd:111-112,666-667`). Not a Zero Hour default: hunt teams keep one victim until it dies, then re-pick the closest or highest-priority enemy (GeneralsGameCode `afc2a103f`, `AIStates.cpp` ~7240-7285, 3611-3680). Wave growth (no target met from wave 3 on) is decided at T1-8.
 
+**After kill check C (user, 2026-11-21; evidence `p7-verification.md` Kill check C):** commit unless hit is adopted as task T1-6b before T1-7 (rewrites BR5's engaged re-pick: a wave re-picks a unit only when one of its units lost hit points since the bot's previous decision); T1-8 may also tune `WAVE0_UNITS` (at most 16) until the Broken Crown 1v2 floor holds (the 7-13 bar stands); night-12 column 1 excludes seats that lose a decided match (widens 7-12); column 2 passes when a map group's count is at least the lowest of stock's shifted-seed counts, Broken Crown 2v2 judged as one group.
+
 ### Open (part 1)
 
 - With 150 s tested, which gap ships: owner pick at T1-8 from the two probe rows and the window check.
@@ -73,7 +75,7 @@ Team bots on either side of `due` (seat 4 forms, seat 3 joins ≤ 29 ticks later
 - Benchmark run alone (no other Godot job; `uptime` first, tag host load): `PERF_LABEL="P7 part 1 enemy bots" sh tools/run_benchmark.sh > build/bench.log 2>&1; echo "exit=$?"`; row in `perf-history.csv` and the status table; exceeded budgets reported, never loosened. No presentation change: no rendered rerun.
 - With approval item (b): push the branch, `gh run watch --exit-status`, then `sh tools/compare_local_traces.sh <RUN_ID>`.
 - `p7-verification.md` complete: red ledger, probe matrix, night-12 columns, floor, release causes, 150 s rows, owner check.
-- Gate review: `/ponytail-review` on the diff (cuts applied, re-verified), then Grok 4.7 high plus an Opus high whole-branch pass (recipe `~/projects/wargrid-private/docs/grok-handoff.md`; Grok missing or failing: Opus alone, say so). Fix rounds Opus high; re-run the gate checks after fixes.
+- Gate review: `/ponytail-review` on the diff (cuts applied, re-verified), then Gemini (Neon high, recipe `~/projects/wargrid-private/docs/agy-handoff.md`) plus an Opus high whole-branch pass (user, 2026-11-21: Grok is no longer used; Gemini missing or failing: Opus alone, say so). Fix rounds Opus high; re-run the gate checks after fixes.
 - **Stop gate:** report the gate and stop. No merge, no part 2.
 
 ### After night 8 lands (T1-12, separate session, owner's go)

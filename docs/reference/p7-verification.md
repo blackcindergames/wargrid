@@ -3,15 +3,15 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 15:58)
-Branch / base commit / working-tree state: p7-enemy-bots / 70dc9873 (T1-5b) / T1-6 uncommitted: skirmish.gd, test_bot_rules.gd, test_skirmish.gd, test_skirmish_waves.gd, sim-interface.md, this file
-Last green task / next incomplete task: T1-5b green on the re-pin list; T1-6 fix round done, awaiting re-review / T1-7 (needs the commit-rule kill check first)
-Changed paths since last commit: game/scripts/simulation/skirmish.gd, game/tests/test_bot_rules.gd, game/tests/test_skirmish.gd, game/tests/test_skirmish_waves.gd, docs/reference/sim-interface.md, docs/reference/p7-verification.md
-Last command / cases / checks / failures / exit / marker: full suite on the T1-6 fix-round tree: CASES 1287 CHECKS 152842 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, re-pin list only); lint exit 0, warnings exit 0 (190 files)
+Resume record (updated 2026-11-21 17:15)
+Branch / base commit / working-tree state: p7-enemy-bots / 300d2283 (T1-6) / kill check C written, uncommitted: this file only
+Last green task / next incomplete task: T1-6 committed (re-pin list red only); kill check C done / T1-7 (waits for the owner's call on commit unless hit and the 1v2 floor)
+Changed paths since last commit: docs/reference/p7-verification.md
+Last command / cases / checks / failures / exit / marker: kill check C probe, 1,206 matches on two scratch exports of 300d2283, all rows parsed (no suite run; no source changed); last suite: T1-6 fix-round tree CASES 1287 CHECKS 152842 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, re-pin list only)
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
-Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); (a) local commit per green task, (b) one branch push at the gate; open: commit-rule kill check before T1-7, wave growth at T1-8, 1v2 floor after T1-6
+Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); (a) local commit per green task, (b) one branch push at the gate; open: owner decides whether commit unless hit enters the design (kill check C), 1v2 floor fails on the T1-6 tip, wave growth at T1-8
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: re-review the T1-6 fix round, commit T1-6, then the clean kill check of the "commit" wave rule before T1-7
+Next exact action: owner reads kill check C and decides on commit unless hit and the Broken Crown 1v2 floor; then T1-7
 ```
 
 ## Red ledger
@@ -143,3 +143,38 @@ Rewrites (R2, the replaced rule): `test_skirmish.gd` A3 and W1 and `test_skirmis
 Interpretations taken: (1) a launching bot with no ready unit still forms the wave (it only sends nothing): the wave needs the team's cost or, at the cap, any team unit ready; (2) `released_by` "timer" is the first decision of any live-or-not team seat from `due` (`prev` is written at the end of every team decision); (3) `left_units` is -1 after wave 0 (no cap); (4) `joiners` are the other live bots in order of their next decision; a joiner that is no longer live is dropped and the last live one takes up to `left`; (5) the objective is a building: with no enemy building the wave does not leave (T1-4 would have picked a unit); (6) a launch always orders the objective, an enemy unit within `DEFENCE_RADIUS` of the wave is taken at the next decision (A3, W1, T5 rewritten for it); (7) a joiner whose objective died re-picks from its own take (`_follow`) and stores it.
 
 Fix round (review findings 1-3): (1) `_victim` counts only owners of a building with `counts_for_victory`, so a defeated player left with a defence or Tunnel Hub is no victim; the objective pick still runs over all of the victim's buildings. Red first: `test_defeated_enemy_with_defence_is_no_victim` (`build/t16-fix-red.log`) failed with `FAIL: BR5 a player left with only a defence is not live; the wave goes to live player 2, got objective 19 owner 1`. (2) `_mates_ready` and `_gather` share `_at_rally` (squared distance on the `[x, y]` floats, no `Vector2` maths); `_gather`'s old `distance_to` site is gone. (3) SK20 checks memory identity through `waves` (the `prev` key left `_bot`). Results: `test_bot_rules` CASES 34 CHECKS 81 FAILURES 0; `test_skirmish*` CASES 131 FAILURES 5 (S1 2, Cs1, Fm1, HUD1); full suite CASES 1287 CHECKS 152842 FAILURES 9, exit 1, the same nine names with the same values (no pin moved); lint exit 0, warnings exit 0 (190 files), `tools/test_sim_math.py` and `tools/test_sim_boundary.py` OK.
+
+### Kill check C (commit unless hit)
+
+Result: evidence for the owner's decision (T1-5 owner decision 3); nothing decided, no source in this worktree changed. Full numbers private: `kc-c.md` (`~/projects/wargrid-overnight-work/p7-enemy-bots/`); raw rows, `kcc.py`, the variant diff and `chain_kcc.sh`: `~/projects/wargrid-private/docs/better-bots/probe/p7/` (`out-kcc-{base,commit}-*.jsonl`).
+
+Tree: two scratch exports (`git archive`) of `300d2283` (T1-6 tip), deleted afterwards: **base** unchanged, **variant** commit unless hit. Variant: `bot_state()` rows gain integer `hp`; each wave stores its units' HP at every decision of its bot; a wave re-picks with `_pick` over units and buildings only when one of its units lost HP or died since that bot's previous decision, and at the first decision without a hit returns to the team objective (`_follow`); an enemy unit within `DEFENCE_RADIUS` no longer makes a wave re-pick, and `_follow`'s objective re-pick takes buildings only. `_defend` and home-defence `DEFENCE_RADIUS` unchanged. Smoke match first (Ashfall 3,7 `usa,china` seed 0: base seat 2 never hits a building, variant both seats do). Matrix: the T1-5 job set (603) on each tree, `ctrl=human`, unchanged `p7_probe.gd`, 4 parallel, 1,206 rows, all parsed (one pair of rows interleaved by parallel appends was split and rejoined; both parse). Compared with T1-1 stock `human` rows; column 2 noise is those stock rows paired with themselves on seeds +1 to +4 (the diagnosis method).
+
+| Bar | Floor / noise | Base (T1-6 tip) | Variant |
+|---|---|---|---|
+| 7-13 floor Dry Wells 1v1 | 7,414 | 7,683 | 7,683 |
+| 7-13 floor Ashfall 2,6 1v1 | 10,698 | 11,141 | 10,954 |
+| 7-13 floor Ashfall 3,7 1v1 | 10,314 | 10,582 | 10,582 |
+| 7-13 floor Broken Crown 1v1 | 7,887 | 8,128 | 8,045 |
+| 7-13 floor Broken Crown 1v2 | 7,887 | **7,621 (fails)** | **7,574 (fails)** |
+| Column 1 whole (every stock-failing seat damages a building) | all | 104/190 | 178/190 (fails) |
+| Column 1 Dry Wells / Ashfall 2,6 / Ashfall 3,7 / BC 2v2 | all | 19/27, 15/36, 9/44, 61/83 | 27/27, 36/36, 36/44, 79/83 |
+| Column 1 excluding losers of decided matches (information) | - | 62/82 | 64/65 |
+| Column 2 Dry Wells (stock-ended that still end) | 34-35/38 | 32 | 37 |
+| Column 2 Ashfall 2,6 | 22-25/30 | 23 | 29 |
+| Column 2 Ashfall 3,7 | 29-30/33 | 22 | 31 |
+| Column 2 BC 2v2 1,2,3,4 / 3,4,1,2 | 36-37/39, 34-36/39 | 32, 27 | 36, 32 |
+| Column 2 BC 2v2 both orders | 71-72/78 | 59 | 68 (fails) |
+| Wins seat 1 : seat 2 (team 1 : 2), DW / A26 / A37 / BC 1234 / BC 3412 | stock 14:24, 7:23, 22:11, 26:13, 15:24 | 20:18, 15:17, 17:12, 18:19, 18:13 | 25:18, 28:16, 22:20, 26:14, 11:24 |
+| No winner by the cap, bot vs bot (stock 34/135 BB, 12/90 BC 2v2) | - | 36, 22 | 6, 15 |
+| Median end tick of won BB, DW / A26 / A37 (stock 18,161 / 33,597 / 29,853) | - | 30,593 / 31,829 / 35,192 | 26,896 / 27,128 / 34,473 |
+| Wave 0 max per team (bar 16) | 16 | 16 | 16 |
+| Minute-6 fighting units BB seat 1 / 2, median (stock 25 / 34.5) | - | 47 / 48 | 51 / 53 |
+| Reach, bot-vs-bot rows: BB (stock 0.225) / BC 2v2 | - | 0.203 / 0.431 | 0.557 / 0.609 |
+| `released_by` waves 1 on: timer / wait cap / size | - | 839 / 2,246 / 379 | 726 / 1,755 / 448 |
+
+Column 2 noise ranges are the four seed shifts (lowest to highest). Same-faction bot-vs-bot matches ended: stock 26 of 45, base 16 (`usa,usa` 1), variant 42 (`usa,usa` 12). No base race: the largest variant seat share is 28 of 44 (Ashfall 2,6 seat 1), against stock's 23 of 30 (seat 2). Wave 0 per team counts the launching bot and its joiners (the probe tags only the launching bot's wave with `wave_index`).
+
+Reading: the variant passes column 2 on Dry Wells and both Ashfall sets, column 1 completely on Dry Wells and Ashfall 2,6, and holds every 1v1 floor (margins on Ashfall 2,6 and Broken Crown 1v1 shrink to 256 and 158). Still failing in the variant: column 1 as worded (12 seats, 11 of them losers of decided matches), column 2 on Broken Crown 2v2 (68 of 78 against 71-72; the 1,2,3,4 order equals the lowest shift, 36, and is 1 under the highest), and the Broken Crown 1v2 floor, which already fails on the T1-6 tip (15 of 81 rows below 7,887, lowest starts 1,2,4 with an FRC pair; the variant makes it 47 ticks worse). Open for the owner: whether commit unless hit enters the design (BR5's engaged re-pick sentence; bots then read unit HP), the 1v2 floor, and whether Broken Crown 2v2 is judged as one group or per slot order.
+
+**Owner decisions after kill check C:** commit unless hit is adopted as task T1-6b before T1-7 (rewrites BR5's engaged re-pick: a wave re-picks a unit only when one of its units lost hit points since the bot's previous decision); T1-8 may also tune `WAVE0_UNITS` (at most 16) until the Broken Crown 1v2 floor holds (the 7-13 bar stands); night-12 column 1 excludes seats that lose a decided match (widens 7-12); column 2 passes when a map group's count is at least the lowest of stock's shifted-seed counts, Broken Crown 2v2 judged as one group.
