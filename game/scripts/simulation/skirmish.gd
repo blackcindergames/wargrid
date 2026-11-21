@@ -18,6 +18,7 @@ const WAVE0_UNITS: int = 16
 const DEF_UNITS: int = 4
 const DEF_REACH: float = 8.0
 const ROUTE_STEP: float = 8.0
+const DEFENCE_STRIDE: int = 7
 const RALLY_RADIUS: float = 6.0
 const DISTANCE_STEP: float = 4.0
 const DETOUR_REACH: float = 10.0
@@ -317,16 +318,16 @@ static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	var capped: bool = ctx.tick >= clock.due + WAVE_WAIT and not kinds.is_empty()
 	# Defences only raise the target, so a wave short of the plain one waits without the scan.
 	if worth < _wave_target(clock.wave, state, live, 0) and not capped: return
-	var order: Array = _victims(enemies, clock)
+	var buildings: Array = enemies.filter(_is_building)
+	var order: Array = _victims(buildings, clock)
 	if order.is_empty(): return
 	var rally: Vector2 = _mean_rally(ctx, live)
-	var objective: Variant = _pick(rally, enemies.filter(func(enemy: Dictionary) -> bool: return enemy.owner == order[0] and _is_building(enemy)))
-	var armed: Array = _armed(enemies)
-	var goal: Dictionary = _row(enemies, objective)
-	var guards: int = armed.filter(func(defence: Dictionary) -> bool: return _guards(rally, goal, defence)).size()
+	var objective: Variant = _pick(rally, buildings.filter(func(building: Dictionary) -> bool: return building.owner == order[0]))
+	var defences: PackedFloat64Array = _defence_rects(_armed(buildings))
+	var guards: int = _guard_count(rally, _row(buildings, objective), defences, false)
 	var target: int = _wave_target(clock.wave, state, live, guards)
 	if worth < target and not capped: return
-	if worth < target and guards > 0: objective = _softer(rally, order, enemies, armed, objective)
+	if worth < target and guards > 0: objective = _softer(rally, order, buildings, defences, objective)
 	@warning_ignore("integer_division")
 	var share: int = target / live.size()
 	@warning_ignore("integer_division")
@@ -338,7 +339,7 @@ static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	clock.released_by = "wait_cap" if worth < target else ("timer" if clock.prev < clock.due else "size")
 	clock.launched_at = ctx.tick
 	clock.objective = objective
-	clock.attacked_at[_row(enemies, objective).owner] = ctx.tick
+	clock.attacked_at[_row(buildings, objective).owner] = ctx.tick
 	clock.left_cost = maxi(target - _cost_sum(take.map(func(id: int) -> String: return mine[id].kind)), 0)
 	clock.left_units = WAVE0_UNITS - take.size() if clock.wave == 0 else -1
 	clock.joiners = _joiners(ctx, live)
@@ -388,49 +389,70 @@ static func _at_rally(position: Array, rally: Vector2) -> bool:
 	return dx * dx + dy * dy <= RALLY_RADIUS * RALLY_RADIUS
 
 # Enemies with a building that keeps them in the match, the one attacked least recently first (never: -1), ties lowest id.
-static func _victims(enemies: Array, clock: Dictionary) -> Array:
+static func _victims(buildings: Array, clock: Dictionary) -> Array:
 	var owners: Array = []
-	for enemy: Dictionary in enemies:
-		if _is_building(enemy) and Registry.kind(enemy.kind).counts_for_victory and not owners.has(enemy.owner): owners.append(enemy.owner)
+	for building: Dictionary in buildings:
+		if Registry.kind(building.kind).counts_for_victory and not owners.has(building.owner): owners.append(building.owner)
 	owners.sort_custom(func(a: int, b: int) -> bool:
 		var seen_a: int = clock.attacked_at.get(a, -1)
 		var seen_b: int = clock.attacked_at.get(b, -1)
 		return seen_a < seen_b or (seen_a == seen_b and a < b))
 	return owners
 
-static func _row(enemies: Array, id: Variant) -> Dictionary:
-	for enemy: Dictionary in enemies:
-		if enemy.id == id: return enemy
+static func _row(rows: Array, id: Variant) -> Dictionary:
+	for row: Dictionary in rows:
+		if row.id == id: return row
 	return {}
 
-static func _armed(enemies: Array) -> Array:
-	return enemies.filter(func(enemy: Dictionary) -> bool: return _is_building(enemy) and enemy.completed and not Registry.kind(enemy.kind).get("weapon", "").is_empty())
+static func _armed(buildings: Array) -> Array:
+	return buildings.filter(func(building: Dictionary) -> bool: return building.completed and not Registry.kind(building.kind).get("weapon", "").is_empty())
 
-# A defence counts within DEF_REACH of the goal or of a point every ROUTE_STEP cells on the line from the rally to it.
-static func _guards(rally: Vector2, goal: Dictionary, defence: Dictionary) -> bool:
+# Per defence, DEFENCE_STRIDE floats: footprint min x, min y, max x, max y, centre x, centre y, route window.
+static func _defence_rects(armed: Array) -> PackedFloat64Array:
+	var rects := PackedFloat64Array()
+	for defence: Dictionary in armed:
+		var box: Vector2i = Definitions.building(defence.kind).footprint
+		rects.append_array([defence.origin[0], defence.origin[1], defence.origin[0] + box.x, defence.origin[1] + box.y, defence.origin[0] + box.x / 2.0, defence.origin[1] + box.y / 2.0, DEF_REACH + sqrt(box.x * box.x + box.y * box.y) / 2.0 + 1.0])
+	return rects
+
+static func _rect_reach_squared(x: float, y: float, defences: PackedFloat64Array, at: int) -> float:
+	var near_x: float = clampf(x, defences[at], defences[at + 2])
+	var near_y: float = clampf(y, defences[at + 1], defences[at + 3])
+	return (x - near_x) * (x - near_x) + (y - near_y) * (y - near_y)
+
+static func _guard_count(rally: Vector2, goal: Dictionary, defences: PackedFloat64Array, stop_at_first: bool) -> int:
+	if defences.is_empty(): return 0
 	var size: Vector2i = Definitions.building(goal.kind).footprint
 	var goal_x: float = goal.origin[0] + size.x / 2.0
 	var goal_y: float = goal.origin[1] + size.y / 2.0
-	if _reach_squared(goal_x, goal_y, defence) <= DEF_REACH * DEF_REACH: return true
 	var length: float = sqrt((goal_x - rally.x) * (goal_x - rally.x) + (goal_y - rally.y) * (goal_y - rally.y))
+	var count: int = 0
+	for at: int in range(0, defences.size(), DEFENCE_STRIDE):
+		if not _guards(rally, goal_x, goal_y, length, defences, at): continue
+		count += 1
+		if stop_at_first: break
+	return count
+
+# A defence counts within DEF_REACH of the goal centre or of a point every ROUTE_STEP cells on the line of that length from the rally to it.
+static func _guards(rally: Vector2, goal_x: float, goal_y: float, length: float, defences: PackedFloat64Array, at: int) -> bool:
+	if _rect_reach_squared(goal_x, goal_y, defences, at) <= DEF_REACH * DEF_REACH: return true
 	if length <= ROUTE_STEP: return false
-	var box: Vector2i = Definitions.building(defence.kind).footprint
-	var centre_x: float = defence.origin[0] + box.x / 2.0
-	var centre_y: float = defence.origin[1] + box.y / 2.0
+	var centre_x: float = defences[at + 4]
+	var centre_y: float = defences[at + 5]
 	# A route point within reach of the footprint lies within reach plus half its diagonal of its centre, so farther steps cannot count; +1 absorbs rounding.
-	var window: float = DEF_REACH + sqrt(box.x * box.x + box.y * box.y) / 2.0 + 1.0
+	var window: float = defences[at + 6]
 	if absf((centre_x - rally.x) * (goal_y - rally.y) - (centre_y - rally.y) * (goal_x - rally.x)) > window * length: return false
 	var near: float = ((centre_x - rally.x) * (goal_x - rally.x) + (centre_y - rally.y) * (goal_y - rally.y)) / length
 	for step: int in range(maxi(ceili((near - window) / ROUTE_STEP), 1), floori((near + window) / ROUTE_STEP) + 1):
 		var along: float = step * ROUTE_STEP
 		if along >= length: return false
-		if _reach_squared(rally.x + (goal_x - rally.x) * along / length, rally.y + (goal_y - rally.y) * along / length, defence) <= DEF_REACH * DEF_REACH: return true
+		if _rect_reach_squared(rally.x + (goal_x - rally.x) * along / length, rally.y + (goal_y - rally.y) * along / length, defences, at) <= DEF_REACH * DEF_REACH: return true
 	return false
 
 # The best building without a counted defence: the objective's player first, then the least recently attacked.
-static func _softer(rally: Vector2, order: Array, enemies: Array, armed: Array, objective: Variant) -> Variant:
+static func _softer(rally: Vector2, order: Array, buildings: Array, defences: PackedFloat64Array, objective: Variant) -> Variant:
 	for owner: int in order:
-		var open: Array = enemies.filter(func(enemy: Dictionary) -> bool: return enemy.owner == owner and _is_building(enemy) and not armed.any(func(defence: Dictionary) -> bool: return _guards(rally, enemy, defence)))
+		var open: Array = buildings.filter(func(building: Dictionary) -> bool: return building.owner == owner and _guard_count(rally, building, defences, true) == 0)
 		if not open.is_empty(): return _best(rally, open)
 	return objective
 
