@@ -245,6 +245,7 @@ case $scenario in
     expect_end s1 ended_left; expect_end s2 stopped; expect_end s3 stopped
     case "$(end_line s1)" in *"layer 3 disconnected") ;; *) fail "s1 reason: $(end_line s1)" ;; esac
     [ "$(end_tick s1)" -ge 900 ] || fail "seat 1 ended at $(end_tick s1), before seat 3's stop at 900"
+    grep -q '^NETPLAY LATENCY' "$out/s1.log" || fail "s1: no NETPLAY LATENCY line, so the pump did not run"
     trio_checks s1 s2 s3 ;;
   trio-left-first)
     start_relay WARGRID_SEATS=3
@@ -256,10 +257,11 @@ case $scenario in
       between "$name end tick" "$(end_tick $name)" 300 310
     done
     ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC"
+    ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
     same_prefix "$out/s1.tsv" "$out/s2.tsv"; same_prefix "$out/s1.tsv" "$out/s3.tsv"; same_prefix "$out/s2.tsv" "$out/s3.tsv" ;;
   trio-result)
     start_relay WARGRID_SEATS=3
-    start_trio "--defeat 2@300,3@1200" "--stop-at-tick 320 --defeat 2@300,3@1200" "--defeat 2@300,3@1200"
+    start_trio "--pump --defeat 2@300,3@1200" "--stop-at-tick 320 --defeat 2@300,3@1200" "--defeat 2@300,3@1200"
     wait_exit "$pid1" 120; wait_exit "$pid2" 120; wait_exit "$pid3" 120
     expect_end s1 match_over; expect_end s2 stopped; expect_end s3 match_over
     for name in s1 s3; do
@@ -267,6 +269,7 @@ case $scenario in
       grep -q '^NETCLIENT DEFEAT 3 AT 1200$' "$out/$name.log" || fail "$name: no DEFEAT 3 AT 1200"
     done
     same_hashes "$out/s1.tsv" "$out/s3.tsv"
+    grep -q '^NETPLAY LATENCY' "$out/s1.log" || fail "s1: no NETPLAY LATENCY line, so the pump did not run"
     trio_checks s1 s2 s3 ;;
   stall)
     start_relay; start_pair "" "--stall-at-tick 300 --stall-seconds 3"

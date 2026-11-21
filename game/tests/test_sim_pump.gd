@@ -19,6 +19,7 @@ const MatchSettings = preload("res://scripts/match_settings.gd")
 const FACTIONS := {1: "usa", 2: "china"}
 const MATCH_TICKS: int = 900
 const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
+const SeatFixture = preload("res://tests/seat_fixture.gd")
 const DIGEST_EVERY: int = 30
 
 # The relay forwards ticks; over and again end at the relay.
@@ -854,26 +855,12 @@ func test_ph_nested_cache_freeze(runner) -> bool:
 	Registry.clear_test_kinds()
 	return true
 
-func _trio_sim() -> RefCounted:
-	var seats: Array[Dictionary] = []
-	for seat in [1, 2, 3]:
-		seats.append({"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "faction": "usa"})
-	var sim: RefCounted = MapData.create(MapData.load("res://data/maps/broken_crown.json"), seats)
-	sim.start_match([1, 2, 3] as Array[int])
-	return sim
-
-func _defeat(sim: RefCounted, seat: int) -> void:
-	for building: Dictionary in sim.snapshot().buildings:
-		if building.owner == seat: sim.remove_object(building.id)
-	for unit: Dictionary in sim.snapshot().entities:
-		if unit.owner == seat: sim.remove_object(unit.id)
-
 func test_pal_survivors_query(runner) -> bool:
-	var sim := _trio_sim()
+	var sim := SeatFixture.sim()
 	var digest: String = StateHash.digest(sim.snapshot())
 	runner.check(sim.survivors() == [1, 2, 3], "PAL every seat with a victory building survives, got %s" % [sim.survivors()])
 	runner.check(StateHash.digest(sim.snapshot()) == digest, "PAL the query leaves the digest unchanged")
-	_defeat(sim, 2)
+	SeatFixture.defeat(sim, 2)
 	runner.check(sim.survivors() == [1, 3], "PAL a seat without a victory building drops out, got %s" % [sim.survivors()])
 	var seats: Array[Dictionary] = []
 	for seat in [1, 2]:
@@ -895,7 +882,7 @@ func test_pal_note_carries_survivors(runner) -> bool:
 	pump.post(job)
 	var note = pump.drain()[0]
 	runner.check(note.survivors == [1, 2, 3], "PAL the job's note carries the survivors after its step, got %s" % [note.survivors])
-	runner.check(SimPump.new(_trio_sim()).start().survivors == [1, 2, 3], "PAL a note from a job without a step carries survivors")
+	runner.check(SimPump.new(SeatFixture.sim()).start().survivors == [1, 2, 3], "PAL a note from a job without a step carries survivors")
 	return true
 
 func _trio_drivers() -> Dictionary:
@@ -905,7 +892,7 @@ func _trio_drivers() -> Dictionary:
 	for seat in [1, 2, 3]:
 		var driver = OnlineDriver.new(relay.ends[seat - 1], Lockstep.new(seat, [1, 2, 3] as Array[int]), "usa", seat)
 		var sim: RefCounted = Skirmish.create(true, "human", {1: "usa", 2: "usa", 3: "usa"}, MatchSettings.map_path("broken_crown"), starts, 3)
-		_defeat(sim, 2)
+		SeatFixture.defeat(sim, 2)
 		driver.adopt(sim)
 		drivers.append(driver)
 	for driver in drivers: driver.start()
@@ -1006,7 +993,7 @@ func test_pal_driver_play_on_then_end_closes_room(runner) -> bool:
 	trio.relay.leave(2, _last_sent(trio, 2))
 	var end_tick: int = 80
 	runner.check(_trio_until(rest, end_tick, true),"PAL fixture: both drivers stand on tick %d, got %d %d" % [end_tick, one.current().tick, rest[1].current().tick])
-	for driver in rest: _defeat(driver.pump.live(), 3)
+	for driver in rest: SeatFixture.defeat(driver.pump.live(), 3)
 	for frame in 60:
 		if one.over(): break
 		for driver in rest: _single(driver)
