@@ -826,7 +826,7 @@ func bot_state() -> Dictionary:
 	var entities: Array = []
 	for id: Variant in ids:
 		var unit: Dictionary = _entities[id]
-		var row := {"id": unit.id, "owner": unit.owner, "kind": unit.kind, "position": unit.position.duplicate(), "combat": null}
+		var row := {"id": unit.id, "owner": unit.owner, "kind": unit.kind, "position": unit.position.duplicate(), "hp": int(unit.hp), "combat": null}
 		if unit.combat != null: row.combat = {"mode": unit.combat.mode, "target_id": unit.combat.target_id}
 		if unit.has("hole_id"): row.hole_id = unit.hole_id
 		if unit.has("container_id"): row.container_id = unit.container_id

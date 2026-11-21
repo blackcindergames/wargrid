@@ -17,6 +17,9 @@ const WAVE_SIZES: Array[int] = [8, 12, 16, 20, 24, 28, 32]
 const WAVE0_UNITS: int = 16
 const RALLY_RADIUS: float = 6.0
 const DISTANCE_STEP: float = 4.0
+const DETOUR_REACH: float = 10.0
+const DETOUR_CALM: int = 90
+const LET_GO_TICKS: int = 300
 const BOT_META := &"skirmish_bot"
 const BOT_TEAM_META := &"skirmish_bot_team"
 const MAP_PATH := "res://data/maps/skirmish.json"
@@ -217,13 +220,18 @@ static func _team_entry(seat_or_sim: RefCounted, team: int, first_due: int) -> D
 static func _drive_waves(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary, clock: Dictionary) -> void:
 	var live: Array = []
 	for wave: Dictionary in bot.waves:
+		var hurt: Variant = _hurt(wave, mine)
 		wave.ids = wave.ids.filter(func(id: int) -> bool: return mine.has(id))
 		if wave.ids.is_empty(): continue
 		var centre: Vector2 = _centre(wave.ids, mine)
+		if hurt != null: wave.hit_at = ctx.tick
+		_end_detour(wave, mine, enemies, ctx.tick)
+		if hurt != null and wave.detour == null: wave.detour = _detour(wave, centre if hurt.is_empty() else _centre(hurt, mine), enemies, ctx.tick)
 		var hits: Array = enemies.filter(func(enemy: Dictionary) -> bool: return enemy.id == wave.target)
 		var switched: bool = false
-		if hits.is_empty() or (_is_building(hits[0]) and _engaged(centre, enemies)):
-			var target: Variant = _pick(centre, enemies) if _engaged(centre, enemies) else _follow(clock, centre, enemies)
+		if wave.detour != null or hits.is_empty() or wave.diverted:
+			var target: Variant = wave.detour if wave.detour != null else _follow(clock, centre, enemies)
+			wave.diverted = wave.detour != null
 			if target == null: continue
 			switched = not hits.is_empty() and target != wave.target
 			wave.target = target
@@ -232,11 +240,51 @@ static func _drive_waves(ctx: Dictionary, bot: Dictionary, mine: Dictionary, ene
 		if not pool.is_empty(): _send(ctx, {"type": "attack", "entity_ids": pool, "target_id": wave.target})
 	bot.waves = live
 
+static func _new_wave(ids: Array, target: Variant, mine: Dictionary) -> Dictionary:
+	return {"ids": ids, "target": target, "detour": null, "diverted": false, "hit_at": -1, "let_go": {}, "hp": _hp_of(ids, mine)}
+
+static func _hp_of(ids: Array, mine: Dictionary) -> Dictionary:
+	var hp := {}
+	for id: int in ids: hp[id] = mine[id].hp
+	return hp
+
+static func _hurt(wave: Dictionary, mine: Dictionary) -> Variant:
+	var before: Dictionary = wave.hp
+	var hurt: Array = before.keys().filter(func(id: int) -> bool: return mine.has(id) and mine[id].hp < before[id])
+	var died: bool = before.keys().any(func(id: int) -> bool: return not mine.has(id))
+	wave.hp = _hp_of(wave.ids.filter(func(id: int) -> bool: return mine.has(id)), mine)
+	return hurt if died or not hurt.is_empty() else null
+
+static func _end_detour(wave: Dictionary, mine: Dictionary, enemies: Array, tick: int) -> void:
+	if wave.detour == null: return
+	var found: Array = enemies.filter(func(enemy: Dictionary) -> bool: return enemy.id == wave.detour)
+	if found.is_empty():
+		wave.detour = null
+	elif not wave.ids.any(func(id: int) -> bool: return _reach_squared(mine[id].position[0], mine[id].position[1], found[0]) <= DETOUR_REACH * DETOUR_REACH):
+		wave.let_go[wave.detour] = tick
+		wave.detour = null
+	elif tick - wave.hit_at >= DETOUR_CALM:
+		wave.detour = null
+
+static func _detour(wave: Dictionary, at: Vector2, enemies: Array, tick: int) -> Variant:
+	return _best(at, enemies.filter(func(enemy: Dictionary) -> bool:
+		if Registry.kind(enemy.kind).get("weapon", "").is_empty(): return false
+		if wave.let_go.has(enemy.id) and tick - wave.let_go[enemy.id] < LET_GO_TICKS: return false
+		return _reach_squared(at.x, at.y, enemy) <= DETOUR_REACH * DETOUR_REACH))
+
+# Squared distance from a point to an enemy unit or to the nearest cell of an enemy building, on plain floats.
+static func _reach_squared(x: float, y: float, enemy: Dictionary) -> float:
+	var near: Array = enemy.get("position", [])
+	if enemy.has("origin"):
+		var size: Vector2i = Definitions.building(enemy.kind).footprint
+		near = [clampf(x, enemy.origin[0], enemy.origin[0] + size.x), clampf(y, enemy.origin[1], enemy.origin[1] + size.y)]
+	return (x - near[0]) * (x - near[0]) + (y - near[1]) * (y - near[1])
+
 # The team objective while it stands; a dead one is replaced once, by the first wave that notices.
 static func _follow(clock: Dictionary, centre: Vector2, enemies: Array) -> Variant:
 	if enemies.any(func(enemy: Dictionary) -> bool: return enemy.id == clock.objective): return clock.objective
 	var target: Variant = _pick(centre, enemies)
-	if target != null and not _engaged(centre, enemies): clock.objective = target
+	if target != null: clock.objective = target
 	return target
 
 static func _gather(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary, clock: Dictionary) -> void:
@@ -275,7 +323,7 @@ static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	var take: Array = _take(ready, mine, share, limit)
 	if not take.is_empty():
 		if not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective}): return
-		bot.waves.append({"ids": take, "target": objective})
+		bot.waves.append(_new_wave(take, objective, mine))
 	clock.released_by = "wait_cap" if worth < target else ("timer" if clock.prev < clock.due else "size")
 	clock.launched_at = ctx.tick
 	clock.objective = objective
@@ -299,7 +347,7 @@ static func _add_to_wave(ctx: Dictionary, bot: Dictionary, mine: Dictionary, ene
 	if take.is_empty(): return
 	var objective: Variant = _follow(clock, _centre(take, mine), enemies)
 	if objective == null or not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective}): return
-	bot.waves.append({"ids": take, "target": objective})
+	bot.waves.append(_new_wave(take, objective, mine))
 	clock.left_cost = maxi(clock.left_cost - _cost_sum(take.map(func(id: int) -> String: return mine[id].kind)), 0)
 	if clock.left_units >= 0: clock.left_units -= take.size()
 
@@ -415,11 +463,15 @@ static func _defend(ctx: Dictionary, state: Dictionary, buildings: Array) -> Dic
 		for id: Variant in groups[target]: sent[id] = true
 	return sent
 
-# Score = priority - one point per DISTANCE_STEP cells (min 1): the Zero Hour attack-priority rule, numbers in docs/reference/m7-verification-archive-research.md.
 static func _pick(position: Vector2, enemies: Array) -> Variant:
+	var buildings: Array = enemies.filter(_is_building)
+	return _best(position, enemies if buildings.is_empty() else buildings)
+
+# Score = priority - one point per DISTANCE_STEP cells (min 1): the Zero Hour attack-priority rule, numbers in docs/reference/m7-verification-archive-research.md.
+static func _best(position: Vector2, candidates: Array) -> Variant:
 	var best: Variant = null
 	var best_score: int = 0
-	for enemy: Dictionary in _candidates(position, enemies):
+	for enemy: Dictionary in candidates:
 		var score: int = maxi(_priority(enemy.kind) - floori(sqrt(Combat.distance_squared(position, enemy)) / DISTANCE_STEP), 1)
 		if best == null or score > best_score or (score == best_score and enemy.id < best):
 			best = enemy.id
@@ -428,14 +480,6 @@ static func _pick(position: Vector2, enemies: Array) -> Variant:
 
 static func _is_building(enemy: Dictionary) -> bool:
 	return not Registry.kind(enemy.kind).has("class")
-
-# A wave heads for a building, not for a far unit it would trickle into, until an enemy unit comes within defence reach.
-static func _engaged(position: Vector2, enemies: Array) -> bool:
-	return enemies.any(func(enemy: Dictionary) -> bool: return not _is_building(enemy) and Combat.distance_squared(position, enemy) <= DEFENCE_RADIUS * DEFENCE_RADIUS)
-
-static func _candidates(position: Vector2, enemies: Array) -> Array:
-	var buildings: Array = enemies.filter(_is_building)
-	return enemies if buildings.is_empty() or _engaged(position, enemies) else buildings
 
 static func _priority(kind: String) -> int:
 	var row: Dictionary = Registry.kind(kind)

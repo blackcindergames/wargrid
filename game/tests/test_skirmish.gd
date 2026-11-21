@@ -21,7 +21,7 @@ const ASHFALL := "res://data/maps/ashfall.json"
 const CHOSEN: Array[int] = [5, 1]
 
 func cases() -> Array[Callable]:
-	return [test_bot_seats_decide_on_their_own_ticks, test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_five_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_wave_targets_base_unless_enemy_near, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
+	return [test_bot_seats_decide_on_their_own_ticks, test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_five_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_unhit_wave_targets_base, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
 
 func _owned(items: Array, player: int) -> Array:
 	return items.filter(func(item: Dictionary) -> bool: return item.owner == player)
@@ -246,12 +246,12 @@ func test_opponent_attack_policy(runner) -> bool:
 	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
 	Skirmish.decide(sim, 2)
 	sim.step()
-	runner.check(_attack_targets(sim, army) == [second, second, second, second], "A3 the wave shares the best-scored target, a builder, got " + str(_attack_targets(sim, army)))
+	runner.check(_attack_targets(sim, army) == [barracks, barracks, barracks, barracks], "A3 the wave shares the best-scored building and ignores the builders beside its path, got " + str(_attack_targets(sim, army)))
 	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
 	Skirmish.decide(sim, 2)
 	runner.check(sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "attack").is_empty(), "A3 attackers are not reissued")
 	sim.remove_object(1)
-	for expected in [second, first, barracks, reactor, depot, 2]:
+	for expected in [barracks, reactor, depot, 2, first, second]:
 		_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
 		Skirmish.decide(sim, 2)
 		sim.step()
@@ -274,16 +274,16 @@ func _wave_world(rifle_at: Vector2) -> Array:
 	var rifle: int = sim.spawn(1, rifle_at, "usa_rifle_infantry")
 	return [sim, _army(sim), building, rifle]
 
-func test_wave_targets_base_unless_enemy_near(runner) -> bool:
-	for case in [[Vector2(43.5, 22.5), 3], [Vector2(70.5, 11.5), 2]]:
-		var world: Array = _wave_world(case[0])
+func test_unhit_wave_targets_base(runner) -> bool:
+	for at in [Vector2(43.5, 22.5), Vector2(70.5, 11.5)]:
+		var world: Array = _wave_world(at)
 		_to_tick(world[0], Skirmish.FIRST_WAVE_TICK)
 		_bot_until_attack(world[0], world[1], Skirmish.FIRST_WAVE_TICK + 4000)
 		_to_tick(world[0], Skirmish.next_decision(world[0].tick(), 2))
 		Skirmish.decide(world[0], 2)
 		world[0].step()
-		var expected: int = world[case[1]]
-		runner.check(_attack_targets(world[0], world[1]) == [expected, expected, expected, expected], "W1 enemy unit at " + str(case[0]) + ": wave targets " + str(expected) + ", got " + str(_attack_targets(world[0], world[1])))
+		var expected: int = world[2]
+		runner.check(_attack_targets(world[0], world[1]) == [expected, expected, expected, expected], "W1 enemy unit at " + str(at) + " has not hit the wave: wave targets " + str(expected) + ", got " + str(_attack_targets(world[0], world[1])))
 	return true
 
 func test_wave_target_removed_same_tick(runner) -> bool:
@@ -304,6 +304,12 @@ func test_wave_target_removed_same_tick(runner) -> bool:
 	runner.check(_attack_targets(sim, world[1]) == [world[3], world[3], world[3], world[3]], "W2 wave retargets the remaining unit after its target vanished, got " + str(_attack_targets(sim, world[1])))
 	return true
 
+func _army_hp(sim: RefCounted, army: Array) -> int:
+	var sum: int = 0
+	for unit in sim.snapshot().entities:
+		if army.has(unit.id): sum += unit.hp
+	return sum
+
 func test_wave_fights_unit_met_on_the_way(runner) -> bool:
 	var world: Array = _wave_world(Vector2(85.5, 11.5))
 	var sim = world[0]
@@ -313,11 +319,21 @@ func test_wave_fights_unit_met_on_the_way(runner) -> bool:
 	var wave_at: Vector2 = Vector2.ZERO
 	for unit in sim.snapshot().entities:
 		if world[1].has(unit.id): wave_at += Vector2(unit.position[0], unit.position[1]) / world[1].size()
-	var met: int = sim.spawn(1, wave_at + Vector2(0.0, 6.0), "usa_rifle_infantry")
-	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
-	Skirmish.decide(sim, 2)
-	sim.step()
-	runner.check(_attack_targets(sim, world[1]) == [met, met, met, met], "W3 a wave marching to a base fights an enemy unit that comes within reach, got " + str(_attack_targets(sim, world[1])))
+	var met: int = sim.spawn(1, wave_at + Vector2(8.0, 0.0), "usa_rifle_infantry")
+	var hit_at: int = -1
+	var held: bool = true
+	for turn in range(12):
+		var before: int = _army_hp(sim, world[1])
+		_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+		var hurt: bool = _army_hp(sim, world[1]) < before
+		Skirmish.decide(sim, 2)
+		sim.step()
+		var expected: int = met if hurt else world[2]
+		held = held and _attack_targets(sim, world[1]) == [expected, expected, expected, expected]
+		if hurt:
+			hit_at = turn
+			break
+	runner.check(hit_at >= 0 and held, "W3 a wave marching to a base ignores an enemy unit within reach until it loses hit points, then fights that unit (hit in round %d), got %s" % [hit_at, str(_attack_targets(sim, world[1]))])
 	sim.remove_object(met)
 	sim.step()
 	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
@@ -731,8 +747,8 @@ func _bot_state_matches(sim: RefCounted, seen: Dictionary) -> bool:
 		var u: Dictionary = s.entities[i]
 		var r: Dictionary = b.entities[i]
 		for key: String in r.keys():
-			if not ["id", "owner", "kind", "position", "combat", "hole_id", "container_id"].has(key): return false
-		if r.id != u.id or r.owner != u.owner or r.kind != u.kind or r.position != u.position: return false
+			if not ["id", "owner", "kind", "position", "hp", "combat", "hole_id", "container_id"].has(key): return false
+		if r.id != u.id or r.owner != u.owner or r.kind != u.kind or r.position != u.position or r.hp != u.hp: return false
 		if (r.combat == null) != (u.combat == null) or (r.combat != null and (r.combat.mode != u.combat.mode or r.combat.target_id != u.combat.target_id)): return false
 		for key: String in ["hole_id", "container_id"]:
 			if r.has(key) != u.has(key) or (u.has(key) and r[key] != u[key]): return false

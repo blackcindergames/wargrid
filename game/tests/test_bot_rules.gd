@@ -16,7 +16,7 @@ const B: int = 4
 const DUE: int = 1000
 
 func cases() -> Array[Callable]:
-	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_takes_highest_cost_first, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_engaged_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision]
+	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_takes_highest_cost_first, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks]
 
 func _world() -> RefCounted:
 	var sim = Simulation.new([], Vector2i(48, 32))
@@ -496,7 +496,7 @@ func test_objective_repicked_once_for_team(runner) -> bool:
 	runner.check(fresh != null and fresh != old and later.size() >= 2 and later.all(func(row: Dictionary) -> bool: return row.target == fresh), "BR5 the first bot to notice stores one new objective and every wave follows it, got %s, objective %s" % [later.map(func(row: Dictionary) -> Variant: return row.target), fresh])
 	return true
 
-func test_engaged_wave_returns_to_team_objective(runner) -> bool:
+func test_detouring_wave_returns_to_team_objective(runner) -> bool:
 	var sim = _crown()
 	stock(sim, A, "usa_tank", 5)
 	stock(sim, B, "usa_tank", 5)
@@ -509,13 +509,13 @@ func test_engaged_wave_returns_to_team_objective(runner) -> bool:
 	var intruder: int = -1
 	for step in [Vector2(0, -3), Vector2(0, 3), Vector2(-3, 0), Vector2(3, 0)]:
 		if intruder < 0: intruder = sim.spawn(1, Vector2(lead.position[0], lead.position[1]) + step, "usa_rifle_infantry")
-	_both(sim, rec, at + 1, false)
-	var engaged: Array = rec.orders.filter(func(row: Dictionary) -> bool: return row.tick == at and row.player == A)
-	runner.check(intruder >= 0 and engaged.size() == 1 and engaged[0].target == intruder, "BR5 a wave with an enemy unit in reach turns on it, got %s" % [engaged])
-	runner.check(Skirmish.team_memory(sim, 2).objective == objective, "BR5 the engaged re-pick never writes the team objective")
-	sim.remove_object(intruder)
 	_both(sim, rec, at + Skirmish.DECISION_TICKS + 1, false)
-	var back: Array = rec.orders.filter(func(row: Dictionary) -> bool: return row.tick == at + Skirmish.DECISION_TICKS and row.player == A)
+	var detour: Array = rec.orders.filter(func(row: Dictionary) -> bool: return row.tick == at + Skirmish.DECISION_TICKS and row.player == A)
+	runner.check(intruder >= 0 and detour.size() == 1 and detour[0].target == intruder, "BR5 a wave whose unit the intruder hurt turns on it, got %s" % [detour])
+	runner.check(Skirmish.team_memory(sim, 2).objective == objective, "BR5 the detour never writes the team objective")
+	sim.remove_object(intruder)
+	_both(sim, rec, at + 2 * Skirmish.DECISION_TICKS + 1, false)
+	var back: Array = rec.orders.filter(func(row: Dictionary) -> bool: return row.tick == at + 2 * Skirmish.DECISION_TICKS and row.player == A)
 	runner.check(back.size() == 1 and back[0].target == objective, "BR5 when the unit is gone the wave returns to the team objective, got %s, objective %s" % [back, objective])
 	return true
 
@@ -595,4 +595,305 @@ func test_released_by_is_first_team_decision(runner) -> bool:
 	stock(timer, B, "usa_tank", 5)
 	_team_play(timer, _log(), DUE + 100, [A, B])
 	runner.check(Skirmish.team_memory(timer, 2).released_by == "timer", "BR4 target met at the first team decision from due is released by timer, got %s" % [Skirmish.team_memory(timer, 2).released_by])
+	return true
+
+func _unit(sim: RefCounted, id: int) -> Dictionary:
+	for unit in sim.snapshot().entities:
+		if unit.id == id: return unit
+	return {}
+
+func _hp(sim: RefCounted, ids: Array) -> int:
+	var sum: int = 0
+	for unit in sim.snapshot().entities:
+		if ids.has(unit.id): sum += unit.hp
+	return sum
+
+func _where(sim: RefCounted, id: int) -> Vector2:
+	var unit: Dictionary = _unit(sim, id)
+	return Vector2(unit.position[0], unit.position[1])
+
+func _mean(sim: RefCounted, ids: Array) -> Vector2:
+	var sum := Vector2.ZERO
+	for id in ids: sum += _where(sim, id)
+	return sum / ids.size()
+
+func _run_to(sim: RefCounted, rec: Dictionary, tick: int, seats: Array[int] = [SEAT]) -> void:
+	_team_play(sim, rec, tick + 1, seats, 0 if seats == [SEAT] else DUE, false)
+
+func _orders_at(rec: Dictionary, tick: int, player: int = SEAT) -> Array:
+	return rec.orders.filter(func(row: Dictionary) -> bool: return row.tick == tick and row.player == player)
+
+func _orders_after(rec: Dictionary, tick: int, player: int = SEAT) -> Array:
+	return rec.orders.filter(func(row: Dictionary) -> bool: return row.tick > tick and row.player == player)
+
+# A lone bot's five tanks, launched at its first decision and walking; the log holds the launch.
+func _marching(sim: RefCounted, rec: Dictionary) -> Array:
+	var ids: Array = _ready(sim, "usa_tank", 5)
+	while rec.launches.is_empty() and sim.tick() < 200: _run_to(sim, rec, sim.tick())
+	return ids
+
+func _shooter_beside(sim: RefCounted, id: int) -> int:
+	var at: Vector2 = _where(sim, id)
+	for step in [Vector2(-2, 0), Vector2(0, 2), Vector2(0, -2), Vector2(2, 0)]:
+		var shooter: int = sim.spawn(1, at + step, "usa_rifle_infantry")
+		if shooter >= 0:
+			Economy.send(sim, {"type": "attack", "entity_ids": [shooter], "target_id": id})
+			return shooter
+	return -1
+
+# A rifleman beside the first tank of each group shoots until it is hurt, then vanishes; returns where each hurt tank stands.
+func _wound(sim: RefCounted, groups: Array) -> Array:
+	var shooters: Array = groups.map(func(ids: Array) -> int: return _shooter_beside(sim, ids[0]))
+	var healthy: Array = groups.map(func(ids: Array) -> int: return _hp(sim, ids))
+	for tick in range(25):
+		if range(groups.size()).all(func(i: int) -> bool: return _hp(sim, groups[i]) < healthy[i]): break
+		sim.step()
+	for shooter in shooters: sim.remove_object(shooter)
+	return groups.map(func(ids: Array) -> Vector2: return _where(sim, ids[0]))
+
+func _foe(sim: RefCounted, kind: String, at: Vector2) -> int:
+	return sim.spawn(1, at, kind)
+
+func _dark_battery(sim: RefCounted, at: Vector2) -> int:
+	return Economy.add_completed(sim, 1, "usa_defence", Vector2i(floori(at.x), ceili(at.y)))
+
+# A launched wave, hurt once, with a battery without power eight cells south of the hurt tank; runs to the decision that sees the hit.
+func _detour_set(sim: RefCounted, rec: Dictionary, to_decision: bool = true) -> Dictionary:
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var hurt: Vector2 = _wound(sim, [ids])[0]
+	var battery: int = _dark_battery(sim, hurt + Vector2(0, 8.5))
+	var first: int = launch.tick + Skirmish.DECISION_TICKS
+	_run_to(sim, rec, first if to_decision else first - 1)
+	return {"ids": ids, "battery": battery, "first": first, "objective": launch.target, "hurt": hurt}
+
+func _gone(sim: RefCounted, id: int) -> bool:
+	return Economy.object(sim, id).is_empty()
+
+func _full_hp(ids: Array) -> int:
+	return ids.size() * 480000
+
+func test_unhit_wave_ignores_enemy_unit_in_defence_radius(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var foe: int = _foe(sim, "usa_rifle_infantry", _where(sim, ids[2]) + Vector2(0, 9))
+	_run_to(sim, rec, launch.tick + 4 * Skirmish.DECISION_TICKS)
+	runner.check(foe >= 0 and _hp(sim, ids) == _full_hp(ids), "BR5 premise: the armed enemy 9 cells away never hurt the wave")
+	runner.check(_orders_after(rec, launch.tick).is_empty(), "BR5 a wave that is not hit ignores an armed enemy unit inside DEFENCE_RADIUS, got %s" % [_orders_after(rec, launch.tick)])
+	runner.check(Skirmish.team_memory(sim, SEAT).objective == launch.target, "BR5 the wave keeps the team objective")
+	return true
+
+func test_hit_wave_takes_best_scored_armed_enemy_within_reach(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var hurt: Vector2 = _wound(sim, [ids])[0]
+	var builder: int = _foe(sim, "usa_builder", hurt + Vector2(0, 2))
+	var rifle: int = _foe(sim, "usa_rifle_infantry", hurt + Vector2(0, 8))
+	var tank: int = _foe(sim, "usa_tank", hurt + Vector2(3, 8))
+	var far: int = _dark_battery(sim, hurt + Vector2(0, 10.5))
+	_run_to(sim, rec, launch.tick + Skirmish.DECISION_TICKS)
+	var order: Array = _orders_at(rec, launch.tick + Skirmish.DECISION_TICKS)
+	runner.check(builder >= 0 and rifle >= 0 and tank >= 0 and far >= 0, "BR5 premise: the four enemies spawn")
+	runner.check(order.size() == 1 and order[0].target == tank and order[0].ids == ids, "BR5 a hit wave takes the best-scored armed enemy within DETOUR_REACH of its hit unit: the tank (26), not the unarmed builder, the rifleman (25) or the battery 10.5 cells off (27), got %s" % [order])
+	runner.check(Skirmish.team_memory(sim, SEAT).objective == launch.target, "BR5 the detour never writes the team objective")
+	return true
+
+func test_detour_scores_units_and_buildings_together(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var hurt: Vector2 = _wound(sim, [ids])[0]
+	var tank: int = _foe(sim, "usa_tank", hurt + Vector2(0, 2))
+	var battery: int = _dark_battery(sim, hurt + Vector2(0, 8.5))
+	_run_to(sim, rec, launch.tick + Skirmish.DECISION_TICKS)
+	var order: Array = _orders_at(rec, launch.tick + Skirmish.DECISION_TICKS)
+	runner.check(tank >= 0 and battery >= 0, "BR5 premise: the tank and the battery spawn")
+	runner.check(order.size() == 1 and order[0].target == tank and order[0].ids == ids, "BR5 the detour scores units and buildings together: the tank 2 cells off (28) beats the battery 8 cells off (27), got %s" % [order])
+	return true
+
+func test_unarmed_enemy_is_never_a_detour(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var hurt: Vector2 = _wound(sim, [ids])[0]
+	var builder: int = _foe(sim, "usa_builder", hurt + Vector2(0, 3))
+	_run_to(sim, rec, launch.tick + 2 * Skirmish.DECISION_TICKS)
+	runner.check(builder >= 0 and _orders_after(rec, launch.tick).is_empty(), "BR5 a hit wave never detours onto an unarmed unit, got %s" % [_orders_after(rec, launch.tick)])
+	return true
+
+func test_detour_is_measured_from_the_hit_units(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var hurt: Vector2 = _wound(sim, [ids])[0]
+	var foe: int = _foe(sim, "usa_rifle_infantry", hurt + Vector2(-9, 0))
+	var spot: Vector2 = _where(sim, foe)
+	runner.check(foe >= 0 and _mean(sim, ids).distance_to(spot) > Skirmish.DETOUR_REACH and hurt.distance_to(spot) < Skirmish.DETOUR_REACH, "BR5 premise: the enemy is within reach of the hit tank and beyond reach of the wave centre")
+	_run_to(sim, rec, launch.tick + Skirmish.DECISION_TICKS)
+	var order: Array = _orders_at(rec, launch.tick + Skirmish.DECISION_TICKS)
+	runner.check(order.size() == 1 and order[0].target == foe, "BR5 the detour reach is measured from the centre of the hit units, got %s" % [order])
+	return true
+
+func _death_orders(kill: bool) -> Array:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var foe: int = _foe(sim, "usa_rifle_infantry", _where(sim, ids[2]) + Vector2(0, 8))
+	if kill: sim.remove_object(ids[4])
+	_run_to(sim, rec, launch.tick + Skirmish.DECISION_TICKS)
+	return [foe, _orders_at(rec, launch.tick + Skirmish.DECISION_TICKS)]
+
+func test_unit_death_counts_as_a_hit(runner) -> bool:
+	var calm: Array = _death_orders(false)
+	runner.check(calm[0] >= 0 and calm[1].is_empty(), "BR5 without a loss the wave ignores the armed enemy 8 cells off, got %s" % [calm[1]])
+	var loss: Array = _death_orders(true)
+	runner.check(loss[1].size() == 1 and loss[1][0].target == loss[0], "BR5 a wave that lost a unit is hit: it takes the armed enemy within reach of its centre, got %s" % [loss[1]])
+	return true
+
+func test_hit_without_candidate_carries_on(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var hurt: Vector2 = _wound(sim, [ids])[0]
+	var builder: int = _foe(sim, "usa_builder", hurt + Vector2(0, 3))
+	var rifle: int = _foe(sim, "usa_rifle_infantry", hurt + Vector2(0, 12))
+	_run_to(sim, rec, launch.tick + 2 * Skirmish.DECISION_TICKS)
+	runner.check(builder >= 0 and rifle >= 0 and _orders_after(rec, launch.tick).is_empty(), "BR5 a hit wave with no armed enemy within reach carries on to the objective, got %s" % [_orders_after(rec, launch.tick)])
+	return true
+
+func test_detour_ends_when_target_dies(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var scene: Dictionary = _detour_set(sim, rec)
+	var detour: Array = _orders_at(rec, scene.first)
+	runner.check(detour.size() == 1 and detour[0].target == scene.battery and detour[0].ids == scene.ids, "BR5 the hit wave takes the armed battery, got %s" % [detour])
+	sim.remove_object(scene.battery)
+	_run_to(sim, rec, scene.first + Skirmish.DECISION_TICKS)
+	var back: Array = _orders_at(rec, scene.first + Skirmish.DECISION_TICKS)
+	runner.check(back.size() == 1 and back[0].target == scene.objective and back[0].ids == scene.ids, "BR5 the detour ends when its target dies: the wave returns to the team objective, got %s" % [back])
+	return true
+
+func test_detour_ends_after_calm_without_a_hit(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var scene: Dictionary = _detour_set(sim, rec)
+	_run_to(sim, rec, scene.first + Skirmish.DETOUR_CALM - Skirmish.DECISION_TICKS)
+	runner.check(_orders_after(rec, scene.first).is_empty() and not _gone(sim, scene.battery), "BR5 the detour holds for DETOUR_CALM ticks while its target lives, got %s" % [_orders_after(rec, scene.first)])
+	_run_to(sim, rec, scene.first + Skirmish.DETOUR_CALM)
+	var back: Array = _orders_at(rec, scene.first + Skirmish.DETOUR_CALM)
+	runner.check(not _gone(sim, scene.battery) and back.size() == 1 and back[0].target == scene.objective and back[0].ids == scene.ids, "BR5 the wave returns to the team objective after DETOUR_CALM ticks without a hit, got %s" % [back])
+	return true
+
+func test_detour_is_kept_while_hits_continue(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var scene: Dictionary = _detour_set(sim, rec)
+	var hurt: Vector2 = _wound(sim, [scene.ids])[0]
+	var better: int = _dark_battery(sim, hurt + Vector2(-3, 0))
+	_run_to(sim, rec, scene.first + Skirmish.DECISION_TICKS)
+	_run_to(sim, rec, scene.first + Skirmish.DECISION_TICKS + Skirmish.DETOUR_CALM - Skirmish.DECISION_TICKS)
+	runner.check(better >= 0 and _orders_after(rec, scene.first).is_empty(), "BR5 a second hit keeps the detour on its target even beside a better-scored one, got %s" % [_orders_after(rec, scene.first)])
+	_run_to(sim, rec, scene.first + Skirmish.DECISION_TICKS + Skirmish.DETOUR_CALM)
+	var back: Array = _orders_at(rec, scene.first + Skirmish.DECISION_TICKS + Skirmish.DETOUR_CALM)
+	runner.check(back.size() == 1 and back[0].target == scene.objective, "BR5 DETOUR_CALM counts from the last hit, got %s" % [back])
+	return true
+
+func test_objective_dies_during_detour(runner) -> bool:
+	var sim = _world()
+	Economy.add_completed(sim, 1, "usa_barracks", Vector2i(4, 10))
+	var rec: Dictionary = _log()
+	var scene: Dictionary = _detour_set(sim, rec)
+	var other: int = -1
+	for entry in sim.snapshot().buildings:
+		if entry.owner == 1 and entry.id != scene.objective and entry.id != scene.battery: other = entry.id
+	sim.remove_object(scene.objective)
+	_run_to(sim, rec, scene.first + Skirmish.DECISION_TICKS)
+	runner.check(other >= 0 and _orders_after(rec, scene.first).is_empty(), "BR5 the detour goes on while the objective dies, got %s" % [_orders_after(rec, scene.first)])
+	sim.remove_object(scene.battery)
+	_run_to(sim, rec, scene.first + 2 * Skirmish.DECISION_TICKS)
+	var back: Array = _orders_at(rec, scene.first + 2 * Skirmish.DECISION_TICKS)
+	runner.check(back.size() == 1 and back[0].target == other and Skirmish.team_memory(sim, SEAT).objective == other, "BR5 the wave returns to the team's re-picked objective, got %s, objective %s" % [back, Skirmish.team_memory(sim, SEAT).objective])
+	return true
+
+func test_detour_target_dies_the_tick_it_is_chosen(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var scene: Dictionary = _detour_set(sim, rec, false)
+	Skirmish.issue_opponents(sim, [SEAT], 0)
+	var chosen: Array = sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.player == SEAT and command.type == "attack" and command.target_id == scene.battery)
+	runner.check(chosen.size() == 1, "BR5 premise: the hit wave took the battery this tick, got %s" % [chosen])
+	sim.remove_object(scene.battery)
+	sim.step()
+	_run_to(sim, rec, scene.first + Skirmish.DECISION_TICKS)
+	var targets: Array = _attacking(sim, scene.ids).map(func(id: int) -> Variant: return _unit(sim, id).combat.target_id)
+	runner.check(targets.size() == scene.ids.size() and targets.all(func(target: Variant) -> bool: return target == scene.objective), "BR5 a detour target that dies as it is chosen leaves the wave on the team objective, got %s" % [targets])
+	return true
+
+func test_two_waves_hit_at_once_detour_separately(runner) -> bool:
+	var sim = _crown()
+	var a_ids: Array = stock(sim, A, "usa_tank", 5)
+	var b_ids: Array = stock(sim, B, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_both(sim, rec, _first_decision_from(DUE, A) + 2, false)
+	var objective: Variant = Skirmish.team_memory(sim, 2).objective
+	var first: int = rec.launches[0].tick + Skirmish.DECISION_TICKS
+	var hurt: Array = _wound(sim, [a_ids, b_ids])
+	var a_foe: int = _foe(sim, "usa_rifle_infantry", hurt[0] + Vector2(0, 8))
+	var b_foe: int = _foe(sim, "usa_rifle_infantry", hurt[1] + Vector2(0, 8))
+	_foe(sim, "usa_builder", hurt[0] + Vector2(0, 2))
+	_foe(sim, "usa_builder", hurt[1] + Vector2(0, 2))
+	_both(sim, rec, first + 2, false)
+	var a_order: Array = _orders_at(rec, first, A)
+	var b_order: Array = _orders_at(rec, first + 1, B)
+	runner.check(rec.launches.size() == 2 and a_foe >= 0 and b_foe >= 0 and a_order.size() == 1 and a_order[0].target == a_foe and b_order.size() == 1 and b_order[0].target == b_foe, "BR5 two waves of one team hit in the same round each detour onto the armed enemy near their own hit unit, not the nearer builder, got %s and %s" % [a_order, b_order])
+	runner.check(Skirmish.team_memory(sim, 2).objective == objective, "BR5 neither detour writes the team objective")
+	sim.remove_object(a_foe)
+	sim.remove_object(b_foe)
+	_both(sim, rec, first + Skirmish.DECISION_TICKS + 2, false)
+	var a_back: Array = _orders_at(rec, first + Skirmish.DECISION_TICKS, A)
+	var b_back: Array = _orders_at(rec, first + Skirmish.DECISION_TICKS + 1, B)
+	runner.check(a_back.size() == 1 and a_back[0].target == objective and b_back.size() == 1 and b_back[0].target == objective, "BR5 both waves return to the team objective, got %s and %s" % [a_back, b_back])
+	return true
+
+# The car keeps 8 cells south of the wave's first tank, out of both weapons' reach, until the given tick.
+func _shadow(sim: RefCounted, rec: Dictionary, car: int, ids: Array, until: int) -> void:
+	while sim.tick() < until:
+		var at: Vector2 = _where(sim, ids[0])
+		Economy.send(sim, {"type": "move", "entity_ids": [car], "target": [at.x, at.y + 8.0]})
+		_run_to(sim, rec, mini(sim.tick() + Skirmish.DECISION_TICKS - 1, until))
+
+func test_kiter_is_let_go_then_taken_after_let_go_ticks(runner) -> bool:
+	var sim = _world()
+	var rec: Dictionary = _log()
+	var ids: Array = _marching(sim, rec)
+	var launch: Dictionary = rec.launches[0]
+	var hurt: Vector2 = _wound(sim, [ids])[0]
+	var car: int = _foe(sim, "usa_light_vehicle", hurt + Vector2(0, 7.8))
+	Economy.send(sim, {"type": "move", "entity_ids": [car], "target": [hurt.x, 30.0]})
+	var first: int = launch.tick + Skirmish.DECISION_TICKS
+	_run_to(sim, rec, first)
+	runner.check(car >= 0 and _orders_at(rec, first).size() == 1 and _orders_at(rec, first)[0].target == car, "BR5 the hit wave takes the armed scout car 8 cells off, got %s" % [_orders_at(rec, first)])
+	while _orders_after(rec, first).is_empty() and sim.tick() < first + 300: _run_to(sim, rec, sim.tick())
+	var back: Array = _orders_after(rec, first)
+	var stamp: int = back[0].tick if not back.is_empty() else -1
+	runner.check(back.size() == 1 and back[0].target == launch.target, "BR5 the scout car outruns the wave, is farther than DETOUR_REACH from every unit and is let go: the wave returns to the objective, got %s" % [back])
+	var seen: Array = []
+	for gap in [Skirmish.LET_GO_TICKS - Skirmish.DECISION_TICKS, Skirmish.LET_GO_TICKS]:
+		var decision: int = stamp + gap
+		_shadow(sim, rec, car, ids, decision - 15)
+		var before: int = _hp(sim, ids)
+		_wound(sim, [ids])
+		_run_to(sim, rec, decision)
+		seen.append([_hp(sim, ids) < before, _where(sim, car).distance_to(_where(sim, ids[0])) <= Skirmish.DETOUR_REACH, _orders_at(rec, decision)])
+	runner.check(seen[0][0] and seen[0][1] and seen[0][2].is_empty(), "BR5 a hit %d ticks after the let go does not take the car again, got %s" % [Skirmish.LET_GO_TICKS - Skirmish.DECISION_TICKS, seen[0]])
+	runner.check(seen[1][0] and seen[1][1] and seen[1][2].size() == 1 and seen[1][2][0].target == car, "BR5 a hit LET_GO_TICKS after the let go takes the car again, got %s" % [seen[1]])
 	return true

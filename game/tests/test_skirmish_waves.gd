@@ -150,7 +150,7 @@ func test_target_score_classes(runner) -> bool:
 	picked = _released_target(runner, func(sim) -> void:
 		ids.append(Economy.add_completed(sim, 1, "usa_power_plant", Vector2i(38, 23)))
 		ids.append(sim.spawn(1, Vector2(43.5, 23.5), "usa_tank")), "T5", true)
-	runner.check(picked == ids[1], "T5 a vehicle (28) ranks above a power plant (27) one cell farther, got " + str(picked) + " of " + str(ids))
+	runner.check(picked == ids[0], "T5 a wave that was not hit keeps the power plant and ignores the vehicle (28) one cell farther, got " + str(picked) + " of " + str(ids))
 	return true
 
 func test_waves_deterministic(runner) -> bool:
