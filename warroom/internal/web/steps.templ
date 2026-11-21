@@ -293,21 +293,23 @@ templ Options(v ChoiceView) {
 	</div>
 }
 
-// LeftPanel is the same on every step kind: the chips, then the question and its folds.
+// LeftPanel is the chips, the question and its folds, then the step's own controls, so they need no scroll.
 templ LeftPanel(chips []Chip, h HeadView, i InfoView) {
 	<div class="lpanel">
 		@ChipNav(chips)
-		@Head(h, i) {
-			{ children... }
-		}
+		@Head(h, i)
+		{ children... }
 	</div>
 }
 
 templ ChoiceMain(v ChoiceView) {
 	<main id="main" class={ "step", "choice", "k-" + v.Kind, viewClass(v.Side) }>
-		@LeftPanel(v.Chips, v.Head, v.Info) {
-			@About(v.Opts)
-		}
+		<div class="lpanel">
+			@ChipNav(v.Chips)
+			@Head(v.Head, v.Info) {
+				@About(v.Opts)
+			}
+		</div>
 		<div class="cpanel">
 			if v.Side {
 				@Tiles(v)
@@ -338,7 +340,27 @@ templ VerdictBox(v VerdictView) {
 
 templ GalleryMain(v GalleryView, chips []Chip) {
 	<main id="main" class="step k-gallery">
-		@LeftPanel(chips, v.Head, v.Info)
+		@LeftPanel(chips, v.Head, v.Info) {
+			if !v.Empty {
+				<section class="gside">
+					<span class="cnt">{ v.Count }</span>
+					<h2>{ v.ItemLabel }</h2>
+					<p>@Fmt(v.Caption)</p>
+					if !isReadOnly(ctx) {
+						<label for={ v.ItemNote.ID } class="h">{ v.ItemNote.Label }</label>
+						@NoteField(v.ItemNote)
+					}
+					<div class="inav">
+						<a class="btn sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
+						<a class="btn sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
+					</div>
+				</section>
+			}
+			if v.Verdict != nil {
+				@VerdictBox(*v.Verdict)
+			}
+			@StepNav(v.Nav)
+		}
 		<div class="cpanel">
 			if v.Empty {
 				<p class="missing">[gallery has no items]</p>
@@ -361,24 +383,7 @@ templ GalleryMain(v GalleryView, chips []Chip) {
 						</a>
 					}
 				</section>
-				<section class="gside">
-					<span class="cnt">{ v.Count }</span>
-					<h2>{ v.ItemLabel }</h2>
-					<p>@Fmt(v.Caption)</p>
-					if !isReadOnly(ctx) {
-						<label for={ v.ItemNote.ID } class="h">{ v.ItemNote.Label }</label>
-						@NoteField(v.ItemNote)
-					}
-					<div class="inav">
-						<a class="btn sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
-						<a class="btn sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
-					</div>
-				</section>
 			}
-			if v.Verdict != nil {
-				@VerdictBox(*v.Verdict)
-			}
-			@StepNav(v.Nav)
 		</div>
 	</main>
 	@AnswerForm(v.Form)
@@ -386,18 +391,20 @@ templ GalleryMain(v GalleryView, chips []Chip) {
 
 templ VerdictMain(v VerdictStepView, chips []Chip) {
 	<main id="main" class="step k-verdict">
-		@LeftPanel(chips, v.Head, v.Info)
-		<div class="cpanel">
+		@LeftPanel(chips, v.Head, v.Info) {
 			@VerdictBox(v.Verdict)
 			@StepNav(v.Nav)
-		</div>
+		}
 	</main>
 	@AnswerForm(v.Form)
 }
 
 templ TuneMain(v TuneView, chips []Chip) {
 	<main id="main" class="step k-tune">
-		@LeftPanel(chips, v.Head, v.Info)
+		@LeftPanel(chips, v.Head, v.Info) {
+			@NoteBox(v.Note)
+			@StepNav(v.Nav)
+		}
 		<div class="cpanel">
 			<section class="stagecol">
 				<div class="stage">
@@ -412,8 +419,6 @@ templ TuneMain(v TuneView, chips []Chip) {
 					@NeutralAnswer(v.Neutral)
 				</div>
 			</section>
-			@NoteBox(v.Note)
-			@StepNav(v.Nav)
 		</div>
 	</main>
 	<input type="hidden" id={ tuneField } name="value" form="answer" value={ v.Value }/>
@@ -422,7 +427,9 @@ templ TuneMain(v TuneView, chips []Chip) {
 
 templ WordingMain(v WordingView, chips []Chip) {
 	<main id="main" class="step k-wording">
-		@LeftPanel(chips, v.Head, v.Info)
+		@LeftPanel(chips, v.Head, v.Info) {
+			@StepNav(v.Nav)
+		}
 		<div class="cpanel">
 			<section class="fields">
 				if !isReadOnly(ctx) {
@@ -440,7 +447,6 @@ templ WordingMain(v WordingView, chips []Chip) {
 					</div>
 				}
 			</section>
-			@StepNav(v.Nav)
 		</div>
 	</main>
 }
@@ -514,32 +520,32 @@ templ SummaryMain(v SummaryView, nav NavView, chips []Chip) {
 		</div>
 		<div class="cpanel">
 			<div id="sum">
-			<h2>{ v.Main.Title } <span class="cnt">{ v.Main.Count }</span></h2>
-			@SumTable(v.Main.Rows)
-			if len(v.Open) > 0 {
-				<p class="close">
-					Not answered yet:
-					<span class="opens">
-						for _, l := range v.Open {
-							<a class="btn" href={ templ.SafeURL(l.Href) }>{ l.Label }</a>
-						}
-					</span>
-				</p>
-			} else if !isReadOnly(ctx) {
-				<p class="close">You can close this tab.</p>
-			}
-			<p>
-				<button type="button" class="btn" data-copy-from="#summary-text">Copy summary</button>
-				<span class="copied" aria-live="polite"></span>
-			</p>
-			<pre id="summary-text" hidden>{ v.Text }</pre>
-			if len(v.Earlier) > 0 {
-				<h3 class="sec">Earlier rounds</h3>
-				for _, e := range v.Earlier {
-					<h2>{ e.Title } <span class="cnt">{ e.Count }</span></h2>
-					@SumTable(e.Rows)
+				<h2>{ v.Main.Title } <span class="cnt">{ v.Main.Count }</span></h2>
+				@SumTable(v.Main.Rows)
+				if len(v.Open) > 0 {
+					<p class="close">
+						Not answered yet:
+						<span class="opens">
+							for _, l := range v.Open {
+								<a class="btn" href={ templ.SafeURL(l.Href) }>{ l.Label }</a>
+							}
+						</span>
+					</p>
+				} else if !isReadOnly(ctx) {
+					<p class="close">You can close this tab.</p>
 				}
-			}
+				<p>
+					<button type="button" class="btn" data-copy-from="#summary-text">Copy summary</button>
+					<span class="copied" aria-live="polite"></span>
+				</p>
+				<pre id="summary-text" hidden>{ v.Text }</pre>
+				if len(v.Earlier) > 0 {
+					<h3 class="sec">Earlier rounds</h3>
+					for _, e := range v.Earlier {
+						<h2>{ e.Title } <span class="cnt">{ e.Count }</span></h2>
+						@SumTable(e.Rows)
+					}
+				}
 			</div>
 			@StepNav(nav)
 		</div>

@@ -66,7 +66,7 @@ Today `Info` opens `why` on desktop, and step 1 opens the intro. Both change to 
 - "Claude's pick" shows only as the tab on the Pick button while Claude's option is shown, placed so Pick's width never changes. Rows and tiles carry no tag (user, 2026-11-21).
 - Confirm steps (one option) show the single row plus Yes/Change in the same place.
 
-**Other kinds** (`gallery`, `verdict`, `tune`, `wording`, missing, summary) use the same left panel. Their own main content goes in the centre, and the note and nav sit under it. They get no right panel unless that kind already has a list (builder's call, kept minimal).
+**Other kinds** (`gallery`, `verdict`, `tune`, `wording`, missing, summary) use the same left panel. Their picture or fields go in the centre. Their own controls (item note, Previous/Next, verdict buttons, the note and nav) sit in the left panel under the Details folds, so they stay above the fold (controller ruling 2026-11-21: under the centre they fell below the fold at 1440 x 900). They get no right panel unless that kind already has a list (builder's call, kept minimal).
 
 ## Phone (the existing phone breakpoint, tested at 390 x 844)
 

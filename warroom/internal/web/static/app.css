@@ -120,7 +120,7 @@
   .lpanel { border-right: 1px solid var(--line); gap: 12px; }
   .cpanel { padding: 20px; gap: 14px; }
   /* Forms and nav at a reading width; only the stage takes the whole column. */
-  .cpanel > :is(.gside, .notebox, .fields, .verdict, .stepnav) { max-width: 720px; }
+  .cpanel > :is(.fields, .stepnav) { max-width: 720px; }
   .cpanel > .missing { padding: 0; }
   /* The bars under the stage have fixed heights, so the stage zone is the same on every step and option. */
   .choice .cpanel { gap: 0; --status: 60px; --more: 172px; --bars: calc(40px + var(--status) + var(--more)); }
@@ -219,9 +219,12 @@
     .act .pick { width: 100%; }
     .nwrap { display: flex; flex-direction: column; gap: 4px; .btn { width: 100%; } }
     .nexplain { position: static; white-space: normal; }
+  }
+  :is(.lpanel, .rpanel) {
     :is(.notebox, .stepnav) { margin-top: 8px; }
     .stepnav { flex-wrap: wrap; gap: 6px; .btn { padding-inline: 10px; } }
   }
+  .lpanel .verdict .vb { flex: 1 1 auto; padding-inline: 14px; }
   .ctlbar {
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
     .btn span { color: var(--muted); font-weight: 700; }

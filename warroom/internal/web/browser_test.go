@@ -1230,7 +1230,7 @@ func wantLeftPanel(t *testing.T, s *site, path, title string, chips, open int) {
 		s.wantCount(t, s.loc("#chips"), 1)
 		s.wantText(t, s.loc(".lpanel .head h1"), title)
 		s.wantCount(t, s.loc(".lpanel details[open]"), open)
-		s.wantCount(t, s.loc("#main > :is(.cpanel, .rpanel) > .stepnav"), 1)
+		s.wantCount(t, s.loc("#main .stepnav"), 1)
 	})
 }
 
@@ -1274,6 +1274,26 @@ func TestPhoneGalleryAndTuneAreNotTrappedInAScrollBox(t *testing.T) {
 		})()`)
 		if got != "" {
 			t.Errorf("%s on the phone: %v", step, got)
+		}
+	}
+}
+
+func TestGalleryAndTuneControlsNeedNoScroll(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	for step, note := range map[string]string{"/r/demo/7": ".gside textarea", "/r/demo/9": ".notebox textarea"} {
+		s.open(t, step)
+		s.wantVisible(t, s.loc(note))
+		got := eval(t, s.Page, `(() => {
+			const bad = [];
+			for (const sel of ['`+note+`', '.stepnav [data-key=arrowleft]']) {
+				const r = document.querySelector(sel).getBoundingClientRect();
+				if (r.top < 0 || r.bottom > innerHeight || r.left < 0 || r.right > innerWidth) bad.push(sel + ' at ' + r.left + ',' + r.top + ' to ' + r.right + ',' + r.bottom);
+			}
+			return bad.join('; ') + (bad.length ? ' in ' + innerWidth + ' x ' + innerHeight : '');
+		})()`)
+		if got != "" {
+			t.Errorf("%s needs a scroll: %v", step, got)
 		}
 	}
 }
