@@ -230,6 +230,70 @@ class PerfChartTest(unittest.TestCase):
         self.assertEqual(perf_chart.status_table([mv("a", "1.0")]).splitlines()[0], "**Nothing over budget**")
         self.assertIn(perf_chart.CAPTION, perf_chart.status_table(rows))
 
+    def test_readme_checked_rows_are_the_seven(self) -> None:
+        self.assertEqual(
+            [x.name for x in perf_chart.PASS_FAIL],
+            [
+                "Unit movement",
+                "Unit movement, slowest moments",
+                "Combat, normal fights",
+                "Combat, normal fights, slowest moments",
+                "Drawing the screen",
+                "Drawing the screen, big map (Ashfall)",
+                "Online play overhead",
+            ],
+        )
+
+    def test_readme_block_layout(self) -> None:
+        rows = [
+            mv("a", "2.73"),
+            row(label="a", metric="combat_tick", scenario="hordes300", p95_ms="2.9"),
+            row(label="a", metric="plumbing", scenario="combat_hordes300:profile", mean_ms="1.93"),
+        ]
+        lines = perf_chart._readme_block(rows).splitlines()
+        expected = [
+            "Performance against the low-end budget (generated):",
+            "**Checked against the limit: 1 of 1 areas over budget**",
+            "| Area | Status | Budget used | vs last run | As of |",
+        ]
+        self.assertEqual([x for x in lines if x][:3], expected)
+        keep = [x for x in lines if x]
+        at = keep.index(perf_chart.DECK_ROW)
+        self.assertEqual(
+            keep[at + 1 : at + 5],
+            [
+                perf_chart.CAPTION,
+                perf_chart.TREND_HEAD,
+                perf_chart.TREND_INTRO,
+                "| Area | Change on this Mac | As of |",
+            ],
+        )
+        tracked = keep[at + 6 : -1]
+        self.assertEqual(len(tracked), 2)
+        self.assertTrue(tracked[0].startswith("| Background upkeep, huge crowds (stress) |"))
+        self.assertTrue(tracked[1].startswith("| Combat, huge battles (stress) |"))
+        self.assertEqual(keep[-1], "Details: [performance ledger](docs/reference/performance.md).")
+        for text in keep[at + 1 :]:
+            for banned in ("\u2588", "\U0001f534", "% of"):
+                self.assertNotIn(banned, text)
+
+    def test_readme_headline_when_nothing_checked_is_over(self) -> None:
+        self.assertIn("**Checked against the limit: nothing over budget**", perf_chart._readme_block([mv("a", "1.0")]))
+
+    def test_ledger_keeps_every_verdict(self) -> None:
+        rows = [
+            mv("a", "2.73"),
+            row(label="a", metric="combat_tick", scenario="hordes300", p95_ms="2.9"),
+            row(label="a", metric="plumbing", scenario="combat_hordes300:profile", mean_ms="1.93"),
+        ]
+        block = perf_chart._ledger_block(rows)
+        self.assertIn("| **Combat, huge battles** | \U0001f534 Over |", block)
+        self.assertIn("combat stress p95: ", block)
+        rows.append(row(label="a", metric="team_tick", scenario="team_match:profile", p95_ms="2.861"))
+        self.assertIn(
+            "| **3v3 match, bots and simulation (headroom)** | \U0001f534 Over |", perf_chart._ledger_block(rows)
+        )
+
     def test_table_over_close_ok_rows(self) -> None:
         over = self.table_row([mv("a", "2.73")], "Unit movement")
         self.assertEqual(

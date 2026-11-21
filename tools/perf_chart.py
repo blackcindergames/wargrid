@@ -211,9 +211,12 @@ def trend_text(rows: list[dict[str, str]], line: Line) -> str | None:
     return f"{abs(pct):.0f}% {'slower' if pct > 0 else 'faster'} since {base.date}, {value}{busy}"
 
 
-def areas(rows: list[dict[str, str]]) -> list[tuple[Line, Point, Change]]:
+PASS_FAIL = tuple(x for x in LINES if x.title not in {t.title for t in TRENDS})
+
+
+def areas(rows: list[dict[str, str]], lines: tuple[Line, ...] = LINES) -> list[tuple[Line, Point, Change]]:
     out = []
-    for line in LINES:
+    for line in lines:
         dev = series(rows, line)
         if dev:
             out.append((line, dev[-1], _change(dev[-1], dev[-2] if len(dev) > 1 else None)))
@@ -292,17 +295,28 @@ def _status(worst_pct: float) -> str:
     return "\U0001f7e1 Close" if worst_pct >= CLOSE_PCT else "\U0001f7e2 OK"
 
 
-def status_table(rows: list[dict[str, str]]) -> str:
-    entries = areas(rows)
-    entries.sort(key=lambda e: e[1].worst_pct, reverse=True)
-    over = sum(1 for _, latest, _ in entries if latest.worst_pct >= 100)
-    head = f"**{over} of {len(entries)} areas over budget**" if over else "**Nothing over budget**"
+def _sorted_entries(rows: list[dict[str, str]], lines: tuple[Line, ...]) -> list[tuple[Line, Point, Change]]:
+    return sorted(areas(rows, lines), key=lambda e: e[1].worst_pct, reverse=True)
+
+
+def _over(entries: list[tuple[Line, Point, Change]]) -> int:
+    return sum(1 for _, latest, _ in entries if latest.worst_pct >= 100)
+
+
+def _table_rows(entries: list[tuple[Line, Point, Change]]) -> list[str]:
     table = ["| Area | Status | Budget used | vs last run | As of |", "| --- | --- | --- | --- | --- |"]
     for line, latest, change in entries:
         name = f"**{line.name}**" if latest.worst_pct >= 100 else line.name
         vs = _vs_last(change) + (" (busy host)" if latest.busy else "")
         table.append(f"| {name} | {_status(latest.worst_pct)} | {_used(latest.worst_pct)} | {vs} | {latest.date} |")
-    return "\n".join([head, "", *table, "", CAPTION])
+    return table
+
+
+def status_table(rows: list[dict[str, str]]) -> str:
+    entries = _sorted_entries(rows, LINES)
+    over = _over(entries)
+    head = f"**{over} of {len(entries)} areas over budget**" if over else "**Nothing over budget**"
+    return "\n".join([head, "", *_table_rows(entries), "", CAPTION])
 
 
 def _ledger_block(rows: list[dict[str, str]]) -> str:
@@ -310,11 +324,43 @@ def _ledger_block(rows: list[dict[str, str]]) -> str:
     return f"{status_table(rows)}\n\nDetails:\n\n{details}"
 
 
+DECK_ROW = "| Smooth on a Steam Deck in Firefox, 3v3 match | Not measured yet | | | |"
+TREND_HEAD = "**Tracked, no route under the limit yet**"
+TREND_INTRO = (
+    "These areas are over their limit and no known change brings them under it yet, so they show only how they move: "
+    "the last run against the median of the three runs before it, with a change inside the run-to-run spread shown as same. "
+    "Stress = far more units than a real match; headroom = a real 3v3 match on this Mac. Every limit is in the ledger."
+)
+
+
+def _tracked_rows(rows: list[dict[str, str]]) -> list[str]:
+    out = []
+    for line in TRENDS:
+        text = trend_text(rows, line)
+        if text is not None:
+            out.append(f"| {line.name} | {text} | {series(rows, line)[-1].date} |")
+    return out
+
+
 def _readme_block(rows: list[dict[str, str]]) -> str:
-    return (
-        "Performance against the low-end budget (generated):\n\n"
-        f"{status_table(rows)}\n\nDetails: [performance ledger](docs/reference/performance.md)."
+    entries = _sorted_entries(rows, PASS_FAIL)
+    over = _over(entries)
+    head = (
+        f"**Checked against the limit: {over} of {len(entries)} areas over budget**"
+        if over
+        else "**Checked against the limit: nothing over budget**"
     )
+    tracked = ["| Area | Change on this Mac | As of |", "| --- | --- | --- |", *_tracked_rows(rows)]
+    parts = [
+        "Performance against the low-end budget (generated):",
+        "\n".join([head, "", *_table_rows(entries), DECK_ROW]),
+        CAPTION,
+        TREND_HEAD,
+        TREND_INTRO,
+        "\n".join(tracked),
+        "Details: [performance ledger](docs/reference/performance.md).",
+    ]
+    return "\n\n".join(parts)
 
 
 def write_all(files: list[tuple[Path, str]]) -> None:

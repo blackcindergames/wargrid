@@ -3,13 +3,14 @@
 Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end): AFTER THE VIEW ROWS CHANGE THE HAND-OFF SUM PASSES THE 0.91 MS PLUMBING BUDGET ON skirmish3v3 ONLY; team_match, hordes300 AND THE MOVEMENT LAYOUTS STILL EXCEED IT; NO BUDGET CHANGED; THE SENTENCES BELOW ARE THE EARLIER STATUS.** **BUDGETS DERIVED FROM MEASURED F = 5.5 (2026-11-06); F RE-MEASURED 2026-11-08 (BROWSER 5.0-5.2 ON SIM ROWS), 5.5 RETAINED PENDING THE USER; ONE OF THE SIX BUDGET ROWS PARTLY EXCEEDED (PLUMBING, ON THE COMBAT LAYOUTS); COMBAT STRESS `open` AND `hordes300` EXCEED THE SIMULATION BUDGET, `dense` SITS AT IT (MEDIAN 1.811 OF 13) (ACCEPTED BY THE USER 2026-11-07 UNTIL THE POST-M7 PERFORMANCE SPIKE, NOT LOOSENED); THE TEAM MATCH PASSES SINCE THE SPIKE; EXISTING GATES UNCHANGED (T3 PROPOSALS NOT YET APPLIED); ART LAB (2026-11-10, gate 2): PLUMBING IS NOW ABOUT 1.9-2.2 MS ON EVERY LAYOUT (EXCEEDED, ASHFALL NO LONGER PASSES), THE NATIVE TICK-FRAME ROWS AND THE WEB ROW ARE EXCEEDED (RE-MEASURED AFTER THE SPEED-UPS)**. One place to track performance across milestones for a low-end target, including a browser (WebAssembly) build. Measurements on this Mac are weak evidence for that target; this note makes the assumption explicit and replaceable.
 
 <!-- perf-charts:begin -->
-**3 of 10 areas over budget**
+**4 of 11 areas over budget**
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
 | **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | 🔻 2% better | 2026-11-21 |
 | **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-21 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | 🔺 1% worse | 2026-11-21 |
+| **3v3 match, background upkeep (headroom)** | 🔴 Over | ██████████▶ 123% | 🔻 1% better | 2026-11-21 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-21 |
 | Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
@@ -32,6 +33,7 @@ Details:
 - rendered tick-frame p95: 73% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 74% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (auto fe9089ee, 2026-11-21), 1% faster than auto 63a6b97c (worst vs worst); run-to-run spread not measured
+- 3v3 upkeep: 123% of budget, exceeded (auto fe9089ee, 2026-11-21), 1% faster than auto 63a6b97c (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
