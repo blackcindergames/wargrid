@@ -293,14 +293,21 @@ templ Options(v ChoiceView) {
 	</div>
 }
 
+// LeftPanel is the same on every step kind: the chips, then the question and its folds.
+templ LeftPanel(chips []Chip, h HeadView, i InfoView) {
+	<div class="lpanel">
+		@ChipNav(chips)
+		@Head(h, i) {
+			{ children... }
+		}
+	</div>
+}
+
 templ ChoiceMain(v ChoiceView) {
 	<main id="main" class={ "step", "choice", "k-" + v.Kind, viewClass(v.Side) }>
-		<div class="lpanel">
-			@ChipNav(v.Chips)
-			@Head(v.Head, v.Info) {
-				@About(v.Opts)
-			}
-		</div>
+		@LeftPanel(v.Chips, v.Head, v.Info) {
+			@About(v.Opts)
+		}
 		<div class="cpanel">
 			if v.Side {
 				@Tiles(v)
@@ -329,31 +336,10 @@ templ VerdictBox(v VerdictView) {
 	}
 }
 
-templ GalleryMain(v GalleryView) {
+templ GalleryMain(v GalleryView, chips []Chip) {
 	<main id="main" class="step k-gallery">
-		<div class="left">
-			@Head(v.Head, v.Info)
-			if !v.Empty {
-				<section class="gside">
-					<span class="cnt">{ v.Count }</span>
-					<h2>{ v.ItemLabel }</h2>
-					<p>@Fmt(v.Caption)</p>
-					if !isReadOnly(ctx) {
-						<label for={ v.ItemNote.ID } class="h">{ v.ItemNote.Label }</label>
-						@NoteField(v.ItemNote)
-					}
-					<div class="inav">
-						<a class="btn sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
-						<a class="btn sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
-					</div>
-				</section>
-			}
-			if v.Verdict != nil {
-				@VerdictBox(*v.Verdict)
-			}
-			@StepNav(v.Nav)
-		</div>
-		<div class="right">
+		@LeftPanel(chips, v.Head, v.Info)
+		<div class="cpanel">
 			if v.Empty {
 				<p class="missing">[gallery has no items]</p>
 			} else {
@@ -375,33 +361,44 @@ templ GalleryMain(v GalleryView) {
 						</a>
 					}
 				</section>
+				<section class="gside">
+					<span class="cnt">{ v.Count }</span>
+					<h2>{ v.ItemLabel }</h2>
+					<p>@Fmt(v.Caption)</p>
+					if !isReadOnly(ctx) {
+						<label for={ v.ItemNote.ID } class="h">{ v.ItemNote.Label }</label>
+						@NoteField(v.ItemNote)
+					}
+					<div class="inav">
+						<a class="btn sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
+						<a class="btn sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
+					</div>
+				</section>
 			}
+			if v.Verdict != nil {
+				@VerdictBox(*v.Verdict)
+			}
+			@StepNav(v.Nav)
 		</div>
 	</main>
 	@AnswerForm(v.Form)
 }
 
-templ VerdictMain(v VerdictStepView) {
+templ VerdictMain(v VerdictStepView, chips []Chip) {
 	<main id="main" class="step k-verdict">
-		<div class="left">
-			@Head(v.Head, v.Info)
-			@StepNav(v.Nav)
-		</div>
-		<div class="right">
+		@LeftPanel(chips, v.Head, v.Info)
+		<div class="cpanel">
 			@VerdictBox(v.Verdict)
+			@StepNav(v.Nav)
 		</div>
 	</main>
 	@AnswerForm(v.Form)
 }
 
-templ TuneMain(v TuneView) {
+templ TuneMain(v TuneView, chips []Chip) {
 	<main id="main" class="step k-tune">
-		<div class="left">
-			@Head(v.Head, v.Info)
-			@NoteBox(v.Note)
-			@StepNav(v.Nav)
-		</div>
-		<div class="right">
+		@LeftPanel(chips, v.Head, v.Info)
+		<div class="cpanel">
 			<section class="stagecol">
 				<div class="stage">
 					@Picture(v.Pic)
@@ -415,19 +412,18 @@ templ TuneMain(v TuneView) {
 					@NeutralAnswer(v.Neutral)
 				</div>
 			</section>
+			@NoteBox(v.Note)
+			@StepNav(v.Nav)
 		</div>
 	</main>
 	<input type="hidden" id={ tuneField } name="value" form="answer" value={ v.Value }/>
 	@AnswerForm(v.Form)
 }
 
-templ WordingMain(v WordingView) {
+templ WordingMain(v WordingView, chips []Chip) {
 	<main id="main" class="step k-wording">
-		<div class="left">
-			@Head(v.Head, v.Info)
-			@StepNav(v.Nav)
-		</div>
-		<div class="right">
+		@LeftPanel(chips, v.Head, v.Info)
+		<div class="cpanel">
 			<section class="fields">
 				if !isReadOnly(ctx) {
 					<p class="nhint">Edits are recorded as you type.</p>
@@ -444,21 +440,24 @@ templ WordingMain(v WordingView) {
 					</div>
 				}
 			</section>
+			@StepNav(v.Nav)
 		</div>
 	</main>
 }
 
-templ MissingMain(v MissingView) {
+templ MissingMain(v MissingView, chips []Chip) {
 	<main id="main" class="step k-missing">
-		<div class="left">
+		<div class="lpanel">
+			@ChipNav(chips)
 			<section class="head">
 				<span class="n">{ v.Eyebrow }</span>
 				<h1>[step missing: { v.Key }]</h1>
-				<p>{ v.Path } did not load.</p>
 			</section>
+		</div>
+		<div class="cpanel">
+			<p class="missing">{ v.Path } did not load.</p>
 			@StepNav(v.Nav)
 		</div>
-		<div class="right"></div>
 	</main>
 }
 
@@ -503,14 +502,18 @@ templ SumTable(rows []SumRow) {
 	}
 }
 
-templ SummaryMain(v SummaryView, nav NavView) {
+templ SummaryMain(v SummaryView, nav NavView, chips []Chip) {
 	<main id="main" class="step k-summary">
-		<section class="head">
-			<span class="n">{ v.Eyebrow }</span>
-			<h1>{ v.Title }</h1>
-		</section>
-		@Intro(v.Intro, true)
-		<div id="sum">
+		<div class="lpanel">
+			@ChipNav(chips)
+			<section class="head">
+				<span class="n">{ v.Eyebrow }</span>
+				<h1>{ v.Title }</h1>
+			</section>
+			@Intro(v.Intro, true)
+		</div>
+		<div class="cpanel">
+			<div id="sum">
 			<h2>{ v.Main.Title } <span class="cnt">{ v.Main.Count }</span></h2>
 			@SumTable(v.Main.Rows)
 			if len(v.Open) > 0 {
@@ -537,8 +540,9 @@ templ SummaryMain(v SummaryView, nav NavView) {
 					@SumTable(e.Rows)
 				}
 			}
+			</div>
+			@StepNav(nav)
 		</div>
-		@StepNav(nav)
 	</main>
 }
 

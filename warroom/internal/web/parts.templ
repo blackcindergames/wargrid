@@ -149,14 +149,7 @@ templ StepNav(n NavView) {
 // Open only on the summary: on a step the question and "Look at" come first.
 templ Intro(text string, open bool) {
 	if text != "" {
-		if open {
-			<section class="intro">
-				<span class="h">This round</span>
-				<p>@Fmt(text)</p>
-			</section>
-		} else {
-			<details class="intro"><summary>This round</summary><p>@Fmt(text)</p></details>
-		}
+		<details class="intro" open?={ open }><summary>This round</summary><p>@Fmt(text)</p></details>
 	}
 }
 

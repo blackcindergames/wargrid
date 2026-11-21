@@ -487,11 +487,11 @@ func TestStepIntroStartsClosed(t *testing.T) {
 	for _, step := range []string{"/r/m/1", "/r/m/2"} {
 		body := a.get(step).Body.String()
 		mustContain(t, step, body, `<details class="intro"><summary>This round</summary>`, intro)
-		if strings.Contains(body, `<section class="intro"`) {
+		if strings.Contains(body, `<details class="intro" open`) {
 			t.Errorf("%s shows the intro open", step)
 		}
 	}
-	mustContain(t, "summary", a.get("/r/m/summary").Body.String(), `<section class="intro"`, intro)
+	mustContain(t, "summary", a.get("/r/m/summary").Body.String(), `<details class="intro" open>`, intro)
 	shipped := newShippedApp(t).locked()
 	mustContain(t, "demo step 4", shipped.get("/r/demo/4?t="+roundToken("demo")).Body.String(), `<details class="intro">`, "Demo only: judge on any screen.")
 }

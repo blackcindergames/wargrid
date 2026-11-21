@@ -6,12 +6,11 @@ import (
 	"wargrid/warroom/internal/stage"
 )
 
-// PageView is what one page puts inside #view: the problems found loading the rounds, the step chips and the page itself.
+// PageView is what one page puts inside #view: the problems found loading the rounds and the page itself.
 type PageView struct {
 	Errors  []string
 	Cvd     string
 	True100 bool
-	Chips   []Chip
 	Body    templ.Component
 	Phone   *PhoneView
 	Legend  LegendView
@@ -81,9 +80,6 @@ templ Shell(p PageView) {
 		}
 		if p.ReadOnly {
 			<p id="readonly" role="status">{ readOnlyNotice }</p>
-		}
-		if len(p.Chips) > 0 {
-			@ChipNav(p.Chips)
 		}
 		@p.Body
 		<div id="phone" class="phone">

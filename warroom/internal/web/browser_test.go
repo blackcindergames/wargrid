@@ -1221,3 +1221,59 @@ func TestConfirmStepPicksFromTheRightPanel(t *testing.T) {
 	s.wantCount(t, s.loc(".opts .orow"), 1)
 	s.wantCount(t, s.loc(".orow[data-show=today]"), 0)
 }
+
+func wantLeftPanel(t *testing.T, s *site, path, title string, chips, open int) {
+	t.Helper()
+	t.Run(path, func(t *testing.T) {
+		s.open(t, path)
+		s.wantCount(t, s.loc(".lpanel #chips .chip"), chips)
+		s.wantCount(t, s.loc("#chips"), 1)
+		s.wantText(t, s.loc(".lpanel .head h1"), title)
+		s.wantCount(t, s.loc(".lpanel details[open]"), open)
+		s.wantCount(t, s.loc("#main > :is(.cpanel, .rpanel) > .stepnav"), 1)
+	})
+}
+
+func TestEveryStepKindHasTheLeftPanel(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	questions := []string{
+		"Which backdrop reads better behind the HUD?", "Is the pile card right as drawn?", "Which wording for the card question?",
+		"Which click sound?", "Edit the notice wording", "Does the selection ring read in motion?", "Look through every state",
+		"Does the demo pass?", "Which outline weight and unit size read best?", "Which outline weight reads best?",
+	}
+	for i, q := range questions {
+		wantLeftPanel(t, s, fmt.Sprintf("/r/demo/%d", i+1), q, 11, 0)
+	}
+	// The summary keeps the round's intro open.
+	wantLeftPanel(t, s, "/r/demo/summary", "What the server recorded", 11, 1)
+	s.wantContains(t, s.loc(".lpanel details[open].intro"), "Demo only")
+	dir := writeTree(t, map[string]string{
+		"index.yaml":   "- {id: m, title: Missing}\n",
+		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
+		"m/ok.yaml":    "kind: verdict\nquestion: Still fine?\n",
+	})
+	wantLeftPanel(t, newSite(t, siteOpts{rounds: dir}), "/r/m/2", "[step missing: gone]", 3, 0)
+}
+
+func TestPhoneGalleryAndTuneAreNotTrappedInAScrollBox(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	for step, parts := range map[string]string{"/r/demo/7": ".gmain .pic, .gside textarea, .thumbs", "/r/demo/9": ".stage .pic, wr-tune"} {
+		phone := s.phoneFrame(t, step, ".phone [data-act=sheet]")
+		got := eval(t, phone, `(() => {
+			const bad = [], d = document.documentElement;
+			if (d.scrollWidth > d.clientWidth) bad.push('page scrolls sideways');
+			for (const el of document.querySelectorAll('`+parts+`')) {
+				const r = el.getBoundingClientRect();
+				if (r.width < 200 || r.height < 40) bad.push(el.className || el.tagName + ' is ' + r.width + ' x ' + r.height);
+				for (let a = el.parentElement; a && a.id !== 'main'; a = a.parentElement) {
+					const o = getComputedStyle(a).overflowY;
+					if ((o === 'auto' || o === 'scroll') && a.scrollHeight > a.clientHeight + 1) bad.push((el.className || el.tagName) + ' scrolls inside ' + a.className);
+				}
+			}
+			return bad.join('; ');
+		})()`)
+		if got != "" {
+			t.Errorf("%s on the phone: %v", step, got)
+		}
+	}
+}
