@@ -627,7 +627,7 @@ func test_controller_and_scan_radius(runner) -> bool:
 	var sim = Fixture.world()
 	runner.check(not sim.add_player(3, 0, "bot").ok, "C1 unknown controller is rejected")
 	runner.check(sim.add_player(3, 0, "bot").error == "Invalid controller", "C1 rejection names the controller")
-	var skirmish = Skirmish.create()
+	var skirmish = Skirmish.create(true, "ai")
 	var players: Array = skirmish.snapshot().players
 	runner.check(players[0].id == 1 and players[0].controller == "human", "C2 player 1 is human")
 	runner.check(players[1].id == 2 and players[1].controller == "ai", "C2 player 2 is ai")

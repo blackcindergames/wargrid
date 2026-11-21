@@ -1571,7 +1571,7 @@ func test_sb3_submit_queues(runner) -> bool:
 	return true
 
 func _replayed_digest(main, recorded: Array[Dictionary]) -> String:
-	var oracle = Skirmish.create(true, "ai", main.factions, main.map_path, main.starts)
+	var oracle = Skirmish.create(true, "human", main.factions, main.map_path, main.starts)
 	var pending: Array = recorded.duplicate()
 	for tick in main.driver.record().tick:
 		while not pending.is_empty() and pending[0].tick == tick: oracle.issue_command(pending.pop_front())

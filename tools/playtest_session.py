@@ -127,6 +127,7 @@ def replay_rows(session: dict, path: Path) -> list[str]:
             str(m["end_tick"]),
             m.get("end_digest", ""),
             ticks,
+            m.get("controller", "-"),
             _build(session, m),
         ]
         rows.append("\t".join(row))

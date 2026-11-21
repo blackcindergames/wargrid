@@ -184,7 +184,7 @@ func playtest_header() -> Dictionary:
 	return _header(played.mode, played.factions)
 
 func _header(mode: String, match_factions: Array) -> Dictionary:
-	return {"mode": mode, "map": _map_id(), "seed": match_seed, "factions": match_factions, "seat": local_player, "build": PlaytestSettings.build_id()}
+	return {"mode": mode, "map": _map_id(), "seed": match_seed, "factions": match_factions, "seat": local_player, "controller": "human", "build": PlaytestSettings.build_id()}
 
 func _map_id() -> String:
 	return map_path.get_file().get_basename()

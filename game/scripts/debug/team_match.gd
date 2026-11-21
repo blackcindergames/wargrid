@@ -14,7 +14,7 @@ static func create() -> Simulation:
 	var seats: Array[Dictionary] = []
 	var ids: Array[int] = []
 	for entry in SEATS:
-		seats.append({"seat": entry.seat, "team": entry.team, "controller": "ai", "faction": entry.faction, "credits": Skirmish.START_CREDITS})
+		seats.append({"seat": entry.seat, "team": entry.team, "controller": "human", "faction": entry.faction, "credits": Skirmish.START_CREDITS})
 		ids.append(entry.seat)
 	var sim: Simulation = MapData.create(MapData.load(MAP_PATH), seats)
 	sim.start_match(ids)

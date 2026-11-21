@@ -99,12 +99,20 @@ class PlaytestSessionTest(unittest.TestCase):
         cmd1 = self.path.parent / "sess-m1.cmd"
         self.assertEqual(
             rows[0],
-            ["1", str(cmd1), "offline", "skirmish", "7", "frc,china", "60", "aa", "30,60", "0.11.0-dev+abc1234"],
+            ["1", str(cmd1), "offline", "skirmish", "7", "frc,china", "60", "aa", "30,60", "-", "0.11.0-dev+abc1234"],
         )
         self.assertEqual(rows[1][5], "-", "online rows pass no --factions")
         self.assertEqual(rows[1][8], "-")
-        self.assertEqual(rows[1][9], "0.11.0-dev+def5678")
+        self.assertEqual(rows[1][10], "0.11.0-dev+def5678")
         self.assertEqual(cmd1.read_text(), "line one\nline two\n")
+
+    def test_replay_rows_carry_controller(self):
+        data = session()
+        data["matches"][0]["controller"] = "human"
+        path = self._write(data)
+        rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
+        self.assertEqual(rows[0][9], "human")
+        self.assertEqual(rows[1][9], "-", "a record without a controller passes none, so the oracle replays it as ai")
 
     def test_float_numbers_from_a_resumed_sitting(self):
         floaty = session()
@@ -158,9 +166,11 @@ class PlaytestSessionTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("unsupported session format", err.getvalue())
 
-    def _replay(self, client_exit, extra="", rows=None, final="aa", count=1, python=sys.executable):
+    def _replay(self, client_exit, extra="", rows=None, final="aa", count=1, python=sys.executable, controller=None):
         one = session()
         one["matches"] = one["matches"][:1] * count
+        if controller is not None:
+            one["matches"][0]["controller"] = controller
         if rows is not None:
             one["matches"][0]["tick_hashes"] = rows
         self.path.write_text(json.dumps(one))
@@ -179,6 +189,14 @@ class PlaytestSessionTest(unittest.TestCase):
         self.assertNotIn("REPLAY MATCHED", crashed.stdout)
         errored = self._replay(0, "echo 'SCRIPT ERROR: boom'\n")
         self.assertEqual((errored.returncode, "REPLAY MATCHED" in errored.stdout), (1, False), errored.stdout)
+
+    def test_replay_wrapper_passes_controller(self):
+        args = Path(self._tmp.name) / "args"
+        record = f'echo " $*" > "{args}"\n'
+        self._replay(0, record, controller="human")
+        self.assertIn(" --controller human ", args.read_text() + " ")
+        self._replay(0, record)
+        self.assertNotIn("--controller", args.read_text())
 
     def _hash_files(self, recorded, ring):
         rec, rng = Path(self._tmp.name) / "rec.hashes", Path(self._tmp.name) / "ring.tsv"

@@ -146,7 +146,7 @@ func _oracle_sim() -> Simulation:
 	var chosen: Array[int] = MatchSettings.starts(id, int(_args.get("seed", "0")))
 	if not _args.has("factions"): return _match_sim(id, chosen)
 	var names: PackedStringArray = str(_args["factions"]).split(",")
-	return Skirmish.create(true, "ai", {1: names[0], 2: names[1]}, MatchSettings.map_path(id), chosen)
+	return Skirmish.create(true, str(_args.get("controller", "ai")), {1: names[0], 2: names[1]}, MatchSettings.map_path(id), chosen)
 
 func _run_steps(limit: int) -> void:
 	for i in limit:

@@ -3,15 +3,15 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 13:01)
-Branch / base commit / working-tree state: p7-enemy-bots / 3e074b6d / T1-2 changes uncommitted: factions.gd, test_skirmish.gd, test_bot_rules.gd (new), run_tests.gd, this file
-Last green task / next incomplete task: T1-2 (BR1, red set as expected, not committed) / T1-3
-Changed paths since last commit: game/scripts/simulation/definitions/factions.gd, game/tests/test_skirmish.gd, game/tests/test_bot_rules.gd, game/tests/run_tests.gd, docs/reference/p7-verification.md
-Last command / cases / checks / failures / exit / marker: full suite on the T1-2 tree: CASES 1251 CHECKS 152757 FAILURES 10 / exit 1 / no TESTS PASSED (expected red, all on the re-pin list); lint 0, warnings 0 (190 files)
-Known red case or blocker: the 10 names in the red ledger (re-pin at T1-10)
+Resume record (updated 2026-11-21 13:09)
+Branch / base commit / working-tree state: p7-enemy-bots / 0e2e613f / T1-3 changes uncommitted (see changed paths)
+Last green task / next incomplete task: T1-3 (UR1, red set as expected, not committed) / T1-4
+Changed paths since last commit: game/scripts/simulation/skirmish.gd, game/scripts/match/offline_driver.gd, game/scripts/match/match_screen.gd, game/scripts/debug/team_match.gd, game/scripts/lab/readme_capture.gd, game/scripts/net/headless_client.gd, game/tests/test_bot_rules.gd, game/tests/test_combat.gd, game/tests/test_playtest.gd, game/tests/test_playtest_replay.gd, game/tests/test_skirmish_scene.gd, tools/playtest_session.py, tools/replay_session.sh, tools/test_playtest_session.py, tools/test_no_production_create_passes_ai.py (new), this file
+Last command / cases / checks / failures / exit / marker: full suite on the T1-3 tree: CASES 1254 CHECKS 152764 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, 9 failing checks, all on the re-pin list); lint 0, warnings 0 (190 files); python checks and shell checks exit 0
+Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: review and commit T1-2, then T1-3
+Next exact action: review and commit T1-3, then T1-4
 ```
 
 ## Red ledger
@@ -19,6 +19,7 @@ Next exact action: review and commit T1-2, then T1-3
 | Task | `FAIL:` names left red | On the re-pin list |
 |---|---|---|
 | T1-2 | TB3 final digest (tick 20000); TB4 team core series; S1 core series; Fm1 pinned outcome (27098, winner 2); Cs1 pinned outcome (10343, winner 2); VR1 view reads digest and VR1 same digest through set_view; S1 pinned outcome (-1 ongoing); S1 terminal inside the six-minute window; S1 economy, production and combat | yes, all (T1-10) |
+| T1-3 | TB3 final digest (tick 20000); TB4 team core series; S1 core series; Fm1 pinned outcome (27098, winner 2); Cs1 pinned outcome (10343, winner 2); VR1 view reads digest and VR1 same digest through set_view; S1 pinned outcome (9958, winner 1); HUD1 pinned panel and collector texts. Left the list: S1 terminal inside the six-minute window, S1 economy, production and combat (green again under human unit rules). | yes, all (T1-10) |
 
 ## Evidence
 
@@ -48,3 +49,13 @@ Not run here: the 150 s rule, wave-level rows (the variant's waves are not logge
 ### T1-2 BR1
 
 Tree: `p7-enemy-bots` at `3e074b6d` plus the uncommitted T1-2 changes. Red first: `test_bot_collector_quota_per_supply_centre` (new `test_bot_rules.gd`, in `run_tests.gd` `SUITES`) failed 3 of 3 checks before the change (quota 2/3/5, USA 2 and China 3 collectors). Then `factions.gd` quota 3/4/6; SK-C1 to SK-C5 rewritten to 3/4/6 (two supply centres: USA 6, China 8). `test_bot_rules`: CASES 1 CHECKS 3 FAILURES 0. `test_skirmish*`: CASES 131 CHECKS 958 FAILURES 6 (S1 x3 plus core series, Cs1, Fm1). Full suite: CASES 1251 CHECKS 152757 FAILURES 10, exit 1 (no `TESTS PASSED`); R4's 16 minus the 6 SK-C checks is 10. `sh tools/run_lint.sh` exit 0; `sh tools/run_warnings.sh` exit 0, 190 files. Baseline skipped, passed on `194048e0`; `3e074b6d` only adds docs.
+
+### T1-3 UR1
+
+Tree: `p7-enemy-bots` at `0e2e613f` plus the uncommitted T1-3 changes. Baseline skipped: the T1-2 full suite ran on the T1-2 tree and only a test rename followed, so the T1-2 red set is the starting point. Red first (each failed before any production change): `tools/test_no_production_create_passes_ai.py` (`skirmish.gd` default `"ai"`); `test_bot_seat_idle_unit_ignores_enemy_beyond_reach` (2 checks: default seat was `ai`, guard acquired target 8); RP4 record `controller` missing; RP10 `test_oracle_controller_arg`; `tools/test_playtest_session.py` `test_replay_rows_carry_controller`, `test_replay_wrapper_passes_controller` and the shifted `build` column. `test_old_record_replays_as_ai` (RP9) passed before the change: it guards the oracle default, so it is not red-first. Change: `Skirmish.create` default and the four create paths pass `"human"`; `match_screen.gd` `_header` writes `controller: "human"`; the oracle reads `--controller` (missing: `"ai"`); `playtest_session.py` emits a `controller` column (`-` when absent) and `replay_session.sh` passes `--controller`. Tests that replay offline matches or assert the replaced rule were switched in the same task: RP4 and RH5 pass `controller: human`, SB3 oracle `_replayed_digest` creates `"human"`, C2/C3 `Skirmish.create(true, "ai")`, `test_playtest.gd` key list and `_record`. `benchmarks/run_recorded_match.gd` keeps `"ai"`.
+
+Results: `test_bot_rules` CASES 2 CHECKS 6 FAILURES 0; `test_playtest*` CASES 91 CHECKS 682 FAILURES 0; `test_sim_pump` 29/134/0; `test_combat` 85/2649/0. Full suite: CASES 1254 CHECKS 152764 FAILURES 9, exit 1 (no `TESTS PASSED`), 9 failing checks, all on the re-pin list; S1 now ends at tick 9958 (winner 1), inside the 7000-17999 window. HUD1 joined; K2 did not. `sh tools/run_lint.sh` exit 0; `sh tools/run_warnings.sh` exit 0, 190 files; `sh tools/run_python_checks.sh` exit 0 (`PYTHON TESTS PASSED`); `sh tools/run_shell_checks.sh` exit 0.
+
+Found, not fixed: `godot --headless --path game --script res://benchmarks/run_recorded_match.gd` reports `RECORDED MATCH DIFFERS tick=6694 recorded=972a057c40053661 replayed=7aa31eab0a71558b` identically on `main` `194048e0` and `0e2e613f`; it matched at `278480b2` (the fixture commit), and the first differing commit on `main` is `56cfcb2c` ("Budget path searches by route cells"). Nothing runs it (no tool or CI step; `performance.md` labels it report-only), so it fails no gate. Not re-recorded in P7: re-pinning would no longer replay the owner's match; re-pin or a new fixture is an owner choice for a separate commit on `main`.
+
+UR1 also reaches `benchmarks/run_profile.gd:104` (`Skirmish.create()` default): the `skirmish_match` profile in `run_benchmark.sh` now runs human unit rules, so the gate's profile row is not comparable to earlier rows. Review fix: the UR1 test gained a positive control (an enemy 3 cells away, inside reach, is acquired); `test_bot_rules` CASES 2 CHECKS 7 FAILURES 0.
