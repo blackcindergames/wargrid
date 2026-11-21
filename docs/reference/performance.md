@@ -3,37 +3,41 @@
 Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end): AFTER THE VIEW ROWS CHANGE THE HAND-OFF SUM PASSES THE 0.91 MS PLUMBING BUDGET ON skirmish3v3 ONLY; team_match, hordes300 AND THE MOVEMENT LAYOUTS STILL EXCEED IT; NO BUDGET CHANGED; THE SENTENCES BELOW ARE THE EARLIER STATUS.** **BUDGETS DERIVED FROM MEASURED F = 5.5 (2026-11-06); F RE-MEASURED 2026-11-08 (BROWSER 5.0-5.2 ON SIM ROWS), 5.5 RETAINED PENDING THE USER; ONE OF THE SIX BUDGET ROWS PARTLY EXCEEDED (PLUMBING, ON THE COMBAT LAYOUTS); COMBAT STRESS `open` AND `hordes300` EXCEED THE SIMULATION BUDGET, `dense` SITS AT IT (MEDIAN 1.811 OF 13) (ACCEPTED BY THE USER 2026-11-07 UNTIL THE POST-M7 PERFORMANCE SPIKE, NOT LOOSENED); THE TEAM MATCH PASSES SINCE THE SPIKE; EXISTING GATES UNCHANGED (T3 PROPOSALS NOT YET APPLIED); ART LAB (2026-11-10, gate 2): PLUMBING IS NOW ABOUT 1.9-2.2 MS ON EVERY LAYOUT (EXCEEDED, ASHFALL NO LONGER PASSES), THE NATIVE TICK-FRAME ROWS AND THE WEB ROW ARE EXCEEDED (RE-MEASURED AFTER THE SPEED-UPS)**. One place to track performance across milestones for a low-end target, including a browser (WebAssembly) build. Measurements on this Mac are weak evidence for that target; this note makes the assumption explicit and replaceable.
 
 <!-- perf-charts:begin -->
-**4 of 11 areas over budget**
+**6 of 13 areas over budget**
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | 🔻 2% better | 2026-11-21 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-21 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | 🔺 1% worse | 2026-11-21 |
-| **3v3 match, background upkeep (headroom)** | 🔴 Over | ██████████▶ 123% | 🔻 1% better | 2026-11-21 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 211% | ➖ same | 2026-11-22 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-22 |
+| **3v3 match, bots and simulation (headroom)** | 🔴 Over | ██████████▶ 158% | 🆕 first run | 2026-11-22 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | ➖ same | 2026-11-22 |
+| **3v3 match, background upkeep (headroom)** | 🔴 Over | ██████████▶ 123% | ➖ same | 2026-11-22 |
+| **3v3 match, simulation (headroom)** | 🔴 Over | ██████████▶ 119% | 🆕 first run | 2026-11-22 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-21 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-22 |
 | Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-21 |
-| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 1% better | 2026-11-21 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 1% better | 2026-11-21 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 1% better | 2026-11-21 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-22 |
+| Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔺 2% worse | 2026-11-22 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 1% worse | 2026-11-22 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-22 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 41% of budget (auto fe9089ee, 2026-11-21), 1% faster than auto 63a6b97c (worst vs worst); run-to-run spread up to 50%
-- movement p99: 24% of budget (auto fe9089ee, 2026-11-21), 1% faster than auto 63a6b97c (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 74% of budget (auto fe9089ee, 2026-11-21), unchanged vs auto 63a6b97c (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (auto fe9089ee, 2026-11-21), 1% faster than auto 63a6b97c (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 160% of budget, exceeded (auto fe9089ee, 2026-11-21), unchanged vs auto 63a6b97c (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 143% of budget, exceeded (auto fe9089ee, 2026-11-21), 1% slower than auto 63a6b97c (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 212% of budget, exceeded (auto fe9089ee, 2026-11-21), 2% faster than auto 63a6b97c (worst vs worst); run-to-run spread not measured
+- movement p95: 42% of budget (night 14 honest speed report, 2026-11-22), 2% slower than auto fe9089ee (worst vs worst); run-to-run spread up to 50%
+- movement p99: 24% of budget (night 14 honest speed report, 2026-11-22), 1% slower than auto fe9089ee (worst vs worst); run-to-run spread up to 50%
+- combat gated p95: 74% of budget (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread up to 58%
+- combat gated p99: 58% of budget (night 14 honest speed report, 2026-11-22), 1% faster than auto fe9089ee (worst vs worst); run-to-run spread up to 58%
+- combat stress p95: 160% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread up to 41%
+- plumbing, movement layouts: 143% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 211% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 73% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 74% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (auto fe9089ee, 2026-11-21), 1% faster than auto 63a6b97c (worst vs worst); run-to-run spread not measured
-- 3v3 upkeep: 123% of budget, exceeded (auto fe9089ee, 2026-11-21), 1% faster than auto 63a6b97c (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (night 14 honest speed report, 2026-11-22), 3% faster than auto fe9089ee (worst vs worst); run-to-run spread not measured
+- 3v3 upkeep: 123% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread not measured
+- 3v3 sim p95: 119% of budget, exceeded (night 14 honest speed report, 2026-11-22), no previous run; run-to-run spread not measured
+- 3v3 bots + sim p95: 158% of budget, exceeded (night 14 honest speed report, 2026-11-22), no previous run; run-to-run spread not measured
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
@@ -145,6 +149,7 @@ All rows: this Mac, Godot 4.7.2, Compatibility renderer, 64×64 map, 300 units, 
 | 2026-11-19 Benchmark pair gate, Task 8a, headless (branch `benchmark-pair-gate` head `3597713`, clean; Apple M6; `PERF_LABEL="Benchmark pair gate" sh tools/run_benchmark.sh` alone, foreground, no other Godot or Codex process; `uptime` load 1.67 / 1.50 / 1.62 at start (11:22), 1.21 / 1.36 / 1.50 at end (11:29); log `~/projects/wargrid-overnight-work/benchmark-pair-gate/logs/gate-bench.log`; **measured**) | p95 / p99 ms; pair medians branch/reference | exit 0 in about 7 minutes, the pair step about 3 of them (11:22-11:25): `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, `PROFILE COMPLETE 11`, `PAIR GATE PASSED 3`, `recorded 24 rows, run 1` with the label above; no `CEILING ALARM`; the accepted `BUDGET EXCEEDED open dense hordes300`. The reference was the merge base `9f1ae41`, whose `run_combat.gd` still blocks on the stress ceiling, so this run exercised the transition path (the reference side exits 0 with the ceilings held). Pair medians (limits in [Pair gate](#pair-gate-benchmark-pair-gate-2026-11-19)): open 1.0011 / 1.0071, dense 0.9957 / 0.9918, hordes300 0.9834 / 0.9953; open pair 3 had single ratios of 1.123 / 1.100 (a host burst on the branch side) and the median absorbed it. Movement open 0.774 / 0.863, dense 0.738 / 0.893. Combat open 1.944 / 2.277, dense 1.852 / 2.166, hordes300 2.920 / 3.395 (over budget, drift alarm lines held); contact 1.204 / 1.577, skirmish3v3 1.354 / 1.454, transports 1.136 / 1.241, defences 0.780 / 2.132, docks 0.587 / 0.604, ramp 0.652 / 1.206, frc 0.890 / 1.082 (all pass). Lockstep overhead p99 0.067 ms (limit 0.6). No simulation, presentation, scene or data file changed (`git diff 9f1ae41 -- game` touches only `run_combat.gd`'s stress verdict, a fail turned into a report-only alarm, not the timed code), so no rendered rerun. No budget, ceiling or guard touched | [Pair gate](#pair-gate-benchmark-pair-gate-2026-11-19) |
 | 2026-11-20 P2.3a1 stop gate B, headless and rendered (branch `p2-3a1-see-your-selection` at `1f07d455`, clean; Apple M6; `PERF_LABEL="P2.3a1" sh tools/run_benchmark.sh`, `uptime` load 2.66 / 2.33 / 2.37 at start (12:59), 1.68 / 1.89 / 2.14 at end (13:07), three gate reviewers reading files beside it; rendered `movement_benchmark.tscn` (four layouts), `-- --hud` at 1280x720 and `--resolution 2560x1080 ... -- --hud --expect-window=2560x1080`, load 1.54 at start (13:10), 2.66 at end (13:17); **measured**) | p95 / p99 ms | headless: `PAIR GATE PASSED 3` (medians dense 1.0005 / 1.0036, hordes300 0.9963 / 0.9957, open 0.9923 / 0.9931 against 1.020 / 1.025), `LOCKSTEP BUDGET PASS` p99 0.067, `BUDGET EXCEEDED open dense hordes300` as on 2026-11-19 (presentation-only branch), `recorded 24 rows, run 1`; rendered frame interval: open 0.333 / 2.003, dense 0.733 / 2.593, ashfall 0.857 / 4.153, horde 0.520 / 3.977; `hud_select_1280x720` frame 1.538 / 2.562, tick 1.544 / 1.617; `hud_select_2560x1080` frame 3.060 / 3.812, tick 1.508 / 1.588; draw calls open 3, dense 4, horde 4, ashfall 23, hud_select 20 at both sizes, all under their ceilings | HUD time is report-only against the rendered 3.04 ms frame budget: within it at 1280x720 (1.538), over it at 2560x1080 (3.060 p95), reported, not enforced. `DRAW_CALL_CEILINGS["hud_select"]` = 30, set from the scratch calibration (max 20 at both sizes, 1.5 x rounded up to 10, owner question 2). No budget, ceiling or guard loosened; no `CEILING ALARM`. | [P2.3a1 verification](p2.3a1-verification.md) |
 | 2026-11-20 P2.3a1 gate C rerun on the final tree (`e075a7c8`, clean; Apple M6; `PERF_LABEL="P2.3a1 gate C" sh tools/run_benchmark.sh` then the rendered four layouts and both `--hud` rows; `uptime` 3.11 / 2.13 / 1.79 at start (13:44, right after the suite), 1.24 at the headless end (13:52), 2.49 / 2.29 / 1.92 at the end (13:59); host under load during the rendered part (a debugging agent ran fresh Godot imports in another worktree); **measured**) | p95 / p99 ms | headless: `PAIR GATE PASSED 3` (p95 medians dense 1.0005, hordes300 0.9969, open 1.0032), `BUDGET EXCEEDED open dense hordes300` as before (report only), `recorded 24 rows, run 1`; rendered frame interval: open 0.482 / 2.123, dense 1.261 / 2.630, ashfall 1.984 / 3.500, horde 0.498 / 3.824; `hud_select_1280x720` 1.705 / 2.581, `hud_select_2560x1080` 3.215 / 7.431; draw calls open 3, dense 4, horde 4, ashfall 23, hud_select 20 at both sizes | Rerun because the gate C fixes touched `game/scripts/match/` after gate B. All draw calls under their ceilings; HUD time report-only: within 3.04 at 1280x720, over it at 2560x1080 (3.215 p95, 3.060 at gate B). No budget, ceiling or guard loosened; no `CEILING ALARM`. | [P2.3a1 verification](p2.3a1-verification.md) |
+| 2026-11-22 night 14 gate benchmark (branch `honest-speed-report` at `990ac6f5`, clean; Apple M6; `PERF_LABEL="night 14 honest speed report" sh tools/run_benchmark.sh` alone after `wait-quiet.sh` exit 0; `uptime` load 2.36 / 2.93 / 2.63 at start (00:17), 2.30 / 2.32 / 2.41 at end (00:22); **measured**) | p95 / mean ms | `LOCKSTEP BUDGET PASS` p99 0.067 (limit 0.6), `BUDGET EXCEEDED open dense hordes300` as on `main`, `PAIR GATE SKIPPED` (`game/` unchanged), `recorded 26 rows, run 1`. Goal rows: team-match upkeep (plumbing) mean 1.1163 ms against 0.91 (over); 3v3 sim-only `step` p95 2.174 ms (mean 1.3737) against 1.82 (over); bots + sim `team_tick` p95 2.878 ms (mean 1.5418) against 1.82 (over) | No budget, limit, noise or assumed slowdown changed. All three goal rows over their limit. | [honest speed report verification](honest-speed-report-verification.md) |
 
 **Budget misses decisions (user, 2026-11-14).** From the budget misses note of the Sim quick wins night: F stays 5.5 (the combat rows' browser F 5.2 would loosen every budget by 6 %, and the movement rows measure 6.2-6.55); hordes300 stays accepted as exceeded and guarded by its regression ceiling (since the benchmark pair gate a report-only drift alarm; regressions: [pair gate](#pair-gate-benchmark-pair-gate-2026-11-19)) (it fails on the Deck itself, row above); the plumbing budget 0.91 ms stays, now with the Deck plumbing row above (movement and team rows at 91-94 % of the 5 ms target natively, horde and large rows over it); the hand-off plumbing rows go into `perf-history.csv` at the next quiet gate, so the status table shows today's definition; one Mac Firefox `Web Render Bench` row joins the next window batch (the web rendered rows are from 2026-11-10); the stress rows were judged on the Deck in Firefox once (row above), as evidence; the budget rule stays Mac ÷ F.
 
