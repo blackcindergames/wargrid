@@ -5,15 +5,15 @@ Evidence file and resume record for night 8, [Play on after a leave](../superpow
 ## Resume record
 
 ```text
-Resume record (updated 2026-11-21, Task 5 reapplied with review fixes, GREEN, uncommitted)
-Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD bbdfbea8 (Allowed test edits amended); Task 5 game files reapplied from logs/t5-parked.patch plus review fixes, uncommitted
-Last green task / next incomplete task: Task 5 (online driver passes the note) / Task 6b (unparks once Task 5 is committed)
-Changed paths since last commit: game/scripts/match/online_driver.gd, game/tests/test_sim_pump.gd, docs/reference/play-on-after-a-leave-verification.md
-Last command / cases / checks / failures / exit / marker: SUITE(t5r) / 1275 / 152821 / 0 / 0 / TESTS PASSED 152821; TRACES(t5r) REPLAYS MATCHED x4; STATIC(t5r) lint 0, warnings 0 (189 files), python 0; PUMP_COUNTS offline 10, online 9; mutations (a) quiet return, (b) no third argument, (c) [] each exit 1, reverted (checksums equal the post-apply state)
+Resume record (updated 2026-11-21, Task 6b GREEN after review fix round, uncommitted)
+Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD 25fb4721 (Task 5 committed); Task 6b game/scripts/net/headless_client.gd uncommitted
+Last green task / next incomplete task: Task 6b (headless client --pump) / Task 7
+Changed paths since last commit: game/scripts/net/headless_client.gd, docs/reference/play-on-after-a-leave-verification.md
+Last command / cases / checks / failures / exit / marker: SUITE(t6bf) / 1275 / 152814 / 0 / 0 / TESTS PASSED 152814; STATIC(t6bf) lint 0, warnings 0 (189 files); NET match 9013 and left-mid PASSED; by hand with --pump on s1: left-mid PASSED, defeat 2@300 on both seats ends both at 301 with both DEFEAT lines (5 of 5 runs, 2 with s2 stalled at 295), match PASSED 9013 with --seat-script human
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: owner answers Q2 a, Q3 a, Q4 a, Q5 a, Q6 a, Q7 b, Q8 a, Q9 a, Q10 b, Q11 b, Q12 a, Q20 a (user, 2026-11-21); Q19 a (user, 2026-11-19); test-only helpers used by new test_pal_* cases allowed (user, 2026-11-21); Q1, Q13-Q18 moot; backup B1 F42 spike only (user, 2026-11-21). Pre-authorized: one local commit per GREEN task (handoff). Deferred: merge decision, rendered rerun after a merge (game/scripts/match/ changes), CI wall times of the four new netplay scenarios (need the owner's push).
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: coordinator commits Task 5, then Task 6b
+Next exact action: coordinator commits Task 6b, then Task 7
 ```
 
 Ledger, rulings and morning summary: `ledger.md`, `morning-summary.md` in the run's work folder `~/projects/wargrid-overnight-work/play-on/` (private). Logs: `logs/` there.
@@ -61,7 +61,7 @@ Filled by Task 1 Step 3 (`rg -n '^(static )?(func|var|const|class) <name>\b' <fi
 | 4c | Three-seat `Skirmish.create` and starts | GREEN | eb2c3ffa |
 | 5 | Online driver passes the note | GREEN (uncommitted), reapplied after the helper ruling; review fix round done (P3-1: closes-room case pins `notice() == ""`, killed by the `_close_room` relay-loss mutant; `_single_until` merged into `_trio_until`) | (coordinator commits) |
 | 6a | Headless client: three seats, `--defeat` | GREEN, review fix round done (P2-1: removal repeats until FRC rebuild holes are gone) | ba4cc3ee |
-| 6b | Headless client: `--pump` with the credit clamp | parked (needs 5 committed) | |
+| 6b | Headless client: `--pump` with the credit clamp | GREEN (uncommitted), review fix round done (P1-1/P2-1: one tick per call, only after that tick's hooks and script ran; pumped `match` back at 9013); `--pump` exercised by hand, scenarios in Task 7 | (coordinator commits) |
 | 7 | Netplay scenarios (trio x3, `left-mid-pump`) | not started | |
 | 8 | Docs | not started | |
 | 9 | Gate (checks, netplay, benchmark, reviews) | not started | |
@@ -72,7 +72,7 @@ Filled by Task 1 Step 3 (`rg -n '^(static )?(func|var|const|class) <name>\b' <fi
 
 - The online oracle stays two-seat; three-seat netplay scenarios skip it (Task 6a).
 - `--pump` runs the driver's `_finish`, which overwrites `user://netplay-latency.txt` on the machine (Task 6b).
-- The `--pump` credit clamp acts only on `--defeat` hook ticks (Task 6b).
+- `--pump` takes one tick per driver call, so the headless client never runs the driver's two-tick catch-up (Task 6b).
 - The driver's `_last.tick == _next_tick` guard cannot be observed on the inline pump; kept for SB5a (Task 5).
 
 ## Evidence
