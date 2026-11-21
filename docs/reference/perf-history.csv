@@ -1519,3 +1519,27 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-21,fe9089ee,auto fe9089ee,dev,plumbing,combat_hordes300:profile,1,,,1.9285,P1,2.24,log sha256:364a2081b724
 2026-11-21,fe9089ee,auto fe9089ee,dev,plumbing,team_match:profile,1,,,1.1182,P1,2.24,log sha256:364a2081b724
 2026-11-21,fe9089ee,auto fe9089ee,dev,plumbing,team_match_pump:profile,1,,,1.1251,P1,2.24,log sha256:364a2081b724
+2026-11-21,6c329a01,night 8 play on after a leave,dev,movement_tick,open,1,0.749,0.838,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,movement_tick,dense,1,0.735,0.849,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,open,1,1.879,2.227,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,dense,1,1.839,2.143,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,contact,1,1.186,1.546,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,skirmish3v3,1,1.341,1.446,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,transports,1,1.122,1.217,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,defences,1,0.789,2.115,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,docks,1,0.582,0.605,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,hordes300,1,2.914,3.387,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,ramp,1,0.662,1.206,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,combat_tick,frc,1,0.885,1.081,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,lockstep_overhead,contact,1,0.016,0.067,,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,movement_open:profile,1,,,1.3008,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,movement_dense:profile,1,,,1.3001,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,combat_contact:profile,1,,,0.3312,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5316,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,combat_open:profile,1,,,0.8943,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,skirmish_match:profile,1,,,0.2433,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,large_196:profile,1,,,1.7016,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,combat_dense:profile,1,,,0.7777,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,combat_hordes300:profile,1,,,1.9321,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,team_match:profile,1,,,1.1175,P1,1.25,log sha256:ff8cfc417a5b
+2026-11-21,6c329a01,night 8 play on after a leave,dev,plumbing,team_match_pump:profile,1,,,1.1167,P1,1.25,log sha256:ff8cfc417a5b
