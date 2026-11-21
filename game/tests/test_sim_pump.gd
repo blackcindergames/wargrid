@@ -15,6 +15,7 @@ const TeamMatch = preload("res://scripts/debug/team_match.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const Wire = preload("res://scripts/net/wire.gd")
+const MatchSettings = preload("res://scripts/match_settings.gd")
 const FACTIONS := {1: "usa", 2: "china"}
 const MATCH_TICKS: int = 900
 const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
@@ -40,8 +41,45 @@ class PairTransport extends RefCounted:
 	func close() -> void: pass
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
+# Forwards a seat's ticks to the other two seats, as the relay does.
+class TrioEnd extends RefCounted:
+	var patient: bool = false
+	var relay
+	var seat: int = 0
+	var inbox := PackedStringArray()
+	var others: Array[String] = []
+	var order := RelayFrameOrder.new()
+	func poll() -> PackedStringArray:
+		var out := inbox
+		inbox = PackedStringArray()
+		return out
+	func send_text(text: String) -> void:
+		if not order.accepts(text): push_error("relay refused: %s" % text)
+		if Wire.decode(text).message.get("type") == "tick": relay.forward(seat, text)
+		else: others.append(text)
+	func closed() -> bool: return false
+	func silent(_now: int) -> bool: return false
+	func close() -> void: pass
+	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
+
+class TrioRelay extends RefCounted:
+	var ends: Array = []
+	func _init() -> void:
+		for seat in [1, 2, 3]:
+			var end := TrioEnd.new()
+			end.relay = self
+			end.seat = seat
+			ends.append(end)
+	func forward(from: int, text: String) -> void:
+		for end in ends:
+			if end.seat != from: end.inbox.append(text)
+	func leave(seat: int, after_tick: int) -> void:
+		var text: String = Wire.encode({"type": "left", "seat": seat, "after_tick": after_tick})
+		for end in ends:
+			if end.seat != seat: end.inbox.append(text)
+
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_driver_play_on_then_end_closes_room]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -860,4 +898,103 @@ func test_pal_note_carries_survivors(runner) -> bool:
 	var note = pump.drain()[0]
 	runner.check(note.survivors == [1, 2, 3], "PAL the job's note carries the survivors after its step, got %s" % [note.survivors])
 	runner.check(SimPump.new(_trio_sim()).start().survivors == [1, 2, 3], "PAL a note from a job without a step carries survivors")
+	return true
+
+func _trio_drivers() -> Dictionary:
+	var relay := TrioRelay.new()
+	var starts: Array[int] = MatchSettings.starts("broken_crown", 7, [1, 2, 3] as Array[int])
+	var drivers: Array = []
+	for seat in [1, 2, 3]:
+		var driver = OnlineDriver.new(relay.ends[seat - 1], Lockstep.new(seat, [1, 2, 3] as Array[int]), "usa", seat)
+		var sim: RefCounted = Skirmish.create(true, "human", {1: "usa", 2: "usa", 3: "usa"}, MatchSettings.map_path("broken_crown"), starts, 3)
+		_defeat(sim, 2)
+		driver.adopt(sim)
+		drivers.append(driver)
+	for driver in drivers: driver.start()
+	return {"drivers": drivers, "relay": relay}
+
+func _trio_frames(drivers: Array, frames: int) -> void:
+	for frame in frames:
+		for driver in drivers:
+			driver.step()
+			driver.drain()
+
+func _trio_until(drivers: Array, tick: int, single: bool = false) -> bool:
+	for frame in 400:
+		if drivers.all(func(driver) -> bool: return driver.current().tick >= tick): return not single or drivers.all(func(driver) -> bool: return driver.current().tick == tick)
+		if not single: _trio_frames(drivers, 1)
+		for driver in drivers:
+			if single and driver.current().tick < tick: _single(driver)
+	return false
+
+func _single(driver) -> void:
+	# The driver has no public cap; one tick per call lets a test stop exactly on a tick.
+	driver._credit = 0
+	driver.step()
+	driver.drain()
+
+func _last_sent(trio: Dictionary, seat: int) -> int:
+	return trio.relay.ends[seat - 1].order._last
+
+func test_pal_three_drivers_play_on(runner) -> bool:
+	var trio: Dictionary = _trio_drivers()
+	var drivers: Array = trio.drivers
+	runner.check(_trio_until(drivers, 40), "PAL fixture: three drivers reach tick 40")
+	trio.relay.leave(2, _last_sent(trio, 2))
+	var rest: Array = [drivers[0], drivers[2]]
+	_trio_frames(rest, 150)
+	var one = drivers[0]
+	var three = drivers[2]
+	runner.check(one._lockstep.status() == "running" and three._lockstep.status() == "running" and one.current().tick > 45 and three.current().tick > 45, "PAL a defeated seat's leave lets the others play on, got %s %s at %d %d" % [one._lockstep.status(), three._lockstep.status(), one.current().tick, three.current().tick])
+	var rows: PackedStringArray = one._lockstep.hash_rows()
+	var other: PackedStringArray = three._lockstep.hash_rows()
+	var common: int = mini(rows.size(), other.size())
+	runner.check(common >= 4 and rows.slice(0, common) == other.slice(0, common), "PAL digests stay equal on %d common rows" % common)
+	trio.relay.leave(3, _last_sent(trio, 3))
+	_trio_frames([one], 60)
+	runner.check(one._lockstep.status() == "ended_left" and one._lockstep.left_seat() == 3 and one._lockstep.end_reason() == "player 3 disconnected", "PAL seat 3 leaving later ends the match, got %s seat %d" % [one._lockstep.status(), one._lockstep.left_seat()])
+	runner.check(trio.relay.ends.all(func(end) -> bool: return end.order.refusals.is_empty()), "PAL every frame is legal at the relay")
+	trio.relay.ends.clear()
+	return true
+
+func test_pal_driver_quiet_defers_verdict(runner) -> bool:
+	var trio: Dictionary = _trio_drivers()
+	var one = trio.drivers[0]
+	var three = trio.drivers[2]
+	runner.check(_trio_until(trio.drivers, 40), "PAL fixture: three drivers reach tick 40")
+	var a: int = _last_sent(trio, 2)
+	trio.relay.leave(2, a)
+	for guard in 30:
+		if one.current().tick >= a: break
+		_single(one)
+	for guard in 30:
+		if _last_sent(trio, 3) > a: break
+		_single(three)
+	runner.check(one.current().tick == a and _last_sent(trio, 3) > a, "PAL fixture: seat 1 waits at A %d (at %d), seat 3 sent past it" % [a, one.current().tick])
+	one._credit = 3
+	one.step()
+	one.drain()
+	runner.check(one.current().tick == a + 1, "PAL the call took A and only A, now at %d" % one.current().tick)
+	runner.check(one._lockstep.can_step(a + 1) and one._credit >= 1, "PAL the A + 1 packets were in hand with credit left (%d)" % one._credit)
+	runner.check(one._lockstep.status() == "running", "PAL a quiet take keeps the status, got %s" % one._lockstep.status())
+	_single(one)
+	runner.check(one._lockstep.status() == "running" and one.current().tick == a + 2, "PAL the next loud take plays on at A + 1, got %s at %d" % [one._lockstep.status(), one.current().tick])
+	trio.relay.ends.clear()
+	return true
+
+func test_pal_driver_play_on_then_end_closes_room(runner) -> bool:
+	var trio: Dictionary = _trio_drivers()
+	var one = trio.drivers[0]
+	var rest: Array = [one, trio.drivers[2]]
+	runner.check(_trio_until(trio.drivers, 40), "PAL fixture: three drivers reach tick 40")
+	trio.relay.leave(2, _last_sent(trio, 2))
+	var end_tick: int = 80
+	runner.check(_trio_until(rest, end_tick, true),"PAL fixture: both drivers stand on tick %d, got %d %d" % [end_tick, one.current().tick, rest[1].current().tick])
+	for driver in rest: _defeat(driver.pump.live(), 3)
+	for frame in 60:
+		if one.over(): break
+		for driver in rest: _single(driver)
+	runner.check(one.over() and one._phase == "done" and not one.can_play_again(), "PAL a played-on match that ends closes the room, phase %s" % one._phase)
+	runner.check(one.rematch_line() == "Your friend left" and not one.opponent_left() and one.notice() == "", "PAL the line says the friend left, not a relay loss, got '%s' notice '%s'" % [one.rematch_line(), one.notice()])
+	trio.relay.ends.clear()
 	return true

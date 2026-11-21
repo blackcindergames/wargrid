@@ -113,7 +113,7 @@ func step() -> void:
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
 	for i in CATCH_UP_STEPS:
 		if _credit < 1 or _last.over or _stopped: break
-		var commands: Variant = _lockstep.take(_next_tick, not _taken.is_empty())
+		var commands: Variant = _lockstep.take(_next_tick, not _taken.is_empty(), _last.survivors if _last.tick == _next_tick else null)
 		if commands == null: break
 		_credit -= 1
 		var last: bool = i == CATCH_UP_STEPS - 1 or _credit < 1 or not _lockstep.can_step(_next_tick + 1)
