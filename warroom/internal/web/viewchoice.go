@@ -105,7 +105,6 @@ type LabView struct {
 }
 
 type ChoiceView struct {
-	Chips               []Chip
 	Head                HeadView
 	Info                InfoView
 	Note                NoteView
@@ -113,7 +112,6 @@ type ChoiceView struct {
 	Side                bool
 	Shown               string
 	Kind                string
-	Flip                []FlipButton
 	ViewHref, ViewLabel string
 	Ctl                 CtlBarView
 	Opts                []OptView
@@ -149,14 +147,13 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 	st := b.stage(s)
 	side := b.side(s)
 	v := ChoiceView{
-		Chips: b.chips(n - 1), Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n, "Skip"), Side: side, Kind: s.Kind,
+		Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n, "Skip"), Side: side, Kind: s.Kind,
 		Shown: b.shown(s), Form: FormView{pickURL(b.round, s, b.carry()), s.ChipKey()},
 	}
 	v.Note = b.noteBox(s, hint)
 	v.Opts = b.options(st, s, v.Shown)
 	v.Ctl = b.ctlBar(n, st, s)
 	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, Cp: b.rec(s), Neutral: s.Neutral}
-	v.Flip = b.flipBar(s, v.Shown)
 	v.ViewHref, v.ViewLabel = b.viewToggle(n, s, v.Shown)
 	if s.Kind == "lab" {
 		v.Lab = b.lab(n, s)

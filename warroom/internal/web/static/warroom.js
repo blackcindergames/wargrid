@@ -812,12 +812,7 @@ function fitBanners() {
 
 // On a phone the step strip scrolls sideways, and the current step may start out of view.
 function showCurrentChip() {
-	const strip = $('#chips');
-	const on = $('#chips [aria-current=step]');
-	if (!strip || !on) return;
-	const s = strip.getBoundingClientRect();
-	const r = on.getBoundingClientRect();
-	strip.scrollLeft += r.left - s.left - (s.width - r.width) / 2;
+	$('#chips [aria-current=step]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
 }
 
 function init() {

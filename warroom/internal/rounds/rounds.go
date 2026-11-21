@@ -461,9 +461,6 @@ const (
 func (c *Catalog) checkLengths(r *Round) {
 	for i := range r.Loaded {
 		s := &r.Loaded[i]
-		if s.Kind == KindMissing {
-			continue
-		}
 		where := r.ID + "/" + s.Key
 		c.warnLength(where, "question", s.Question, maxQuestionLen)
 		for _, l := range s.OptionLetters() {

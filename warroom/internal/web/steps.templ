@@ -321,10 +321,10 @@ templ LeftPanel(chips []Chip, h HeadView, i InfoView) {
 	</div>
 }
 
-templ ChoiceMain(v ChoiceView) {
+templ ChoiceMain(v ChoiceView, chips []Chip) {
 	<main id="main" class={ "step", "choice", "k-" + v.Kind, viewClass(v.Side) }>
 		<div class="lpanel">
-			@ChipNav(v.Chips)
+			@ChipNav(chips)
 			@Head(v.Head, v.Info) {
 				@About(v.Opts)
 			}

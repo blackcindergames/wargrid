@@ -59,7 +59,7 @@ func (b *builder) stepBody(n int, s *rounds.Step, record, hint string) (templ.Co
 		return TuneMain(b.tune(n, s, record, hint), chips), &plain
 	}
 	v := b.choice(n, s, record, hint)
-	return ChoiceMain(v), b.choicePhone(n, s, &v)
+	return ChoiceMain(v, chips), b.choicePhone(n, s, &v)
 }
 
 func (b *builder) stepPageView(errs []string, n int, record, hint string) *PageView {

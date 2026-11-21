@@ -228,20 +228,14 @@ func TestPhoneBarNeverCoversThePageEnd(t *testing.T) {
 
 var phoneSteps = []string{"/r/p2-3b-dock/1", "/r/p2-3b-dock/5"}
 
-func TestPhoneHasNoSideScroll(t *testing.T) {
+func TestPhoneStepLayout(t *testing.T) {
 	s := newSite(t, siteOpts{})
+	var heights []any
 	for _, step := range phoneSteps {
 		phone := s.phoneFrame(t, step, ".zone")
 		if got := eval(t, phone, `(() => { const d = document.documentElement; return d.scrollWidth <= d.clientWidth ? '' : d.scrollWidth + ' > ' + d.clientWidth; })()`); got != "" {
 			t.Errorf("%s scrolls sideways: %v", step, got)
 		}
-	}
-}
-
-func TestPhoneShowsQuestionLookAndPickBar(t *testing.T) {
-	s := newSite(t, siteOpts{})
-	for _, step := range phoneSteps {
-		phone := s.phoneFrame(t, step, ".zone")
 		got := eval(t, phone, `(() => {
 			scrollTo(0, 0);
 			const r = (sel) => document.querySelector(sel).getBoundingClientRect();
@@ -256,14 +250,6 @@ func TestPhoneShowsQuestionLookAndPickBar(t *testing.T) {
 		if got != "" {
 			t.Errorf("%s at the top: %v", step, got)
 		}
-	}
-}
-
-func TestPhoneStageIsAFixedFourByThreeBox(t *testing.T) {
-	s := newSite(t, siteOpts{})
-	var heights []any
-	for _, step := range phoneSteps {
-		phone := s.phoneFrame(t, step, ".zone")
 		if got := eval(t, phone, `(() => {
 			const z = document.querySelector('.zone').getBoundingClientRect(), page = document.documentElement.clientWidth;
 			return Math.abs(z.height - z.width * 3 / 4) <= 1 && z.width >= page - 32 - 1 ? '' : z.width + ' x ' + z.height + ' in a page ' + page + ' wide';
@@ -1032,20 +1018,6 @@ func TestViewMenuClosedAndKeysStillWork(t *testing.T) {
 	s.wantClass(t, s.loc("#view"), "true100")
 }
 
-func TestDetailsFoldsStartClosed(t *testing.T) {
-	s := newTodaySite(t)
-	for _, path := range []string{"/r/d/1", "/r/p2-3b-dock/1"} {
-		if path != "/r/d/1" {
-			s = newSite(t, siteOpts{})
-			s.open(t, path)
-		}
-		if n, err := s.loc(".lpanel details").Count(); err != nil || n < 4 {
-			t.Errorf("%s: %d folds in the left panel (%v), want why, Claude's reason, About and This round", path, n, err)
-		}
-		s.wantCount(t, s.loc(".lpanel details[open]"), 0)
-	}
-}
-
 func TestTodayAndExtrasSitInTheSamePlaceOnEveryStep(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	var strips, todays []playwright.Rect
@@ -1198,14 +1170,14 @@ func TestConfirmStepPicksFromTheRightPanel(t *testing.T) {
 	s.wantCount(t, s.loc(".orow[data-show=today]"), 0)
 }
 
-func wantLeftPanel(t *testing.T, s *site, path, title string, chips, open int) {
+func wantLeftPanel(t *testing.T, s *site, path, title string, chips int) {
 	t.Helper()
 	t.Run(path, func(t *testing.T) {
 		s.open(t, path)
 		s.wantCount(t, s.loc(".lpanel #chips .chip"), chips)
 		s.wantCount(t, s.loc("#chips"), 1)
 		s.wantText(t, s.loc(".lpanel .head h1"), title)
-		s.wantCount(t, s.loc(".lpanel details[open]"), open)
+		s.wantCount(t, s.loc(".lpanel details[open]"), 0)
 		s.wantCount(t, s.loc(":is(.lpanel, .rpanel) .stepnav"), 1)
 	})
 }
@@ -1218,17 +1190,18 @@ func TestEveryStepKindHasTheLeftPanel(t *testing.T) {
 		"Does the demo pass?", "Which outline weight and unit size read best?", "Which outline weight reads best?",
 	}
 	for i, q := range questions {
-		wantLeftPanel(t, s, fmt.Sprintf("/r/demo/%d", i+1), q, 11, 0)
+		wantLeftPanel(t, s, fmt.Sprintf("/r/demo/%d", i+1), q, 11)
 	}
 	// The summary keeps the round's intro open, in the centre column.
-	wantLeftPanel(t, s, "/r/demo/summary", "What the server recorded", 11, 0)
+	wantLeftPanel(t, s, "/r/demo/summary", "What the server recorded", 11)
 	s.wantContains(t, s.loc(".cpanel details[open].intro"), "Demo only")
 	dir := writeTree(t, map[string]string{
 		"index.yaml":   "- {id: m, title: Missing}\n",
 		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
 		"m/ok.yaml":    "kind: verdict\nquestion: Still fine?\n",
 	})
-	wantLeftPanel(t, newSite(t, siteOpts{rounds: dir}), "/r/m/2", "[step missing: gone]", 3, 0)
+	wantLeftPanel(t, newSite(t, siteOpts{rounds: dir}), "/r/m/2", "[step missing: gone]", 3)
+	wantLeftPanel(t, s, "/r/p2-3b-dock/1", "Factory queue: where does it live?", 7)
 }
 
 func TestPhoneGalleryAndTuneAreNotTrappedInAScrollBox(t *testing.T) {

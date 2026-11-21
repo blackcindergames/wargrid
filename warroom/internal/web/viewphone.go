@@ -103,7 +103,7 @@ func (b *builder) phoneBase(n int, ctl CtlBarView) PhoneView {
 
 func (b *builder) choicePhone(n int, s *rounds.Step, v *ChoiceView) *PhoneView {
 	p := b.phoneBase(n, v.Ctl)
-	p.Flip, p.Shown, p.Cp, p.Confirm, p.Pick = v.Flip, v.Shown, v.Act.Cp, v.Act.Confirm, !v.Act.Confirm
+	p.Flip, p.Shown, p.Cp, p.Confirm, p.Pick = b.flipBar(s, v.Shown), v.Shown, v.Act.Cp, v.Act.Confirm, !v.Act.Confirm
 	p.Neutral, p.Play, p.Note = s.Neutral, s.Kind == "audio", true
 	if len(s.Options) > 1 {
 		p.ViewHref, p.ViewLabel = v.ViewHref, "Side"
