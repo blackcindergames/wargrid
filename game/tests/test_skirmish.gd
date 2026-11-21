@@ -21,7 +21,7 @@ const ASHFALL := "res://data/maps/ashfall.json"
 const CHOSEN: Array[int] = [5, 1]
 
 func cases() -> Array[Callable]:
-	return [test_bot_seats_decide_on_their_own_ticks, test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_four_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_wave_targets_base_unless_enemy_near, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
+	return [test_bot_seats_decide_on_their_own_ticks, test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_five_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_wave_targets_base_unless_enemy_near, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
 
 func _owned(items: Array, player: int) -> Array:
 	return items.filter(func(item: Dictionary) -> bool: return item.owner == player)
@@ -511,16 +511,16 @@ func _run_collector_bot(faction: String, ticks: int):
 
 func test_bot_collectors_per_supply_center(runner) -> bool:
 	var usa = _run_collector_bot("usa", 3600)
-	runner.check(_count_collectors(usa, "usa_collector") == 2, "SK-C1 a USA bot runs two collectors per supply center, got %d" % _count_collectors(usa, "usa_collector"))
-	runner.check(Registry.faction("usa").bot_collectors_per_supply_center == 2 and Registry.faction("china").bot_collectors_per_supply_center == 3 and Registry.faction("frc").bot_collectors_per_supply_center == 5, "SK-C3 faction values are USA 2, China 3, FRC 5")
+	runner.check(_count_collectors(usa, "usa_collector") == 3, "SK-C1 a USA bot runs three collectors per supply center, got %d" % _count_collectors(usa, "usa_collector"))
+	runner.check(Registry.faction("usa").bot_collectors_per_supply_center == 3 and Registry.faction("china").bot_collectors_per_supply_center == 4 and Registry.faction("frc").bot_collectors_per_supply_center == 6, "SK-C3 faction values are USA 3, China 4, FRC 6")
 	var china = _run_collector_bot("china", 3600)
-	runner.check(_count_collectors(china, "china_collector") == 3, "SK-C2 a China bot runs three, got %d" % _count_collectors(china, "china_collector"))
+	runner.check(_count_collectors(china, "china_collector") == 4, "SK-C2 a China bot runs four, got %d" % _count_collectors(china, "china_collector"))
 	var lost: int = usa.snapshot().entities.filter(func(u: Dictionary) -> bool: return u.owner == 2 and u.kind == "usa_collector")[0].id
 	usa.remove_object(lost)
 	for tick in range(900):
 		Skirmish.issue_opponent(usa, 2)
 		usa.step()
-	runner.check(_count_collectors(usa, "usa_collector") == 2, "SK-C4 a lost collector is replaced, got %d" % _count_collectors(usa, "usa_collector"))
+	runner.check(_count_collectors(usa, "usa_collector") == 3, "SK-C4 a lost collector is replaced, got %d" % _count_collectors(usa, "usa_collector"))
 	return true
 
 func _two_depot_collectors(faction: String, kind: String) -> int:
@@ -542,11 +542,11 @@ func _two_depot_collectors(faction: String, kind: String) -> int:
 	return _count_collectors(sim, kind) if second else -1
 
 func test_bot_counts_queued_collectors(runner) -> bool:
-	runner.check(_two_depot_collectors("usa", "usa_collector") == 4, "SK-C5 two supply centers, a USA bot owns exactly 4, got %d" % _two_depot_collectors("usa", "usa_collector"))
-	runner.check(_two_depot_collectors("china", "china_collector") == 6, "SK-C5 two supply centers, a China bot owns exactly 6, got %d" % _two_depot_collectors("china", "china_collector"))
+	runner.check(_two_depot_collectors("usa", "usa_collector") == 6, "SK-C5 two supply centers, a USA bot owns exactly 6, got %d" % _two_depot_collectors("usa", "usa_collector"))
+	runner.check(_two_depot_collectors("china", "china_collector") == 8, "SK-C5 two supply centers, a China bot owns exactly 8, got %d" % _two_depot_collectors("china", "china_collector"))
 	return true
 
-func test_bot_keeps_one_builder_four_gatherers(runner) -> bool:
+func test_bot_keeps_one_builder_five_gatherers(runner) -> bool:
 	var sim = Skirmish.create(true, "ai", {1: "usa", 2: "frc"})
 	var queued: bool = false
 	for tick in range(3000):

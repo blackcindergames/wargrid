@@ -3,21 +3,22 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 12:57)
-Branch / base commit / working-tree state: p7-enemy-bots / 6bd58ff3 + plan 194048e0 / this file new
-Last green task / next incomplete task: T1-1 (probe, no code) / T1-2
-Changed paths since last commit: docs/reference/p7-verification.md
-Last command / cases / checks / failures / exit / marker: baseline suite on 194048e0: CASES 1250 CHECKS 152754 FAILURES 0 / exit 0 / TESTS PASSED; T1-1 probe 1,350 matches, 0 errors
-Known red case or blocker: none
+Resume record (updated 2026-11-21 13:01)
+Branch / base commit / working-tree state: p7-enemy-bots / 3e074b6d / T1-2 changes uncommitted: factions.gd, test_skirmish.gd, test_bot_rules.gd (new), run_tests.gd, this file
+Last green task / next incomplete task: T1-2 (BR1, red set as expected, not committed) / T1-3
+Changed paths since last commit: game/scripts/simulation/definitions/factions.gd, game/tests/test_skirmish.gd, game/tests/test_bot_rules.gd, game/tests/run_tests.gd, docs/reference/p7-verification.md
+Last command / cases / checks / failures / exit / marker: full suite on the T1-2 tree: CASES 1251 CHECKS 152757 FAILURES 10 / exit 1 / no TESTS PASSED (expected red, all on the re-pin list); lint 0, warnings 0 (190 files)
+Known red case or blocker: the 10 names in the red ledger (re-pin at T1-10)
 Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: T1-2
+Next exact action: review and commit T1-2, then T1-3
 ```
 
 ## Red ledger
 
 | Task | `FAIL:` names left red | On the re-pin list |
 |---|---|---|
+| T1-2 | TB3 final digest (tick 20000); TB4 team core series; S1 core series; Fm1 pinned outcome (27098, winner 2); Cs1 pinned outcome (10343, winner 2); VR1 view reads digest and VR1 same digest through set_view; S1 pinned outcome (-1 ongoing); S1 terminal inside the six-minute window; S1 economy, production and combat | yes, all (T1-10) |
 
 ## Evidence
 
@@ -44,3 +45,6 @@ Medians rise in both 1v1 slots (the stop condition does not fire), means by only
 
 Not run here: the 150 s rule, wave-level rows (the variant's waves are not logged; stock `BL` waves unchanged).
 
+### T1-2 BR1
+
+Tree: `p7-enemy-bots` at `3e074b6d` plus the uncommitted T1-2 changes. Red first: `test_bot_collector_quota_per_supply_centre` (new `test_bot_rules.gd`, in `run_tests.gd` `SUITES`) failed 3 of 3 checks before the change (quota 2/3/5, USA 2 and China 3 collectors). Then `factions.gd` quota 3/4/6; SK-C1 to SK-C5 rewritten to 3/4/6 (two supply centres: USA 6, China 8). `test_bot_rules`: CASES 1 CHECKS 3 FAILURES 0. `test_skirmish*`: CASES 131 CHECKS 958 FAILURES 6 (S1 x3 plus core series, Cs1, Fm1). Full suite: CASES 1251 CHECKS 152757 FAILURES 10, exit 1 (no `TESTS PASSED`); R4's 16 minus the 6 SK-C checks is 10. `sh tools/run_lint.sh` exit 0; `sh tools/run_warnings.sh` exit 0, 190 files. Baseline skipped, passed on `194048e0`; `3e074b6d` only adds docs.
