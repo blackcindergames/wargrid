@@ -3,15 +3,15 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 21:00)
-Branch / base commit / working-tree state: p7-enemy-bots / 2f8b3d8d (T1-6b committed) / T1-7 built and green, uncommitted, awaiting review
-Last green task / next incomplete task: T1-7 (built, mutation-checked, not yet reviewed or committed) / T1-8 (tune; Broken Crown 1v2 floor, wave growth, owner window check)
-Changed paths since last commit: game/scripts/simulation/skirmish.gd, game/tests/test_bot_rules.gd, docs/reference/p7-verification.md
-Last command / cases / checks / failures / exit / marker: full suite on the T1-7 tree CASES 1312 CHECKS 152904 FAILURES 9 / exit 1 / no TESTS PASSED (expected red, the T1-6b names); lint exit 0, warnings exit 0 (190 files), sim_boundary and sim_math OK, check_public passed
+Resume record (updated 2026-11-21 21:40)
+Branch / base commit / working-tree state: p7-enemy-bots / e648c744 (T1-7 committed) / code unchanged (defaults kept); this file and the plan carry T1-8 and the owner decisions after it, uncommitted
+Last green task / next incomplete task: T1-7 / T1-8b (behaviour-identical cost cut, committed after this record) / T1-8a BR7: owner window check found infantry-only waves; BR7 kill check failed; retrospective first (2026-11-22)
+Changed paths since last commit: none (T1-8 docs and T1-8b committed 2026-11-21 late)
+Last command / cases / checks / failures / exit / marker: full suite with WAVE0_UNITS 4 (build/suite-T1-8.log) CASES 1316 CHECKS 152909 FAILURES 63 / exit 1 / no TESTS PASSED (9 re-pin names plus 54 others); lint exit 0, warnings exit 0 (190 files); then reverted to 16
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
-Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); kill checks C and D decisions (user, 2026-11-21; plan "After kill check C/D"); gate review Gemini Neon high plus Opus high (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate; open: 1v2 floor fails on every tree (T1-8 `WAVE0_UNITS`), wave growth at T1-8, fast-unit chipping watched at the T1-8 window check, Fm1 winner at T1-10
+Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); kill checks C and D decisions (user, 2026-11-21; plan "After kill check C/D"); gate review Gemini Neon high plus Opus high (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate; T1-8 decisions and BR7 (user, 2026-11-21; plan "After T1-8's first matrix", "After the owner window check"); open: BR7 shape after its failed kill check (owner, after the retrospective), T1-8c, Fm1 winner at T1-10
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: one Opus high review of the T1-7 diff (skirmish.gd, test_bot_rules.gd), then the local commit (approval item a), then T1-8
+Next exact action: P7 retrospective (private p7-retro-prompt.txt), then the owner decides BR7's shape (second kill check or a simpler cut)
 ```
 
 ## Red ledger
@@ -242,3 +242,77 @@ Mutations on the final code (each made named tests fail, then reverted): no rais
 Results: `test_bot_rules` CASES 59 CHECKS 143 FAILURES 0; `test_defences` 19/109/0; `test_skirmish*` CASES 131 CHECKS 959 FAILURES 5 (S1 2, Cs1, Fm1, HUD1). Full suite (`build/suite-T1-7.log`): CASES 1312 CHECKS 152904 FAILURES 9, exit 1 (no `TESTS PASSED`), the T1-6b names, all on the re-pin list (moved values in the ledger row). `sh tools/run_lint.sh` exit 0; `sh tools/run_warnings.sh` exit 0, 190 files; `tools/test_sim_boundary.py` and `tools/test_sim_math.py` OK; `sh tools/check_public.sh` passed. `sim-interface.md` unchanged (no `bot_state` or team entry key changed). Not checked: the cost of `_form`'s per-decision objective and defence scan (benchmark at the gate), human play, the Broken Crown 1v2 floor (T1-8).
 
 Fix round (review findings 1-5): (1) the release decision cost 10-61 ms on late-game enemy lists, as `_softer` ran a whole-array `_defences` per candidate. Now `_form` first compares the ready cost with the unraised target and returns before any victim, objective or defence work when it is short and not at the wait cap (defences only raise the target, so the decision is the same); `_armed` filters completed armed buildings once per `_form`; `_guards` answers one defence against one goal in O(1): the objective point, then only the route steps whose distance along the line is within `DEF_REACH` + half the defence's diagonal + 1 of its centre's projection, after a perpendicular-distance reject with the same bound; `_softer` stops at the first counting defence. Equivalence (`build/br6_equiv.gd`, the T1-7 `_defences` and `_softer` kept as copies): 400 random layouts (1-3 players, 2-12 buildings and 0-8 batteries or Tunnel Hubs each, 10 % unfinished, tanks, maps 24-160 cells, rallies on and off cell centres) plus a 1x1 battery at every cell of a 50 x 46 grid around three routes: 15,904 goals, 32,389 counted defences, 275 softer picks, 0 mismatches in the counted-defence ids or the softer pick. Release decision (objective's defence count plus `_softer`; 3 players x 150 tanks, 30 buildings, 6 batteries each): 28-48 ms before, 1.6-2.9 ms after, over maps of 160, 60 and 30 cells. (3) The route spacing is `ROUTE_STEP` 8, no longer `DEF_REACH`. (2, 4) New cases: `test_softer_takes_best_score_not_first_or_nearest` (a barracks 14.6 cells off, score 24, beats a nearer headquarters, 23, and the lowest-id one), `test_retarget_follows_br5_order_not_id` (wave 0 is retargeted to player 4; wave 1's retarget then goes to never-attacked player 5), `test_route_points_every_8_cells` (a battery near the 24-cell point, more than `DEF_REACH` from the 16- and 32-cell points), `test_defence_route_starts_at_team_mean_rally` (Broken Crown, a battery on the line from the team mean rally, off the line from the forming bot's rally). Mutations (each red, then reverted, logs `build/mut-fix-*.log`): `_softer` returns `open[0].id` (the first) or the lowest id: the score case and the mean-rally case fail; the nearest: the score case fails; players after the first by id: the BR5-order case fails; `ROUTE_STEP` 16: the 8-cell case and the mean-rally case fail; the forming bot's own rally as line origin: the mean-rally case fails. These four cases were written after the fix, so their red evidence is the mutations only. Results: `test_bot_rules` CASES 63 CHECKS 148 FAILURES 0; full suite (`build/suite-T1-7.log`) CASES 1316 CHECKS 152909 FAILURES 9, exit 1, the nine re-pin names with the T1-7 values (no pin moved); `sh tools/run_lint.sh` exit 0; `sh tools/run_warnings.sh` exit 0, 190 files; `tools/test_sim_boundary.py` OK; `sh tools/check_public.sh` passed.
+
+### T1-8 Tune
+
+Result: STOPPED for the owner. At defaults every hard bar passes except the Broken Crown 1v2 floor. Among the allowed constants only `WAVE0_UNITS` 4 passes it. With 4, every hard bar passes on the full matrix, but 54 checks outside the re-pin list turn red. The worktree code is back at `WAVE0_UNITS` 16 (equal to `e648c744`); nothing is committed and no window check was asked for. Full report private: `t1-8.md` (`~/projects/wargrid-overnight-work/p7-enemy-bots/`). Raw rows, probe, builder and analysis: `~/projects/wargrid-private/docs/better-bots/probe/p7/` (`out-t18-*.jsonl`, `t18/`).
+
+Tree: `p7-enemy-bots` at `e648c744`. Probe runs come from scratch exports of that commit under `build/t18/` (git-ignored). Each export adds logging-only lines in `_form`: at every launch the team entry gets the ready cost, the target, the counted defences and whether `_softer` retargeted. Constants are overridden per export. The instrumented tree and the plain worktree give equal rows on two smoke matches (Ashfall 2,6 `usa,frc` and Broken Crown 2v2 `usa,usa,frc,frc`, seed 0) apart from wall time and the new fields. Matrix: the T1-5 job set, 603 jobs, `ctrl=human`, 4 workers, one writer per output file. Every run parsed with 603 distinct keys and 0 interleaved rows. Compared with T1-1's stock `human` rows; column 2 noise is stock paired with itself on seeds +1 to +4.
+
+| Bar (decided wording, user 2026-11-21) | Floor / noise | Defaults (`DEF_UNITS` 4, `DEF_REACH` 8, `WAVE0_UNITS` 16) | `WAVE0_UNITS` 4 |
+|---|---|---|---|
+| 7-13 floor DW / A26 / A37 / BC, 1v1 | 7,414 / 10,698 / 10,314 / 7,887 | 7,683 / 10,954 / 10,582 / 8,045 | 8,068 / 11,252 / 10,843 / 8,443 |
+| 7-13 floor Broken Crown 1v2 | 7,887 | **7,574 (fails, 15 of 81 rows below)** | 8,177 (0 below) |
+| Column 1 (excluding seats that lose a decided match) | all | 79/79 | 84/84 |
+| Column 2 DW / A26 / A37 | lowest shift 34 / 22 / 29 | 38 / 28 / 31 | 34 / 30 / 31 |
+| Column 2 Broken Crown 2v2, one group | lowest shift 71 of 78 | 75 | 72 |
+| Wave 0 per team | ≤ 16 | max 16, median 9 | max 4, median 4 |
+| Stricter: column 1 as worded in 7-12 | all | 175/190 (fails) | 176/190 (fails) |
+| Stricter: column 2 against the median shift (DW 34.5, A26 23.5, A37 29.5, BC 71.5; BC 1,2,3,4 36.5, 3,4,1,2 35) | median | passes every group | fails DW (34) and BC 1,2,3,4 (36) |
+| Stricter: column 2 as worded (every stock-ended row still ends) | 179 | 172 (fails; only DW passes) | 167 (fails; only A26 passes) |
+
+Report only, defaults / `WAVE0_UNITS` 4:
+- Reach, bot vs bot: BB 0.516 / 0.478; BC 2v2 0.600 / 0.568.
+- Minute-6 fighting units, median: BB seat 1 and 2 50 and 51 / 46 and 52; BC 2v2 teams 72 and 75 / 86 and 84.
+- No winner by the cap: BB 6 / 6 of 135; BC 2v2 4 / 7 of 90.
+- Largest seat or team win share: 0.71 / 0.76 (Ashfall 2,6), against stock's 0.77.
+
+**Wave growth (defaults; team launches, all rows).**
+
+| Wave | Released by | Met target | Target / ready cost at release, median | Gap to next launch, median (min-max) |
+|---|---|---|---|---|
+| 0 | timer 828 | 828/828 | 4,248 / 7,450 | 2,700 (2,700-4,500) |
+| 1 | timer 628, size 128, wait cap 5 | 756/761 | 6,372 / 8,500 | 4,500 (2,700-5,640) |
+| 2 | wait cap 254, size 180, timer 52 | 232/486 | 8,496 / 8,038 | 3,600 (1,800-5,880) |
+| 3 | wait cap 316, size 29, timer 3 | 32/348 | 10,620 / 5,613 | 3,600 (1,800-9,360) |
+| 4-10 | wait cap 970 of 982 | 10/982 | 12,744-18,432 / 1,913-5,250 | 3,600 |
+
+From wave 3 on, waves meet their target 42 times in 1,330 at defaults (74 of 1,335 with 4). In practice they leave at the wait cap every 3,600 ticks with what has gathered, and the ready cost shrinks to about 2,000 while targets climb to 16,992. 150 s rule: `released_by` is *timer* for 686 of 2,577 waves 1 on (0.266; with 4, 0.344), under half, so the `WAVE_GAPS` 4,500 rerun was not required and was not run. BR6 at defaults: 699 raised waves (waves 1 on), 206 retargets; wave 0 had a counted defence 150 times (no raise).
+
+**Tuning.** `DEF_UNITS` and `DEF_REACH` cannot move the failing bar: an idle seat has nothing armed, so BR6 counts no defence. Subset: Broken Crown 1v2 idle, 81 jobs per value.
+
+| `WAVE0_UNITS` | 16 | 14 | 12 | 10 | 8 | 6 | 5 | 4 |
+|---|---|---|---|---|---|---|---|---|
+| 1v2 idle defeat, min (bar 7,887) | 7,574 | 7,574 | 7,573 | 7,622 | 7,770 | 7,841 | 7,841 | 8,177 |
+| Rows below | 15 | 15 | 15 | 12 | 12 | 6 | 6 | 0 |
+
+The idle seat owns one building, and the two bots' wave 0 destroys it before wave 1 is due. 5 splits 2 + 3 between the bots and fails like 6. The cap is per team, so 4 also caps a lone 1v1 bot's wave 0 at 4 units (median 8 at defaults). Full matrix with 4: every hard bar passes (table above); column 2 then sits exactly on the lowest shift on Dry Wells (34) and in the BC 1,2,3,4 order (36).
+
+Suite with `WAVE0_UNITS` 4 (`build/suite-T1-8.log`): CASES 1316 CHECKS 152909 FAILURES 63, exit 1, no `TESTS PASSED`.
+- The nine re-pin names moved: TB3 digest ff48f65c2235a469; TB4 core series 8868501172089059650; S1 core series 2192880208930555981; S1 pinned outcome 11400, winner 1; Fm1 35126, winner 2; Cs1 23852, winner 2. VR1 digest is unchanged (both checks); HUD1 texts are red.
+- **54 more checks fail.** They are BR3-BR6 cases in `test_bot_rules.gd` and the wave checks W2, W3, W10 and T1-T5, whose fixture wave is wave 0 with 5-10 units. Only `test_wave_zero_takes_at_most_16` asserts the cap itself.
+- `sh tools/run_lint.sh` exit 0; `sh tools/run_warnings.sh` exit 0, 190 files.
+- By the red-ledger rule this is a regression outside the re-pin list, so the value was not kept.
+
+**Chip watch** (R's known gap). Fast enemy units (Scout Car, Armed Pickup) that fired at least 5 shots at a wave, were never shot by a wave unit and were alive at the wave's end: 152 on 129 of 4,592 waves at defaults; 334 on 192 of 4,796 with 4, mostly Armed Pickups. Let-go stamps: 3,210 on 1,968 waves at defaults. The probe counts shooters, not damage.
+
+Open for the owner: (1) `WAVE0_UNITS` 4, which makes every first wave 4 units and needs the 54 fixture checks rewritten, or another route for the 1v2 floor that changes a rule or a bar, which T1-8 may not apply; (2) wave growth: targets from wave 3 on are almost never met; (3) whether the fast-unit chipping count needs a rule. Then the owner window check. Not checked: human play, the window check, 150 s rows (rule not triggered), `WAVE0_UNITS` 1-3, `WAVE0_UNITS` 4 against its own shifted seeds.
+
+**After the owner's decisions (user, 2026-11-21).** Scoped-fix probe and stock 1v2 reference (private report `t1-8-scoped.md`; rows `out-t18x-*.jsonl`): stock bots (`git archive 194048e0`, `skirmish.gd` equal to `main` `6bd58ff3`, the T1-1 kit probe, `ctrl=human`) on the same 81 Broken Crown 1v2 idle jobs give a minimum of 7,413 (layouts 1,2,3 / 1,2,4 / 1,3,4: 7,930 / 7,413 / 7,796); 45 of the 81 stock rows are themselves below the 1v1 floor 7,887. The owner set the Broken Crown 1v2 floor to that stock 1v2 minimum, 7,413 (1v1 floors unchanged). Defaults pass it: minimum 7,574, 0 of 81 rows below, every layout above stock's (8,268 / 7,574 / 7,922). No constant changes; the code stays equal to `e648c744`, so its suite row is T1-7's (`build/suite-T1-7.log`, CASES 1316 CHECKS 152909 FAILURES 9, the re-pin names); `build/suite-T1-8.log` is the rejected `WAVE0_UNITS` 4 run.
+
+| Scoped variant (teams of 2+ bots only) | 1v2 min vs 7,887 | BC 2v2 column 2 (lowest 71) | BC 2v2 column 1 | Team wave 0 |
+|---|---|---|---|---|
+| defaults | 7,574 (15 below) | 75 | 38/38 | 16 max, 14 median |
+| (a) team wave 0 cap 4 | 8,177 | 72 | 41/41 | 4 |
+| (b) team wave 0 +450 ticks | 8,024 | 72 | 36/37 (fails) | 16 |
+| (b) team wave 0 +300 ticks | 7,874 (6 below) | 72 | 37/37 | 16 |
+
+Each variant changes about half of the 90 Broken Crown 2v2 outcomes and raises no-winner rows from 4 to 7-9; 1v1 smoke rows equal the defaults. Not taken. Wave growth stays as built and chipping is judged at the window check with a kiting step (plan "After T1-8's first matrix"). Not checked: stock shifted seeds for the 1v2 set (rows are seed-identical within a layout), human play.
+
+**Owner window check (user, 2026-11-21 late).** Offline 1v1 on Dry Wells against an FRC bot, owner China, tree `e648c744`: "the bot is only sending infantry waves, no vehicles, which against a rotary defense tower is really useless"; the bot had a Vehicle Yard and its first wave had vehicles. The match was not filed (no playtest card filled, `playtest_session.gd:58-63`), so it cannot be replayed. Probe rows agree: Dry Wells vehicle share of units, wave 0 / waves 1 on: usa 0.33 / 0.00-0.05, china 0.83 / 0.01-0.06, frc 1.00 / 0.00-0.02. Measured cause (private `vehicle-starvation-diagnosis.json`): `_produce` keeps no reserve; after the start credits the bot averages 165-444 credits and the factory is idle and short of its pick in 84-99 % of decisions; stock has the same rule; the dearest-first take sends every early vehicle in wave 0. Decision: BR7 (plan "After the owner window check").
+
+**BR7 kill check (private `br7-kill-check.md`, verdict `br7-kill-check-verdict.json`).** Scratch variants of `e648c744`, Dry Wells, 150 matches (bot vs bot, 9 faction pairs x 2 seeds; bot vs idle), shares 40 / 55 / 70 with `HOLD_LAPSE` 1,800 and 55 with 3,600. Result: fails the kill bar (vehicles in every wave from wave 2) in every variant. Where a factory stands vehicles reach 50-68 % of wave value; seats that lose their factory almost never rebuild it (the same starvation at the 2,000-2,500 rebuild); bot-vs-bot rows that no longer end rise from 0 to 1-2 of 18 (USA mirror never ends at share 70); FRC non-mirror wins drop from 3 to 0-1 of 8; matches about 50 % longer. A Fable verifier reproduced every number and rejected the proposed pick (share 70 best only for USA, worst for China; no match against the current bot; 2 seeds, 1 map). No values picked; the owner decides after the retrospective.
+
+### T1-8b BR6 decision cost
+
+Tree: `e648c744` plus `skirmish.gd` only (+47 / -25). `_form` filters enemy buildings once and passes them to `_victims`, `_pick` (its own unit fallback kept), `_armed`, `_row`, `_softer`; defence rectangles, centres and route windows are computed once per `_form` (`_defence_rects`, `DEFENCE_STRIDE` 7, `PackedFloat64Array`); `_guard_count` takes goal centre and line length once per candidate; `_guards` does no lookups or allocations per pair. Equivalence (scratch harness, old functions kept as copies): 0 mismatches over 9,004 goals and a 6,900-cell edge grid, and 0 over 1,500 whole `_form` decisions (objective, payloads, clock). Timing, in-process old vs new, 558 enemies, load 1.4-1.5: recurring decision 0.53-0.56 to 0.28-0.29 ms; release decision with defences 1.51-2.19 to 0.47-0.62 ms. `sh tools/run_profile.sh` before / after (load 1.4-2.1): team_match_pump `opponent.decide` max 2.264 / 2.250 ms, p95 1.439 / 1.441 ms, step max 8.877 / 8.916 ms (no measurable change: that match has few defences). Full suite CASES 1316 CHECKS 152909 FAILURES 9, exit 1, the nine re-pin names with the T1-7 values; lint exit 0, warnings exit 0 (190 files), `tools/test_sim_boundary.py` OK. Reviews: two Opus high reviewers (equivalence, claims), no findings. Research behind it (rejected: score-order early stop, spatial grid, caching between decisions): private `br6_cost.gd` / `br6_cost.log`.
