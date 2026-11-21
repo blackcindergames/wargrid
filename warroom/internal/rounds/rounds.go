@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode/utf8"
 	"wargrid/warroom/internal/store"
 
 	"github.com/goccy/go-yaml"
@@ -447,6 +448,35 @@ func (c *Catalog) validateRound(r *Round) {
 		c.validateStep(r, &r.Loaded[i])
 	}
 	c.checkBlindLetters(r)
+	c.checkLengths(r)
+}
+
+const (
+	maxQuestionLen = 70
+	maxNotesLen    = 90
+	maxLookLen     = 120
+)
+
+// checkLengths warns when a text will not fit the step layout's one-line slot; backticks are markup and do not count.
+func (c *Catalog) checkLengths(r *Round) {
+	for i := range r.Loaded {
+		s := &r.Loaded[i]
+		if s.Kind == KindMissing {
+			continue
+		}
+		where := r.ID + "/" + s.Key
+		c.warnLength(where, "question", s.Question, maxQuestionLen)
+		for _, l := range s.OptionLetters() {
+			c.warnLength(where+" option "+l, "notes", s.Options[l].Notes, maxNotesLen)
+		}
+		c.warnLength(where, "look", s.Look, maxLookLen)
+	}
+}
+
+func (c *Catalog) warnLength(where, field, text string, limit int) {
+	if n := utf8.RuneCountInString(strings.ReplaceAll(text, "`", "")); n > limit {
+		c.Warnings = append(c.Warnings, fmt.Sprintf("%s: %s is %d characters; keep it to one line (%d)", where, field, n, limit))
+	}
 }
 
 // checkBlindLetters warns when every blind step has Claude's pick at one letter: the owner would learn where the candidate sits.
