@@ -50,6 +50,19 @@ PROFILE movement_open zone=view.sort mean_ms=0.0550 share=8.5% p50=0.0550 p95=0.
 PROFILE COMPLETE 11
 """
 
+TEAM_PROFILE_LOG = """\
+PROFILE team_match.warmup zone=step mean_ms=9.0000 share=100.0% p50=9.0000 p95=9.0000 max=9.000 calls_per_tick=1.00
+PROFILE team_match.warmup zone=team.tick mean_ms=9.5000 share=105.0% p50=9.5000 p95=9.5000 max=9.500 calls_per_tick=1.00
+PROFILE team_match zone=team.tick mean_ms=1.5400 share=114.6% p50=1.3000 p95=2.8610 max=12.000 calls_per_tick=1.00
+PROFILE team_match zone=step mean_ms=1.3440 share=100.0% p50=1.2000 p95=2.1760 max=11.000 calls_per_tick=1.00
+PROFILE team_match zone=view_state mean_ms=0.4000 share=29.8% p50=0.4000 p95=0.5000 max=1.000 calls_per_tick=1.00
+PROFILE team_match zone=view.sort mean_ms=0.0500 share=3.7% p50=0.0500 p95=0.0600 max=0.100 calls_per_tick=1.00
+PROFILE team_match zone=view.batch mean_ms=0.6700 share=49.9% p50=0.6700 p95=0.8000 max=1.500 calls_per_tick=1.00
+PROFILE team_match_pump zone=step mean_ms=7.0000 share=100.0% p50=7.0000 p95=7.0000 max=7.000 calls_per_tick=1.00
+PROFILE team_match_pump zone=team.tick mean_ms=7.5000 share=107.0% p50=7.5000 p95=7.5000 max=7.500 calls_per_tick=1.00
+PROFILE COMPLETE 11
+"""
+
 HEADLESS_P95_OPEN = 0.707
 LOCKSTEP_P99 = 0.07
 
@@ -337,6 +350,32 @@ class PerfRecordTest(unittest.TestCase):
         s = {(x.metric, x.scenario): x for x in perf_record.parse_log(HANDOFF_PROFILE_LOG)}
         self.assertEqual(set(s), {("plumbing", "movement_open:profile")})
         self.assertAlmostEqual(s["plumbing", "movement_open:profile"].mean_ms or 0, 0.3022 + 0.0550 + 0.9335)
+
+    def test_team_match_profile_records_sim_rows(self) -> None:
+        s = {(x.metric, x.scenario): x for x in perf_record.parse_log(TEAM_PROFILE_LOG)}
+        self.assertIn(("step", "team_match:profile"), s)
+        self.assertEqual(s["step", "team_match:profile"].p95_ms, 2.176)
+        self.assertEqual(s["step", "team_match:profile"].mean_ms, 1.344)
+        self.assertIsNone(s["step", "team_match:profile"].p99_ms)
+        self.assertEqual(s["team_tick", "team_match:profile"].p95_ms, 2.861)
+        self.assertEqual(s["team_tick", "team_match:profile"].mean_ms, 1.54)
+        self.assertNotIn(("step", "team_match_pump:profile"), s)
+        self.assertNotIn(("team_tick", "team_match_pump:profile"), s)
+        self.assertAlmostEqual(s["plumbing", "team_match:profile"].mean_ms or 0, 0.4 + 0.05 + 0.67)
+
+    def test_team_rows_need_the_profile_marker(self) -> None:
+        log = TEAM_PROFILE_LOG.replace("PROFILE COMPLETE 11\n", "")
+        with self.assertRaisesRegex(ValueError, "missing marker: PROFILE COMPLETE 11"):
+            perf_record.parse_log(log)
+
+    def test_team_rows_written_with_p95_and_mean(self) -> None:
+        self.assertEqual(self.record(self.write_log("t.log", TEAM_PROFILE_LOG), "--method", "P1"), 0)
+        rows = [r for r in read_rows(self.csv) if r["metric"] == "team_tick"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["scenario"], "team_match:profile")
+        self.assertEqual(rows[0]["p95_ms"], "2.861")
+        self.assertEqual(rows[0]["mean_ms"], "1.54")
+        self.assertEqual(rows[0]["p99_ms"], "")
 
     def test_rendered_profile_with_view_state_zones(self) -> None:
         log = RENDERED_PROFILE_LOG.replace("zone=snapshot", "zone=view_state").replace(
