@@ -19,9 +19,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
 </p>
 
-![Two bots fight on the skirmish map: blue and red bases at opposite corners, supply piles beside them, and both armies clashing in the middle](docs/images/skirmish.png)
+![A match on Dry Wells: the player's blue USA riflemen and rocket troopers, selected with green markers, trade fire across open sand with red China infantry and a red tank. Supply piles sit at the top left and bottom right, credits and power run along the top edge, the selection panel at the bottom left reads 15 selected · 2 kinds with rows Rifleman 7 and Rocket Trooper 8, and the order buttons Attack move (A) and Stop (S) sit at the bottom right](docs/images/skirmish.webp)
 
-*Bot against bot on the skirmish map after 3:20 of game time (tick 6000). Drawn with the old placeholder shapes; 0.11.0 replaced them with the new geometric look, and a new screenshot follows.*
+![Ten seconds of the same fight up close: blue USA infantry advance and fire tracers at red China infantry and a tank advancing from the left; units fall on both sides](docs/images/skirmish-fight.webp)
+
+*USA against China on Dry Wells, both sides played by the skirmish bot, four seconds after the armies first met (3:41 of game time, tick 6630). Captured by a script, so it is redone whenever the look changes.*
 
 Wargrid is an isometric RTS written in Godot 4 and typed GDScript. Its design follows Zero Hour (factions, base building, supply economy, combat feel and pacing); the code is Wargrid's own and leaves out the original's known bugs and slow paths. Not affiliated with or endorsed by Electronic Arts, see [License](#license).
 
