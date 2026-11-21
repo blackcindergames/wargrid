@@ -155,7 +155,8 @@ func (b *builder) claudePick(s *rounds.Step) *ClaudePick {
 }
 
 func (b *builder) head(n int, s *rounds.Step, record string) HeadView {
-	h := HeadView{Eyebrow: b.round.Title + " · Step " + strconv.Itoa(n) + " of " + strconv.Itoa(b.steps()), Record: record}
+	// Step first: the one-line eyebrow's ellipsis may cut only the round title.
+	h := HeadView{Eyebrow: "Step " + strconv.Itoa(n) + " of " + strconv.Itoa(b.steps()) + " · " + b.round.Title, Record: record}
 	if s.Question != "" {
 		h.Question = s.Question
 	} else {

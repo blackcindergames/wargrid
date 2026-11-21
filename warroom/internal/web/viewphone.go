@@ -23,7 +23,7 @@ type PhoneView struct {
 }
 
 // maxFlipInRow: more option buttons than this get their own rows, so each stays a thumb wide.
-const maxFlipInRow = 4
+const maxFlipInRow = 3
 
 func (p *PhoneView) FlipRow() bool { return len(p.Flip) > maxFlipInRow }
 

@@ -219,6 +219,13 @@ function scaleNote() {
 	const el = $('.v-flip .ostage:not([hidden]) .pic[data-cw], .k-gallery .gmain .pic[data-cw]');
 	const sc = el?.clientWidth ? el.clientWidth / Number(el.dataset.cw) : 1;
 	const dpr = devicePixelRatio || 1;
+	const pct = Math.abs(sc - 1) > 0.02 ? `${String(Math.round(sc * 100))} %` : '';
+	// The status line is one line: there the note only completes its Fit or True 100 % value.
+	if (out.closest('.status')) {
+		const t100 = $('#view')?.classList.contains('true100');
+		out.textContent = t100 ? (dpr === 1 ? '' : ` (screen scale ${String(dpr)})`) : pct && ` ${pct}`;
+		return;
+	}
 	if ($('#view')?.classList.contains('true100')) {
 		const note =
 			dpr === 1
@@ -226,11 +233,18 @@ function scaleNote() {
 				: ` (screen scale ${String(dpr)}, so it looks ${dpr > 1 ? 'smaller' : 'larger'} than in a game window of that size)`;
 		out.textContent = `True 100 %: one picture pixel per screen pixel${note}.`;
 	} else {
-		out.textContent = Math.abs(sc - 1) > 0.02 ? `Shown at ${String(Math.round(sc * 100))} % of game pixels.` : '';
+		out.textContent = pct && `Shown at ${pct} of game pixels.`;
 	}
 }
 
 // ---------- options ----------
+
+// The fade says the list goes on below its box.
+function markMoreOpts() {
+	const list = $('.rpanel .opts');
+	const more = $('.rpanel .omore');
+	if (list && more) more.hidden = list.scrollTop + list.clientHeight >= list.scrollHeight - 1;
+}
 
 // Option letters only: Today is never a flip or swipe step, just key 0 or its own row.
 const flipLetters = () => $$('.opts .orow:not(.today)').map((b) => b.dataset.show);
@@ -603,6 +617,13 @@ const CLICKS = [
 		},
 	],
 	[
+		'summary',
+		(el) => {
+			// Like a row: a fold kept focused by a click would take the next Enter instead of Pick.
+			if (!el.matches(':focus-visible')) el.blur();
+		},
+	],
+	[
 		'.ohd[data-pick]',
 		(el) => {
 			showOption(el.dataset.pick ?? '');
@@ -693,7 +714,7 @@ function onKey(e) {
 	// Tweakpane's sliders are focusable divs that take the arrow keys themselves.
 	if (e.key !== 'Enter' && closestOf(e.target, 'wr-tune')) return;
 	const k = keyName(e);
-	if ((k === 'enter' || k === ' ') && ['BUTTON', 'A'].includes(tag)) return;
+	if ((k === 'enter' || k === ' ') && ['BUTTON', 'A', 'SUMMARY'].includes(tag)) return;
 	if (overOpen()) {
 		if (k === '?') toggleLegend();
 		return;
@@ -766,13 +787,32 @@ function onSwap() {
 		lastMain = main;
 		stopMedia();
 		closeOver();
-		if ($('#nhint')?.textContent) focusNote();
+		if ($('#main [data-note][autofocus]')) focusNote();
 	}
 	init();
 	renderFailures();
 }
 
+// The fixed zones fill the window below the read-only or error banner.
+function fitBanners() {
+	const h = $$('#view > :is(#err, #readonly)').reduce((sum, el) => sum + el.offsetHeight, 0);
+	rootEl.style.setProperty('--banner', `${String(h)}px`);
+}
+
+// On a phone the step strip scrolls sideways, and the current step may start out of view.
+function showCurrentChip() {
+	const strip = $('#chips');
+	const on = $('#chips [aria-current=step]');
+	if (!strip || !on) return;
+	const s = strip.getBoundingClientRect();
+	const r = on.getBoundingClientRect();
+	strip.scrollLeft += r.left - s.left - (s.width - r.width) / 2;
+}
+
 function init() {
+	fitBanners();
+	showCurrentChip();
+	markMoreOpts();
 	forgetGoneFrames();
 	renderMeasures();
 	askMeasures();
@@ -832,8 +872,18 @@ document.addEventListener(
 document.addEventListener('touchstart', onTouch, { passive: true });
 document.addEventListener('touchend', onTouch);
 addEventListener('resize', () => {
+	fitBanners();
+	markMoreOpts();
 	scaleNote();
 	syncPhone();
 });
+// Scroll does not bubble, so the Options list's is caught on the way down.
+document.addEventListener(
+	'scroll',
+	(e) => {
+		if (closestOf(e.target, '.rpanel .opts')) markMoreOpts();
+	},
+	true,
+);
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
 else start();

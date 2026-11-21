@@ -474,7 +474,7 @@ func TestOptionsPastDFlipWithDigitsOnlyAndSideBySideWraps(t *testing.T) {
 			t.Errorf("an option took the control key %s", taken)
 		}
 	}
-	mustContain(t, "side", a.get("/r/m/1?view=side").Body.String(), "--n:4", `data-opt="F"`)
+	mustContain(t, "side", a.get("/r/m/1?view=side").Body.String(), "--n:3", `data-opt="F"`)
 	mustContain(t, "phone", a.get("/r/m/1?phone=1").Body.String(), `class="row opts"`)
 	if strings.Contains(a.get("/r/m/2?phone=1").Body.String(), `class="row opts"`) {
 		t.Error("two options got their own phone row")
@@ -496,8 +496,8 @@ func TestStepIntroStartsClosed(t *testing.T) {
 	mustContain(t, "demo step 4", shipped.get("/r/demo/4?t="+roundToken("demo")).Body.String(), `<details class="intro">`, "Demo only: judge on any screen.")
 }
 
-func TestSideBySideKeepsTheRefTileBesideFourOptions(t *testing.T) {
-	mustContain(t, "ref and four", manyOptionsApp(t).get("/r/m/3?view=side").Body.String(), "--n:5", "reft")
+func TestSideBySideCountsTheRefTileInItsGrid(t *testing.T) {
+	mustContain(t, "ref and four", manyOptionsApp(t).get("/r/m/3?view=side").Body.String(), "--n:3", "reft")
 }
 
 func TestBlindStepsShowNoMeasurementsBeforeThePick(t *testing.T) {
@@ -591,7 +591,44 @@ func TestStatusListsOnlyViewValues(t *testing.T) {
 		{Name: "world", Value: "n/a with a backdrop", Disabled: true},
 		{Name: "numbers", Value: "shown"},
 	}}
-	if got := bar.Status(); got != "1280 x 720 · Fit" {
+	var names []string
+	for _, b := range bar.StatusItems() {
+		names = append(names, b.Value)
+	}
+	if got := strings.Join(names, " · "); got != "1280 x 720 · Fit" {
 		t.Errorf("status %q, want only the view values", got)
 	}
+	if got := bar.Vision(); got != "Normal vision" {
+		t.Errorf("vision %q without a colour-vision control, want Normal vision", got)
+	}
+	bar.Buttons = append(bar.Buttons, CtlButton{Name: "cvd", Value: "Deuteranopia"})
+	if got := bar.Vision(); got != "Deuteranopia vision" || len(bar.StatusItems()) != 2 {
+		t.Errorf("vision %q and %d items, want Deuteranopia vision kept out of the list", got, len(bar.StatusItems()))
+	}
+}
+
+func TestLabStepHasNoTodayRow(t *testing.T) {
+	_, v := choiceOf(t, "kind: lab\nquestion: Q\nurl: docs/a.txt\nref: {label: Today, img: docs/a.txt}\noptions:\n  A: {name: a}\n  B: {name: b}\n", "")
+	var out strings.Builder
+	if err := Options(v).Render(t.Context(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), `data-show="today"`) {
+		t.Error("a lab step shows a Today row, but its stage has no Today picture")
+	}
+}
+
+func TestNoteHasAPlaceholderNotALabel(t *testing.T) {
+	a := newShippedApp(t)
+	for path, want := range map[string]string{
+		"/r/demo/10": `placeholder="Note for Claude (optional)"`,
+		"/r/demo/2":  `placeholder="Note (say what to change, or anything else)"`,
+	} {
+		body := a.get(path).Body.String()
+		mustContain(t, path, body, want, `aria-label="`)
+		if strings.Contains(body, `<label for="note"`) {
+			t.Errorf("%s: the note still has a visible label", path)
+		}
+	}
+	mustContain(t, "/r/demo/10", a.get("/r/demo/10").Body.String(), `aria-label="Optional note for Claude (saved with your pick)"`)
 }

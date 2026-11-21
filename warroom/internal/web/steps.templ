@@ -108,15 +108,12 @@ templ Act(v ChoiceView) {
 	</div>
 }
 
-// NeutralAnswer is the neutral button with the line under it that says what it records.
+// The tooltip says what the neutral answer records (user, 2026-11-21: no visible hint line).
+const neutralTitle = "Records no winner. Say why in the note."
+
 templ NeutralAnswer(neutral string) {
 	if neutral != "" && !isReadOnly(ctx) {
-		<span class="nwrap">
-			@PickButton("neither", "neutral btn", "") {
-				{ neutral }
-			}
-			<span class="nexplain">Records no winner. Say why in the note.</span>
-		</span>
+		<button type="submit" form="answer" name="pick" value="neither" class="neutral btn" title={ neutralTitle }>{ neutral }</button>
 	}
 }
 
@@ -202,8 +199,23 @@ templ Tiles(v ChoiceView) {
 templ StatusLine(v ChoiceView) {
 	<div class="status">
 		<p class="stxt">
-			{ v.Ctl.Status() }
-			<span class="scale"></span>
+			<span class="sv">
+				for i, b := range v.Ctl.StatusItems() {
+					if i > 0 {
+						{ " · " }
+					}
+					{ b.Value }
+					if b.Name == "fit" {
+						<span class="scale"></span>
+					}
+				}
+			</span>
+			<span class="vis">
+				if len(v.Ctl.StatusItems()) > 0 {
+					{ " · " }
+				}
+				{ v.Ctl.Vision() }
+			</span>
 		</p>
 		if v.ViewHref != "" {
 			<a class="btn sm" href={ templ.SafeURL(v.ViewHref) } data-key="w" data-keepview>
@@ -234,6 +246,9 @@ templ MoreOf(v ChoiceView) {
 				}
 			</div>
 		}
+		if !v.Side {
+			@Measures(v.Opts)
+		}
 	</section>
 }
 
@@ -242,6 +257,9 @@ templ About(opts []OptView) {
 		if o.HasAbout() {
 			<details class="about" data-opt={ o.Letter } hidden?={ !o.On }>
 				<summary>About { o.Letter }</summary>
+				if o.LongNotes {
+					<p class="onotes">@Fmt(o.Notes)</p>
+				}
 				if o.Sees != "" {
 					<p class="sees"><span class="h">What you see</span>@Fmt(o.Sees)</p>
 				}
@@ -270,12 +288,12 @@ templ OptRow(o OptView) {
 	</button>
 }
 
-// Options is the right panel: Today (one at a time only; side by side has its tile) and the option rows, with Pick, the note and the step buttons directly under them.
+// Options is the right panel: Today (one at a time only; side by side has its tile) and the option rows, with Pick, the note and the step buttons at one height under them.
 templ Options(v ChoiceView) {
 	<div class="rpanel">
 		<span class="h">Options</span>
 		<div class="opts" role="group" aria-label="Options">
-			if v.Ref != nil && !v.Side {
+			if v.Ref != nil && !v.Side && v.Lab == nil {
 				<button type="button" class="orow today" data-show="today" data-key="0">
 					<span class="ot">
 						@Kbd("0")
@@ -287,6 +305,7 @@ templ Options(v ChoiceView) {
 				@OptRow(o)
 			}
 		</div>
+		<span class="omore" aria-hidden="true" hidden>▾ more</span>
 		@Act(v)
 		@NoteBox(v.Note)
 		@StepNav(v.Nav)
@@ -318,9 +337,6 @@ templ ChoiceMain(v ChoiceView) {
 			}
 			@StatusLine(v)
 			@MoreOf(v)
-			if !v.Side {
-				@Measures(v.Opts)
-			}
 		</div>
 		@Options(v)
 	</main>
@@ -392,9 +408,11 @@ templ GalleryMain(v GalleryView, chips []Chip) {
 templ VerdictMain(v VerdictStepView, chips []Chip) {
 	<main id="main" class="step k-verdict">
 		@LeftPanel(chips, v.Head, v.Info) {
-			@VerdictBox(v.Verdict)
 			@StepNav(v.Nav)
 		}
+		<div class="cpanel">
+			@VerdictBox(v.Verdict)
+		</div>
 	</main>
 	@AnswerForm(v.Form)
 }
@@ -456,13 +474,13 @@ templ MissingMain(v MissingView, chips []Chip) {
 		<div class="lpanel">
 			@ChipNav(chips)
 			<section class="head">
-				<span class="n">{ v.Eyebrow }</span>
+				<span class="n" title={ v.Eyebrow }>{ v.Eyebrow }</span>
 				<h1>[step missing: { v.Key }]</h1>
 			</section>
+			@StepNav(v.Nav)
 		</div>
 		<div class="cpanel">
 			<p class="missing">{ v.Path } did not load.</p>
-			@StepNav(v.Nav)
 		</div>
 	</main>
 }
@@ -513,12 +531,13 @@ templ SummaryMain(v SummaryView, nav NavView, chips []Chip) {
 		<div class="lpanel">
 			@ChipNav(chips)
 			<section class="head">
-				<span class="n">{ v.Eyebrow }</span>
+				<span class="n" title={ v.Eyebrow }>{ v.Eyebrow }</span>
 				<h1>{ v.Title }</h1>
 			</section>
-			@Intro(v.Intro, true)
+			@StepNav(nav)
 		</div>
 		<div class="cpanel">
+			@Intro(v.Intro, true)
 			<div id="sum">
 				<h2>{ v.Main.Title } <span class="cnt">{ v.Main.Count }</span></h2>
 				@SumTable(v.Main.Rows)
@@ -547,7 +566,6 @@ templ SummaryMain(v SummaryView, nav NavView, chips []Chip) {
 					}
 				}
 			</div>
-			@StepNav(nav)
 		</div>
 	</main>
 }

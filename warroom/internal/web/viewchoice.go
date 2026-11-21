@@ -35,13 +35,14 @@ type OptView struct {
 	Card                 *CardView
 	Audio                *AudioView
 	Sees, Notes, Changes string
-	Folds                []FoldView
-	Extras               []FigureView
+	// LongNotes: past the loader's limit the row's two lines may cut the notes, so About repeats them.
+	LongNotes bool
+	Folds     []FoldView
+	Extras    []FigureView
 }
 
-// HasAbout leaves out notes: the option's row already shows them.
 func (o *OptView) HasAbout() bool {
-	return o.Sees != "" || o.Changes != "" || len(o.Folds) > 0
+	return o.Sees != "" || o.Changes != "" || len(o.Folds) > 0 || o.LongNotes
 }
 
 type FlipButton struct {
@@ -69,14 +70,25 @@ type CtlBarView struct {
 	Buttons []CtlButton
 }
 
-func (c CtlBarView) Status() string {
-	var values []string
+// StatusItems are the view values the status line lists; colour vision has its own place at the end.
+func (c CtlBarView) StatusItems() []CtlButton {
+	var out []CtlButton
 	for i := range c.Buttons {
-		if b := &c.Buttons[i]; b.Name != "numbers" && !b.Disabled {
-			values = append(values, b.Value)
+		if b := &c.Buttons[i]; b.Name != "numbers" && b.Name != "cvd" && !b.Disabled {
+			out = append(out, *b)
 		}
 	}
-	return strings.Join(values, " · ")
+	return out
+}
+
+// Vision is always named, so a page without the control still says the colours are as seen normally.
+func (c CtlBarView) Vision() string {
+	for i := range c.Buttons {
+		if b := &c.Buttons[i]; b.Name == "cvd" {
+			return b.Value + " vision"
+		}
+	}
+	return "Normal vision"
 }
 
 type ActView struct {
@@ -158,12 +170,14 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 }
 
 func (b *builder) noteBox(s *rounds.Step, hint string) NoteView {
-	label := "Optional note for Claude (saved with your pick)"
+	label, placeholder := "Optional note for Claude (saved with your pick)", "Note for Claude (optional)"
 	if s.IsConfirm() {
 		label = "Note (say what to change, or anything else)"
+		placeholder = label
 	}
 	n := b.note(s, s.Key, "note", label)
-	n.InForm, n.Hint = true, hint
+	// The hint sits in the empty note it asks for, so it never moves Pick.
+	n.InForm, n.Hint, n.Placeholder = true, hint, cmp.Or(hint, placeholder)
 	return n
 }
 
@@ -273,6 +287,7 @@ func textCard(s *rounds.Step, o *rounds.Option) *CardView {
 
 func (b *builder) fillText(v *OptView, pb picBuilder, s *rounds.Step, o *rounds.Option) {
 	v.Sees, v.Notes, v.Changes = o.Sees, o.Notes, o.Changes
+	v.LongNotes = rounds.TextLen(o.Notes) > rounds.MaxNotesLen
 	crop := s.Crop
 	if o.Render != nil && o.Render.Crop != nil {
 		crop = o.Render.Crop
@@ -335,12 +350,14 @@ func (b *builder) selectOf(c *stage.Ctl, cur string, n int) *SelectView {
 	return sel
 }
 
-// maxCols: past four options side by side the pictures get too small, so the grid wraps; the reference tile comes on top.
-const maxCols = 4
-
+// Cols fills the stage zone: two columns hold up to four tiles at a useful size, three hold five or six; Today counts as a tile.
 func (v *ChoiceView) Cols() int {
+	n := len(v.Opts)
 	if v.Ref != nil {
-		return min(len(v.Opts), maxCols) + 1
+		n++
 	}
-	return min(len(v.Opts), maxCols)
+	if n <= 4 {
+		return 2
+	}
+	return 3
 }

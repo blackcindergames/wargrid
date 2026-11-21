@@ -116,6 +116,9 @@ templ NoteField(n NoteView) {
 		if n.Placeholder != "" {
 			placeholder={ n.Placeholder }
 		}
+		if n.Label != "" {
+			aria-label={ n.Label }
+		}
 		autofocus?={ n.Hint != "" }
 		hx-post={ n.Post }
 		hx-target="#rec"
@@ -131,9 +134,7 @@ templ NoteField(n NoteView) {
 templ NoteBox(n NoteView) {
 	if !isReadOnly(ctx) {
 		<section class="notebox">
-			<label for={ n.ID } class="h">{ n.Label }</label>
 			@NoteField(n)
-			<p class="nhint" id="nhint">{ n.Hint }</p>
 		</section>
 	}
 }
@@ -156,7 +157,7 @@ templ Intro(text string, open bool) {
 // Head is the left panel: the question and "Look at" stay in view, everything longer folds away closed.
 templ Head(h HeadView, i InfoView) {
 	<section class="head">
-		<span class="n">{ h.Eyebrow }</span>
+		<span class="n" title={ h.Eyebrow }>{ h.Eyebrow }</span>
 		<h1>@Fmt(h.Question)</h1>
 		<p id="rec" class="rec" aria-live="polite">{ h.Record }</p>
 	</section>
@@ -338,7 +339,7 @@ templ PhoneBar(p PhoneView) {
 					<a class="btn sm" href={ templ.SafeURL(p.ViewHref) } data-keepview>{ p.ViewLabel }</a>
 				}
 				if p.Neutral != "" {
-					<button type="submit" form="answer" name="pick" value="neither" class="neutral btn sm">{ p.Neutral }</button>
+					<button type="submit" form="answer" name="pick" value="neither" class="neutral btn sm" title={ neutralTitle }>{ p.Neutral }</button>
 				}
 			</div>
 		}

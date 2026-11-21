@@ -56,7 +56,7 @@ Today `Info` opens `why` on desktop, and step 1 opens the intro. Both change to 
 - **Options list.**
   - First comes "Today" (from `ref`): a muted, dashed row on key 0, labelled `ref.label`. Choosing it shows the Today render on the full stage; it is viewing only, never a pick. T stays the built-in `tier` control, and digits 1 to 8 already pick A to H (user, 2026-11-21). While Today is shown, Pick is disabled and Enter does nothing, so no option can be recorded unseen. Showing Today is client-only, not URL state (my call).
   - Then a row for each of A to H: the keycap, the name, and `notes` as an always-visible line. The selected row is marked with `--sel`.
-- **Directly under the list, with no spacer:**
+- **Under the list, at one fixed position on every step** (the list scrolls in its own box and clamps `notes` to two lines; ruling and owner answer 2026-11-21):
   - `Pick X (Enter)`, letter only (cherry-picked `0158eb3c`; its width stays constant);
   - the neutral button with its hint;
   - the note field (`NoteBox`, moved here from the left);

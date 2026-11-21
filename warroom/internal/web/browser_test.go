@@ -611,7 +611,6 @@ func TestPhoneSideAndNeutralLiveInTheControlsSheet(t *testing.T) {
 	phone := s.phoneFrame(t, "/r/demo-controls/1", ".phone [data-act=sheet]")
 	bar := phone.Locator(".phone .row")
 	s.wantCount(t, bar.Locator("[value=neither]"), 0)
-	s.wantHidden(t, phone.Locator(".nexplain"))
 	s.wantCount(t, bar.Locator("[data-keepview]"), 0)
 	s.wantText(t, phone.Locator("[data-act=sheet]"), "Controls")
 	failIf(t, phone.Locator("[data-act=sheet]").Click())
@@ -680,7 +679,7 @@ func TestSideViewSharesThePickInTheRightPanel(t *testing.T) {
 	s.open(t, "/r/demo/10")
 	flip := s.rect(t, ".rpanel button.pick")
 	s.open(t, "/r/demo/10?view=side")
-	s.wantVisible(t, s.loc(".rpanel .act .pick + .nwrap [value=neither]"))
+	s.wantVisible(t, s.loc(".rpanel .act .pick + [value=neither]"))
 	s.wantCount(t, s.loc(".cpanel .act"), 0)
 	if side := s.rect(t, ".rpanel button.pick"); !near(side, flip) {
 		t.Errorf("Pick at %+v side by side, %+v one at a time", side, flip)
@@ -693,9 +692,9 @@ func TestSideViewSharesThePickInTheRightPanel(t *testing.T) {
 	}
 }
 
-// stackCheck says what is wrong with the right panel's order under the list: Pick, neutral and its hint, note, nav, each at most 16 px below the one before.
+// stackCheck says what is wrong with the right panel's order under the list: Pick, neutral, note, nav, each at most 16 px below the one before.
 const stackCheck = `() => {
-	const parts = ['.opts', '.act .pick', '.act [value=neither]', '.act .nexplain', '.notebox', '.stepnav'];
+	const parts = ['.opts', '.act .pick', '.act [value=neither]', '.notebox', '.stepnav'];
 	const r = parts.map((sel) => document.querySelector('.rpanel ' + sel).getBoundingClientRect());
 	const gaps = r.slice(1).map((x, i) => Math.round(x.top - r[i].bottom));
 	const ok = gaps.every((g) => g >= 0 && g <= 16) && r[1].height === 44;
@@ -710,35 +709,6 @@ func TestPickNeutralNoteAndNavFollowTheListWithNoSpacer(t *testing.T) {
 			t.Errorf("%s: %v", path, got)
 		}
 	}
-}
-
-func TestNeutralAnswerIsExplainedUnderItsRow(t *testing.T) {
-	const hint = "Records no winner. Say why in the note."
-	s := newSite(t, siteOpts{secret: testSecret})
-	tok := "t=" + roundToken("demo")
-	for _, path := range []string{"/r/demo/10?" + tok, "/r/demo/10?view=side&" + tok, "/r/demo/9?" + tok} {
-		s.open(t, path)
-		s.wantText(t, s.loc(".act .nexplain"), hint)
-		if c := cssOf(t, s.Page, ".nexplain", "", "color"); c != mutedRGB {
-			t.Errorf("%s: hint colour %v, want --muted %s", path, c, mutedRGB)
-		}
-		place := eval(t, s.Page, `(() => {
-			const r = (e) => e.getBoundingClientRect();
-			const hint = r(document.querySelector('.act .nexplain')), btn = r(document.querySelector('.act [value=neither]'));
-			const hits = [...document.querySelectorAll('.btn')].map(r).filter((b) => b.width && b.left < hint.right && hint.left < b.right && b.top < hint.bottom && hint.top < b.bottom);
-			return Math.abs(hint.left - btn.left) < 1 && hint.top >= btn.bottom && hint.top - btn.bottom <= 8 && hits.length === 0
-				? '' : 'hint ' + hint.left + ',' + hint.top + '; neutral ' + btn.left + ' to ' + btn.bottom + '; overlaps ' + hits.length + ' buttons';
-		})()`)
-		if place != "" {
-			t.Errorf("%s: hint not directly under the neutral answer: %v", path, place)
-		}
-	}
-	s.open(t, "/r/demo/2?"+tok)
-	s.wantVisible(t, s.loc(".act .pick"))
-	s.wantCount(t, s.loc(".nexplain"), 0)
-	s.open(t, "/r/demo/10")
-	s.wantVisible(t, s.loc("#readonly"))
-	s.wantCount(t, s.loc(".nexplain"), 0)
 }
 
 func TestTunePaneRowsHaveOneEvenGapAndTheRingStaysInItsRow(t *testing.T) {
@@ -1185,12 +1155,15 @@ func TestPickVisibleWithoutScrolling(t *testing.T) {
 		inside(path, 1440, 900)
 	}
 	// Short enough that six options cannot fit, so the list must scroll inside the panel.
-	s.viewport(t, 1280, 600)
+	s.viewport(t, 1280, 540)
 	s.open(t, "/r/demo/10")
-	inside("/r/demo/10", 1280, 600)
+	inside("/r/demo/10", 1280, 540)
 	if scrolls := eval(t, s.Page, `(() => { const o = document.querySelector('.rpanel .opts'); return o.scrollHeight > o.clientHeight; })()`); scrolls != true {
-		t.Errorf("six options at 1280 x 600 do not scroll inside the Options list")
+		t.Errorf("six options at 1280 x 540 do not scroll inside the Options list")
 	}
+	s.wantVisible(t, s.loc(".rpanel .omore"))
+	eval(t, s.Page, `(() => { const o = document.querySelector('.rpanel .opts'); o.scrollTop = o.scrollHeight; o.dispatchEvent(new Event('scroll')); })()`)
+	s.wantHidden(t, s.loc(".rpanel .omore"))
 }
 
 func TestSideViewTilesStayInTheZone(t *testing.T) {
@@ -1230,7 +1203,7 @@ func wantLeftPanel(t *testing.T, s *site, path, title string, chips, open int) {
 		s.wantCount(t, s.loc("#chips"), 1)
 		s.wantText(t, s.loc(".lpanel .head h1"), title)
 		s.wantCount(t, s.loc(".lpanel details[open]"), open)
-		s.wantCount(t, s.loc("#main .stepnav"), 1)
+		s.wantCount(t, s.loc(":is(.lpanel, .rpanel) .stepnav"), 1)
 	})
 }
 
@@ -1244,9 +1217,9 @@ func TestEveryStepKindHasTheLeftPanel(t *testing.T) {
 	for i, q := range questions {
 		wantLeftPanel(t, s, fmt.Sprintf("/r/demo/%d", i+1), q, 11, 0)
 	}
-	// The summary keeps the round's intro open.
-	wantLeftPanel(t, s, "/r/demo/summary", "What the server recorded", 11, 1)
-	s.wantContains(t, s.loc(".lpanel details[open].intro"), "Demo only")
+	// The summary keeps the round's intro open, in the centre column.
+	wantLeftPanel(t, s, "/r/demo/summary", "What the server recorded", 11, 0)
+	s.wantContains(t, s.loc(".cpanel details[open].intro"), "Demo only")
 	dir := writeTree(t, map[string]string{
 		"index.yaml":   "- {id: m, title: Missing}\n",
 		"m/round.yaml": "title: Missing\nsteps: [ok, gone]\n",
@@ -1295,5 +1268,284 @@ func TestGalleryAndTuneControlsNeedNoScroll(t *testing.T) {
 		if got != "" {
 			t.Errorf("%s needs a scroll: %v", step, got)
 		}
+	}
+}
+
+func TestLongNotesClampAndShowInAbout(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	for _, vp := range [][2]int{{1440, 900}, {1280, 800}} {
+		s.viewport(t, vp[0], vp[1])
+		s.open(t, "/r/p2-3b-dock/1")
+		got := eval(t, s.Page, `(() => {
+			const box = document.querySelector('.rpanel .opts').getBoundingClientRect();
+			return [...document.querySelectorAll('.rpanel .orow')].map((r) => r.getBoundingClientRect()).filter((r) => r.top < box.top - 0.5 || r.top >= box.bottom).length;
+		})()`)
+		if got != 0 {
+			t.Errorf("%dx%d: %v option rows start outside the visible list", vp[0], vp[1], got)
+		}
+		s.wantHidden(t, s.loc(".omore"))
+	}
+	s.press(t, "b")
+	s.wantContains(t, s.loc(".about[data-opt=B]"), "rather than names")
+	s.wantContains(t, s.loc(".about[data-opt=A]"), "slot row")
+}
+
+func TestNeutralAnswerIsExplainedInItsTooltip(t *testing.T) {
+	const hint = "Records no winner. Say why in the note."
+	s := newSite(t, siteOpts{secret: testSecret})
+	tok := "t=" + roundToken("demo")
+	for _, path := range []string{"/r/demo/10?" + tok, "/r/demo/10?view=side&" + tok, "/r/demo/9?" + tok} {
+		s.open(t, path)
+		failIf(t, expect.Locator(s.loc(".act [value=neither]")).ToHaveAttribute("title", hint))
+		s.wantCount(t, s.loc(".nexplain"), 0)
+	}
+	s.open(t, "/r/demo/2?"+tok)
+	s.wantVisible(t, s.loc(".act .pick"))
+	s.wantCount(t, s.loc("[value=neither]"), 0)
+	s.open(t, "/r/demo/10")
+	s.wantVisible(t, s.loc("#readonly"))
+	s.wantCount(t, s.loc("[value=neither]"), 0)
+	open := newSite(t, siteOpts{})
+	phone := open.phoneFrame(t, "/r/demo-controls/1", ".phone [data-act=sheet]")
+	failIf(t, expect.Locator(phone.Locator(".sheet [value=neither]")).ToHaveAttribute("title", hint))
+}
+
+func TestVerdictSitsInTheCentreAtReadingWidth(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/demo/8")
+	s.wantVisible(t, s.loc(".cpanel .verdict .vb.pick"))
+	s.wantVisible(t, s.loc(".cpanel .verdict textarea"))
+	if r := s.rect(t, ".cpanel .verdict"); r.Width > 640 || r.Y+r.Height > 900 {
+		t.Errorf("verdict %+v, want at most 640 px wide and above the fold", r)
+	}
+	s.wantCount(t, s.loc(".lpanel .stepnav"), 1)
+	s.wantCount(t, s.loc(".lpanel .verdict"), 0)
+	dir := writeTree(t, map[string]string{
+		"index.yaml":   "- {id: g, title: G}\n",
+		"g/round.yaml": "title: G\nsteps: [gal]\n",
+		"g/gal.yaml":   "kind: gallery\nquestion: Look\nitems: [{id: a, label: A}, {id: b, label: B}]\nverdict: {key: gv, pass: Pass, changes: Changes}\n",
+	})
+	g := newSite(t, siteOpts{rounds: dir})
+	g.open(t, "/r/g/1")
+	g.wantCount(t, g.loc(".lpanel .verdict"), 1)
+}
+
+func TestPhonePickHasOneWidthOnEveryStep(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	var widths []any
+	for _, step := range []string{"/r/p2-3b-dock/1", "/r/p2-3b-dock/5", "/r/demo/10"} {
+		phone := s.phoneFrame(t, step, ".phone .pick")
+		widths = append(widths, eval(t, phone, `document.querySelector('.phone button.pick').getBoundingClientRect().width`))
+		if step == "/r/p2-3b-dock/1" {
+			if over := eval(t, phone, `(() => { const r = (q) => document.querySelector(q).getBoundingClientRect(); return r('.phone .ptab').right > r('.phone button.pick').right + 0.5; })()`); over != false {
+				t.Error("Claude's tab overhangs the phone Pick")
+			}
+		}
+	}
+	if widths[0] != widths[1] || widths[0] != widths[2] {
+		t.Errorf("phone Pick widths %v, want one width", widths)
+	}
+}
+
+func TestEyebrowIsOneLine(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/p2-3b-dock/1")
+	eb := s.loc(".lpanel .head .n")
+	failIf(t, expect.Locator(eb).ToHaveAttribute("title", "Step 1 of 6 · P2.3b Build from the dock: queue, empty card, counter line"))
+	// The ellipsis cuts the end, so the step count must come first to stay visible.
+	failIf(t, expect.Locator(eb).ToHaveText(regexp.MustCompile(`^Step 1 of 6 · `)))
+	if h := s.rect(t, ".lpanel .head .n").Height; h > 20 {
+		t.Errorf("eyebrow %v px tall, want one line", h)
+	}
+}
+
+func TestStatusIsOneLineWithScaleAndVision(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/p2-3b-dock/1")
+	s.wantVisible(t, s.loc(".status .scale"))
+	text := eval(t, s.Page, `document.querySelector('.status .stxt').textContent.replace(/\s+/g, ' ').trim()`)
+	if !regexp.MustCompile(`^1280 x 720 · Fit \d+ % · Sand · Plain ground · Normal vision$`).MatchString(text.(string)) {
+		t.Errorf("status line %q", text)
+	}
+	if h := s.rect(t, ".status .stxt").Height; h > 20 {
+		t.Errorf("status line %v px tall, want one line", h)
+	}
+	s.open(t, "/r/demo-controls/4")
+	s.wantVisible(t, s.loc(".status .vis"))
+	if cut := eval(t, s.Page, `(() => { const v = document.querySelector('.status .vis'); return v.scrollWidth > v.clientWidth + 0.5 || v.getBoundingClientRect().right > document.querySelector('.status .stxt').getBoundingClientRect().right + 0.5; })()`); cut != false {
+		t.Error("a long status line cuts the vision value")
+	}
+}
+
+func TestSideViewTilesFillTheZoneInAGrid(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	cols := func() any {
+		return eval(t, s.Page, `new Set([...document.querySelectorAll('.zone .tile')].map((e) => Math.round(e.getBoundingClientRect().left))).size`)
+	}
+	s.open(t, "/r/p2-3b-dock/1?view=side")
+	s.wantCount(t, s.loc(".zone .tile"), 4)
+	if n := cols(); n != 2 {
+		t.Errorf("four tiles in %v columns, want 2", n)
+	}
+	if narrow := eval(t, s.Page, `[...document.querySelectorAll('.zone .tile .pic')].filter((p) => p.getBoundingClientRect().width < 340).length`); narrow != 0 {
+		t.Errorf("%v tile pictures narrower than 340 px", narrow)
+	}
+	if tall := eval(t, s.Page, `[...document.querySelectorAll('.zone .tile .ohd')].filter((h) => h.getBoundingClientRect().height > 22).length`); tall != 0 {
+		t.Errorf("%v tile headers taller than one line", tall)
+	}
+	s.open(t, "/r/demo/10?view=side")
+	if n := cols(); n != 3 {
+		t.Errorf("six tiles in %v columns, want 3", n)
+	}
+}
+
+func TestMeasuresSitInTheMoreOfBand(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/demo/10?show=C")
+	s.wantVisible(t, s.loc(`[data-measure=C] table`))
+	table, band := s.rect(t, `[data-measure=C] table`), s.rect(t, ".moreof")
+	if table.Y < band.Y || table.Y+table.Height > band.Y+band.Height+0.5 {
+		t.Errorf("measures %+v outside the More of band %+v", table, band)
+	}
+	if scroll := eval(t, s.Page, `document.documentElement.scrollHeight - innerHeight`); scroll != 0 {
+		t.Errorf("the page scrolls %v px at 1440 x 900", scroll)
+	}
+}
+
+func TestPhoneStripShowsTheCurrentStep(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	phone := s.phoneFrame(t, "/r/demo/10", ".phone .pick")
+	got := eval(t, phone, `(() => {
+		const strip = document.querySelector('#chips').getBoundingClientRect(), on = document.querySelector('#chips [aria-current=step]').getBoundingClientRect();
+		return on.left >= strip.left - 0.5 && on.right <= strip.right + 0.5 ? '' : 'chip ' + on.left + ' to ' + on.right + ' in a strip ' + strip.left + ' to ' + strip.right;
+	})()`)
+	if got != "" {
+		t.Errorf("current step tab out of view: %v", got)
+	}
+}
+
+func TestSummaryIntroSitsInTheCentre(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/demo/summary")
+	s.wantContains(t, s.loc(".cpanel details[open].intro"), "Demo only")
+	s.wantCount(t, s.loc(".lpanel .intro"), 0)
+	if w := s.rect(t, ".cpanel .intro").Width; w < 400 || w > 700 {
+		t.Errorf("intro %v px wide, want a reading width", w)
+	}
+}
+
+func TestMoreOfCaptionsWrapToTwoLines(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	for _, key := range []string{"a", "b", "c"} {
+		s.open(t, "/r/p2-3b-dock/1")
+		s.press(t, key)
+		got := eval(t, s.Page, `(() => {
+			const band = document.querySelector('.moreof').getBoundingClientRect(), bad = [];
+			for (const c of document.querySelectorAll('.moreof [data-opt]:not([hidden]) figcaption')) {
+				const r = c.getBoundingClientRect(), fig = c.closest('figure').getBoundingClientRect();
+				if (c.scrollWidth > c.clientWidth + 0.5 || c.scrollHeight > c.clientHeight + 0.5) bad.push('"' + c.textContent + '" cut');
+				if (r.height > 40) bad.push('"' + c.textContent + '" ' + r.height + ' px tall');
+				if (fig.bottom > band.bottom + 0.5) bad.push('figure ends ' + fig.bottom + ' below the band ' + band.bottom);
+			}
+			return bad.join('; ');
+		})()`)
+		if got != "" {
+			t.Errorf("option %s: %v", key, got)
+		}
+	}
+}
+
+func TestTrue100KeepsTheStageScrollAcrossOptions(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1280, 800)
+	s.open(t, "/r/p2-3b-dock/1?size=1280x800")
+	s.press(t, "f")
+	s.wantClass(t, s.loc("#view"), "true100")
+	s.settle(t)
+	eval(t, s.Page, `(() => { const st = document.querySelector('.zone .stage'); st.scrollLeft = 120; st.scrollTop = 60; })()`)
+	want := eval(t, s.Page, `(() => { const st = document.querySelector('.zone .stage'); return st.scrollLeft + ',' + st.scrollTop; })()`)
+	if want == "0,0" {
+		t.Fatal("the stage does not scroll at true 100 %")
+	}
+	s.press(t, "b")
+	s.wantContains(t, s.loc(".rpanel button.pick"), "Pick B")
+	if got := eval(t, s.Page, `(() => { const st = document.querySelector('.zone .stage'); return st.scrollLeft + ',' + st.scrollTop; })()`); got != want {
+		t.Errorf("stage scroll %v after switching, %v before", got, want)
+	}
+}
+
+func TestPickSitsAtOneHeightOnEveryChoiceStep(t *testing.T) {
+	top := func(s *site, sel string) float64 {
+		t.Helper()
+		s.viewport(t, 1440, 900)
+		return s.rect(t, sel).Y
+	}
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/p2-3b-dock/1")
+	neutral := top(s, ".rpanel button.pick")
+	s.open(t, "/r/demo/2")
+	yes := top(s, ".rpanel [value=yes]")
+	s.click(t, ".rpanel [value=change]")
+	s.wantCount(t, s.loc("#main textarea[autofocus]"), 1)
+	s.settle(t)
+	hinted := top(s, ".rpanel [value=yes]")
+	plain := top(newTodaySite(t), ".rpanel button.pick")
+	for name, y := range map[string]float64{"without neutral": plain, "confirm Yes": yes, "confirm Yes with the hint": hinted} {
+		if y-neutral > 1 || neutral-y > 1 {
+			t.Errorf("%s: top %v, step with neutral %v", name, y, neutral)
+		}
+	}
+}
+
+func TestEnterOnAFocusedFoldOpensItAndPicksNothing(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.open(t, "/r/demo/10")
+	eval(t, s.Page, `document.querySelector('.why summary').focus()`)
+	s.press(t, "Enter")
+	s.settle(t)
+	if open := eval(t, s.Page, `document.querySelector('.why').open`); open != true {
+		t.Error("Enter on the focused fold did not open it")
+	}
+	s.wantURL(t, "/r/demo/10")
+	if got := s.entries(t); len(got) != 0 {
+		t.Errorf("Enter on a fold recorded %v", got)
+	}
+	s.click(t, ".cpwhy summary")
+	if kept := eval(t, s.Page, `document.activeElement === document.querySelector('.cpwhy summary')`); kept != false {
+		t.Error("a mouse click leaves the fold focused, so the next Enter would toggle it instead of picking")
+	}
+}
+
+func TestReadOnlyBannerKeepsTheZonesOnScreen(t *testing.T) {
+	s := newSite(t, siteOpts{secret: testSecret})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/demo/10")
+	s.wantVisible(t, s.loc("#readonly"))
+	for _, sel := range []string{".rpanel .stepnav", ".moreof"} {
+		if r := s.rect(t, sel); r.Y+r.Height > 900.5 {
+			t.Errorf("%s ends at %v, below the 900 px window", sel, r.Y+r.Height)
+		}
+	}
+}
+
+func TestLoadingBarSpansTheViewportTop(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	s.viewport(t, 1440, 900)
+	s.open(t, "/r/p2-3b-dock/1")
+	got := eval(t, s.Page, `(() => {
+		document.querySelector('#chips a').classList.add('htmx-request');
+		const c = getComputedStyle(document.querySelector('.top'), '::after');
+		return [c.position, c.top, c.width].join(' ');
+	})()`)
+	if got != "fixed 0px 1440px" {
+		t.Errorf("loading bar %v, want fixed 0px 1440px", got)
 	}
 }
