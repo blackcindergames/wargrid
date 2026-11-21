@@ -15,6 +15,9 @@ const WAVE_GAPS: Array[int] = [2700, 2700, 1800]
 const WAVE_WAIT: int = 1800
 const WAVE_SIZES: Array[int] = [8, 12, 16, 20, 24, 28, 32]
 const WAVE0_UNITS: int = 16
+const DEF_UNITS: int = 4
+const DEF_REACH: float = 8.0
+const ROUTE_STEP: float = 8.0
 const RALLY_RADIUS: float = 6.0
 const DISTANCE_STEP: float = 4.0
 const DETOUR_REACH: float = 10.0
@@ -308,14 +311,22 @@ static func _wave(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 
 # The first live bot to see the team's ready cost reach the target (or the wait cap) forms the wave; the others join at their next decision.
 static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary, live: Array[int]) -> void:
-	var target: int = _wave_target(clock.wave, state, live)
 	var kinds: Array = ready.map(func(id: int) -> String: return mine[id].kind)
 	kinds.append_array(_mates_ready(ctx, state, live))
 	var worth: int = _cost_sum(kinds)
-	if worth < target and (ctx.tick < clock.due + WAVE_WAIT or kinds.is_empty()): return
-	var victim: int = _victim(enemies, clock)
-	if victim < 0: return
-	var objective: Variant = _pick(_mean_rally(ctx, live), enemies.filter(func(enemy: Dictionary) -> bool: return enemy.owner == victim and _is_building(enemy)))
+	var capped: bool = ctx.tick >= clock.due + WAVE_WAIT and not kinds.is_empty()
+	# Defences only raise the target, so a wave short of the plain one waits without the scan.
+	if worth < _wave_target(clock.wave, state, live, 0) and not capped: return
+	var order: Array = _victims(enemies, clock)
+	if order.is_empty(): return
+	var rally: Vector2 = _mean_rally(ctx, live)
+	var objective: Variant = _pick(rally, enemies.filter(func(enemy: Dictionary) -> bool: return enemy.owner == order[0] and _is_building(enemy)))
+	var armed: Array = _armed(enemies)
+	var goal: Dictionary = _row(enemies, objective)
+	var guards: int = armed.filter(func(defence: Dictionary) -> bool: return _guards(rally, goal, defence)).size()
+	var target: int = _wave_target(clock.wave, state, live, guards)
+	if worth < target and not capped: return
+	if worth < target and guards > 0: objective = _softer(rally, order, enemies, armed, objective)
 	@warning_ignore("integer_division")
 	var share: int = target / live.size()
 	@warning_ignore("integer_division")
@@ -327,7 +338,7 @@ static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	clock.released_by = "wait_cap" if worth < target else ("timer" if clock.prev < clock.due else "size")
 	clock.launched_at = ctx.tick
 	clock.objective = objective
-	clock.attacked_at[victim] = ctx.tick
+	clock.attacked_at[_row(enemies, objective).owner] = ctx.tick
 	clock.left_cost = maxi(target - _cost_sum(take.map(func(id: int) -> String: return mine[id].kind)), 0)
 	clock.left_units = WAVE0_UNITS - take.size() if clock.wave == 0 else -1
 	clock.joiners = _joiners(ctx, live)
@@ -376,16 +387,52 @@ static func _at_rally(position: Array, rally: Vector2) -> bool:
 	var dy: float = position[1] - rally.y
 	return dx * dx + dy * dy <= RALLY_RADIUS * RALLY_RADIUS
 
-# The enemy attacked least recently (never: -1), ties lowest id, among those with a building to attack; -1 for none.
-static func _victim(enemies: Array, clock: Dictionary) -> int:
+# Enemies with a building that keeps them in the match, the one attacked least recently first (never: -1), ties lowest id.
+static func _victims(enemies: Array, clock: Dictionary) -> Array:
 	var owners: Array = []
 	for enemy: Dictionary in enemies:
 		if _is_building(enemy) and Registry.kind(enemy.kind).counts_for_victory and not owners.has(enemy.owner): owners.append(enemy.owner)
-	owners.sort()
-	var best: int = -1
-	for owner: int in owners:
-		if best < 0 or clock.attacked_at.get(owner, -1) < clock.attacked_at.get(best, -1): best = owner
-	return best
+	owners.sort_custom(func(a: int, b: int) -> bool:
+		var seen_a: int = clock.attacked_at.get(a, -1)
+		var seen_b: int = clock.attacked_at.get(b, -1)
+		return seen_a < seen_b or (seen_a == seen_b and a < b))
+	return owners
+
+static func _row(enemies: Array, id: Variant) -> Dictionary:
+	for enemy: Dictionary in enemies:
+		if enemy.id == id: return enemy
+	return {}
+
+static func _armed(enemies: Array) -> Array:
+	return enemies.filter(func(enemy: Dictionary) -> bool: return _is_building(enemy) and enemy.completed and not Registry.kind(enemy.kind).get("weapon", "").is_empty())
+
+# A defence counts within DEF_REACH of the goal or of a point every ROUTE_STEP cells on the line from the rally to it.
+static func _guards(rally: Vector2, goal: Dictionary, defence: Dictionary) -> bool:
+	var size: Vector2i = Definitions.building(goal.kind).footprint
+	var goal_x: float = goal.origin[0] + size.x / 2.0
+	var goal_y: float = goal.origin[1] + size.y / 2.0
+	if _reach_squared(goal_x, goal_y, defence) <= DEF_REACH * DEF_REACH: return true
+	var length: float = sqrt((goal_x - rally.x) * (goal_x - rally.x) + (goal_y - rally.y) * (goal_y - rally.y))
+	if length <= ROUTE_STEP: return false
+	var box: Vector2i = Definitions.building(defence.kind).footprint
+	var centre_x: float = defence.origin[0] + box.x / 2.0
+	var centre_y: float = defence.origin[1] + box.y / 2.0
+	# A route point within reach of the footprint lies within reach plus half its diagonal of its centre, so farther steps cannot count; +1 absorbs rounding.
+	var window: float = DEF_REACH + sqrt(box.x * box.x + box.y * box.y) / 2.0 + 1.0
+	if absf((centre_x - rally.x) * (goal_y - rally.y) - (centre_y - rally.y) * (goal_x - rally.x)) > window * length: return false
+	var near: float = ((centre_x - rally.x) * (goal_x - rally.x) + (centre_y - rally.y) * (goal_y - rally.y)) / length
+	for step: int in range(maxi(ceili((near - window) / ROUTE_STEP), 1), floori((near + window) / ROUTE_STEP) + 1):
+		var along: float = step * ROUTE_STEP
+		if along >= length: return false
+		if _reach_squared(rally.x + (goal_x - rally.x) * along / length, rally.y + (goal_y - rally.y) * along / length, defence) <= DEF_REACH * DEF_REACH: return true
+	return false
+
+# The best building without a counted defence: the objective's player first, then the least recently attacked.
+static func _softer(rally: Vector2, order: Array, enemies: Array, armed: Array, objective: Variant) -> Variant:
+	for owner: int in order:
+		var open: Array = enemies.filter(func(enemy: Dictionary) -> bool: return enemy.owner == owner and _is_building(enemy) and not armed.any(func(defence: Dictionary) -> bool: return _guards(rally, enemy, defence)))
+		if not open.is_empty(): return _best(rally, open)
+	return objective
 
 static func _mean_rally(ctx: Dictionary, live: Array[int]) -> Vector2:
 	var sum := Vector2.ZERO
@@ -401,11 +448,11 @@ static func _live_bots(ctx: Dictionary, state: Dictionary) -> Array[int]:
 		if state.buildings.any(func(building: Dictionary) -> bool: return building.owner == entry.id and Registry.kind(building.kind).counts_for_victory): live.append(entry.id)
 	return live
 
-static func _wave_target(wave: int, state: Dictionary, live: Array[int]) -> int:
+static func _wave_target(wave: int, state: Dictionary, live: Array[int], guards: int) -> int:
 	var mean: int = 0
 	for player in live: mean += faction_unit_cost(_faction(state, player))
 	@warning_ignore("integer_division")
-	return WAVE_SIZES[mini(wave, WAVE_SIZES.size() - 1)] * live.size() * (mean / live.size())
+	return (WAVE_SIZES[mini(wave, WAVE_SIZES.size() - 1)] * live.size() + (DEF_UNITS * guards if wave > 0 else 0)) * (mean / live.size())
 
 static func _cost_sum(kinds: Array) -> int:
 	var sum: int = 0

@@ -16,7 +16,7 @@ const B: int = 4
 const DUE: int = 1000
 
 func cases() -> Array[Callable]:
-	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_takes_highest_cost_first, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks]
+	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_takes_highest_cost_first, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks, test_defence_near_objective_raises_target, test_defence_on_route_raises_target, test_defence_raises_target_by_def_units_times_unit_cost, test_wave_zero_not_raised_by_defence, test_softer_objective_when_target_unmet, test_no_soft_objective_goes_anyway, test_unfinished_defence_not_counted, test_defence_completing_in_the_judging_tick_counts_at_the_next_decision, test_team_waves_follow_the_softer_objective, test_detour_returns_to_the_softer_objective, test_defence_at_exactly_def_reach_counts, test_softer_takes_best_score_not_first_or_nearest, test_retarget_follows_br5_order_not_id, test_route_points_every_8_cells, test_defence_route_starts_at_team_mean_rally]
 
 func _world() -> RefCounted:
 	var sim = Simulation.new([], Vector2i(48, 32))
@@ -896,4 +896,254 @@ func test_kiter_is_let_go_then_taken_after_let_go_ticks(runner) -> bool:
 		seen.append([_hp(sim, ids) < before, _where(sim, car).distance_to(_where(sim, ids[0])) <= Skirmish.DETOUR_REACH, _orders_at(rec, decision)])
 	runner.check(seen[0][0] and seen[0][1] and seen[0][2].is_empty(), "BR5 a hit %d ticks after the let go does not take the car again, got %s" % [Skirmish.LET_GO_TICKS - Skirmish.DECISION_TICKS, seen[0]])
 	runner.check(seen[1][0] and seen[1][1] and seen[1][2].size() == 1 and seen[1][2][0].target == car, "BR5 a hit LET_GO_TICKS after the let go takes the car again, got %s" % [seen[1]])
+	return true
+
+const GUARDS: int = 3
+const SOFT: int = 4
+const NEAR_OBJECTIVE := Vector2i(3, 12)
+const ON_ROUTE := Vector2i(20, 8)
+const NEAR_BOTH := Vector2i(9, 6)
+const NEAR_SOFT := Vector2i(3, 20)
+
+# Enemies of the bot: player 1 (headquarters at 4,4), player 3 (batteries only, no victory building) and with `soft` player 4 (headquarters at 4,24).
+func _guarded(batteries: Array, soft: bool = true) -> RefCounted:
+	var sim = _world()
+	sim.add_player(GUARDS, 5000)
+	if soft:
+		sim.add_player(SOFT, 0)
+		Economy.add_completed(sim, SOFT, "usa_command_center", Vector2i(4, 24))
+	for cell: Vector2i in batteries: Economy.add_completed(sim, GUARDS, "usa_defence", cell)
+	return sim
+
+func _objective_owner(sim: RefCounted) -> int:
+	return _owner_of(sim, _memory(sim).get("objective"))
+
+# Wave 0 leaves with five tanks; `tanks` then wait at the rally for wave 1, played until `span` ticks after its due tick.
+func _second_wave(sim: RefCounted, tanks: int, span: int) -> Dictionary:
+	var rec: Dictionary = _log()
+	_ready(sim, "usa_tank", 5)
+	_play(sim, rec, Skirmish.FIRST_WAVE_TICK + 2 * Skirmish.DECISION_TICKS)
+	_ready(sim, "usa_tank", tanks)
+	rec.due = _memory(sim).due
+	_play(sim, rec, rec.due + span)
+	return rec
+
+func _wave_one_left(batteries: Array, tanks: int) -> bool:
+	return _second_wave(_guarded(batteries, false), tanks, 2 * Skirmish.DECISION_TICKS).launches.size() == 2
+
+# Tank counts just below and at wave 1's target with `guards` counted defences.
+func _tanks_around(guards: int) -> Array:
+	var needed: int = ceili((Skirmish.WAVE_SIZES[1] + Skirmish.DEF_UNITS * guards) * 531 / 900.0)
+	return [needed - 1, needed]
+
+func _wave_zero_at_cap(sim: RefCounted) -> Dictionary:
+	var rec: Dictionary = _log()
+	_ready(sim, "usa_tank", 3)
+	_play(sim, rec, Skirmish.WAVE_WAIT + 2 * Skirmish.DECISION_TICKS, 0)
+	return rec
+
+func test_defence_near_objective_raises_target(runner) -> bool:
+	var tanks: Array = _tanks_around(1)
+	runner.check(not _wave_one_left([NEAR_OBJECTIVE], tanks[0]), "BR6 a battery 6.7 cells from the objective raises wave 1's target by DEF_UNITS units: %d tanks wait" % tanks[0])
+	runner.check(_wave_one_left([NEAR_OBJECTIVE], tanks[1]), "BR6 %d tanks reach the raised target" % tanks[1])
+	return true
+
+func test_defence_on_route_raises_target(runner) -> bool:
+	var tanks: Array = _tanks_around(1)
+	runner.check(not _wave_one_left([ON_ROUTE], tanks[0]), "BR6 a battery beside the line from the rally to the objective raises wave 1's target: %d tanks wait" % tanks[0])
+	runner.check(_wave_one_left([ON_ROUTE], tanks[1]), "BR6 %d tanks reach the raised target" % tanks[1])
+	return true
+
+func test_defence_raises_target_by_def_units_times_unit_cost(runner) -> bool:
+	var once: Array = _tanks_around(1)
+	runner.check(_wave_one_left([NEAR_BOTH], once[1]), "BR6 a battery near both the objective and the line counts once, %d tanks suffice" % once[1])
+	var twice: Array = _tanks_around(2)
+	runner.check(not _wave_one_left([NEAR_OBJECTIVE, ON_ROUTE], twice[0]), "BR6 two counted batteries raise the target by 2 x DEF_UNITS x 531: %d tanks wait" % twice[0])
+	runner.check(_wave_one_left([NEAR_OBJECTIVE, ON_ROUTE], twice[1]), "BR6 %d tanks reach it" % twice[1])
+	return true
+
+func test_wave_zero_not_raised_by_defence(runner) -> bool:
+	var sim = _guarded([NEAR_OBJECTIVE])
+	var rec: Dictionary = _log()
+	_ready(sim, "usa_tank", 5)
+	_play(sim, rec, Skirmish.FIRST_WAVE_TICK + 2 * Skirmish.DECISION_TICKS)
+	runner.check(rec.launches.size() == 1 and rec.launches[0].tick == _first_decision_from(Skirmish.FIRST_WAVE_TICK), "BR6 wave 0 is not raised: five tanks leave at the first decision from FIRST_WAVE_TICK, got %s" % [rec.launches])
+	runner.check(_objective_owner(sim) == 1, "BR6 a wave 0 that meets its target keeps the objective, got owner %d" % _objective_owner(sim))
+	var capped = _guarded([NEAR_OBJECTIVE])
+	var capped_rec: Dictionary = _wave_zero_at_cap(capped)
+	runner.check(capped_rec.launches.size() == 1 and _objective_owner(capped) == SOFT, "BR6 a wave 0 left short at the wait cap is retargeted to the soft player, got owner %d" % _objective_owner(capped))
+	runner.check(_memory(capped).attacked_at.keys() == [SOFT], "BR6 the retargeted player is the one marked attacked, got %s" % [_memory(capped).attacked_at.keys()])
+	return true
+
+func test_softer_objective_when_target_unmet(runner) -> bool:
+	var sim = _guarded([NEAR_SOFT])
+	var rec: Dictionary = _second_wave(sim, 9, Skirmish.WAVE_WAIT - Skirmish.DECISION_TICKS)
+	runner.check(rec.launches.size() == 1, "BR6 nine tanks (8100) wait below the raised target 8496 until the wait cap, got %d launches" % rec.launches.size())
+	_play(sim, rec, rec.due + Skirmish.WAVE_WAIT + 2 * Skirmish.DECISION_TICKS)
+	runner.check(rec.launches.size() == 2 and rec.launches[1].tick == _first_decision_from(rec.due + Skirmish.WAVE_WAIT) and rec.launches[1].ids.size() == 9, "BR6 at the wait cap the wave leaves with its nine tanks, got %s" % [rec.launches])
+	runner.check(_objective_owner(sim) == 1 and _memory(sim).released_by == "wait_cap", "BR6 wave 1's objective is player 4's guarded headquarters; it goes to the undefended building of player 1, got owner %d, %s" % [_objective_owner(sim), _memory(sim).released_by])
+	var own = _guarded([Vector2i(22, 22)], false)
+	Economy.add_completed(own, 1, "usa_barracks", Vector2i(22, 26))
+	own.add_player(SOFT, 0)
+	Economy.add_completed(own, SOFT, "usa_command_center", Vector2i(30, 2))
+	_wave_zero_at_cap(own)
+	var kind: String = Economy.object(own, _memory(own).objective).get("kind", "")
+	runner.check(_objective_owner(own) == 1 and kind == "usa_command_center", "BR6 the objective's player comes first: its undefended headquarters beats a better scored enemy headquarters, got owner %d %s" % [_objective_owner(own), kind])
+	var order = _guarded([NEAR_OBJECTIVE])
+	order.add_player(5, 0)
+	Economy.add_completed(order, 5, "usa_command_center", Vector2i(30, 2))
+	_wave_zero_at_cap(order)
+	runner.check(_objective_owner(order) == SOFT, "BR6 then BR5's player order (lowest id on a tie), not the best score, got owner %d" % _objective_owner(order))
+	var skip = _guarded([NEAR_OBJECTIVE, NEAR_SOFT])
+	skip.add_player(5, 0)
+	Economy.add_completed(skip, 5, "usa_command_center", Vector2i(30, 2))
+	_wave_zero_at_cap(skip)
+	runner.check(_objective_owner(skip) == 5, "BR6 a player whose only buildings have a counted defence is skipped, got owner %d" % _objective_owner(skip))
+	return true
+
+func test_no_soft_objective_goes_anyway(runner) -> bool:
+	var sim = _guarded([NEAR_OBJECTIVE, NEAR_SOFT])
+	var rec: Dictionary = _second_wave(sim, 9, Skirmish.WAVE_WAIT - Skirmish.DECISION_TICKS)
+	runner.check(rec.launches.size() == 1, "BR6 nine tanks wait below the raised target, got %d launches" % rec.launches.size())
+	_play(sim, rec, rec.due + Skirmish.WAVE_WAIT + 2 * Skirmish.DECISION_TICKS)
+	runner.check(rec.launches.size() == 2 and rec.launches[1].tick == _first_decision_from(rec.due + Skirmish.WAVE_WAIT) and _objective_owner(sim) == SOFT, "BR6 with a counted defence at every enemy building the wave goes to the first objective at the wait cap, got %s, owner %d" % [rec.launches, _objective_owner(sim)])
+	return true
+
+func _battery_world() -> RefCounted:
+	var sim = _guarded([], false)
+	Economy.add_completed(sim, GUARDS, "usa_power_plant", Vector2i(1, 29))
+	return sim
+
+func _start_battery(sim: RefCounted, cell: Vector2i) -> int:
+	var builder: int = sim.spawn(GUARDS, Vector2(cell) + Vector2(0.5, 2.5), "usa_builder")
+	Economy.send(sim, {"type": "build", "player": GUARDS, "builder_id": builder, "building_kind": "usa_defence", "origin": [cell.x, cell.y]})
+	return builder
+
+func _battery_row(sim: RefCounted) -> Dictionary:
+	for entry in sim.snapshot().buildings:
+		if entry.owner == GUARDS and entry.kind == "usa_defence": return entry
+	return {}
+
+func test_unfinished_defence_not_counted(runner) -> bool:
+	var sim = _battery_world()
+	var builder: int = _start_battery(sim, NEAR_OBJECTIVE)
+	for tick in range(20): sim.step()
+	sim.remove_object(builder)
+	runner.check(not _battery_row(sim).is_empty() and not _battery_row(sim).completed, "BR6 premise: a battery stands unfinished near the objective")
+	_wave_zero_at_cap(sim)
+	runner.check(_objective_owner(sim) == 1, "BR6 an unfinished battery counts for nothing: the wave keeps the objective, got owner %d" % _objective_owner(sim))
+	var done = _battery_world()
+	Economy.add_completed(done, GUARDS, "usa_defence", NEAR_OBJECTIVE)
+	_wave_zero_at_cap(done)
+	runner.check(_objective_owner(done) == GUARDS, "BR6 the same battery finished counts: the wave is retargeted, got owner %d" % _objective_owner(done))
+	return true
+
+func _completion_tick() -> int:
+	var sim = _battery_world()
+	_start_battery(sim, NEAR_OBJECTIVE)
+	for tick in range(1500):
+		sim.step()
+		if _battery_row(sim).get("completed", false): return sim.tick()
+	return -1
+
+func _cap_decision_with_battery_done_at(done_tick: int, work: int) -> Dictionary:
+	var sim = _battery_world()
+	_ready(sim, "usa_tank", 3)
+	var rec: Dictionary = _log()
+	_team_play(sim, rec, done_tick - work, [SEAT], 0)
+	_start_battery(sim, NEAR_OBJECTIVE)
+	var cap: int = _first_decision_from(Skirmish.WAVE_WAIT)
+	_team_play(sim, rec, cap, [SEAT], 0)
+	var before: bool = _battery_row(sim).get("completed", false)
+	_team_play(sim, rec, cap + 2 * Skirmish.DECISION_TICKS, [SEAT], 0)
+	return {"sim": sim, "rec": rec, "done_before": before, "cap": cap}
+
+func test_defence_completing_in_the_judging_tick_counts_at_the_next_decision(runner) -> bool:
+	var work: int = _completion_tick()
+	var cap: int = _first_decision_from(Skirmish.WAVE_WAIT)
+	var late: Dictionary = _cap_decision_with_battery_done_at(cap + 1, work)
+	runner.check(work > 0 and not late.done_before and _battery_row(late.sim).completed, "BR6 premise: the battery completes in the step of the wait-cap decision at %d" % cap)
+	runner.check(late.rec.launches.size() == 1 and late.rec.launches[0].tick == cap and _objective_owner(late.sim) == 1, "BR6 a defence completing in the judging tick does not count: the wave keeps the objective, got %s, owner %d" % [late.rec.launches, _objective_owner(late.sim)])
+	var early: Dictionary = _cap_decision_with_battery_done_at(cap, work)
+	runner.check(early.done_before, "BR6 premise: the battery is complete one tick earlier")
+	runner.check(early.rec.launches.size() == 1 and early.rec.launches[0].tick == cap and _objective_owner(early.sim) == GUARDS, "BR6 a defence done before the judging step counts: the wave is retargeted, got %s, owner %d" % [early.rec.launches, _objective_owner(early.sim)])
+	return true
+
+func test_team_waves_follow_the_softer_objective(runner) -> bool:
+	var sim = _crown()
+	Economy.add_completed(sim, 2, "usa_defence", Vector2i(20, 22))
+	stock(sim, A, "usa_tank", 3)
+	stock(sim, B, "usa_tank", 3)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + Skirmish.WAVE_WAIT + 100)
+	var objective: Variant = Skirmish.team_memory(sim, 2).objective
+	var targets: Array = rec.launches.map(func(row: Dictionary) -> Variant: return row.target)
+	runner.check(rec.launches.size() == 2 and targets[0] == targets[1] and targets[0] == objective, "BR6 both bots' waves go to the one retargeted team objective, got %s, objective %s" % [targets, objective])
+	runner.check(_owner_of(sim, objective) == 2, "BR6 the guarded buildings of player 1 are passed over for player 2, got owner %d" % _owner_of(sim, objective))
+	return true
+
+func test_detour_returns_to_the_softer_objective(runner) -> bool:
+	var sim = _guarded([NEAR_OBJECTIVE])
+	var rec: Dictionary = _log()
+	var ids: Array = _ready(sim, "usa_tank", 3)
+	_run_to(sim, rec, Skirmish.WAVE_WAIT + Skirmish.DECISION_TICKS)
+	var softer: Variant = _memory(sim).objective
+	var hurt: Vector2 = _wound(sim, [ids])[0]
+	var battery: int = _dark_battery(sim, hurt + Vector2(0, 8.5))
+	var first: int = rec.launches[0].tick + Skirmish.DECISION_TICKS
+	_run_to(sim, rec, first)
+	runner.check(softer != null and _owner_of(sim, softer) == SOFT and _orders_at(rec, first).any(func(row: Dictionary) -> bool: return row.target == battery), "BR6 premise: the wave left for player 4's headquarters and turned on the battery that hurt it, got %s" % [_orders_at(rec, first)])
+	sim.remove_object(battery)
+	_run_to(sim, rec, first + Skirmish.DECISION_TICKS)
+	var back: Array = _orders_at(rec, first + Skirmish.DECISION_TICKS)
+	runner.check(back.size() == 1 and back[0].target == softer and _memory(sim).objective == softer, "BR6 after the detour the wave returns to the team objective it was retargeted to, got %s, objective %s" % [back, softer])
+	return true
+
+func test_defence_at_exactly_def_reach_counts(runner) -> bool:
+	var owners: Array = []
+	for cell in [Vector2i(5, 13), Vector2i(5, 14)]:
+		var sim = _guarded([cell])
+		for entry in sim.snapshot().buildings:
+			if entry.owner == 1: sim.remove_object(entry.id)
+		Economy.add_completed(sim, 1, "usa_barracks", Vector2i(4, 4))
+		_wave_zero_at_cap(sim)
+		owners.append(_objective_owner(sim))
+	runner.check(owners == [SOFT, 1], "BR6 a battery exactly DEF_REACH from the objective's centre counts, one cell farther does not, got owners %s" % [owners])
+	return true
+
+func test_softer_takes_best_score_not_first_or_nearest(runner) -> bool:
+	var sim = _guarded([], false)
+	var nearer: int = Economy.add_completed(sim, 1, "usa_command_center", Vector2i(28, 12))
+	var better: int = Economy.add_completed(sim, 1, "usa_barracks", Vector2i(29, 22))
+	Economy.add_completed(sim, 1, "usa_defence", Vector2i(46, 0))
+	_wave_zero_at_cap(sim)
+	var objective: Variant = _memory(sim).objective
+	runner.check(nearer >= 0 and better > nearer and objective == better and Economy.object(sim, objective).kind == "usa_barracks", "BR6 the retarget scores the open buildings: a barracks 14.6 cells off (24) beats a nearer headquarters 12.5 cells off (23) and the lowest-id one, got %s" % [objective])
+	return true
+
+func test_retarget_follows_br5_order_not_id(runner) -> bool:
+	var sim = _guarded([NEAR_OBJECTIVE])
+	sim.add_player(5, 0)
+	var fresh: int = Economy.add_completed(sim, 5, "usa_command_center", Vector2i(30, 2))
+	var rec: Dictionary = _wave_zero_at_cap(sim)
+	runner.check(_objective_owner(sim) == SOFT, "BR6 premise: wave 0 is retargeted to player 4, which is then the most recently attacked, got owner %d" % _objective_owner(sim))
+	_ready(sim, "usa_tank", 1)
+	_play(sim, rec, _memory(sim).due + Skirmish.WAVE_WAIT + 2 * Skirmish.DECISION_TICKS, 0)
+	runner.check(rec.launches.size() == 2 and _memory(sim).objective == fresh, "BR6 wave 1's retarget follows BR5's order: never-attacked player 5 before player 4, got %s, objective owner %d" % [rec.launches, _objective_owner(sim)])
+	return true
+
+func test_route_points_every_8_cells(runner) -> bool:
+	var tanks: Array = _tanks_around(1)
+	runner.check(not _wave_one_left([Vector2i(18, 14)], tanks[0]), "BR6 a battery near the route point 24 cells from the rally (more than DEF_REACH from the 16 and 32 points) raises wave 1's target: %d tanks wait" % tanks[0])
+	return true
+
+func test_defence_route_starts_at_team_mean_rally(runner) -> bool:
+	var sim = _crown()
+	var battery: int = Economy.add_completed(sim, 2, "usa_defence", Vector2i(20, 33))
+	stock(sim, A, "usa_tank", 3)
+	stock(sim, B, "usa_tank", 3)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + Skirmish.WAVE_WAIT + 100)
+	var objective: Variant = Skirmish.team_memory(sim, 2).objective
+	runner.check(battery >= 0 and _owner_of(sim, objective) == 2 and Economy.object(sim, objective).kind == "usa_barracks", "BR6 a battery on the line from the team's mean rally, off the line from the forming bot's own rally, guards player 1: the wave goes to player 2's barracks, got %s owner %d" % [objective, _owner_of(sim, objective)])
 	return true
