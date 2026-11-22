@@ -12,7 +12,7 @@ Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_pla
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Fm1 winner at T1-10, Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: owner plays a match on the group-speed order (waves together and smooth?); then T1-8c
+Next exact action: T1-8c bot debug lines (brainstorm and plan first)
 ```
 
 ## Red ledger
@@ -415,3 +415,5 @@ Bot lab (`build/bot_lab/gs-base` = `4a2447f6` exported, stop and wait in it; `gs
 The refuting observation did not occur: spread at first contact is about half of stop and wait's and a sixth of the 18-29 before BR8, no wave stalls, every bot-vs-bot row ends (the equal mirrors too), the floors hold, the tower falls 150-850 ticks later because the wave walks at infantry pace. The owner's match judges the look.
 
 Full suite on the final tree (`build/suite-gs.log`): CASES 1362 CHECKS 153084 FAILURES 11, the names of red ledger row T1-8f; `sh tools/run_checks.sh` CHECKS PASSED 5. S1 (`test_skirmish_match.gd`) no longer ends: a probe to 40,000 ticks keeps both seats at 4-6 units and 4 buildings from tick 30,000. Its seat 1 is the same USA bot from tick 9,000 (`scripted_human.gd` calls `issue_opponent` for seat 1), so from then on S1 is an equal mirror. Owner decision (user, 2026-11-22): S1 is treated as a mirror, like the lab's: at T1-10 it pins its outcome at the 18,000-tick cap (ongoing) and keeps its economy, production and combat checks, measured up to the cap.
+
+**Owner's group-speed match (user, 2026-11-22).** Offline, owner against a bot, Dry Wells, tree `9c7c157c`, two screenshots (kept outside the repository). Wave 0 was four vehicles and three riflemen moving as one group; wave 1 about sixteen riflemen with three damaged vehicles a few cells behind (capped at infantry pace after a fight, so the gap the fight left stays; no catch-up rule, see the one page's Out). The waves destroyed the owner's defence tower. Owner's words: "works better now", "looks good i think, they managed to destroy my defense tower now even". The trailing was shown to the owner and not asked for a change.
