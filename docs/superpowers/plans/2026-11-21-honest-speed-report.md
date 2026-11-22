@@ -296,7 +296,7 @@ Sonnet high. The Deck address is in `~/projects/wargrid-native-work/deck-address
 ## Gate (stop gate; no merge)
 
 1. `git status --short` clean; resume record current.
-2. Reviews in parallel, each with the [gate review](../../milestone-prompt.md#gate-review) brief (changed contracts: the CSV metrics `step` and `team_tick`, the README block, `areas(rows, lines)`; previous rulings; evidence paths: verification file, ledger rows, this plan; name per new test the production change that makes it fail):
+2. Reviews in parallel, each with the [gate review](https://github.com/pdstuber/wargrid/blob/a35b80306fe47fca6df6331b280506d710c8769c/docs/milestone-prompt.md#gate-review) brief (changed contracts: the CSV metrics `step` and `team_tick`, the README block, `areas(rows, lines)`; previous rulings; evidence paths: verification file, ledger rows, this plan; name per new test the production change that makes it fail):
    - Opus whole-branch (high);
    - Gemini 4 Neon high: `git diff main...HEAD > …/logs/gate.diff`, the review prompt body of `agy-handoff.md` (private, "Review task") written to `…/logs/gate-agy.md` naming that diff, then `sh ~/projects/wargrid-overnight-work/night-14/agy-review.sh gemini-4-neon-high …/logs/gate-agy.md > …/logs/gate-agy.txt 2>&1; echo "exit=$?"` in the background; exit 1 or `AGY MISSING`: a second Opus high pass;
    - `pr-review-toolkit:silent-failure-hunter` and `pr-review-toolkit:pr-test-analyzer` (owner answer 6; the night-run rule for a test diff), each pinned to Opus high;
