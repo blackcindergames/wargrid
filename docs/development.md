@@ -87,6 +87,7 @@ actionlint   # GitHub workflows, with shellcheck on run: blocks; needs: brew ins
 sh tools/check_public.sh   # no home paths, hostnames, LAN addresses, session ids or working files in tracked files (AGENTS.md, public repository rule)
 mkdir -p build && sh tools/run_benchmark.sh > build/bench.log 2>&1   # on a clean main it records itself in docs/reference/perf-history.csv (PERF_LABEL="…" forces a record on any branch, PERF_RECORD=0 disables; PERF_REF=<rev> forces the pair step against <rev>; without it the reference is the merge base with main and the step is skipped when game/ is unchanged against it; the step takes about 3 min); the status table in the ledger and README is regenerated after every passing run whose record step succeeds, unless PERF_RECORD=0
 sh tools/run_team_match.sh   # three-faction 3v3 bots-only match on Ashfall, pinned cap line at tick 45000, about 2 min
+sh tools/run_bot_lab.sh LABEL   # 150 headless bot matches (bots vs bots, idle seat, tower), one table; rows in build/bot_lab/LABEL/; BOT_LAB_GAME=<patched export of game/> measures a variant (see the guide chapter 13)
 ```
 
 Python tooling: ruff and mypy are configured in `tools/pyproject.toml`, pinned in `tools/requirements-dev.txt` (CI installs from the same file). Once per clone, `git config blame.ignoreRevsFile .git-blame-ignore-revs` makes `git blame` skip the formatting-only commits listed there (GitHub reads the file by itself); add the SHA of any future repo-wide reformat.

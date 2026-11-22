@@ -1,0 +1,158 @@
+# Bot lab preset matrix: `<job name> <probe arguments>`; blank lines and # lines are skipped. Cap 45000 ticks everywhere.
+# Idle rows are (idle faction, bot faction); the bot sits on the seat named b<seat>. Floors the summary checks are in tools/bot_lab_summary.py.
+# Bot against bot, Dry Wells starts 1,2
+bvb-dw-usa-usa-s0 map=dry_wells starts=1,2 factions=usa,usa bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-usa-usa-s1 map=dry_wells starts=1,2 factions=usa,usa bots=1,2 seed=1 cap=45000 label=bvb
+bvb-dw-usa-china-s0 map=dry_wells starts=1,2 factions=usa,china bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-usa-china-s1 map=dry_wells starts=1,2 factions=usa,china bots=1,2 seed=1 cap=45000 label=bvb
+bvb-dw-usa-frc-s0 map=dry_wells starts=1,2 factions=usa,frc bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-usa-frc-s1 map=dry_wells starts=1,2 factions=usa,frc bots=1,2 seed=1 cap=45000 label=bvb
+bvb-dw-china-usa-s0 map=dry_wells starts=1,2 factions=china,usa bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-china-usa-s1 map=dry_wells starts=1,2 factions=china,usa bots=1,2 seed=1 cap=45000 label=bvb
+bvb-dw-china-china-s0 map=dry_wells starts=1,2 factions=china,china bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-china-china-s1 map=dry_wells starts=1,2 factions=china,china bots=1,2 seed=1 cap=45000 label=bvb
+bvb-dw-china-frc-s0 map=dry_wells starts=1,2 factions=china,frc bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-china-frc-s1 map=dry_wells starts=1,2 factions=china,frc bots=1,2 seed=1 cap=45000 label=bvb
+bvb-dw-frc-usa-s0 map=dry_wells starts=1,2 factions=frc,usa bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-frc-usa-s1 map=dry_wells starts=1,2 factions=frc,usa bots=1,2 seed=1 cap=45000 label=bvb
+bvb-dw-frc-china-s0 map=dry_wells starts=1,2 factions=frc,china bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-frc-china-s1 map=dry_wells starts=1,2 factions=frc,china bots=1,2 seed=1 cap=45000 label=bvb
+bvb-dw-frc-frc-s0 map=dry_wells starts=1,2 factions=frc,frc bots=1,2 seed=0 cap=45000 label=bvb
+bvb-dw-frc-frc-s1 map=dry_wells starts=1,2 factions=frc,frc bots=1,2 seed=1 cap=45000 label=bvb
+# Idle seat, Dry Wells starts 1,2, bot on seat 1 or 2
+idle-dw-usa-usa-b1-s0 map=dry_wells starts=1,2 factions=usa,usa bots=1 seed=0 cap=45000 label=idle
+idle-dw-usa-usa-b2-s0 map=dry_wells starts=1,2 factions=usa,usa bots=2 seed=0 cap=45000 label=idle
+idle-dw-usa-usa-b1-s1 map=dry_wells starts=1,2 factions=usa,usa bots=1 seed=1 cap=45000 label=idle
+idle-dw-usa-usa-b2-s1 map=dry_wells starts=1,2 factions=usa,usa bots=2 seed=1 cap=45000 label=idle
+idle-dw-usa-china-b1-s0 map=dry_wells starts=1,2 factions=china,usa bots=1 seed=0 cap=45000 label=idle
+idle-dw-usa-china-b2-s0 map=dry_wells starts=1,2 factions=usa,china bots=2 seed=0 cap=45000 label=idle
+idle-dw-usa-china-b1-s1 map=dry_wells starts=1,2 factions=china,usa bots=1 seed=1 cap=45000 label=idle
+idle-dw-usa-china-b2-s1 map=dry_wells starts=1,2 factions=usa,china bots=2 seed=1 cap=45000 label=idle
+idle-dw-usa-frc-b1-s0 map=dry_wells starts=1,2 factions=frc,usa bots=1 seed=0 cap=45000 label=idle
+idle-dw-usa-frc-b2-s0 map=dry_wells starts=1,2 factions=usa,frc bots=2 seed=0 cap=45000 label=idle
+idle-dw-usa-frc-b1-s1 map=dry_wells starts=1,2 factions=frc,usa bots=1 seed=1 cap=45000 label=idle
+idle-dw-usa-frc-b2-s1 map=dry_wells starts=1,2 factions=usa,frc bots=2 seed=1 cap=45000 label=idle
+idle-dw-china-usa-b1-s0 map=dry_wells starts=1,2 factions=usa,china bots=1 seed=0 cap=45000 label=idle
+idle-dw-china-usa-b2-s0 map=dry_wells starts=1,2 factions=china,usa bots=2 seed=0 cap=45000 label=idle
+idle-dw-china-usa-b1-s1 map=dry_wells starts=1,2 factions=usa,china bots=1 seed=1 cap=45000 label=idle
+idle-dw-china-usa-b2-s1 map=dry_wells starts=1,2 factions=china,usa bots=2 seed=1 cap=45000 label=idle
+idle-dw-china-china-b1-s0 map=dry_wells starts=1,2 factions=china,china bots=1 seed=0 cap=45000 label=idle
+idle-dw-china-china-b2-s0 map=dry_wells starts=1,2 factions=china,china bots=2 seed=0 cap=45000 label=idle
+idle-dw-china-china-b1-s1 map=dry_wells starts=1,2 factions=china,china bots=1 seed=1 cap=45000 label=idle
+idle-dw-china-china-b2-s1 map=dry_wells starts=1,2 factions=china,china bots=2 seed=1 cap=45000 label=idle
+idle-dw-china-frc-b1-s0 map=dry_wells starts=1,2 factions=frc,china bots=1 seed=0 cap=45000 label=idle
+idle-dw-china-frc-b2-s0 map=dry_wells starts=1,2 factions=china,frc bots=2 seed=0 cap=45000 label=idle
+idle-dw-china-frc-b1-s1 map=dry_wells starts=1,2 factions=frc,china bots=1 seed=1 cap=45000 label=idle
+idle-dw-china-frc-b2-s1 map=dry_wells starts=1,2 factions=china,frc bots=2 seed=1 cap=45000 label=idle
+idle-dw-frc-usa-b1-s0 map=dry_wells starts=1,2 factions=usa,frc bots=1 seed=0 cap=45000 label=idle
+idle-dw-frc-usa-b2-s0 map=dry_wells starts=1,2 factions=frc,usa bots=2 seed=0 cap=45000 label=idle
+idle-dw-frc-usa-b1-s1 map=dry_wells starts=1,2 factions=usa,frc bots=1 seed=1 cap=45000 label=idle
+idle-dw-frc-usa-b2-s1 map=dry_wells starts=1,2 factions=frc,usa bots=2 seed=1 cap=45000 label=idle
+idle-dw-frc-china-b1-s0 map=dry_wells starts=1,2 factions=china,frc bots=1 seed=0 cap=45000 label=idle
+idle-dw-frc-china-b2-s0 map=dry_wells starts=1,2 factions=frc,china bots=2 seed=0 cap=45000 label=idle
+idle-dw-frc-china-b1-s1 map=dry_wells starts=1,2 factions=china,frc bots=1 seed=1 cap=45000 label=idle
+idle-dw-frc-china-b2-s1 map=dry_wells starts=1,2 factions=frc,china bots=2 seed=1 cap=45000 label=idle
+idle-dw-frc-frc-b1-s0 map=dry_wells starts=1,2 factions=frc,frc bots=1 seed=0 cap=45000 label=idle
+idle-dw-frc-frc-b2-s0 map=dry_wells starts=1,2 factions=frc,frc bots=2 seed=0 cap=45000 label=idle
+idle-dw-frc-frc-b1-s1 map=dry_wells starts=1,2 factions=frc,frc bots=1 seed=1 cap=45000 label=idle
+idle-dw-frc-frc-b2-s1 map=dry_wells starts=1,2 factions=frc,frc bots=2 seed=1 cap=45000 label=idle
+# Idle seat, Ashfall starts 2,6 and 3,7
+idle-af26-usa-usa-b1-s0 map=ashfall starts=2,6 factions=usa,usa bots=1 seed=0 cap=45000 label=idle
+idle-af26-usa-usa-b2-s0 map=ashfall starts=2,6 factions=usa,usa bots=2 seed=0 cap=45000 label=idle
+idle-af26-usa-china-b1-s0 map=ashfall starts=2,6 factions=china,usa bots=1 seed=0 cap=45000 label=idle
+idle-af26-usa-china-b2-s0 map=ashfall starts=2,6 factions=usa,china bots=2 seed=0 cap=45000 label=idle
+idle-af26-usa-frc-b1-s0 map=ashfall starts=2,6 factions=frc,usa bots=1 seed=0 cap=45000 label=idle
+idle-af26-usa-frc-b2-s0 map=ashfall starts=2,6 factions=usa,frc bots=2 seed=0 cap=45000 label=idle
+idle-af26-china-usa-b1-s0 map=ashfall starts=2,6 factions=usa,china bots=1 seed=0 cap=45000 label=idle
+idle-af26-china-usa-b2-s0 map=ashfall starts=2,6 factions=china,usa bots=2 seed=0 cap=45000 label=idle
+idle-af26-china-china-b1-s0 map=ashfall starts=2,6 factions=china,china bots=1 seed=0 cap=45000 label=idle
+idle-af26-china-china-b2-s0 map=ashfall starts=2,6 factions=china,china bots=2 seed=0 cap=45000 label=idle
+idle-af26-china-frc-b1-s0 map=ashfall starts=2,6 factions=frc,china bots=1 seed=0 cap=45000 label=idle
+idle-af26-china-frc-b2-s0 map=ashfall starts=2,6 factions=china,frc bots=2 seed=0 cap=45000 label=idle
+idle-af26-frc-usa-b1-s0 map=ashfall starts=2,6 factions=usa,frc bots=1 seed=0 cap=45000 label=idle
+idle-af26-frc-usa-b2-s0 map=ashfall starts=2,6 factions=frc,usa bots=2 seed=0 cap=45000 label=idle
+idle-af26-frc-china-b1-s0 map=ashfall starts=2,6 factions=china,frc bots=1 seed=0 cap=45000 label=idle
+idle-af26-frc-china-b2-s0 map=ashfall starts=2,6 factions=frc,china bots=2 seed=0 cap=45000 label=idle
+idle-af26-frc-frc-b1-s0 map=ashfall starts=2,6 factions=frc,frc bots=1 seed=0 cap=45000 label=idle
+idle-af26-frc-frc-b2-s0 map=ashfall starts=2,6 factions=frc,frc bots=2 seed=0 cap=45000 label=idle
+idle-af37-usa-usa-b1-s0 map=ashfall starts=3,7 factions=usa,usa bots=1 seed=0 cap=45000 label=idle
+idle-af37-usa-usa-b2-s0 map=ashfall starts=3,7 factions=usa,usa bots=2 seed=0 cap=45000 label=idle
+idle-af37-usa-china-b1-s0 map=ashfall starts=3,7 factions=china,usa bots=1 seed=0 cap=45000 label=idle
+idle-af37-usa-china-b2-s0 map=ashfall starts=3,7 factions=usa,china bots=2 seed=0 cap=45000 label=idle
+idle-af37-usa-frc-b1-s0 map=ashfall starts=3,7 factions=frc,usa bots=1 seed=0 cap=45000 label=idle
+idle-af37-usa-frc-b2-s0 map=ashfall starts=3,7 factions=usa,frc bots=2 seed=0 cap=45000 label=idle
+idle-af37-china-usa-b1-s0 map=ashfall starts=3,7 factions=usa,china bots=1 seed=0 cap=45000 label=idle
+idle-af37-china-usa-b2-s0 map=ashfall starts=3,7 factions=china,usa bots=2 seed=0 cap=45000 label=idle
+idle-af37-china-china-b1-s0 map=ashfall starts=3,7 factions=china,china bots=1 seed=0 cap=45000 label=idle
+idle-af37-china-china-b2-s0 map=ashfall starts=3,7 factions=china,china bots=2 seed=0 cap=45000 label=idle
+idle-af37-china-frc-b1-s0 map=ashfall starts=3,7 factions=frc,china bots=1 seed=0 cap=45000 label=idle
+idle-af37-china-frc-b2-s0 map=ashfall starts=3,7 factions=china,frc bots=2 seed=0 cap=45000 label=idle
+idle-af37-frc-usa-b1-s0 map=ashfall starts=3,7 factions=usa,frc bots=1 seed=0 cap=45000 label=idle
+idle-af37-frc-usa-b2-s0 map=ashfall starts=3,7 factions=frc,usa bots=2 seed=0 cap=45000 label=idle
+idle-af37-frc-china-b1-s0 map=ashfall starts=3,7 factions=china,frc bots=1 seed=0 cap=45000 label=idle
+idle-af37-frc-china-b2-s0 map=ashfall starts=3,7 factions=frc,china bots=2 seed=0 cap=45000 label=idle
+idle-af37-frc-frc-b1-s0 map=ashfall starts=3,7 factions=frc,frc bots=1 seed=0 cap=45000 label=idle
+idle-af37-frc-frc-b2-s0 map=ashfall starts=3,7 factions=frc,frc bots=2 seed=0 cap=45000 label=idle
+# Broken Crown 1v1 idle: idle start 1, bot on start 2, 3 or 4
+idle-bc1v1-usa-usa-k2-s0 map=broken_crown starts=1,2 factions=usa,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-usa-china-k2-s0 map=broken_crown starts=1,2 factions=usa,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-usa-frc-k2-s0 map=broken_crown starts=1,2 factions=usa,frc bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-usa-k2-s0 map=broken_crown starts=1,2 factions=china,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-china-k2-s0 map=broken_crown starts=1,2 factions=china,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-frc-k2-s0 map=broken_crown starts=1,2 factions=china,frc bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-usa-k2-s0 map=broken_crown starts=1,2 factions=frc,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-china-k2-s0 map=broken_crown starts=1,2 factions=frc,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-frc-k2-s0 map=broken_crown starts=1,2 factions=frc,frc bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-usa-usa-k3-s0 map=broken_crown starts=1,3 factions=usa,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-usa-china-k3-s0 map=broken_crown starts=1,3 factions=usa,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-usa-frc-k3-s0 map=broken_crown starts=1,3 factions=usa,frc bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-usa-k3-s0 map=broken_crown starts=1,3 factions=china,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-china-k3-s0 map=broken_crown starts=1,3 factions=china,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-frc-k3-s0 map=broken_crown starts=1,3 factions=china,frc bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-usa-k3-s0 map=broken_crown starts=1,3 factions=frc,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-china-k3-s0 map=broken_crown starts=1,3 factions=frc,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-frc-k3-s0 map=broken_crown starts=1,3 factions=frc,frc bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-usa-usa-k4-s0 map=broken_crown starts=1,4 factions=usa,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-usa-china-k4-s0 map=broken_crown starts=1,4 factions=usa,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-usa-frc-k4-s0 map=broken_crown starts=1,4 factions=usa,frc bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-usa-k4-s0 map=broken_crown starts=1,4 factions=china,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-china-k4-s0 map=broken_crown starts=1,4 factions=china,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-china-frc-k4-s0 map=broken_crown starts=1,4 factions=china,frc bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-usa-k4-s0 map=broken_crown starts=1,4 factions=frc,usa bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-china-k4-s0 map=broken_crown starts=1,4 factions=frc,china bots=2 seed=0 cap=45000 label=idle
+idle-bc1v1-frc-frc-k4-s0 map=broken_crown starts=1,4 factions=frc,frc bots=2 seed=0 cap=45000 label=idle
+# Broken Crown 1v2 idle: idle start 1, two bots of one faction on starts 2,3 / 2,4 / 3,4
+idle-bc1v2-usa-usa-k23-s0 map=broken_crown starts=1,2,3 factions=usa,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-usa-china-k23-s0 map=broken_crown starts=1,2,3 factions=usa,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-usa-frc-k23-s0 map=broken_crown starts=1,2,3 factions=usa,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-usa-k23-s0 map=broken_crown starts=1,2,3 factions=china,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-china-k23-s0 map=broken_crown starts=1,2,3 factions=china,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-frc-k23-s0 map=broken_crown starts=1,2,3 factions=china,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-usa-k23-s0 map=broken_crown starts=1,2,3 factions=frc,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-china-k23-s0 map=broken_crown starts=1,2,3 factions=frc,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-frc-k23-s0 map=broken_crown starts=1,2,3 factions=frc,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-usa-usa-k24-s0 map=broken_crown starts=1,2,4 factions=usa,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-usa-china-k24-s0 map=broken_crown starts=1,2,4 factions=usa,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-usa-frc-k24-s0 map=broken_crown starts=1,2,4 factions=usa,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-usa-k24-s0 map=broken_crown starts=1,2,4 factions=china,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-china-k24-s0 map=broken_crown starts=1,2,4 factions=china,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-frc-k24-s0 map=broken_crown starts=1,2,4 factions=china,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-usa-k24-s0 map=broken_crown starts=1,2,4 factions=frc,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-china-k24-s0 map=broken_crown starts=1,2,4 factions=frc,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-frc-k24-s0 map=broken_crown starts=1,2,4 factions=frc,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-usa-usa-k34-s0 map=broken_crown starts=1,3,4 factions=usa,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-usa-china-k34-s0 map=broken_crown starts=1,3,4 factions=usa,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-usa-frc-k34-s0 map=broken_crown starts=1,3,4 factions=usa,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-usa-k34-s0 map=broken_crown starts=1,3,4 factions=china,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-china-k34-s0 map=broken_crown starts=1,3,4 factions=china,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-china-frc-k34-s0 map=broken_crown starts=1,3,4 factions=china,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-usa-k34-s0 map=broken_crown starts=1,3,4 factions=frc,usa,usa bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-china-k34-s0 map=broken_crown starts=1,3,4 factions=frc,china,china bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+idle-bc1v2-frc-frc-k34-s0 map=broken_crown starts=1,3,4 factions=frc,frc,frc bots=2,3 teams=1,2,2 seed=0 cap=45000 label=idle
+# One Rotary Gun Tower (and its power plant) on the idle China seat, Dry Wells
+tower-dw-usa-b1-s0 map=dry_wells starts=1,2 factions=usa,china bots=1 tower=2 seed=0 cap=45000 label=tower
+tower-dw-usa-b2-s0 map=dry_wells starts=1,2 factions=china,usa bots=2 tower=1 seed=0 cap=45000 label=tower
+tower-dw-china-b1-s0 map=dry_wells starts=1,2 factions=china,china bots=1 tower=2 seed=0 cap=45000 label=tower
+tower-dw-china-b2-s0 map=dry_wells starts=1,2 factions=china,china bots=2 tower=1 seed=0 cap=45000 label=tower
+tower-dw-frc-b1-s0 map=dry_wells starts=1,2 factions=frc,china bots=1 tower=2 seed=0 cap=45000 label=tower
+tower-dw-frc-b2-s0 map=dry_wells starts=1,2 factions=china,frc bots=2 tower=1 seed=0 cap=45000 label=tower
