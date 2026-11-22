@@ -1652,3 +1652,13 @@ The open questions of [late-game income](../questions/next-economy-late-income.m
 - **Q13, capture bonus:** 1,000 once per point per match, to the first owner only, as Zero Hour (`AutoDepositUpdate.cpp:120-141`) (user, 2026-11-22).
 - **Q14, bots:** every level captures and upgrades nearby free points; from Regular up bots also attack enemy points (user, 2026-11-22).
 - **Q15, look:** step 1 keeps one neutral derrick shown in its owner's colour; step 2's post gets one shape per faction with the same numbers (user, 2026-11-22).
+
+## Income points proposal round (user, 2026-11-22)
+
+Questions from writing the [income points proposal](../superpowers/specs/2026-11-22-income-points-design.md) and its builder and player-experience checks.
+
+- **Point layout:** two points per seat, one home point near its own start and one contested point between opposing seats or in the centre; Zero Hour derrick spots kept where they fit, Ashfall's four pairs merged into single contested points (user, 2026-11-22).
+- **Approach:** a point is a neutral, invulnerable derrick building with an owner, a capture timer and a payout; not a map zone, not part of batch B's Capture Building (user, 2026-11-22).
+- **Floor before batch A:** step 1 waits for ground batch A's capped passive set, so a player who ignores points never runs out of income once the piles are empty; no pre-owned home point, no temporary trickle (user, 2026-11-22).
+- **Switch:** "Income points" is a lobby match setting, on by default, synced with the match settings (user, 2026-11-22).
+- **Capture times:** the proposal's 20 s capture and 7 s neutralise are a starting point, tuned by playtest; 30 s and 10 s is the second pair to try (user, 2026-11-22).
