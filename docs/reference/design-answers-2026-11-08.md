@@ -1627,3 +1627,17 @@ Input: the owner's brief on a hybrid economy with strategic locations (private `
 - **Research:** the four engines with local source (Zero Hour, Warzone 2100, Zero-K, OpenRA) plus one fetched primary source for Dawn of War's strategic points and listening posts; Company of Heroes is left out (user, 2026-11-22).
 - **Placement:** a Later item of its own, Fight over income points, split from map life; the design proposal says what it needs (capture, fog or not, bots, maps) and the owner places it then (user, 2026-11-22).
 - **Open for the design:** where points sit on each map (Ashfall has 8 derrick spots, the others were not found), a point whose building dies, a leaver's points, how bots take and contest points, the HUD's income display, the faction look, and every number above.
+
+## Late-income wizard round (user, 2026-11-22)
+
+The open questions of [late-game income](../questions/next-economy-late-income.md) after the [hybrid economy frame](#hybrid-economy-frame-user-2026-11-22). Q8 to Q11 revise the uncapped ground batch A answer.
+
+- **Q3, where points come from:** Zero Hour's derrick spots plus points added in Wargrid's map data, so every map has a set number per player (user, 2026-11-22). The owner doubts that Zero Hour's derrick spots sit where Dawn of War's strategic points would; the design checks each map's spots against that and may move or add points.
+- **Q8, which sources get a limit:** each kind on its own: Supply Drop Zone, Black Market, Internet Center and Hackers (user, 2026-11-22).
+- **Q9, how many:** 2 Supply Drop Zones and 2 Black Markets per player; the Internet Center stays at 1 (user, 2026-11-22). The owner flagged the USA and FRC gap this leaves at Zero Hour rates (1,500 against 1,200 per minute, inferred); Q11 closes it.
+- **Q10, Hackers:** earn only inside the Internet Center, whose slots drop from Zero Hour's 8 to 4, so the building is the Hacker cap (user, 2026-11-22). At Zero Hour rates that pays about 670 per minute, 1,330 at Heroic (inferred); the owner flagged the balance against USA and FRC, closed by Q11.
+- **Q11, pay:** each faction's full capped set pays the same total; 1,200 per minute is provisional, and the figure is set by the bot-match measurement of the frame, below one working depot as the cap rule requires (user, 2026-11-22). Factions differ in how their passive income can be raided (planes, a capturable market, killable Hackers), not in how much. Zero Hour's per-building rates are replaced.
+- **Q12, a destroyed building:** the Dawn of War way: the point itself is never destroyed, only captured. In step 1 the derrick can be captured but not destroyed; in step 2 the post shields its point, and destroying it loses its upgrades and their pay and opens the point to capture, while its holder may rebuild (user, 2026-11-22). Source: fan wikis only, no primary source found (private `research/dawn-of-war-points-2026-11-22.md`); a departure from Zero Hour, where a destroyed derrick is gone for good.
+- **Q13, capture bonus:** 1,000 once per point per match, to the first owner only, as Zero Hour (`AutoDepositUpdate.cpp:120-141`) (user, 2026-11-22).
+- **Q14, bots:** every level captures and upgrades nearby free points; from Regular up bots also attack enemy points (user, 2026-11-22).
+- **Q15, look:** step 1 keeps one neutral derrick shown in its owner's colour; step 2's post gets one shape per faction with the same numbers (user, 2026-11-22).
