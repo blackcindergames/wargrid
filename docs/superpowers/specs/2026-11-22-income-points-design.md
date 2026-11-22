@@ -48,7 +48,7 @@ Decided by the owner (user, 2026-11-22, frame, wizard round and proposal round) 
 - **Look:** one neutral derrick shape for everyone, shown in its holder's colour.
 - **Who captures (agent's call, narrowing "any infantry"):** units with a `captures: true` capability, set on combat infantry (riflemen and rocket troopers of every faction). Builders, collectors and Hackers do not capture. Without it the FRC Laborer, an `infantry` start unit (`factions.gd:26`, `frc.gd:7`), would take its home point at tick 0 while USA and China start with a vehicle builder (`usa.gd:5`, `china.gd:10`). Vehicles cannot capture.
 - **Capture order (agent's call):** right-clicking a point with capturers selected moves them into the radius and sets a capture stance: they chase only within the radius plus weapon range and return to the point afterwards. Today's guard scan (vision × 2.2, `combat.gd:77-78`) would otherwise walk them off the point (`combat.gd:126-128`, `:185-199`). Right-clicking a point with only vehicles moves them there and shows "Only infantry can capture".
-- **Capture time and radius (agent's call):** 600 ticks (20 s) with at least one capturer within 3 cells of the point's centre. 20 s matches both Zero Hour's channel and Dawn of War's strategic point (fan wiki, below). Several capturers do not speed it up; one rate reads at a glance.
+- **Capture time and radius (agent's call):** 600 ticks (20 s) with at least one capturer within 3 cells of the point's centre. 20 s matches both Zero Hour's channel and Dawn of War's strategic point (fan wiki, below). Several capturers do not speed it up; one rate reads at a glance. The capture and neutralise times are a starting point, tuned by playtest; 30 s and 10 s is the second pair to try (user, 2026-11-22).
 - **Pause (agent's call on who counts):** progress pauses while an armed enemy ground unit the capturing team sees stands within the radius. Collectors, builders, aircraft and passengers do not pause it. Armed vehicles therefore defend a point without being able to take one.
 - **Decay (agent's call):** with no capturer in the radius, progress drains at the neutralise rate instead of resetting, so a step out for one second costs about three, not twenty.
 - **Taking an enemy point (agent's call):** neutralise first, 200 ticks (about a third of the capture time, as Dawn of War's decapture per the fan wiki), during which the point still pays its holder; capture then continues on the same order, 800 ticks in all. Neutralising follows the same pause and decay rules. A raid that neutralises and leaves still costs the holder the point.
@@ -88,7 +88,7 @@ It does need ground batch A (user, 2026-11-22): before batch A there is no passi
 
 ### First playable slice
 
-Dry Wells only, points on: the simulation, the derrick, ring, payout text, alerts and card, and bots that take their home point. Then the owner's ten-minute match (AGENTS.md, How a package runs). The other maps, the full bot rules and the measurement follow and aim at what that match showed.
+Dry Wells only, points on: the simulation, the derrick, ring, payout text, alerts and card, and bots that take their home point. The capture and neutralise times are data, with a lab key that switches between 20 s / 7 s and 30 s / 10 s mid-match, as the [A/B labs](../../reference/art-lab-verification.md) do. Then the owner's ten-minute match (AGENTS.md, How a package runs). The other maps, the full bot rules and the measurement follow and aim at what that match showed.
 
 ## Where points sit
 
@@ -163,7 +163,7 @@ Purpose (user, 2026-11-22, "Income target, measure first"): fix the point's pay 
 
 ## Sources on Dawn of War
 
-Primary: the *Warhammer 40,000: Dawn of War* and *Winter Assault* manual (THQ; PDF at segaretro.org, `WHDoW_Steam_manual.pdf`), p. 8 ("Use squads with the Capture ability … to capture Strategic Points") and p. 10 (Listening Post). The manual has no times or rates. Capture time, decapture share and per-point income come from fan wikis only (private `research/dawn-of-war-points-2026-11-22.md`); nothing numeric here rests on them except the agent's 20 s and one-third calls, which the owner's match and the measurement may change.
+Primary: the *Warhammer 40,000: Dawn of War* and *Winter Assault* manual (THQ; PDF at segaretro.org, `WHDoW_Steam_manual.pdf`), p. 8 ("Use squads with the Capture ability … to capture Strategic Points") and p. 10 (Listening Post). The manual has no times or rates. Capture time, decapture share and per-point income come from fan wikis only (private `research/dawn-of-war-points-2026-11-22.md`); nothing numeric here rests on them except the agent's 20 s and one-third calls, which playtests tune (user, 2026-11-22).
 
 ## Placement
 

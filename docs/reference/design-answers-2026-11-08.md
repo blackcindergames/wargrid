@@ -1661,3 +1661,4 @@ Questions from writing the [income points proposal](../superpowers/specs/2026-11
 - **Approach:** a point is a neutral, invulnerable derrick building with an owner, a capture timer and a payout; not a map zone, not part of batch B's Capture Building (user, 2026-11-22).
 - **Floor before batch A:** step 1 waits for ground batch A's capped passive set, so a player who ignores points never runs out of income once the piles are empty; no pre-owned home point, no temporary trickle (user, 2026-11-22).
 - **Switch:** "Income points" is a lobby match setting, on by default, synced with the match settings (user, 2026-11-22).
+- **Capture times:** the proposal's 20 s capture and 7 s neutralise are a starting point, tuned by playtest; 30 s and 10 s is the second pair to try (user, 2026-11-22).
