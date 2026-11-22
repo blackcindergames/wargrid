@@ -1,96 +1,178 @@
 # SB5a Worker mode, the thread: Implementation Plan
 
-**Status:** draft (agent, 2026-11-22); the three placement questions are answered ("Owner answers"); the plan itself is not approved and has had no readiness review. Approving does not start implementation: the run starts from its handoff (private, `sb5a-build-prompt.txt`). 
+**Status:** revision 2, draft (agent, 2026-11-22). The three placement questions are answered ("Owner answers"). One Opus readiness review (3 blockers, 19 should-fix, 14 nits; report private, `sb5a-readiness-review.md`) and the owner's planning brief (private) are applied; the disposition of each item is in "Review disposition". The plan itself is not approved and needs a second, narrower readiness review. Approving does not start implementation: the run starts from its handoff (private, `sb5a-build-prompt.txt`).
 
-> **For agentic workers:** run rules: [milestone prompt](../../milestone-prompt.md) and, unattended, [night run](../../night-run.md#coordinator-rules). One fresh subagent per task, each starting from the SB5a resume record in [sim boundary verification](../../reference/sim-boundary-verification.md) (Task 1 adds the section). Every task subagent also reads "Global Constraints", "Beside P2.3b", "Determinism notes", "Same-tick and ordering cases" and "Stop conditions" (`rg -n '^## ' <plan>`).
+> **For agentic workers:** run rules: [milestone prompt](../../milestone-prompt.md) and, unattended, [night run](../../night-run.md#coordinator-rules). One fresh subagent per task, each starting from the SB5a resume record in [sim boundary verification](../../reference/sim-boundary-verification.md) (Task 1 adds the section). Every task subagent also reads "Labels", "Global Constraints", "Beside P2.3b", "Capacity and the full-queue trace", "Ownership", "Thread lifecycle", "Same-tick and ordering cases" and "Stop conditions" (`rg -n '^## ' <plan>`).
 
-**Goal:** `SimPump` can run every job on its own thread, native and headless, switched on by `WARGRID_SIM_THREAD=1` and off by default. With the switch off nothing changes; with it on, digests, traces and pins are equal, the scene suite is green, a fault ends the match within 5 s, and a loopback online match with one worker client plays to its end.
+**Goal:** `SimPump` can run every job on one worker thread, native and headless, switched on by `WARGRID_SIM_THREAD=1`, off by default. With the switch off nothing changes. With it on: digests are equal to inline on four loads, the scene suite is green with every scene pump in worker mode, a fault ends the match within 5 s, and a loopback online match with one worker client plays to its end with equal hashes.
 
-**Architecture:** One code path. `post`, `drain`, `query`, `record`, `stop` keep their signatures. In worker mode `post` hands the job to a queue (`Mutex` plus `Semaphore`, at most `MAX_QUEUED` jobs not yet published, the running one included). The worker thread runs the same `run_job`, publishes the note and a fresh slot under the lock, and `drain` takes them under the same lock. `query` waits for its own note. A failure on the worker (null result, wrong thread, logged error, stall, dead thread) becomes one main-side `failure()` reason at the next `drain`. Drivers ask for room before they build a job or take a lockstep tick.
+**Architecture:** One code path; the inline pump stays the reference. `post` accepts a job (responsibility for that tick passes to the pump at that instant) only when there is room. The worker runs the same `run_job` outside the lock and publishes the note and a fresh slot under the lock. `drain` takes them under the same lock. `query` waits for its own reply with a deadline. A worker-side failure travels as a marker in the queue and becomes one main-side `failure()` reason. Drivers ask for room before they build a job or take a lockstep tick.
 
-**Tech stack:** Godot 4.7.2 typed GDScript (`Thread`, `Mutex`, `Semaphore`, `Logger`), suite runner `game/tests/run_tests.gd`, Python checks under `tools/`, POSIX sh tools. `relay/`, `protocol/` and `game/scripts/simulation/` untouched.
+**Tech stack:** Godot 4.7.2 typed GDScript (`Thread`, `Mutex`, `Semaphore`, `Logger`), suite runner `game/tests/run_tests.gd` with `tools/run_tests.sh`, Python checks under `tools/`, POSIX sh tools. `relay/`, `protocol/` and `game/scripts/simulation/` untouched.
 
-**Spec:** [sim boundary design](../specs/2026-11-15-sim-boundary-design.md): the API block, "One code path", the SB5a row of "Package cut" and [SB5a inherits](../specs/2026-11-15-sim-boundary-design.md#sb5a-inherits). Decisions: [critique review](../../reference/design-answers-2026-11-08.md#sim-boundary-critique-review-user-2026-11-18) (owner-thread check approved; peer of a faulted client sees "Your opponent left"), [packages](../../packages.md#night-lane) item 6 (Deck waiting-line rider; pairing-guard and catch-up riders). Background (private): the sim boundary critique, changes 4, 10, 21 to 31 and findings A1 to A8, C2, C4. Riders from night 8: [play on after a leave](2026-11-21-play-on-after-a-leave.md) Review Focus 1 and 7. Template: [Pump hardening plan](2026-11-18-pump-hardening.md).
+**Spec:** [sim boundary design](../specs/2026-11-15-sim-boundary-design.md): the API block, "One code path", the SB5a row of "Package cut", [SB5a inherits](../specs/2026-11-15-sim-boundary-design.md#sb5a-inherits) and [Verification](../specs/2026-11-15-sim-boundary-design.md#verification). Decisions: [critique review](../../reference/design-answers-2026-11-08.md#sim-boundary-critique-review-user-2026-11-18); [packages](../../packages.md#night-lane) item 6. Background (private): the sim boundary critique (changes 4, 10, 21 to 31; findings A1 to A8, C2, C4), the Pump hardening "Notes for SB5a" and its open items (`sim-boundary-verification.md:448`). Riders from night 8: [play on after a leave](2026-11-21-play-on-after-a-leave.md) Review Focus 1 and 7. Template: [Pump hardening plan](2026-11-18-pump-hardening.md).
+
+## Labels
+
+Every decision below carries one label, so a reviewer can tell them apart:
+
+- **[owner]**: an owner decision, with its date; changing it needs the owner.
+- **[proposed]**: an agent decision, reversible on the owner's word ("Decided for you" in AGENTS.md).
+- **[probe]**: an engine or platform behaviour not yet verified; the task that settles it is named. **[probed]**: verified in this planning session (Godot 4.7.2 Linux editor build, headless, scratch scripts outside the repository).
+
+## Target revision
+
+- Code base: `main` `83d00e8` (checked 2026-11-22: `origin/main` is still `83d00e8`; no SB5a or worker code on any branch; `p2-3b-build-from-the-dock` is not on GitHub). Task 1 checks again before any task is assigned, and Task 14 moves the base to `main` with P2.3b in it.
+- Prerequisites at that base: Pump hardening merged (fresh slot per job, null job fails the pump, `close_match`, `record()` with the log, nested freeze); night 8 Play on after a leave merged; the Deck no-threads arms measured before this plan ([packages](../../packages.md#night-lane) item 6: none helped) **[owner, 2026-11-19]**.
+- Scheduling: SB5a is night lane only and never ahead of a day package **[owner, 2026-11-20]**; it is built beside P2.3b and merges after it **[owner, 2026-11-22]**.
 
 ## One page
 
-- **What a player notices:** nothing, with the switch off, which is every build this package ships. What a player gets is SB6's decision, which needs this thread to measure. With the switch on, a Steam Deck player in the Firefox team row would see the simulation leave the main thread (inline misses 49 % of frames there; the spike's worker missed 0 %, `ow/worker-threads/results.md:70-77`, private).
-- **What would refute it:** a digest that differs between inline and worker on any of the four loads, or a scene case that fails only under the switch. The first evidence is headless: `test_sim_pump.gd`'s existing 900-tick digest cases run once per mode (Task 3), before any driver changes.
-- **Look in existing data first:** the spike (`~/projects/wargrid-wt-worker`, private worktree) produced equal digests inline and worker on three loads (`docs/reference/worker-thread-spike-verification.md:62` lists the check as open). Task 1 reads its logs if they are on the machine. Either way the headless check runs again on this tree.
-- **First slice:** Tasks 2 and 3 (the switch and the queue, with the pump suite in both modes). Everything after that hardens the slice.
-- **Out:** the threaded Web preset, COOP/COEP headers, the pause-menu toggle and the launcher off position (SB5b); Deck decision rows, the go rule's limits, `Engine.max_physics_steps_per_frame` (SB6); interpolation for uneven tick arrival (P4); overtaken-order wording (P2.3a); bot seats in the scene client (M9).
+- **What a player notices:** nothing; every build this package ships has the switch off. It gives SB6 a thread to measure. On the Steam Deck in Firefox the team load misses 49 % of frames inline and 0 % with the spike's worker (`ow/worker-threads/results.md:70-77`, private).
+- **What would refute it:** a digest that differs between inline and worker on any load, or a scene case that fails only with worker pumps. First evidence (headless): `test_sim_pump.gd`'s 900-tick digest cases in both modes (Task 3).
+- **Existing data first:** the spike's DIGEST lines, if they are on the machine (Task 1 Step 4). The check `docs/reference/worker-thread-spike-verification.md:62` is still open, so this tree runs it either way.
+- **First slice:** Tasks 2 and 3.
+- **Out:** threaded Web preset, COOP/COEP, pause-menu toggle, launcher off position, release Web fault probe (SB5b); go-rule limits, Deck decision rows, `Engine.max_physics_steps_per_frame` (SB6); uneven-arrival interpolation (P4); overtaken-order wording (P2.3a); scene-client bot seats (M9).
 
 ## Beside P2.3b
 
-This package is built in parallel with P2.3b Build from the dock and merges after it, so it never goes ahead of a day package (user, 2026-11-20). P2.3b's plan (2026-11-21, on the unpushed branch `p2-3b-build-from-the-dock`) owns `orders.gd`, the HUD and dock scripts, the input half of `match_screen.gd`, the F33 rider in `offline_driver.gd` (a standing preview request on every job) and its T2b hunk in `online_driver.gd`.
+P2.3b's plan (2026-11-21, branch `p2-3b-build-from-the-dock`, not yet pushed; file list taken from its handoff, private, `p2-3b-build-prompt.txt`, until the branch is readable) owns `orders.gd`, `hud.gd`, `hud_model.gd`, the dock and command-card scripts, `match_screen.gd`'s input and selection functions, the F33 rider in `offline_driver.gd` (standing preview request on every job) and its T2b hunk in `online_driver.gd`.
 
-- **SB5a never edits** `game/scripts/match/orders.gd`, `game/scripts/presentation/hud*.gd`, the dock or command-card scripts, or `match_screen.gd`'s `_input`, `_unhandled_input` and selection functions. `git diff <base> --stat -- game/scripts/match/orders.gd game/scripts/presentation/hud.gd` is empty at every task.
-- **The preview path stays as it is.** SB5a carries `Job.preview` and `Note.preview` through the queue and does not reorder or redesign the preview code in either driver (`offline_driver.gd:24-25, 61-74, 84, 137-142`; `online_driver.gd:35-36, 119-140, 189-194` at `83d00e8`). Task 14 adapts to F33 and T2b after P2.3b merges.
-- **Driver hunks stay small and named:** offline `step` (room check) and `drain` (failure read); online `step` (room before `take`), `drain` (failure read) and `notice` (night-8 guard). Each is listed per task.
-- **The pending-build flag** is cleared through the existing `orders.reset()` (`orders.gd:86`, called from `match_screen.gd:532`), called from the screen when the driver reports a failure. No new `orders.gd` code.
-- **Shared documents wait:** `docs/STATUS.md`, `docs/packages.md`, `docs/reference/perf-history.csv`, the README roadmap and guide chapters 05 and 13 are edited only in Task 15, after Task 14 has merged `main` with P2.3b in it. Before then, notes go to the verification file only.
-- **If P2.3b has not merged when Task 13 is green**, the run stops at Task 13, reports, and waits. It does not merge P2.3b's branch, rebase onto it, or push.
+- **SB5a never edits:** `game/scripts/match/orders.gd`, `game/scripts/match/hud.gd`, `game/scripts/match/hud_model.gd`, the dock and command-card scripts, and `match_screen.gd`'s `_input`, `_unhandled_input`, `_select_kind`, `_hud_selection`. Guard at every task: `git diff <base> --stat -- game/scripts/match/orders.gd game/scripts/match/hud.gd game/scripts/match/hud_model.gd` is empty.
+- **The preview code stays as it is** in both drivers (`offline_driver.gd:24-25, 61-74, 84, 137-142`; `online_driver.gd:35-36, 119, 126, 129-140, 189-194` at `83d00e8`). In particular `online_driver.gd:119` (`last`) is not changed: when room runs out mid catch-up, the preview request stays and rides on the next frame's job (one frame later, nothing lost; tested in Task 7).
+- **Named hunks SB5a may add:** `match_screen.gd` `_exit_tree` (stop the driver) and a first-failure hook beside `_drain_notes`; offline `step` (room) and `drain` (failure read); online `start` (null query), `step` (room before `take`), `drain` (failure read and end), `_report` (null query, `sim` field), `notice` (night-8 guard), new `failure()` and `sim_mode()`.
+- **The pending-build flag** is cleared through the existing `orders.reset()` (`orders.gd:86`, already called at `match_screen.gd:532`). It also clears selection, placement and attack-move, visible under the freeze card; the player-experience reviewer looks at that, and Task 14 checks whether P2.3b changed `reset()`.
+- **Shared documents wait:** `docs/STATUS.md`, `docs/packages.md`, `docs/reference/perf-history.csv`, the README roadmap and guide chapters 05 and 13 are edited only in Task 15, after Task 14. Before then notes go to the verification file only.
+- **If P2.3b has not merged when Task 13 is done**, the run stops and reports. It never merges, rebases onto or pushes P2.3b's branch.
 
 ## Global Constraints
 
-- **Base:** worktree `$W`, branch `sim-boundary-sb5a` from `main` `83d00e8` (a cloud session uses its own branch name; the resume record names it). Logs `$L` = `~/projects/wargrid-overnight-work/sb5a/logs`. `$W`, `$L`, `~` are notation: commands use absolute paths; tracked files use `~/...`, never a typed absolute path (`sh tools/check_public.sh`).
-- **Nothing pinned moves, in either mode:** the four suite traces (replay, economy, combat, team), `run_netplay.sh match` and `rematch` (terminal tick pinned in `run_netplay.sh`), the `TEAM MATCH` line pinned in `run_team_match.sh`, IC1, IC2, OD1, S3, RB8. Any of them moving is a stop; never re-pin.
-- **Allowed test edits (exactly these):** `BaseScene.tick` and the other scene tick helpers wait for an idle pump (bounded) before the drain (Task 9); the Profiler cases Task 1 lists are skipped under the switch by name, with a counted skip line (Task 9); `test_sb4_refused_post_ends_match` becomes "a refused post without room keeps the tick", because room-before-take replaces its premise (Task 7, inherits list, user, 2026-11-18); new `test_sb5a_*` cases and their helper classes. No assertion is removed or loosened otherwise.
-- **Untouched paths:** `relay/`, `protocol/`, `game/scripts/simulation/`, `game/scripts/net/headless_client.gd`, `seat_sim.gd`, `wire.gd`, `relay_transport.gd`, `game/scripts/match/orders.gd`, `game/scripts/presentation/` except `perf_overlay.gd`, `web/`, `game/export_presets.cfg`.
-- **Inline unchanged:** with the switch off, `sim_pump.gd` behaves exactly as at base: no `Thread` is created, `busy()` is false, `post` runs the job at once. Every task ends with the full suite and `TRACES` in the default mode.
-- **Contract:** `docs/reference/sim-interface.md` changes only by what this plan names: the worker-mode rule per pump method, `has_room()`, `mode()`, the failure reasons. Anything more is a stop.
-- **Tests:** new cases `test_sb5a_*` (no existing case or suite file contains `test_sb5a_`), appended to their suite's `cases()` list. They use the [simulation interface](../../reference/sim-interface.md), the pump and the drivers; `pump.live()` only while `busy()` is false. Fault and stall cases print error lines on purpose, so they live outside the suite (Task 6).
-- **Red is a failed named check.** A task whose tests need a new field or method first adds it bare and behaviour-neutral (Step 0). A red run with `suite failed to load`, `SCRIPT ERROR` or a parse error is not red: fix Step 0 or the test, then rerun.
-- Typed GDScript (tests exempt from `untyped_declaration` only); comments one line, WHY only; edits with the Edit tool only. Subagents never commit, push, merge or open a window; the coordinator makes one local commit per green task. Never push or merge without the owner.
-- **Commands** (Bash `timeout: 600000`, output to a file in `$L`, judged by exit code plus marker; on failure read only `rg -n 'FAIL|SCRIPT ERROR|ERROR:|NETPLAY FAILED' <log>`), run from `$W`:
+- **Base and logs:** worktree `$W`, branch `sim-boundary-sb5a` from `main` `83d00e8`; a cloud session uses its own branch name, recorded in the resume record. Logs `$L`: on the Mac `~/projects/wargrid-overnight-work/sb5a/logs`; in a cloud session the session's scratch directory, with every ledger figure copied into the verification file before the session ends (cloud logs are lost with the container). Notation only: commands use absolute paths; tracked files use `~/...`, never a typed absolute path (`sh tools/check_public.sh`).
+- **Nothing pinned moves:** the four suite traces, `run_netplay.sh match` and `rematch`, the `TEAM MATCH` line, IC1, IC2, OD1, S3, RB8. These come from direct-sim suites and inline headless clients, so they guard the inline path only. Worker evidence is the both-mode pump digests (Task 3), the four-load digests (Task 11) and the worker loopback (Task 10).
+- **Allowed test edits (exactly these):**
+  1. Scene drive sites go through two helpers in `test_base_scene.gd`: `BaseScene.tick` (physics, wait for an idle pump, drain) and `BaseScene.settle(main)` (wait for an idle pump, bounded). `BaseScene.publish` waits after its post. Each direct `_physics_process(`, `driver.step()`, `pump.post(` or drain site that Task 1 lists gets one `settle` call after its post. No expected value changes.
+  2. Cases that run two or more physics frames before one drain on purpose (Task 1 lists them, e.g. `test_two_tick_frame_keeps_earlier_results`, `test_sb3_online_two_notes`, `test_sb4_three_callbacks_one_drain`, the catch-up cases) and the ten Profiler cases run with inline pumps under the switch, through the mode hook. Each is named in one list and counted like a skip (Task 9).
+  3. `test_sim_pump.gd`'s existing cases gain a mode loop through `_pump(mode)`; `SimPump.new` in that file stays inline unless the hook asks for worker.
+  4. New `test_sb5a_*` cases, their helper classes, and the `test_runner.gd` case for the skip list.
+  No assertion is removed or loosened. `test_sb4_refused_post_ends_match` stays unchanged.
+- **Untouched paths:** `relay/`, `protocol/`, `game/scripts/simulation/`, `game/scripts/net/` (all of it: `headless_client.gd`, `seat_sim.gd`, `wire.gd`, `relay_transport.gd`, `lockstep.gd`), the Beside-P2.3b files, `game/scripts/presentation/` except `perf_overlay.gd`, `web/`, `game/export_presets.cfg`, `game/benchmarks/run_profile.gd`.
+- **Inline unchanged:** with the switch off, no `Thread` is created, `busy()` is false and `post` runs the job at once. Every code task ends with `SUITE` and `TRACES` in the default mode.
+- **Contract:** `docs/reference/sim-interface.md` gains exactly this, and anything more is a stop. Pump: `has_room()`, `mode()`, `static worker_wanted()`, the worker-mode rule per method (the Ownership table), the failure reasons. Drivers: `sim_mode()`, online `failure()`. Playtest header and desync report: the `sim` field. Test seams, test-only and named as such: `SimPump.force_mode_for_test(mode)`, `reset_process_latch_for_test()`, `cap_for_test(n)`, `frame_source` (a `Callable`), `gate_publish_for_test(semaphore)`, `live_workers()`, `pump_counts()`; constants `MAX_QUEUED`, `STALL_FRAMES`, `WAIT_MSEC`.
+- **Tests:** new cases `test_sb5a_*` (no existing case or file contains `test_sb5a_`), appended to `cases()`. Simulation interface, the pump and the drivers only; `pump.live()` only while `busy()` is false. Fault and stall cases print error lines on purpose, so they run in their own processes (Task 6). Test waits are bounded (`try_wait` loops with a deadline), so a red case fails instead of hanging until the runner's watchdog.
+- **Red is a failed named check.** New members first appear bare and behaviour-neutral (Step 0). A red run with `suite failed to load`, `SCRIPT ERROR` or a parse error is not red.
+- Typed GDScript (tests exempt from `untyped_declaration` only); one-line WHY comments; edits with the Edit tool only. Subagents never commit, push, merge or open a window; the coordinator makes one local commit per green task. Never push or merge without the owner.
+- **Commands** (Bash `timeout: 600000`, output to a file in `$L`, judged by exit code plus marker; on failure read only `rg -n 'FAIL|SCRIPT ERROR|ERROR:|NETPLAY FAILED' <log>`), from `$W`:
   - `SUITE(<tag>)`: `WARGRID_REPLAY_TRACE=<abs $L>/replay-<tag>.tsv WARGRID_ECONOMY_REPLAY_TRACE=<abs $L>/economy-<tag>.tsv WARGRID_COMBAT_REPLAY_TRACE=<abs $L>/combat-<tag>.tsv WARGRID_TEAM_REPLAY_TRACE=<abs $L>/team-<tag>.tsv sh tools/run_tests.sh > <abs $L>/<tag>-suite.log 2>&1; echo "exit=$?"` → `TESTS PASSED <n>`.
-  - `WSUITE(<tag>)`: the same with `WARGRID_SIM_THREAD=1` in front and `w<tag>` in every file name.
-  - `ONLY(<tag>, <filter>)` and `WONLY(<tag>, <filter>)`: `WARGRID_TEST_ONLY=<filter> sh tools/run_tests.sh`, the second with `WARGRID_SIM_THREAD=1`.
+  - `WSUITE(<tag>)`: `WARGRID_SIM_THREAD=1` and four trace paths named `w<tag>`; also → `SIM PUMPS worker=<w> inline=<i>` with `i` equal to the listed inline cases' pumps, and `SKIPPED 0`.
+  - `ONLY(<tag>, <filter>)` / `WONLY(<tag>, <filter>)`: `WARGRID_TEST_ONLY=<filter> sh tools/run_tests.sh`, the second with the switch.
   - `TRACES(<tag>)`: `python3 tools/compare_replays.py` of each trace against `base`, team with `--interval 200 --rows 100`; each `REPLAYS MATCHED`.
   - `NET(<tag>, <s>)`: `NETPLAY_OUT=<abs $L>/<tag>-np-<s> sh tools/run_netplay.sh <s>` → `NETPLAY PASSED`; `NETEQ(<tag>)` compares `s1.tsv` and `cmp`s `s1.cmd` of `match` and `rematch` against base.
+  - `FAULTS(<tag>)`: `sh tools/run_pump_faults.sh > <abs $L>/<tag>-faults.log 2>&1` → `PUMP FAULTS PASSED <n>`.
+  - `DIGESTS(<tag>)`: `sh tools/run_worker_digests.sh > <abs $L>/<tag>-digests.log 2>&1` → `WORKER DIGESTS MATCHED 4`.
   - `CHECKS(<tag>)`: `sh tools/run_checks.sh` → `CHECKS PASSED 5`.
-- **Benchmarks run alone:** `uptime` and `pgrep -fl godot` first. Above load 2.5 the row is labelled `Sim boundary SB5a (host under load)` and an evening rerun is owed. Another session's Godot never stops a task, and the run never kills a process it did not start. Never loosen a budget.
-- **Mutation proofs:** `git add <file>`; mutate with the Edit tool; run the named `ONLY` or `WONLY` → exit 1; revert with the Edit tool; `git diff --exit-code -- <file>` → exit 0.
-- **No visible window, no sound.** No `sh tools/run_game.sh`, no `fly`, no `deploy_web.sh`, no `gh pr`.
+- **Benchmarks run alone:** `uptime`, `pgrep -fl godot` first; above load 2.5 the row is labelled `(host under load)` and an evening rerun is owed. Never kill a process the run did not start. Never loosen a budget.
+- **Mutation proofs:** `git add <file>`; mutate with the Edit tool; the named `ONLY`/`WONLY`/`FAULTS` → red; revert; `git diff --exit-code -- <file>` → exit 0.
+- **No visible window, no sound.** No `sh tools/run_game.sh`, `fly`, `deploy_web.sh`, `gh pr`.
 
 ## Model routing and reviews
 
 - Implementer per task: Sonnet. Diagnosis of an unexpected red: Opus (high) first.
-- **Per-task review (simulation boundary and netplay diff, AGENTS.md step 3):** after `GREEN`, one fresh Opus (high) reviewer with paths only (this plan's task heading, "Same-tick and ordering cases", `git diff -U30 HEAD`, `git status --short`) writes `<abs $L>/t<N>-review.md` and names, per new test, the production change that makes it fail. High and medium findings get one fix round, test-first; the rest go to the ledger.
-- **Gate (Task 16):** one fresh Opus whole-branch review (its brief names, per new test, the production change that makes it fail; an empty or one-line report is a failed review and gets a narrower second one); Gemini 4 Neon (high) through `agy` as the second reviewer (the branch touches netplay and will pass 500 lines), skipped and said so when `agy` is missing or out of quota; the [player-experience reviewer](../../../.claude/agents/player-experience-reviewer.md) on the one player-facing line (the F3 overlay's mode text, Task 2).
+- **Per-task review** (simulation boundary and netplay, AGENTS.md step 3): after `GREEN`, one fresh Opus (high) reviewer with paths only (task heading, "Capacity and the full-queue trace", "Ownership", "Thread lifecycle", "Same-tick and ordering cases", `git diff -U30 HEAD`, `git status --short`) writes `<abs $L>/t<N>-review.md`, naming per new test the production change that makes it fail. High and medium findings get one fix round, test-first.
+- **Gate (Task 16):** one fresh Opus whole-branch review (same brief rule; an empty or one-line report is a failed review and gets a narrower second one); Gemini 4 Neon (high) through `agy`, skipped and said so when `agy` is missing or out of quota; the [player-experience reviewer](../../../.claude/agents/player-experience-reviewer.md) on the F3 mode line and the `orders.reset()` effect under the freeze card.
+
+## Capacity and the full-queue trace
+
+**Rule [proposed]:** `MAX_QUEUED = 2` counts accepted jobs that have not yet been published: the executing job plus the waiting ones. Queries are not counted (the caller blocks, so at most one exists) and never enter the drain queue. The spec left this open (API block). SB6 measures caps 1 and 2 (critique question 6).
+
+- **Accepted, unfinished ticks:** at most 2. If only waiting jobs counted, it would be 3 (one executing plus two waiting); the plan does not use that rule.
+- **Completed, undrained notes** are counted separately: publishing frees capacity before the main thread drains, so further physics steps in the same render frame can post again. The bound is posts per render frame: online `CATCH_UP_STEPS` (2) × physics steps per render frame (engine default at most 8) = 16; offline 8. `drain` empties them every `_process`. Task 3 tests the bound with a frame script.
+
+**Single producer:** only the main thread calls `post`, `query`, `stop`, `has_room`, `drain`. The worker only decreases the unpublished count (publishing) or sets a failure marker. So between `has_room()` true and `post`, room can only grow. The one race is a terminal failure, handled in step 2.
+
+**Healthy trace** (online, input delay D, ticks N, N+1, N+2):
+
+1. The worker is running N; N+1 is waiting; unpublished = 2. Packets for N+2 arrive. Main's `step()` polls the transport, `Lockstep.receive` buffers them, the catch-up loop reads `pump.has_room()` → false and breaks **before** `take(N+2)`. Bookkeeping unchanged: `_next_tick == N+2`, `_taken == [N, N+1]`, credit not spent, `pump.failure() == ""`, the lockstep still holds N+2's packets. Test: `test_sb5a_full_pump_leaves_next_tick_in_lockstep`.
+2. The worker finishes N. Under the lock, in this order: append N's note, set READY to N's slot, unpublished -= 1. Unlock. It checks the quit flag, then takes N+1 under the lock (N+1 was already counted). It runs N+1 outside the lock. N's note is readable by main from the unlock, and main reads it only at its next `drain`. The next `step()` sees room, calls `take(N+2)`, posts it, unpublished = 2. If the worker failed between `has_room()` and `post` (marker queued), `post` refuses. Main then reads the marker inside `post`, sets the pump's first failure reason itself, and returns false. The online driver ends the lockstep with `sim pump failed: <reason>`, not "sim pump refused tick", and closes the transport. N+2's packets are consumed, but the match is over anyway.
+3. A render frame drains N and N+1 together: `_finish_job` pops `_taken` front-first, checks `note.tick == taken + 1` (N+1, then N+2), records each note's own `issued`, and calls `finish_tick` with that note's own snapshot and digest (computed inside that job). The existing end exceptions are unchanged: a note past the end with no tick movement records nothing (`online_driver.gd:151-152`), and pairing on a foreign note is a protocol end (`:153-156`). Catch-up stays at 2 ticks per physics frame with credit 4 (`:10-11`, unchanged). The preview rides on the `last` job as today; a pending build is cleared by its answer as today. Test: `test_sb5a_two_notes_one_frame_pair_in_order`.
+4. **Leave before drain.** `leave()` ends the lockstep and closes the transport; `close_match` calls `driver.stop()` → `pump.stop()`. The jobs already accepted (N running, N+1 waiting) both finish: responsibility passed at `post`. The worker re-checks quit only when its queue is empty, so it exits after publishing N+1, never mid-job. Main waits for the exit acknowledgement (bounded, see "Thread lifecycle") and joins. `keep_match` then calls `record()`; after a join the pump's owner is main again, so the record's query runs inline on the caller and returns the log and digest of every accepted job, equal to inline. The old match's notes stay in the old pump. Nothing drains them, because the screen changes scene.
+5. **Restart or rematch with jobs undrained.** `adopt` stops the old pump (step 4's rule), then builds a new one. The driver's only reference is the new pump. The old pump's notes, and any late result, sit in the old object, which no driver or screen can reach. Test: `test_sb5a_restart_drops_old_notes`.
+
+**Stalled trace** (N runs past the stall limit):
+
+1. N started at physics frame F; N+1 is waiting. Each `drain` reads `frame_source.call()` (default `Engine.get_physics_frames()`). At frame F + `STALL_FRAMES` (150, 5 s at 30 Hz) with no new note, main sets `failure() = "stall: job at tick N ran over 150 frames"`, sets the process latch (later pumps run inline), and moves the pump into the abandoned list (see "Lifetime of a failed pump"). Offline: the freeze card shows (`FREEZE_NOTICE`). Online: the lockstep ends with `sim pump failed: stall`, the transport closes in the same frame, and the peer sees "Your opponent left" with no result recorded **[owner, 2026-11-18]**.
+2. A leave during the stall, before the stall limit: `stop()` waits up to `WAIT_MSEC` (5000 ms) for the exit acknowledgement, does not get it, fails the pump with `stall: stop waited 5000 ms`, never calls `wait_to_finish()`, and abandons the pump. `record()` on a pump whose thread is still alive returns the last shown tick and view, an empty log, `digest ""`; the end text comes from `failure()`.
+3. A new match after the stall runs inline (latch). If N ever returns, the worker publishes into the abandoned pump, sees quit, and exits. It never takes N+1.
+
+## Ownership
+
+| Method | Caller | Owns while running | Lock | Can wait for |
+|---|---|---|---|---|
+| `post(job)` | main only | the job until it is appended; from the unlock on, the job belongs to the worker | queue mutex, to append and count | nothing |
+| `run_job` (static, via `_run_owned`) | the owner thread: main inline, before spawn and after a join; the worker in between | the simulation, the recorder, the job, the new note and slot | none: never under the queue lock | nothing |
+| worker loop | the worker | nothing between jobs | the queue mutex to take a job, and again to publish | the work semaphore |
+| `drain()` | main only | the taken notes and slots from the unlock on; never written again by anyone | queue mutex, to take notes, swap slots, read markers | nothing |
+| `query(job)` | main only | nothing; the job goes to the worker at the unlock | queue mutex to append; the reply is read under it | its reply semaphore, as a `try_wait` poll with a `WAIT_MSEC` deadline |
+| `record()` | main only | nothing | as `query` | as `query` |
+| `stop()` | main only | the thread object, until it joins or abandons it | queue mutex, to set quit | the exit acknowledgement, polled up to `WAIT_MSEC` |
+| `live()` | main, tests and setup only | the simulation, but only while `busy()` is false, or after a join | none | nothing; debug `assert(not busy())` |
+| `has_room()`, `busy()` | main only | nothing | queue mutex (they read the unpublished count) | nothing |
+
+- **A note becomes readable** at the publish unlock, and main reads it only through `drain` or a query reply.
+- **Owner thread [owner, 2026-11-18]:** the pump keeps `_owner_id`, which is the main id until spawn. The worker writes its id at loop entry and posts a start semaphore; `start()` waits for it (bounded) and stores the id. After a successful join `_owner_id` is main again. `_run_owned` compares `OS.get_thread_caller_id()` with `_owner_id` in every build. A mismatch calls `push_error`, fails the pump (`owner thread`) and publishes a failure marker. `_run_owned` is not overridable: the test seam `_note_for` sits inside it, so `failing_pump.gd` cannot bypass the check.
+- **Profiler [proposed]:** the Profiler writes static dictionaries and is not thread-safe. In worker mode `start()` calls `assert(not Profiler.enabled)` (debug). The ten Profiler cases run with inline pumps under the switch (Allowed test edits 2). No mutex.
+- **Two pumps at once:** while an old abandoned worker or a test's second pump runs beside the main thread, the shared static writes inside the simulation (for example `destination_allocation.last_cells_examined`) are benign debug counters. Task 1 lists them; a non-debug static write found there is a stop.
+
+## Thread lifecycle
+
+`Thread.wait_to_finish()` has no timeout **[probed]**, so every bounded wait is a poll on main: a deadline from `Time.get_ticks_msec()`, `try_wait()` or a flag read under the lock, and `OS.delay_usec(200)` between reads. A join happens only after the worker has acknowledged its exit.
+
+| State | Who signals quit | Who wakes it | Who sees the exit | Who keeps its objects | Who joins |
+|---|---|---|---|---|---|
+| idle, asleep on the work semaphore | `stop()` sets quit under the lock | `stop()` posts the work semaphore once | the worker sets `_exited` under the lock as its last act; `stop()` polls it | the pump's self-reference (below) | `stop()`, right after it sees `_exited` |
+| healthy, inside a job | the same | not needed; the worker re-checks quit when its queue is empty | the same, after it publishes the accepted jobs | the same | the same, within `WAIT_MSEC` |
+| exited (loop returned or thread died) | n/a | n/a | `drain` reads `not _thread.is_alive()` while unpublished > 0 → `dead thread` failure; `stop()` sees `_exited` or a dead thread at once | the same | `stop()` joins at once (the thread has finished) |
+| alive after a stall | `stop()` or the stall check sets quit | `stop()` posts the semaphore (harmless) | nobody: no acknowledgement arrives | the abandoned list, until the process exits | nobody, ever |
+
+**Self-reference [probed]:** a `Thread`'s `Callable` does not keep a `RefCounted` owner alive. In the probe, dropping the last reference freed the object while its thread ran, and Godot printed "Could not call function on previously freed instance" and "A Thread object is being destroyed without its completion having been realized". So the pump keeps `_keep_alive = self` from spawn until a successful join, when it clears it. A failed pump moves into the abandoned list instead.
+
+**Lifetime of a failed pump [proposed]:** `static var _abandoned: Array[SimPump]` holds every pump whose thread may still run: a stall, or a timed-out stop. It keeps the pump, its `Thread`, simulation, recorder and notes alive until the process exits. Nothing reads them again; `record()` on such a pump uses only main-side copies (the last drained slot, `failure()`). The process latch makes every later pump inline. An abandoned thread at process exit exited cleanly on Linux in the critique's probe (5 of 5); on Windows and macOS this is unknown **[probe, Task 6 on Linux and in CI on Windows; macOS at the Mac gate]**.
+
+**Screen exit [proposed]:** `match_screen._exit_tree` calls `driver.stop()` after `orders._set_attack_move(false)` (the spec's "`_exit_tree` calls `stop()`"; today it calls only `detach`). `stop()` is idempotent (Pump hardening), so `close_match` followed by `_exit_tree` is safe.
+
+## Failure channel
+
+- **Causes and who decides:** the worker never writes `_failure`. It queues a marker (`cause`, `tick`) or sets a note flag under the lock: null result, `owner thread`, `fault` (logger count rose during the job). Main turns the first marker it sees, in `drain`, `post` or `query`, into the first failure reason. Main itself detects `stall` (frames, or a query or stop deadline) and `dead thread`. A full queue and an ordinary stop keep `failure()` empty **[owner, 2026-11-18, inherits list]**.
+- **After a marker:** the worker takes no more jobs and exits. Every accepted job afterwards publishes nothing, and its marker brings the unpublished count back down, so `busy()` returns false. `drain` drops every note after the marker and keeps the slots, so no state from an untrusted simulation reaches the screen.
+- **Callers:** offline `drain` calls `_read_failure()` after `pump.drain()` (freeze card). Online `drain` reads `pump.failure()`; on a new reason it ends the lockstep (`set_protocol_error("sim pump failed: " + reason)`) and closes the transport in the same frame. The online driver gains `failure()` (passthrough). Online `start()` on a null query result ends with a protocol error before any packet is sent. `_report()` on a null query writes an empty ring. The screen calls `orders.reset()` once, when `driver.failure()` first turns non-empty.
+- **`query` interrupted:** if the queried job's reply is a marker, `query` returns null and the reason is already set by main. The three callers are covered: online startup digest (`start`), final command log (`record`), desync ring (`_report`).
+- **Logger [proposed; attribution probed]:** `PumpLogger extends Logger`, installed once per process in debug builds (`OS.is_debug_build()`) when the first worker pump starts. `_log_error` takes the logger's own mutex, increments a count for `OS.get_thread_caller_id()` (error types only, not warnings), unlocks, and calls nothing that logs, so it cannot recurse. `_log_message` does nothing (the drivers' `printerr` lines arrive there and are not faults). The worker reads its own count before and after each job. **Probed:** a `push_error` and a script error on a worker thread arrive with the worker's id (two errors), and a main-thread `push_error` arrives with the main id (one), so a main-thread error during a worker job does not fault it. A release build detects no script fault: online, the 30-tick digest is the backstop; offline there is none.
+- **Unchanged checks:** null result (Pump hardening), owner thread, stall, dead thread each keep their own cause string and their own fault case.
 
 ## Decided for you
 
-Implementation and measurement details, reversible on the owner's word.
+[proposed], reversible on the owner's word.
 
-1. **`MAX_QUEUED = 2` counts the running job.** A post is refused while two jobs are posted and not yet published. This bounds answer latency to two jobs and keeps the worker fed. The spec left this open (API block, "whether it counts the running job is not decided"). SB6 measures caps 1 and 2 (critique question 6).
-2. **The stall limit is counted in physics frames:** `STALL_FRAMES = 150`, 5 s at 30 Hz, counted by `drain` while a job is in flight and no note arrives. A device suspend stops frames, so it cannot trip the limit (critique A5).
-3. **Bounded waits for `query` and `stop` are in wall time:** `WAIT_MSEC = 5000`. The main thread is the waiter, so frames do not advance while it waits.
-4. **Effective mode** is one static, `SimPump.worker_wanted()`: `WARGRID_SIM_THREAD == "1"`, `OS.has_feature("threads")`, and no pump has failed in this process. A pump decides its mode once, in `_init`, and `mode()` returns `"worker"` or `"inline"`.
-5. **The mode field** is `"sim": "inline" | "worker"` in the playtest header (`match_screen._header`) and the desync report (`online_driver._report`), plus `Sim: worker` or `Sim: inline` on the F3 overlay's first line. `mode` already means offline or online there.
-6. **Profiler:** the Profiler cases run inline only and are skipped by name under the switch. That is ten cases at `83d00e8`, listed by Task 1. The Profiler gets no mutex: it is debug tooling, and a lock would cost every zone call.
-7. **Fault flag:** an error-count `Logger` (`OS.add_logger`) in debug builds only (`OS.is_debug_build()`), counting errors per thread id. A job that logged an error on the worker thread fails the pump. A release build detects no script fault: online, the 30-tick digest is the backstop; offline there is none (critique A3).
-8. **`record()` after a failure:** if the worker thread is no longer alive, `record()` reads the log inline as today's failed path does (last shown tick and view, no digest). If it is still alive (stalled), the record has an empty log and `end` reads `sim pump stalled`. Both drivers already write `end` from `failure()`. After a clean `stop()` (joined), `query()` runs inline on the caller (rider of Pump hardening answer 6).
-9. **The natural match end** (`playtest_overlay.end_match`) records through `query`, which waits for the worker. No extra stop is needed (Pump hardening "Notes for SB5a").
-10. **Catch-up rider:** `online_driver.gd` now takes at most `CATCH_UP_STEPS = 2` ticks per frame with a credit of 4 (`:10-11`), not the "input delay + 1 = 5" the rider names. Task 1 records the fps below which a client falls behind (15 fps). SB5a changes nothing here unless Task 10's worker loopback falls behind where inline keeps up, which is a stop.
-11. **The pending-build flag** is cleared with `orders.reset()` when the driver first reports a failure (Beside P2.3b).
-12. **`worker_ab.py`** comes from the spike (`~/projects/wargrid-overnight-work/worker-threads/`, private), trimmed to the metrics the bench prints. If the source is not on the machine, Task 12 writes it fresh against the bench's line format.
+1. Capacity rule: `MAX_QUEUED = 2`, counting the executing job (see "Capacity").
+2. `STALL_FRAMES = 150` physics frames, read from an injectable `frame_source` (default `Engine.get_physics_frames()`), compared in `drain`. `drain` runs every `_process`, also while the offline pause menu is open, so a stall during pause is caught. If `drain` never runs nothing is shown, and `query` and `stop` keep their own deadlines.
+3. `WAIT_MSEC = 5000` for `query`, `stop` and the start handshake.
+4. Effective mode: `worker_wanted()` = `WARGRID_SIM_THREAD == "1"` and `OS.has_feature("threads")` and the process latch not set **[owner rule, 2026-11-18; the latch's form is proposed]**. A pump decides its mode in `_init`. Tests reset the latch per case (`reset_process_latch_for_test()` in `BaseScene.setup` and after every deliberate-failure case), so one failing case cannot turn the rest of a shard inline.
+5. Mode field: `"sim": "inline" | "worker"` in the playtest header and the desync report; `Sim: worker` or `Sim: inline` on the F3 overlay's first line. The screen reads `driver.sim_mode()`, never `driver.pump`.
+6. `stop()` with accepted jobs finishes them (at most 2, inside `WAIT_MSEC`), so the playtest record after `close_match` equals inline's.
+7. `has_room()` is capacity only: false only when the unpublished count is at the cap (or `cap_for_test`'s cap; inline with a cap it counts posted-but-undrained notes). A stopped or failed pump has room. Its `post` refuses, and the existing protocol end fires (`test_sb4_refused_post_ends_match` unchanged).
+8. Online preview: when room runs out mid catch-up, the request waits one frame (Beside P2.3b). No lookahead.
+9. Headless netplay clients stay inline: `tools/run_netplay.sh` starts its clients with `WARGRID_SIM_THREAD` unset. The worker client is covered by Task 10's scene loopback. CI's netplay step never sets the switch.
+10. CI's switch-on step sets the four `WARGRID_*_REPLAY_TRACE` variables to empty, so it cannot overwrite the inline traces that the job uploads and compares (`ci.yml:57-60`).
+11. Packed arrays inside frozen caches: `make_read_only` does not cover them. No writer exists after the freeze (Pump hardening Review Focus 5), and a packed array copies on write **[probe, Task 3 Step 0: two threads read a cached packed array while a test write is attempted on main; record whether the reader ever sees the change]**. If the probe shows a shared write, it is a stop (the fix touches `simulation/`).
+12. `worker_ab.py` comes from the spike (private) if the source is on the machine, trimmed to the bench's line format; otherwise it is written fresh.
 
 ## Review Focus
 
-1. **Lock scope.** The worker holds the lock only to publish (append the note, set READY) and to take the next job; `drain` holds it only to take notes and swap slots. `run_job` never runs under the lock. A lock held across `run_job` passes every digest check and freezes frames, so Task 8's free-running case measures `drain`'s lock wait.
-2. **Nothing read across threads without the lock:** `_failure` is written on main only; the worker reports through fields on the note (`note.fault`, `note.thread_ok`) or through a `_worker_state` read under the lock. Every `failure()` cause has a test.
-3. **`live()` in worker mode** asserts `not busy()` in debug builds and returns the simulation. Release builds have no asserts, which is why the owner-thread check lives in `run_job`.
-4. **Stop and leak.** `stop()` sets the quit flag, posts the semaphore, waits up to `WAIT_MSEC`, then joins; after a failure it never joins, and the stalled thread leaks (the spec's "infinite loop in a job" risk). Task 5 checks that every scene test ends with zero live worker threads.
-5. **Online room before `take`.** A tick whose packets `take` consumed can never be posted again, so the room check comes first; a refused post after a successful room check is impossible in one thread (main), and stays a protocol end as a guard.
-6. **Two drains in one frame.** Tests and `_drain_notes` may drain twice before the worker publishes: the second drain returns nothing and leaves the slots unchanged (inline: the same).
-
-## Determinism notes
-
-- The simulation runs on one owner thread for a pump's lifetime: the worker in worker mode, main inline. Jobs run in post order; `run_job` is unchanged, so command, bot and step order are unchanged. `determinism-rules.md:14` is reworded from "the main thread" to "one owner thread" (Task 15).
-- `query` and `record` are jobs in the same FIFO, so a record never reads mid-step.
-- Caches stay frozen before the thread starts (`_warm_and_freeze` in `start`, on the caller); the worker reads them only.
-- Packed arrays and dictionaries in a published note or slot are never written after publishing, on either side (answer 11).
+1. **Lock scope:** the lock is held only to append or take a job, to publish (note, READY, count) and to drain. `run_job` never runs under it. Task 8's gated-publish case fails deterministically if `drain` skips the lock.
+2. **Nothing read across threads without the lock:** the unpublished count, markers, READY, `_exited`, quit. `_failure` and the latch are main-only.
+3. **`live()`** asserts in debug builds only. Release builds rely on the owner-thread check in `_run_owned`.
+4. **Room before `take`:** a consumed tick can never be posted again, so the check comes first. A refusal after a successful check can only come from a terminal failure (Capacity, step 2).
+5. **Two drains in one frame:** the second returns nothing and keeps the slots, in both modes.
+6. **Quit re-check:** the worker checks quit only with an empty queue. "Re-check after each job" (inherits list) is satisfied by the empty-queue check, so it has no separately observable test (stated, not tested).
 
 ## Same-tick and ordering cases
 
@@ -98,216 +180,250 @@ No new simulation command. Changed flow:
 
 | Operation | Against | Expected | Test |
 |---|---|---|---|
-| `post` with two jobs unpublished | worker busy | false; job not queued; `failure()` empty | `test_sb5a_post_refused_when_full` |
-| offline `step` without room | queue and preview request | kept, nothing posted, `_next_tick` unchanged; next frame posts both | `test_sb5a_offline_waits_for_room` |
-| online `step` without room | lockstep tick | `take` not called; the tick is taken on the next frame | `test_sb5a_online_room_before_take` |
-| online `step` with room for one of two catch-up ticks | second tick | taken next frame; preview on the one job that was posted | same |
-| `drain` with no note published | slots | `current()` and `previous()` unchanged; empty array | `test_sb5a_empty_drain_keeps_slots` |
-| `drain` with two notes | slots | `current()` is the second job's slot, `previous()` the old current | both-mode run of `test_ph_fresh_slot_per_job` |
-| `query` while a tick job runs | that job | query runs after it; its note is not in the drain queue; slots unchanged | `test_sb5a_query_waits_behind_jobs` |
-| `query` on a stalled worker | caller | returns null after `WAIT_MSEC`; pump failed with the stall reason | fault process `stall_query` |
-| `record()` at the natural end, jobs in flight | log | waits for them; digest equals an inline record of the same commands | `test_sb5a_record_waits_for_queue` |
-| `stop()` with a job in flight | thread | joined within `WAIT_MSEC`; later posts false; later `query` runs inline | `test_sb5a_stop_with_job_in_flight` |
-| `stop()` after a failure | thread | returns at once, never joins | fault process `stall_stop` |
-| restart or rematch, jobs undrained | old pump | stopped; its notes never reach the new driver state | `test_sb5a_restart_drops_old_notes` |
-| `run_job` on a thread other than the owner | pump | `push_error`, pump failed `owner thread`, nothing published | fault process `wrong_thread` |
-| error logged inside `step()` on the worker | pump | failed `fault`; the faulty job's note and slot not shown | fault process `logged_error` |
-| job longer than `STALL_FRAMES` | pump | failed `stall`; offline freeze card; online ends with `ended_protocol` | fault process `stall_offline`, `stall_online` |
-| worker thread not alive with a job queued | pump | failed `dead thread` at the next drain | fault process `dead_thread` |
-| pump failure online | lockstep, transport | lockstep ended with reason `sim pump failed: <reason>`; transport closed in the same frame; peer sees "Your opponent left", no result recorded | `test_sb5a_online_failure_ends_and_closes` |
-| `left` arrives while waiting | `notice()` | no index error when `waiting_for()` is empty (night 8 rider 7) | `test_sb5a_notice_waiting_empty` |
-| note pairing with `_taken` empty | foreign job | protocol end, not accepted silently (SB4 rider) | `test_sb5a_pairing_rejects_foreign_note` |
-| `live()` while busy (debug) | caller | assert fires; tests never do it | none (assert) |
+| online `step`, pump full, N+2's packets buffered | lockstep tick | `take` not called; `_next_tick`, `_taken`, credit unchanged; `failure()` empty | `test_sb5a_full_pump_leaves_next_tick_in_lockstep` |
+| next frame, room again | N+2 | taken and posted; pairs as N+3's note | same |
+| room runs out mid catch-up | preview request | kept; rides on the next frame's job; answer one frame later | `test_sb5a_preview_waits_for_room` |
+| offline `step`, pump full | queue, preview request | kept; `_next_tick` unchanged; next frame posts both | `test_sb5a_offline_waits_for_room` |
+| `post` at the cap | worker | false; not queued; `failure()` empty | `test_sb5a_post_refused_when_full` |
+| failure marker between `has_room` and `post` | online tick | `post` false; reason set by main inside `post`; lockstep ends `sim pump failed`; transport closed | `test_sb5a_failure_between_room_and_post` (gated worker) |
+| two notes in one frame | pairing | in post order; each with its own `issued` and digest | `test_sb5a_two_notes_one_frame_pair_in_order` |
+| drain before publish / after one / after two publishes | slots, notes | nothing and slots unchanged / one / two in order; each once | `test_sb5a_drain_at_publish_boundary` |
+| a view held from tick N through N+1 | its packed and nested data | unchanged, by deep hash, after N+1 is published and drained | `test_sb5a_held_view_never_changes` |
+| `query` while tick jobs are queued | order | runs after them; its note not in `drain`; slots unchanged | `test_sb5a_query_waits_behind_jobs` |
+| `record()` with jobs unpublished | log, digest | waits; equals the inline record of the same posts | `test_sb5a_record_waits_for_queue` |
+| `query` whose job faults | caller | null; failure `fault` set by main | fault process `fault_in_query` |
+| `stop()` idle | thread | joined within `WAIT_MSEC` (catches a missed wakeup) | `test_sb5a_stop_idle_worker` |
+| `stop()` with 2 accepted jobs | log | both run; joined; later `query` inline; record equals inline | `test_sb5a_stop_with_job_in_flight` |
+| leave or restart with undrained notes | old pump | stopped; its notes unreachable | `test_sb5a_restart_drops_old_notes` |
+| pause (offline menu open) | posts | none; worker idle; drain still runs | `test_sb5a_pause_posts_nothing` (both modes) |
+| error logged in a worker job | pump | failed `fault`; that note and every later one dropped; slots kept | fault process `logged_error` |
+| main-thread error during a worker job | pump | healthy | fault process `main_error_control` |
+| `run_job` on a non-owner thread | pump | `push_error`, failed `owner thread` | fault process `wrong_thread` |
+| job past `STALL_FRAMES`, offline | match | freeze card within 5 s + 1 s wall time; next pump inline | fault process `stall_offline` |
+| job past `STALL_FRAMES`, online | match, peer | `ended_protocol`, transport closed; peer `opponent_left()` within 5 s + 1 s | fault process `stall_online` |
+| stall, then restart / leave (finite 8 s job) | caller | returns within `WAIT_MSEC`; the job ends after the drop with no crash; exit 0 | fault processes `stall_restart`, `stall_leave` |
+| stop during a stall, before `STALL_FRAMES` | thread | `stop` returns after `WAIT_MSEC`, fails `stall`, never joins | fault process `stall_stop` |
+| query on a stalled worker | caller | null after `WAIT_MSEC`; failed `stall` | fault process `stall_query` |
+| thread dead with jobs queued | pump | failed `dead thread` at the next drain | fault process `dead_thread` |
+| `left` while waiting | `notice()` | no index error with an empty `waiting_for()` (night 8 rider 7) | `test_sb5a_notice_waiting_empty` |
+| foreign note with `_taken` empty | online drain | protocol end (SB4 rider) | `test_sb5a_pairing_rejects_foreign_note` |
 
 ## Files
 
 | File | Change | Task |
 |---|---|---|
-| `game/scripts/match/sim_pump.gd` | `worker_wanted()`, `mode()`, `has_room()`; thread, queue, lock, semaphore; publish and drain under the lock; `query` through the worker; `stop` bounded; stall and dead-thread watch; owner-thread check; error logger; failure reasons | 2-6 |
-| `game/scripts/match/pump_logger.gd` (new) | `Logger` subclass counting errors per thread id | 6 |
-| `game/scripts/match/offline_driver.gd` | `step` checks `has_room()`; `drain` reads `failure()` | 7 |
-| `game/scripts/match/online_driver.gd` | room before `take`; failure ends the lockstep and closes the transport; pairing guard; `notice` guard; `sim` field in `_report` | 2, 7 |
-| `game/scripts/match/match_screen.gd` | `sim` in `_header`; `orders.reset()` on the first failure; F3 mode line feed | 2, 7 |
-| `game/scripts/presentation/perf_overlay.gd` | the `Sim:` word on the first line | 2 |
-| `game/tests/test_sim_pump.gd`, `test_skirmish_scene.gd`, `test_online_scene.gd`, `test_base_scene.gd` | both-mode cases, tick helper, skip list | 3-10 |
-| `game/tests/run_tests.gd` | a named skip list under the switch, counted in the summary (the runner has no skips today) | 9 |
-| `game/tests/pump_faults.gd` (new), `tools/run_pump_faults.sh` (new) | fault and stall cases, one process each | 6 |
-| `tools/run_worker_digests.sh` (new) | the four loads inline and worker, `cmp` of DIGEST lines | 11 |
+| `game/scripts/match/sim_pump.gd` | `worker_wanted`, latch, `mode`, `has_room`; thread, queue, lock, semaphores, handshake, self-reference, abandoned list; `_run_owned`; publish and drain under the lock; failure markers; `query` deadline; `stop` acknowledgement; stall and dead-thread checks; test seams | 2-6 |
+| `game/scripts/match/pump_logger.gd` (new) | error counts per thread id | 6 |
+| `game/scripts/match/offline_driver.gd` | `sim_mode`; `step` room; `drain` failure read | 2, 7 |
+| `game/scripts/match/online_driver.gd` | `sim_mode`, `failure`; `start` null; `step` room before `take`; `drain` failure end; `_report` null and `sim`; pairing guard; `notice` guard | 2, 7 |
+| `game/scripts/match/match_screen.gd` | `_header` `sim`; `_exit_tree` stop; first-failure `orders.reset()` | 2, 5, 7 |
+| `game/scripts/presentation/perf_overlay.gd` | `Sim:` word | 2 |
+| `tools/test_sim_boundary.py` | `PUMP_COUNTS` by exact deltas, in every task that adds pump accesses | 2, 7 |
+| `game/tests/test_sim_pump.gd`, `test_base_scene.gd`, `test_skirmish_scene.gd`, `test_online_scene.gd`, plus the sites Task 1 lists (e.g. `test_playtest_overlay.gd`, `test_graphics_settings.gd`) | mode loop, helpers, `settle` calls, new cases | 3-10 |
+| `game/tests/run_tests.gd`, `tools/run_tests.sh`, `game/tests/test_runner.gd` | inline-under-switch list and the `SIM PUMPS` count per shard, summed in the summary; a runner case | 9 |
+| `game/tests/pump_faults.gd` (new), `tools/run_pump_faults.sh` (new) | fault cases, one process each, outer `timeout 20` | 6 |
+| `game/benchmarks/run_worker_digests.gd` (new), `tools/run_worker_digests.sh` (new) | four loads in both modes, digest every 30 ticks, first mismatch report | 11 |
 | `game/benchmarks/run_match_bench.gd` (new), `game/scenes/match_bench.tscn` (new), `tools/worker_ab.py` (new), `tools/test_worker_ab.py` (new) | real match screen on the pump, both modes, go-rule metrics | 12 |
-| `.github/workflows/ci.yml` | one suite run under `WARGRID_SIM_THREAD=1` on Linux and Windows | 9 |
-| `tools/test_sim_boundary.py` | `PUMP_COUNTS` updated by exact deltas | 7 |
+| `tools/run_netplay.sh` | clients start with the switch unset | 10 |
+| `.github/workflows/ci.yml` | switch-on suite step, traces empty | 9 |
 | docs | Task 15 | 15 |
 
 ---
 
-### Task 1: Base, counts and line map
+### Task 1: Base, counts, lists and line map
 
-**Files:** `docs/reference/sim-boundary-verification.md` (new `## SB5a` section: resume record, ledger, base counts, line map). Nothing else.
+**Files:** `docs/reference/sim-boundary-verification.md` (new `## SB5a`: resume record, ledger, counts, lists, line map). Nothing else.
 
-- [ ] **Step 1:** HEAD is `sim-boundary-sb5a` on `83d00e8` plus the plan commit; `git diff 83d00e8 --stat -- game tools relay protocol` is empty. `uptime`, `pgrep -fl godot` into the ledger.
-- [ ] **Step 2:** `SUITE(base)`; `ONLY` per suite: `test_sim_pump`, `test_online_scene`, `test_skirmish_scene`, `test_base_scene`; `NET(base, match)`, `NET(base, rematch)`; `sh tools/run_team_match.sh`; `CHECKS(base)`. A red base is a stop.
-- [ ] **Step 3:** Counts and lists: `cases()` lengths of the four suites; `PUMP_COUNTS` (10 and 9 at `83d00e8`); every `Profiler.enabled = true` case under `game/tests` that ticks a scene (ten at `83d00e8`: `test_base_scene` `test_one_snapshot_per_refresh`, `test_ticks_take_no_snapshot`; `test_online_scene` `test_sb1_online_snapshot_per_hash_tick`; `test_skirmish_scene` `test_one_snapshot_per_refresh`, `test_sb1_idle_offline_ticks_take_no_snapshot`, `test_sb1_submit_takes_no_snapshot`, `test_sb1_economy_input_reads_shown`, `test_sb1_combat_input_reads_shown`, `test_sb3_over_stops_refreshing`, `test_sb3_one_view_per_tick`); every scene tick helper (`rg -n 'static func tick|func _tick' game/tests`); the catch-up floor (Decided 10).
-- [ ] **Step 4:** Spike evidence: if `~/projects/wargrid-wt-worker` or `~/projects/wargrid-overnight-work/worker-threads/` exists, record its DIGEST lines per load and the path of `worker_ab.py`; otherwise write "not on this machine".
-- [ ] **Step 5:** P2.3b state: `git log --oneline main -- game/scripts/match/orders.gd | head -3` and whether `p2-3b-build-from-the-dock` has merged. Record it.
-- [ ] **Step 6:** Line map of every cite in this plan, re-found by symbol. `sh tools/check_public.sh` → `PUBLIC CHECK PASSED`. Commit.
+- [ ] **Step 1:** Branch and base (Target revision); `git diff 83d00e8 --stat -- game tools relay protocol` empty; `git fetch origin main` and record whether `main` moved; `uptime`, `pgrep -fl godot`.
+- [ ] **Step 2:** `SUITE(base)`; `ONLY` for `test_sim_pump`, `test_online_scene`, `test_skirmish_scene`, `test_base_scene`; `NET(base, match)`, `NET(base, rematch)`; `sh tools/run_team_match.sh`; `CHECKS(base)`. Red base is a stop.
+- [ ] **Step 3: lists** (each into the verification file, path:line):
+  - drive sites: `rg -n "_physics_process\(|driver\.step\(\)|pump\.post\(|BaseScene\.publish|\.publish\(main|\.drain\(\)" game/tests`, each marked "settle after post" or "multi-physics on purpose: inline under the switch";
+  - the ten Profiler cases (named in Ownership);
+  - every `failing_pump.gd` or other deliberate-failure use (the latch resets);
+  - static writes reachable from `run_job` (`rg -n "^static var" game/scripts/simulation`), each marked debug counter or not;
+  - `PUMP_COUNTS` (10 and 9 at `83d00e8`); the catch-up rule (`CATCH_UP_STEPS`, `MAX_CATCH_UP_CREDIT`).
+- [ ] **Step 4:** spike evidence: if `~/projects/wargrid-wt-worker` or `~/projects/wargrid-overnight-work/worker-threads/` exists, record its DIGEST lines and the path of `worker_ab.py`; else "not on this machine".
+- [ ] **Step 5:** P2.3b state: merged or not; if its branch is readable, its file list against "Beside P2.3b" (a conflict outside the named hunks is a stop for the owner).
+- [ ] **Step 6:** line map of every cite in this plan, by symbol; `sh tools/check_public.sh`. Commit.
 
 ### Task 2: The switch, the mode, and where it shows
 
-**Files:** `sim_pump.gd`, `match_screen.gd` (`_header` `:189-190`), `online_driver.gd` (`_report` `:300-307`), `perf_overlay.gd` (`refresh_text`). Test: `test_sim_pump.gd`, `test_skirmish_scene.gd`, `test_online_scene.gd`.
+**Files:** `sim_pump.gd`, `offline_driver.gd`, `online_driver.gd` (`sim_mode`, `_report`), `match_screen.gd` (`_header` `:189-190`), `perf_overlay.gd` (`refresh_text`), `tools/test_sim_boundary.py`. Tests: `test_sim_pump.gd`, `test_skirmish_scene.gd`, `test_online_scene.gd`.
 
-**Interfaces:** `static func worker_wanted() -> bool` (Decided 4); `static var _failed_in_process: bool` set by the first failure in either mode; `func mode() -> String`, fixed in `_init`. In this task `mode()` is computed and shown, but the pump still runs inline in both modes.
+**Interfaces:** `static func worker_wanted() -> bool`; `static func force_mode_for_test(mode: String)` (`""` clears) and `reset_process_latch_for_test()`; `func mode() -> String` fixed in `_init`. The pump still runs inline in both modes in this task.
 
-- [ ] **Step 1: Tests.** `test_sb5a_mode_from_switch`: with a test hook that overrides the environment read, the switch on gives `"worker"`, off gives `"inline"`, and the switch on after `_failed_in_process` gives `"inline"`. `test_sb5a_header_names_mode`: offline `playtest_header().sim == "inline"`; online `_report().sim` likewise. `test_sb5a_f3_shows_mode`: the overlay's first line contains `Sim: inline`.
-- [ ] **Step 2:** red; **Step 3:** implement; **Step 4:** `SUITE(t2)`, `TRACES(t2)`, `CHECKS(t2)`; **Step 5:** mutation: `worker_wanted` ignores `_failed_in_process` → `ONLY(t2m, test_sb5a_mode)` red; **Step 6:** review, commit.
+- [ ] **Step 1: Tests.** `test_sb5a_mode_from_switch` (forced on → `"worker"`; off → `"inline"`; on after the latch → `"inline"`; latch reset → `"worker"`). `test_sb5a_header_names_mode` and `test_sb5a_f3_shows_mode` assert the expected mode (`SimPump.worker_wanted()`), not a literal, so they hold under the switch.
+- [ ] **Steps 2-6:** red; implement; `SUITE(t2)`, `TRACES(t2)`, `CHECKS(t2)` (with the new `PUMP_COUNTS`); mutation: `worker_wanted` ignores the latch → `ONLY(t2m, test_sb5a_mode)` red; review; commit.
 
 ### Task 3: The queue (first slice)
 
 **Files:** `sim_pump.gd`. Test: `test_sim_pump.gd`.
 
-**Interfaces:** worker mode creates `Thread`, `Mutex`, `Semaphore` in `start()` after `_warm_and_freeze` and job 0 (job 0 runs on the caller, as the spec says). `post` (main): refuse when stopped, failed or `not has_room()`; append the job under the lock; post the semaphore; return true. The worker loop: wait, take one job under the lock, check the quit flag, `run_job` outside the lock, publish note and fresh slot under the lock, check the quit flag again. `drain` (main): under the lock take the notes and swap slots as inline. `has_room()`: inline true unless stopped or failed; worker `_unpublished < MAX_QUEUED`. `busy()`: worker `_unpublished > 0`. The owner thread is recorded at `start` (`OS.get_thread_caller_id()` on the worker's first job); `run_job` keeps its static signature and the pump checks the caller id in `_note_for`.
+**Interfaces:** worker mode in `start()`: `_warm_and_freeze`, job 0 on the caller (owner main), spawn, start handshake (bounded) recording `_owner_id`, `_keep_alive = self`. `post` (main): refuse when stopped, failed, a marker is pending (read it and set the reason), or at the cap; append under the lock; count; post the work semaphore. Worker loop (Ownership). Publish: under the lock, the note, READY, count -= 1. `drain`: under the lock, take notes and markers, swap slots, then (unlocked) the stall and dead-thread checks. `has_room()`, `busy()` under the lock. Test seams: `cap_for_test`, `gate_publish_for_test(semaphore)` (the worker waits on it, bounded, between `run_job` and publish), `frame_source`, `live_workers()`, `pump_counts()`.
 
-- [ ] **Step 0:** `has_room()` returning true; `MAX_QUEUED` constant. `ONLY(t3s0, test_sim_pump)` green.
-- [ ] **Step 1: Tests.** A helper `_modes()` returns `["inline", "worker"]`, and `_pump(mode)` builds a pump in that mode through the test hook. Every existing digest and slot case in `test_sim_pump.gd` that the pump drives (the 900-tick bot match, the 150-tick battle, the 300-tick team run, `test_ph_fresh_slot_per_job`, the SB3 rotation cases) gains a worker-mode run through a wait-for-idle drain helper, with the same expected values. New: `test_sb5a_post_refused_when_full` (a gate job that blocks the worker on a test semaphore; two posts accepted, the third refused, `failure()` empty, release the gate, both notes drain in order); `test_sb5a_empty_drain_keeps_slots`; `test_sb5a_worker_runs_off_main` (the note's recorded thread id differs from main in worker mode and equals it inline).
+- [ ] **Step 0:** the bare members; the packed-array probe (Decided 11) as a scratch script (`quit()` on every path), result into the ledger. `ONLY(t3s0, test_sim_pump)` green.
+- [ ] **Step 1: Tests.** `_modes()` and `_pump(mode)`; every existing `test_sim_pump.gd` case runs in both modes (allowed edit 3) with the same expected values, through a bounded wait-for-idle before each drain. New: `test_sb5a_post_refused_when_full` (gated publish: two posts accepted, third refused, `failure()` empty, release, both notes drain in order); `test_sb5a_empty_drain_keeps_slots`; `test_sb5a_drain_at_publish_boundary`; `test_sb5a_held_view_never_changes` (deep hash of view N, packed rows and nested dictionaries, before and after N+1); `test_sb5a_undrained_notes_bounded` (a frame script of 8 physics steps per render frame); `test_sb5a_worker_runs_off_main` (a test subclass records the thread id in `_note_for`, so `Note` gains no field).
 - [ ] **Step 2:** `ONLY(t3red, test_sb5a_)` red on named checks only.
 - [ ] **Step 3:** implement.
-- [ ] **Step 4:** `SUITE(t3)`, `TRACES(t3)`; `WONLY(t3w, test_sim_pump)` green; `CHECKS(t3)`.
-- [ ] **Step 5:** mutations: (a) publish the slot before the note under two separate lock sections → `WONLY(t3m1, test_sim_pump)` red, or record it as not caught and hand it to Task 8; (b) `has_room` ignores the running job → `WONLY(t3m2, test_sb5a_post_refused)` red.
-- [ ] **Step 6:** review, commit. **First evidence reached:** the pump digests are equal in both modes. Report it in the ledger.
+- [ ] **Step 4:** `SUITE(t3)`, `TRACES(t3)`, `WONLY(t3w, test_sim_pump)`, `CHECKS(t3)`.
+- [ ] **Step 5:** mutations: count released before the note is appended → `test_sb5a_drain_at_publish_boundary` red; `has_room` ignores the executing job → `test_sb5a_post_refused_when_full` red.
+- [ ] **Step 6:** review; commit. **First evidence:** pump digests equal in both modes, into the ledger.
 
 ### Task 4: `query` and `record` through the worker
 
-**Files:** `sim_pump.gd` (`query` `:98-101`, `record` `:103-112`). Test: `test_sim_pump.gd`, `test_skirmish_scene.gd`.
+**Files:** `sim_pump.gd` (`query` `:98-101`, `record` `:103-112`). Tests: `test_sim_pump.gd`, `test_skirmish_scene.gd`.
 
-**Interfaces:** worker `query(job)`: post it as a query job (no slot) behind the queue, wait on its own reply semaphore up to `WAIT_MSEC`, return its note. A query does not count against `MAX_QUEUED` (it blocks the caller, so at most one exists) and its note never enters `drain`. On timeout the pump fails with `stall` and returns null. After a clean `stop()` the query runs inline (Decided 8). `record()` keeps its body; it only gains the stalled-thread branch.
+**Interfaces:** worker `query`: append a query job with its own reply semaphore; poll `try_wait` against the `WAIT_MSEC` deadline, also reading markers, so expiry is detected inside the call; on expiry fail `stall` and return null. After a join, `query` runs inline (owner main). `record()`'s alive-thread branch (Stalled trace, step 2).
 
-- [ ] **Step 1: Tests.** `test_sb5a_query_waits_behind_jobs`; `test_sb5a_record_waits_for_queue` (post 40 jobs, `record()` at once, digest equals an inline pump's record after the same 40); `test_sb5a_query_after_stop_runs_inline`; the offline `match_log` and online `start()` (job 0 digest query) in worker mode equal inline.
-- [ ] **Steps 2-6:** red, implement, `SUITE(t4)` + `TRACES(t4)` + `WONLY(t4w, test_sim_pump)`, mutation (query note appended to `_notes` → red), review, commit.
+- [ ] **Step 1: Tests.** `test_sb5a_query_waits_behind_jobs`; `test_sb5a_record_waits_for_queue` (40 jobs posted with a wait for room between posts, then `record()` while at least one is unpublished; equal to inline); `test_sb5a_query_after_stop_runs_inline`; offline `match_log` and online `start()` (startup digest) equal inline in worker mode.
+- [ ] **Steps 2-6:** red; implement; `SUITE(t4)`, `TRACES(t4)`, `WONLY(t4w, test_sim_pump)`; mutation: a query note appended to the drain queue → red; review; commit.
 
-### Task 5: Stop, stall and dead thread
+### Task 5: Stop, exit, restart
 
-**Files:** `sim_pump.gd` (`stop` `:123-124`, `drain`). Test: `test_sim_pump.gd`, `test_base_scene.gd` (the live-thread count).
+**Files:** `sim_pump.gd` (`stop` `:123-124`), `match_screen.gd` (`_exit_tree` `:138-141`), `test_base_scene.gd` (`setup`: `live_workers() == 0` before building a screen, latch reset). Tests: `test_sim_pump.gd`, `test_skirmish_scene.gd`, `test_online_scene.gd`.
 
-**Interfaces:** `stop()`: set quit, post the semaphore, wait up to `WAIT_MSEC` for the loop to finish, then `wait_to_finish()`; after a failure only set quit and return. `drain` counts frames with a job in flight and no new note; at `STALL_FRAMES` the pump fails with `stall`. `drain` also checks `_thread.is_alive()` while `_unpublished > 0`, and fails with `dead thread`. `static func live_workers() -> int` counts started and not joined threads, for tests.
+- [ ] **Step 1: Tests.** `test_sb5a_stop_idle_worker`; `test_sb5a_stop_with_job_in_flight`; `test_sb5a_stop_is_idempotent`; `test_sb5a_restart_drops_old_notes` (offline `_restart_world` and online rematch); `test_sb5a_exit_tree_stops_worker` (`main.free()` leaves `live_workers() == 0`). The runner prints `SIM PUMPS LIVE 0` at the end of each shard under the switch.
+- [ ] **Steps 2-6:** red; implement; `SUITE(t5)`, `TRACES(t5)`, `WONLY(t5w, test_sim_pump)`; mutation: `stop` skips the join on the clean path → `test_sb5a_exit_tree_stops_worker` red; review; commit.
 
-- [ ] **Step 1: Tests.** `test_sb5a_stop_with_job_in_flight`; `test_sb5a_stop_is_idempotent`; `test_sb5a_restart_drops_old_notes` (offline `_restart_world` and online rematch with undrained jobs); every scene suite's teardown checks `SimPump.live_workers() == 0` under the switch (a check added to the shared helper, counted once per case). The stall itself runs in Task 6's process.
-- [ ] **Steps 2-6:** red, implement, `SUITE(t5)` + `TRACES(t5)` + `WONLY(t5w, test_sim_pump)`, mutation (`stop` returns without joining on the clean path → live-worker check red), review, commit.
+### Task 6: Fault flag and the fault processes
 
-### Task 6: Fault flag and the fault process
+**Files:** `pump_logger.gd` (new), `sim_pump.gd`, `game/tests/pump_faults.gd` (new), `tools/run_pump_faults.sh` (new).
 
-**Files:** `pump_logger.gd` (new), `sim_pump.gd`, `game/tests/pump_faults.gd` (new), `tools/run_pump_faults.sh` (new). Test: the new script.
+**Interfaces:** the Failure channel. `pump_faults.gd` is a `SceneTree` script, one case per process (`--case=<name>`), real 30 Hz physics frames, printing `FAULT CASE <name> PASSED <ms>` or `FAILED <why>`, `quit()` on every path. Cases: `logged_error`, `main_error_control`, `wrong_thread`, `fault_in_query`, `stall_offline`, `stall_online`, `stall_restart`, `stall_leave`, `stall_stop`, `stall_query`, `dead_thread`, `next_match_inline` (after any failure, the next pump's `mode()` is `"inline"`). `run_pump_faults.sh` runs each under `timeout 20`, checks the marker and the exit status, and prints `PUMP FAULTS PASSED 12`. It runs as its own gate line, outside `run_checks.sh`.
 
-**Interfaces:** `PumpLogger extends Logger`: `_log_error` increments a per-thread count under its own mutex; the pump installs one logger per process (debug builds) and compares the worker's count before and after each job; a rise sets `note.fault`. Main turns `note.fault` into `failure() == "fault in job at tick N"` at drain, and shows neither the note's events nor its slot. `pump_faults.gd` is a `SceneTree` script, one case per process (`--case=<name>`), each printing `FAULT CASE <name> PASSED` or `FAILED <why>` and calling `quit()` on every path. Cases: `logged_error`, `wrong_thread`, `stall_offline`, `stall_online` (match ends within 5 s of wall time with `STALL_FRAMES` driven by a fake frame counter), `stall_query`, `stall_stop`, `dead_thread`. `run_pump_faults.sh` runs each with a 20 s timeout, greps the marker, and prints `PUMP FAULTS PASSED 7`. It joins `tools/run_checks.sh` only if that keeps the checks under a minute; otherwise it is a separate gate line.
-
-- [ ] **Steps 1-6:** the cases first (red: the markers are missing), implement, `sh tools/run_pump_faults.sh` → `PUMP FAULTS PASSED 7`, `SUITE(t6)` + `TRACES(t6)`, mutation (the logger compare skipped → `logged_error` red), review, commit. `sh tools/run_shell_checks.sh` passes.
+- [ ] **Steps 1-6:** the cases first (red: markers missing); implement; `FAULTS(t6)`; `SUITE(t6)` + `TRACES(t6)`; mutations: the logger compare skipped → `logged_error` red; the stop deadline removed → `stall_stop` times out at the outer bound (red); `sh tools/run_shell_checks.sh`; review; commit. The ledger records the abandoned-thread exit status per case (Linux).
 
 ### Task 7: Drivers: room, failure, online end, riders
 
-**Files:** `offline_driver.gd` (`step` `:59-74`, `drain` `:76-89`), `online_driver.gd` (`step` `:110-127`, `drain` `:137-145`, `_finish_job` `:147-158`, `notice` `:332-340`), `match_screen.gd` (the first-failure hook beside `_drain_notes`), `tools/test_sim_boundary.py` (`PUMP_COUNTS`). Test: `test_skirmish_scene.gd`, `test_online_scene.gd`.
+**Files:** the named hunks in "Beside P2.3b"; `tools/test_sim_boundary.py`. Tests: `test_skirmish_scene.gd`, `test_online_scene.gd`.
 
-**Interfaces:** offline `step` returns early, keeping the queue and request, when `not pump.has_room()`; `drain` calls `_read_failure()` after `pump.drain()`. Online `step` breaks the catch-up loop before `take` when `not pump.has_room()`; `drain` reads `pump.failure()`, and on a new reason calls `_lockstep.set_protocol_error("sim pump failed: " + reason)`, then `_transport.close()` in the same frame. A refused post after a room check stays a protocol end. `_finish_job` with `_taken` empty and a note whose tick moved is a protocol end (SB4 rider); a note from `adopt`'s job 0 is not passed to it. `notice` returns `"Waiting for players"` when `waiting_for()` is empty. The screen calls `orders.reset()` once when `driver.failure()` first turns non-empty.
+- [ ] **Step 1: Tests.** `test_sb5a_offline_waits_for_room`; `test_sb5a_full_pump_leaves_next_tick_in_lockstep`; `test_sb5a_preview_waits_for_room`; `test_sb5a_two_notes_one_frame_pair_in_order`; `test_sb5a_failure_between_room_and_post`; `test_sb5a_online_failure_ends_and_closes` (loopback through `FakeTransport` with the relay frame-order rule; the failure comes from `failing_pump.gd`, so no ERROR line; the peer reads `opponent_left()` and `rematch_line() == "Your opponent left"`, no result recorded); `test_sb5a_online_start_null_query`; `test_sb5a_pairing_rejects_foreign_note`; `test_sb5a_notice_waiting_empty`; `test_sb5a_failure_clears_pending_build`; `test_sb5a_pause_posts_nothing`. Room cases use `cap_for_test`, so they also run inline.
+- [ ] **Steps 2-6:** red; implement; `SUITE(t7)`, `TRACES(t7)`, `NET(t7, match)`, `NET(t7, rematch)`, `NETEQ(t7)`, `WONLY(t7w, test_online_scene)`; mutation: room checked after `take` → `test_sb5a_full_pump_leaves_next_tick_in_lockstep` red; review; commit.
 
-- [ ] **Step 1: Tests.** `test_sb5a_offline_waits_for_room`; `test_sb5a_online_room_before_take`; `test_sb5a_online_failure_ends_and_closes` (loopback through `FakeTransport` with the relay frame-order rule: the peer driver reads `opponent_left()` and `rematch_line() == "Your opponent left"`, and records no result); `test_sb5a_pairing_rejects_foreign_note`; `test_sb5a_notice_waiting_empty`; `test_sb5a_failure_clears_pending_build`. `test_sb4_refused_post_ends_match` becomes "a full pump keeps the tick for the next frame" (allowed edit). The room cases use a test-only cap (`pump.cap_for_test(n)`) so they run inline.
-- [ ] **Steps 2-6:** red, implement, `SUITE(t7)` + `TRACES(t7)` + `NET(t7, match)` + `NET(t7, rematch)` + `NETEQ(t7)`, `WONLY(t7w, test_online_scene)`, mutation (room check after `take` → `test_sb5a_online_room_before_take` red), review, commit.
+### Task 8: The lock proof and a free-running run
 
-### Task 8: Races the idle-waiting suite cannot see
+**Files:** `test_sim_pump.gd`. No production change expected; a red is a finding for Task 3.
 
-**Files:** `test_sim_pump.gd`. No production change expected; a red here is a finding for Task 3's code.
-
-- [ ] **Step 1:** `test_sb5a_free_running_equals_inline`: worker mode, no wait for idle, 900 bot ticks posted whenever there is room and drained every loop iteration. The notes' ticks, issued results and a hash of every drained slot's view (`StateHash.digest(slot.view)`) are compared with an inline run; `drain`'s longest lock wait is recorded in the ledger.
-- [ ] **Step 2:** `test_sb5a_publish_drain_orders`: no thread, a stepper that runs the pump's publish and drain halves in every order for up to three jobs (the enumerated interleavings); each order keeps "after `drain`, `current().tick` is the last note's tick" and "no note lost or doubled".
-- [ ] **Step 3: Lock proof.** Remove the lock from `drain` (mutation) → `WONLY(t8m, test_sb5a_free_running)` red within three runs. If it stays green, strengthen the case once (more jobs, a slower drain); still green is a stop.
-- [ ] **Step 4:** `SUITE(t8)`, `WONLY(t8w, test_sim_pump)`; review, commit.
+- [ ] **Step 1:** `test_sb5a_lock_guards_publish`: the publish gate pauses the worker after it has appended the note but before READY and the count (inside the lock). Main calls `drain` from a helper thread with a deadline. With the lock, that drain waits until the gate opens and sees note and slot together. Mutation: `drain` without the lock → `current().tick == last note tick` fails on every run.
+- [ ] **Step 2:** `test_sb5a_free_running_equals_inline`: 900 bot ticks, posts whenever there is room, drains every loop without waiting for idle; notes, issued results and `StateHash.digest(slot.view)` per drained slot equal an inline run; on a mismatch the case prints the first tick, its commands and both hashes; `drain`'s longest lock wait into the ledger.
+- [ ] **Step 3:** `SUITE(t8)`, `WONLY(t8w, test_sim_pump)`; review; commit.
 
 ### Task 9: The scene suite under the switch, and CI
 
-**Files:** `test_base_scene.gd` (`tick` `:69-71`), the other tick helpers Task 1 listed, the skip list, `.github/workflows/ci.yml`.
+**Files:** `test_base_scene.gd` and the drive sites Task 1 listed; `run_tests.gd`, `tools/run_tests.sh`, `test_runner.gd`; `.github/workflows/ci.yml`.
 
-- [ ] **Step 1:** Tick helpers: physics, then wait for `not pump.busy()` with a bound of `WAIT_MSEC` (fail the case on timeout), then drain. Inline the wait returns at once. Skip list: the ten Profiler cases, each printing `SKIP <case> (Profiler inline only)` under the switch; the runner counts skips and prints them in the summary.
-- [ ] **Step 2:** `SUITE(t9)` (inline, unchanged count), `WSUITE(t9)` → `TESTS PASSED <n>` with the skip count equal to the list. Any other red under the switch is a finding: diagnose (Opus) before any fix; a fix that is not in the pump or drivers is a stop.
-- [ ] **Step 3:** CI: one job step `WARGRID_SIM_THREAD=1 sh tools/run_tests.sh` after the existing suite on Linux and Windows. No new trace upload. `sh tools/run_checks.sh` passes.
-- [ ] **Step 4:** review, commit.
+- [ ] **Step 1:** `BaseScene.tick`, `settle`, `publish` (allowed edit 1); the inline-under-switch list (allowed edit 2), checked by name before each case, with the case's pumps counted as inline; the runner prints per shard `SIM PUMPS worker=<w> inline=<i>`, and `run_tests.sh` sums them in the summary. `test_runner.gd` gets a case for the list and the count.
+- [ ] **Step 2:** `SUITE(t9)` (counts unchanged, `SIM PUMPS worker=0`); `WSUITE(t9)` (inline count equal to the list's pumps, worker count above zero, `SIM PUMPS LIVE 0`). Any other red under the switch: Opus diagnosis first; a fix outside the pump, the drivers or the allowed test edits is a stop. Mutation: the latch never reset → the inline count rises → red.
+- [ ] **Step 3:** CI: one step `WARGRID_SIM_THREAD=1 sh tools/run_tests.sh` after the existing suite on Linux and Windows, with the four trace variables empty (Decided 10). `CHECKS(t9)`.
+- [ ] **Step 4:** review; commit.
 
 ### Task 10: Loopback online with one worker client
 
-**Files:** `test_online_scene.gd`, `tools/run_netplay.sh` only if a scenario switch is needed (agent call; prefer a scene test).
+**Files:** `test_online_scene.gd`, `tools/run_netplay.sh` (Decided 9).
 
-- [ ] **Step 1:** `test_sb5a_worker_peer_against_inline_peer`: two scene drivers through `FakeTransport` with the relay frame-order rule, seat 1 in worker mode, seat 2 inline, the SB4 reference script through two hash ticks and the match end. The command logs, the hashes at every hash tick and the end status are equal.
-- [ ] **Step 2:** `NET(t10, match)` and `NET(t10, rematch)` with `WARGRID_SIM_THREAD=1` for the scene client if `run_netplay.sh` runs one (else: recorded "headless clients only, switch has no effect").
-- [ ] **Step 3:** catch-up floor (Decided 10): the worker client keeps up at the same frame rates as inline in the test's frame script; falling behind earlier is a stop.
-- [ ] **Step 4:** `SUITE(t10)`, review, commit.
+- [ ] **Step 1:** `test_sb5a_worker_peer_against_inline_peer`: two scene drivers through `FakeTransport` with the relay frame-order rule, seat 1 worker, seat 2 inline, the SB4 reference script through two hash ticks and the match end: command logs, every hash-tick hash and the end status equal.
+- [ ] **Step 2:** `run_netplay.sh` starts clients with the switch unset; `NET(t10, left-mid-pump)` and one `trio-*` scenario with `WARGRID_SIM_THREAD=1` in the caller's environment still pass (proof that the clients stay inline).
+- [ ] **Step 3:** catch-up: under the frame script of Step 1 the worker peer takes the same ticks per frame as the inline peer; falling behind earlier is a stop.
+- [ ] **Step 4:** `SUITE(t10)`; review; commit.
 
 ### Task 11: Digests on four loads, both modes
 
-**Files:** `tools/run_worker_digests.sh` (new).
+**Files:** `game/benchmarks/run_worker_digests.gd`, `tools/run_worker_digests.sh`.
 
-- [ ] **Step 1:** For skirmish3v3, team, hordes300 and late, run the headless load once inline and once with `WARGRID_SIM_THREAD=1` through the pump (`run_profile.gd`'s pump row path), print `DIGEST <load> tick=<t> <hash>`, and `cmp` the two files; print `WORKER DIGESTS MATCHED 4`.
-- [ ] **Step 2:** `sh tools/run_shell_checks.sh`; commit. The script is an exit-evidence line, not part of `run_checks.sh`.
+- [ ] **Step 1:** for skirmish3v3, team, hordes300 and late_game_3v3, a headless run with the Profiler off, posting only when there is room, draining each loop, `record()` digests every 30 ticks to a fixed end tick, once inline and once worker (forced through the hook). It prints `DIGEST <load> tick=<t> <hash>`. The shell script `cmp`s the files. On a mismatch it prints the earliest differing tick, that tick's posted commands, both digests and both view hashes; otherwise `WORKER DIGESTS MATCHED 4`. `run_profile.gd` is not changed (its pump row stays inline, Profiler on).
+- [ ] **Step 2:** `DIGESTS(t11)`; `sh tools/run_shell_checks.sh`; commit. **Cloud run ends here** (owner answer 2); the run reports and stops.
 
-### Task 12: Match bench and `worker_ab.py`
+### Task 12: Match bench and `worker_ab.py` (Mac)
 
 **Files:** `game/benchmarks/run_match_bench.gd`, `game/scenes/match_bench.tscn`, `tools/worker_ab.py`, `tools/test_worker_ab.py`.
 
-- [ ] **Step 1:** The bench loads the real match screen on Ashfall with 3v3 bots (team load) in either mode, runs a scripted input track (box selects and moves every 2 s, one build every 20 s), headless or rendered, and prints one `MATCH BENCH` line per run: mode, ticks, `tick_rate`, refused posts, the longest run of refusals, pace over the worst two-second window and the average, the share of ticks shown 1, 2 and 3 frames after the previous one, drains with two ticks, answer latency in frames (p50, p95), main frame CPU p95 and p99, and the end digest.
-- [ ] **Step 2:** `worker_ab.py report <dirs>` tabulates the lines per arm (median and range). Its test covers a missing field, an arm with one run, and equal or unequal digests across arms.
-- [ ] **Step 3:** one headless run per mode on the dev machine into the ledger (report-only; no limits until SB6). `sh tools/run_python_checks.sh` passes. Commit.
+- [ ] **Step 1:** The bench runs the real match screen on Ashfall, 3v3 bots (team load), in either mode, with a scripted input track (box selects and moves every 2 s, one build every 20 s). `Engine.max_fps = 60` headless, so frame shares mean something. It asserts that the input track ran inside the timed window (AGENTS.md benchmark rule). One `MATCH BENCH` line per run: mode, ticks, `tick_rate`, refused posts, longest refusal run, pace (average and worst two-second window), share of ticks shown 1, 2 and 3 frames after the previous one, drains with two ticks, answer latency in frames (p50, p95), main frame CPU p95 and p99, end digest.
+- [ ] **Step 2:** `worker_ab.py report <dirs>`: median and range per arm; its test covers a missing field, a one-run arm, and equal or unequal digests across arms.
+- [ ] **Step 3:** one headless run per mode into the ledger. The rows are report-only. The 29.7 ticks/s floor is the go rule's **[owner, 2026-11-18]** and is printed as a reference only; refusal limits are unset **[open, SB6]**. `sh tools/run_python_checks.sh`; commit.
 
-### Task 13: Deck waiting-line rider (over SSH, no owner needed)
+### Task 13: Deck waiting-line rider (Mac, over SSH, no owner needed)
 
-Rider (user, 2026-11-17): with SB4's quiet take, "Waiting for player N" shows only once the in-flight jobs drain. SB5a measures it in its online loopback test with a 1 s hold on the Deck under team load.
+Rider **[owner, 2026-11-17; kept in SB5a 2026-11-22]**: with SB4's quiet take, "Waiting for player N" shows only once the in-flight jobs drain; SB5a measures it with a 1 s hold on the Deck under team load.
 
-- [ ] **Step 1:** If the Deck answers SSH (`ssh -o BatchMode=yes <deck> true`), copy a native Linux debug export of this tree, run Task 10's loopback with team load and a 1 s hold on seat 2's packets, 20 holds, worker mode, and record per hold the delay from the hold start to the first frame that shows the line, plus whether the line showed at all.
-- [ ] **Step 2:** Verdict per the rider: p99 at or below about 150 ms and the line shown in every hold: done. Otherwise the wall-clock waiting line (about 1 s, [M9 drops Q12](../../questions/next-m9-drops.md)) moves into this package as Task 13b, and the run stops for the owner to start it. This is already the owner's rule.
-- [ ] **Step 3:** If the Deck does not answer: record "not run, Deck unreachable" and carry it to the owner list. The gate does not wait for it.
-- [ ] **Step 4:** cleanup on the Deck (remove the copied export only); ledger; commit.
+- [ ] **Step 1:** if the Deck answers `ssh -o BatchMode=yes <deck> true`, copy a native Linux debug export of this tree and run a real-time loopback (two native clients through the local relay path, team load, worker mode), with 20 holds of 1 s on seat 2's packets. Per hold, record the wall-clock delay from the hold start to the first rendered frame with the line, and whether the line showed at all. Frames run in real time, not test-paced.
+- [ ] **Step 2:** p99 at most about 150 ms and the line in every hold: done. Otherwise the wall-clock waiting line (about 1 s, [M9 drops Q12](../../questions/next-m9-drops.md)) becomes Task 13b, and the run stops for the owner (the owner's rule).
+- [ ] **Step 3:** Deck unreachable: "not run" into the owner list; the gate does not wait. **Step 4:** remove only the copied export from the Deck; ledger; commit.
 
 ### Task 14: Merge `main` after P2.3b
 
-Runs only when P2.3b is on `main`; until then the run stops here (Beside P2.3b).
+Runs only when P2.3b is on `main`.
 
-- [ ] **Step 1:** `git merge main` (asks the owner). Conflicts are expected only in `offline_driver.gd` and `online_driver.gd` around the preview request (F33, T2b) and in `match_screen.gd` near `_drain_notes`. Keep P2.3b's preview rule and re-apply SB5a's room and failure hunks around it.
-- [ ] **Step 2:** `SUITE(t14)` against a new base trace set taken on `main` after P2.3b (P2.3b's re-pin, if any, is the reference; SB5a moves nothing on top), `WSUITE(t14)`, `NET(t14, match)`, `NET(t14, rematch)`, `sh tools/run_pump_faults.sh`, `sh tools/run_worker_digests.sh`, `CHECKS(t14)`. F33's "preview on every job" also runs in worker mode: `WONLY(t14w, preview)`.
+- [ ] **Step 1:** `git merge main` (asks the owner). Expected conflicts: the preview lines in both drivers (F33, T2b) and `match_screen.gd` near `_drain_notes` and `_exit_tree`. P2.3b's preview rule wins; SB5a's hunks are re-applied around it. Check whether `orders.reset()` changed.
+- [ ] **Step 2:** a new base trace set on `main` after P2.3b; `SUITE(t14)`, `TRACES(t14)`, `WSUITE(t14)`, `NET(t14, match)`, `NET(t14, rematch)`, `NETEQ(t14)`, `FAULTS(t14)`, `DIGESTS(t14)`, `CHECKS(t14)`; F33's preview cases under the switch (`WONLY(t14w, preview)`).
 - [ ] **Step 3:** ledger; commit the merge.
 
 ### Task 15: Docs
 
-- [ ] `docs/reference/sim-interface.md`: the worker-mode rule per pump method, `has_room()`, `mode()`, failure reasons.
+- [ ] `docs/reference/sim-interface.md`: the Contract list, the Ownership table, the failure reasons.
 - [ ] `docs/reference/determinism-rules.md:14`: "one owner thread".
-- [ ] Spec: the API block refreshed from `sim_pump.gd`; the SB5a row's state; the inherits list ticked item by item with the test that covers each.
+- [ ] Spec: the API block from `sim_pump.gd`; the SB5a row's state; the inherits list ticked with its test per item; "five ticking cases" → the ten Profiler cases; the Thread lifecycle and failed-pump lifetime as one paragraph.
 - [ ] Guide chapters `01-big-picture`, `04-the-tick`, `05-presentation`, `12-performance-and-platforms`, `13-testing-and-tooling`, each with its `Checked against` footer.
 - [ ] `docs/STATUS.md` night 6 row (one status line), `docs/packages.md` item 6, `python3 tools/roadmap.py`.
-- [ ] One fresh Opus (high) docs review over the docs diff; one fix round. `sh tools/check_public.sh`. Commit.
+- [ ] One fresh Opus (high) docs review, one fix round; `sh tools/check_public.sh`; commit.
 
 ### Task 16: Gate
 
-- [ ] `CHECKS(gate)`, `SUITE(gate)` + `TRACES(gate)`, `WSUITE(gate)`, `NET(gate, match)` + `NET(gate, rematch)` + `NETEQ(gate)`, `sh tools/run_conformance.sh`, `sh tools/run_pump_faults.sh`, `sh tools/run_worker_digests.sh`.
-- [ ] `PERF_LABEL="Sim boundary SB5a" sh tools/run_benchmark.sh` (runs alone). A rendered rerun is owed after the merge because `game/scripts/match/` and `perf_overlay.gd` changed (an owner item; it opens a window).
-- [ ] Push the branch for CI once (pre-authorized in the handoff only); `gh run watch --exit-status`; Linux and Windows green, with the switch-on step; `sh tools/compare_local_traces.sh <run id>` on the Mac.
-- [ ] Reviews (Model routing): Opus whole-branch, Gemini through `agy`, player-experience reviewer on the F3 line. Fixes in one round, test-first; the ledger records what was left and why.
+- [ ] The spec's checks: `CHECKS(gate)`, `SUITE(gate)` + `TRACES(gate)`, `NET(gate, match)`, `NET(gate, rematch)`, `NETEQ(gate)`, `sh tools/run_conformance.sh`, `PERF_LABEL="Sim boundary SB5a" sh tools/run_benchmark.sh` (alone). SB5a's own: `WSUITE(gate)`, `FAULTS(gate)`, `DIGESTS(gate)`.
+- [ ] Push the branch for CI once (pre-authorized in the handoff only); `gh run watch --exit-status`; Linux and Windows green with the switch-on step and the abandoned-thread exit on Windows; `sh tools/compare_local_traces.sh <run id>` on the Mac (macOS traces; the macOS abandoned-thread exit by running `FAULTS` there once).
+- [ ] Reviews (Model routing); one fix round, test-first.
+- [ ] Owner items: the rendered rerun owed after the merge (`game/scripts/match/` and `perf_overlay.gd` changed; it opens a window); the catch-up rider wording (below).
 - [ ] Report: implemented, verified (with the tree each check ran on), pending, Decided for you, owner items.
+
+## Evidence to move from SB5a to SB5b
+
+SB5b (threaded Web preset, headers, pause-menu toggle) may start when all of these hold on the merged tree:
+
+1. `WORKER DIGESTS MATCHED 4`, and every `test_sim_pump` case green in both modes (spec exit: digests equal on four loads in both modes).
+2. `WSUITE` green, with the worker pump count above zero, the inline count equal to the named list, and `SIM PUMPS LIVE 0` (spec exit: scene suite green under the flag).
+3. `PUMP FAULTS PASSED 12`, with `stall_offline` and `stall_online` under 6 s of wall time and the peer's leave inside the same bound (spec exit: a fault ends the match within 5 s).
+4. `test_sb5a_worker_peer_against_inline_peer` green (spec exit: loopback online with one worker client).
+5. The inline gate unchanged: traces, netplay, conformance, benchmark row, CI Linux and Windows (switch-on step included), macOS traces.
+6. The bench and `worker_ab.py` merged, with one row per mode in the ledger (SB6's input).
+7. The Deck rider either done or recorded "not run" for the owner, and Task 13b not pending.
+8. The Opus and Gemini gate reviews with every high finding fixed.
 
 ## Stop conditions
 
 Never ruled on, always parked for the owner:
 
-- any digest, trace or pin moving, in either mode;
+- any pinned digest, trace or pin moving; a worker digest differing from inline;
 - a weakened or removed assertion, or a test edit outside "Allowed test edits";
-- an edit to a path under "Beside P2.3b" or "Untouched paths";
-- a contract change beyond "Contract";
-- a red under the switch whose fix is outside the pump and the drivers (Task 9);
-- the lock proof staying green after one strengthening round (Task 8);
-- the worker client falling behind earlier than inline (Task 10);
-- the Deck rider failing (Task 13): the run stops before Task 13b;
-- P2.3b not merged when Task 13 is done (Task 14);
-- a task not green after two fix rounds: it parks (`git stash push --include-untracked -m park-t<N>-sb5a`, the stash SHA in the ledger, never popped). Dependent tasks park too: 4 and 5 need 3; 7 needs 5; 8, 9, 10 need 7; 11 and 12 need 3; 13 needs 10;
+- an edit outside the named hunks or to an untouched path; a contract change beyond "Contract";
+- a red under the switch whose fix lies outside the pump, the drivers or the allowed test edits;
+- the lock proof green under the mutation (Task 8);
+- the worker peer falling behind earlier than inline (Task 10);
+- the packed-array probe showing a shared write (Decided 11);
+- a non-debug static write reachable from `run_job` (Task 1);
+- the Deck rider failing (Task 13): stop before 13b;
+- P2.3b not merged when Task 13 is done;
+- a task not green after two fix rounds: it parks (`git stash push --include-untracked -m park-t<N>-sb5a`, the stash SHA in the ledger, never popped). Dependent tasks: 4, 5, 6 need 3; 7 needs 5; 8, 9, 10 need 7; 11 needs 4; 12 needs 7; 13 needs 10;
 - a budget exceeded or `run_benchmark.sh` exit 1;
-- about 100M processed tokens (`python3 tools/session_usage.py` after each task).
+- about 100M processed tokens (`python3 tools/session_usage.py` after each task; the cloud session reports its usage line instead).
 
-Red under host load (load above 2.5): one rerun, `uptime` before each in the ledger; green on the rerun is "flake under load", red twice is a stop.
+Red under host load (above 2.5): one rerun with `uptime` before each; green is "flake under load", red twice is a stop.
+
+## Review disposition
+
+Readiness review (Opus, 2026-11-22, private report `sb5a-readiness-review.md`); every item is applied unless noted:
+
+- **Blockers.** B1: the latch resets per case, and `SIM PUMPS` counts prove the mode (Decided 4, Task 9). B2: allowed test edits widened; Task 1 lists every drive site. B3: `_exit_tree` stops, self-reference, abandoned list, `stall_restart` and `stall_leave` (Thread lifecycle, Task 6). The engine claim behind B3 was probed.
+- **Should-fix.** S1 (poll loops, never join after a timeout), S2 (physics-frame source), S3 (owner handshake, `_run_owned`), S4 (failure markers; `stop` finishes accepted jobs), S5 (online `failure()`, null queries), S6 and S7 (counts per task, mode-relative asserts), S8 (capacity-only `has_room`, SB4 test unchanged), S9 (no lookahead, preview waits a frame), S10 (`run_worker_digests.gd`), S11 (gated, deterministic lock proof), S12 (full Contract list), S13 (real frames, wall time, peer bound), S14 (CI traces empty), S15 (netplay clients inline), S16 (HUD paths), S17 (posts wait for room), S18 (runner and `run_tests.sh` in Files, a runner case), S19 (Decided 11; `run_profile` untouched, its loop bound stays open; the quit-frame refusal stays as the owner chose it, Pump hardening choice 4).
+- **Nits.** N1, N3, N5, N6, N8, N9, N10, N11, N12, N13 and N14 are applied. N2: the spec text is fixed in Task 15. N4: moved to the owner list. N7: covered by Task 3's mode loop and `test_sb5a_pause_posts_nothing`.
+
+Owner planning brief (2026-11-22, private): the full-queue trace, the ownership table, the four thread states, the failed-pump lifetime, the query deadline, the logger contract, the publication-boundary and held-view tests, the external fault bounds, the SB6 carry-over, the labels and the SB5b evidence are all in this revision.
 
 ## Owner answers (user, 2026-11-22)
 
-1. **Build beside P2.3b:** yes. SB5a is built in parallel and merges only after P2.3b is on `main`, under "Beside P2.3b".
-2. **Where it runs:** Tasks 1 to 11 in a cloud session; Tasks 12 and 13, and `compare_local_traces.sh` at the gate, on the Mac afterwards. A cloud session uses its own branch (Global Constraints, Base). It records "spike sources not on this machine" at Task 1 Step 4 and stops after Task 11 for the Mac part.
+1. **Build beside P2.3b:** yes. Built in parallel, merging only after P2.3b is on `main`.
+2. **Where it runs:** Tasks 1 to 11 in a cloud session; Tasks 12, 13 and the Mac parts of the gate on the Mac afterwards.
 3. **Deck rider:** stays in SB5a (Task 13).
 
-Still owed before a run: the owner's approval of the plan itself, and a handoff (private). Answering these questions did not start implementation.
+## For the owner
+
+- **Catch-up rider wording.** Packages item 6 says "catch-up is capped at input delay + 1 = 5 ticks per frame, which falls behind below 6 fps". The code at `83d00e8` takes at most 2 ticks per physics frame from a credit capped at 4 (`online_driver.gd:10-11`), and physics runs at a fixed 30 Hz. The plan keeps the code's rule. Should the rider be closed as superseded, or does it ask for a change?
+- Still owed before a run: approval of this plan after a second, narrower readiness review, and a handoff (private).
