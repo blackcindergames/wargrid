@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'While a forecast shows: keep the `PREVIEW` label?'
+why: >-
+  Gate B (user, 2026-11-20) added a cyan `PREVIEW` label and a 1 px `sel` frame when the strip showed
+  only the values after the purchase (`4100 −1200`), which could be read as today's balance. Your
+  picture shows the balance and the forecast side by side (`5300 → 4100`), which may make the label
+  redundant. Both options keep the frame on each slab whose number changes, and show power as before →
+  after, as your picture does (today: after only). The arrow is drawn, since Public Sans has no arrow
+  glyph. Zero Hour shows no forecast, so there is no default.
+look: >-
+  Where to look: the top left, Rotary Gun Tower armed at 5300. Under each option, Vehicle Factory short.
+rec: A
+recWhy: >-
+  the arrow between the two numbers already reads as a forecast, and the label widens the slab the first
+  step tries to shrink; the cost is one word less for a newcomer, who still gets the cyan frame.
+neutral: None of these
+crop: {x: 0, y: 0, w: 800, h: 120}
+ref:
+  label: 'Today: PREVIEW, after-values and a delta'
+  render: {state: ts-built-armed}
+options:
+  A:
+    name: No label; the arrow and the cyan frame
+    render: {state: ts-card-armed}
+    sees: '`5300 → 4100` and `8 / 10 → 11 / 10 LOW POWER · DEFENCES OFF`, each slab in its cyan frame.'
+    notes: Shortest; the forecast reads from the arrow and the frame.
+    extra:
+    - label: Pointer on Vehicle Factory at 800
+      render: {state: ts-card-short}
+  B:
+    name: '`PREVIEW` after the credits'
+    render: {state: ts-label-armed}
+    sees: >-
+      As A, plus today's cyan `PREVIEW` label 24 px after the forecast, inside the credits slab, whose
+      held width grows by the label.
+    notes: Says it in a word, as today; the credits slab grows by the label.
+    extra:
+    - label: Pointer on Vehicle Factory at 800
+      render: {state: ts-label-short}

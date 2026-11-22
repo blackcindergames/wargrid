@@ -1,0 +1,105 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'Top strip: what shape, and may it move during a forecast?'
+why: >-
+  Your note asks for compact credits and power slabs instead of today's bar, which is 704 px wide in
+  every state so a forecast never moves it (strip follow-ups, user 2026-11-20). A strip that hugs its
+  numbers grows whenever a forecast shows, so the question is what moves, and when. Today each build
+  button ends its hover when the pointer leaves it (read from the code, not tried in a window), so the
+  forecast probably clears in the 4 px gaps between cells: A and C would jump at every gap, B and D never
+  do. More is planned on the strip right of power: the production strip after a separator (Full tier), an
+  optional `+N/min` income readout and an `N IDLE COLLECTORS` chip. Power grows by 286 px in a forecast
+  into low power (`8 / 10` to `8 / 10 → 11 / 10 LOW POWER · DEFENCES OFF`), so in A, B and C those
+  residents would jump with it; only D holds power's width too. Placement stays top left at (8, 8),
+  above the alert feed at (8, 48), with network notices top centre (gate B, user 2026-11-20). Zero Hour
+  prints money as one number and power as a separate bar, and previews no purchase, so neither grows
+  (GeneralsGameCode `afc2a103f`, `InGameUI.cpp:2041-2048`, `:2022`).
+look: >-
+  Where to look: the top left. Flip between an option and its first extra (armed) to see what moved.
+rec: D
+recWhy: >-
+  compact at rest like A (266 px), and while you use the card nothing moves, the planned residents
+  included, because both slabs hold their widest forecast until the pointer leaves the card or the
+  building is placed or cancelled; the cost is one move as the pointer enters the card and one as it
+  leaves (674 px while held). B never moves its credits slab but still pushes everything right of power
+  in a low-power forecast, and to stop that it would have to hold power's width too, about today's 704 at
+  rest.
+neutral: None of these
+ref:
+  label: 'Today: the 704 px strip'
+  render: {state: ts-built-normal}
+options:
+  A:
+    name: Two slabs that hug (your picture)
+    render: {state: ts-two-normal}
+    sees: >-
+      Credits and power in two slabs 8 apart, each as wide as its words. In a forecast the credits slab
+      grows by the arrow and the second number, and the power slab moves right by as much, probably at
+      every gap between cells.
+    notes: 266 px at rest; the power slab jumps 73 to 112 px right in a forecast.
+    extra:
+    - label: Rotary Gun Tower armed at 5300
+      render: {state: ts-two-armed}
+    - label: Pointer on Vehicle Factory at 800
+      render: {state: ts-two-short}
+    - label: Low power at rest
+      render: {state: ts-two-low}
+    - label: FRC at rest (no power)
+      render: {state: ts-two-frc}
+    - label: FRC, pointer on Vehicle Yard at 800
+      render: {state: ts-two-frcshort}
+  B:
+    name: Two slabs, credits slab holds its widest forecast
+    render: {state: ts-hold-normal}
+    sees: >-
+      The same two slabs, but the credits slab is always as wide as its widest forecast (`88888 → −8888`
+      and the coin), so the power slab never moves; the power slab's right end still grows.
+    notes: 379 px at rest, 112 empty; power still grows 286 px into low power.
+    extra:
+    - label: Rotary Gun Tower armed at 5300
+      render: {state: ts-hold-armed}
+    - label: Pointer on Vehicle Factory at 800
+      render: {state: ts-hold-short}
+    - label: Low power at rest
+      render: {state: ts-hold-low}
+    - label: FRC at rest (no power)
+      render: {state: ts-hold-frc}
+    - label: FRC, pointer on Vehicle Yard at 800
+      render: {state: ts-hold-frcshort}
+  C:
+    name: One slab that hugs both
+    render: {state: ts-one-normal}
+    sees: >-
+      Today's single frame, only as wide as its words: credits, 24 px, power. In a forecast it grows at
+      its right end and the power group moves right, probably at every gap between cells.
+    notes: One frame, 266 px at rest; power jumps right 73 to 112 px in a forecast.
+    extra:
+    - label: Rotary Gun Tower armed at 5300
+      render: {state: ts-one-armed}
+    - label: Pointer on Vehicle Factory at 800
+      render: {state: ts-one-short}
+    - label: Low power at rest
+      render: {state: ts-one-low}
+    - label: FRC at rest (no power)
+      render: {state: ts-one-frc}
+    - label: FRC, pointer on Vehicle Yard at 800
+      render: {state: ts-one-frcshort}
+  D:
+    name: Hug at rest, hold the grown width while on the card
+    render: {state: ts-two-normal}
+    sees: >-
+      At rest as A. When the pointer enters the card or a building is armed, both slabs grow at once to
+      their widest forecast (credits as in B, power as wide as `88 / 99 → 99 / 88 LOW POWER · DEFENCES
+      OFF`) and hold until the pointer leaves the card, or the building is placed or cancelled.
+    notes: 266 px at rest, 674 while on the card; moves only on entering and leaving it.
+    extra:
+    - label: Rotary Gun Tower armed at 5300
+      render: {state: ts-card-armed}
+    - label: Pointer on Vehicle Factory at 800
+      render: {state: ts-card-short}
+    - label: Low power at rest
+      render: {state: ts-two-low}
+    - label: FRC at rest (no power)
+      render: {state: ts-two-frc}
+    - label: FRC, pointer on Vehicle Yard at 800
+      render: {state: ts-card-frcshort}

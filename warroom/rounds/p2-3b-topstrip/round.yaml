@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'P2.3b Top strip: compact slabs, credits below zero'
+intro: >-
+  Pictures questions for P2.3b's top strip, from your inbox note of 2026-11-22: the strip takes the space
+  its information needs, and a purchase you cannot afford still forecasts the credits after it, below
+  zero, in `warn`. Nothing of it is built yet; every step blocks the strip task. Every picture is the
+  planned dock (China Bulldozer on its build sub-grid, the v5 command card bottom right) at 1280 x 720 over
+  a base; S switches to an ultrawide 3440 x 1440 and to 1920 x 1080, F to true 100 %, G to other
+  backdrops. The two previews are Rotary Gun Tower armed at 5300 (power goes low) and the pointer on
+  Vehicle Factory at 800 (short by 1200); step 1 adds low power at rest and FRC, which has no power slab.
+  Each step changes one thing and draws the others as Claude recommends them (slabs that hold their
+  widest forecast while you use the card, the coin, no `PREVIEW` label), so a pick in one step never
+  depends on another. Costs, power and build times come from the China and FRC data; credits are
+  illustrative; the FRC pictures keep the China base behind them.
+  A neutral answer records no winner: the strip task waits for your note.
+steps: [shape, short, label]
+render:
+  pass:
+    size: size
+    world: world
+    ground: ground
+controls:
+  size: [1280x720, 3440x1440, 1920x1080]
+  fit: true
+  world: [build, place, plain]
+  ground: true

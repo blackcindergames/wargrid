@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'Credits below zero: what marks the forecast besides colour?'
+why: >-
+  Decided (your note, 2026-11-22): a purchase you cannot afford forecasts the credits after it, below
+  zero, in `warn` (`800 → −1200`), where today's strip keeps `800` and turns the cost red (`hud.gd:449`).
+  Open is what else carries it, since accessibility guides say colour alone must not (XAG 103, "Color
+  alone should never be used to represent information"). Your picture's `!` becomes the solid `$` coin
+  you picked for the cells you cannot afford (cost step, user 2026-11-21), so one mark means short of
+  credits on the strip and on the card; the warning triangle stays out, as there. Zero Hour has no
+  forecast and its money never goes below zero: it prints the unsigned balance
+  (`InGameUI.cpp:2041-2048` @ `afc2a103f`) and greys a cell you cannot afford. Power still forecasts when
+  credits are short, so you see what the building would do once affordable; your picture showed none.
+look: >-
+  Where to look: the credits slab, pointer on Vehicle Factory at 800 (whole screen: step 1, D). Shift+C: colour vision.
+rec: B
+recWhy: >-
+  the coin repeats the mark on the cell under the pointer, so strip and card say the same thing in one
+  shape, and it reads without colour; the line adds a third cue the coin already covers.
+neutral: None of these
+crop: {x: 0, y: 0, w: 480, h: 120}
+controls:
+  cvd: true
+pairs:
+- [warn, '#f47b6c', HUD bg, '#121c24']
+- [warn, '#f47b6c', HUD text, '#eef3f5', vs]
+- [warn, '#f47b6c', sel frame, '#60e5ed', vs]
+ref:
+  label: 'Today: balance kept, cost in warn'
+  render: {state: ts-built-short}
+options:
+  A:
+    name: Number in `warn` only
+    render: {state: ts-short-bare}
+    sees: '`800 → −1200`, the second number in `warn`; its minus sign is the only cue without colour.'
+    notes: Quietest; without colour only the small minus sign says short.
+  B:
+    name: Number plus the cell's `$` coin
+    render: {state: ts-card-short}
+    sees: >-
+      `800 → −1200` in `warn`, then the solid 15 px `warn` coin with the `$` cut out, 4 px after the
+      number, as on the Vehicle Factory cell (whole screen: step 1, D).
+    notes: The same mark as the cell under the pointer.
+  C:
+    name: Coin plus a `warn` underline (your picture's underline)
+    render: {state: ts-short-line}
+    sees: >-
+      As B, and the credits slab's bottom edge becomes a 2 px `warn` line in place of the cyan frame's.
+    notes: Loudest; the underline meets the cyan frame at the slab's corners.

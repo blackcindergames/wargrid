@@ -1494,6 +1494,15 @@ War Room round `p2-3b-dock` (`warroom/rounds/p2-3b-dock/`), drawn as `p23b-*` st
 - **Cost you cannot afford (3-2, advisory):** `warn` plus a non-colour mark about money, not the warning triangle: a solid 15 px `warn` coin with `$` cut out in the cell's fill, 4 px after the cost (the owner found the 11 px outline coin's `$` too small to read). Cost numbers stay bare.
 - **War Room:** the Pick button names only the letter (`Pick B`), so its width never changes. The step page gets fixed zones (a fixed-height stage with the picture centred, so the Pick row never moves) with the War Room layout package.
 
+## P2.3b top strip round (user, 2026-11-22)
+
+War Room round `p2-3b-topstrip` (`warroom/rounds/p2-3b-topstrip/`), drawn as `ts-*` and `ts-card-*` states of the HUD v5 states page, for the P2.3b riders of 2026-11-22 (compact slabs instead of the full-width bar; a purchase you cannot afford forecasts below zero). Blocking, since the look was the question; player-experience pass before the owner's look. All three picks are the recommendations.
+
+- **Shape (D):** two slabs top left at (8, 8), 8 px apart, each hugging its content at rest. While the pointer is on the build card or a building is armed, both hold the width of their widest forecast, so nothing on the strip moves until the pointer leaves the card or the building is placed or cancelled; the planned residents right of power (production strip, income readout, idle collectors chip) then never jump. FRC shows the credits slab alone. Zero Hour shows money as one unsigned number with no forecast (GeneralsGameCode `afc2a103f`, `GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:2041-2048`).
+- **Below zero (B):** the forecast number in `warn` plus the solid `$` coin of the cells (P2.3b round, 2026-11-21), 4 px after it, so one mark means "short of credits" on strip and card. Power still forecasts when credits are short.
+- **Label (A):** no `PREVIEW` label; the arrow and the 1 px `sel` frame on a slab whose number changes mark the forecast. Replaces the as-built label of P2.3a1.
+- **Open for the build:** Godot measures the widest forecast form itself, as `hud.gd` does for today's strip; whether a hover forecast clears in the gaps between cells (`hud.gd:480-481`, inferred, not reproduced) matters less under D, which holds for the whole card.
+
 ## Fun-first prep (user, 2026-11-21)
 
 Owner answers for night 8 Play on after a leave and the three fun-first packages (P2.3b, P7, P15). Before answering the 71 fun-first rows, three research passes ran first, over primary web sources, the reference engines and Zero Hour's code and data (user, 2026-11-21; private reports `research-web.md`, `research-projects.md`, `research-zh.md`); the rows are in the private `owner-questions-v2.md`, each with the Zero Hour default and a recommendation. Its 54 "accept as recommended" rows were accepted as recommended (user, 2026-11-21) and are listed below with the asked rows. Row 3-1 and the War Room pictures are in [P2.3b War Room round](#p23b-war-room-round-user-2026-11-21) and not repeated here.

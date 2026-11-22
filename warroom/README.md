@@ -135,7 +135,7 @@ Option fields: `name`, `notes`, `sees`, `changes`, `reveal`, `extra` (more pictu
 | `tune` | `target`, `params`, optional `neutral` | `<prefix>:<key>` = `tuned` with `value`, or `neither` |
 | `wording` | `fields [{id, label, text}]` | `<prefix>:<key>:<field id>`, the text as `note`, posted as you type |
 
-Rounds here: `p2-3b-dock` (P2.3b's queue, empty card, counter line and cost mark; answers: design answers, "P2.3b War Room round"), `demo` and `demo-controls` (marked `demo: true`: one step per kind, one step per render target with its controls; `demo` has an `intro`, then a `tune` step and `many`, six options on the demo scene with measurement tables); the deleted P2.3a1 gate rounds live on as test fixtures in `testdata/rounds/` (answers: design answers, "P2.3a1 gate A").
+Rounds here: `p2-3b-dock` (P2.3b's queue, empty card, counter line and cost mark; answers: design answers, "P2.3b War Room round"), `p2-3b-topstrip` (P2.3b's top strip: slab shape, the forecast below zero, the `PREVIEW` label; not answered yet), `demo` and `demo-controls` (marked `demo: true`: one step per kind, one step per render target with its controls; `demo` has an `intro`, then a `tune` step and `many`, six options on the demo scene with measurement tables); the deleted P2.3a1 gate rounds live on as test fixtures in `testdata/rounds/` (answers: design answers, "P2.3a1 gate A").
 
 ## Stage controls
 
