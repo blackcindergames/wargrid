@@ -12,7 +12,7 @@ Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_pla
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Fm1 winner at T1-10, Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: owner decisions on the hard bar (three mirrors not ending) and a BR8 match; then T1-8c
+Next exact action: owner's BR8 match (offline, FRC bot, Dry Wells: waves together, stutter?); then T1-8c
 ```
 
 ## Red ledger
@@ -383,4 +383,4 @@ Bot lab (`build/bot_lab/br8-base` = `c682bc96` exported; `br8b` = the final work
 | Waves without contact 60 s or more before the match ended | 0 of 530 | 61 of 565 (37 Ashfall, 24 Broken Crown, idle rows) |
 | One Rotary Gun Tower killed (usa, china, frc) | 7,092-7,380, 7,201-7,589, 6,784-6,888 | 7,380-7,416, 7,141-7,589, 6,784-6,888 |
 
-The 61 waves are not stalls. A traced rerun of `idle-af37-frc-frc-b1-s0` (scratch probe dumping wave positions every 300 ticks, ticks 8,100-11,000) shows both live waves moving at infantry speed, about 0.8 cells/s, toward a far objective, while the vehicles go stop-go at the front; the idle seat falls to earlier waves first. Waves now walk at their slowest units' pace, so contact comes later (p90 +1,660 ticks) and idle defeats come later on the big maps (Ashfall median +2,000). Hard bar "rows that end on stock still end": still failing, now three mirrors (owner decision pending, as agreed for after BR8).
+The 61 waves are not stalls. A traced rerun of `idle-af37-frc-frc-b1-s0` (scratch probe dumping wave positions every 300 ticks, ticks 8,100-11,000) shows both live waves moving at infantry speed, about 0.8 cells/s, toward a far objective, while the vehicles go stop-go at the front; the idle seat falls to earlier waves first. Waves now walk at their slowest units' pace, so contact comes later (p90 +1,660 ticks) and idle defeats come later on the big maps (Ashfall median +2,000). Hard bar "rows that end on stock still end": three equal mirrors run to the cap (USA s0, s1, China s0; the China one ended at 41,583 on base). Same cause in all three: identical bots, equal waves on one clock, annihilation mid-map, no factory lost. Owner decision (user, 2026-11-22): equal mirrors are exempt from the bar and reported, not failed; every non-mirror row still ends, so the bar holds.
