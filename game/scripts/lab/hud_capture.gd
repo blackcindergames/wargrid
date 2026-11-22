@@ -141,6 +141,8 @@ func _run(directory: String) -> void:
 
 func _settle() -> void:
 	for i in SETTLE_FRAMES: await process_frame
+	# Process frames can run ahead of the renderer on a loaded host; read the picture only after a draw.
+	await RenderingServer.frame_post_draw
 
 func _scene() -> void:
 	_main = await _overlays._scene(self, Skirmish, _port)
