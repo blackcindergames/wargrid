@@ -6,6 +6,7 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Economy = preload("res://tests/economy_fixture.gd")
 const MapData = preload("res://scripts/simulation/map_data.gd")
+const StateHash = preload("res://scripts/simulation/state_hash.gd")
 
 const RALLY := Vector2(43.5, 14.5)
 const SEAT: int = 2
@@ -16,7 +17,7 @@ const B: int = 4
 const DUE: int = 1000
 
 func cases() -> Array[Callable]:
-	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_take_alternates_vehicles_and_infantry, test_wave_take_goes_on_with_the_other_kind_when_one_runs_out, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks, test_defence_near_objective_raises_target, test_defence_on_route_raises_target, test_defence_raises_target_by_def_units_times_unit_cost, test_wave_zero_not_raised_by_defence, test_softer_objective_when_target_unmet, test_no_soft_objective_goes_anyway, test_unfinished_defence_not_counted, test_defence_completing_in_the_judging_tick_counts_at_the_next_decision, test_team_waves_follow_the_softer_objective, test_detour_returns_to_the_softer_objective, test_defence_at_exactly_def_reach_counts, test_softer_takes_best_score_not_first_or_nearest, test_retarget_follows_br5_order_not_id, test_route_points_every_8_cells, test_defence_route_starts_at_team_mean_rally, test_br7_data_share_and_lapse, test_br7_hold_starts_at_wave_one, test_br7_barracks_spends_only_the_rest, test_br7_hold_ends_at_the_share, test_br7_hold_lapses_after_hold_lapse_without_income, test_br7_hold_kept_while_income_rises, test_br7_lowest_factory_id_buys, test_br7_rebuild_hold_while_builder_lives, test_br8_wave_marches_at_its_slowest_speed, test_br8_detour_goes_uncapped_and_the_return_is_capped]
+	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_take_alternates_vehicles_and_infantry, test_wave_take_goes_on_with_the_other_kind_when_one_runs_out, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks, test_defence_near_objective_raises_target, test_defence_on_route_raises_target, test_defence_raises_target_by_def_units_times_unit_cost, test_wave_zero_not_raised_by_defence, test_softer_objective_when_target_unmet, test_no_soft_objective_goes_anyway, test_unfinished_defence_not_counted, test_defence_completing_in_the_judging_tick_counts_at_the_next_decision, test_team_waves_follow_the_softer_objective, test_detour_returns_to_the_softer_objective, test_defence_at_exactly_def_reach_counts, test_softer_takes_best_score_not_first_or_nearest, test_retarget_follows_br5_order_not_id, test_route_points_every_8_cells, test_defence_route_starts_at_team_mean_rally, test_br7_data_share_and_lapse, test_br7_hold_starts_at_wave_one, test_br7_barracks_spends_only_the_rest, test_br7_hold_ends_at_the_share, test_br7_hold_lapses_after_hold_lapse_without_income, test_br7_hold_kept_while_income_rises, test_br7_lowest_factory_id_buys, test_br7_rebuild_hold_while_builder_lives, test_br8_wave_marches_at_its_slowest_speed, test_br8_detour_goes_uncapped_and_the_return_is_capped, test_bot_line_shows_each_field, test_bot_line_after_launch_counts_exactly, test_bot_line_late_and_gone, test_bot_line_leaves_state_and_memory, test_bot_line_counts_ready_against_guarded_target]
 
 func _world() -> RefCounted:
 	var sim = Simulation.new([], Vector2i(48, 32))
@@ -1328,4 +1329,113 @@ func test_br8_detour_goes_uncapped_and_the_return_is_capped(runner) -> bool:
 	_run_to(sim, rec, scene.first + Skirmish.DETOUR_CALM)
 	var back: Array = _orders_at(rec, scene.first + Skirmish.DETOUR_CALM)
 	runner.check(back.size() == 1 and back[0].target == scene.objective and back[0].group, "BR8 the order back to the objective carries the group-speed flag, got %s" % [back])
+	return true
+
+const ARMY_KINDS := ["usa_rifle_infantry", "usa_rocket_infantry", "usa_tank", "usa_light_vehicle"]
+const PRODUCER_CODES := {"usa_barracks": "B", "usa_factory": "F"}
+
+func _lone_bot(tanks: int, riflemen: int = 0) -> RefCounted:
+	var sim: RefCounted = Skirmish.create(true, "ai", {1: "usa", 2: "usa"})
+	stock(sim, SEAT, "usa_tank", tanks)
+	stock(sim, SEAT, "usa_rifle_infantry", riflemen)
+	return sim
+
+func _army(sim: RefCounted) -> Array:
+	return sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == SEAT and ARMY_KINDS.has(unit.kind))
+
+func _credits(sim: RefCounted) -> int:
+	for entry: Dictionary in sim.snapshot().players:
+		if entry.id == SEAT: return entry.credits
+	return -1
+
+# One entry per finished army producer, by id: its code and the head of its queue, "-" when idle.
+func _producer_entries(sim: RefCounted) -> Array:
+	var entries: Array = []
+	for building: Dictionary in sim.snapshot().buildings:
+		if building.owner != SEAT or not building.completed or not PRODUCER_CODES.has(building.kind): continue
+		entries.append("%s:%s" % [PRODUCER_CODES[building.kind], Registry.kind(building.queue[0].kind).display_name if not building.queue.is_empty() else "-"])
+	return entries
+
+func _decide_to(sim: RefCounted, tick: int) -> void:
+	while sim.tick() < tick:
+		Skirmish.issue_opponent(sim, SEAT)
+		sim.step()
+
+func _grouped(value: int) -> String:
+	return "%d,%03d" % [floori(value / 1000.0), value % 1000] if value >= 1000 else str(value)
+
+func _bot_line(sim: RefCounted) -> String:
+	var lines: PackedStringArray = Skirmish.debug_lines(sim, [SEAT])
+	return lines[0] if lines.size() == 1 else ""
+
+func _objective_row(sim: RefCounted) -> Dictionary:
+	for row: Dictionary in sim.bot_state().buildings:
+		if row.id == _memory(sim).objective: return row
+	return {}
+
+func test_bot_line_shows_each_field(runner) -> bool:
+	var sim: RefCounted = _lone_bot(12)
+	_decide_to(sim, 65)
+	var plain: int = Skirmish.WAVE_SIZES[0] * Skirmish.faction_unit_cost("usa")
+	var expected: String = "Bot 2 usa | W0 in 178s | ready 10,800/%s | home 0i/12v | $%s | - | ->none" % [_grouped(plain), _grouped(_credits(sim))]
+	runner.check(_bot_line(sim) == expected, "BL1 before the first wave the line reads '%s' (5335 ticks to due round up to 178 s, no army producer yet, no objective), got '%s'" % [expected, _bot_line(sim)])
+	return true
+
+func test_bot_line_after_launch_counts_exactly(runner) -> bool:
+	var sim: RefCounted = _lone_bot(12, 6)
+	var stocked: Array = _army(sim).map(func(unit: Dictionary) -> int: return unit.id)
+	var rec: Dictionary = _log()
+	_play(sim, rec, Skirmish.FIRST_WAVE_TICK - 5)
+	for unit: Dictionary in _army(sim):
+		if not stocked.has(unit.id): sim.remove_object(unit.id)
+	_play(sim, rec, Skirmish.FIRST_WAVE_TICK + 2 * Skirmish.DECISION_TICKS)
+	var home: Array = _army(sim)
+	var vehicles: int = home.filter(func(unit: Dictionary) -> bool: return Registry.kind(unit.kind).get("class", "") == "vehicle").size()
+	var ready: int = 0
+	for unit: Dictionary in home:
+		if stocked.has(unit.id): ready += Skirmish.unit_cost(unit.kind)
+	var due: int = _memory(sim).due
+	runner.check((due - sim.tick()) % Skirmish.TICKS_PER_SECOND != 0, "BL1 the timer check needs a tick that is not a whole second from due")
+	var heads: Array = _producer_entries(sim).filter(func(entry: String) -> bool: return not entry.ends_with(":-"))
+	runner.check(rec.launches.size() == 1 and heads.size() == 1, "BL1 setup: wave 0 left once and one army producer holds a queue, got %s and %s" % [rec.launches.size(), heads])
+	var goal: Dictionary = _objective_row(sim)
+	var expected: String = "Bot 2 usa | W1 in %ds | ready %s/%s | home %di/%dv | $%s | %s | ->%s#%d" % [ceili((due - sim.tick()) / 30.0), _grouped(ready), _grouped(12 * Skirmish.faction_unit_cost("usa")), home.size() - vehicles, vehicles, _grouped(_credits(sim)), " ".join(_producer_entries(sim)), Registry.kind(goal.kind).display_name, goal.id]
+	runner.check(_bot_line(sim) == expected, "BL1 after the launch the line reads '%s', got '%s'" % [expected, _bot_line(sim)])
+	return true
+
+func test_bot_line_late_and_gone(runner) -> bool:
+	var sim: RefCounted = _lone_bot(0)
+	_decide_to(sim, 65)
+	var clock: Dictionary = sim.get_meta(Skirmish.BOT_TEAM_META)[SEAT]
+	clock.due = sim.tick() - 100
+	runner.check(_bot_line(sim).contains(" | W0 late 3/60s | "), "BL1 100 ticks past due reads 'late 3/60s', got '%s'" % _bot_line(sim))
+	clock.due = sim.tick() - 2200
+	runner.check(_bot_line(sim).contains(" | W0 late 73/60s | "), "BL1 the late counter keeps rising past the 60 s wait cap, got '%s'" % _bot_line(sim))
+	clock.objective = 424242
+	runner.check(_bot_line(sim).ends_with(" | ->#424242 gone"), "BL1 an objective that no longer exists reads 'gone', got '%s'" % _bot_line(sim))
+	return true
+
+func test_bot_line_leaves_state_and_memory(runner) -> bool:
+	var fresh: RefCounted = Skirmish.create(true, "ai", {1: "usa", 2: "usa"})
+	runner.check(Skirmish.debug_lines(fresh, [SEAT]).is_empty() and not fresh.has_meta(Skirmish.BOT_META) and not fresh.has_meta(Skirmish.BOT_TEAM_META), "BL2 a simulation no bot has decided in gives no line and no memory")
+	var sim: RefCounted = _lone_bot(12)
+	_decide_to(sim, Skirmish.FIRST_WAVE_TICK + 2 * Skirmish.DECISION_TICKS)
+	var digest: String = StateHash.digest(sim.snapshot())
+	var memory: String = var_to_str(sim.get_meta(Skirmish.BOT_META)) + var_to_str(sim.get_meta(Skirmish.BOT_TEAM_META))
+	var lines: PackedStringArray = Skirmish.debug_lines(sim, [1, SEAT, 7])
+	runner.check(lines.size() == 1 and lines[0].begins_with("Bot 2 "), "BL2 only the bot seat gets a line, got %s" % [lines])
+	runner.check(StateHash.digest(sim.snapshot()) == digest, "BL2 reading the line leaves the digest alone")
+	runner.check(var_to_str(sim.get_meta(Skirmish.BOT_META)) + var_to_str(sim.get_meta(Skirmish.BOT_TEAM_META)) == memory, "BL2 reading the line leaves both bot memories alone")
+	return true
+
+func test_bot_line_counts_ready_against_guarded_target(runner) -> bool:
+	var plain: RefCounted = _guarded([], false)
+	_second_wave(plain, 0, 0)
+	var guarded: RefCounted = _guarded([NEAR_OBJECTIVE], false)
+	_second_wave(guarded, 0, 0)
+	var mean: int = Skirmish.faction_unit_cost("usa")
+	var without: int = Skirmish.WAVE_SIZES[1] * mean
+	var raised: int = without + Skirmish.DEF_UNITS * mean
+	runner.check(_bot_line(plain).contains("/%s | " % _grouped(without)), "BL3 no defence: wave 1 shows the plain target %d, got '%s'" % [without, _bot_line(plain)])
+	runner.check(_bot_line(guarded).contains("/%s | " % _grouped(raised)), "BL3 one finished defence on the way raises the shown target by DEF_UNITS x unit cost to %d, got '%s'" % [raised, _bot_line(guarded)])
 	return true

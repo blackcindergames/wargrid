@@ -127,6 +127,9 @@ func _ready() -> void:
 	rng.randomize()
 	music.play_match(rng, MusicPlayer.GAP_SECONDS)
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
+	if driver.has_method("bot_line"):
+		_perf.extra = driver.bot_line
+		_perf.visibility_changed.connect(func() -> void: driver.show_bots = _perf.visible)
 	driver.start()
 
 func _enter_tree() -> void:

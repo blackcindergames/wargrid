@@ -78,7 +78,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_pump_bot_first_wave_at_5400]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -1018,4 +1018,26 @@ func test_pump_bot_first_wave_at_5400(runner) -> bool:
 		for command: Dictionary in pump.drain()[0].bot_commands:
 			if command.type == "attack": attacks.append(command.tick)
 	runner.check(not attacks.is_empty() and attacks[0] == Skirmish.next_decision(Skirmish.FIRST_WAVE_TICK - 1, 2), "7-14 the offline bot's first wave leaves at the first decision from tick 5400, got %s" % [attacks.slice(0, 3)])
+	return true
+
+func test_pump_bot_lines_on_request(runner) -> bool:
+	var plain = _pump()
+	var asked = _pump()
+	var lines: Array[PackedStringArray] = []
+	for i in 80:
+		plain.post(_job([], [1, 2]))
+		var job = _job([], [1, 2])
+		job.want_bot_lines = i >= 40
+		asked.post(job)
+		lines.append(asked.drain()[0].bot_lines)
+		plain.drain()
+	runner.check(lines.slice(0, 40).all(func(rows: PackedStringArray) -> bool: return rows.is_empty()), "BL4 no line without the flag")
+	runner.check(lines[79].size() == 2 and lines[79][0].begins_with("Bot 1 usa | W0 in ") and lines[79][1].begins_with("Bot 2 china | W0 in "), "BL4 one line per bot seat, in seat order, got %s" % [lines[79]])
+	runner.check(StateHash.digest(asked.live().snapshot()) == StateHash.digest(plain.live().snapshot()), "BL4 asking for the lines leaves the digest alone")
+	for key: StringName in [Skirmish.BOT_META, Skirmish.BOT_TEAM_META]:
+		runner.check(var_to_str(asked.live().get_meta(key)) == var_to_str(plain.live().get_meta(key)), "BL4 asking for the lines leaves the %s memory alone after the second decisions" % key)
+	var none = _job([], [])
+	none.want_bot_lines = true
+	none.step = false
+	runner.check(asked.query(none).bot_lines.is_empty(), "BL4 a job with no bot seats has no lines")
 	return true

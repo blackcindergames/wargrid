@@ -3,16 +3,16 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-22 after BR8 group speed)
+Resume record (updated 2026-11-22 after T1-8c)
 Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 (2026-11-22, approved by the owner), order step 1 committed 8b292146 / T1-8a BR7 committed after this record
-Last green task / next incomplete task: T1-8f BR8 group-speed order / owner match on it, then T1-8c
+Last green task / next incomplete task: T1-8c bot debug lines / T1-10 re-pin
 Changed paths since last commit: none after the BR7 commit
-Last command / cases / checks / failures / exit / marker: full suite on the group-speed order (build/suite-gs.log) CASES 1362 CHECKS 153084 FAILURES 11 / exit 1 / no TESTS PASSED (red ledger row T1-8f); `sh tools/run_checks.sh` CHECKS PASSED 5
+Last command / cases / checks / failures / exit / marker: full suite on T1-8c (build/suite-t18c-final.log) CASES 1370 CHECKS 153122 FAILURES 11 / exit 1 / no TESTS PASSED (red ledger row T1-8f); `sh tools/run_checks.sh` CHECKS PASSED 5
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Fm1 winner at T1-10, Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: T1-8c bot debug lines (brainstorm and plan first)
+Next exact action: T1-10 re-pin; after part 1's gate P2.3b comes before part 2 (user, 2026-11-22)
 ```
 
 ## Red ledger
@@ -417,3 +417,9 @@ The refuting observation did not occur: spread at first contact is about half of
 Full suite on the final tree (`build/suite-gs.log`): CASES 1362 CHECKS 153084 FAILURES 11, the names of red ledger row T1-8f; `sh tools/run_checks.sh` CHECKS PASSED 5. S1 (`test_skirmish_match.gd`) no longer ends: a probe to 40,000 ticks keeps both seats at 4-6 units and 4 buildings from tick 30,000. Its seat 1 is the same USA bot from tick 9,000 (`scripted_human.gd` calls `issue_opponent` for seat 1), so from then on S1 is an equal mirror. Owner decision (user, 2026-11-22): S1 is treated as a mirror, like the lab's: at T1-10 it pins its outcome at the 18,000-tick cap (ongoing) and keeps its economy, production and combat checks, measured up to the cap.
 
 **Owner's group-speed match (user, 2026-11-22).** Offline, owner against a bot, Dry Wells, tree `9c7c157c`, two screenshots (kept outside the repository). Wave 0 was four vehicles and three riflemen moving as one group; wave 1 about sixteen riflemen with three damaged vehicles a few cells behind (capped at infantry pace after a fight, so the gap the fight left stays; no catch-up rule, see the one page's Out). The waves destroyed the owner's defence tower. Owner's words: "works better now", "looks good i think, they managed to destroy my defense tower now even". The trailing was shown to the owner and not asked for a change.
+
+### T1-8c Bot debug lines
+
+Design: [short design](../superpowers/specs/2026-11-22-p7-bot-debug-lines-design.md), one line per bot (user, 2026-11-22). Offline matches against bots only: with F3 open the offline driver asks the pump every 30 ticks for `Skirmish.debug_lines`, which reads bot memory without creating any; the online driver never asks. Example (BL1, after wave 0): `Bot 2 usa | W1 in 89s | ready 7,875/6,372 | home 3i/8v | $475 | B:Rifleman F:- | ->Headquarters#2`. `_form`'s objective and guard scan is shared through `_scan_target`, so the shown target is the one the wave waits for.
+
+Tree `3fa379ed` plus the change. Red first: BL1-BL4 and PO20 (12 failures before the code), the fix round's tests (8 failures before the fix). Full suite (`build/suite-t18c-final.log`): CASES 1370 CHECKS 153122 FAILURES 11, the `FAIL:` lines identical to the baseline at `3fa379ed` (red ledger row T1-8f, names and values); `sh tools/run_checks.sh` CHECKS PASSED 5. Worst-case line (longest producer and unit names of the three factions, `$999,999`, `late 999/60s`) 905 px; inside every `HUD_SIZES` viewport and clear of the HUD panels (PO3), also beside the open playtest checklist and form (PO21); the first worst-case line, with the command centre and supply producers, measured about 1,292 px, so the line lists army producers only. Reviews: Opus (no blocking finding; taken: worst case from real names, refresh every 30 ticks so F3's own step p95 stays clean, stronger BL1 and BL4) and player-experience (taken: labels `ready`, `home`, `in`, `late`, field order timer first, the guide's leave rule, no stale line on reopening F3, `development.md` F3 line); not taken: a guard marker after the target and a BR7 hold marker (for the next window check if it still asks why). `/ponytail-review`: one cut (-4 lines in `_form`), suite re-run as above.

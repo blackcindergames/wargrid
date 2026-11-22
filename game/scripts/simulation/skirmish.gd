@@ -9,6 +9,7 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 
 const START_CREDITS: int = 10000
 const DECISION_TICKS: int = 30
+const TICKS_PER_SECOND: int = 30
 const DEFENCE_RADIUS: float = 10.0
 const FIRST_WAVE_TICK: int = 5400
 const WAVE_GAPS: Array[int] = [2700, 2700, 1800]
@@ -121,7 +122,7 @@ static func decide(sim: RefCounted, player: int, attack_tick: int = FIRST_WAVE_T
 static func _real(seat_or_sim: RefCounted) -> RefCounted:
 	return seat_or_sim.simulation() if seat_or_sim.has_method("simulation") else seat_or_sim
 
-static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dictionary) -> void:
+static func _context(sim: RefCounted, player: int, state: Dictionary) -> Dictionary:
 	var sequence: int = -1
 	for entry: Variant in state.last_sequences:
 		if entry.player == player: sequence = entry.sequence
@@ -130,9 +131,12 @@ static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dicti
 		if entry.id == player: credits = entry.credits
 	var teams := {}
 	for entry: Dictionary in state.players: teams[entry.id] = entry.team
-	var ctx := {"sim": sim, "player": player, "tick": state.tick, "sequence": sequence, "credits": credits, "start_credits": credits, "teams": teams}
+	return {"sim": sim, "player": player, "tick": state.tick, "sequence": sequence, "credits": credits, "start_credits": credits, "teams": teams}
+
+static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dictionary) -> void:
+	var ctx: Dictionary = _context(sim, player, state)
 	_bot(sim, player)
-	var wave_clock: Dictionary = _team_entry(sim, teams.get(player, player), attack_tick)
+	var wave_clock: Dictionary = _team_entry(sim, ctx.teams.get(player, player), attack_tick)
 	var buildings: Array = state.buildings.filter(func(building: Dictionary) -> bool: return building.owner == player)
 	var faction: String = _faction(state, player)
 	_build(ctx, state, buildings, faction)
@@ -262,12 +266,20 @@ static func _faction(state: Dictionary, player: int) -> String:
 		if entry.id == player: return entry.get("faction", Registry.Factions.DEFAULT_FACTION)
 	return Registry.Factions.DEFAULT_FACTION
 
-static func _attack(ctx: Dictionary, state: Dictionary, skip: Dictionary, clock: Dictionary) -> void:
+static func _enemies(ctx: Dictionary, state: Dictionary) -> Array:
 	var enemies: Array = state.entities.filter(func(unit: Dictionary) -> bool: return _hostile(ctx, unit.owner) and not Registry.air_kinds.has(unit.kind) and not unit.has("container_id"))
 	enemies.append_array(state.buildings.filter(func(building: Dictionary) -> bool: return _hostile(ctx, building.owner) and not Combat.masked(building)))
+	return enemies
+
+static func _own_units(ctx: Dictionary, state: Dictionary) -> Dictionary:
 	var mine := {}
 	for unit: Dictionary in state.entities:
 		if unit.owner == ctx.player: mine[unit.id] = unit
+	return mine
+
+static func _attack(ctx: Dictionary, state: Dictionary, skip: Dictionary, clock: Dictionary) -> void:
+	var enemies: Array = _enemies(ctx, state)
+	var mine: Dictionary = _own_units(ctx, state)
 	var bot: Dictionary = _bot(ctx.sim, ctx.player)
 	_drive_waves(ctx, bot, mine, enemies, skip, clock)
 	_gather(ctx, state, bot, mine, enemies, skip, clock)
@@ -358,18 +370,27 @@ static func _follow(clock: Dictionary, centre: Vector2, enemies: Array) -> Varia
 	if target != null: clock.objective = target
 	return target
 
-static func _gather(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary, clock: Dictionary) -> void:
+static func _waving(bot: Dictionary) -> Dictionary:
 	var waving := {}
 	for wave: Dictionary in bot.waves:
 		for id: int in wave.ids: waving[id] = true
-	var rally: Vector2 = _rally(ctx.sim, ctx.player)
+	return waving
+
+# Idle units outside any wave, split by whether they already stand at the rally.
+static func _rally_split(bot: Dictionary, mine: Dictionary, skip: Dictionary, rally: Vector2) -> Dictionary:
+	var waving: Dictionary = _waving(bot)
 	var ready: Array = []
 	var walking: Array = []
 	for id: int in mine:
 		if waving.has(id) or skip.has(id) or not _idle(mine[id]): continue
 		(ready if _at_rally(mine[id].position, rally) else walking).append(id)
-	if not walking.is_empty(): _send(ctx, {"type": "move", "entity_ids": walking, "target": [rally.x, rally.y]})
-	_wave(ctx, state, bot, mine, enemies, ready, clock)
+	return {"ready": ready, "walking": walking}
+
+static func _gather(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary, clock: Dictionary) -> void:
+	var rally: Vector2 = _rally(ctx.sim, ctx.player)
+	var split: Dictionary = _rally_split(bot, mine, skip, rally)
+	if not split.walking.is_empty(): _send(ctx, {"type": "move", "entity_ids": split.walking, "target": [rally.x, rally.y]})
+	_wave(ctx, state, bot, mine, enemies, split.ready, clock)
 
 static func _wave(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary) -> void:
 	var live: Array[int] = _live_bots(ctx, state)
@@ -385,16 +406,12 @@ static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	var capped: bool = ctx.tick >= clock.due + WAVE_WAIT and not kinds.is_empty()
 	# Defences only raise the target, so a wave short of the plain one waits without the scan.
 	if worth < _wave_target(clock.wave, state, live, 0) and not capped: return
-	var buildings: Array = enemies.filter(_is_building)
-	var order: Array = _victims(buildings, clock)
-	if order.is_empty(): return
-	var rally: Vector2 = _mean_rally(ctx, live)
-	var objective: Variant = _pick(rally, buildings.filter(func(building: Dictionary) -> bool: return building.owner == order[0]))
-	var defences: PackedFloat64Array = _defence_rects(_armed(buildings))
-	var guards: int = _guard_count(rally, _row(buildings, objective), defences, false)
-	var target: int = _wave_target(clock.wave, state, live, guards)
+	var scan: Dictionary = _scan_target(ctx, state, enemies, clock, live)
+	if scan.is_empty(): return
+	var objective: Variant = scan.objective
+	var target: int = scan.target
 	if worth < target and not capped: return
-	if worth < target and guards > 0: objective = _softer(rally, order, buildings, defences, objective)
+	if worth < target and scan.guards > 0: objective = _softer(scan.rally, scan.order, scan.buildings, scan.defences, objective)
 	@warning_ignore("integer_division")
 	var share: int = target / live.size()
 	@warning_ignore("integer_division")
@@ -406,12 +423,23 @@ static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	clock.released_by = "wait_cap" if worth < target else ("timer" if clock.prev < clock.due else "size")
 	clock.launched_at = ctx.tick
 	clock.objective = objective
-	clock.attacked_at[_row(buildings, objective).owner] = ctx.tick
+	clock.attacked_at[_row(scan.buildings, objective).owner] = ctx.tick
 	clock.left_cost = maxi(target - _cost_sum(take.map(func(id: int) -> String: return mine[id].kind)), 0)
 	clock.left_units = WAVE0_UNITS - take.size() if clock.wave == 0 else -1
 	clock.joiners = _joiners(ctx, live)
 	clock.due = ctx.tick + WAVE_GAPS[mini(clock.wave, WAVE_GAPS.size() - 1)]
 	clock.wave += 1
+
+# Empty when no enemy keeps a building; else the objective, its guards and the wave target they raise.
+static func _scan_target(ctx: Dictionary, state: Dictionary, enemies: Array, clock: Dictionary, live: Array[int]) -> Dictionary:
+	var buildings: Array = enemies.filter(_is_building)
+	var order: Array = _victims(buildings, clock)
+	if order.is_empty(): return {}
+	var rally: Vector2 = _mean_rally(ctx, live)
+	var objective: Variant = _pick(rally, buildings.filter(func(building: Dictionary) -> bool: return building.owner == order[0]))
+	var defences: PackedFloat64Array = _defence_rects(_armed(buildings))
+	var guards: int = _guard_count(rally, _row(buildings, objective), defences, false)
+	return {"buildings": buildings, "order": order, "rally": rally, "objective": objective, "defences": defences, "guards": guards, "target": _wave_target(clock.wave, state, live, guards)}
 
 # A joiner takes its share of what the launcher left; the last live one takes all of it.
 static func _add_to_wave(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary, live: Array[int]) -> void:
@@ -643,3 +671,85 @@ static func _nearest(unit: Dictionary, enemies: Array) -> int:
 			best = enemy.id
 			best_distance = distance
 	return best
+
+# F3 text, one line per bot seat; reads memory but never creates any, so it cannot move a digest.
+static func debug_lines(sim: RefCounted, players: Array[int]) -> PackedStringArray:
+	var lines := PackedStringArray()
+	var real: RefCounted = _real(sim)
+	if not real.has_meta(BOT_META) or not real.has_meta(BOT_TEAM_META): return lines
+	var state: Dictionary = real.bot_state()
+	for player: int in players:
+		var line: String = _debug_line(_context(real, player, state), state)
+		if not line.is_empty(): lines.append(line)
+	return lines
+
+static func _debug_line(ctx: Dictionary, state: Dictionary) -> String:
+	var player: int = ctx.player
+	var clocks: Dictionary = ctx.sim.get_meta(BOT_TEAM_META)
+	var bots: Dictionary = ctx.sim.get_meta(BOT_META)
+	var team: int = ctx.teams.get(player, player)
+	if not bots.has(player) or not clocks.has(team): return ""
+	var clock: Dictionary = clocks[team]
+	var bot: Dictionary = bots[player]
+	var mine: Dictionary = _own_units(ctx, state)
+	var live: Array[int] = _live_bots(ctx, state)
+	if live.is_empty(): live.append(player)
+	return " | ".join([
+		"Bot %d %s" % [player, _faction(state, player)],
+		"W%d %s" % [clock.wave, _due_text(clock.due, ctx.tick)],
+		"ready " + _ready_text(ctx, state, bot, mine, clock, live),
+		"home " + _home_text(bot, mine),
+		"$" + _commas(ctx.credits),
+		_producers_text(state, player),
+		_objective_text(state, clock)])
+
+static func _commas(value: int) -> String:
+	var digits: String = str(value)
+	var text: String = ""
+	while digits.length() > 3:
+		text = "," + digits.substr(digits.length() - 3) + text
+		digits = digits.left(digits.length() - 3)
+	return digits + text
+
+static func _initials(kind: String) -> String:
+	var text: String = ""
+	for word: String in kind.substr(kind.find("_") + 1).split("_"): text += word.left(1).to_upper()
+	return text
+
+static func _producers_text(state: Dictionary, player: int) -> String:
+	var parts := PackedStringArray()
+	for building: Dictionary in state.buildings:
+		if building.owner != player or not building.completed or building.has("hole_id") or not Registry.kind(building.kind).produces.any(_is_army): continue
+		parts.append("%s:%s" % [_initials(building.kind), Registry.kind(building.queue[0].kind).display_name if not building.queue.is_empty() else "-"])
+	return " ".join(parts) if not parts.is_empty() else "-"
+
+static func _due_text(due: int, tick: int) -> String:
+	if tick < due: return "in %ds" % ceili((due - tick) / float(TICKS_PER_SECOND))
+	@warning_ignore("integer_division")
+	return "late %d/%ds" % [floori((tick - due) / float(TICKS_PER_SECOND)), WAVE_WAIT / TICKS_PER_SECOND]
+
+static func _home_text(bot: Dictionary, mine: Dictionary) -> String:
+	var waving: Dictionary = _waving(bot)
+	var vehicles: int = 0
+	var infantry: int = 0
+	for unit: Dictionary in mine.values():
+		if waving.has(unit.id) or not _is_army(unit.kind): continue
+		if _is_vehicle(unit.kind): vehicles += 1
+		else: infantry += 1
+	return "%di/%dv" % [infantry, vehicles]
+
+# The target is the number _form compares: the plain one until an enemy building gives it guards.
+static func _ready_text(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, clock: Dictionary, live: Array[int]) -> String:
+	var ready: Array = _rally_split(bot, mine, {}, _rally(ctx.sim, ctx.player)).ready
+	var kinds: Array = ready.map(func(id: int) -> String: return mine[id].kind)
+	kinds.append_array(_mates_ready(ctx, state, live))
+	var scan: Dictionary = _scan_target(ctx, state, _enemies(ctx, state), clock, live)
+	var target: int = scan.target if not scan.is_empty() else _wave_target(clock.wave, state, live, 0)
+	return "%s/%s" % [_commas(_cost_sum(kinds)), _commas(target)]
+
+static func _objective_text(state: Dictionary, clock: Dictionary) -> String:
+	if clock.objective == null: return "->none"
+	var row: Dictionary = _row(state.buildings, clock.objective)
+	if row.is_empty(): row = _row(state.entities, clock.objective)
+	if row.is_empty(): return "->#%d gone" % clock.objective
+	return "->%s#%d" % [Registry.kind(row.kind).display_name, row.id]
