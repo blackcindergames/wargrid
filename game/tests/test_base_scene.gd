@@ -12,7 +12,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 # [window, logical]: what the match's stretch caps lay each window out at
 const HUD_SIZES: Array[Array] = [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)]]
 
-const HUD_PANELS: Array[String] = ["HUD/Economy", "HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/Hud/SelectionPanel"]
+const HUD_PANELS: Array[String] = ["HUD/Economy", "HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/Hud/GroupLine", "HUD/Hud/SelectionPanel"]
 
 # The no-overlap lists: each shown HUD panel by path, sized as the layout tests always read them.
 static func hud_panels(main) -> Dictionary:
@@ -144,7 +144,7 @@ func test_placement_input(runner) -> bool:
 			var position: Vector2 = camera.position
 			main.pan_camera(Vector2.RIGHT,1.0)
 			main.change_zoom(1)
-			runner.check(camera.position == position and camera.zoom.x == zoom,"Bs2 placement freezes camera")
+			runner.check(camera.position != position and camera.zoom.x == zoom,"Bs2 placement pans the camera and holds the zoom")
 			key(main,KEY_ESCAPE)
 			runner.check(main.orders.selected_ids == [1] and main.orders._placement_kind.is_empty() and main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty(),"Bs2 cancel no order spend preserves selection")
 	build_key(main,"usa_power_plant")

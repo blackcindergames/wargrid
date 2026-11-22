@@ -7,9 +7,11 @@ const Construction = preload("res://scripts/simulation/construction.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const SoundDirector = preload("res://scripts/presentation/sound_director.gd")
+const ControlGroups = preload("res://scripts/match/control_groups.gd")
 
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
+var groups := ControlGroups.new()
 var inspected_id: int = -1
 var _screen: Node
 var _selecting: bool = false
@@ -49,7 +51,7 @@ func handle(event: InputEvent) -> void:
 	_hover(event, on_hud)
 	# A press that began on the map ends over a panel: only a drag goes on there, never a click, an order or the ghost.
 	if on_hud and not _selecting: return
-	if _card_key(event): return
+	if _card_key(event) or _group_key(event): return
 	if _placement_kind.is_empty() and (_combat_input(event) or _sub_grid_escape(event)): return
 	if not _placement_kind.is_empty():
 		_placement_input(event)
@@ -94,6 +96,7 @@ func reset() -> void:
 	_selecting = false
 	_dragged = false
 	_start_pending = true
+	groups.reset()
 
 # Online the seat owns nothing until its choose_faction step, so the start is the first view it owns anything in and takes orders in (3-6).
 func select_start(state: Dictionary) -> void:
@@ -138,6 +141,54 @@ func _card_key(event: InputEvent) -> bool:
 	if action.is_empty(): _no_cell(key.physical_keycode)
 	else: press_cell(action)
 	return true
+
+# 1-9 recall, Shift adds, Ctrl or Cmd saves (Shift+Ctrl is the save for browsers that keep Ctrl+N, 3-18); Alt does nothing (3-17), nor does any of it during a drag or a placement.
+func _group_key(event: InputEvent) -> bool:
+	var key := event as InputEventKey
+	var slot: int = ControlGroups.KEYS.find(key.physical_keycode) if key != null else -1
+	if slot == -1 or not key.pressed or key.echo: return false
+	if is_selecting() or key.alt_pressed or not _placement_kind.is_empty(): return true
+	if key.ctrl_pressed or key.meta_pressed: _save_group(slot)
+	elif key.shift_pressed: _add_to_group(slot)
+	else: _recall_group(slot)
+	return true
+
+# Units only; a building or an inspected enemy leaves the group be, nothing selected empties it.
+func _save_group(slot: int) -> void:
+	if not selected_ids.is_empty(): groups.save(slot, selected_ids)
+	elif selected_building_id == -1 and inspected_id == -1: groups.clear(slot)
+	else: return
+	_report_group(slot)
+
+func _add_to_group(slot: int) -> void:
+	if selected_ids.is_empty(): return
+	groups.add(slot, selected_ids)
+	_report_group(slot)
+
+func _report_group(slot: int) -> void:
+	var count: int = groups.ids(slot).size()
+	if count > 0: _screen.hud.group_saved(slot + 1, count)
+
+func _recall_group(slot: int) -> void:
+	var live: Array[int] = []
+	live.assign(groups.ids(slot).filter(func(id: int) -> bool: return not _unit(id).is_empty() and not _unit(id).inside))
+	groups.keep(slot, live)
+	if live.is_empty(): return
+	selected_ids.assign(live)
+	selected_building_id = -1
+	inspected_id = -1
+	_sub_grid = false
+	_set_attack_move(false)
+	if groups.double_tap(slot): _screen.centre_camera(_centroid(live))
+	_screen._reshow()
+
+func _centroid(units: Array[int]) -> Vector2:
+	var rows: RefCounted = _screen.shown_state.units
+	var sum := Vector2.ZERO
+	for id: int in units:
+		var i: int = rows.index_of(id)
+		sum += Vector2(rows.x[i], rows.y[i])
+	return sum / units.size()
 
 # A key or a click on a shown cell; the Hud's cells carry the actions of `HudModel.card`.
 func press_cell(action: String) -> void:
@@ -383,6 +434,10 @@ func _enter_placement(kind: String) -> void:
 	_screen.driver.request_preview({})
 	_update_preview(_screen._view.get_local_mouse_position())
 	_screen._reshow()
+
+# The camera moved under a standing pointer, so the ghost goes where the pointer now is.
+func camera_moved() -> void:
+	if not _placement_kind.is_empty(): _update_preview(_screen._view.get_local_mouse_position())
 
 func _clear_placement() -> void:
 	_placement_kind = ""

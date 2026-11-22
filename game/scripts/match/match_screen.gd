@@ -352,10 +352,19 @@ func _auto_sample(frame_ms: float) -> void:
 	_view.set_quality(quality)
 
 func pan_camera(direction: Vector2, delta: float) -> void:
-	if orders.busy():
+	if orders.is_selecting():
 		return
-	_camera.position += direction.normalized() * 400.0 * delta / _camera.zoom.x
-	_camera.position = _camera.position.clamp(_camera_bounds.position, _camera_bounds.end)
+	_move_camera(_camera.position + direction.normalized() * 400.0 * delta / _camera.zoom.x)
+
+func centre_camera(world: Vector2) -> void:
+	_move_camera(Iso.world_to_plane(world))
+
+func _move_camera(plane: Vector2) -> void:
+	var before: Vector2 = _camera.position
+	_camera.position = plane.clamp(_camera_bounds.position, _camera_bounds.end)
+	if _camera.position == before: return
+	_camera.force_update_scroll()
+	orders.camera_moved()
 
 func change_zoom(direction: int) -> void:
 	if orders.busy():

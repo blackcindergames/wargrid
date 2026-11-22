@@ -55,6 +55,9 @@ var _notice_text: Label
 var _refusal_line: PanelContainer
 var _refusal_text: Label
 var _refused_at: int = 0
+var _group_line: PanelContainer
+var _group_text: Label
+var _grouped_at: int = 0
 var _esc: Label
 var _resume: Label
 var _queue_header: HBoxContainer
@@ -93,6 +96,7 @@ func _init() -> void:
 	_build_menu_chip()
 	_build_notice()
 	_build_refusal_line()
+	_build_group_line()
 	_build_panel()
 	for surface: Control in [_top_strip, _menu, _panel]: block(surface)
 
@@ -298,6 +302,24 @@ func _build_refusal_line() -> void:
 	_refusal_text.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 	_refusal_line.visible = false
 
+# 3-27: bottom centre, stacked above the refusal line it shares the middle with.
+func _build_group_line() -> void:
+	_group_line = _slab("GroupLine", Vector2.ZERO)
+	_flat(_group_line, 28)
+	_group_line.set_anchors_preset(PRESET_CENTER_BOTTOM)
+	_group_line.grow_horizontal = GROW_DIRECTION_BOTH
+	_group_line.offset_left = -12
+	_group_line.offset_right = -12
+	_group_line.offset_top = -68
+	_group_line.offset_bottom = -40
+	_group_text = _label(_group_line, "Text", &"HudRow")
+	_group_line.visible = false
+
+func group_saved(slot: int, count: int) -> void:
+	_grouped_at = now_msec.call()
+	_group_text.text = "Group %d · %d unit%s" % [slot, count, "" if count == 1 else "s"]
+	_group_line.visible = true
+
 func refuse(raw_error: String) -> void:
 	refusal = raw_error
 	_refused_at = now_msec.call()
@@ -311,6 +333,7 @@ func clear_refusal() -> void:
 # The timer only hides the line; `refusal` keeps the words until replaced, cleared or reset.
 func _process(_delta: float) -> void:
 	if _refusal_line.visible and now_msec.call() - _refused_at >= 3000: _refusal_line.visible = false
+	if _group_line.visible and now_msec.call() - _grouped_at >= 2000: _group_line.visible = false
 	# Only the 250 ms wait needs the frame; hover and refresh lay out an open card.
 	if _hovered_cell != null and not _cell_card.visible: _show_cell_card()
 
@@ -330,6 +353,7 @@ func setup(economy: VBoxContainer) -> void:
 
 func reset() -> void:
 	clear_refusal()
+	_group_line.visible = false
 	_labels = {}
 	_last = []
 	_last_ids = []
