@@ -48,7 +48,7 @@ templ PickButton(value, class, key string) {
 	}
 }
 
-// No Claude's-pick tag here: one at a time it would repeat the Pick's tab.
+// No Claude's-pick tag here: only the Pick button's tab names it (user, 2026-11-21).
 templ Tags(o OptView) {
 	if o.Picked {
 		<span class="tag got">Picked</span>
@@ -56,24 +56,6 @@ templ Tags(o OptView) {
 	if o.Reveal != "" {
 		<span class="tag rv">{ o.Reveal }</span>
 	}
-}
-
-templ OptText(o OptView) {
-	if o.Sees != "" {
-		<p class="sees"><span class="h">What you see</span>@Fmt(o.Sees)</p>
-	}
-	if o.Notes != "" {
-		<p class="notes">
-			if o.NotesHead != "" {
-				<span class="h">{ o.NotesHead }</span>
-			}
-			@Fmt(o.Notes)
-		</p>
-	}
-	if o.Changes != "" {
-		<p class="chg">@Fmt(o.Changes)</p>
-	}
-	@Folds(o.Folds)
 }
 
 templ OptBody(o OptView) {
@@ -104,28 +86,6 @@ templ OptBody(o OptView) {
 	}
 }
 
-templ FlipBar(v ChoiceView) {
-	if len(v.Flip) > 0 {
-		<div class="flipbar">
-			for _, f := range v.Flip {
-				<button type="button" class={ "ob btn sm", templ.KV("on", f.On), templ.KV("done", f.Done) } data-show={ f.Letter } data-key={ f.Key }>
-					@Kbd(strings.ToUpper(f.Key))
-					if f.Key != strings.ToLower(f.Letter) {
-						<b class="fl">{ f.Letter }</b>
-					}
-					<span>@Fmt(f.Name)</span>
-				</button>
-			}
-			if v.ViewHref != "" {
-				<a class="vt btn sm" href={ templ.SafeURL(v.ViewHref) } data-key="w" data-keepview>
-					@Kbd("W")
-					{ v.ViewLabel }
-				</a>
-			}
-		</div>
-	}
-}
-
 templ Act(v ChoiceView) {
 	<div class="act">
 		if v.Act.Confirm {
@@ -137,7 +97,8 @@ templ Act(v ChoiceView) {
 				Change (say what in the note)
 			}
 		} else if !isReadOnly(ctx) {
-			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">Pick <span class="pl">{ v.Act.Shown }</span><span class="pn">{ v.Act.ShownName }</span> @Kbd("Enter")
+			<button type="submit" form="answer" name="pick" value={ v.Act.Shown } data-shown class="pick btn" data-key="enter">
+				Pick <span class="pl">{ v.Act.Shown }</span> @Kbd("Enter")
 				if v.Act.Cp != "" {
 					<span class="tag cp ptab" data-cp={ v.Act.Cp } hidden?={ v.Act.Cp != v.Act.Shown }>Claude's pick</span>
 				}
@@ -145,23 +106,14 @@ templ Act(v ChoiceView) {
 		}
 		@NeutralAnswer(v.Act.Neutral)
 	</div>
-	if v.Large {
-		<div class="tools">
-			<span class="scale"></span>
-			@LargeButton()
-		</div>
-	}
 }
 
-// NeutralAnswer is the neutral button with the line under it that says what it records.
+// The tooltip says what the neutral answer records (user, 2026-11-21: no visible hint line).
+const neutralTitle = "Records no winner. Say why in the note."
+
 templ NeutralAnswer(neutral string) {
 	if neutral != "" && !isReadOnly(ctx) {
-		<span class="nwrap">
-			@PickButton("neither", "neutral btn", "") {
-				{ neutral }
-			}
-			<span class="nexplain">Records no winner. Say why in the note.</span>
-		</span>
+		<button type="submit" form="answer" name="pick" value="neither" class="neutral btn" title={ neutralTitle }>{ neutral }</button>
 	}
 }
 
@@ -193,13 +145,16 @@ templ LabBox(l LabView) {
 }
 
 templ FlipStage(v ChoiceView) {
-	<section class="stagecol">
-		@FlipBar(v)
-		@CtlBar(v.Ctl, false)
+	<div class="zone stagecol">
 		<div class="stage" data-swipe>
 			if v.Lab != nil {
 				@LabBox(*v.Lab)
 			} else {
+				if v.Ref != nil {
+					<div class="ostage" data-opt="today" hidden>
+						@Picture(v.Ref.Pic)
+					</div>
+				}
 				for _, o := range v.Opts {
 					<div class="ostage" data-opt={ o.Letter } hidden?={ !o.On }>
 						@OptBody(o)
@@ -207,25 +162,7 @@ templ FlipStage(v ChoiceView) {
 				}
 			}
 		</div>
-		@Act(v)
-		@Measures(v.Opts)
-	</section>
-}
-
-templ Details(v ChoiceView) {
-	<section class="detail">
-		for _, o := range v.Opts {
-			<div class="odetail" data-opt={ o.Letter } hidden?={ !o.On }>
-				<div class="ohd">
-					<span class="let">{ o.Letter }</span>
-					<h2>@Fmt(o.Name)</h2>
-					@Tags(o)
-				</div>
-				@OptText(o)
-				@Figures(o.Extras)
-			</div>
-		}
-	</section>
+	</div>
 }
 
 templ Tile(o OptView) {
@@ -233,29 +170,17 @@ templ Tile(o OptView) {
 		<div class="ohd" data-pick={ o.Letter }>
 			<span class="let">{ o.Letter }</span>
 			<h2>@Fmt(o.Name)</h2>
-			if o.Cp {
-				<span class="tag cp">Claude's pick</span>
-			}
 			@Tags(o)
 		</div>
 		@OptBody(o)
 		if o.Measure {
 			<div class="measure" data-measure={ o.Letter }></div>
 		}
-		@OptText(o)
-		if len(o.Extras) > 0 {
-			<details>
-				<summary>{ strconv.Itoa(len(o.Extras)) } more pictures</summary>
-				@Figures(o.Extras)
-			</details>
-		}
 	</div>
 }
 
 templ Tiles(v ChoiceView) {
-	<section class="stagecol">
-		@FlipBar(v)
-		@CtlBar(v.Ctl, false)
+	<div class="zone stagecol">
 		<div class="tiles" style={ colsStyle(v.Cols()) }>
 			if v.Ref != nil {
 				<div class="tile reft">
@@ -267,26 +192,160 @@ templ Tiles(v ChoiceView) {
 				@Tile(o)
 			}
 		</div>
-		@Act(v)
+	</div>
+}
+
+// StatusLine says how the stage is set; the View menu holds the controls, whose keys work with it closed.
+templ StatusLine(v ChoiceView) {
+	<div class="status">
+		<p class="stxt">
+			<span class="sv">
+				for i, b := range v.Ctl.StatusItems() {
+					if i > 0 {
+						{ " · " }
+					}
+					{ b.Value }
+					if b.Name == "fit" {
+						<span class="scale"></span>
+					}
+				}
+			</span>
+			<span class="vis">
+				if len(v.Ctl.StatusItems()) > 0 {
+					{ " · " }
+				}
+				{ v.Ctl.Vision() }
+			</span>
+		</p>
+		if v.ViewHref != "" {
+			<a class="btn sm" href={ templ.SafeURL(v.ViewHref) } data-key="w" data-keepview>
+				@Kbd("W")
+				{ v.ViewLabel }
+			</a>
+		}
+		if v.Large {
+			@LargeButton()
+		}
+		if len(v.Ctl.Buttons) > 0 {
+			<details class="viewmenu">
+				<summary class="btn sm">View</summary>
+				@CtlBar(v.Ctl, false)
+			</details>
+		}
+	</div>
+}
+
+// MoreOf draws a block for every option, empty ones too, so the strip's height never depends on the shown option.
+templ MoreOf(v ChoiceView) {
+	<section class="moreof">
+		for _, o := range v.Opts {
+			<div data-opt={ o.Letter } hidden?={ !o.On }>
+				if len(o.Extras) > 0 {
+					<span class="h">More of { o.Letter }</span>
+					@Figures(o.Extras)
+				}
+			</div>
+		}
+		if !v.Side {
+			@Measures(v.Opts)
+		}
 	</section>
 }
 
-templ ChoiceMain(v ChoiceView) {
-	<main id="main" class={ "step", "k-" + v.Kind, viewClass(v.Side) }>
-		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, v.Side)
-			@NoteBox(v.Note)
-			@StepNav(v.Nav)
+templ About(opts []OptView) {
+	for _, o := range opts {
+		if o.HasAbout() {
+			<details class="about" data-opt={ o.Letter } hidden?={ !o.On }>
+				<summary>About { o.Letter }</summary>
+				if o.Notes != "" {
+					<p class="onotes">@Fmt(o.Notes)</p>
+				}
+				if o.Sees != "" {
+					<p class="sees"><span class="h">What you see</span>@Fmt(o.Sees)</p>
+				}
+				if o.Changes != "" {
+					<p class="chg">@Fmt(o.Changes)</p>
+				}
+				@Folds(o.Folds)
+			</details>
+		}
+	}
+}
+
+templ OptRow(o OptView) {
+	<button type="button" class={ "orow", templ.KV("sel", o.On) } data-show={ o.Letter } data-key={ o.Key }>
+		<span class="ot">
+			@Kbd(strings.ToUpper(o.Key))
+			if o.Key != strings.ToLower(o.Letter) {
+				<b class="fl">{ o.Letter }</b>
+			}
+			<span class="nm">@Fmt(o.Name)</span>
+			@Tags(o)
+		</span>
+		if o.Notes != "" {
+			<span class="onote">@Fmt(o.Notes)</span>
+		}
+	</button>
+}
+
+// Options is the right panel: Today (one at a time only; side by side has its tile) and the option rows, with Pick, the note and the step buttons at one height under them.
+templ Options(v ChoiceView) {
+	<div class="rpanel">
+		<span class="h">Options</span>
+		<div class="opts" role="group" aria-label="Options">
+			if v.Ref != nil && !v.Side && v.Lab == nil {
+				<button type="button" class="orow today" data-show="today" data-key="0">
+					<span class="ot">
+						@Kbd("0")
+						<span class="nm">@Fmt(v.Ref.Label)</span>
+					</span>
+				</button>
+			}
+			for _, o := range v.Opts {
+				@OptRow(o)
+			}
 		</div>
-		<div class="right">
+		<span class="omore" aria-hidden="true" hidden>▾ more</span>
+		@Act(v)
+		@NoteBox(v.Note)
+		@StepNav(v.Nav)
+	</div>
+}
+
+// LeftPanel is the chips, the question and its folds.
+templ LeftPanel(chips []Chip, h HeadView, i InfoView) {
+	<div class="lpanel">
+		@ChipNav(chips)
+		@Head(h, i)
+	</div>
+}
+
+// RightPanel holds every kind's answer controls with the step buttons under them, where a choice step has Pick.
+templ RightPanel(nav NavView) {
+	<div class="rpanel">
+		{ children... }
+		@StepNav(nav)
+	</div>
+}
+
+templ ChoiceMain(v ChoiceView, chips []Chip) {
+	<main id="main" class={ "step", "choice", "k-" + v.Kind, viewClass(v.Side) }>
+		<div class="lpanel">
+			@ChipNav(chips)
+			@Head(v.Head, v.Info) {
+				@About(v.Opts)
+			}
+		</div>
+		<div class="cpanel">
 			if v.Side {
 				@Tiles(v)
 			} else {
 				@FlipStage(v)
-				@Details(v)
 			}
+			@StatusLine(v)
+			@MoreOf(v)
 		</div>
+		@Options(v)
 	</main>
 	@AnswerForm(v.Form)
 }
@@ -295,39 +354,31 @@ templ VerdictBox(v VerdictView) {
 	if !isReadOnly(ctx) {
 		<section class="verdict">
 			for _, b := range v.Buttons {
-				<button type="submit" form="answer" name="pick" value={ b.Value } class={ "vb btn lg", templ.KV("pick", b.Value == "pass"), templ.KV("done", b.Done) }>{ b.Label }</button>
+				<button
+					type="submit"
+					form="answer"
+					name="pick"
+					value={ b.Value }
+					class={ "vb btn lg", templ.KV("pick", b.Value == "pass"), templ.KV("done", b.Done) }
+					if b.Value == "pass" {
+						data-key="enter"
+					}
+				>
+					{ b.Label }
+					if b.Value == "pass" {
+						@Kbd("Enter")
+					}
+				</button>
 			}
 			@NoteField(v.Note)
 		</section>
 	}
 }
 
-templ GalleryMain(v GalleryView) {
+templ GalleryMain(v GalleryView, chips []Chip) {
 	<main id="main" class="step k-gallery">
-		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, false)
-			if !v.Empty {
-				<section class="gside">
-					<span class="cnt">{ v.Count }</span>
-					<h2>{ v.ItemLabel }</h2>
-					<p>@Fmt(v.Caption)</p>
-					if !isReadOnly(ctx) {
-						<label for={ v.ItemNote.ID } class="h">{ v.ItemNote.Label }</label>
-						@NoteField(v.ItemNote)
-					}
-					<div class="inav">
-						<a class="btn sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
-						<a class="btn sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
-					</div>
-				</section>
-			}
-			if v.Verdict != nil {
-				@VerdictBox(*v.Verdict)
-			}
-			@StepNav(v.Nav)
-		</div>
-		<div class="right">
+		@LeftPanel(chips, v.Head, v.Info)
+		<div class="cpanel">
 			if v.Empty {
 				<p class="missing">[gallery has no items]</p>
 			} else {
@@ -351,60 +402,71 @@ templ GalleryMain(v GalleryView) {
 				</section>
 			}
 		</div>
+		@RightPanel(v.Nav) {
+			if !v.Empty {
+				<section class="gside">
+					<span class="cnt">{ v.Count }</span>
+					<h2>{ v.ItemLabel }</h2>
+					<p>@Fmt(v.Caption)</p>
+					if !isReadOnly(ctx) {
+						<label for={ v.ItemNote.ID } class="h">{ v.ItemNote.Label }</label>
+						@NoteField(v.ItemNote)
+					}
+					<div class="inav">
+						<a class="btn sm" href={ templ.SafeURL(v.PrevHref) } data-key="p">@Kbd("P") Previous</a>
+						<a class="btn sm" href={ templ.SafeURL(v.NextHref) } data-key="n">Next @Kbd("N")</a>
+					</div>
+				</section>
+			}
+			if v.Verdict != nil {
+				@VerdictBox(*v.Verdict)
+			}
+		}
 	</main>
 	@AnswerForm(v.Form)
 }
 
-templ VerdictMain(v VerdictStepView) {
+templ VerdictMain(v VerdictStepView, chips []Chip) {
 	<main id="main" class="step k-verdict">
-		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, false)
-			@StepNav(v.Nav)
-		</div>
-		<div class="right">
+		@LeftPanel(chips, v.Head, v.Info)
+		<div class="cpanel"></div>
+		@RightPanel(v.Nav) {
 			@VerdictBox(v.Verdict)
-		</div>
+		}
 	</main>
 	@AnswerForm(v.Form)
 }
 
-templ TuneMain(v TuneView) {
+templ TuneMain(v TuneView, chips []Chip) {
 	<main id="main" class="step k-tune">
-		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, false)
-			@NoteBox(v.Note)
-			@StepNav(v.Nav)
-		</div>
-		<div class="right">
+		@LeftPanel(chips, v.Head, v.Info)
+		<div class="cpanel">
 			<section class="stagecol">
 				<div class="stage">
 					@Picture(v.Pic)
 				</div>
 				<wr-tune data-params={ v.Params } data-target={ v.Pic.FrameID } data-field={ tuneField }></wr-tune>
-				<div class="act">
-					@PickButton("tuned", "pick btn", "enter") {
-						Use these values
-						@Kbd("Enter")
-					}
-					@NeutralAnswer(v.Neutral)
-				</div>
 			</section>
 		</div>
+		@RightPanel(v.Nav) {
+			<div class="act">
+				@PickButton("tuned", "pick btn", "enter") {
+					Use these values
+					@Kbd("Enter")
+				}
+				@NeutralAnswer(v.Neutral)
+			</div>
+			@NoteBox(v.Note)
+		}
 	</main>
 	<input type="hidden" id={ tuneField } name="value" form="answer" value={ v.Value }/>
 	@AnswerForm(v.Form)
 }
 
-templ WordingMain(v WordingView) {
+templ WordingMain(v WordingView, chips []Chip) {
 	<main id="main" class="step k-wording">
-		<div class="left">
-			@Head(v.Head)
-			@Info(v.Info, false)
-			@StepNav(v.Nav)
-		</div>
-		<div class="right">
+		@LeftPanel(chips, v.Head, v.Info)
+		<div class="cpanel">
 			<section class="fields">
 				if !isReadOnly(ctx) {
 					<p class="nhint">Edits are recorded as you type.</p>
@@ -422,20 +484,29 @@ templ WordingMain(v WordingView) {
 				}
 			</section>
 		</div>
+		@RightPanel(v.Nav) {
+			if !isReadOnly(ctx) {
+				<div class="act">
+					<a class="pick btn" href={ templ.SafeURL(v.Nav.Next) } data-key="enter">Done, next @Kbd("Enter")</a>
+				</div>
+			}
+		}
 	</main>
 }
 
-templ MissingMain(v MissingView) {
+templ MissingMain(v MissingView, chips []Chip) {
 	<main id="main" class="step k-missing">
-		<div class="left">
+		<div class="lpanel">
+			@ChipNav(chips)
 			<section class="head">
-				<span class="n">{ v.Eyebrow }</span>
+				<span class="n" title={ v.Eyebrow }>{ v.Eyebrow }</span>
 				<h1>[step missing: { v.Key }]</h1>
-				<p>{ v.Path } did not load.</p>
 			</section>
-			@StepNav(v.Nav)
 		</div>
-		<div class="right"></div>
+		<div class="cpanel">
+			<p class="missing">{ v.Path } did not load.</p>
+		</div>
+		@RightPanel(v.Nav)
 	</main>
 }
 
@@ -480,42 +551,50 @@ templ SumTable(rows []SumRow) {
 	}
 }
 
-templ SummaryMain(v SummaryView, nav NavView) {
+templ SummaryMain(v SummaryView, nav NavView, chips []Chip) {
 	<main id="main" class="step k-summary">
-		<section class="head">
-			<span class="n">{ v.Eyebrow }</span>
-			<h1>{ v.Title }</h1>
-		</section>
-		@Intro(v.Intro, true)
-		<div id="sum">
-			<h2>{ v.Main.Title } <span class="cnt">{ v.Main.Count }</span></h2>
-			@SumTable(v.Main.Rows)
-			if len(v.Open) > 0 {
-				<p class="close">
-					Not answered yet:
-					<span class="opens">
-						for _, l := range v.Open {
-							<a class="btn" href={ templ.SafeURL(l.Href) }>{ l.Label }</a>
-						}
-					</span>
-				</p>
-			} else if !isReadOnly(ctx) {
-				<p class="close">You can close this tab.</p>
+		<div class="lpanel">
+			@ChipNav(chips)
+			<section class="head">
+				<span class="n" title={ v.Eyebrow }>{ v.Eyebrow }</span>
+				<h1>{ v.Title }</h1>
+			</section>
+		</div>
+		<div class="cpanel">
+			<div id="sum" class="sumblock">
+				@Intro(v.Intro, true)
+				<h2>{ v.Main.Title } <span class="cnt">{ v.Main.Count }</span></h2>
+				@SumTable(v.Main.Rows)
+				if len(v.Open) > 0 {
+					<p class="close">
+						<span class="h">Not answered yet</span>
+						<span class="opens">
+							for _, l := range v.Open {
+								<a class="btn" href={ templ.SafeURL(l.Href) }>{ l.Label }</a>
+							}
+						</span>
+					</p>
+				} else if !isReadOnly(ctx) {
+					<p class="close">You can close this tab.</p>
+				}
+				<pre id="summary-text" hidden>{ v.Text }</pre>
+			</div>
+			if len(v.Earlier) > 0 {
+				<div class="sumblock earlier">
+					<h3 class="sec">Earlier rounds</h3>
+					for _, e := range v.Earlier {
+						<h2>{ e.Title } <span class="cnt">{ e.Count }</span></h2>
+						@SumTable(e.Rows)
+					}
+				</div>
 			}
-			<p>
+		</div>
+		@RightPanel(nav) {
+			<p class="copy">
 				<button type="button" class="btn" data-copy-from="#summary-text">Copy summary</button>
 				<span class="copied" aria-live="polite"></span>
 			</p>
-			<pre id="summary-text" hidden>{ v.Text }</pre>
-			if len(v.Earlier) > 0 {
-				<h3 class="sec">Earlier rounds</h3>
-				for _, e := range v.Earlier {
-					<h2>{ e.Title } <span class="cnt">{ e.Count }</span></h2>
-					@SumTable(e.Rows)
-				}
-			}
-		</div>
-		@StepNav(nav)
+		}
 	</main>
 }
 

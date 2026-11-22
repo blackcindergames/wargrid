@@ -50,8 +50,8 @@ func TestShippedRoundsLoadClean(t *testing.T) {
 	if len(c.Errors) > 0 {
 		t.Fatalf("errors:\n%s", strings.Join(c.Errors, "\n"))
 	}
-	if len(c.Index) != 2 || len(c.Rounds) != 2 {
-		t.Fatalf("index %d, rounds %d, want 2 and 2", len(c.Index), len(c.Rounds))
+	if len(c.Index) != 4 || len(c.Rounds) != 4 {
+		t.Fatalf("index %d, rounds %d, want 4 and 4", len(c.Index), len(c.Rounds))
 	}
 }
 
@@ -292,5 +292,31 @@ func TestLoaderWarnsWhenEveryBlindStepHasTheSameLetter(t *testing.T) {
 		if c := oneRound(t, "steps: [a, b, open]\n", steps); len(c.Warnings) > 0 {
 			t.Errorf("%s: %q", name, c.Warnings)
 		}
+	}
+}
+
+func longStep(question, notes, look string) string {
+	return "kind: pictures\nquestion: " + question + "\nlook: " + look + "\noptions:\n  A: {name: a, img: x.png}\n  B: {name: b, img: y.png, notes: " + notes + "}\n"
+}
+
+func TestLongTextsWarnTheAuthor(t *testing.T) {
+	step := longStep(strings.Repeat("q", 71), strings.Repeat("n", 91), strings.Repeat("l", 121))
+	c := oneRound(t, "steps: [a]\n", map[string]string{"a": step})
+	want := []string{
+		"r/a option B: notes is 91 characters; keep it to one line (90)",
+		"r/a: look is 121 characters; keep it to one line (120)",
+		"r/a: question is 71 characters; keep it to one line (70)",
+	}
+	if !slices.Equal(c.Warnings, want) || len(c.Errors) > 0 {
+		t.Errorf("warnings %q, errors %q; want warnings %q, no errors", c.Warnings, c.Errors, want)
+	}
+}
+
+func TestTextsAtTheLimitDoNotWarn(t *testing.T) {
+	question := strings.Repeat("q", 30) + "`" + strings.Repeat("q", 40) + "`"
+	step := longStep(question, strings.Repeat("n", 90), strings.Repeat("l", 120))
+	c := oneRound(t, "steps: [a]\n", map[string]string{"a": step})
+	if len(c.Warnings) > 0 || len(c.Errors) > 0 {
+		t.Errorf("warnings %q, errors %q; want none", c.Warnings, c.Errors)
 	}
 }

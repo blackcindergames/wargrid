@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'P2.3b Build from the dock: queue, empty card, counter line'
+intro: >-
+  Pictures questions for P2.3b, the command card package; nothing of it is built yet. Steps 1 to 4 block
+  its build tasks (the queue's place and tiles, the card with nothing selected, where the counter line
+  sits); steps 5 and 6 are advisory and confirm a default P2.3b builds anyway. Two builders selected (decided: a blocked `Q`,
+  `Select one builder`) gets no step; the producing cell's progress bar follows step 1. Every picture is the planned HUD (today's top
+  strip and selection panel, the v5 command card bottom right) for China (steps 5 and 6: FRC) in the Core tier
+  at 1280 x 720;
+  S switches to 1280 x 800 and 1920 x 1080, F to true 100 %. Names, costs and build times come from the
+  China data; credits, queues and counter words are illustrative. A neutral answer records no winner: the
+  task it blocks waits for your note.
+steps: [queue, queue-tiles, empty-card, counter, cost, cost-icon]
+render:
+  pass:
+    size: size
+    world: world
+    ground: ground
+controls:
+  size: [1280x720, 1280x800, 1920x1080]
+  fit: true
+  world: true
+  ground: true

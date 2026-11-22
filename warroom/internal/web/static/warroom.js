@@ -219,6 +219,13 @@ function scaleNote() {
 	const el = $('.v-flip .ostage:not([hidden]) .pic[data-cw], .k-gallery .gmain .pic[data-cw]');
 	const sc = el?.clientWidth ? el.clientWidth / Number(el.dataset.cw) : 1;
 	const dpr = devicePixelRatio || 1;
+	const pct = Math.abs(sc - 1) > 0.02 ? `${String(Math.round(sc * 100))} %` : '';
+	// The status line is one line: there the note only completes its Fit or True 100 % value.
+	if (out.closest('.status')) {
+		const t100 = $('#view')?.classList.contains('true100');
+		out.textContent = t100 ? (dpr === 1 ? '' : ` (screen scale ${String(dpr)})`) : pct && ` ${pct}`;
+		return;
+	}
 	if ($('#view')?.classList.contains('true100')) {
 		const note =
 			dpr === 1
@@ -226,49 +233,79 @@ function scaleNote() {
 				: ` (screen scale ${String(dpr)}, so it looks ${dpr > 1 ? 'smaller' : 'larger'} than in a game window of that size)`;
 		out.textContent = `True 100 %: one picture pixel per screen pixel${note}.`;
 	} else {
-		out.textContent = Math.abs(sc - 1) > 0.02 ? `Shown at ${String(Math.round(sc * 100))} % of game pixels.` : '';
+		out.textContent = pct && `Shown at ${pct} of game pixels.`;
 	}
 }
 
 // ---------- options ----------
 
-const flipLetters = () => $$('.flipbar [data-show]').map((b) => b.dataset.show);
+// About repeats exactly the notes a row's two lines cut, which only layout knows.
+function markCutNotes() {
+	for (const row of $$('.orow[data-show]')) {
+		const note = $('.onote', row);
+		$(`.about[data-opt="${row.dataset.show ?? ''}"]`)?.classList.toggle(
+			'cut',
+			!!note && note.scrollHeight > note.clientHeight + 1,
+		);
+	}
+}
 
-/** @param {string} letter @param {HTMLVideoElement} [keep] a clip that just started in this option, left playing */
+// The fade says the list goes on below its box.
+function markMoreOpts() {
+	const list = $('.rpanel .opts');
+	const more = $('.rpanel .omore');
+	if (list && more) more.hidden = list.scrollTop + list.clientHeight >= list.scrollHeight - 1;
+}
+
+// Option letters only: Today is never a flip or swipe step, just key 0 or its own row.
+const flipLetters = () => $$('.opts .orow:not(.today)').map((b) => b.dataset.show);
+
+/** @param {string} letter an option letter or today @param {HTMLVideoElement} [keep] a clip that just started in this option, left playing */
 function showOption(letter, keep) {
-	if (!flipLetters().includes(letter)) return;
-	$$('.ostage[data-opt], .odetail[data-opt]').forEach((el) => {
+	const today = letter === 'today';
+	if (today ? !$('.opts .orow.today') : !flipLetters().includes(letter)) return;
+	// A reader comparing options with About open expects the next option's About open too.
+	const aboutOpen = /** @type {HTMLDetailsElement | null} */ ($('.about[data-opt]:not([hidden])'))?.open;
+	$$('.ostage[data-opt], .moreof [data-opt], .about[data-opt]').forEach((el) => {
 		el.hidden = el.dataset.opt !== letter;
 	});
+	if (aboutOpen !== undefined) {
+		/** @type {HTMLDetailsElement[]} */ ($$('.about[data-opt]')).forEach((d) => {
+			d.open = aboutOpen;
+		});
+	}
 	$$('.measures [data-measure]').forEach((el) => {
 		el.hidden = el.dataset.measure !== letter;
 	});
 	$$('.tile[data-opt]').forEach((el) => el.classList.toggle('sel', el.dataset.opt === letter));
-	$$('[data-show]').forEach((b) => b.classList.toggle('on', b.dataset.show === letter));
+	$$('.orow[data-show]').forEach((el) => el.classList.toggle('sel', el.dataset.show === letter));
+	$$('.ob[data-show]').forEach((b) => b.classList.toggle('on', b.dataset.show === letter));
+	stopMedia(keep);
+	scaleNote();
+	// Today is for looking only, so nothing may be recorded while it is shown.
+	/** @type {NodeListOf<HTMLButtonElement>} */ (document.querySelectorAll('button.pick[name=pick]')).forEach((b) => {
+		b.disabled = today;
+	});
+	$$('.ptab').forEach((el) => {
+		el.hidden = el.dataset.cp !== letter;
+	});
+	if (today) return;
 	/** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('[data-shown]')).forEach((b) => {
 		b.value = letter;
 	});
 	$$('.pl').forEach((el) => {
 		el.textContent = letter;
 	});
-	const name = $(`.ohd[data-pick="${letter}"] h2, .odetail[data-opt="${letter}"] h2`)?.textContent ?? '';
-	$$('.ptab').forEach((el) => {
-		el.hidden = el.dataset.cp !== letter;
-	});
-	$$('.pn').forEach((el) => {
-		el.textContent = name && name !== letter ? `· ${name}` : '';
-	});
-	stopMedia(keep);
 	setParam('show', letter);
-	scaleNote();
 }
 
 /** @param {number} d */
 function flipBy(d) {
 	const letters = flipLetters();
 	if (!letters.length) return;
-	const at = letters.indexOf($('.flipbar [data-show].on')?.dataset.show);
-	const next = letters[(at + d + letters.length) % letters.length];
+	const at = letters.indexOf($('.opts .orow.sel')?.dataset.show);
+	// From Today (not in the list) a swipe goes to the first or the last option.
+	const next = at < 0 ? letters.at(d > 0 ? 0 : -1) : letters[(at + d + letters.length) % letters.length];
 	if (next) showOption(next);
 }
 
@@ -592,7 +629,16 @@ const CLICKS = [
 	[
 		'[data-show]',
 		(el) => {
+			// A row kept focused by a click would take the next Enter instead of Pick.
+			if (!el.matches(':focus-visible')) el.blur();
 			showOption(el.dataset.show ?? '');
+		},
+	],
+	[
+		'summary',
+		(el) => {
+			// Like a row: a fold kept focused by a click would take the next Enter instead of Pick.
+			if (!el.matches(':focus-visible')) el.blur();
 		},
 	],
 	[
@@ -686,7 +732,7 @@ function onKey(e) {
 	// Tweakpane's sliders are focusable divs that take the arrow keys themselves.
 	if (e.key !== 'Enter' && closestOf(e.target, 'wr-tune')) return;
 	const k = keyName(e);
-	if ((k === 'enter' || k === ' ') && ['BUTTON', 'A'].includes(tag)) return;
+	if ((k === 'enter' || k === ' ') && ['BUTTON', 'A', 'SUMMARY'].includes(tag)) return;
 	if (overOpen()) {
 		if (k === '?') toggleLegend();
 		return;
@@ -753,19 +799,65 @@ function onConfigRequest(evt) {
 /** @type {HTMLElement | null} */
 let lastMain = null;
 
+const FOLDS = '#main details:not(.viewmenu)';
+/** @param {HTMLElement} el */
+const foldKey = (el) =>
+	`${el.classList[0] ?? ''} ${el.dataset.opt ?? ''} ${el.querySelector('summary')?.textContent ?? ''}`;
+const stepOf = () => $('#chips [aria-current=step]')?.dataset.step ?? location.pathname;
+/** @type {{ step: string, open: Set<string> } | null} */
+let openFolds = null;
+
+// The server renders every fold closed, so a stage control's morph would shut the ones the reader opened.
+function rememberFolds() {
+	openFolds = {
+		step: stepOf(),
+		open: new Set(
+			$$(FOLDS)
+				.filter((d) => d.hasAttribute('open'))
+				.map(foldKey),
+		),
+	};
+}
+
+function restoreFolds() {
+	if (openFolds?.step === stepOf()) {
+		const { open } = openFolds;
+		$$(FOLDS).forEach((d) => {
+			if (open.has(foldKey(d))) d.setAttribute('open', '');
+		});
+	}
+	openFolds = null;
+}
+
 function onSwap() {
+	restoreFolds();
 	const main = $('#main');
 	if (main !== lastMain) {
 		lastMain = main;
 		stopMedia();
 		closeOver();
-		if ($('#nhint')?.textContent) focusNote();
+		if ($('#main [data-note][autofocus]')) focusNote();
 	}
 	init();
 	renderFailures();
 }
 
+// The fixed zones fill the window below the read-only or error banner.
+function fitBanners() {
+	const h = $$('#view > :is(#err, #readonly)').reduce((sum, el) => sum + el.offsetHeight, 0);
+	rootEl.style.setProperty('--banner', `${String(h)}px`);
+}
+
+// On a phone the step strip scrolls sideways, and the current step may start out of view.
+function showCurrentChip() {
+	$('#chips [aria-current=step]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+
 function init() {
+	fitBanners();
+	showCurrentChip();
+	markMoreOpts();
+	markCutNotes();
 	forgetGoneFrames();
 	renderMeasures();
 	askMeasures();
@@ -781,6 +873,7 @@ function start() {
 	if (new URLSearchParams(location.search).get('sheet') === '1') rootEl.dataset.sheet = '';
 	init();
 	void document.fonts.ready.then(() => {
+		markCutNotes();
 		scaleNote();
 		keepStage();
 	});
@@ -809,6 +902,7 @@ document.addEventListener('htmx:after:request', (e) => {
 	onSuccess(e.detail.ctx);
 });
 document.addEventListener('htmx:config:request', onConfigRequest);
+document.addEventListener('htmx:before:swap', rememberFolds);
 document.addEventListener('htmx:after:swap', onSwap);
 document.addEventListener('click', onClick);
 document.addEventListener('keydown', onKey);
@@ -825,8 +919,19 @@ document.addEventListener(
 document.addEventListener('touchstart', onTouch, { passive: true });
 document.addEventListener('touchend', onTouch);
 addEventListener('resize', () => {
+	fitBanners();
+	markMoreOpts();
+	markCutNotes();
 	scaleNote();
 	syncPhone();
 });
+// Scroll does not bubble, so the Options list's is caught on the way down.
+document.addEventListener(
+	'scroll',
+	(e) => {
+		if (closestOf(e.target, '.rpanel .opts')) markMoreOpts();
+	},
+	true,
+);
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
 else start();

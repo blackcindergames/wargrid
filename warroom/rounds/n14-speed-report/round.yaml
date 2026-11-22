@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'Night 14 Honest speed report: the README speed block'
+advisory: true
+intro: >-
+  Advisory: night 14 built these defaults; answer when you like, nothing waits for it. Step 1 shows the
+  README speed block on `main` (Today, key 0) against the block the branch generates; steps 2 to 6 are the
+  wording calls inside it, the built text being Claude's pick. Numbers come from the night's gate run on
+  this Mac. A contradiction becomes a follow-up on the next package that touches the README speed block.
+  A neutral answer keeps the built text.
+steps: [block, headline, trend-words, labels, deck-row, trend-intro]
+render:
+  page: docs/images/speed-report/readme-blocks.html
+  w: 1280
+  h: 1100
+  hash: 'shot={state}'

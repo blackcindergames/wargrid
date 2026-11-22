@@ -6,12 +6,11 @@ import (
 	"wargrid/warroom/internal/stage"
 )
 
-// PageView is what one page puts inside #view: the problems found loading the rounds, the step chips and the page itself.
+// PageView is what one page puts inside #view: the problems found loading the rounds and the page itself.
 type PageView struct {
 	Errors  []string
 	Cvd     string
 	True100 bool
-	Chips   []Chip
 	Body    templ.Component
 	Phone   *PhoneView
 	Legend  LegendView
@@ -57,6 +56,16 @@ templ ChipLink(c Chip) {
 	>{ c.Label }</a>
 }
 
+templ ChipNav(chips []Chip) {
+	<header class="top">
+		<nav id="chips" class="chips" aria-label="Steps">
+			for _, c := range chips {
+				@ChipLink(c)
+			}
+		</nav>
+	</header>
+}
+
 templ pageHead(title string) {
 	<meta charset="utf-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -71,15 +80,6 @@ templ Shell(p PageView) {
 		}
 		if p.ReadOnly {
 			<p id="readonly" role="status">{ readOnlyNotice }</p>
-		}
-		if len(p.Chips) > 0 {
-			<header class="top">
-				<nav id="chips" class="chips" aria-label="Steps">
-					for _, c := range p.Chips {
-						@ChipLink(c)
-					}
-				</nav>
-			</header>
 		}
 		@p.Body
 		<div id="phone" class="phone">

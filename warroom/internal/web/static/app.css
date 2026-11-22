@@ -29,6 +29,8 @@
     --btn: #223241;
     --panel2: #26384a;
     --line: #2e3f4b;
+    /* A control's edge: 3.4:1 on --slab and 3.7:1 on --well, the WCAG 1.4.11 floor, where --line is 1.6:1. */
+    --edge: #5e717e;
     /* Softer than the HUD's #eef3f5 so page text never outshines the picture. */
     --text: #dfe7ec;
     --soft: #b9c6ce;
@@ -44,6 +46,8 @@
     --mono: ui-monospace, Menlo, monospace;
     --label: 12px;
     --row: 13px;
+    /* The window less the read-only or error banner above the page, which warroom.js measures into --banner. */
+    --vh: calc(100dvh - var(--banner, 0px));
   }
 }
 
@@ -51,7 +55,7 @@
   body { background: var(--well); color: var(--text); font: 15px/1.45 var(--font); }
   textarea {
     display: block; width: 100%; padding: 8px 12px; font-size: 14px;
-    background: var(--well); border: 1px solid var(--line);
+    background: var(--well); border: 1px solid var(--edge);
     &:focus { outline: 2px solid var(--muted); outline-offset: 2px; }
   }
   kbd {
@@ -67,8 +71,8 @@
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: nowrap;
     height: 40px; padding-inline: 16px; font-size: 14px; font-weight: 600; text-align: center; white-space: nowrap;
-    color: var(--text); background: var(--quiet); border: 1px solid var(--quiet); cursor: pointer; user-select: none;
-    &:hover { background: var(--btn); border-color: var(--btn); }
+    color: var(--text); background: var(--quiet); border: 1px solid var(--edge); cursor: pointer; user-select: none;
+    &:hover { background: var(--btn); }
     /* A visible edge: --quiet on --well alone is 1.1:1. */
     &.neutral { border-color: var(--muted); }
     &:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
@@ -80,6 +84,8 @@
     kbd { margin-inline: 4px; }
     &[aria-disabled=true] { color: var(--muted); background: transparent; border-color: var(--quiet); pointer-events: none; }
   }
+  /* No box inside a box: the control's edge frames its keycap already. */
+  :is(.btn, .orow) kbd { border-color: transparent; }
 
   .tag {
     display: inline-flex; align-items: center; height: 20px; padding-inline: 6px; flex: none; white-space: nowrap;
@@ -110,19 +116,63 @@
     &.er { margin-left: 12px; font-style: italic; }
   }
 
-  .step { max-width: 1680px; margin: 0 auto; padding: 16px 24px 48px; display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 24px; align-items: start; }
-  .step .left, .step .right { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-  .step.v-side, .step.k-summary, .step.k-index, .step.k-missing { grid-template-columns: minmax(0, 1fr); }
-  .step.v-side { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
-  .step.v-side .left, .step.v-side .right { display: contents; }
-  .v-side {
-    :is(.intro, .head) { order: 1; } .why { order: 2; } .cue { order: 3; } .stagecol { order: 4; } .info { order: 5; } .notebox { order: 6; } .stepnav { order: 7; }
-    :is(.why, .cue, .info, .notebox) { max-width: 1100px; }
+  .step { max-width: 1680px; margin: 0 auto; padding: 16px 24px 48px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+
+  /* Every step kind keeps the choice step's three columns, so no zone moves between pages: question left, what you judge centre, your answer right. */
+  .step:has(> .lpanel) { max-width: none; min-height: var(--vh); padding: 0; gap: 0; align-items: stretch; grid-template-columns: 260px minmax(0, 1fr) 340px; }
+  :is(.lpanel, .cpanel, .rpanel) { min-width: 0; display: flex; flex-direction: column; }
+  :is(.lpanel, .rpanel) { background: var(--slab); padding: 16px 20px 24px; }
+  .lpanel {
+    border-right: 1px solid var(--line); gap: 12px;
+    .top { position: relative; background: none; border: 0; }
+    .chips { flex-wrap: wrap; padding: 0; overflow: visible; }
+    .chip { padding: 3px 8px; font-size: var(--label); }
+    .head h1 { font-size: 22px; }
   }
-  .step .right:empty { display: none; }
+  .cpanel { padding: 20px; gap: 14px; }
+  /* Blocks at a reading width sit centred in the column, their text left-aligned; only the stage takes the whole column. */
+  .cpanel > :is(.fields, .missing), wr-tune { width: 100%; margin-inline: auto; }
+  /* One column as wide as the widest summary block, centred, so every block shares its left edge. */
+  .k-summary .cpanel { display: grid; grid-template-columns: fit-content(min(1200px, 100%)); justify-content: center; align-content: start; }
+  .cpanel > .fields { max-width: 720px; }
+  .sumblock > .intro { max-width: 65ch; }
+  .cpanel > .missing { padding: 0; width: fit-content; }
+  /* The bars under the stage have fixed heights, so the stage zone is the same on every step and option. */
+  .choice .cpanel { gap: 0; --status: 60px; --more: 200px; --bars: calc(40px + var(--status) + var(--more)); }
+  /* Pinned to the viewport, so Pick stays put and in view however long the question or list is. */
+  .rpanel {
+    border-left: 1px solid var(--line); gap: 6px; position: sticky; top: 0; height: var(--vh);
+    /* With the panel's gap, 10 px on top holds the Pick's 14 px tab clear of the list; the height leaves room for Pick or Yes and a second button, so Pick keeps one height with or without the neutral answer. */
+    :is(.act, .copy) { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding-top: 10px; min-height: calc(10px + 44px + 8px + 44px); }
+    /* Every kind's answers share one size: yellow primary, outlined secondary; the summary's Copy is its answer. */
+    :is(.act .btn, .verdict .vb, .copy .btn) { width: 100%; height: 44px; padding-inline: 22px; font-size: 16px; font-weight: 800; }
+    :is(.act, .verdict, .copy) .btn:not(.pick) { border-color: var(--muted); }
+    /* With no list above, the answer drops to where Pick sits on a choice step; a gallery's item block takes the list's room. */
+    > :first-child { margin-top: auto; }
+    > .gside { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    /* Wording and the summary have no note here: keep the gap, margin and height a note takes, so their answer sits at Pick's height. */
+    > :is(.act, .copy):not(:has(~ .notebox)) { margin-bottom: calc(6px + 8px + 72px); }
+    /* Pass and Changes take Pick's and the neutral answer's heights, and the note sits where a choice step's note does. */
+    .verdict { gap: 8px; padding-top: 10px; .vb { flex: 1 1 100%; min-height: 0; } textarea { margin-top: 6px; } }
+    /* Over the list's last 28 px, cancelling the panel's gap, so Pick keeps its place whether it shows or not. */
+    .omore {
+      position: relative; z-index: 1; height: 28px; margin-top: -34px; padding-top: 8px; pointer-events: none;
+      text-align: center; font-size: var(--label); font-weight: 700; color: var(--soft); background: linear-gradient(transparent, var(--slab) 70%);
+    }
+  }
+  .zone { height: calc(var(--vh) - var(--bars)); overflow: auto; }
+  .zone .stage { height: 100%; align-items: safe center; overflow: auto; }
+  .look { margin: 0; padding: 10px 12px; font-size: 14px; color: var(--text); background: var(--quiet); border-left: 3px solid var(--amber); }
+  .folds {
+    &:empty { display: none; }
+    > details { padding: 10px 0; background: none; border: 0; border-top: 1px solid var(--line); }
+    > details > summary { color: var(--soft); font-size: 14px; font-weight: 600; text-transform: none; letter-spacing: 0; margin: 0; }
+    > details[open] > summary { margin-bottom: 6px; }
+    p { margin: 0 0 8px; color: var(--soft); font-size: 14px; }
+  }
 
   .head {
-    .n { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+    .n { display: block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     h1 { margin: 2px 0 6px; font-size: 24px; font-weight: 800; line-height: 1.2; }
     p { margin: 0 0 4px; }
   }
@@ -132,17 +182,12 @@
     .fail { color: var(--amber); font-weight: 700; }
     button { margin-left: 6px; }
   }
-  .cpline { color: var(--soft); font-size: 14px; }
   .intro {
     max-width: 1100px; padding: 10px 14px; background: var(--slab); border-left: 3px solid var(--line);
     p { margin: 0; color: var(--text); font-size: 14px; }
     summary { font-size: var(--label); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
     &[open] summary { margin-bottom: 4px; }
   }
-  :is(.info, .cue, .why) p { margin: 0 0 10px; color: var(--soft); font-size: 14px; }
-  .cue p.look { color: var(--amber); margin-bottom: 6px; }
-  :is(.why, .ref) summary { font-size: var(--label); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-  .ref summary { text-transform: none; letter-spacing: 0; font-size: var(--row); font-weight: 600; }
   .fold {
     margin-top: 10px; border-top: 1px solid var(--line); padding-top: 6px;
     summary { color: var(--soft); font-weight: 700; font-size: 14px; }
@@ -152,15 +197,60 @@
   .check ul { color: var(--text); }
   .notebox textarea { height: 72px; }
   .nhint { margin: 2px 0 0; color: var(--amber); font-size: var(--row); &:empty { display: none; } }
+  .notebox textarea[autofocus]::placeholder { color: var(--amber); opacity: 1; }
   .stepnav, .inav { display: flex; gap: 8px; align-items: center; }
   .stepnav [data-act=legend] { margin-left: auto; }
 
-  .flipbar {
-    display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch;
-    .ob { max-width: 320px; }
-    .ob span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status {
+    display: flex; align-items: center; gap: 6px; height: var(--status); padding: 8px 0 12px; border-bottom: 1px solid var(--line);
+    .stxt { flex: 1 1 auto; display: flex; min-width: 0; margin: 0; font-size: var(--row); color: var(--muted); white-space: nowrap; }
+    .sv { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    /* Never cut: the colour-vision value says how the picture's colours are shown. */
+    .vis { flex: none; padding-left: .3em; }
+    .sv:empty + .vis { padding-left: 0; }
+    .btn { height: 32px; padding-inline: 12px; font-size: 12px; }
+  }
+  .viewmenu {
+    position: relative;
+    summary { list-style: none; &::-webkit-details-marker { display: none; } &::after { content: "▾"; } }
+    &[open] summary { color: var(--on-sel); background: var(--sel); border-color: var(--sel); }
+    > .ctlbar {
+      position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; width: max-content; max-width: min(560px, 80vw);
+      flex-direction: column; align-items: stretch; padding: 10px; background: var(--slab); border: 1px solid var(--line);
+    }
+  }
+  .moreof {
+    height: var(--more); padding-top: 12px; overflow: hidden;
+    .extras { display: flex; gap: 12px; margin: 0; overflow-x: auto; }
+    display: flex; gap: 16px; align-items: flex-start;
+    > [data-opt] { min-width: 0; }
+    /* Up to 20 rows: a long table scrolls inside the band, never the page. */
+    .measures { flex: none; align-self: stretch; overflow-y: auto; }
+    figure { flex: 0 0 220px; min-width: 0; }
+    figcaption { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  }
+
+  /* Fills the panel and scrolls, so Pick's place never depends on the list; the line marks where a long list is cut. */
+  .rpanel .opts { display: flex; flex-direction: column; gap: 6px; flex: 1 1 0; min-height: 0; overflow-y: auto; padding-block: 4px; border-bottom: 1px solid var(--line); }
+  .orow {
+    display: block; width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
+    background: var(--quiet); border: 1px solid var(--edge); border-left: 3px solid transparent;
+    &:hover { background: var(--btn); }
+    /* Inside the row, so the scrolling list never clips it. */
+    &:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+    &.sel { background: var(--panel2); border-color: var(--muted); border-left-color: var(--sel); }
+    .ot { display: flex; align-items: flex-start; gap: 8px; font-size: 15px; font-weight: 700; }
+    .ot > :is(kbd, .tag) { margin-top: 2px; }
+    .nm { flex: 1 1 auto; min-width: 0; }
     .fl { font-weight: 800; }
-    .vt { margin-left: auto; }
+    /* Two lines keep every row in the list's box; About repeats notes past the loader's limit. */
+    .onote { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 3px 0 0 26px; font-size: var(--row); color: var(--soft); }
+    &.today { background: transparent; border: 1px dashed var(--edge); .ot { font-weight: 600; color: var(--soft); } }
+    &.today.sel { border-color: var(--sel); }
+  }
+  .rpanel {
+    :is(.notebox, .stepnav) { margin-top: 8px; }
+    .stepnav { flex-wrap: wrap; gap: 6px; .btn { padding-inline: 10px; } }
   }
   .ctlbar {
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
@@ -169,34 +259,34 @@
   .ctlsel {
     display: inline-flex; align-items: center; gap: 4px; font-size: var(--row); font-weight: 600; white-space: nowrap;
     span { color: var(--muted); font-weight: 700; }
-    select { height: 32px; padding-inline: 8px; font-size: 12px; background: var(--well); border: 1px solid var(--line); }
+    select { height: 32px; padding-inline: 8px; font-size: 12px; }
   }
+  /* A field looks like a field: a well framed by a control edge; !important beats Tweakpane's unlayered styles. */
+  :is(.ctlbar select, wr-tune :is(.tp-txtv_i, .tp-lstv_s)) { background: var(--well) !important; border: 1px solid var(--edge) !important; }
   .act, .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  /* Out of flow on the button's top edge, so the Pick keeps its size and place with or without it. */
+  .pick .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
   .act {
     .pick { font-size: 16px; padding-inline: 22px; height: 44px; max-width: 100%; position: relative; }
-    /* Above the button in the 16 px gap, 14 px tall so it never reaches the picture. */
-    .ptab { position: absolute; left: -1px; bottom: calc(100% + 1px); height: 14px; font-size: var(--label); line-height: 1; }
-    .pn { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; &:empty { display: none; } }
+    .pick:disabled { opacity: .45; cursor: not-allowed; }
     &:empty { display: none; }
   }
+  /* A choice step's status line: the scale text left, a small Large at the right edge. */
   .tools {
-    .scale { margin-left: auto; }
-    .scale:empty + [data-act=large] { margin-left: auto; }
+    padding: 8px 0 12px; border-bottom: 1px solid var(--line);
+    .btn { height: 32px; padding-inline: 12px; font-size: 12px; margin-left: auto; }
   }
-  :is(.v-flip, .v-side) :is(.stage, .tiles) + .act, .v-flip .act + .tools { margin-top: 16px; }
-  /* Out of flow so the buttons stay centred on one line. The row keeps room for it: the neutral button ends 2 px inside the 44 px row, then 4 px, the 16 px line and the 16 px gap. */
-  .nwrap { position: relative; display: inline-flex; }
-  .nexplain { position: absolute; left: 0; top: calc(100% + 4px); white-space: nowrap; color: var(--muted); font-size: var(--row); line-height: 16px; }
-  .act:has(.nexplain) { margin-bottom: 34px; }
-  .k-tune .act:has(.nexplain) { margin-bottom: 18px; }
-  .tiles + .act { justify-content: center; }
   .scale { color: var(--muted); font-size: var(--row); &:empty { display: none; } }
 
   .ohd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .let { font-size: 28px; font-weight: 800; line-height: 1; }
   .ohd h2 { margin: 0; font-size: 18px; font-weight: 700; flex: 1 1 200px; min-width: 0; }
-  :is(.detail, .tile) p { margin: 8px 0 0; color: var(--soft); font-size: 14px; max-width: 1000px; }
-  :is(.detail, .tile) p.sees { color: var(--text); }
+  .about p.sees { color: var(--text); }
+  /* Notes only where the row cuts them (warroom.js marks .cut); a fold with nothing else then stays out of sight. */
+  .about:not(.cut) {
+    .onotes { display: none; }
+    &:not(:has(> :not(summary, .onotes))) { display: none; }
+  }
   .chg { font-size: var(--row); }
   .extras { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 12px; }
   .extras figcaption { text-transform: none; letter-spacing: 0; font-size: var(--row); font-weight: 600; }
@@ -204,14 +294,15 @@
   .tiles { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 14px; align-items: stretch; }
   .tile {
     background: var(--slab); border: 2px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 10px;
-    .ohd { min-height: 2.6em; flex-wrap: nowrap; }
-    .ohd h2 { flex: 1 1 0; }
+    /* One 14 px line, so the picture gets the tile's height. */
+    .ohd { flex-wrap: nowrap; }
+    :is(.let, .ohd h2) { font-size: 14px; line-height: 20px; }
+    .ohd h2 { flex: 1 1 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     &.done { border-color: var(--amber); }
     &.sel { border-color: var(--sel); .let { color: var(--sel); } }
     cursor: pointer;
-    details summary { color: var(--muted); font-size: var(--row); }
     &.reft { border-style: dashed; }
-    &.reft h2 { font-size: 15px; color: var(--soft); }
+    &.reft h2 { color: var(--soft); }
   }
 
   .gside {
@@ -220,7 +311,7 @@
     textarea { height: 90px; }
     .inav { margin-top: 8px; }
   }
-  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fit, 150px); justify-content: center; gap: 8px; }
   .th {
     border: 2px solid transparent; background: var(--slab); padding: 2px; display: block;
     &.on { border-color: var(--sel); }
@@ -233,7 +324,6 @@
     .vb.done { outline: 3px solid var(--sel); outline-offset: 3px; }
     textarea { flex: 1 1 100%; height: 72px; }
   }
-  .k-verdict .right .verdict { margin-top: 40px; }
 
   .fields { display: flex; flex-direction: column; gap: 16px; }
   .field {
@@ -249,10 +339,10 @@
     thead { color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; }
     :is(thead tr, tbody tr:not(:last-child)) > * { border-bottom: 1px solid var(--quiet); }
   }
-  #sum {
+  .sumblock {
+    max-width: 1200px;
     h2 { font-size: 18px; margin: 16px 0 0; font-weight: 700; }
     .cnt { margin-left: 8px; }
-    .sum { max-width: 1200px; }
     p { margin: 1em 0; }
     .scroll { margin: 8px 0 20px; }
   }
@@ -326,19 +416,23 @@
     /* Track only: the public --tp-input-* also fill every text field. */
     .tp-sldv_t { --in-bg: var(--muted); }
     /* The knob looks the same focused, so arrow keys need a ring, inside the track so it never touches a neighbour; !important beats Tweakpane's unlayered outline: none. */
+    /* The drag stub beside each number only repeats the slider. */
+    .tp-txtv_k { display: none; }
     .tp-sldv_t:focus-visible { outline: 2px solid var(--text) !important; outline-offset: -2px; }
   }
 
   /* In flight: a page change dims the old page and shows a bar under the chips; note saves do not. */
   body:has(a.htmx-request, form.htmx-request, select.htmx-request) {
     #main { opacity: .55; }
-    .top::after { content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 3px; background: var(--amber); }
+    /* Fixed across the window's top: the chips' header is only as wide as the left panel and scrolls away. */
+    .top::after { content: ""; position: fixed; z-index: 60; left: 0; right: 0; top: 0; height: 3px; background: var(--amber); }
   }
 }
 
 @layer stage {
   figure { margin: 0; }
-  .stage { background: var(--stage); display: flex; justify-content: center; min-height: 120px; }
+  /* Safe: a picture larger than the stage starts at its scrollable edge instead of spilling past both. */
+  .stage { background: var(--stage); display: flex; justify-content: safe center; min-height: 120px; }
   .ostage { width: 100%; display: flex; justify-content: center; }
   .ref .pic { max-width: 420px; }
 
@@ -355,8 +449,9 @@
     &.vid video { display: block; width: 100%; height: auto; background: var(--stage); }
     .hudlayer { position: absolute; border: 0; pointer-events: none; background: transparent; }
   }
-  :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: min(100%, calc((100vh - 280px) * var(--ar))); }
-  :is(.v-flip .stage, .k-gallery .gmain) .pic.img img { width: auto; max-width: 100%; max-height: calc(100vh - 280px); margin: 0 auto; }
+  /* Without a zone (gallery, tune) 280 px stands in for the page above and below the stage. */
+  :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: min(100%, calc((var(--vh) - var(--bars, 280px)) * var(--ar))); }
+  :is(.v-flip .stage, .k-gallery .gmain) .pic.img img { width: auto; max-width: 100%; max-height: calc(var(--vh) - var(--bars, 280px)); margin: 0 auto; }
   .k-tune .stagecol { display: flex; flex-direction: column; gap: 14px; }
 
   .card {
@@ -406,7 +501,7 @@
   [data-cvd=deut] :is(.pic > .sc, .pic img, .pic video) { filter: url(#dp-deut); }
   [data-cvd=prot] :is(.pic > .sc, .pic img, .pic video) { filter: url(#dp-prot); }
   .true100 {
-    :is(.v-flip .stage, .k-gallery .gmain) { overflow: auto; justify-content: flex-start; max-height: calc(100vh - 220px); }
+    .k-gallery .gmain { overflow: auto; justify-content: flex-start; max-height: calc(100vh - 220px); }
     :is(.v-flip .stage, .k-gallery .gmain) .pic[data-cw] { width: calc(var(--cw) * 1px / var(--dpr, 1)); flex: none; }
     :is(.v-flip .stage, .k-gallery .gmain) .pic.img { width: auto; flex: none; }
     :is(.v-flip .stage, .k-gallery .gmain) .pic.img img { width: calc(var(--nw, 1280) * 1px / var(--dpr, 1)); max-width: none; max-height: none; }
@@ -426,26 +521,40 @@
     /* 16 px keeps iOS Safari from zooming the page when a note gets the focus. */
     textarea { font-size: 16px; }
     .chips { padding: 8px 16px; }
-    .step { display: flex; flex-direction: column; align-items: stretch; width: 100%; padding: 12px 16px 24px; gap: 12px; }
+    .step { display: flex; flex-direction: column; align-items: stretch; width: 100%; min-height: 0; padding: 12px 16px 24px; gap: 12px; }
     .step.v-side { gap: 14px; }
-    .step .left, .step .right { display: contents; }
+    .step :is(.lpanel, .cpanel, .rpanel) { display: contents; }
     .step {
-      :is(.intro, .head) { order: 1; } .cue { order: 2; } .why { order: 3; } .stagecol { order: 4; }
-      :is(.detail, .gside, .fields, #sum, .close, .rounds) { order: 5; }
-      .verdict { order: 6; } .thumbs { order: 7; } .info { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
+      :is(.top, .intro, .head) { order: 1; } .look { order: 2; } .stagecol { order: 4; }
+      :is(.rpanel > .h, .opts, .gside, .fields, #sum, .close, .copy, .rounds, .cpanel > .missing) { order: 5; }
+      :is(.moreof, .measures, .verdict, .earlier) { order: 6; } .thumbs { order: 7; } .folds { order: 8; } .notebox { order: 9; } .stepnav { order: 10; }
     }
+    .lpanel .top { position: sticky; z-index: 10; margin: -12px -16px 0; background: var(--well); border-bottom: 1px solid var(--line); }
+    .lpanel .chips { flex-wrap: nowrap; overflow-x: auto; }
     .head h1 { font-size: 20px; }
-    .flipbar, .stepnav, .inav, .stagecol > .ctlbar, :is(.act, .tools) .btn { display: none; }
-    :is(.act, .tools) { margin-top: 0; margin-bottom: 0; }
-    .nexplain { display: none; }
+    .status, .act, .stepnav, .inav, .stagecol > .ctlbar, .tools .btn { display: none; }
+    .tools { margin-top: 0; margin-bottom: 0; padding: 0; border: 0; }
     .tiles { grid-template-columns: minmax(0, 1fr); }
     :is(.v-flip .stage, .k-gallery .gmain, .k-tune .stage) .pic[data-cw] { width: 100%; }
     .ref .pic { max-width: none; }
     .extras { grid-template-columns: minmax(0, 1fr); }
-    .verdict .vb { flex: 1 1 40%; padding-inline: 8px; }
+    .verdict { gap: 10px; padding-top: 0; .vb { flex: 1 1 40%; height: 48px; padding-inline: 8px; min-height: 48px; font-size: 18px; } kbd { display: none; } textarea { margin-top: 0; } }
+    .cpanel > :is(.fields, .missing) { width: auto; margin-inline: 0; }
+    /* Cancels the step's gap, so Copy keeps the spacing it had inside the summary block. */
+    .copy { margin-block: -12px; padding-top: 0; min-height: 0; }
     .opens { flex-basis: 100%; }
     .thumbs { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
-    .true100 :is(.v-flip .stage, .k-gallery .gmain) { max-height: none; }
+    .true100 .k-gallery .gmain { max-height: none; }
+    /* One box on every step and option, so the options under it never jump. */
+    .zone { aspect-ratio: 4 / 3; height: auto; width: 100%; container-type: inline-size; }
+    /* Full width, or full height for a picture taller than the box. */
+    .v-flip .zone .pic[data-cw] { width: min(100%, 75cqw * var(--ar)); }
+    .v-flip .zone .pic.img img { max-height: 75cqw; }
+    /* Tiles stack in one column, so the page scrolls them rather than a box a third of the screen high. */
+    .v-side .zone { aspect-ratio: auto; overflow: visible; }
+    /* The page scrolls on a phone, so the strip needs no reserved height. */
+    .moreof { height: auto; padding-top: 0; }
+    .rpanel .opts { flex: none; overflow: visible; padding: 0; border: 0; }
     .keys { padding: 14px; }
     .keys th { white-space: normal; width: 34%; padding-right: 10px; }
     wr-tune { max-width: none; }
@@ -455,10 +564,13 @@
       background: var(--slab); border-top: 1px solid var(--line); padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
       /* The round list has no bar; without this its padding and border leave a strip at the bottom. */
       &:empty { display: none; }
-      .row { display: flex; gap: 6px; }
+      .row { display: flex; gap: 6px; justify-content: space-between; }
       .row .btn { flex: 1 1 0; min-width: 0; min-height: 48px; height: auto; padding: 4px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .row .arrow { flex: 0 0 52px; font-size: 22px; }
-      .row .pick { flex-grow: 2; }
+      /* One width on every step, wide enough for Claude's tab, so the bar never changes between steps. */
+      .row .pick { flex: 0 0 104px; position: relative; overflow: visible; }
+      /* Room above Pick for Claude's tab, kept on every option so the bar never moves. */
+      .row:has(.ptab) { margin-top: 10px; }
       .row:last-child { flex-wrap: wrap; }
       .row:last-child .btn { flex: 1 1 auto; padding: 4px 10px; }
       .row.opts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }

@@ -24,6 +24,7 @@ class Note:
 	var done: bool = true
 	var tick: int = 0
 	var over: bool = false
+	var survivors: Array[int] = []
 	var events: Array[Dictionary] = []
 	var results: Array[Dictionary] = []
 	var issued: Array[Dictionary] = []
@@ -167,6 +168,7 @@ static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job
 		slot.tick = sim.tick()
 		slot.view = sim.view_state()
 	note.over = sim.match_over()
+	note.survivors = sim.survivors()
 	note.tick = sim.tick()
 	note.stats = sim.match_stats()
 	return note

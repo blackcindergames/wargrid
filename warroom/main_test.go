@@ -208,7 +208,7 @@ func TestOpenCommandListsRoundsWithUnansweredSteps(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := out.String()
-	if strings.Contains(got, "p2-3a1-gate-1") || !strings.Contains(got, "p2-3a1-gate-2\t0 of ") || strings.Contains(got, "demo") {
+	if strings.Contains(got, "p2-3a1-gate-1\t") || !strings.Contains(got, "p2-3a1-gate-2\t0 of ") || strings.Contains(got, "demo") {
 		t.Errorf("open printed %q, want only p2-3a1-gate-2 with 0 answered and no demo rounds", got)
 	}
 }

@@ -26,7 +26,8 @@ type AudioView struct {
 
 type OptView struct {
 	Letter, Name, Reveal string
-	Cp, Picked           bool
+	Key                  string
+	Picked               bool
 	On, Done             bool
 	// Measure: the option's measurement slot; a blind step has none until the pick, since numbers could tell the options apart.
 	Measure              bool
@@ -34,14 +35,18 @@ type OptView struct {
 	Card                 *CardView
 	Audio                *AudioView
 	Sees, Notes, Changes string
-	NotesHead            string
 	Folds                []FoldView
 	Extras               []FigureView
 }
 
+// HasAbout counts notes because About repeats them when the row's two lines cut them; warroom.js decides that.
+func (o *OptView) HasAbout() bool {
+	return o.Sees != "" || o.Changes != "" || len(o.Folds) > 0 || o.Notes != ""
+}
+
 type FlipButton struct {
-	Letter, Name, Key string
-	On, Done          bool
+	Letter string
+	On     bool
 }
 
 type CtlButton struct {
@@ -64,11 +69,30 @@ type CtlBarView struct {
 	Buttons []CtlButton
 }
 
+// StatusItems are the view values the status line lists; colour vision has its own place at the end.
+func (c CtlBarView) StatusItems() []CtlButton {
+	var out []CtlButton
+	for i := range c.Buttons {
+		if b := &c.Buttons[i]; b.Name != "numbers" && b.Name != "cvd" && !b.Disabled {
+			out = append(out, *b)
+		}
+	}
+	return out
+}
+
+// Vision is always named, so a page without the control still says the colours are as seen normally.
+func (c CtlBarView) Vision() string {
+	for i := range c.Buttons {
+		if b := &c.Buttons[i]; b.Name == "cvd" {
+			return b.Value + " vision"
+		}
+	}
+	return "Normal vision"
+}
+
 type ActView struct {
 	Confirm bool
 	Shown   string
-	// ShownName is "· name" for the Pick button, empty when the option has no name.
-	ShownName string
 	// Cp is Claude's pick when the page may show it; the Pick button wears a tab while that option is shown.
 	Cp      string
 	Neutral string
@@ -88,7 +112,6 @@ type ChoiceView struct {
 	Side                bool
 	Shown               string
 	Kind                string
-	Flip                []FlipButton
 	ViewHref, ViewLabel string
 	Ctl                 CtlBarView
 	Opts                []OptView
@@ -115,13 +138,6 @@ func (b *builder) shown(s *rounds.Step) string {
 	return letters[0]
 }
 
-func pickName(name string) string {
-	if name == "" {
-		return ""
-	}
-	return "· " + strings.ReplaceAll(name, "`", "")
-}
-
 func (b *builder) side(s *rounds.Step) bool {
 	view := cmp.Or(b.q.View, s.View)
 	return s.IsChoice() && view == "side" && len(s.Options) > 1
@@ -131,19 +147,18 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 	st := b.stage(s)
 	side := b.side(s)
 	v := ChoiceView{
-		Head: b.head(n, s, record), Info: b.info(st, s, side), Nav: b.nav(n, "Skip"), Side: side, Kind: s.Kind,
+		Head: b.head(n, s, record), Info: b.info(st, s), Nav: b.nav(n), Side: side, Kind: s.Kind,
 		Shown: b.shown(s), Form: FormView{pickURL(b.round, s, b.carry()), s.ChipKey()},
 	}
 	v.Note = b.noteBox(s, hint)
 	v.Opts = b.options(st, s, v.Shown)
 	v.Ctl = b.ctlBar(n, st, s)
-	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, ShownName: pickName(s.Options[v.Shown].Name), Cp: b.rec(s), Neutral: s.Neutral}
-	v.Flip = b.flipBar(s, v.Shown)
+	v.Act = ActView{Confirm: s.IsConfirm(), Shown: v.Shown, Cp: b.rec(s), Neutral: s.Neutral}
 	v.ViewHref, v.ViewLabel = b.viewToggle(n, s, v.Shown)
 	if s.Kind == "lab" {
 		v.Lab = b.lab(n, s)
 	}
-	if side && s.Ref != nil {
+	if s.Ref != nil {
 		v.Ref = &FigureView{s.Ref.Label, b.pics(st).pic(picOf(s.Ref), b.cropOf(s), s.Ref.Label, true)}
 	}
 	v.Large = !side && slices.ContainsFunc(v.Opts, func(o OptView) bool { return o.Pic != nil && o.Pic.Large })
@@ -151,12 +166,14 @@ func (b *builder) choice(n int, s *rounds.Step, record, hint string) ChoiceView 
 }
 
 func (b *builder) noteBox(s *rounds.Step, hint string) NoteView {
-	label := "Optional note for Claude (saved with your pick)"
+	label, placeholder := "Optional note for Claude (saved with your pick)", "Note for Claude (optional)"
 	if s.IsConfirm() {
 		label = "Note (say what to change, or anything else)"
+		placeholder = label
 	}
 	n := b.note(s, s.Key, "note", label)
-	n.InForm, n.Hint = true, hint
+	// The hint sits in the empty note it asks for, so it never moves Pick.
+	n.InForm, n.Hint, n.Placeholder = true, hint, cmp.Or(hint, placeholder)
 	return n
 }
 
@@ -164,10 +181,9 @@ func (b *builder) flipBar(s *rounds.Step, shown string) []FlipButton {
 	if s.IsConfirm() {
 		return nil
 	}
-	pick := b.pickOf(b.round, s.Key)
 	var out []FlipButton
 	for _, l := range s.OptionLetters() {
-		out = append(out, FlipButton{l, cmp.Or(s.Options[l].Name, l), flipKey(l), l == shown, l == pick})
+		out = append(out, FlipButton{l, l == shown})
 	}
 	return out
 }
@@ -210,9 +226,7 @@ func (b *builder) options(st *stage.Stage, s *rounds.Step, shown string) []OptVi
 	revealed := b.revealed(s)
 	for _, l := range s.OptionLetters() {
 		o := s.Options[l]
-		// On a confirm step the tag on the only option adds nothing; the Claude's-pick line under the question stays.
-		cp := b.rec(s) == l && !s.IsConfirm()
-		v := OptView{Letter: l, Name: cmp.Or(o.Name, l), Cp: cp, Picked: pick == l, On: l == shown, Done: l == pick}
+		v := OptView{Letter: l, Key: flipKey(l), Name: cmp.Or(o.Name, l), Picked: pick == l, On: l == shown, Done: l == pick}
 		if s.Blind && revealed {
 			v.Reveal = o.Reveal
 		}
@@ -269,9 +283,6 @@ func textCard(s *rounds.Step, o *rounds.Option) *CardView {
 
 func (b *builder) fillText(v *OptView, pb picBuilder, s *rounds.Step, o *rounds.Option) {
 	v.Sees, v.Notes, v.Changes = o.Sees, o.Notes, o.Changes
-	if o.Sees != "" || s.NotesLabel != "" {
-		v.NotesHead = cmp.Or(s.NotesLabel, "Notes")
-	}
 	crop := s.Crop
 	if o.Render != nil && o.Render.Crop != nil {
 		crop = o.Render.Crop
@@ -334,12 +345,14 @@ func (b *builder) selectOf(c *stage.Ctl, cur string, n int) *SelectView {
 	return sel
 }
 
-// maxCols: past four options side by side the pictures get too small, so the grid wraps; the reference tile comes on top.
-const maxCols = 4
-
+// Cols fills the stage zone: two columns hold up to four tiles at a useful size, three hold five or six; Today counts as a tile.
 func (v *ChoiceView) Cols() int {
+	n := len(v.Opts)
 	if v.Ref != nil {
-		return min(len(v.Opts), maxCols) + 1
+		n++
 	}
-	return min(len(v.Opts), maxCols)
+	if n <= 4 {
+		return 2
+	}
+	return 3
 }

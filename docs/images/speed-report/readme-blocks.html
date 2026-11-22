@@ -1,0 +1,43 @@
+<!-- Frozen copies of the README speed block on main and on honest-speed-report, for the War Room round n14-speed-report. -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>README speed block</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root { color-scheme: dark; }
+body { margin: 0; padding: 24px 32px; background: #0d1117; color: #e6edf3;
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji"; }
+section { max-width: 1100px; margin: 0 auto; display: none; }
+section.on { display: block; }
+p { margin: 0 0 16px; }
+a { color: #4493f8; }
+table { border-collapse: collapse; margin: 0 0 16px; }
+th, td { border: 1px solid #3d444d; padding: 6px 13px; text-align: left; }
+th { font-weight: 600; }
+tr:nth-child(2n) td { background: #151b23; }
+</style></head><body>
+<section id="old">
+<p>Performance against the low-end budget (generated):</p>
+<p><strong>3 of 10 areas over budget</strong></p>
+<table><thead><tr><th>Area</th><th>Status</th><th>Budget used</th><th>vs last run</th><th>As of</th></tr></thead><tbody><tr><td><strong>Background upkeep, huge crowds</strong></td><td>🔴 Over</td><td>██████████▶ 212%</td><td>🔻 2% better</td><td>2026-11-21</td></tr><tr><td><strong>Combat, huge battles</strong></td><td>🔴 Over</td><td>██████████▶ 160%</td><td>➖ same</td><td>2026-11-21</td></tr><tr><td><strong>Background upkeep, armies on the move</strong></td><td>🔴 Over</td><td>██████████▶ 143%</td><td>🔺 1% worse</td><td>2026-11-21</td></tr><tr><td>Drawing the screen, big map (Ashfall)</td><td>🟢 OK</td><td>███████░░░ 74%</td><td>🔻 3% better</td><td>2026-11-21</td></tr><tr><td>Combat, normal fights</td><td>🟢 OK</td><td>███████░░░ 74%</td><td>➖ same</td><td>2026-11-21</td></tr><tr><td>Drawing the screen</td><td>🟢 OK</td><td>███████░░░ 73%</td><td>🔻 3% better</td><td>2026-11-21</td></tr><tr><td>Combat, normal fights, slowest moments</td><td>🟢 OK</td><td>█████░░░░░ 58%</td><td>🔻 1% better</td><td>2026-11-21</td></tr><tr><td>Unit movement</td><td>🟢 OK</td><td>████░░░░░░ 41%</td><td>🔻 1% better</td><td>2026-11-21</td></tr><tr><td>Unit movement, slowest moments</td><td>🟢 OK</td><td>██░░░░░░░░ 24%</td><td>🔻 1% better</td><td>2026-11-21</td></tr><tr><td>Online play overhead</td><td>🟢 OK</td><td>█░░░░░░░░░ 11%</td><td>🔻 1% better</td><td>2026-11-21</td></tr></tbody></table>
+<p>Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.</p>
+<p>Details: <a href="docs/reference/performance.md">performance ledger</a>.</p>
+</section>
+<section id="new">
+<p>Performance against the low-end budget (generated):</p>
+<p><strong>Checked against the limit: nothing over budget</strong></p>
+<table><thead><tr><th>Area</th><th>Status</th><th>Budget used</th><th>vs last run</th><th>As of</th></tr></thead><tbody><tr><td>Drawing the screen, big map (Ashfall)</td><td>🟢 OK</td><td>███████░░░ 74%</td><td>🔻 3% better</td><td>2026-11-21</td></tr><tr><td>Combat, normal fights</td><td>🟢 OK</td><td>███████░░░ 74%</td><td>➖ same</td><td>2026-11-22</td></tr><tr><td>Drawing the screen</td><td>🟢 OK</td><td>███████░░░ 73%</td><td>🔻 3% better</td><td>2026-11-21</td></tr><tr><td>Combat, normal fights, slowest moments</td><td>🟢 OK</td><td>█████░░░░░ 58%</td><td>🔻 1% better</td><td>2026-11-22</td></tr><tr><td>Unit movement</td><td>🟢 OK</td><td>████░░░░░░ 42%</td><td>🔺 2% worse</td><td>2026-11-22</td></tr><tr><td>Unit movement, slowest moments</td><td>🟢 OK</td><td>██░░░░░░░░ 24%</td><td>🔺 1% worse</td><td>2026-11-22</td></tr><tr><td>Online play overhead</td><td>🟢 OK</td><td>█░░░░░░░░░ 11%</td><td>🔻 3% better</td><td>2026-11-22</td></tr><tr><td>Smooth on a Steam Deck in Firefox, 3v3 match</td><td>Not measured yet</td><td></td><td></td><td></td></tr></tbody></table>
+<p>Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.</p>
+<p><strong>Tracked, no route under the limit yet</strong></p>
+<p>These areas are over their limit and no known change brings them under it yet, so they show only how they move: the last run against the median of the three runs before it, with a change inside the run-to-run spread shown as same. Stress = far more units than a real match; headroom = a real 3v3 match on this Mac. Every limit is in the ledger.</p>
+<table><thead><tr><th>Area</th><th>Change on this Mac</th><th>As of</th></tr></thead><tbody><tr><td>Background upkeep, huge crowds (stress)</td><td>same as 2026-11-21, mean 1.92 ms</td><td>2026-11-22</td></tr><tr><td>Combat, huge battles (stress)</td><td>same as 2026-11-21, p95 2.92 ms</td><td>2026-11-22</td></tr><tr><td>Background upkeep, armies on the move (stress)</td><td>same as 2026-11-21, mean 1.30 ms</td><td>2026-11-22</td></tr><tr><td>Combat, big armies in the open (stress)</td><td>same as 2026-11-21, p95 1.89 ms</td><td>2026-11-22</td></tr><tr><td>Combat, big armies packed close (stress)</td><td>same as 2026-11-21, p95 1.85 ms</td><td>2026-11-22</td></tr><tr><td>3v3 match, background upkeep (headroom)</td><td>same as 2026-11-21, mean 1.12 ms</td><td>2026-11-22</td></tr><tr><td>3v3 match, simulation (headroom)</td><td>first run, p95 2.17 ms</td><td>2026-11-22</td></tr><tr><td>3v3 match, bots and simulation (headroom)</td><td>first run, p95 2.88 ms</td><td>2026-11-22</td></tr></tbody></table>
+<p>Details: <a href="docs/reference/performance.md">performance ledger</a>.</p>
+</section>
+<script>
+(function () {
+  var m = /(?:^|[#&])shot=([a-z]+)/.exec(location.hash), want = m ? m[1] : null;
+  var all = document.querySelectorAll("section");
+  for (var i = 0; i < all.length; i++) {
+    if (!want || all[i].id === want) all[i].className = "on";
+  }
+})();
+</script></body></html>

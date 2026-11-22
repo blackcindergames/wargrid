@@ -11,7 +11,7 @@ import (
 type PhoneView struct {
 	Prev, Next          string
 	Flip                []FlipButton
-	Shown               string
+	Shown, Cp           string
 	Pick, Confirm       bool
 	Tuned               bool
 	Neutral             string
@@ -23,7 +23,7 @@ type PhoneView struct {
 }
 
 // maxFlipInRow: more option buttons than this get their own rows, so each stays a thumb wide.
-const maxFlipInRow = 4
+const maxFlipInRow = 3
 
 func (p *PhoneView) FlipRow() bool { return len(p.Flip) > maxFlipInRow }
 
@@ -38,6 +38,7 @@ type LegendView struct {
 
 var legendKeys = []LegendRow{
 	{"A B C D or 1 to 8", "show that option (E to H: 5 to 8 only; side by side: select it, or click its tile)", false},
+	{"0", "show Today, the picture as it is now (only to look: Pick waits until you show an option)", false},
 	{"Enter", "pick the shown option, record it and go on", false},
 	{"W", "one at a time / side by side", false},
 	{"← → (or [ ], Backspace)", "previous / next step without picking", false},
@@ -102,7 +103,7 @@ func (b *builder) phoneBase(n int, ctl CtlBarView) PhoneView {
 
 func (b *builder) choicePhone(n int, s *rounds.Step, v *ChoiceView) *PhoneView {
 	p := b.phoneBase(n, v.Ctl)
-	p.Flip, p.Shown, p.Confirm, p.Pick = v.Flip, v.Shown, v.Act.Confirm, !v.Act.Confirm
+	p.Flip, p.Shown, p.Cp, p.Confirm, p.Pick = b.flipBar(s, v.Shown), v.Shown, v.Act.Cp, v.Act.Confirm, !v.Act.Confirm
 	p.Neutral, p.Play, p.Note = s.Neutral, s.Kind == "audio", true
 	if len(s.Options) > 1 {
 		p.ViewHref, p.ViewLabel = v.ViewHref, "Side"

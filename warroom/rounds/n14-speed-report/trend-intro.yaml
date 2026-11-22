@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: text
+question: 'Advisory: how should the tracked table introduce itself?'
+why: >-
+  The tracked rows show no colour and no percent of a limit. The intro is the one place the README says
+  they are over their limit.
+rec: A
+recWhy: says plainly that these rows are over, so the green checked table does not read as the whole story.
+neutral: Keep the built text
+card:
+  title: Tracked table, intro under its heading
+  lines:
+  - null
+options:
+  A:
+    name: Says they are over (as built)
+    text: >-
+      These areas are over their limit and no known change brings them under it yet, so they show only how
+      they move: the last run against the median of the three runs before it, with a change inside the
+      run-to-run spread shown as same. Stress = far more units than a real match; headroom = a real 3v3
+      match on this Mac. Every limit is in the ledger.
+    notes: Honest about the miss; three sentences.
+  B:
+    name: Neutral
+    text: >-
+      Trend only: how these areas move from run to run, against the median of the three runs before. Stress
+      = far more units than a real match; headroom = a real 3v3 match on this Mac. Limits are in the ledger.
+    notes: Shorter; does not say they are over.
