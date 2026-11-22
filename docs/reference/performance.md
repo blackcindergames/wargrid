@@ -9,39 +9,39 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | --- | --- | --- | --- | --- |
 | **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | ➖ same | 2026-11-22 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame** | 🔴 Over | ██████████▶ 188% | 🆕 first run | 2026-11-22 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | 🔻 2% better | 2026-11-22 |
-| **3v3 match, bots and simulation (real 3v3)** | 🔴 Over | ██████████▶ 158% | 🔻 12% better | 2026-11-22 |
+| **3v3 match, bots and simulation (real 3v3)** | 🔴 Over | ██████████▶ 179% | 🔺 13% worse | 2026-11-22 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 164% | 🔺 2% worse | 2026-11-22 |
+| **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 147% | 🔺 24% worse | 2026-11-22 |
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | ➖ same | 2026-11-22 |
-| **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 123% | 🔻 5% better | 2026-11-22 |
-| **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 119% | 🔻 20% better | 2026-11-22 |
+| **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 124% | 🔺 1% worse | 2026-11-22 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-22 |
 | Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-22 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔻 4% better | 2026-11-22 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | ➖ same | 2026-11-22 |
-| Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔻 6% better | 2026-11-22 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 6% better | 2026-11-22 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-22 |
+| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 5% worse | 2026-11-22 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔺 3% worse | 2026-11-22 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 3% worse | 2026-11-22 |
 
 Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 42% of budget (auto 86a245e3, 2026-11-22), 6% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread up to 50%
-- movement p99: 24% of budget (auto 86a245e3, 2026-11-22), 6% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 74% of budget (auto 86a245e3, 2026-11-22), unchanged vs P7 part 1 enemy bots (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 59% of budget (auto 86a245e3, 2026-11-22), unchanged vs P7 part 1 enemy bots (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 160% of budget, exceeded (auto 86a245e3, 2026-11-22), 2% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 143% of budget, exceeded (auto 86a245e3, 2026-11-22), unchanged vs P7 part 1 enemy bots (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 212% of budget, exceeded (auto 86a245e3, 2026-11-22), unchanged vs P7 part 1 enemy bots (worst vs worst); run-to-run spread not measured
+- movement p95: 44% of budget (auto 91f5f084, 2026-11-22), 5% slower than auto 86a245e3 (worst vs worst); run-to-run spread up to 50%
+- movement p99: 25% of budget (auto 91f5f084, 2026-11-22), 3% slower than auto 86a245e3 (worst vs worst); run-to-run spread up to 50%
+- combat gated p95: 74% of budget (auto 91f5f084, 2026-11-22), unchanged vs auto 86a245e3 (worst vs worst); run-to-run spread up to 58%
+- combat gated p99: 59% of budget (auto 91f5f084, 2026-11-22), unchanged vs auto 86a245e3 (worst vs worst); run-to-run spread up to 58%
+- combat stress p95: 164% of budget, exceeded (auto 91f5f084, 2026-11-22), 2% slower than auto 86a245e3 (worst vs worst); run-to-run spread up to 41%
+- plumbing, movement layouts: 143% of budget, exceeded (auto 91f5f084, 2026-11-22), unchanged vs auto 86a245e3 (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 212% of budget, exceeded (auto 91f5f084, 2026-11-22), unchanged vs auto 86a245e3 (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 73% of budget (P7 part 1 enemy bots, 2026-11-22), 1% faster than tooling-night merge (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 71% of budget (P7 part 1 enemy bots, 2026-11-22), 4% faster than tooling-night merge (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (auto 86a245e3, 2026-11-22), 3% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (auto 91f5f084, 2026-11-22), 3% slower than auto 86a245e3 (worst vs worst); run-to-run spread not measured
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
-- 3v3 upkeep: 123% of budget, exceeded (auto 86a245e3, 2026-11-22), 5% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread not measured
-- 3v3 sim p95: 119% of budget, exceeded (auto 86a245e3, 2026-11-22), 20% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread not measured
-- 3v3 bots + sim p95: 158% of budget, exceeded (auto 86a245e3, 2026-11-22), 12% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread not measured
+- 3v3 upkeep: 124% of budget, exceeded (auto 91f5f084, 2026-11-22), 1% slower than auto 86a245e3 (worst vs worst); run-to-run spread not measured
+- 3v3 sim p95: 147% of budget, exceeded (auto 91f5f084, 2026-11-22), 24% slower than auto 86a245e3 (worst vs worst); run-to-run spread not measured
+- 3v3 bots + sim p95: 179% of budget, exceeded (auto 91f5f084, 2026-11-22), 13% slower than auto 86a245e3 (worst vs worst); run-to-run spread not measured
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
