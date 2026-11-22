@@ -14,7 +14,7 @@ Researched questions for the user's design wizard: one short question at a time,
 | [next-m76-hud.md](next-m76-hud.md) | HUD (M7.6) | answered 2026-11-09; HUD v2 mock-up review points open for M7.6 planning |
 | [hud-modern-recheck.md](hud-modern-recheck.md) | HUD answers re-checked against modern RTS (M7.6) | answered 2026-11-09 (click page) |
 | [next-m8-bot-economy.md](next-m8-bot-economy.md) | Bot economy (M8) | open |
-| [next-economy-late-income.md](next-economy-late-income.md) | Late-game income: capture points and caps on passive income (Q8 to Q11 would revise ground batch A answers) | Q1, Q2, Q4, Q6, Q7 answered 2026-11-22 (hybrid economy frame); Q3, Q5, the counts in Q8 to Q11, Q12 to Q15 open |
+| [next-economy-late-income.md](next-economy-late-income.md) | Late-game income: capture points and caps on passive income (Q8 to Q11 would revise ground batch A answers) | answered 2026-11-22 (hybrid economy frame, late-income wizard round); Q5 waits on measurement |
 | [next-bot-attack-reach.md](next-bot-attack-reach.md) | Bot attack reach | open, partly overtaken by the 2026-11-09 wave fix |
 | [next-m81-styles.md](next-m81-styles.md) | Difficulty and play styles (M8.1) | open |
 | [next-bots-fair-human.md](next-bots-fair-human.md) | Fair, human and challenging bots (P7, M8, M8.1) | Q1, Q3-Q5, Q7-Q15 answered 2026-11-18; Q2, Q6 overtaken by the six-level design |

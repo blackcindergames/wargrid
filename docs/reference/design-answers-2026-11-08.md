@@ -1494,6 +1494,15 @@ War Room round `p2-3b-dock` (`warroom/rounds/p2-3b-dock/`), drawn as `p23b-*` st
 - **Cost you cannot afford (3-2, advisory):** `warn` plus a non-colour mark about money, not the warning triangle: a solid 15 px `warn` coin with `$` cut out in the cell's fill, 4 px after the cost (the owner found the 11 px outline coin's `$` too small to read). Cost numbers stay bare.
 - **War Room:** the Pick button names only the letter (`Pick B`), so its width never changes. The step page gets fixed zones (a fixed-height stage with the picture centred, so the Pick row never moves) with the War Room layout package.
 
+## P2.3b top strip round (user, 2026-11-22)
+
+War Room round `p2-3b-topstrip` (`warroom/rounds/p2-3b-topstrip/`), drawn as `ts-*` and `ts-card-*` states of the HUD v5 states page, for the P2.3b riders of 2026-11-22 (compact slabs instead of the full-width bar; a purchase you cannot afford forecasts below zero). Blocking, since the look was the question; player-experience pass before the owner's look. All three picks are the recommendations.
+
+- **Shape (D):** two slabs top left at (8, 8), 8 px apart, each hugging its content at rest. While the pointer is on the build card or a building is armed, both hold the width of their widest forecast, so nothing on the strip moves until the pointer leaves the card or the building is placed or cancelled; the planned residents right of power (production strip, income readout, idle collectors chip) then never jump. FRC shows the credits slab alone. Zero Hour shows money as one unsigned number with no forecast (GeneralsGameCode `afc2a103f`, `GeneralsMD/Code/GameEngine/Source/GameClient/InGameUI.cpp:2041-2048`).
+- **Below zero (B):** the forecast number in `warn` plus the solid `$` coin of the cells (P2.3b round, 2026-11-21), 4 px after it, so one mark means "short of credits" on strip and card. Power still forecasts when credits are short.
+- **Label (A):** no `PREVIEW` label; the arrow and the 1 px `sel` frame on a slab whose number changes mark the forecast. Replaces the as-built label of P2.3a1.
+- **Open for the build:** Godot measures the widest forecast form itself, as `hud.gd` does for today's strip; whether a hover forecast clears in the gaps between cells (`hud.gd:480-481`, inferred, not reproduced) matters less under D, which holds for the whole card.
+
 ## Fun-first prep (user, 2026-11-21)
 
 Owner answers for night 8 Play on after a leave and the three fun-first packages (P2.3b, P7, P15). Before answering the 71 fun-first rows, three research passes ran first, over primary web sources, the reference engines and Zero Hour's code and data (user, 2026-11-21; private reports `research-web.md`, `research-projects.md`, `research-zh.md`); the rows are in the private `owner-questions-v2.md`, each with the Zero Hour default and a recommendation. Its 54 "accept as recommended" rows were accepted as recommended (user, 2026-11-21) and are listed below with the asked rows. Row 3-1 and the War Room pictures are in [P2.3b War Room round](#p23b-war-room-round-user-2026-11-21) and not repeated here.
@@ -1627,6 +1636,8 @@ Plan not written; private input `p15-data.md`.
 - **Kind-row cap (15-10):** first in the package, roster order unchanged (user, 2026-11-21).
 - **Card slot (15-11):** the heavy goes last on the factory card, keys stay put (user, 2026-11-21).
 - **Display names (15-12):** `usa_heavy_tank` Heavy Tank, `china_heavy_tank` Twin-Gun Tank, `frc_heavy_tank` Scrap Tank, `frc_suicide_infantry` Sapper; named by weight, role or look like today's roster; Zero Hour's names (Paladin, Overlord, Marauder, Terrorist) stay source references only ([blueprint](../blueprint.md) §14) (user, 2026-11-22).
+- **Heavy tank looks (15-13):** the three heavies get very different silhouettes per faction, as Zero Hour's do; the China heavy should be as iconic as Zero Hour's Overlord, in Wargrid's own geometric shapes, never a copy. Picked in a blocking War Room round before P15's first slice, since the look is the question; the round draws the FRC Scrap Tank in its three salvage tiers, which today show only in the weapon sound (`sound_cues.gd:24-27`) (user, 2026-11-22).
+- **Balance checks (15-14):** before the owner's match, two headless checks: the Scrap Tank at tier 0 and 2 against the China heavy and the kills it needs to reach tier 2 (Zero Hour's tier 2 gun does about twice the Overlord's damage per second on paper, on less than half its health, `weapon.ini:75-93`, `:235-256`); and the USA heavy against rocket infantry without its point-defence laser (`americavehicle.ini:1971-1976`), with a higher health bonus than 15-4's or the laser as its own small package if it clearly loses (user, 2026-11-22).
 
 ## Hybrid economy frame (user, 2026-11-22)
 
@@ -1645,3 +1656,27 @@ Input: the owner's brief on a hybrid economy with strategic locations (private `
 - **Research:** the four engines with local source (Zero Hour, Warzone 2100, Zero-K, OpenRA) plus one fetched primary source for Dawn of War's strategic points and listening posts; Company of Heroes is left out (user, 2026-11-22).
 - **Placement:** a Later item of its own, Fight over income points, split from map life; the design proposal says what it needs (capture, fog or not, bots, maps) and the owner places it then (user, 2026-11-22).
 - **Open for the design:** where points sit on each map (Ashfall has 8 derrick spots, the others were not found), a point whose building dies, a leaver's points, how bots take and contest points, the HUD's income display, the faction look, and every number above.
+
+## Late-income wizard round (user, 2026-11-22)
+
+The open questions of [late-game income](../questions/next-economy-late-income.md) after the [hybrid economy frame](#hybrid-economy-frame-user-2026-11-22). Q8 to Q11 revise the uncapped ground batch A answer.
+
+- **Q3, where points come from:** Zero Hour's derrick spots plus points added in Wargrid's map data, so every map has a set number per player (user, 2026-11-22). The owner doubts that Zero Hour's derrick spots sit where Dawn of War's strategic points would; the design checks each map's spots against that and may move or add points.
+- **Q8, which sources get a limit:** each kind on its own: Supply Drop Zone, Black Market, Internet Center and Hackers (user, 2026-11-22).
+- **Q9, how many:** 2 Supply Drop Zones and 2 Black Markets per player; the Internet Center stays at 1 (user, 2026-11-22). The owner flagged the USA and FRC gap this leaves at Zero Hour rates (1,500 against 1,200 per minute, inferred); Q11 closes it.
+- **Q10, Hackers:** earn only inside the Internet Center, whose slots drop from Zero Hour's 8 to 4, so the building is the Hacker cap (user, 2026-11-22). At Zero Hour rates that pays about 670 per minute, 1,330 at Heroic (inferred); the owner flagged the balance against USA and FRC, closed by Q11.
+- **Q11, pay:** each faction's full capped set pays the same total; 1,200 per minute is provisional, and the figure is set by the bot-match measurement of the frame, below one working depot as the cap rule requires (user, 2026-11-22). Factions differ in how their passive income can be raided (planes, a capturable market, killable Hackers), not in how much. Zero Hour's per-building rates are replaced.
+- **Q12, a destroyed building:** the Dawn of War way: the point itself is never destroyed, only captured. In step 1 the derrick can be captured but not destroyed; in step 2 the post shields its point, and destroying it loses its upgrades and their pay and opens the point to capture, while its holder may rebuild (user, 2026-11-22). Source: fan wikis only, no primary source found (private `research/dawn-of-war-points-2026-11-22.md`); a departure from Zero Hour, where a destroyed derrick is gone for good.
+- **Q13, capture bonus:** 1,000 once per point per match, to the first owner only, as Zero Hour (`AutoDepositUpdate.cpp:120-141`) (user, 2026-11-22).
+- **Q14, bots:** every level captures and upgrades nearby free points; from Regular up bots also attack enemy points (user, 2026-11-22).
+- **Q15, look:** step 1 keeps one neutral derrick shown in its owner's colour; step 2's post gets one shape per faction with the same numbers (user, 2026-11-22).
+
+## Income points proposal round (user, 2026-11-22)
+
+Questions from writing the [income points proposal](../superpowers/specs/2026-11-22-income-points-design.md) and its builder and player-experience checks.
+
+- **Point layout:** two points per seat, one home point near its own start and one contested point between opposing seats or in the centre; Zero Hour derrick spots kept where they fit, Ashfall's four pairs merged into single contested points (user, 2026-11-22).
+- **Approach:** a point is a neutral, invulnerable derrick building with an owner, a capture timer and a payout; not a map zone, not part of batch B's Capture Building (user, 2026-11-22).
+- **Floor before batch A:** step 1 waits for ground batch A's capped passive set, so a player who ignores points never runs out of income once the piles are empty; no pre-owned home point, no temporary trickle (user, 2026-11-22).
+- **Switch:** "Income points" is a lobby match setting, on by default, synced with the match settings (user, 2026-11-22).
+- **Capture times:** the proposal's 20 s capture and 7 s neutralise are a starting point, tuned by playtest; 30 s and 10 s is the second pair to try (user, 2026-11-22).
