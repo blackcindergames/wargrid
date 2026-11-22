@@ -521,8 +521,10 @@ func test_f23_placement_closes_when_builder_dies(runner) -> bool:
 	main.driver.pump.live().remove_object(1)
 	publish(main)
 	runner.check(main.orders._placement_kind.is_empty(),"F23 placement closes when its builder dies, still '%s'" % main.orders._placement_kind)
+	runner.check(main.hud.refusal == "Builder lost","F23 the refusal after the builder dies reads Builder lost, got '%s'" % main.hud.refusal)
 	hover(main,Iso.world_to_plane(Vector2(12.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(12.25,4.25)),MOUSE_BUTTON_LEFT,false)
+	runner.check(main.driver.queued().is_empty(),"F23 the click after the builder died queues nothing, held %d" % main.driver.queued().size())
 	tick(main)
 	runner.check(not hud_text(main).contains("Invalid builder_id") and main.driver.queued().is_empty(),"F23 no build for a dead builder is sent or refused, HUD '%s'" % main.hud.refusal)
 	main.free()
@@ -538,6 +540,9 @@ func test_f23_builder_dies_in_the_click_step(runner) -> bool:
 	main.driver.pump.live().remove_object(1)
 	tick(main)
 	runner.check(main.orders._placement_kind.is_empty(),"F23 placement closes after the refused build of a dead builder, still '%s' with '%s'" % [main.orders._placement_kind, main.hud.refusal])
+	runner.check(main.hud.refusal == "Builder lost","F23 the refusal after a refused build of a dead builder reads Builder lost, got '%s'" % main.hud.refusal)
+	var errors: int = main._sound.last_requests().filter(func(request: Dictionary) -> bool: return request.cue == "error").size()
+	runner.check(errors == 1,"F23 one error cue for the refused build and the lost builder, got %d" % errors)
 	main.free()
 	return true
 

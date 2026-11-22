@@ -26,6 +26,8 @@ var _preview_origin: Vector2i
 var _preview_key: Array = []
 var _attack_move_mode: bool = false
 var _awaiting_build: String = ""
+# Its refusal already beeped; the Builder lost line of the same frame stays quiet.
+var _build_refused: bool = false
 # Any submit, re-arm or Esc after the build click bumps this, so a late refusal reopens placement only over an untouched selection.
 var gestures: int = 0
 var _awaiting_from: Array = []
@@ -112,8 +114,9 @@ func prune(state: Dictionary) -> void:
 	if HudModel.inspected(state, inspected_id).is_empty(): inspected_id = -1
 	if _sub_grid and _builder() == -1: _sub_grid = false
 	if not _placement_kind.is_empty() and _builder() == -1:
+		var sound: String = "" if _build_refused else "error"
 		_clear_placement()
-		_screen.refuse("Builder lost")
+		_screen.refuse("Builder lost", sound)
 
 func view_selection() -> Array[int]:
 	var ids: Array[int] = []
@@ -231,6 +234,7 @@ func answered(answer: Dictionary) -> void:
 	if _awaiting_build.is_empty() or answer.command.get("type") != "build": return
 	var kind: String = _awaiting_build
 	_awaiting_build = ""
+	_build_refused = not answer.ok
 	var online: bool = _screen.driver.closes_placement_on_click()
 	if answer.ok and not online: _clear_placement()
 	# A gesture begun since the click keeps its release; reopening would turn it into a build.
@@ -382,6 +386,7 @@ func _enter_placement(kind: String) -> void:
 
 func _clear_placement() -> void:
 	_placement_kind = ""
+	_build_refused = false
 	_screen.driver.request_preview({})
 	var empty: Array[Vector2i] = []
 	_screen._view.set_build_preview(empty,false)
