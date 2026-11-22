@@ -163,17 +163,77 @@ def landed(log: str) -> dict[date, collections.Counter[str]]:
     return lines
 
 
+def _first_message(path: Path) -> str:
+    for event in _events(path):
+        content = (event.get("message") or {}).get("content")
+        if event.get("type") != "user" or event.get("isMeta") or not content:
+            continue
+        if isinstance(content, list):
+            content = " ".join(block.get("text", "") for block in content if block.get("type") == "text")
+        content = content.strip()
+        if content and not content.startswith(("<system-reminder>", "<local-command", "<command-name>/clear")):
+            return content
+    return ""
+
+
+def session_label(path: Path) -> str:
+    text = _first_message(path)
+    handoff = re.search(r"([\w.-]+)-prompt\.txt", text)
+    command = re.search(r"<command-name>(/\S+)</command-name>", text) or re.match(r"(/\S+)", text)
+    if handoff:
+        return handoff.group(1)
+    return command.group(1) if command else " ".join(text.split())[:40]
+
+
+def package_ids(text: str) -> dict[str, str]:
+    ids = re.findall(r"^\| (P\d[\w.]*) \|", text, re.M)
+    return {_squash(i): i for i in sorted(ids, key=len, reverse=True)}
+
+
+def _squash(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+# shortcut: a lane counts as a player package when its label starts with a package id, upgrade to a lane tag in the handoff when names stop matching.
+def _package_of(name: str, ids: dict[str, str]) -> str | None:
+    squashed = _squash(name.removeprefix("wargrid-wt-"))
+    return next((i for i in ids if squashed.startswith(i) and not squashed[len(i) :][:1].isdigit()), None)
+
+
+def player_packages(rows: list[tuple[str, int]], ids: dict[str, str]) -> str:
+    shares: collections.Counter[str] = collections.Counter()
+    for name, processed in rows:
+        found = _package_of(name, ids)
+        if found:
+            shares[ids[found]] += processed
+    total = sum(processed for _name, processed in rows)
+    line = "  player packages: %d %%" % round(100 * sum(shares.values()) / total if total else 0)
+    if shares:
+        line += " (%s)" % ", ".join("%s %dM" % (i, n // 10**6) for i, n in shares.most_common())
+    return line
+
+
+def _package_table() -> dict[str, str]:
+    try:
+        return package_ids((Path(__file__).resolve().parent.parent / "docs" / "packages.md").read_text())
+    except OSError:
+        return {}
+
+
 def lanes(days: int, out) -> None:
     since = date.today() - timedelta(days=days - 1)
     prefix = re.sub(r"[^A-Za-z0-9]", "-", str(Path.home())) + "-projects-"
     seen: set = set()  # a resumed session repeats requests of the file it resumed
     tokens: dict[date, collections.Counter[str]] = collections.defaultdict(collections.Counter)
+    labels: dict[str, str] = {}
     for directory in (Path.home() / ".claude" / "projects").glob(prefix + "wargrid*"):
         lane = directory.name.removeprefix(prefix)
         for path in directory.rglob("*.jsonl"):
             if path.name == "journal.jsonl":  # workflow journals repeat their agents' requests
                 continue
             key = lane if lane != "wargrid" else "wargrid/" + path.relative_to(directory).parts[0][:8]
+            if lane == "wargrid" and path.parent == directory:
+                labels[key] = session_label(path)
             for day, processed in claude_by_day(path, seen).items():
                 if day >= since:
                     tokens[day][key] += processed
@@ -183,12 +243,15 @@ def lanes(days: int, out) -> None:
         text=True,
         check=True,
     ).stdout
-    lines = landed(log)
+    lines, ids = landed(log), _package_table()
     for offset in range(days):
         day = since + timedelta(days=offset)
         print("== %s processed %dM" % (day, sum(tokens[day].values()) // 10**6), file=out)
         for key, processed in tokens[day].most_common(9):
-            print("  %6dM  %s" % (processed // 10**6, key), file=out)
+            print("  %6dM  %s" % (processed // 10**6, key) + (f"  {labels[key]}" if labels.get(key) else ""), file=out)
+        if ids:
+            rows = [(labels.get(key) or key, n) for key, n in tokens[day].items()]
+            print(player_packages(rows, ids), file=out)
         print(
             "  landed on main (+lines): %s"
             % " ".join(f"{a}={lines[day][a]}" for a in ("game", "tests", "docs", "tools")),

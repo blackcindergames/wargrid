@@ -119,6 +119,42 @@ class SessionUsageTests(unittest.TestCase):
         )
         self.assertEqual([usage.area(path) for path in ("tools/roadmap.py", "README.md")], ["tools", "docs"])
 
+    def test_label_comes_from_first_real_user_message(self):
+        def user(content, **extra):
+            return {"type": "user", "message": {"content": content}, **extra}
+
+        noise = [
+            user("<system-reminder>x</system-reminder>", isMeta=True),
+            user([{"type": "tool_result", "content": "x"}]),
+            user("  "),
+        ]
+        cases = {
+            "Read ~/projects/x-private/docs/p7-bots-prompt.txt first": "p7-bots",
+            "<command-message>kickoff</command-message>\n<command-name>/kickoff</command-name>": "/kickoff",
+            "/wrapup now": "/wrapup",
+            "  one\ntwo " + "x" * 60: "one two " + "x" * 32,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            for text, label in cases.items():
+                path = write(directory, "s.jsonl", [*noise, user([{"type": "text", "text": text}]), user("later")])
+                self.assertEqual(usage.session_label(path), label)
+            self.assertEqual(usage.session_label(write(directory, "s.jsonl", noise)), "")
+
+    def test_package_share_matches_longest_id_and_whole_numbers(self):
+        table = "| # | Name |\n|---|---|\n| P2 | a |\n| P2.3b | b |\n| P1 | c |\n| P15 | d |\n| P7 | e |\n"
+        ids = usage.package_ids(table)
+        self.assertEqual(list(ids), ["p23b", "p15", "p2", "p1", "p7"])
+        rows = [
+            ("wargrid-wt-p7bots", 216 * 10**6),
+            ("wargrid-wt-p23b-warroom", 56 * 10**6),
+            ("wargrid-wt-p15x", 10**6),
+            ("wargrid-wt-p11other", 3 * 10**6),
+            ("kickoff", 724 * 10**6),
+        ]
+        self.assertEqual(usage.player_packages(rows, ids), "  player packages: 27 % (P7 216M, P2.3b 56M, P15 1M)")
+        self.assertEqual(usage.player_packages(rows[-1:], ids), "  player packages: 0 %")
+        self.assertEqual(usage.package_ids("no table"), {})
+
     def test_landed_skips_binary_and_generated_files_and_follows_renames(self):
         log = "@2026-11-22\n3\t1\tgame/a.gd\n-\t-\tdocs/x.webp\n5\t0\t{docs => game}/b.gd\n9\t0\twarroom/x_templ.go\n2\t0\tdocs/old.md => tools/new.py\n"
         self.assertEqual(dict(usage.landed(log)[date(2026, 11, 22)]), {"game": 8, "tools": 2})
