@@ -11,11 +11,12 @@ Wargrid is a Godot isometric RTS with geometric 2.5D art, inspired by Zero Hour'
 
 ## Hard limits
 
-- No commit, push, PR, merge or fly deploy without explicit approval. A handoff may pre-authorize local commits.
+- No commit, push, PR, merge or fly deploy without explicit approval. Only the owner pre-authorizes local commits for a run; its handoff records that.
+- Ordinary CI must work without sibling projects or retail game data.
 - Never loosen a budget, tolerance, assertion or pinned outcome to make something pass. Report it as exceeded and ask.
 - Never invent approvals, playtests or measurements. Say what is unverified.
 - Simulation is typed GDScript, advanced by ticks, separate from scenes, rendering, wall-clock time and networking. It follows the [determinism rules](docs/reference/determinism-rules.md). New tests use only the [simulation interface](docs/reference/sim-interface.md).
-- Ask before any visible window and batch such checks. Tests, replays and simulation benchmarks stay headless. The reference game always runs `-headless -noaudio`.
+- Ask before any visible window and batch such checks. Tests, replays and simulation benchmarks stay headless. The reference game always runs `-headless -noaudio`. A UI round may take one batch of offscreen screenshots per screen (rendered to files, no window, no sound) and have a reviewer compare them with the mock-ups before the owner's look.
 - Reference engines (`~/projects/CnC_Generals_Zero_Hour`, `GeneralsGameCode`, `OpenRA`, `RecoilEngine`, `permafrost-engine`) are read-only. Read them for behaviour and values, then write Wargrid's own code. Port only a small algorithm where our own version would be clearly worse, rewritten in typed GDScript with a comment naming repo, revision and path; ported EA code keeps EA's copyright line and a pointer to EA's additional terms.
 - Never copy EA assets, INI or map data, art, audio, text or trademarks. Exception: maps from EA's GPL-released `CnC_Modding_Support`, converted by a repo tool, with EA's copyright line, the source revision and a Wargrid map name. Query Zero Hour data only through `python3 tools/zh_ini.py dump` and `python3 tools/zh_w3d.py dump`; the dumps are never committed.
 - The repository is public. No personal detail, hostnames, LAN addresses, session ids or scratch paths in tracked files; paths are home-relative. `sh tools/check_public.sh` must pass; fix a hit by rewording.
@@ -27,9 +28,10 @@ Wargrid is a Godot isometric RTS with geometric 2.5D art, inspired by Zero Hour'
 1. **One page first.** What the player will notice, the observation that would refute it, the first playable slice, what is out. Look for the refuting observation in data that already exists before running anything new.
 2. **Build the smallest playable slice,** test-first for simulation rules. Then the owner plays it for ten minutes. Measuring and polishing come after that match and aim at what it showed.
 3. **Decide details yourself.** Bar definitions, probe sizes, constants and implementation choices are the coordinator's; list them under "Decided for you" in the report, reversible on the owner's word. Ask the owner only for taste, play results, scope and approvals, with the selector tool and a recommendation. Look decisions run as a [War Room](warroom/README.md) round.
-4. **Harden once, at the end:** pins and traces, one fresh Opus review of the whole branch, the benchmark row, one status line, the affected [guide](docs/guide/README.md) chapter. UI, HUD, controls, art or player-facing text also get the [player-experience reviewer](.claude/agents/player-experience-reviewer.md) before the owner sees them. The [game director](.claude/agents/game-director.md) runs only when the owner asks.
-5. **Night runs** take only work whose acceptance a headless check can decide; follow [night run](docs/night-run.md).
-6. Build only the requested package and stop at its gate. No scaffolding for later systems.
+4. **Harden once, at the end:** pins and traces, one fresh Opus review of the whole branch, the benchmark row, one status line, the affected [guide](docs/guide/README.md) chapter.
+5. **Player experience.** Design specs, plans, playtest cards, mock-ups and diffs touching UI, HUD, controls, art or player-facing text also get the [player-experience reviewer](.claude/agents/player-experience-reviewer.md), beside the correctness reviewer. It runs unasked, before the work is reported done or shown to the owner; not on simulation, relay or tooling-only diffs; typo, rename and comment-only diffs are exempt. The [game director](.claude/agents/game-director.md) runs only when the owner asks.
+6. **Night runs** take only work whose acceptance a headless check can decide; follow [night run](docs/night-run.md).
+7. Build only the requested package and stop at its gate. Writing, editing or approving a plan, or preparing a branch, never starts implementation on its own. No scaffolding for later systems.
 
 ## Commands and environment facts
 
