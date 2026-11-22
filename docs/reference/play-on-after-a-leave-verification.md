@@ -5,15 +5,15 @@ Evidence file and resume record for night 8, [Play on after a leave](../superpow
 ## Resume record
 
 ```text
-Resume record (updated 2026-11-21, Task 10 fix rounds done)
-Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD e4852145; clean once the coordinator commits this edit
-Last green task / next incomplete task: Task 10 fix rounds done (ff76b309, 0404c2fe, e4852145) / 9c benchmark rerun
+Resume record (updated 2026-11-22, 9c benchmark rerun done)
+Branch / base commit / working-tree state: play-on-after-a-leave in ~/projects/wargrid-wt-playon, base main 6bd58ff3; HEAD c6af4507 (benchmark rows); clean once this edit is committed
+Last green task / next incomplete task: 9c benchmark rerun on 6c329a01 (rows c6af4507) / Task 10 stop gate: owner merge decision
 Changed paths since last commit: this file only
-Last command / cases / checks / failures / exit / marker: Task 10 part 2: SUITE exit 0, CASES 1277 CHECKS 152828 FAILURES 0, TRACES x4 REPLAYS MATCHED, lint, warnings (189), Python, boundary, check_public exit 0; this edit: sh tools/check_public.sh exit 0
-Known red case or blocker: 9c benchmark, first attempt exited 1 at run_combat under host load 5-7: simulation-only combat budgets contact, skirmish3v3, transports failed; budgets not loosened; run_lockstep and run_profile never ran
+Last command / cases / checks / failures / exit / marker: 9c `PERF_LABEL="night 8 play on after a leave" sh tools/run_benchmark.sh` on 6c329a01 (night 14, 2026-11-21 23:36): exit 0, LOCKSTEP BUDGET PASS p99 0.067 ms, PAIR GATE PASSED 3, PROFILE COMPLETE 11, recorded 24 rows
+Known red case or blocker: none; BUDGET EXCEEDED open dense hordes300 are report-only stress rows (pair ratios against the reference 0.99 to 1.01), no CEILING ALARM
 Approved decisions, pre-authorizations used, deferred gates: owner answers Q2 a, Q3 a, Q4 a, Q5 a, Q6 a, Q7 b, Q8 a, Q9 a, Q10 b, Q11 b, Q12 a, Q20 a (user, 2026-11-21); Q19 a (user, 2026-11-19); test-only helpers used by new test_pal_* cases allowed (user, 2026-11-21); take(tick, quiet, survivors) signature in sim-interface and the blueprint _left_seat sentence replaced (user, 2026-11-21); gate 9d uses Fable 5.2 high instead of Grok 4.7 (user, 2026-11-21); survivors() returns every match player during setup, option A (user, 2026-11-21); benchmark rerun waits until the p7 session finishes (user, 2026-11-21); Q1, Q13-Q18 moot; backup B1 F42 spike only (user, 2026-11-21). Pre-authorized: one local commit per GREEN task (handoff). Deferred: merge decision, rendered rerun after a merge (game/scripts/match/ changes), CI wall times of the four new netplay scenarios (need the owner's push).
 Usage so far (python3 tools/session_usage.py <session files>): none recorded
-Next exact action: rerun `PERF_LABEL="night 8 play on after a leave" sh tools/run_benchmark.sh` on a quiet host once the p7 session is done; it must reach LOCKSTEP BUDGET PASS and PROFILE COMPLETE 11 (and record team_match_pump:profile); then backup B1
+Next exact action: owner merge decision; after the merge the rendered rerun and the CI wall times below
 ```
 
 Ledger, rulings and morning summary: `ledger.md`, `morning-summary.md` in the run's work folder `~/projects/wargrid-overnight-work/play-on/` (private). Logs: `logs/` there.
@@ -66,7 +66,7 @@ Filled by Task 1 Step 3 (`rg -n '^(static )?(func|var|const|class) <name>\b' <fi
 | 8 | Docs | GREEN; guide chapters 01, 03, 04, 11, 13, development notes, sim-interface, STATUS row; Opus docs review 1 P1, 5 P2, fix round done; owner rulings applied (take signature, blueprint sentence) | e620dbe8, 2ad0c9a4 |
 | 9a | Gate: static checks, suite, traces, conformance | GREEN | none (checks only) |
 | 9b | Gate: netplay scenarios | GREEN | none (checks only) |
-| 9c | Gate: benchmark | BLOCKED on a quiet host; first attempt exit 1 at run_combat under load 5-7, rerun owed | none |
+| 9c | Gate: benchmark | GREEN on 6c329a01: LOCKSTEP BUDGET PASS, PROFILE COMPLETE 11, 24 rows recorded | c6af4507 |
 | 9d | Gate: reviews | done: five reviewers (Opus whole-branch, Fable, silent-failure-hunter, pr-test-analyzer, ponytail-review), 0 P1 | none (reports private) |
 | 10 | Review fixes, stop gate | fix rounds done: part 1 (two surviving mutations killed, `--defeat` validated), part 2 (`survivors()` in setup, option A), footers and comment at the final code tip; stop gate waits for the 9c rerun | ff76b309, 0404c2fe, e4852145 |
 | B1 | F42 spike (evidence only, private note) | not started | none (no repo change) |
@@ -79,7 +79,7 @@ Filled by Task 1 Step 3 (`rg -n '^(static )?(func|var|const|class) <name>\b' <fi
 - `--pump --rematch` is unsupported; a `--defeat` hook landing on a seat's decision tick gives a pumped seat a stale survivors list (Task 6b, 9d).
 - `--defeat` does not check the seat against the match's seats (Task 10).
 - The driver's `_last.tick == _next_tick` guard cannot be observed on the inline pump; kept for SB5a (Task 5).
-- Pump cost (`team_match_pump:profile`, `note.survivors`) is unmeasured until the 9c rerun.
+- Pump cost (9c rerun): PROFILE_PUMP extra 0.0228 ms over the direct tick (1.24 %); `team_match_pump:profile` mean 1.1167 ms, over the 0.91 ms plumbing budget, recorded and not loosened.
 - Unfixed P3 findings are listed in the private ledger.
 - Not checked, waiting for the owner's push: CI wall times of the four new netplay scenarios, Windows CI.
 
@@ -110,3 +110,4 @@ Rows give the commit that carries the task's change; each check ran on that chan
 | 2026-11-21 | 453c2812 + working tree | owner follow-ups | suite; test_pal_; trio-result, trio-left-first, trio-play-on, left-mid-pump; run_checks; two mutations | 0 | 1277 cases 152821 checks 0 failures (count varies by 7 between runs); test_pal_ 27/67/0; four scenarios passed; run_checks 5/5. Changes: `--pump` on trio-result seat 1 (still ends 1201); `lead bound` check in trio-left-first; `NETPLAY LATENCY` assert in trio-play-on; shared `game/tests/seat_fixture.gd` plus `_trio_net` and `_send_left` in test_lockstep (-209/+66 lines in the two suites, +24 fixture; every test and check kept). Mutations: relay logs `lead bound` at tick 100 without refusing, trio-left-first exit 1; `--pump` removed from trio-play-on seat 1, exit 1 (both restored) | trio-result 4 s before, 4 s after (3.5 s, 4.0 s inside) | owner rulings (user, 2026-11-21); logs `followups-*` |
 | 2026-11-21 | 453c2812 + working tree | follow-up review fixes | fresh Opus review (0 P1, 3 P2, 4 P3; `followups-review.md` in the private run folder): `trio-result` asserts the pump marker, guide 11 and 13 passages and footers, comment dropped from `seat_fixture.gd`; `trio-result` NETPLAY PASSED 3.9 s, `run_checks.sh` CHECKS PASSED 5, `WARGRID_TEST_ONLY=pal` 32 / 156 / 0; check-count wobble (152814 / 152821 / 152828, steps of 7, only under host load) pre-existing, not located |
 
+| 2026-11-21 23:36 | 6c329a01 | 9c | `PERF_LABEL="night 8 play on after a leave" sh tools/run_benchmark.sh` | 0 | BENCHMARK PASSED 2, COMBAT BENCHMARK PASSED 10, PAIR GATE PASSED 3, LOCKSTEP BUDGET PASS p99 0.067, PROFILE COMPLETE 11, PROFILE_PUMP extra_pct 1.24; BUDGET EXCEEDED open dense hordes300 (stress rows, report only); 24 rows recorded in c6af4507 | 1.25 to 1.64 | night 14 run; log `logs/gate-bench.log` in the private run folder |
