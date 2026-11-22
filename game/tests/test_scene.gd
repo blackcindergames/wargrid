@@ -69,11 +69,12 @@ func test_ready(runner) -> bool:
 	runner.check(stops.size() == 7 and passes.size() == 4, "S1 panels stop clicks and the wheel, the rest passes, got %s %s" % [stops, passes])
 	runner.check(ProjectSettings.get_setting("physics/common/physics_ticks_per_second") == 30, "S1 tick rate")
 	runner.check(ProjectSettings.get_setting("rendering/renderer/rendering_method") == "gl_compatibility", "S1 renderer")
-	for binding in [["camera_left", KEY_A, KEY_LEFT], ["camera_right", KEY_D, KEY_RIGHT], ["camera_up", KEY_W, KEY_UP], ["camera_down", KEY_S, KEY_DOWN], ["deselect", KEY_ESCAPE]]:
-		for key in binding.slice(1):
-			var event := InputEventKey.new()
-			event.keycode = key
-			runner.check(InputMap.action_has_event(binding[0], event), "S1 action binding " + str([binding[0], key]))
+	for action in ["camera_left", "camera_right", "camera_up", "camera_down"]:
+		runner.check(not InputMap.has_action(action), "S1 no WASD camera action " + action)
+	for binding in [["ui_left", KEY_LEFT], ["ui_right", KEY_RIGHT], ["ui_up", KEY_UP], ["ui_down", KEY_DOWN], ["deselect", KEY_ESCAPE]]:
+		var event := InputEventKey.new()
+		event.keycode = binding[1]
+		runner.check(InputMap.action_has_event(binding[0], event), "S1 action binding " + str(binding))
 	main.free()
 	return true
 
