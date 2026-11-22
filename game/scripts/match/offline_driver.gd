@@ -7,8 +7,13 @@ const SimPump = preload("res://scripts/match/sim_pump.gd")
 const BOTS: Array[int] = [2]
 const FREEZE_NOTICE := "Match stopped"
 const HASH_EVERY: int = 30
+const BOT_LINES_EVERY: int = 30
 
 var pump: SimPump
+var show_bots: bool = false:
+	set(value):
+		show_bots = value
+		if not value: _bot_lines = PackedStringArray()
 var first_note: SimPump.Note
 var _player: int
 var _factions: Dictionary = {}
@@ -21,6 +26,7 @@ var _preview_answer: Dictionary = {}
 var _failure: String = ""
 var _next_tick: int = 0
 var _tick_hashes := PackedStringArray()
+var _bot_lines := PackedStringArray()
 # printerr, not push_error: the test runner fails the suite on ERROR lines.
 var log_error: Callable = func(line: String) -> void: printerr(line)
 
@@ -29,7 +35,7 @@ func _init(player: int) -> void:
 
 func create(map_path: String, starts: Array[int], factions: Dictionary, _match_seed: int) -> void:
 	_factions = factions
-	adopt(Skirmish.create(true, "ai", factions, map_path, starts))
+	adopt(Skirmish.create(true, "human", factions, map_path, starts))
 
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
@@ -39,6 +45,7 @@ func adopt(value: Simulation) -> void:
 	_last = first_note
 	_next_tick = first_note.tick
 	_tick_hashes = PackedStringArray()
+	_bot_lines = PackedStringArray()
 	_queue = []
 	_flushed = []
 	_answers = []
@@ -58,6 +65,7 @@ func step() -> void:
 	job.preview = _preview_request
 	job.stamp_sequence = true
 	job.want_tick_hash = (_next_tick + 1) % HASH_EVERY == 0
+	job.want_bot_lines = show_bots and (_next_tick + 1) % BOT_LINES_EVERY == 0
 	if not pump.post(job):
 		_read_failure()
 		return
@@ -74,10 +82,14 @@ func drain() -> Array[SimPump.Note]:
 	for note: SimPump.Note in notes:
 		_answers.append_array(note.issued)
 		if not note.preview.is_empty(): _preview_answer = note.preview
+		if show_bots and not note.bot_lines.is_empty(): _bot_lines = note.bot_lines
 		# A post after the end leaves the tick standing; only a note whose tick moved is a row.
 		if not note.tick_hash.is_empty() and note.tick > _last.tick: _tick_hashes.append("%d\t%s" % [note.tick, note.tick_hash])
 		_last = note
 	return notes
+
+func bot_line() -> String:
+	return "\n".join(_bot_lines)
 
 func take_answers() -> Array[Dictionary]:
 	var answers: Array[Dictionary] = _answers

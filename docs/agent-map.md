@@ -26,10 +26,6 @@ Read [performance next](reference/performance-next.md) and the user's answers in
 
 Read the spike evidence (tag `archive/spike-avoidance`, `docs/reference/unit-avoidance-spike.md` there) and the user's answers in [design answers](reference/design-answers-2026-11-08.md#unit-avoidance-scope) (user, 2026-11-08).
 
-## Fun-first packages (P2.3b, P7, P15)
-
-They run the lighter process of the [fun-first reorder](superpowers/specs/2026-11-20-fun-first-reorder-design.md): one short design-and-plan file with a player-experience pass before approval, no A/B lab rounds unless the look is the question, one owner check at the end, the gate review (player-experience reviewer included) once at merge (user, 2026-11-20).
-
 ## GDScript checks (`tools/run_lint.sh`, `tools/run_warnings.sh`)
 
 Read the static checks [plan](superpowers/plans/2026-11-05-gdscript-static-checks.md); Task 3 was skipped by the user.

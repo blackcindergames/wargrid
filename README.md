@@ -101,22 +101,38 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 <!-- perf-table:begin -->
 Performance against the low-end budget (generated):
 
-**3 of 10 areas over budget**
+**Checked against the limit: 2 of 9 areas over budget**
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 212% | 🔻 2% better | 2026-11-21 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same | 2026-11-21 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 143% | 🔺 1% worse | 2026-11-21 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-21 |
-| Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-21 |
-| Unit movement | 🟢 OK | ████░░░░░░ 41% | 🔻 1% better | 2026-11-21 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔻 1% better | 2026-11-21 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 1% better | 2026-11-21 |
+| **Steam Deck in Firefox, 3v3 match: CPU time per frame** | 🔴 Over | ██████████▶ 188% | 🆕 first run | 2026-11-22 |
+| **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-22 |
+| Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-22 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔻 4% better | 2026-11-22 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | ➖ same | 2026-11-22 |
+| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 5% worse | 2026-11-22 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔺 3% worse | 2026-11-22 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 3% worse | 2026-11-22 |
 
-Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
+Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
+
+The two Steam Deck rows are one goal. The 3v3 match ran at 58 frames per second there on 2026-11-22, but the CPU work behind a frame must fit in 16.7 ms on most frames (p95) and 33.3 ms on the slowest (p99); the planned worker thread is the route to that, not yet measured on this build.
+
+**Tracked, no route under the limit yet**
+
+These areas are over their limit and no known change brings them under it yet, so they show only how they move: the last run against the median of the three runs before it, with a change inside the run-to-run spread shown as same. Recent runs: one bar per run, oldest first; each step is about 5% above or below those runs' median. Stress = far more units than a real match; real 3v3 = a 3v3 team match measured on this Mac. Every limit is in the ledger.
+
+| Area | Latest on this Mac | Recent runs → | vs recent runs | As of |
+| --- | --- | --- | --- | --- |
+| Background upkeep, huge crowds (stress) | mean 1.93 ms | ▄▄▄▄▅▄▄▄ | ➖ same | 2026-11-22 |
+| Combat, huge battles (stress) | p95 2.98 ms | ▄▄▄▄▅▄▄▄ | ➖ same | 2026-11-22 |
+| Background upkeep, armies on the move (stress) | mean 1.30 ms | ▄▄▄▄▅▄▄▄ | ➖ same | 2026-11-22 |
+| Combat, big armies in the open (stress) | p95 1.92 ms | ▄▄▄▄▅▅▄▄ | ➖ same, -1% (noise ±41%) | 2026-11-22 |
+| Combat, big armies packed close (stress) | p95 1.86 ms | ▄▄▄▄▅▄▄▄ | ➖ same | 2026-11-22 |
+| 3v3 match, background upkeep (real 3v3) | mean 1.13 ms | ▄▄▄▄▅▅▄▄ | 🔻 2% faster | 2026-11-22 |
+| 3v3 match, simulation (real 3v3) | p95 2.68 ms | ▃▄█▃█ | 🔺 19% slower | 2026-11-22 |
+| 3v3 match, bots and simulation (real 3v3) | p95 3.25 ms | ▃▄▆▃▆ | 🔺 9% slower | 2026-11-22 |
 
 Details: [performance ledger](docs/reference/performance.md).
 <!-- perf-table:end -->

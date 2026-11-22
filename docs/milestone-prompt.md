@@ -29,8 +29,7 @@ Next exact action:
 
 Fresh context per task keeps the token saving of the old restart rule (retrospective item 1) without a manual `/clear` (user, 2026-11-06). Start and coordinator rules: [night run](night-run.md#start) and [coordinator rules](night-run.md#coordinator-rules). Milestone-specific:
 
-- **Stop gate.** Dispatch the gate reviewer (below), record its findings, notify the user and end the session (a night run takes its backups instead). Playtest, visible windows, push, PR, merge and outline expansion wait for the user. A gate that ends at an owner look prepares a [War Room](../warroom/README.md) round for it, not a loose page.
-- **Reviewers.** Per-task and gate reviewers: [coordinator rules](night-run.md#coordinator-rules) or the plan's gate line.
+- **Stop gate.** Dispatch the gate reviewers ([How a package runs](../AGENTS.md#how-a-package-runs) step 3), record their findings, notify the user and end the session (a night run takes its backups instead). Playtest, visible windows, push, PR, merge and outline expansion wait for the user. A gate that ends at an owner look prepares a [War Room](../warroom/README.md) round for it, not a loose page.
 - Push only as plain `git push`: the ask rule matches the command prefix, so `git -C … push` would bypass it.
 
 ## Pre-authorized actions
@@ -43,55 +42,12 @@ Granted by the user on 2026-11-03 for milestone runs:
 
 Still require explicit approval: push, PR, merge, visible game windows, design changes, relaxing any budget or assertion.
 
-## Planning rules (used when the milestone plan is written)
+## Engineering lessons
 
-- **Risk first.** Name the 3–5 riskiest contracts, interactions and costs. Task 1 writes their failing tests, or a load spike measured against the [performance ledger](reference/performance.md), before any task depends on them.
-- **Zero Hour values.** Read them from the `python3 tools/zh_ini.py dump` output (`build/zh_ini/inizh.jsonl`) and cite them as entry:line; no hand-written INI decoders.
-- **Interactions.** Every new command gets same-tick cases against every existing command and against removal of its target or actor. Every AI policy rule gets a test using the spec's own wording.
-- **Benchmarks.** Each workload asserts that its mechanics happen inside the timed window, for example each weapon fires or chases and repaths occur. Startup, mass-order, placement and death spikes are reported separately.
 - **Outcome tests.** Never recommend relaxing an assertion; one that fails on real behaviour is a defect until a measurement says otherwise. A tuned system (rates, timings, costs) gets an outcome test against the measured reference (e.g. credits per minute), not only an invariant (e.g. one collector per dock).
 - **New entity states.** Each new state (contained, held, masked) is tested against all existing queries and commands (pick, target, validate, retaliate, salvage, bot), and the whole class is fixed at once (about eight findings came from the contained state).
-- **Long sweeps.** Before a parity or benchmark sweep expected to take over 15 minutes, measure one row end to end and check for caps (frame cap, rate limits) first; the parity harness ran 157 minutes before a 27x speed-up was found. Benchmark runs before the exit gate follow the ledger's [while iterating](reference/performance.md#rule-per-milestone) rule: touched layouts only, one run, sequential A/B pairs.
+- **Long sweeps.** Before a parity or benchmark sweep expected to take over 15 minutes, measure one row end to end and check for caps (frame cap, rate limits) first; the parity harness ran 157 minutes before a 27x speed-up was found. Benchmark runs before the gate follow the ledger's [while iterating](reference/performance.md#rule-per-milestone) rule: touched layouts only, one run, sequential A/B pairs.
 - **Briefs state units.** A coordinator brief states units explicitly and checks them in the repo (e.g. 1 cell = 25 world units, [Zero Hour verification](reference/zero-hour-verification.md)) before it is sent.
-- **Presentation.** HUD changes get a headless layout test, so that no control overlaps status text.
-- **Task contracts.** Each task is written as:
-
-  ```text
-  Task: <one behavior>
-  Owns: <files or helpers it may change>
-  Invariant: <what must stay true>
-  Boundary: <the edge or interaction case>
-  Red: <named behavioral assertion, not a parse error>
-  Green: <named test plus affected suite>
-  Stop: <condition that needs the user>
-  ```
-
-## Gate review
-
-At each stop gate, dispatch one fresh-context Opus (high) whole-branch reviewer, plus the gate set in [night run](night-run.md#coordinator-rules). Give each a brief with:
-
-- the changed contracts and the diff scope since the last review;
-- the previous rulings and findings, which it must not re-raise unless a ruling is wrong;
-- the evidence paths: verification file, ledger, plan section;
-- the instruction to name, for each new test, the production change that makes it fail;
-- read-only scratch copies only for mutations.
-
-A cloud ultra review (`/code-review ultra`) runs only when the user asks; it is costly and its usage is limited. It reviews a branch against a base, so commit unrelated docs and tooling first on a scratch base branch, merge that into the branch, and review against the scratch base (M7: `m7-ultra-base`, `4c6cb53`; delete the scratch branch afterwards).
-
-An empty or one-line report is a failed review. Record it and dispatch a second fresh-context reviewer at once with a narrower brief. Fix critical and important findings test-first, record rulings for the rest, then restart.
-
-## Exit gate
-
-All of the following, run on the final tree, with each result recorded with the tree it ran on:
-
-- full suite;
-- `PERF_LABEL="<milestone task>" sh tools/run_benchmark.sh` with a new ledger row (the label puts the run in `docs/reference/perf-history.csv` and the status table; rendered logs by hand, see the [ledger rule](reference/performance.md)), run alone on a quiet host with the `uptime` load average at start and end in the row;
-- a rendered rerun if presentation changed;
-- CI on Linux and Windows, plus `sh tools/compare_local_traces.sh <run id>` for macOS;
-- one substantive review and one lean-only `/ponytail-review`;
-- the user's playtest.
-
-Report implemented, verified and pending separately.
 
 ## Stop conditions
 

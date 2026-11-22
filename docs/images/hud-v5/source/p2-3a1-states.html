@@ -101,6 +101,15 @@ body{margin:0;background:#0a0f14;color:#dfe7ec;font:15px/1.45 "Public Sans",Aria
 .hud .qt.now{background:var(--panel2)}
 .hud .qt.hov{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--muted)}
 .hud .qt.more{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+/* P2.3b top strip round: slabs side by side, and a hidden widest form that holds a slab's width. */
+.hud .tsrow{display:flex;gap:8px;align-items:flex-start}
+.hud .tsrow>.strip{position:relative}
+.hud .rsv{display:grid}
+.hud .rsv>*{grid-area:1/1}
+.hud .rsv>.ghost{visibility:hidden}
+.hud .neg{display:flex;align-items:center;gap:4px}
+.hud .stat.cr .dl{font-size:13px;color:var(--muted)}
+.hud .stat.cr .dl.warn{color:var(--warn)}
 </style>
 <div id="err"></div>
 <div id="app"></div>
@@ -504,7 +513,7 @@ const DOLLAR_BIG = coin15(`<circle cx="7.5" cy="7.5" r="6.5" fill="none" style="
 const DOLLAR_SOLID = coin15(`<circle cx="7.5" cy="7.5" r="7.5" style="fill:var(--warn)"/><path d="${DOLLAR15}" style="fill:var(--quiet)"/>`);
 function v5Cell(k, c) {
   if (!c) return '<span class="well" style="box-shadow:inset 0 0 0 1px var(--line)"></span>';
-  const cls = `b cell two${c.cmd ? ' cmd' : ''}${c.off ? ' quiet' : ''}${c.hov ? ' hov' : ''}`, chip = key(c.chip || k);
+  const cls = `b cell two${c.cmd ? ' cmd' : ''}${c.off ? ' quiet' : ''}${c.hov ? ' hov' : ''}${c.on ? ' on' : ''}`, chip = key(c.chip || k);
   if (c.cmd) return `<span class="${cls}" data-key="${k}"><span class="r1">${chip}</span><span class="cn">${c.cmd}${c.more ? ' <span class="muted">›</span>' : ''}</span></span>`;
   const cost = `<span class="cost num" style="display:flex;align-items:center;gap:4px;${c.costColor ? `color:var(--${c.costColor})` : ''}">${c.cost}${c.cue || ''}</span>`;
   return `<span class="${cls}" data-key="${k}"><span class="r1">${cost}${chip}</span><span class="nm2">${c.item}</span>` +
@@ -625,6 +634,85 @@ Object.assign(STATES, {
   'p23b-qt-run-mixed': () => qtState(Q6, true),
   'p23b-qt-hover': () => qtState(Q4, true, 1),
   'p23b-qt-empty': () => qtState([], true)});
+
+// P2.3b top strip round (user, 2026-11-22): compact slabs; a purchase you cannot afford still forecasts below zero.
+// Drawn, since Public Sans has no U+2192 (gate A round 2).
+const ARROW = '<svg width="12" height="8" viewBox="0 0 12 8" style="display:block;flex:none"><path d="M0 4h10.5M7 .5 10.5 4 7 7.5" fill="none" style="stroke:var(--muted)" stroke-width="1.5"/></svg>';
+const signed = n => n < 0 ? `−${-n}` : String(n);
+const isLow = p => p[0] > p[1];
+const SWATCH = '<i class="sw" style="background:var(--you)"></i><span class="lab">Credits</span>';
+const PREVIEW_LAB = '<span class="lab" style="color:var(--sel);margin-left:16px">Preview</span>';
+function creditsStat(t, o) {
+  const short = t.after < 0, next = t.after != null && t.after !== t.credits;
+  const after = next ? `${ARROW}<span class="neg"><b class="${short ? 'warn' : ''}">${signed(t.after)}</b>${short && o.mark ? DOLLAR_SOLID : ''}</span>` : '';
+  return `<span class="stat cr">${SWATCH}<b>${t.credits}</b>${after}${o.label && next ? PREVIEW_LAB : ''}</span>`;
+}
+// LOW POWER words only when the purchase flips power low; already low, the numbers turn warn (3-5, user 2026-11-21).
+function powerStat(now, after) {
+  const next = after && (after[0] !== now[0] || after[1] !== now[1]);
+  const words = (next ? isLow(after) && !isLow(now) : isLow(now)) ? `<span class="lab warn">${LOW_POWER}</span>` : '';
+  const to = next ? `${ARROW}<b class="${isLow(after) ? 'warn' : ''}">${after[0]} / ${after[1]}</b>` : '';
+  return `<span class="stat"><span class="lab">Power</span><b class="${isLow(now) ? 'warn' : ''}">${now[0]} / ${now[1]}</b>${to}${words}</span>`;
+}
+const tsSlab = (body, on, style = '') => `<div class="strip" style="border-width:1px;${on ? 'border-color:var(--sel);' : ''}${style}">${body}</div>`;
+// As built in P2.3a1 (hud.gd _show_strip): 704 wide, after-values with a delta, today's balance when short.
+function builtStrip(t) {
+  const preview = t.after != null, short = t.after < 0, shown = preview && !short ? t.after : t.credits;
+  const delta = preview && t.after !== t.credits ? `<b class="dl${short ? ' warn' : ''}">−${t.credits - t.after}</b>` : '';
+  const credits = `<span class="rsv"><span class="stat cr">${SWATCH}<b>${shown}</b>${delta}</span><span class="stat cr ghost">${SWATCH}<b>00000</b><b class="dl">−0000</b></span></span>`;
+  const power = t.powerAfter || t.power, low = isLow(power);
+  const pw = `<span class="stat"><span class="lab">Power</span><b class="${low ? 'warn' : ''}">${power[0]} / ${power[1]}</b>${low ? `<span class="lab warn">${LOW_POWER}</span>` : ''}</span>`;
+  return tsSlab(credits + (preview ? '<span class="lab" style="color:var(--sel)">Preview</span>' : '') + '<span style="flex:1"></span>' + pw, preview, 'width:704px');
+}
+// Forms: built (today), two (two slabs that hug), hold (credits slab as wide as its widest forecast), card (both slabs hold their widest forecast), one (one slab that hugs).
+function topStrip(form, t, o = {}) {
+  o = {mark: true, ...o};
+  const cOn = t.after != null && t.after !== t.credits, pOn = !!t.powerAfter && String(t.powerAfter) !== String(t.power);
+  // The owner's underline takes the place of the frame's bottom edge.
+  const line = o.line && t.after < 0 ? 'border-bottom:2px solid var(--warn)' : '';
+  const hold = (html, widest) => `<span class="rsv">${html}<span class="ghost">${widest}</span></span>`;
+  let body;
+  if (form === 'built') body = builtStrip(t);
+  else if (form === 'one') body = tsSlab(`<div class="g wide">${creditsStat(t, o)}${t.power ? powerStat(t.power, t.powerAfter) : ''}</div>`, cOn || pOn, line);
+  else {
+    const c = creditsStat(t, o), p = t.power ? powerStat(t.power, t.powerAfter) : '';
+    const held = form === 'hold' || (form === 'card' && (cOn || pOn));
+    const credits = held ? hold(c, creditsStat({credits: 88888, after: -8888}, {...o, mark: true})) : c;
+    const power = form === 'card' && (cOn || pOn) ? hold(p, powerStat([88, 99], [99, 88])) : p;
+    body = tsSlab(credits, cOn, line) + (p ? tsSlab(power, pOn) : '');
+  }
+  return `<div class="tsrow" data-id="top_strip" style="left:8px;top:8px">${body}</div>`;
+}
+// China Bulldozer (FRC Laborer) on its build sub-grid; prices it cannot afford take the cost-step coin (user, 2026-11-21).
+const TS_MENUS = {
+  china: {Q: ['Power Plant', 1000], W: ['Supply Depot', 1500], E: ['Barracks', 500], R: ['Vehicle Factory', 2000], A: ['Rotary Gun Tower', 1200]},
+  frc: {W: ['Supply Cache', 1500], E: ['Barracks', 500], R: ['Vehicle Yard', 2500], A: ['Tunnel Hub', 800]}};
+function tsSpec(credits, extra = {}, faction = 'china') {
+  const spec = {V: {cmd: 'Back', chip: 'V'}};
+  Object.entries(TS_MENUS[faction]).forEach(([k, [item, cost]]) => { spec[k] = {item, cost, ...(cost > credits ? {off: true, costColor: 'warn', cue: DOLLAR_SOLID} : {})}; });
+  Object.entries(extra).forEach(([k, v]) => Object.assign(spec[k], v));
+  return spec;
+}
+function tsHover(credits, k, name, cost, faction) {
+  const spec = tsSpec(credits, {[k]: {hov: true}}, faction);
+  return v5Card(spec) + v5Hover(spec, k, [ccHead(name, cost, 15), `<span class="warn">${cost - credits} credits short</span>`]);
+}
+const LABORER = () => panelSlab('var(--you)', identity('Laborer', 100, 100));
+const TS = {
+  normal: {strip: {credits: 5300, power: [8, 10]}, dock: () => v5Card(tsSpec(5300))},
+  armed: {strip: {credits: 5300, after: 4100, power: [8, 10], powerAfter: [11, 10]}, dock: () => v5Card(tsSpec(5300, {A: {on: true}}))},
+  short: {strip: {credits: 800, after: -1200, power: [8, 10], powerAfter: [9, 10]}, dock: () => tsHover(800, 'R', 'Vehicle Factory', 2000)},
+  low: {strip: {credits: 5300, power: [12, 10]}, dock: () => v5Card(tsSpec(5300))},
+  frc: {strip: {credits: 5300}, panel: LABORER, dock: () => v5Card(tsSpec(5300, {}, 'frc'))},
+  frcshort: {strip: {credits: 800, after: -1700}, panel: LABORER, dock: () => tsHover(800, 'R', 'Vehicle Yard', 2500, 'frc')}};
+const tsState = (form, scene, o) => topStrip(form, TS[scene].strip, o) + chips({esc: false, playtest: '1 / 3'}) + (TS[scene].panel || PANELS.bulldozer)() + TS[scene].dock();
+['two', 'hold', 'one', 'card'].forEach(form => Object.keys(TS).forEach(scene => { STATES[`ts-${form}-${scene}`] = () => tsState(form, scene); }));
+['normal', 'armed', 'short'].forEach(scene => { STATES[`ts-built-${scene}`] = () => tsState('built', scene); });
+Object.assign(STATES, {
+  'ts-short-bare': () => tsState('card', 'short', {mark: false}),
+  'ts-short-line': () => tsState('card', 'short', {line: true}),
+  'ts-label-armed': () => tsState('card', 'armed', {label: true}),
+  'ts-label-short': () => tsState('card', 'short', {label: true})});
 
 const COLUMNS = menuColumns();
 let COLS = COLUMNS.cols;

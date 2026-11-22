@@ -102,13 +102,13 @@ A unit on a plain move order takes no part: it neither looks for targets nor sho
 **Guard and attack-move** run the same loop: keep the target or rescan, then stand or chase.
 
 - *Keep or drop.* A target is kept while it is hostile. A human-owned unit that stands also drops a target that left its weapon reach.
-- *Rescan*, at most once per cadence tick. A human-owned unit scans its weapon reach only, so an idle human guard never chases. A bot-owned unit scans its vision times a guard modifier, which is wider. A human unit that lost its target while attack-moving gets one wide scan too. "Bot-owned" means the player's `controller` is `ai` (README appendix). Both modifiers are constants named after the retail guard settings.
+- *Rescan*, at most once per cadence tick. A human-owned unit scans its weapon reach only, so an idle human guard never chases. A bot-owned unit scans its vision times a guard modifier, which is wider. A human unit that lost its target while attack-moving gets one wide scan too. "Bot-owned" means the player's `controller` is `ai` (README appendix); since P7 part 1 bot seats are created `"human"` and play by these human rules, so `ai` survives only in replays of older records (chapter 9). Both modifiers are constants named after the retail guard settings.
 - *Chase.* With a target out of reach, the unit drives to a firing cell. An attack-moving unit first stores its original destination.
 - *Resume.* When the target dies or comes into reach, the unit halts and gets that destination back. It is routed again without a new destination allocation (the second fix under "Trade-offs and limits").
 
 `Combat._engage, _halt; Simulation._chases`
 
-**Retaliate.** After a volley, each shot is checked: if the victim's owner is not a bot and the attacker is within 8 cells of the victim, that owner's idle guards near the victim switch to `retaliate`. They remember where they stood as `goal` and take the attacker as target for up to 300 ticks. Leashes on the distance from home and from home to the attacker send them back. Bots skip this rule; their reach comes from the larger scan above.  
+**Retaliate.** After a volley, each shot is checked: if the victim's owner is not `ai`-controlled and the attacker is within 8 cells of the victim, that owner's idle guards near the victim switch to `retaliate`. They remember where they stood as `goal` and take the attacker as target for up to 300 ticks. Leashes on the distance from home and from home to the attacker send them back. `ai`-controlled units skip this rule; their reach comes from the larger scan above.  
 `Combat.fire → _retaliate_trigger → _join_retaliation; _plan_retaliate → _go_home`  
 When a unit is removed, `object_removed` sends every retaliator that was chasing it home in one batch: it opens one reservation map of ground positions and destinations (`Simulation._begin_reservations`), each `_go_home` reads it instead of rescanning all entities, and it closes after the loop.  
 `Combat.object_removed → _begin_reservations → _go_home → _assign_move → Allocation.assign_excluding`
@@ -198,7 +198,7 @@ A profile of 2026-11-11 on the Mac mini ([data layout decision](../reference/dat
 
 **Documented shortcuts.** Three `shortcut:` comments in `combat.gd` mark known limits: the defence scan looks at every object; retaliation joiners are found by scanning idle guards per shot; and horde beats ramp. The first two name the ledger result that would trigger a fix. The [M4 scenario envelope](../reference/m4-scenario-envelope.md) measured 6.0 to 6.3 ms per allocation call on a 64x64 map before the allocation was rewritten to expand rings; that cost is why a resuming unit skips allocation.
 
-**Humans and bots scan differently.** A bot's army wakes up and chases from further away than a human's idle units react. The constants cite the retail guard settings, but the rule is not symmetric, so keep it in mind when reading bot results (chapter 9).
+**The `ai` controller scans differently.** Its idle units wake up and chase from further away than a human's react; today only replays of older records use it, since bot seats play by human rules (chapter 9). The constants cite the retail guard settings, but the rule is not symmetric, so keep it in mind when reading bot results (chapter 9).
 
 **The horde check has no profile zone of its own.** It runs inside `step.advance`, next to movement and containers, which is 48 percent of `step` on hordes300 (0.951 ms; same table). Its grid is built only on ticks where a member is due.
 
@@ -225,4 +225,4 @@ A profile of 2026-11-11 on the Mac mini ([data layout decision](../reference/dat
 - Next: [9. AI](09-ai.md) issues the commands that drive the bot armies; [5. Presentation](05-presentation.md) draws the shots and the turret.
 
 ---
-Checked against `b88dc0f`, the visual-director hand-off chain against `f46993b`, the death-counting passages against `6c83492`; passenger builds against `949706f`. Files: `game/scripts/simulation/combat.gd`, `game/scripts/simulation/combat_definitions.gd`, `game/scripts/simulation/containers.gd`, `game/scripts/simulation/horde.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/shared.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/scripts/simulation/definitions/china.gd`, `game/scripts/simulation/definitions/frc.gd`, `game/scripts/presentation/visual_director.gd`, `game/scripts/match/match_screen.gd`
+Checked against `b88dc0f`, the `ai`-controller passages against `5d7a394f`, the visual-director hand-off chain against `f46993b`, the death-counting passages against `6c83492`; passenger builds against `949706f`. Files: `game/scripts/simulation/combat.gd`, `game/scripts/simulation/combat_definitions.gd`, `game/scripts/simulation/containers.gd`, `game/scripts/simulation/horde.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/definitions/shared.gd`, `game/scripts/simulation/definitions/usa.gd`, `game/scripts/simulation/definitions/china.gd`, `game/scripts/simulation/definitions/frc.gd`, `game/scripts/presentation/visual_director.gd`, `game/scripts/match/match_screen.gd`

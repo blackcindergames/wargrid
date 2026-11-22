@@ -4,10 +4,10 @@ question: Does the slab hold at every window size and on every backdrop?
 why: >-
   A controls step on the HUD states page: S window size, F fit or true 100 %, G ground, Shift+G game-world
   backdrop, H HUD layer, O owner colour (Shift+O Neon), Shift+C colour vision, M the marker, K the numbers.
-  Every control is also a button above the picture (on a phone: View).
-look: >-
-  Where to look: the bottom right slab, ringed by the marker. 3440 x 1440 is the 1720 x 720 layout at
-  scale 2; 1920 x 1080 is 1280 x 720 at 1.5.
+  Every control is also a button in the View menu under the picture. 3440 x 1440 is the 1720 x 720
+  layout at scale 2; 1920 x 1080 is 1280 x 720 at 1.5. The controls go to the render page as hash
+  parameters (`world`, `ground`, `hud`, `you`, `size`, `scale`).
+look: 'Where to look: the bottom right slab, ringed by the marker.'
 rec: A
 recWhy: demo only; any answer is fine.
 neutral: Can't tell them apart
@@ -32,9 +32,7 @@ options:
   A:
     name: Bulldozer slab
     render: {state: slab}
-    notes: >-
-      The live states page; the controls go to it as hash parameters (`world`, `ground`, `hud`, `you`,
-      `size`, `scale`).
+    notes: The live states page, driven by the controls.
   B:
     name: Factory queue
     render: {state: queue-a}

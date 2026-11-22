@@ -1,7 +1,9 @@
 package web
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"html"
@@ -14,6 +16,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 	"wargrid/warroom/internal/rounds"
 	"wargrid/warroom/internal/store"
@@ -44,6 +47,8 @@ type Config struct {
 type Server struct {
 	cfg   *Config
 	store *store.Store
+	// The catalog reloads on every request, note autosaves included; each loader message logs once per server.
+	logged sync.Map
 }
 
 func NewServer(cfg *Config) *Server {
@@ -66,7 +71,11 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /r/{round}/{step}/pick", s.pick)
 	mux.HandleFunc("POST /r/{round}/{step}/note", s.note)
 	mux.HandleFunc("GET /static/{path...}", func(w http.ResponseWriter, r *http.Request) {
-		serveFile(w, r, staticFiles, "static/"+r.PathValue("path"))
+		name := "static/" + r.PathValue("path")
+		if tag, ok := staticETags()[name]; ok {
+			w.Header().Set("ETag", tag)
+		}
+		serveFile(w, r, staticFiles, name)
 	})
 	for _, tree := range siteTrees {
 		mux.HandleFunc("GET /"+tree+"/{path...}", func(w http.ResponseWriter, r *http.Request) { s.serveTree(w, r, tree) })
@@ -96,6 +105,21 @@ func (s *Server) serveTree(w http.ResponseWriter, r *http.Request, tree string) 
 	serveFile(w, r, root.FS(), tree+"/"+r.PathValue("path"))
 }
 
+// Embedded files carry no modification time, so without an ETag a browser could only guess how long to keep them.
+var staticETags = sync.OnceValue(func() map[string]string {
+	tags := map[string]string{}
+	_ = fs.WalkDir(staticFiles, "static", func(name string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		data, err := staticFiles.ReadFile(name)
+		sum := sha256.Sum256(data)
+		tags[name] = `"` + hex.EncodeToString(sum[:8]) + `"`
+		return err
+	})
+	return tags
+})
+
 // serveFile uses ServeContent, not FileServer, which redirects /index.html away (the lab loads web/site/index.html).
 func serveFile(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) {
 	if !fs.ValidPath(name) {
@@ -114,16 +138,22 @@ func serveFile(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) 
 		http.NotFound(w, r)
 		return
 	}
+	// Without it a browser keeps a stale stylesheet or round page after a restart or redeploy.
+	w.Header().Set("Cache-Control", "no-cache")
 	http.ServeContent(w, r, st.Name(), st.ModTime(), rs)
 }
 
 func (s *Server) catalog() *rounds.Catalog {
 	c := rounds.LoadCatalog(s.cfg.Rounds)
 	for _, e := range c.Errors {
-		slog.Warn("rounds", "error", e)
+		if _, seen := s.logged.LoadOrStore("error "+e, true); !seen {
+			slog.Warn("rounds", "error", e)
+		}
 	}
 	for _, w := range c.Warnings {
-		slog.Warn("rounds", "warning", w)
+		if _, seen := s.logged.LoadOrStore("warning "+w, true); !seen {
+			slog.Warn("rounds", "warning", w)
+		}
 	}
 	return c
 }

@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: run_netplay.sh match|rematch|kill|left-mid|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole
+# usage: run_netplay.sh match|rematch|kill|left-mid|left-mid-pump|trio-play-on|trio-left-first|trio-result|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole
 scenario=$1
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 out=${NETPLAY_OUT:-$(mktemp -d)}
@@ -83,7 +83,7 @@ proxies_accepted() {
 proxy_ms() { awk -v e="$2" '$4 == e {print $2; exit}' "$out/proxy-seat$1.log"; }
 
 # between LABEL VALUE LOW HIGH
-between() { [ "$2" -ge "$3" ] && [ "$2" -le "$4" ] || fail "$1: $2 ms is outside $3 to $4"; }
+between() { [ "$2" -ge "$3" ] && [ "$2" -le "$4" ] || fail "$1: $2 is outside $3 to $4"; }
 
 # same_prefix A B: the seats stop at different ticks when one leaves, so compare the rows both have
 same_prefix() {
@@ -117,6 +117,31 @@ start_pair() { # EXTRA_SEAT1 ... -- EXTRA_SEAT2 ...
   [ -z "$url2" ] || url=$url2
   start_client s2 --match "$(cat "$out/code")" --seat-script opponent $2
   pid2=$pid
+}
+
+# shellcheck disable=SC2086 # $1 to $3 are flag lists, split on purpose
+start_trio() { # EXTRA_SEAT1 EXTRA_SEAT2 EXTRA_SEAT3 (each one quoted word)
+  start_pair "--map broken_crown --seat-script idle $1" "--map broken_crown --seat-script idle $2"
+  i=0
+  until grep -q '^NETCLIENT WELCOME SEAT 2 ' "$out/s2.log"; do
+    i=$((i + 1)); [ $i -lt 100 ] || fail "seat 2 did not join"
+    sleep 0.2
+  done
+  start_client s3 --match "$(cat "$out/code")" --map broken_crown --seat-script idle $3
+  pid3=$pid
+}
+
+# Every client still running at the defeat tick must have run the hook, and all three got three starts.
+trio_checks() { # NAME... (clients that reach tick 300)
+  for name in "$@"; do
+    grep -q '^NETCLIENT DEFEAT 2 AT 300$' "$out/$name.log" || fail "$name: no DEFEAT 2 AT 300"
+  done
+  for name in s1 s2 s3; do
+    grep -q '^NETCLIENT MAP broken_crown SEED [^ ]* STARTS [^,]*,[^,]*,[^,]*$' "$out/$name.log" || fail "$name: no three-start MAP line"
+  done
+  same_prefix "$out/s1.tsv" "$out/s2.tsv"; same_prefix "$out/s1.tsv" "$out/s3.tsv"; same_prefix "$out/s2.tsv" "$out/s3.tsv"
+  ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC"
+  ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
 }
 
 wait_exit() { # PID SECONDS
@@ -158,7 +183,7 @@ case $scenario in
     wait_exit "$pid1" "$match_wait"; wait_exit "$pid2" "$match_wait"
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
-    [ "$(end_tick s1)" = 9013 ] || fail "terminal tick $(end_tick s1), pinned 9013"
+    [ "$(end_tick s1)" = 9746 ] || fail "terminal tick $(end_tick s1), pinned 9746"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     [ -n "$remote" ] || ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     [ "$scenario" = match ] || proxies_accepted
@@ -176,10 +201,10 @@ case $scenario in
     wait_exit "$pid1" $((2 * match_wait)); wait_exit "$pid2" $((2 * match_wait))
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
-    [ "$(end_tick s1)" = 9013 ] || fail "second match terminal tick $(end_tick s1), pinned 9013"
+    [ "$(end_tick s1)" = 9746 ] || fail "second match terminal tick $(end_tick s1), pinned 9746"
     for name in s1 s2; do
       [ "$(grep -c '^NETCLIENT MAP' "$out/$name.log")" = 2 ] || fail "$name: expected two MAP lines"
-      [ "$(grep -c '^NETCLIENT OVER TICK 9013$' "$out/$name.log")" = 1 ] || fail "$name: expected one OVER TICK 9013"
+      [ "$(grep -c '^NETCLIENT OVER TICK 9746$' "$out/$name.log")" = 1 ] || fail "$name: expected one OVER TICK 9746"
     done
     grep -q '^NETCLIENT AGAIN SEAT 2$' "$out/s1.log" || fail "s1: no AGAIN line from seat 2"
     grep -q '^NETCLIENT AGAIN SEAT 1$' "$out/s2.log" || fail "s2: no AGAIN line from seat 1"
@@ -203,14 +228,49 @@ case $scenario in
     wait_exit "$pid1" 60
     expect_end s1 ended_left
     [ "$(end_tick s1)" -ge 600 ] || fail "seat 1 ended before tick 600" ;;
-  left-mid)
-    start_relay; start_pair "" "--stop-at-tick 600"
+  left-mid|left-mid-pump)
+    start_relay
+    if [ "$scenario" = left-mid-pump ]; then start_pair "--pump" "--stop-at-tick 600"; else start_pair "" "--stop-at-tick 600"; fi
     wait_exit "$pid1" 60; wait_exit "$pid2" 60
     expect_end s1 ended_left; expect_end s2 stopped
     grep -q '^NETCLIENT VICTORY left$' "$out/s1.log" || fail "s1: no VICTORY left"
+    [ "$scenario" = left-mid ] || grep -q '^NETPLAY LATENCY' "$out/s1.log" || fail "s1: no NETPLAY LATENCY line, so the pump did not run"
     ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
     [ "$(end_tick s1)" -ge 600 ] || fail "seat 1 ended before tick 600" ;;
+  trio-play-on)
+    start_relay WARGRID_SEATS=3
+    start_trio "--pump --defeat 2@300" "--faction usa --stop-at-tick 320 --defeat 2@300" "--stop-at-tick 900 --defeat 2@300"
+    wait_exit "$pid1" 120; wait_exit "$pid2" 120; wait_exit "$pid3" 120
+    expect_end s1 ended_left; expect_end s2 stopped; expect_end s3 stopped
+    case "$(end_line s1)" in *"layer 3 disconnected") ;; *) fail "s1 reason: $(end_line s1)" ;; esac
+    [ "$(end_tick s1)" -ge 900 ] || fail "seat 1 ended at $(end_tick s1), before seat 3's stop at 900"
+    grep -q '^NETPLAY LATENCY' "$out/s1.log" || fail "s1: no NETPLAY LATENCY line, so the pump did not run"
+    trio_checks s1 s2 s3 ;;
+  trio-left-first)
+    start_relay WARGRID_SEATS=3
+    start_trio "" "--stop-at-tick 600" "--stop-at-tick 300"
+    wait_exit "$pid1" 120; wait_exit "$pid2" 120; wait_exit "$pid3" 120
+    expect_end s1 ended_left; expect_end s2 ended_left; expect_end s3 stopped
+    for name in s1 s2; do
+      case "$(end_line $name)" in *"layer 3 disconnected") ;; *) fail "$name reason: $(end_line $name)" ;; esac
+      between "$name end tick" "$(end_tick $name)" 300 310
+    done
+    ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC"
+    ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
+    same_prefix "$out/s1.tsv" "$out/s2.tsv"; same_prefix "$out/s1.tsv" "$out/s3.tsv"; same_prefix "$out/s2.tsv" "$out/s3.tsv" ;;
+  trio-result)
+    start_relay WARGRID_SEATS=3
+    start_trio "--pump --defeat 2@300,3@1200" "--stop-at-tick 320 --defeat 2@300,3@1200" "--defeat 2@300,3@1200"
+    wait_exit "$pid1" 120; wait_exit "$pid2" 120; wait_exit "$pid3" 120
+    expect_end s1 match_over; expect_end s2 stopped; expect_end s3 match_over
+    for name in s1 s3; do
+      [ "$(end_tick $name)" = 1201 ] || fail "$name ended at $(end_tick $name), expected 1201"
+      grep -q '^NETCLIENT DEFEAT 3 AT 1200$' "$out/$name.log" || fail "$name: no DEFEAT 3 AT 1200"
+    done
+    same_hashes "$out/s1.tsv" "$out/s3.tsv"
+    grep -q '^NETPLAY LATENCY' "$out/s1.log" || fail "s1: no NETPLAY LATENCY line, so the pump did not run"
+    trio_checks s1 s2 s3 ;;
   stall)
     start_relay; start_pair "" "--stall-at-tick 300 --stall-seconds 3"
     wait_exit "$pid1" 180; wait_exit "$pid2" 180

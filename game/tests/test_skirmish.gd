@@ -21,7 +21,7 @@ const ASHFALL := "res://data/maps/ashfall.json"
 const CHOSEN: Array[int] = [5, 1]
 
 func cases() -> Array[Callable]:
-	return [test_bot_seats_decide_on_their_own_ticks, test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_four_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_wave_targets_base_unless_enemy_near, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
+	return [test_bot_seats_decide_on_their_own_ticks, test_bot_state_carries_what_the_bot_reads, test_bot_state_is_a_copy, test_skirmish_initial_state, test_roster_production, test_bot_cycles_unit_list, test_bot_reads_seat_faction, test_bot_plays_china, test_bot_plays_frc, test_bot_builds_tunnel_hub_never_enters, test_bot_collectors_per_supply_center, test_bot_counts_queued_collectors, test_bot_keeps_one_builder_five_gatherers, test_bot_leaves_rebuild_alone, test_opponent_pays_and_retries, test_opponent_attack_policy, test_unhit_wave_targets_base, test_wave_target_removed_same_tick, test_wave_fights_unit_met_on_the_way, test_wave_ignores_far_unit_beside_building, test_opponent_defends_base, test_defence_skips_busy_units, test_bot_ignores_contained_units, test_match_lifecycle, test_restart_state, test_bot_state_survives_seat_wrapper, test_headless_client_rejects_unknown_faction, test_chosen_starts_become_bases, test_no_starts_leaves_default_map, test_bot_builds_on_chosen_start, test_bot_rally_follows_chosen_start, test_replay_oracle_uses_match_map, test_desync_report_names_map_seed_starts, test_seeded_diagonal_on_broken_crown]
 
 func _owned(items: Array, player: int) -> Array:
 	return items.filter(func(item: Dictionary) -> bool: return item.owner == player)
@@ -201,6 +201,7 @@ func _world(credits: int) -> RefCounted:
 	sim.add_player(1, 10000)
 	sim.add_player(2, credits)
 	sim.spawn(2, Vector2(43.5, 14.5), "usa_builder")
+	Economy.add_completed(sim, 2, "usa_command_center", Vector2i(0, 28))
 	return sim
 
 func _army(sim: RefCounted) -> Array:
@@ -232,21 +233,25 @@ func test_opponent_attack_policy(runner) -> bool:
 	var reactor: int = depot - 1
 	sim.remove_object(3)
 	sim.remove_object(4)
+	Economy.add_completed(sim, 2, "usa_power_plant", Vector2i(0, 29))
 	var first: int = sim.spawn(1, Vector2(41.5, 22.5), "usa_builder")
 	var second: int = sim.spawn(1, Vector2(45.5, 6.5), "usa_builder")
-	_to_tick(sim, 5370)
+	_to_tick(sim, Skirmish.FIRST_WAVE_TICK - 30)
 	var army: Array = _army(sim)
-	while sim.tick() < 5399:
+	while sim.tick() < Skirmish.FIRST_WAVE_TICK - 1:
 		Skirmish.issue_opponent(sim)
 		sim.step()
-	runner.check(_attack_targets(sim, army).is_empty(), "A3 no attack orders before tick 5400")
-	_bot_until_attack(sim, army, Skirmish.ATTACK_TICK + 4000)
-	runner.check(_attack_targets(sim, army) == [first, first, first, first], "A3 the wave shares the best-scored target, a builder, got " + str(_attack_targets(sim, army)))
+	runner.check(_attack_targets(sim, army).is_empty(), "A3 no attack orders before FIRST_WAVE_TICK")
+	_bot_until_attack(sim, army, Skirmish.FIRST_WAVE_TICK + 4000)
+	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+	Skirmish.decide(sim, 2)
+	sim.step()
+	runner.check(_attack_targets(sim, army) == [barracks, barracks, barracks, barracks], "A3 the wave shares the best-scored building and ignores the builders beside its path, got " + str(_attack_targets(sim, army)))
 	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
 	Skirmish.decide(sim, 2)
 	runner.check(sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.type == "attack").is_empty(), "A3 attackers are not reissued")
 	sim.remove_object(1)
-	for expected in [first, second, barracks, reactor, depot, 2]:
+	for expected in [barracks, reactor, depot, 2, first, second]:
 		_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
 		Skirmish.decide(sim, 2)
 		sim.step()
@@ -254,6 +259,7 @@ func test_opponent_attack_policy(runner) -> bool:
 		sim.remove_object(expected)
 	var lone = _world(10000)
 	lone.remove_object(1)
+	lone.remove_object(2)
 	var before: Dictionary = lone.snapshot()
 	Skirmish.decide(lone, 2)
 	runner.check(lone.snapshot() == before, "A3 an eliminated opponent submits nothing")
@@ -263,25 +269,29 @@ func _wave_world(rifle_at: Vector2) -> Array:
 	var sim = Simulation.new([], Vector2i(160, 32))
 	sim.add_player(1, 10000)
 	sim.add_player(2, 10000)
+	Economy.add_completed(sim, 2, "usa_power_plant", Vector2i(0, 29))
 	var building: int = Economy.add_completed(sim, 1, "usa_supply_center", Vector2i(150, 10))
 	var rifle: int = sim.spawn(1, rifle_at, "usa_rifle_infantry")
 	return [sim, _army(sim), building, rifle]
 
-func test_wave_targets_base_unless_enemy_near(runner) -> bool:
-	for case in [[Vector2(43.5, 22.5), 3], [Vector2(70.5, 11.5), 2]]:
-		var world: Array = _wave_world(case[0])
-		_to_tick(world[0], Skirmish.ATTACK_TICK)
-		_bot_until_attack(world[0], world[1], Skirmish.ATTACK_TICK + 4000)
-		var expected: int = world[case[1]]
-		runner.check(_attack_targets(world[0], world[1]) == [expected, expected, expected, expected], "W1 enemy unit at " + str(case[0]) + ": wave targets " + str(expected) + ", got " + str(_attack_targets(world[0], world[1])))
+func test_unhit_wave_targets_base(runner) -> bool:
+	for at in [Vector2(43.5, 22.5), Vector2(70.5, 11.5)]:
+		var world: Array = _wave_world(at)
+		_to_tick(world[0], Skirmish.FIRST_WAVE_TICK)
+		_bot_until_attack(world[0], world[1], Skirmish.FIRST_WAVE_TICK + 4000)
+		_to_tick(world[0], Skirmish.next_decision(world[0].tick(), 2))
+		Skirmish.decide(world[0], 2)
+		world[0].step()
+		var expected: int = world[2]
+		runner.check(_attack_targets(world[0], world[1]) == [expected, expected, expected, expected], "W1 enemy unit at " + str(at) + " has not hit the wave: wave targets " + str(expected) + ", got " + str(_attack_targets(world[0], world[1])))
 	return true
 
 func test_wave_target_removed_same_tick(runner) -> bool:
 	var world: Array = _wave_world(Vector2(85.5, 11.5))
 	var sim = world[0]
-	_to_tick(sim, Skirmish.ATTACK_TICK)
+	_to_tick(sim, Skirmish.FIRST_WAVE_TICK)
 	var ordered: Callable = func() -> bool: return sim.snapshot().pending_commands.any(func(command: Dictionary) -> bool: return command.type == "attack")
-	while sim.tick() < Skirmish.ATTACK_TICK + 4000:
+	while sim.tick() < Skirmish.FIRST_WAVE_TICK + 4000:
 		Skirmish.issue_opponent(sim)
 		if ordered.call(): break
 		sim.step()
@@ -294,20 +304,36 @@ func test_wave_target_removed_same_tick(runner) -> bool:
 	runner.check(_attack_targets(sim, world[1]) == [world[3], world[3], world[3], world[3]], "W2 wave retargets the remaining unit after its target vanished, got " + str(_attack_targets(sim, world[1])))
 	return true
 
+func _army_hp(sim: RefCounted, army: Array) -> int:
+	var sum: int = 0
+	for unit in sim.snapshot().entities:
+		if army.has(unit.id): sum += unit.hp
+	return sum
+
 func test_wave_fights_unit_met_on_the_way(runner) -> bool:
 	var world: Array = _wave_world(Vector2(85.5, 11.5))
 	var sim = world[0]
-	_to_tick(sim, Skirmish.ATTACK_TICK)
-	_bot_until_attack(sim, world[1], Skirmish.ATTACK_TICK + 4000)
+	_to_tick(sim, Skirmish.FIRST_WAVE_TICK)
+	_bot_until_attack(sim, world[1], Skirmish.FIRST_WAVE_TICK + 4000)
 	runner.check(_attack_targets(sim, world[1]) == [world[2], world[2], world[2], world[2]], "W3 the wave marches on the building, got " + str(_attack_targets(sim, world[1])))
 	var wave_at: Vector2 = Vector2.ZERO
 	for unit in sim.snapshot().entities:
 		if world[1].has(unit.id): wave_at += Vector2(unit.position[0], unit.position[1]) / world[1].size()
-	var met: int = sim.spawn(1, wave_at + Vector2(0.0, 6.0), "usa_rifle_infantry")
-	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
-	Skirmish.decide(sim, 2)
-	sim.step()
-	runner.check(_attack_targets(sim, world[1]) == [met, met, met, met], "W3 a wave marching to a base fights an enemy unit that comes within reach, got " + str(_attack_targets(sim, world[1])))
+	var met: int = sim.spawn(1, wave_at + Vector2(8.0, 0.0), "usa_rifle_infantry")
+	var hit_at: int = -1
+	var held: bool = true
+	for turn in range(12):
+		var before: int = _army_hp(sim, world[1])
+		_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
+		var hurt: bool = _army_hp(sim, world[1]) < before
+		Skirmish.decide(sim, 2)
+		sim.step()
+		var expected: int = met if hurt else world[2]
+		held = held and _attack_targets(sim, world[1]) == [expected, expected, expected, expected]
+		if hurt:
+			hit_at = turn
+			break
+	runner.check(hit_at >= 0 and held, "W3 a wave marching to a base ignores an enemy unit within reach until it loses hit points, then fights that unit (hit in round %d), got %s" % [hit_at, str(_attack_targets(sim, world[1]))])
 	sim.remove_object(met)
 	sim.step()
 	_to_tick(sim, Skirmish.next_decision(sim.tick(), 2))
@@ -320,11 +346,12 @@ func test_wave_ignores_far_unit_beside_building(runner) -> bool:
 	var sim = Simulation.new([], Vector2i(160, 32))
 	sim.add_player(1, 10000)
 	sim.add_player(2, 10000)
+	Economy.add_completed(sim, 2, "usa_power_plant", Vector2i(0, 29))
 	var building: int = Economy.add_completed(sim, 1, "usa_power_plant", Vector2i(53, 10))
 	sim.spawn(1, Vector2(43.5, 25.5), "usa_tank")
 	var army: Array = _army(sim)
-	_to_tick(sim, Skirmish.ATTACK_TICK)
-	_bot_until_attack(sim, army, Skirmish.ATTACK_TICK + 4000)
+	_to_tick(sim, Skirmish.FIRST_WAVE_TICK)
+	_bot_until_attack(sim, army, Skirmish.FIRST_WAVE_TICK + 4000)
 	runner.check(_attack_targets(sim, army) == [building, building, building, building], "W4 a building in reach beats a unit beyond it, got " + str(_attack_targets(sim, army)))
 	return true
 
@@ -373,10 +400,10 @@ func test_defence_skips_busy_units(runner) -> bool:
 	sim.step()
 	runner.check(_mode(sim, idle).mode == "guard" and _mode(sim, attacker).mode == "guard", "D2 after the intruder dies defenders guard where they stand")
 	_decide_now(sim)
-	runner.check(_attack_targets(sim, [attacker, idle]).is_empty(), "D2 no wave before ATTACK_TICK")
-	_to_tick(sim, Skirmish.ATTACK_TICK)
-	_bot_until_attack(sim, [idle], Skirmish.ATTACK_TICK + 4000, 1)
-	runner.check(_attack_targets(sim, [idle]).size() == 1, "D2 the wave picks up idle units after ATTACK_TICK")
+	runner.check(_attack_targets(sim, [attacker, idle]).is_empty(), "D2 no wave before FIRST_WAVE_TICK")
+	_to_tick(sim, Skirmish.FIRST_WAVE_TICK)
+	_bot_until_attack(sim, [idle], Skirmish.FIRST_WAVE_TICK + 4000, 1)
+	runner.check(_attack_targets(sim, [idle]).size() == 1, "D2 the wave picks up idle units after FIRST_WAVE_TICK")
 	return true
 
 func test_bot_ignores_contained_units(runner) -> bool:
@@ -391,8 +418,8 @@ func test_bot_ignores_contained_units(runner) -> bool:
 	for i in range(100): sim.step()
 	runner.check(Economy.object(sim, builder).has("container_id"), "D3 setup: the builder boarded")
 	var army: Array = _army(sim)
-	_to_tick(sim, Skirmish.ATTACK_TICK)
-	_bot_until_attack(sim, army, Skirmish.ATTACK_TICK + 4000)
+	_to_tick(sim, Skirmish.FIRST_WAVE_TICK)
+	_bot_until_attack(sim, army, Skirmish.FIRST_WAVE_TICK + 4000)
 	Registry.clear_test_kinds()
 	runner.check(_attack_targets(sim, army) == [ferry, ferry, ferry, ferry], "D3 the wave hits the carrier, never the contained builder, got " + str(_attack_targets(sim, army)))
 	var world: Array = _defence_world(runner)
@@ -511,16 +538,16 @@ func _run_collector_bot(faction: String, ticks: int):
 
 func test_bot_collectors_per_supply_center(runner) -> bool:
 	var usa = _run_collector_bot("usa", 3600)
-	runner.check(_count_collectors(usa, "usa_collector") == 2, "SK-C1 a USA bot runs two collectors per supply center, got %d" % _count_collectors(usa, "usa_collector"))
-	runner.check(Registry.faction("usa").bot_collectors_per_supply_center == 2 and Registry.faction("china").bot_collectors_per_supply_center == 3 and Registry.faction("frc").bot_collectors_per_supply_center == 5, "SK-C3 faction values are USA 2, China 3, FRC 5")
+	runner.check(_count_collectors(usa, "usa_collector") == 3, "SK-C1 a USA bot runs three collectors per supply center, got %d" % _count_collectors(usa, "usa_collector"))
+	runner.check(Registry.faction("usa").bot_collectors_per_supply_center == 3 and Registry.faction("china").bot_collectors_per_supply_center == 4 and Registry.faction("frc").bot_collectors_per_supply_center == 6, "SK-C3 faction values are USA 3, China 4, FRC 6")
 	var china = _run_collector_bot("china", 3600)
-	runner.check(_count_collectors(china, "china_collector") == 3, "SK-C2 a China bot runs three, got %d" % _count_collectors(china, "china_collector"))
+	runner.check(_count_collectors(china, "china_collector") == 4, "SK-C2 a China bot runs four, got %d" % _count_collectors(china, "china_collector"))
 	var lost: int = usa.snapshot().entities.filter(func(u: Dictionary) -> bool: return u.owner == 2 and u.kind == "usa_collector")[0].id
 	usa.remove_object(lost)
 	for tick in range(900):
 		Skirmish.issue_opponent(usa, 2)
 		usa.step()
-	runner.check(_count_collectors(usa, "usa_collector") == 2, "SK-C4 a lost collector is replaced, got %d" % _count_collectors(usa, "usa_collector"))
+	runner.check(_count_collectors(usa, "usa_collector") == 3, "SK-C4 a lost collector is replaced, got %d" % _count_collectors(usa, "usa_collector"))
 	return true
 
 func _two_depot_collectors(faction: String, kind: String) -> int:
@@ -542,11 +569,11 @@ func _two_depot_collectors(faction: String, kind: String) -> int:
 	return _count_collectors(sim, kind) if second else -1
 
 func test_bot_counts_queued_collectors(runner) -> bool:
-	runner.check(_two_depot_collectors("usa", "usa_collector") == 4, "SK-C5 two supply centers, a USA bot owns exactly 4, got %d" % _two_depot_collectors("usa", "usa_collector"))
-	runner.check(_two_depot_collectors("china", "china_collector") == 6, "SK-C5 two supply centers, a China bot owns exactly 6, got %d" % _two_depot_collectors("china", "china_collector"))
+	runner.check(_two_depot_collectors("usa", "usa_collector") == 6, "SK-C5 two supply centers, a USA bot owns exactly 6, got %d" % _two_depot_collectors("usa", "usa_collector"))
+	runner.check(_two_depot_collectors("china", "china_collector") == 8, "SK-C5 two supply centers, a China bot owns exactly 8, got %d" % _two_depot_collectors("china", "china_collector"))
 	return true
 
-func test_bot_keeps_one_builder_four_gatherers(runner) -> bool:
+func test_bot_keeps_one_builder_five_gatherers(runner) -> bool:
 	var sim = Skirmish.create(true, "ai", {1: "usa", 2: "frc"})
 	var queued: bool = false
 	for tick in range(3000):
@@ -595,9 +622,9 @@ func test_bot_state_survives_seat_wrapper(runner) -> bool:
 	var sim = Skirmish.create()
 	var lockstep = Lockstep.new(2, [1, 2] as Array[int], 2)
 	var first: Dictionary = Skirmish._bot(SeatSim.new(sim, lockstep), 2)
-	first.since = 77
-	runner.check(Skirmish._bot(SeatSim.new(sim, lockstep), 2).since == 77, "SK20 a fresh seat wrapper sees the bot state of the earlier one")
-	runner.check(Skirmish._bot(sim, 2).since == 77, "SK20 the real simulation holds the same bot state")
+	first.waves = [77]
+	runner.check(Skirmish._bot(SeatSim.new(sim, lockstep), 2).waves == [77], "SK20 a fresh seat wrapper sees the bot state of the earlier one")
+	runner.check(Skirmish._bot(sim, 2).waves == [77], "SK20 the real simulation holds the same bot state")
 	return true
 
 func test_headless_client_rejects_unknown_faction(runner) -> bool:
@@ -720,8 +747,8 @@ func _bot_state_matches(sim: RefCounted, seen: Dictionary) -> bool:
 		var u: Dictionary = s.entities[i]
 		var r: Dictionary = b.entities[i]
 		for key: String in r.keys():
-			if not ["id", "owner", "kind", "position", "combat", "hole_id", "container_id"].has(key): return false
-		if r.id != u.id or r.owner != u.owner or r.kind != u.kind or r.position != u.position: return false
+			if not ["id", "owner", "kind", "position", "hp", "combat", "hole_id", "container_id"].has(key): return false
+		if r.id != u.id or r.owner != u.owner or r.kind != u.kind or r.position != u.position or r.hp != u.hp: return false
 		if (r.combat == null) != (u.combat == null) or (r.combat != null and (r.combat.mode != u.combat.mode or r.combat.target_id != u.combat.target_id)): return false
 		for key: String in ["hole_id", "container_id"]:
 			if r.has(key) != u.has(key) or (u.has(key) and r[key] != u[key]): return false

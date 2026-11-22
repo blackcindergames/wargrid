@@ -51,7 +51,7 @@ func (b *builder) tune(n int, s *rounds.Step, record, hint string) TuneView {
 		target.Params = append(slices.Clone(target.Params), rounds.KV{K: id, V: tuneText(start[id])})
 	}
 	return TuneView{
-		Head: b.head(n, s, record), Info: b.info(st, s, false), Note: b.noteBox(s, hint), Nav: b.nav(n, "Skip"),
+		Head: b.head(n, s, record), Info: b.info(st, s), Note: b.noteBox(s, hint), Nav: b.nav(n),
 		Form: FormView{pickURL(b.round, s, b.carry()), s.ChipKey()}, Neutral: s.Neutral,
 		Pic:    b.pics(st).pic(picSrc{Render: &target}, s.Crop, "Target", true),
 		Params: tuneParamsJSON(s, start), Value: mustJSON(start),

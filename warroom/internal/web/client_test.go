@@ -31,13 +31,15 @@ func TestShotShowsTheGalleryItem(t *testing.T) {
 	}
 }
 
-func TestPhoneFlagClosesFoldsAndRendersTheBar(t *testing.T) {
+func TestFoldsStartClosedAndThePhoneFlagRendersTheBar(t *testing.T) {
 	a := newGateApp(t)
 	desk := a.get("/r/p2-3a1-gate-1/1").Body.String()
 	phone := a.get("/r/p2-3a1-gate-1/1?phone=1").Body.String()
-	mustContain(t, "desk", desk, `<details class="why" open>`)
-	if strings.Contains(phone, `<details class="why" open`) || strings.Contains(phone, `<details class="ref" open`) {
-		t.Error("phone page opens the why or reference fold")
+	mustContain(t, "desk", desk, `<details class="why">`)
+	for _, page := range []string{desk, phone} {
+		if strings.Contains(page, `<details class="why" open`) || strings.Contains(page, `<details class="ref" open`) {
+			t.Error("a page opens the why or reference fold")
+		}
 	}
 	mustContain(t, "phone", phone, `data-act="sheet"`, `data-act="whole"`, `aria-label="Next step"`, `name="pick" value="A" data-shown`)
 }
