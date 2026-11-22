@@ -58,6 +58,50 @@ static func uses_power(faction: String) -> bool:
 
 # Physical keycodes: orders read their keys here and the buttons print them, so a label never names an unused key.
 const ORDER_KEYS := {"attack_move": KEY_A, "stop": KEY_S, "unload": KEY_F}
+const BUILD_KEY: Key = KEY_Q
+const BACK_KEY: Key = KEY_V
+# The card owns every unmodified key of its Q W E R / A S D F / Z X C V position grid.
+const GRID_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E, KEY_R, KEY_A, KEY_S, KEY_D, KEY_F, KEY_Z, KEY_X, KEY_C, KEY_V]
+# One cell per role in every faction (user, 2026-11-15); a building names its role in `slot`, a unit after its faction prefix.
+const CELL_KEYS := {"power_plant": KEY_Q, "supply_center": KEY_W, "barracks": KEY_E, "factory": KEY_R, "defence": KEY_A, "builder": KEY_Q, "collector": KEY_Q, "rifle_infantry": KEY_Q, "rocket_infantry": KEY_W, "light_vehicle": KEY_Q, "tank": KEY_W}
+
+static func role(kind: String) -> String:
+	return Registry.kind(kind).get("slot", kind.substr(kind.find("_") + 1))
+
+static func kind_cells(kinds: Array) -> Array:
+	return kinds.map(func(kind: String) -> Array: return [CELL_KEYS.get(role(kind), KEY_NONE), kind])
+
+# The cells the card shows, as [key, action]: a kind to build or produce, else "build", "back" or an ORDER_KEYS name. Orders press only these.
+static func card(view: Dictionary, selection: Dictionary, seat: int) -> Array:
+	var cells: Array = []
+	var chosen: Dictionary = building(view, selection.building_id)
+	var builders: Array = _builder_kinds(view, selection.ids, seat)
+	if not chosen.is_empty():
+		if chosen.completed: cells = kind_cells(Registry.kind(chosen.kind).produces)
+	elif selection.sub_grid and builders.size() == 1:
+		cells = kind_cells(Registry.kind(builders[0]).builds) + [[BACK_KEY, "back"]]
+	elif not builders.is_empty():
+		cells = [[BUILD_KEY, "build"]]
+	elif has_armed_unit(view, selection.ids, seat):
+		cells = [[ORDER_KEYS.attack_move, "attack_move"], [ORDER_KEYS.stop, "stop"]]
+	var host: int = selection.building_id if selection.building_id != -1 else (selection.ids[0] if selection.ids.size() == 1 else -1)
+	if is_container(view, host, seat): cells.append([ORDER_KEYS.unload, "unload"])
+	return cells
+
+# The selected units' kinds when every one is an own builder, else none.
+static func _builder_kinds(view: Dictionary, ids: Array[int], seat: int) -> Array:
+	var kinds: Array = []
+	for id: int in ids:
+		var i: int = view.units.index_of(id)
+		if i == -1 or view.units.owner[i] != seat or not Registry.is_builder(view.units.kinds[view.units.kind[i]]): return []
+		kinds.append(view.units.kinds[view.units.kind[i]])
+	return kinds
+
+# The refusal for Build with nothing selected names the faction's own builder (user, 2026-11-21).
+static func select_builder(view: Dictionary, seat: int) -> String:
+	var faction: String = player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)
+	return "Select a %s" % Registry.kind(Registry.faction(faction).get("start_unit", "")).display_name
+
 const SLAB_WIDTH: float = 432.0
 const SLAB_CONTENT: float = SLAB_WIDTH - 20.0
 const MENU_PADDING: float = 24.0

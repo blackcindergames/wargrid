@@ -981,6 +981,8 @@ func test_world_click_releases_field(runner) -> bool:
 		main._unhandled_input(click)
 		runner.check(main.get_viewport().gui_get_focus_owner() == null and PlaytestSession.current.data.matches[0].markers[0].comment == "clicked", "PO25 a right click on the ground releases and saves the field, focus %s" % main.get_viewport().gui_get_focus_owner())
 		runner.check(_pending(main, "move") == 1, "PO25 the same click sends the move")
+		main.orders.selected_ids.assign([main.driver.pump.live().spawn(main.local_player, target, "usa_tank")])
+		BaseScene.publish(main)
 		_key(runner, KEY_S, 115)
 		runner.check(_pending(main, "stop") == 1, "PO25 the stop hotkey then sends a stop")
 	main.free()

@@ -83,7 +83,7 @@ func _ready() -> void:
 	var menu_chip: Control = hud.get_node("MenuChip")
 	menu_chip.reparent($HUD, false)
 	$HUD.move_child(menu_chip, _result_panel.get_index() + 1)
-	hud.menu_chosen.connect(orders._menu_choose.bind(false))
+	hud.menu_chosen.connect(orders._menu_choose)
 	hud.entry_cancelled.connect(orders._cancel_entry)
 	hud.cancel_build_pressed.connect(orders._cancel_build)
 	hud.attack_move_pressed.connect(orders.arm_attack_move)
@@ -440,7 +440,7 @@ func _select_kind(kind: String, shift: bool) -> void:
 	_reshow()
 
 func _hud_selection() -> Dictionary:
-	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": shown_over() or driver.over() or frozen(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "sub_grid": orders._sub_grid, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": shown_over() or driver.over() or frozen(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
 
 func _result(state: Dictionary) -> String:
 	var result: String = _result_text(state.match)

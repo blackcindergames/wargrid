@@ -126,14 +126,14 @@ func test_combat_context_input(runner) -> bool:
 	main.orders.selected_ids.assign([ids.infantry, ids.tank])
 	helper.key(main, KEY_A)
 	main.orders.selected_ids.assign([1])
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	runner.check(not main.orders._attack_move_mode and main.orders._placement_kind == "usa_power_plant", "K3 placement clears a stale attack-move mode")
 	helper.key(main, KEY_ESCAPE)
 	main.orders.selected_ids.assign([1])
 	main._refresh()
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	helper.key(main, KEY_A)
-	runner.check(main.orders._placement_kind == "usa_power_plant" and not main.orders._attack_move_mode, "K3 placement mode consumes controls first")
+	runner.check(main.orders._placement_kind == "usa_defence" and not main.orders._attack_move_mode, "K3 in placement A is the sub-grid's defence cell, never attack-move, got '%s'" % main.orders._placement_kind)
 	main.free()
 	return true
 
@@ -743,10 +743,10 @@ func test_silent_keys_explain(runner) -> bool:
 	var helper = BaseScene.new()
 	var main = await _setup(runner)
 	var ids: Dictionary = _arena(main)
-	main.orders.selected_ids.assign([ids.infantry])
+	main.orders.selected_ids.clear()
 	var before: Dictionary = main.driver.pump.live().snapshot()
-	helper.key(main, KEY_1)
-	runner.check(main.orders._placement_kind.is_empty() and main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.refusal == "Choose one builder", "P4 build key without a builder says why, got '%s'" % main.hud.refusal)
+	helper.key(main, KEY_Q)
+	runner.check(main.orders._placement_kind.is_empty() and main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty() and main.hud.refusal == "Select a Bulldozer", "P4 Build with nothing selected says why, got '%s'" % main.hud.refusal)
 	main.hud.refusal = ""
 	main.orders.selected_ids.clear()
 	helper.key(main, KEY_E)
@@ -767,8 +767,8 @@ func test_hud_strings_use_display_names(runner) -> bool:
 	main.driver.adopt(sim)
 	main.orders.selected_building_id = barracks
 	main._refresh()
-	main.orders._menu_choose(0, false)
-	main.orders._menu_choose(0, false)
+	main.orders._menu_choose(0)
+	main.orders._menu_choose(0)
 	BaseScene.tick(main)
 	await runner.process_frame
 	runner.check(main.get_node("HUD/Economy/Queue").get_child_count() == 2, "N1 fixture: two queue entries")
@@ -799,7 +799,7 @@ func test_hud_font_size_is_shared(runner) -> bool:
 	BaseScene.publish(main)
 	main.orders.selected_building_id = barracks
 	main._refresh()
-	main.orders._menu_choose(0, false)
+	main.orders._menu_choose(0)
 	BaseScene.tick(main)
 	await runner.process_frame
 	runner.check(main.get_node("HUD/Economy/Queue").get_child_count() == 1, "FS1 fixture: a queue entry, got %d" % main.get_node("HUD/Economy/Queue").get_child_count())
@@ -861,7 +861,7 @@ func test_enter_unload_scene(runner) -> bool:
 	main.orders.selected_ids.assign([rifle])
 	main._refresh()
 	helper.key(main, KEY_F)
-	runner.check(orders.call("unload").size() == 1 and main.hud.refusal == "Select a container", "TU1 F without a container says why, got '%s'" % main.hud.refusal)
+	runner.check(orders.call("unload").size() == 1 and main.hud.refusal.is_empty(), "TU1 F without a container is not on the card: nothing sent, no hint, got '%s'" % main.hud.refusal)
 	var hub_point: Vector2 = Iso.world_to_plane(Vector2(10.5, 10.5)) + Vector2(0, -8)
 	sim._entities[rifle].container_id = hub
 	sim._entities[rifle].position = [10.5, 10.5]
@@ -933,7 +933,7 @@ func test_frc_laborer_right_click_pile(runner) -> bool:
 	runner.check(sim.snapshot().entities.filter(func(u: Dictionary) -> bool: return u.id in laborers and u.collection.enabled).size() == laborers.size(), "K13 every laborer, including the builder, starts collecting")
 	main.orders.selected_ids.assign([laborers[0]])
 	BaseScene.publish(main)
-	helper.key(main, KEY_1)
+	helper.build_key(main, "frc_supply_center")
 	var ghost: String = main.orders._placement_kind
 	helper.pointer(main, click, MOUSE_BUTTON_RIGHT, true)
 	var gathers: int = _pending(main, "gather")
@@ -1037,7 +1037,7 @@ func _ic_row(main, step: int, seen: Array, status: bool = false) -> String:
 	var added: PackedStringArray = []
 	for command: Dictionary in pending.slice(mini(seen[0], pending.size())): added.append(JSON.stringify(command))
 	seen[0] = pending.size()
-	var row: String = "%d|sel=%s|bld=%d|insp=%d|place=%s|pend=%s|am=%s|esc=%s|menu=%s|perf=%s|%s" % [step, main.orders.selected_ids, main.orders.selected_building_id, main.orders.inspected_id, main.orders._placement_kind, main.orders._pending_placement, main.orders._attack_move_mode, main._escape_pending(), main.menu_open(), main._perf.visible, ";".join(added)]
+	var row: String = "%d|sel=%s|bld=%d|insp=%d|place=%s|sub=%s|am=%s|esc=%s|menu=%s|perf=%s|%s" % [step, main.orders.selected_ids, main.orders.selected_building_id, main.orders.inspected_id, main.orders._placement_kind, main.orders._sub_grid, main.orders._attack_move_mode, main._escape_pending(), main.menu_open(), main._perf.visible, ";".join(added)]
 	return row + "|refusal=" + main.hud.refusal if status else row
 
 func _ic_esc(main) -> void:
@@ -1125,7 +1125,7 @@ func test_input_script_offline(runner) -> bool:
 	runner.check(not main.menu_open(), "IC1 step 8 took effect")
 	rows.append(_ic_row(main, 8, seen))
 	_ic_click(helper, main, at.call(6.5, 12.5))
-	helper.key(main, KEY_1)
+	helper.build_key(main, "frc_supply_center")
 	runner.check(not main.orders._placement_kind.is_empty(), "IC1 step 9 took effect")
 	rows.append(_ic_row(main, 9, seen, true))
 	helper.key(main, KEY_F3)
@@ -1136,7 +1136,7 @@ func test_input_script_offline(runner) -> bool:
 	BaseScene.tick(main)
 	seen[0] = 0
 	_ic_click(helper, main, at.call(21.0, 21.0))
-	helper.key(main, KEY_1)
+	helper.produce_key(main, "usa_rifle_infantry")
 	runner.check(sim_orders.call("produce") == 1, "IC1 step 12 took effect")
 	rows.append(_ic_row(main, 12, seen, true))
 	helper.pointer(main, Iso.world_to_plane(Vector2(26.5, 16.5)), MOUSE_BUTTON_RIGHT, true)
@@ -1156,9 +1156,11 @@ func test_input_script_offline(runner) -> bool:
 	rows.append(_ic_row(main, 16, seen))
 	var builder_box: Array[Vector2] = _ic_box(Iso.world_to_plane(Vector2(6.5, 12.5)), Iso.world_to_plane(Vector2(6.5, 12.5)), 30.0)
 	helper.pointer(main, builder_box[0], MOUSE_BUTTON_LEFT, true)
-	helper.key(main, KEY_1)
+	helper.key(main, KEY_Q)
 	helper.pointer(main, builder_box[1], MOUSE_BUTTON_LEFT, false)
-	runner.check(not main.orders._placement_kind.is_empty() and main.orders._pending_placement.is_empty(), "IC1 step 17 took effect")
+	runner.check(main.orders._placement_kind.is_empty() and not main.orders._sub_grid, "IC1 step 17 a card key during the drag pressed nothing")
+	helper.build_key(main, "frc_supply_center")
+	runner.check(not main.orders._placement_kind.is_empty(), "IC1 step 17 took effect")
 	rows.append(_ic_row(main, 17, seen))
 	_ic_esc(main)
 	_ic_esc(main)
@@ -1325,7 +1327,7 @@ func test_sb1_economy_input_reads_shown(runner) -> bool:
 	main._refresh()
 	Profiler.reset()
 	Profiler.enabled = true
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	var spot: Vector2 = Iso.world_to_plane(Vector2(cell) + Vector2(0.25, 0.25))
 	helper.hover(main, spot)
 	helper.pointer(main, spot, MOUSE_BUTTON_LEFT, true)
@@ -1335,7 +1337,7 @@ func test_sb1_economy_input_reads_shown(runner) -> bool:
 	var click: Vector2 = Iso.world_to_plane(Vector2(13.5, 13.5))
 	helper.pointer(main, click, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, click, MOUSE_BUTTON_LEFT, false)
-	helper.key(main, KEY_1)
+	helper.produce_key(main, "usa_rifle_infantry")
 	helper.pointer(main, Iso.world_to_plane(Vector2(20.5, 14.5)), MOUSE_BUTTON_RIGHT, true)
 	var snapshots: int = Profiler.calls(&"snapshot")
 	var views: int = Profiler.calls(&"view_state")
@@ -1397,8 +1399,9 @@ func test_sb1_pick_of_unit_dead_since_shown(runner) -> bool:
 	runner.check(not main.orders.selected_ids.has(ids.infantry), "RB4 pick of a unit dead since the shown view does not error")
 	main.orders.selected_ids.assign([ids.infantry])
 	helper.key(main, KEY_S)
+	runner.check(_pending(main, "stop") == 0, "RB4 the shown view no longer holds the unit, so its card has no Stop: nothing sent")
 	BaseScene.tick(main)
-	runner.check(main.hud.refusal.contains("Missing entity or wrong owner"), "RB4 the simulation refuses it, got '%s'" % main.hud.refusal)
+	runner.check(main.hud.refusal.is_empty(), "RB4 and nothing to refuse, got '%s'" % main.hud.refusal)
 	main.orders.selected_ids.assign([ids.infantry, ids.tank])
 	var pending: int = _pending(main, "stop")
 	helper.key(main, KEY_S)
@@ -1815,7 +1818,7 @@ func test_freeze_card_on_a_failed_pump(runner) -> bool:
 	for code: Key in [KEY_U, KEY_F]: _push_key(main, code)
 	main.orders.selected_ids.assign([ids.builder])
 	main._reshow()
-	_push_key(main, KEY_1)
+	_push_key(main, KEY_Q)
 	runner.check(types.call() == ["move"] and not main.orders.busy() and main.hud.refusal == refusal, "FN1 keys behind the card reach no order, got %s busy %s refusal '%s'" % [types.call(), main.orders.busy(), main.hud.refusal])
 	runner.check(_freeze_shown(main) and _focus_owner(main) == main.get_node(COPY), "FN1 the card stays up with the focus on Copy report")
 	main.get_node(COPY).pressed.emit()
@@ -1833,7 +1836,7 @@ func test_freeze_leave_reaches_the_launcher(runner) -> bool:
 		var world: Dictionary = _frozen_arena(main)
 		main.orders.selected_ids.assign([world.ids.builder])
 		main._reshow()
-		_push_key(main, KEY_1)
+		for code: Key in [KEY_Q, KEY_Q]: _push_key(main, code)
 		runner.check(main._playtest.is_active() and main.orders.busy() and not main.orders.selected_ids.is_empty(), "FN2 %s fixture: helper on, a unit selected, a placement armed" % way)
 		world.pump.fail_next = true
 		BaseScene.tick(main)
@@ -2311,7 +2314,7 @@ func test_releases_on_a_panel_are_the_huds(runner) -> bool:
 	runner.check(_pending(main, "attack_move") == 1, "MR5 fixture: the next click on the map attack-moves")
 	main.orders.selected_ids.assign([1])
 	main._refresh()
-	main.orders._menu_choose(0, false)
+	main.orders._menu_choose(0)
 	await _frames(runner)
 	var forecast: Control = main.get_node("HUD/Hud/TopStrip")
 	runner.check(not main.orders._placement_kind.is_empty() and forecast.find_child("Preview", true, false).is_visible_in_tree(), "MR5 fixture: a placement is armed and the strip previews it")

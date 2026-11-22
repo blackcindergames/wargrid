@@ -131,11 +131,7 @@ func test_f3_toggles_during_placement(runner) -> bool:
 	main.driver.adopt(Fixture.make_world())
 	main.orders.selected_ids.assign([1])
 	main._refresh()
-	var key := InputEventKey.new()
-	key.physical_keycode = KEY_1
-	key.keycode = KEY_1
-	key.pressed = true
-	main._unhandled_input(key)
+	BaseScene.new().build_key(main, "usa_power_plant")
 	var kind: String = main.orders._placement_kind
 	var queued: int = main.driver.queued().size()
 	var overlay: Label = main.get_node("HUD/PerfOverlay")

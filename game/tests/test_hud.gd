@@ -396,11 +396,11 @@ func _forecast_follows_the_placement(runner) -> void:
 	main.driver.adopt(Fixture.make_world())
 	main.orders.selected_ids.assign([1])
 	main._refresh()
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	runner.check(_previewing(main.hud), "TS2 arming a building shows the preview")
 	helper.key(main, KEY_ESCAPE)
 	runner.check(not _previewing(main.hud), "TS2 cancelling the placement ends the preview")
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	helper.hover(main, Iso.world_to_plane(Vector2(8.25, 4.25)))
 	helper.pointer(main, Iso.world_to_plane(Vector2(8.25, 4.25)), MOUSE_BUTTON_LEFT, false)
 	BaseScene.tick(main)
@@ -1220,7 +1220,9 @@ func _crosshair(runner) -> void:
 		["F", [ids.car], func() -> void: helper.key(main, KEY_F)],
 		["the Stop button", ids.tanks, func() -> void: main.hud.stop_pressed.emit()],
 		["the Unload button", [ids.car], func() -> void: main.hud.unload_pressed.emit()],
-		["a placement armed", [ids.builder], func() -> void: main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()],
+		["a placement armed", ids.tanks, func() -> void:
+			_select(main, [ids.builder])
+			main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()],
 		["orders.reset()", ids.tanks, func() -> void: main.orders.reset()],
 		["the pause menu opened by Menu, a frame later", ids.tanks, func() -> void:
 			main._pause.open()
@@ -2445,11 +2447,13 @@ func test_placement_refusal_after_the_click_only(runner) -> bool:
 func test_local_hints_on_the_line(runner) -> bool:
 	var skirmish = SkirmishTests.new()
 	var main = await skirmish._setup(runner)
-	var ids: Dictionary = skirmish._arena(main)
-	main.orders.selected_ids.assign([ids.infantry])
-	BaseScene.new().key(main, KEY_1)
+	skirmish._arena(main)
+	var builders: Array = [main.driver.pump.live().spawn(1, Vector2(12.5, 12.5), "usa_builder"), main.driver.pump.live().spawn(1, Vector2(13.5, 12.5), "usa_builder")]
+	BaseScene.publish(main)
+	_select(main, builders)
+	BaseScene.new().key(main, HudModel.BUILD_KEY)
 	BaseScene.tick(main)
-	runner.check(_line_text(main) == "Choose one builder" and main.hud.refusal == "Choose one builder", "RN6 placing without a builder says so on the line, got '%s'" % _line_text(main))
+	runner.check(_line_text(main) == "Choose one builder" and main.hud.refusal == "Choose one builder", "RN6 Build with two builders says so on the line, got '%s'" % _line_text(main))
 	runner.check(skirmish._error_cues(main) == 0, "RN6 a local hint asks for no sound, got %d" % skirmish._error_cues(main))
 	main.free()
 	return true

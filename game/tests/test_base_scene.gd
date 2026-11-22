@@ -8,6 +8,7 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const HudModel = preload("res://scripts/match/hud_model.gd")
 # [window, logical]: what the match's stretch caps lay each window out at
 const HUD_SIZES: Array[Array] = [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)]]
 
@@ -91,6 +92,14 @@ func key(main, code: Key) -> void:
 	event.pressed = true
 	main._unhandled_input(event)
 
+# Arms `kind` for the selected builder by key: Build first unless its sub-grid is open.
+func build_key(main, kind: String) -> void:
+	if not main.orders._sub_grid: key(main, HudModel.BUILD_KEY)
+	key(main, HudModel.CELL_KEYS[HudModel.role(kind)])
+
+func produce_key(main, kind: String) -> void:
+	key(main, HudModel.CELL_KEYS[HudModel.role(kind)])
+
 func pointer(main, plane: Vector2, button: MouseButton, pressed: bool) -> void:
 	var event := InputEventMouseButton.new()
 	event.position = main.get_node("WorldView").get_global_transform_with_canvas() * plane
@@ -129,7 +138,7 @@ func test_placement_input(runner) -> bool:
 			camera.zoom = Vector2.ONE * zoom
 			camera.force_update_scroll()
 			await runner.process_frame
-			key(main,KEY_1)
+			build_key(main,"usa_power_plant")
 			hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
 			runner.check(main.orders._placement_kind == "usa_power_plant" and main.get_node("WorldView")._preview_cells == [Vector2i(8,4),Vector2i(9,4),Vector2i(8,5),Vector2i(9,5)],"Bs2 transformed snapped preview")
 			var position: Vector2 = camera.position
@@ -138,7 +147,7 @@ func test_placement_input(runner) -> bool:
 			runner.check(camera.position == position and camera.zoom.x == zoom,"Bs2 placement freezes camera")
 			key(main,KEY_ESCAPE)
 			runner.check(main.orders.selected_ids == [1] and main.orders._placement_kind.is_empty() and main.driver.pump.live().snapshot() == before and main.driver.queued().is_empty(),"Bs2 cancel no order spend preserves selection")
-	key(main,KEY_1)
+	build_key(main,"usa_power_plant")
 	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
 	tick(main)
@@ -157,10 +166,12 @@ func test_placement_input(runner) -> bool:
 	runner.check(main.orders._placement_kind.is_empty(),"Bs2 placement ends with the build's answer")
 	var queued: Dictionary = main.driver.pump.live().snapshot()
 	pointer(main,Iso.world_to_plane(Vector2(4.5,4.5)) + Vector2(0,-8),MOUSE_BUTTON_LEFT,true)
-	key(main,KEY_2)
+	build_key(main,"usa_supply_center")
 	runner.check(main.orders.is_selecting() and main.orders._placement_kind.is_empty(),"Bs2 placement key waits for gesture")
 	pointer(main,Iso.world_to_plane(Vector2(4.5,4.5)) + Vector2(0,-8),MOUSE_BUTTON_LEFT,false)
-	runner.check(not main.orders.is_selecting() and main.orders._placement_kind == "usa_supply_center","Bs2 deferred placement after selection")
+	runner.check(not main.orders.is_selecting() and main.orders._placement_kind.is_empty(),"Bs2 a card key during a drag presses nothing")
+	build_key(main,"usa_supply_center")
+	runner.check(main.orders._placement_kind == "usa_supply_center","Bs2 the key after the selection arms the building")
 	pointer(main,Iso.world_to_plane(Vector2(10,10)),MOUSE_BUTTON_RIGHT,true)
 	runner.check(main.orders._placement_kind.is_empty() and main.orders.selected_ids == [1] and main.driver.pump.live().snapshot() == queued and main.driver.queued().is_empty(),"Bs2 right cancel preserves state")
 	main.free()
@@ -177,7 +188,7 @@ func test_production_ui(runner) -> bool:
 	runner.check(main.orders.selected_building_id == depot and main.orders.selected_ids.is_empty() and main.get_node("WorldView")._selection.keys() == [depot],"Bs3 building selection outline")
 	main.orders.selected_building_id = depot
 	main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()
-	key(main,KEY_1)
+	produce_key(main,"usa_collector")
 	runner.check(main.driver.queued().size() == 2,"Bs3 one command per produce")
 	tick(main)
 	var queue: Array = Fixture.object(main.driver.pump.live(),depot).queue
@@ -286,7 +297,7 @@ func _placing(runner) -> Variant:
 	main.driver.adopt(Fixture.make_world())
 	main.orders.selected_ids.assign([1])
 	main._refresh()
-	key(main,KEY_1)
+	build_key(main,"usa_power_plant")
 	return main
 
 func test_sb2_preview_cost(runner) -> bool:
@@ -304,7 +315,7 @@ func test_sb2_preview_cost(runner) -> bool:
 	tick(main)
 	runner.check(main.driver.preview_answer().get("origin") == Vector2i(12,4),"Bs6 a new cell is answered at the next step")
 	key(main,KEY_ESCAPE)
-	key(main,KEY_1)
+	build_key(main,"usa_power_plant")
 	runner.check(not main.get_node("WorldView")._preview_cells.is_empty(),"Bs6 re-entering placement redraws the preview")
 	main.free()
 	return true
@@ -367,7 +378,7 @@ func test_sb2_reenter_placement_ignores_old_answer(runner) -> bool:
 	tick(main)
 	runner.check(view._preview_valid,"RP6 fixture: the first placement got a valid answer")
 	key(main,KEY_ESCAPE)
-	key(main,KEY_1)
+	build_key(main,"usa_power_plant")
 	hover(main,Iso.world_to_plane(Vector2(8.25,4.25)))
 	runner.check(not view._preview_valid and main.driver.preview_answer().is_empty(),"RP6 the old answer does not colour the new placement")
 	tick(main)
@@ -511,14 +522,14 @@ func test_build_menu_from_capabilities(runner) -> bool:
 	main.orders.selected_building_id = factory
 	main._refresh()
 	runner.check(_menu_texts(main) == ["1: Scout Car $700","2: Battle Tank $900"],"M2 factory menu lists produces, got %s" % [_menu_texts(main)])
-	key(main,KEY_2)
+	produce_key(main,"usa_tank")
 	var pending: Array = main.driver.queued()
-	runner.check(pending.size() == 1 and pending[0].type == "produce" and pending[0].unit_kind == "usa_tank","M3 number key trains the n-th entry")
+	runner.check(pending.size() == 1 and pending[0].type == "produce" and pending[0].unit_kind == "usa_tank","M3 the tank's cell key trains the tank")
 	main.orders.selected_building_id = -1
 	main.orders.selected_ids.assign([1])
 	main._refresh()
-	key(main,KEY_4)
-	runner.check(main.orders._placement_kind == "usa_factory","M4 key 4 places the fourth build")
+	build_key(main,"usa_factory")
+	runner.check(main.orders._placement_kind == "usa_factory","M4 Build then the factory's cell key places the factory")
 	main.free()
 	return true
 
@@ -560,7 +571,7 @@ func test_sb2_placement_waits_for_build_answer(runner) -> bool:
 	main.driver.adopt(Fixture.make_world())
 	main.orders.selected_ids.assign([1])
 	main._refresh()
-	key(main,KEY_1)
+	build_key(main,"usa_power_plant")
 	hover(main,Iso.world_to_plane(Vector2(4.25,4.25)))
 	pointer(main,Iso.world_to_plane(Vector2(4.25,4.25)),MOUSE_BUTTON_LEFT,false)
 	runner.check(main.orders._placement_kind == "usa_power_plant" and main.hud.refusal.is_empty(),"RA6 a refused click keeps placement and says nothing yet, got '%s'" % main.hud.refusal)

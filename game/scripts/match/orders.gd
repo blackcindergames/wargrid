@@ -21,7 +21,7 @@ var _double: bool = false
 var _ctrl: bool = false
 var _alt: bool = false
 var _placement_kind: String = ""
-var _pending_placement: String = ""
+var _sub_grid: bool = false
 var _preview_origin: Vector2i
 var _preview_key: Array = []
 var _attack_move_mode: bool = false
@@ -46,17 +46,13 @@ func handle(event: InputEvent) -> void:
 	_hover(event, on_hud)
 	# A press that began on the map ends over a panel: only a drag goes on there, never a click, an order or the ghost.
 	if on_hud and not _selecting: return
+	if _card_key(event): return
 	if _placement_kind.is_empty() and _combat_input(event): return
-	if _economy_keys(event): return
 	if not _placement_kind.is_empty():
 		_placement_input(event)
 		return
 	if _building_input(event): return
 	_selection_input(event, on_hud)
-	if not is_selecting() and not _pending_placement.is_empty():
-		var pending: String = _pending_placement
-		_pending_placement = ""
-		_enter_placement(pending)
 
 func takes_orders() -> bool:
 	return not _screen.shown_over() and not _screen.frozen() and not _screen._playtest.holds_match()
@@ -81,14 +77,14 @@ func busy() -> bool:
 	return _selecting or not _placement_kind.is_empty()
 
 func escape_pending() -> bool:
-	return _attack_move_mode or inspected_id != -1 or _selecting or not selected_ids.is_empty() or not _placement_kind.is_empty() or selected_building_id != -1 or not _pending_placement.is_empty()
+	return _attack_move_mode or inspected_id != -1 or _selecting or not selected_ids.is_empty() or not _placement_kind.is_empty() or selected_building_id != -1
 
 func reset() -> void:
 	selected_ids.clear()
 	selected_building_id = -1
 	inspected_id = -1
 	_placement_kind = ""
-	_pending_placement = ""
+	_sub_grid = false
 	_set_attack_move(false)
 	_awaiting_build = ""
 	_answer = {}
@@ -99,6 +95,7 @@ func prune(state: Dictionary) -> void:
 	if selected_building_id != -1 and HudModel.building(state, selected_building_id).is_empty(): selected_building_id = -1
 	selected_ids.assign(selected_ids.filter(func(id: int) -> bool: return state.units.index_of(id) != -1))
 	if HudModel.inspected(state, inspected_id).is_empty(): inspected_id = -1
+	if _sub_grid and _builder() == -1: _sub_grid = false
 
 func view_selection() -> Array[int]:
 	var ids: Array[int] = []
@@ -109,14 +106,43 @@ func view_selection() -> Array[int]:
 func is_selecting() -> bool:
 	return _selecting
 
+# Every unmodified grid key is the card's: it presses the cell shown under it, else nothing; never during a drag.
+func _card_key(event: InputEvent) -> bool:
+	var key := event as InputEventKey
+	if key == null or not key.pressed or key.echo or not HudModel.GRID_KEYS.has(key.physical_keycode): return false
+	if key.ctrl_pressed or key.meta_pressed or key.alt_pressed or is_selecting(): return true
+	var action: String = ""
+	for cell: Array in HudModel.card(_screen.shown_state, _screen._hud_selection(), _screen.local_player):
+		if cell[0] == key.physical_keycode: action = cell[1]
+	match action:
+		"": _no_cell(key.physical_keycode)
+		"build": _open_build()
+		"back": _back()
+		"attack_move": arm_attack_move()
+		"stop": stop_selected()
+		"unload": _unload_selected()
+		_: _press(action)
+	return true
+
+func _no_cell(code: Key) -> void:
+	if code != HudModel.BUILD_KEY or not selected_ids.is_empty() or selected_building_id != -1: return
+	_screen.refuse(HudModel.select_builder(_screen.shown_state, _screen.local_player))
+	_screen._reshow()
+
+func _open_build() -> void:
+	if _builder() == -1: _screen.refuse("Choose one builder", false)
+	else: _sub_grid = true
+	_screen._reshow()
+
+# Back cancels a placement to the sub-grid, else closes the sub-grid; like Esc, it keeps a late refusal from reopening placement.
+func _back() -> void:
+	gestures += 1
+	if not _placement_kind.is_empty(): _clear_placement()
+	else:
+		_sub_grid = false
+		_screen._reshow()
+
 func _combat_input(event: InputEvent) -> bool:
-	if event is InputEventKey and event.pressed and not event.echo and not is_selecting():
-		if event.physical_keycode == HudModel.ORDER_KEYS.attack_move and not selected_ids.is_empty():
-			arm_attack_move()
-			return true
-		if event.physical_keycode == HudModel.ORDER_KEYS.stop and not selected_ids.is_empty():
-			stop_selected()
-			return true
 	if _attack_move_mode and (event.is_action_pressed("deselect") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed)):
 		_set_attack_move(false)
 		_screen._reshow()
@@ -142,18 +168,6 @@ func _hover(event: InputEvent, on_hud: bool) -> void:
 		if hovered != _screen._view.hovered_id():
 			_screen._view.set_hovered(hovered)
 			_screen._reshow()
-
-func _economy_keys(event: InputEvent) -> bool:
-	if not (event is InputEventKey and event.pressed and not event.echo): return false
-	if event.physical_keycode == KEY_B: return true
-	var index: int = event.physical_keycode - KEY_1
-	if index >= 0 and index < menu.size():
-		_menu_choose(index,true)
-		return true
-	if event.physical_keycode == HudModel.ORDER_KEYS.unload:
-		_unload_selected()
-		return true
-	return false
 
 func _placement_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F3:
@@ -188,7 +202,6 @@ func answered(answer: Dictionary) -> void:
 func _building_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("deselect"):
 		selected_building_id = -1
-		_pending_placement = ""
 	if event is InputEventMouseButton:
 		var plane: Vector2 = _screen._view.make_canvas_position_local(event.position)
 		if event.button_index == MOUSE_BUTTON_RIGHT and event.pressed and not is_selecting():
@@ -305,11 +318,11 @@ func _hint_point(payload: Dictionary) -> Variant:
 	if building.is_empty(): return null
 	return Vector2(building.origin[0],building.origin[1]) + Vector2(Definitions.building(building.kind).footprint) / 2.0
 
-func _menu_choose(index: int, from_key: bool) -> void:
-	if not takes_orders(): return
-	var kind: String = menu[index]
+func _menu_choose(index: int) -> void:
+	if takes_orders(): _press(menu[index])
+
+func _press(kind: String) -> void:
 	if selected_building_id != -1: _screen._submit({"type":"produce","building_id":selected_building_id,"unit_kind":kind})
-	elif from_key and is_selecting(): _pending_placement = kind
 	else: _enter_placement(kind)
 
 func _builder() -> int:
@@ -325,6 +338,7 @@ func _enter_placement(kind: String) -> void:
 		_screen._reshow()
 		return
 	_placement_kind = kind
+	_sub_grid = true
 	selected_building_id = -1
 	_preview_key = []
 	_answer = {}

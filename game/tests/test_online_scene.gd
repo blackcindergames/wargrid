@@ -1447,7 +1447,7 @@ func _ic_row(main, transport: FakeTransport, step: int, seen: Array, status: boo
 	var added: PackedStringArray = []
 	for command: Dictionary in sent.slice(mini(seen[0], sent.size())): added.append(JSON.stringify(command))
 	seen[0] = sent.size()
-	var row: String = "%d|sel=%s|bld=%d|insp=%d|place=%s|pend=%s|am=%s|esc=%s|menu=%s|perf=%s|%s" % [step, main.orders.selected_ids, main.orders.selected_building_id, main.orders.inspected_id, main.orders._placement_kind, main.orders._pending_placement, main.orders._attack_move_mode, main._escape_pending(), main.menu_open(), main._perf.visible, ";".join(added)]
+	var row: String = "%d|sel=%s|bld=%d|insp=%d|place=%s|sub=%s|am=%s|esc=%s|menu=%s|perf=%s|%s" % [step, main.orders.selected_ids, main.orders.selected_building_id, main.orders.inspected_id, main.orders._placement_kind, main.orders._sub_grid, main.orders._attack_move_mode, main._escape_pending(), main.menu_open(), main._perf.visible, ";".join(added)]
 	return row + "|refusal=" + main.hud.refusal if status else row
 
 func _ic_esc(main) -> void:
@@ -1493,13 +1493,13 @@ func test_input_script_online(runner) -> bool:
 	runner.check(commands.call("move") == 1, "IC2 step 2 took effect")
 	helper.key(main, KEY_S)
 	step.call(4, 3)
-	runner.check(commands.call("stop") == 1, "IC2 step 4 took effect")
+	runner.check(commands.call("stop") == 0, "IC2 step 4 S on a lone builder sends no stop (3-14)")
 	corners = box.call()
 	helper.pointer(main, corners[0], MOUSE_BUTTON_LEFT, true)
 	helper.key(main, KEY_S)
 	helper.pointer(main, corners[1], MOUSE_BUTTON_LEFT, false)
 	step.call(6, 3)
-	runner.check(commands.call("stop") == 1 and main.orders.selected_ids.has(3), "IC2 step 6 took effect")
+	runner.check(commands.call("stop") == 0 and main.orders.selected_ids.has(3), "IC2 step 6 took effect")
 	_ic_esc(main)
 	step.call(7, 3)
 	runner.check(main.orders.selected_ids.is_empty(), "IC2 step 7 took effect")
@@ -1511,7 +1511,7 @@ func test_input_script_online(runner) -> bool:
 	var at: Vector2 = _ic_plane(main, 3) + Vector2(0, -8)
 	helper.pointer(main, at, MOUSE_BUTTON_LEFT, true)
 	helper.pointer(main, at, MOUSE_BUTTON_LEFT, false)
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	step.call(9, 3, true)
 	runner.check(not main.orders._placement_kind.is_empty(), "IC2 step 9 took effect")
 	helper.key(main, KEY_F3)
@@ -1521,10 +1521,12 @@ func test_input_script_online(runner) -> bool:
 	runner.check(commands.call("build") == 1, "IC2 step 11 took effect")
 	corners = box.call()
 	helper.pointer(main, corners[0], MOUSE_BUTTON_LEFT, true)
-	helper.key(main, KEY_1)
+	helper.key(main, KEY_Q)
 	helper.pointer(main, corners[1], MOUSE_BUTTON_LEFT, false)
+	runner.check(main.orders._placement_kind.is_empty(), "IC2 step 17 a card key during the drag pressed nothing")
+	helper.build_key(main, "usa_power_plant")
 	step.call(17, 3)
-	runner.check(not main.orders._placement_kind.is_empty() and main.orders._pending_placement.is_empty(), "IC2 step 17 took effect")
+	runner.check(not main.orders._placement_kind.is_empty(), "IC2 step 17 took effect")
 	_ic_esc(main)
 	_ic_esc(main)
 	step.call(18, 3)
@@ -1574,7 +1576,7 @@ func test_sb2_online_placement_closes_and_reopens(runner) -> bool:
 	main.orders.selected_ids.assign([3])
 	main._refresh()
 	var builds = func() -> int: return _own_commands(transport).filter(func(command: Dictionary) -> bool: return command.type == "build").size()
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	var kind: String = main.orders._placement_kind
 	helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
 	runner.check(not kind.is_empty() and main.orders._placement_kind.is_empty(), "RA8 a build click closes placement at once")
@@ -1582,7 +1584,7 @@ func test_sb2_online_placement_closes_and_reopens(runner) -> bool:
 	runner.check(main.orders._placement_kind == kind and not main.hud.refusal.is_empty(), "RA8 a refusal reopens placement with the same kind, got '%s' '%s'" % [main.orders._placement_kind, main.hud.refusal])
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	runner.check(main.orders._placement_kind.is_empty(), "RA8 an accepted build click closes placement in the same frame")
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	helper.pointer(main, Iso.world_to_plane(Vector2(14.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	_run_until_answered(main, 30)
 	_run(main, 3)
@@ -1601,7 +1603,7 @@ func test_sb2_online_refusal_keeps_new_gesture(runner) -> bool:
 	var count = func(type: String) -> int: return _own_commands(transport).filter(func(command: Dictionary) -> bool: return command.type == type).size()
 	main.orders.selected_ids.assign([3])
 	main._refresh()
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, true)
 	_run_until_answered(main, 30)
@@ -1610,9 +1612,9 @@ func test_sb2_online_refusal_keeps_new_gesture(runner) -> bool:
 	runner.check(not main.hud.refusal.is_empty() and count.call("build") == 1, "RA9 a refusal during a selection click does not turn its release into a build, builds %d" % count.call("build"))
 	main.orders.selected_ids.assign([3])
 	main._refresh()
-	helper.key(main, KEY_1)
+	helper.build_key(main, "usa_power_plant")
 	helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
-	helper.key(main, KEY_A)
+	main.orders.arm_attack_move()
 	_run_until_answered(main, 30)
 	helper.pointer(main, Iso.world_to_plane(Vector2(10.5, 10.5)), MOUSE_BUTTON_LEFT, false)
 	_run(main, 3)
@@ -1639,8 +1641,8 @@ func test_sb2_online_refusal_after_a_later_gesture(runner) -> bool:
 		"another builder selected": func() -> void:
 			main.orders.selected_ids.assign([second])
 			main._refresh(),
-		"A then a ground click": func() -> void:
-			helper.key(main, KEY_A)
+		"attack move then a ground click": func() -> void:
+			main.orders.arm_attack_move()
 			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
 			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false),
 		"a right-click move": func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true),
@@ -1653,7 +1655,7 @@ func test_sb2_online_refusal_after_a_later_gesture(runner) -> bool:
 	for gesture: String in gestures:
 		main.orders.selected_ids.assign([3])
 		main._refresh()
-		helper.key(main, KEY_1)
+		helper.build_key(main, "usa_power_plant")
 		var kind: String = main.orders._placement_kind
 		helper.pointer(main, Iso.world_to_plane(Vector2(-3.5, -3.5)), MOUSE_BUTTON_LEFT, false)
 		gestures[gesture].call()
@@ -1673,7 +1675,7 @@ func _builder(main, owner: int) -> int:
 func _place(main) -> void:
 	main.orders.selected_ids.assign([_builder(main, 1)])
 	main._refresh()
-	BaseScene.new().key(main, KEY_1)
+	BaseScene.new().build_key(main, "usa_power_plant")
 
 func test_sb2_online_preview_waits_for_step(runner) -> bool:
 	var helper = BaseScene.new()
