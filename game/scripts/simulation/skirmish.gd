@@ -130,7 +130,7 @@ static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dicti
 		if entry.id == player: credits = entry.credits
 	var teams := {}
 	for entry: Dictionary in state.players: teams[entry.id] = entry.team
-	var ctx := {"sim": sim, "player": player, "tick": state.tick, "sequence": sequence, "credits": credits, "teams": teams}
+	var ctx := {"sim": sim, "player": player, "tick": state.tick, "sequence": sequence, "credits": credits, "start_credits": credits, "teams": teams}
 	_bot(sim, player)
 	var wave_clock: Dictionary = _team_entry(sim, teams.get(player, player), attack_tick)
 	var buildings: Array = state.buildings.filter(func(building: Dictionary) -> bool: return building.owner == player)
@@ -204,7 +204,7 @@ static func _buy(ctx: Dictionary, building: Dictionary, kind: String, owned: Arr
 	owned.append(kind)
 	return true
 
-# BR7, from wave 1: an idle factory holds the credits while vehicles are short of the faction's share of army value, and a lost factory is saved for while the builder lives; either hold lapses after HOLD_LAPSE until a factory buys again.
+# BR7, from wave 1: an idle factory holds the credits while vehicles are short of the faction's share of army value, and a lost factory is saved for while the builder lives; a hold lapses for one decision after HOLD_LAPSE ticks without income.
 static func _spend_rest(ctx: Dictionary, rest: Array, buildings: Array, faction: String, owned: Array, queued: Array, has_builder: bool) -> void:
 	var bot: Dictionary = _bot(ctx.sim, ctx.player)
 	var share: int = Registry.faction(faction).bot_vehicle_share
@@ -216,11 +216,10 @@ static func _spend_rest(ctx: Dictionary, rest: Array, buildings: Array, faction:
 		if not _is_army(entry[0]): continue
 		army += entry[1]
 		if _is_vehicle(entry[0]): vehicles += entry[1]
-	var lapsed: bool = bot.get("hold_lapsed", false)
-	var held: bool = not lapsed and has_builder and _is_factory(faction, _first_missing(buildings, faction))
+	var held: bool = has_builder and _is_factory(faction, _first_missing(buildings, faction))
 	var bought := {}
 	for building: Dictionary in rest:
-		if held or lapsed or vehicles * 100 >= share * army: break
+		if held or vehicles * 100 >= share * army: break
 		if not _is_factory(faction, building.kind): continue
 		var pick: String = unit_for(faction, building.kind, owned)
 		if not _buy(ctx, building, pick, owned):
@@ -229,16 +228,19 @@ static func _spend_rest(ctx: Dictionary, rest: Array, buildings: Array, faction:
 		army += Definitions.unit(pick).cost
 		vehicles += Definitions.unit(pick).cost
 		bought[building.id] = true
-		bot.erase("hold_since")
-	if held:
-		var since: int = bot.get_or_add("hold_since", ctx.tick)
-		if ctx.tick - since < HOLD_LAPSE: return
-		bot.hold_lapsed = true
+	if held and not _lapses(bot, ctx): return
 	bot.erase("hold_since")
+	bot.erase("hold_credits")
 	for building: Dictionary in rest:
 		if bought.has(building.id): continue
 		var kind: String = unit_for(faction, building.kind, owned)
-		if not kind.is_empty() and _buy(ctx, building, kind, owned) and _is_factory(faction, building.kind): bot.hold_lapsed = false
+		if not kind.is_empty(): _buy(ctx, building, kind, owned)
+
+# The lapse clock restarts whenever credits rose since the last held decision; read before this decision's buys, so a buy never hides income.
+static func _lapses(bot: Dictionary, ctx: Dictionary) -> bool:
+	if ctx.start_credits > bot.get("hold_credits", -1): bot.hold_since = ctx.tick
+	bot.hold_credits = ctx.start_credits
+	return ctx.tick - bot.hold_since >= HOLD_LAPSE
 
 static func _is_army(kind: String) -> bool:
 	return not Registry.is_builder(kind) and Registry.collects(kind).is_empty()
