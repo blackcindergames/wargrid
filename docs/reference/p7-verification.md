@@ -3,16 +3,16 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-22 after T1-9)
+Resume record (updated 2026-11-22 after T1-11)
 Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 (2026-11-22, approved by the owner), order step 1 committed 8b292146 / T1-8a BR7 committed after this record
-Last green task / next incomplete task: T1-9 2v2 trace / T1-11 docs
+Last green task / next incomplete task: T1-11 docs / gate
 Changed paths since last commit: none after the BR7 commit
 Last command / cases / checks / failures / exit / marker: full suite on T1-9 (build/t19-suite.log) CASES 1371 CHECKS 153123 FAILURES 0 / exit 0 / TESTS PASSED 153123; `sh tools/run_checks.sh` CHECKS PASSED 5
 Known red case or blocker: none (red ledger cleared at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: T1-11 docs, then the gate; after part 1's gate P2.3b comes before part 2 (user, 2026-11-22)
+Next exact action: the gate (plan, Gate part 1); after part 1's gate P2.3b comes before part 2 (user, 2026-11-22)
 ```
 
 ## Red ledger
@@ -440,3 +440,7 @@ Checks on that tree: full suite (`build/t110-suite.log`) CASES 1370 CHECKS 15312
 The check on the team-match pin (T1-10): team bots do not stall. Deaths per 5,000 ticks in this match, from a probe line removed before commit: 0, 30, 113, 52, 46 up to the end at 24,106. So the 3v3 team match at its cap is a mirror stalemate, not a stall; no tuning task.
 
 Tree `c4855a86` plus TT1: full suite (`build/t19-suite.log`) CASES 1371 CHECKS 153123 FAILURES 0, exit 0, `TESTS PASSED 153123`; `sh tools/run_checks.sh` CHECKS PASSED 5.
+
+### T1-11 Docs
+
+Guide chapters 9 (BR2 to BR8 at HEAD: the vehicle share and holds, group speed, the mixed take, the mirror caps), 8 (the `ai` controller now only in older records), 10, 11 and 13 (netplay 8,997, S1 ongoing, the team-match cap, TT1), `sim-interface.md` (the `group_speed` refusal wording), a blueprint §1 pointer, design answers (changes during the build), the T1-8c design's `late N/60s`, the P7 rows of `packages.md` and `STATUS.md` (part 1 built, gate pending); `python3 tools/roadmap.py` left the README unchanged. One fresh Opus review of the code claims: nothing blocking, nine wording slips fixed (chapter 8 contradicting chapter 9, S1's offset timetables, the `group_speed` key's lifetime, TB3 against TB5, where the tuned values came from, the detour target, the full team-match pin, the F3 decision date, a stale "current bot" line). `sh tools/check_public.sh` and `sh tools/run_checks.sh` exit 0 (`CHECKS PASSED 5`).

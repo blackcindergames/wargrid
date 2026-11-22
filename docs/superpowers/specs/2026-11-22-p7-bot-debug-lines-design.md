@@ -10,7 +10,7 @@ Short design (approved 2026-11-22 by the owner, one line per bot). Plan entry: T
 Bot 2 usa | W1 in 89s | ready 7,875/6,372 | home 3i/8v | $475 | B:Rifleman F:- | ->Headquarters#2
 ```
 
-Per bot: credits; each producer's current unit (`-` when idle); next wave number and seconds until it is due (`+Ns` once past due, up to the wait cap); home infantry / vehicles (own army units in no wave); ready cost against the wave target `_form` compares (guards included); the team's last objective.
+Per bot: credits; each producer's current unit (`-` when idle); next wave number and seconds until it is due (`late N/60s` once past due: seconds since due over the wait cap); home infantry / vehicles (own army units in no wave); ready cost against the wave target `_form` compares (guards included); the team's last objective.
 
 **Non-goals.** Online matches (the online driver never asks); a new panel or toggle key; lines for human seats; world-space drawing.
 

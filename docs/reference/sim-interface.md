@@ -33,7 +33,7 @@ Status: describes the code at e3a4b2b plus the view rows change, task 2 (2026-11
 | defence_attack | building_id, target_id |
 | choose_faction | faction |
 
-- `move`, `attack` and `attack_move` take an optional `group_speed` (bool; any other type or value is refused with "Invalid group_speed"). When true, every unit the order commands at its tick gets the entity key `group_speed`, the lowest kind `speed` among them, and moves no faster while its intent is still that order's; any later order to the unit removes the key (P7 BR8, 2026-11-22).
+- `move`, `attack` and `attack_move` take an optional `group_speed` (bool, `false` is the same as absent; a non-bool value, or the key on any other command, is refused with "Invalid group_speed"). When true, every unit the order commands at its tick gets the entity key `group_speed`, the lowest kind `speed` among them, and moves no faster while its intent is still that order's; any later order to the unit removes the key (P7 BR8, 2026-11-22).
 - After setup a command is the only way to change the game. Same-tick order is `tick`, `player`, `sequence` (`_command_before`, `simulation.gd`).
 
 ## Advance
