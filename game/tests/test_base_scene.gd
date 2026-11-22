@@ -187,7 +187,8 @@ func test_production_ui(runner) -> bool:
 	pointer(main,Iso.world_to_plane(Vector2(11.5,5.5)),MOUSE_BUTTON_LEFT,false)
 	runner.check(main.orders.selected_building_id == depot and main.orders.selected_ids.is_empty() and main.get_node("WorldView")._selection.keys() == [depot],"Bs3 building selection outline")
 	main.orders.selected_building_id = depot
-	main.get_node("HUD/Economy/BuildMenu").get_child(0).pressed.emit()
+	main._refresh()
+	main.get_node("HUD/Economy/Card/Q").pressed.emit()
 	produce_key(main,"usa_collector")
 	runner.check(main.driver.queued().size() == 2,"Bs3 one command per produce")
 	tick(main)
@@ -506,8 +507,9 @@ func test_sb1_repaint_keeps_step_pending(runner) -> bool:
 	main.free()
 	return true
 
+# The card's item cells in lattice order, as "key cost name".
 func _menu_texts(main) -> Array:
-	return main.get_node("HUD/Economy/BuildMenu").get_children().map(func(button: Button) -> String: return button.text + " " + button.get_node("Price").text)
+	return main.get_node("HUD/Economy/Card").get_children().filter(func(cell: Button) -> bool: return cell.is_visible_in_tree() and cell.get_node("Cost").visible).map(func(cell: Button) -> String: return "%s %s %s" % [cell.get_node("Chip").text, cell.get_node("Cost").text, cell.get_node("Name").text])
 
 func test_build_menu_from_capabilities(runner) -> bool:
 	var main = await setup(runner)
@@ -517,11 +519,12 @@ func test_build_menu_from_capabilities(runner) -> bool:
 	var factory: int = Fixture.build(runner,main.driver.pump.live(),"usa_factory",Vector2i(14,4))
 	main.orders.selected_ids.assign([1])
 	publish(main)
-	runner.check(_menu_texts(main) == ["1: Power Plant $800","2: Supply Depot $2000","3: Barracks $600","4: Vehicle Factory $2000","5: Missile Battery $1000"],"M1 builder menu lists its builds, got %s" % [_menu_texts(main)])
+	key(main,HudModel.BUILD_KEY)
+	runner.check(_menu_texts(main) == ["Q 800 Power Plant","W 2000 Supply Depot","E 600 Barracks","R 2000 Vehicle Factory","A 1000 Missile Battery"],"M1 the builder's sub-grid lists its builds by role, got %s" % [_menu_texts(main)])
 	main.orders.selected_ids.clear()
 	main.orders.selected_building_id = factory
 	main._refresh()
-	runner.check(_menu_texts(main) == ["1: Scout Car $700","2: Battle Tank $900"],"M2 factory menu lists produces, got %s" % [_menu_texts(main)])
+	runner.check(_menu_texts(main) == ["Q 700 Scout Car","W 900 Battle Tank"],"M2 the factory's card lists its produces by role, got %s" % [_menu_texts(main)])
 	produce_key(main,"usa_tank")
 	var pending: Array = main.driver.queued()
 	runner.check(pending.size() == 1 and pending[0].type == "produce" and pending[0].unit_kind == "usa_tank","M3 the tank's cell key trains the tank")
@@ -533,36 +536,33 @@ func test_build_menu_from_capabilities(runner) -> bool:
 	main.free()
 	return true
 
+# The fullest card, three rows, sits inside the slab with no cell over another (was: eleven menu buttons wrap).
 func test_build_menu_wraps_eleven(runner) -> bool:
 	var main = await setup(runner)
-	var kinds: Array = []
-	for i in 11:
-		Registry.add_test_kind("test_k%d" % i,{"display_name":"Synthetic %d" % i,"cost":100 + i})
-		kinds.append("test_k%d" % i)
-	main.hud._refresh_menu(kinds,true,0,"")
+	main.orders.selected_ids.assign([1])
+	main._refresh()
+	key(main,HudModel.BUILD_KEY)
 	await runner.process_frame
 	await runner.process_frame
-	var buttons: Array = main.get_node("HUD/Economy/BuildMenu").get_children()
-	runner.check(buttons.size() == 11,"M5 eleven buttons")
+	var cells: Array = main.get_node("HUD/Economy/Card").get_children()
+	runner.check(cells.size() == 12 and cells.all(func(cell: Control) -> bool: return cell.is_visible_in_tree()),"M5 twelve cells, the sub-grid's three rows")
 	slab_clear(runner,main,"M5")
-	for i in buttons.size():
-		runner.check(main.get_node("HUD/Economy").get_global_rect().encloses(buttons[i].get_global_rect()),"M5 button %d inside the slab" % i)
-		for j in range(i + 1,buttons.size()):
-			runner.check(not buttons[i].get_global_rect().intersects(buttons[j].get_global_rect()),"M5 buttons %d and %d do not overlap" % [i,j])
-	Registry.clear_test_kinds()
+	for i in cells.size():
+		runner.check(main.get_node("HUD/Economy").get_global_rect().encloses(cells[i].get_global_rect()),"M5 cell %d inside the slab" % i)
+		for j in range(i + 1,cells.size()):
+			runner.check(not cells[i].get_global_rect().intersects(cells[j].get_global_rect()),"M5 cells %d and %d do not overlap" % [i,j])
 	main.free()
 	return true
 
 func test_build_menu_quantity_label(runner) -> bool:
 	var main = await setup(runner)
-	main.hud._refresh_menu(["china_rifle_infantry","china_rocket_infantry"],true,0,"")
+	main.driver.adopt(Fixture.make_world(50000))
+	var barracks: int = Fixture.add_completed(main.driver.pump.live(),1,"china_barracks",Vector2i(10,10))
+	main.orders.selected_building_id = barracks
+	publish(main)
 	await runner.process_frame
-	await runner.process_frame
-	var buttons: Array = main.get_node("HUD/Economy/BuildMenu").get_children()
-	runner.check(_menu_texts(main) == ["1: Militia x2 $300","2: Anti-Tank Trooper $300"],"M6 militia button reads x2, got " + str(_menu_texts(main)))
+	runner.check(_menu_texts(main) == ["Q 300 Militia \u00d72","W 300 Anti-Tank Trooper"],"M6 the Militia cell reads ×2, got " + str(_menu_texts(main)))
 	slab_clear(runner,main,"M6")
-	for button: Button in buttons: runner.check(main.get_node("HUD/Economy").get_global_rect().encloses(button.get_global_rect()),"M6 button inside the slab")
-	runner.check(not buttons[0].get_global_rect().intersects(buttons[1].get_global_rect()),"M6 buttons do not overlap")
 	main.free()
 	return true
 

@@ -10,7 +10,6 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
 var inspected_id: int = -1
-var menu: Array = []
 var _screen: Node
 var _selecting: bool = false
 var _dragged: bool = false
@@ -114,15 +113,20 @@ func _card_key(event: InputEvent) -> bool:
 	var action: String = ""
 	for cell: Array in HudModel.card(_screen.shown_state, _screen._hud_selection(), _screen.local_player):
 		if cell[0] == key.physical_keycode: action = cell[1]
+	if action.is_empty(): _no_cell(key.physical_keycode)
+	else: press_cell(action)
+	return true
+
+# A key or a click on a shown cell; the Hud's cells carry the actions of `HudModel.card`.
+func press_cell(action: String) -> void:
+	if not takes_orders(): return
 	match action:
-		"": _no_cell(key.physical_keycode)
 		"build": _open_build()
 		"back": _back()
 		"attack_move": arm_attack_move()
 		"stop": stop_selected()
 		"unload": _unload_selected()
 		_: _press(action)
-	return true
 
 func _no_cell(code: Key) -> void:
 	if code != HudModel.BUILD_KEY or not selected_ids.is_empty() or selected_building_id != -1 or inspected_id != -1: return
@@ -319,9 +323,6 @@ func _hint_point(payload: Dictionary) -> Variant:
 	var building: Dictionary = HudModel.building(_screen.shown_state,payload.building_id)
 	if building.is_empty(): return null
 	return Vector2(building.origin[0],building.origin[1]) + Vector2(Definitions.building(building.kind).footprint) / 2.0
-
-func _menu_choose(index: int) -> void:
-	if takes_orders(): _press(menu[index])
 
 func _press(kind: String) -> void:
 	if selected_building_id != -1: _screen._submit({"type":"produce","building_id":selected_building_id,"unit_kind":kind})

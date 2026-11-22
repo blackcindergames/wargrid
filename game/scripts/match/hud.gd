@@ -1,12 +1,9 @@
 extends Control
 
-signal menu_chosen(index: int)
+signal cell_pressed(action: String)
 signal entry_cancelled(entry_id: int)
 signal cancel_build_pressed()
 signal menu_pressed()
-signal attack_move_pressed()
-signal stop_pressed()
-signal unload_pressed()
 signal row_clicked(kind: String, shift: bool)
 
 # Wider notices wrap, so a long desync path grows down, clear of the chips at 1280.
@@ -16,6 +13,15 @@ const PAD_Y: float = 8.0
 const GAP: int = 4
 const ROW: float = 32.0
 const QUEUE_GAP: float = 12.0
+# hud-v5-layout "Command card": 100 x 60 cells, padding 4 8, line 1 20 high, the name 4 under it.
+const CELL: Vector2 = Vector2(100, 60)
+const CELL_PAD: Vector2 = Vector2(8, 4)
+const CELL_LINE: float = 20.0
+const NAME_TOP: float = CELL_PAD.y + CELL_LINE + 4.0
+const COMMAND_LINE: float = 28.0
+const ITEM_NAME_SIZE: int = 12
+# The page's empty-well fill, a literal there too (hud-v5-layout "Colour tokens").
+const WELL: Color = Color("#0f1820")
 # Each fits its faction's widest five-digit preview (678 with power and low power, 343 without power, measured at 1280 x 720); longer numbers still widen the strip.
 const STRIP_WIDTH: float = 704.0
 const STRIP_WIDTH_UNPOWERED: float = 352.0
@@ -28,9 +34,9 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 var refusal: String = ""
 var now_msec: Callable = Time.get_ticks_msec
 var rebuilds: int = 0
-var menu_kinds: Array = []
 var _economy: VBoxContainer
-var _build_menu: GridContainer
+var _card: GridContainer
+var _well: StyleBoxFlat
 var _queue: Control
 var _cancel_build: Button
 var _top_strip: PanelContainer
@@ -44,7 +50,6 @@ var _refusal_text: Label
 var _refused_at: int = 0
 var _esc: Label
 var _resume: Label
-var _commands: GridContainer
 var _queue_header: HBoxContainer
 var _queue_more: Button
 var _queue_gap: Control
@@ -62,7 +67,7 @@ var _labels: Dictionary = {}
 var _last: Array = []
 var _last_ids: Array[int] = []
 var _shape: Array = []
-var _hovered: int = -1
+var _hovered_cell: Button
 var _strip_args: Array = []
 var _blockers: Array[Control] = []
 
@@ -283,15 +288,7 @@ func _build_slab() -> void:
 	_economy.draw.connect(_draw_slab)
 	_economy.sort_children.connect(_pad_slab)
 	_resume = _label(_economy, "ResumeHint", &"HudHint", "Right-click: resume")
-	_commands = _grid("Orders", 2)
-	for part: Array in [["Unload", unload_pressed], ["AttackMove", attack_move_pressed], ["Stop", stop_pressed]]:
-		var button: Button = _button(_commands, part[0], _cell_width(2))
-		button.pressed.connect((part[1] as Signal).emit)
-	# Fills Unload's row, so Attack move and Stop keep the bottom row whether Unload shows or not.
-	var pad: Control = _spacer(_commands, "UnloadPad", Vector2(_cell_width(2), ROW))
-	_commands.move_child(pad, 1)
-	var font: Font = get_theme_font("font", &"HudButton")
-	_build_menu = _grid("BuildMenu", HudModel.menu_columns(font, get_theme_font_size("font_size", &"HudButton")))
+	_build_card()
 	_square(_cancel_build)
 	_queue_header = _box(_economy, "QueueHeader", HBoxContainer.new(), 8) as HBoxContainer
 	_label(_queue_header, "Title", &"HudLabel", "QUEUE").size_flags_horizontal = SIZE_EXPAND_FILL
@@ -304,13 +301,43 @@ func _build_slab() -> void:
 	_queue_more.draw.connect(_draw_chevron)
 	_queue_more.pressed.connect(_toggle_queue)
 	# The slab grows upward from the screen edge, so the queue and its toggle sit above the buttons and opening adds rows on top: nothing under the pointer moves (gate B, user 2026-11-20).
-	var rows: Array[Control] = [_queue_header, _queue, _queue_more, _queue_gap, _resume, _commands, _build_menu, _cancel_build]
+	var rows: Array[Control] = [_queue_header, _queue, _queue_more, _queue_gap, _resume, _card, _cancel_build]
 	for i in rows.size(): _economy.move_child(rows[i], i)
 
+# One cell per lattice position, named by its key; a cell keeps its position, only its words and look change.
+func _build_card() -> void:
+	_card = _grid("Card", 4)
+	_well = StyleBoxFlat.new()
+	_well.bg_color = WELL
+	_well.border_color = get_theme_color("line", &"Tokens")
+	_well.set_border_width_all(1)
+	for code: Key in HudModel.GRID_KEYS:
+		var cell: Button = _button(_card, OS.get_keycode_string(code), CELL.x)
+		cell.custom_minimum_size.y = CELL.y
+		cell.set_meta("action", "")
+		cell.pressed.connect(_press_cell.bind(cell))
+		cell.mouse_entered.connect(_hover_cell.bind(cell, true))
+		cell.mouse_exited.connect(_hover_cell.bind(cell, false))
+		_cell_label(cell, "Cost", &"HudNumber", Vector2(CELL_PAD.x, CELL_PAD.y), Vector2(CELL.x - 2.0 * CELL_PAD.x - 22.0, CELL_LINE))
+		_cell_label(cell, "Chip", &"HudKey", Vector2(CELL.x - CELL_PAD.x - 18.0, CELL_PAD.y + 1.0), Vector2(18, 18)).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var name_label: Label = _cell_label(cell, "Name", &"HudRow", Vector2(CELL_PAD.x, NAME_TOP), Vector2(CELL.x - 2.0 * CELL_PAD.x, COMMAND_LINE))
+		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		# Item names keep the page's 14 px line pitch, so two lines end inside the cell.
+		name_label.add_theme_constant_override("line_spacing", -1)
+		_cell_label(cell, "More", &"HudRow", Vector2(CELL_PAD.x, NAME_TOP), Vector2(0, COMMAND_LINE)).add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+		_cell_look(cell, &"well")
+
+static func _cell_label(cell: Button, label_name: String, variation: StringName, at: Vector2, minimum: Vector2) -> Label:
+	var label: Label = _label(cell, label_name, variation)
+	label.mouse_filter = MOUSE_FILTER_IGNORE
+	label.position = at
+	label.custom_minimum_size = minimum
+	label.size = minimum
+	return label
+
+# Chips name the cell's position in the player's layout; a reset re-reads them.
 func _read_keys() -> void:
-	(_commands.get_node("AttackMove") as Button).text = "Attack move (%s)" % HudModel.key_label(HudModel.ORDER_KEYS.attack_move)
-	(_commands.get_node("Stop") as Button).text = "Stop (%s)" % HudModel.key_label(HudModel.ORDER_KEYS.stop)
-	(_commands.get_node("Unload") as Button).text = "Unload (%s)" % HudModel.key_label(HudModel.ORDER_KEYS.unload)
+	for cell: Node in _card.get_children(): (cell.get_node("Chip") as Label).text = HudModel.key_label(HudModel.GRID_KEYS[cell.get_index()])
 
 func _grid(grid_name: String, columns: int) -> GridContainer:
 	var grid := GridContainer.new()
@@ -329,9 +356,6 @@ static func _spacer(parent: Control, spacer_name: String, minimum: Vector2) -> C
 	spacer.custom_minimum_size = minimum
 	parent.add_child(spacer)
 	return spacer
-
-func _cell_width(columns: int) -> float:
-	return (HudModel.SLAB_CONTENT - (columns - 1) * GAP) / columns
 
 # No slab button keeps the focus: Space or Enter would press it again and the arrows walk a focus ring.
 static func _square(button: Button) -> void:
@@ -382,13 +406,10 @@ func slab_top() -> float:
 
 func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat: int) -> void:
 	var building: Dictionary = HudModel.building(view, selection.building_id)
-	var faction: String = HudModel.player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)
-	var kinds: Array = HudModel.menu_kinds(view, building, selection.ids, faction)
 	set_esc_chip(selection.esc_opens_menu)
 	_show_notice(selection.notice)
 	_show_selection(view, selection, seat, HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
-	if _economy == null: menu_kinds = kinds
-	else: _economy_controls(view, building, selection, kinds, seat)
+	if _economy != null: _economy_controls(view, building, selection, seat)
 	_strip_args = [view, selection, view_player]
 	_show_strip(view, selection, view_player)
 	_count_rebuild(selection)
@@ -400,37 +421,79 @@ func _count_rebuild(selection: Dictionary) -> void:
 	_shape = shape
 	rebuilds += 1
 
-func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictionary, kinds: Array, seat: int) -> void:
+func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictionary, seat: int) -> void:
 	var edge: Color = View.owner_color(seat, selection.bright_owners)
 	_resume.visible = selection.resume_id != -1
-	_show_commands(view, selection, seat)
 	_cancel_build.visible = not building.is_empty() and not building.completed
-	_refresh_menu(kinds, HudModel.shows_build_menu(view, selection, seat), HudModel.player(view, seat).get("credits", 0), selection.placement_kind)
+	_show_card(HudModel.card(view, selection, seat), selection, HudModel.player(view, seat).get("credits", 0))
 	if edge != _edge:
 		_edge = edge
 		for row: Node in _queue.get_children(): (row.get_node("Track/Bar") as ColorRect).color = edge
 	_refresh_queue(building, edge)
-	_queue_gap.visible = _queue.visible and (_resume.visible or _commands.visible or _build_menu.visible or _cancel_build.visible)
+	_queue_gap.visible = _queue.visible and (_resume.visible or _card.visible or _cancel_build.visible)
 	_fit_slab()
 
-# The keys keep today's paths for any own selection; only the buttons follow the row rule.
-func _show_commands(view: Dictionary, selection: Dictionary, seat: int) -> void:
-	var armed: bool = HudModel.has_armed_unit(view, selection.ids, seat)
-	var unload: bool = HudModel.unload_target(view, selection, seat) != -1
-	_commands.get_node("AttackMove").visible = armed
-	_commands.get_node("Stop").visible = armed
-	_commands.get_node("Unload").visible = unload
-	_commands.get_node("UnloadPad").visible = unload and armed
-	_commands.visible = armed or unload
-	_look(_commands.get_node("AttackMove"), selection.attack_move)
+# hud-v5-layout "Hug rule for rows": rows from the top-most one holding a cell down to the edge; every other position is a well.
+func _show_card(cells: Array, selection: Dictionary, credits: int) -> void:
+	var actions: Dictionary = {}
+	for cell: Array in cells: actions[cell[0]] = cell[1]
+	var top: int = HudModel.GRID_KEYS.size()
+	for code: Key in actions: top = mini(top, HudModel.GRID_KEYS.find(code))
+	_card.visible = not actions.is_empty()
+	for cell: Node in _card.get_children():
+		var at: int = cell.get_index()
+		cell.visible = at >= top - top % 4
+		_fill_cell(cell, actions.get(HudModel.GRID_KEYS[at], ""), selection, credits)
+	# A hidden cell or a well sends no exit, so its hover ends here.
+	if _hovered_cell != null and (not _hovered_cell.is_visible_in_tree() or str(_hovered_cell.get_meta("action")).is_empty()): _hovered_cell = null
 
-static func _look(button: Button, armed: bool) -> void:
-	var look: StringName = &"HudButtonArmed" if armed else &"HudButton"
-	if button.theme_type_variation != look: button.theme_type_variation = look
+func _fill_cell(cell: Button, action: String, selection: Dictionary, credits: int) -> void:
+	cell.set_meta("action", action)
+	var item: bool = not action.is_empty() and not HudModel.COMMANDS.has(action)
+	var armed: bool = action == selection.placement_kind or (action == "attack_move" and selection.attack_move)
+	_cell_look(cell, &"well" if action.is_empty() else (&"armed" if armed else &"ready"))
+	cell.get_node("Chip").visible = not action.is_empty()
+	cell.get_node("Cost").visible = item
+	if item:
+		var cost: int = Registry.kind(action).cost
+		_tint(cell.get_node("Cost"), str(cost), cost > credits)
+	var name_label: Label = cell.get_node("Name")
+	_name_form(name_label, item)
+	var words: String = "" if action.is_empty() else HudModel.cell_name(action, selection.placement_kind)
+	if name_label.text != words:
+		name_label.text = words
+		name_label.reset_size()
+	var more: Label = cell.get_node("More")
+	more.visible = action == "build"
+	if more.visible:
+		more.text = "\u203a"
+		more.position.x = name_label.position.x + name_label.get_theme_font("font").get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, name_label.get_theme_font_size("font_size")).x + 4.0
+
+# Item names take the smaller two-line form, top-aligned; commands sit centred in their 28 px line.
+func _name_form(label: Label, item: bool) -> void:
+	if label.has_theme_font_size_override("font_size") == item: return
+	if item: label.add_theme_font_size_override("font_size", ITEM_NAME_SIZE)
+	else: label.remove_theme_font_size_override("font_size")
+	label.vertical_alignment = VERTICAL_ALIGNMENT_TOP if item else VERTICAL_ALIGNMENT_CENTER
+	label.reset_size()
+
+# Ready cells take the queue rows' hover inset; the armed look keeps its own hover; a well takes no pointer.
+func _cell_look(cell: Button, look: StringName) -> void:
+	if cell.get_meta("look", &"") == look: return
+	cell.set_meta("look", look)
+	cell.theme_type_variation = &"HudButtonArmed" if look == &"armed" else &"HudButton"
+	for state: String in ["normal", "hover", "pressed", "hover_pressed"]:
+		if look == &"well": cell.add_theme_stylebox_override(state, _well)
+		elif look == &"ready" and state != "normal": cell.add_theme_stylebox_override(state, _inset)
+		else: cell.remove_theme_stylebox_override(state)
+	cell.mouse_filter = MOUSE_FILTER_IGNORE if look == &"well" else MOUSE_FILTER_STOP
+
+func _press_cell(cell: Button) -> void:
+	var action: String = cell.get_meta("action")
+	if not action.is_empty(): cell_pressed.emit(action)
 
 func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> void:
-	var hovered: String = menu_kinds[_hovered] if _hovered >= 0 and _hovered < menu_kinds.size() else ""
-	var numbers: Dictionary = HudModel.strip(view, view_player, hovered if not hovered.is_empty() else selection.placement_kind)
+	var numbers: Dictionary = HudModel.strip(view, view_player, _hovered_kind() if not _hovered_kind().is_empty() else selection.placement_kind)
 	var powered: bool = HudModel.uses_power(HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
 	_top_strip.custom_minimum_size.x = STRIP_WIDTH if powered else STRIP_WIDTH_UNPOWERED
 	(_top_strip.get_node("Row/CreditsGroup/Swatch") as ColorRect).color = View.owner_color(view_player, selection.bright_owners)
@@ -449,6 +512,12 @@ func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> v
 	var credits: int = numbers.after_credits if preview and not short else numbers.credits
 	_fill(_top_strip, str(credits), numbers.after_used if preview else numbers.used, numbers.after_available if preview else numbers.available, powered)
 
+# Only an item cell previews; a command cell under the pointer previews nothing.
+func _hovered_kind() -> String:
+	if _hovered_cell == null: return ""
+	var action: String = _hovered_cell.get_meta("action")
+	return "" if HudModel.COMMANDS.has(action) else action
+
 func _fill(slab: PanelContainer, credits: String, used: int, available: int, powered: bool) -> void:
 	var low: bool = used > available
 	_tint(slab.find_child("Credits", true, false), credits, false)
@@ -464,39 +533,14 @@ func _tint(label: Label, text: String, warn: bool) -> void:
 	if warn: label.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 	else: label.remove_theme_color_override("font_color")
 
-func _refresh_menu(kinds: Array, shown: bool, credits: int, placement_kind: String) -> void:
-	menu_kinds = kinds
-	var grid: GridContainer = _build_menu
-	grid.visible = shown and not kinds.is_empty()
-	# A freed or hidden button sends no exit, so its hover ends here.
-	if not grid.visible or _hovered >= kinds.size(): _hovered = -1
-	while grid.get_child_count() > kinds.size(): grid.get_child(grid.get_child_count() - 1).free()
-	for i in kinds.size():
-		var button: Button = grid.get_child(i) if i < grid.get_child_count() else null
-		if button == null:
-			button = _button(grid, "Item%d" % i, _cell_width(grid.columns))
-			button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-			button.pressed.connect(menu_chosen.emit.bind(i))
-			button.mouse_entered.connect(_hover_menu.bind(i, true))
-			button.mouse_exited.connect(_hover_menu.bind(i, false))
-			_inset_looks(button, true)
-			_right_label(button, "Price", &"HudRow", -8.0)
-		var cost: int = Registry.kind(kinds[i]).cost
-		button.text = HudModel.menu_name(i, kinds[i])
-		_tint(button.get_node("Price"), "$%d" % cost, cost > credits)
-		var armed: bool = kinds[i] == placement_kind
-		_look(button, armed)
-		# The armed look keeps its own hover.
-		if button.has_theme_stylebox_override("hover") == armed: _inset_looks(button, not armed)
-
 func end_hover() -> void:
-	_hovered = -1
+	_hovered_cell = null
 
-func _hover_menu(index: int, entered: bool) -> void:
-	# An ending without a card (desync, relay lost) leaves the menu up but previews nothing.
+func _hover_cell(cell: Button, entered: bool) -> void:
+	# An ending without a card (desync, relay lost) leaves the card up but previews nothing.
 	if not _strip_args.is_empty() and _strip_args[1].over: return
-	if not entered and _hovered != index: return
-	_hovered = index if entered else -1
+	if not entered and _hovered_cell != cell: return
+	_hovered_cell = cell if entered else null
 	if not _strip_args.is_empty(): _show_strip.callv(_strip_args)
 
 func _refresh_queue(building: Dictionary, edge: Color) -> void:

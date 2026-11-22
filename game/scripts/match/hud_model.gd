@@ -27,18 +27,6 @@ static func player(view: Dictionary, id: int) -> Dictionary:
 		if found.id == id: return found
 	return view.players[0]
 
-static func menu_kinds(view: Dictionary, chosen: Dictionary, ids: Array[int], faction: String) -> Array:
-	if not chosen.is_empty(): return Registry.kind(chosen.kind).produces if chosen.completed else []
-	var kind: String = Registry.faction(faction).get("start_unit", "")
-	if ids.size() == 1:
-		var i: int = view.units.index_of(ids[0])
-		var unit_kind: String = view.units.kinds[view.units.kind[i]] if i != -1 else ""
-		if Registry.is_builder(unit_kind): kind = unit_kind
-	return Registry.kind(kind).get("builds", [])
-
-static func menu_label(index: int, kind: String) -> String:
-	return menu_name(index, kind) + " $%d" % Registry.kind(kind).cost
-
 const LOW_POWER := "LOW POWER · DEFENCES OFF"
 
 static func strip(view: Dictionary, id: int, placement_kind: String) -> Dictionary:
@@ -110,8 +98,14 @@ static func select_builder(view: Dictionary, seat: int) -> String:
 
 const SLAB_WIDTH: float = 432.0
 const SLAB_CONTENT: float = SLAB_WIDTH - 20.0
-const MENU_PADDING: float = 24.0
-const MENU_GAP: float = 4.0
+const COMMANDS := {"build": "Build", "back": "Back", "attack_move": "Attack Move", "stop": "Stop", "unload": "Unload"}
+
+# Back cancels while a building is armed (hud-v5-layout "Cards per state").
+static func cell_name(action: String, placement_kind: String) -> String:
+	if action == "back" and not placement_kind.is_empty(): return "Cancel"
+	if COMMANDS.has(action): return COMMANDS[action]
+	var quantity: int = Registry.kind(action).get("quantity", 1)
+	return Registry.kind(action).display_name + (" ×%d" % quantity if quantity > 1 else "")
 
 const QUEUE_SHOWN: int = 5
 const QUEUE_COLLAPSED: int = 4
@@ -126,26 +120,6 @@ static func _platform_label(physical: Key) -> Key:
 
 static func key_label(physical: Key) -> String:
 	return OS.get_keycode_string(layout_label.call(physical))
-
-static func menu_name(index: int, kind: String) -> String:
-	var quantity: int = Registry.kind(kind).get("quantity", 1)
-	return "%d: %s%s" % [index + 1, Registry.kind(kind).display_name, " x%d" % quantity if quantity > 1 else ""]
-
-# Each faction's builds, and what each of those and the start building produce.
-static func _every_menu() -> Array:
-	var menus: Array = []
-	for faction: String in Registry.Factions.FACTIONS:
-		menus.append(Registry.kind(Registry.faction(faction).get("start_unit", "")).get("builds", []))
-		for kind: String in _faction_kinds(faction): menus.append(Registry.kind(kind).get("produces", []))
-	return menus
-
-static func menu_columns(font: Font, size: int) -> int:
-	var widest: float = 0.0
-	for kinds: Array in _every_menu():
-		for i in kinds.size(): widest = maxf(widest, font.get_string_size(menu_label(i, kinds[i]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x)
-	for columns: int in [4, 3, 2]:
-		if columns * (widest + MENU_PADDING) + (columns - 1) * MENU_GAP <= SLAB_CONTENT: return columns
-	return 1
 
 static func is_container(view: Dictionary, id: int, seat: int) -> bool:
 	var host: Dictionary = building(view, id)
@@ -170,13 +144,6 @@ static func has_armed_unit(view: Dictionary, ids: Array[int], seat: int) -> bool
 		var i: int = view.units.index_of(id)
 		if i != -1 and view.units.owner[i] == seat and not Registry.kind(view.units.kinds[view.units.kind[i]]).get("weapon", "").is_empty(): return true
 	return false
-
-# Every build button shown with a selection is one placement accepts (orders' `_builder()` rule).
-static func shows_build_menu(view: Dictionary, selection: Dictionary, seat: int) -> bool:
-	if selection.building_id != -1 or selection.ids.is_empty(): return true
-	if selection.ids.size() != 1: return false
-	var i: int = view.units.index_of(selection.ids[0])
-	return i != -1 and view.units.owner[i] == seat and Registry.is_builder(view.units.kinds[view.units.kind[i]])
 
 static func queue_rows(count: int, open: bool) -> Dictionary:
 	var capped: bool = count > QUEUE_SHOWN

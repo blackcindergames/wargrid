@@ -1119,7 +1119,7 @@ func _select_builder(main) -> bool:
 		if unit.owner != main.local_player: continue
 		main.orders.selected_ids.assign([unit.id])
 		main._refresh()
-		if not main.orders.menu.is_empty(): return true
+		if main.get_node("HUD/Economy/Card/Q").get_meta("action") == "build": return true
 	return false
 
 func test_modifier_keys_stay_in_field(runner) -> bool:
