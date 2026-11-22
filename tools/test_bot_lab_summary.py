@@ -70,11 +70,6 @@ class SummaryTests(unittest.TestCase):
         text, _ = lab.summarise([match("dry_wells", "1,2", [seat("usa", waves)])], [])
         self.assertIn("usa: launch 5.5 / 9.0 | 2.8 / 4.5   contact 5.5 / 9.0 | 2.8 / 4.5", text)
 
-    def test_stops_per_wave_unit(self) -> None:
-        waves = [wave(1, 0) | {"units": 4, "stops": v} for v in range(0, 10)]
-        text, _ = lab.summarise([match("dry_wells", "1,2", [seat("usa", waves)])], [])
-        self.assertIn("usa: 1.12 / 2.00", text)
-
     def test_not_ended_bot_matches_are_listed_and_failed_jobs_fail(self) -> None:
         stuck = match("dry_wells", "1,2", [], ended=False, job="bvb-stuck")
         text, ok = lab.summarise([stuck], ["tower-broken"])

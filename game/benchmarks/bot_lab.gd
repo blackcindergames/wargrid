@@ -94,7 +94,6 @@ func _loop(bots: Array[int], cap: int) -> void:
 		var state: Dictionary = _sim.bot_state() if not deciding.is_empty() else {}
 		for seat: int in deciding: _observe(state, _seats[seat], tick)
 		Skirmish.issue_opponents(_sim, bots)
-		if not deciding.is_empty(): _count_stops(tick)
 		for seat: int in deciding: _record_new_waves(state, _seats[seat], tick)
 		_sim.step()
 		_watch_events(_sim.tick())
@@ -118,14 +117,6 @@ func _observe_factory(state: Dictionary, row: Dictionary, tick: int) -> void:
 	if up and not row.factory_up and not row.factory_lost.is_empty() and row.factory_back.size() < row.factory_lost.size(): row.factory_back.append(tick)
 	row.factory_up = up
 
-# BR8's stop-go: every stop order naming a unit counts on its wave; read-only look at this tick's queued commands.
-func _count_stops(tick: int) -> void:
-	for command: Dictionary in _sim._pending:
-		if command.type != "stop" or command.tick != tick: continue
-		for id: int in command.entity_ids:
-			var entry: Variant = _unit_wave.get(id)
-			if entry != null: entry.stops += 1
-
 func _team_wave(team: int) -> int:
 	return int(Skirmish.team_memory(_sim, team).get("wave", 0))
 
@@ -138,7 +129,7 @@ func _record_new_waves(state: Dictionary, row: Dictionary, tick: int) -> void:
 		wave["lab_seen"] = true
 		var ids: Array = wave.ids.filter(func(id: int) -> bool: return units.has(id))
 		var entry := {"uid": _wave_ids.size(), "wave": _team_wave(row.team) - 1, "tick": tick, "units": ids.size(), "kinds": {}, "value": 0, "veh_value": 0, "factory_up": row.factory_up,
-			"launch": _spread(ids, units), "contact_tick": -1, "contact": null, "stops": 0}
+			"launch": _spread(ids, units), "contact_tick": -1, "contact": null}
 		for id: int in ids:
 			var kind: String = units[id].kind
 			var value: int = Skirmish.unit_cost(kind)

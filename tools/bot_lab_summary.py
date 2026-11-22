@@ -139,14 +139,6 @@ def spread_lines(rows: list[Row]) -> list[str]:
         for kind, speed in (wave["contact"] or {}).get("slow_units", []):
             slow.setdefault(faction, {})[kind] = speed
     lines.append(f"  slowest kinds at contact (speed): {slow}")
-    lines.append("BR8 stops per wave unit, median / p90:")
-    for faction in FACTIONS:
-        values = [w["stops"] / w["units"] for f, w in waves(rows) if f == faction and "stops" in w and w["units"]]
-        lines.append(
-            f"  {faction}: {statistics.median(values):.2f} / {percentile(values, 0.9):.2f}"
-            if values
-            else f"  {faction}: -"
-        )
     return lines
 
 

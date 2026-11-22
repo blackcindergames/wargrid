@@ -25,7 +25,6 @@ const DETOUR_REACH: float = 10.0
 const DETOUR_CALM: int = 90
 const LET_GO_TICKS: int = 300
 const HOLD_LAPSE: int = 1800
-const REGROUP_SPREAD: float = 8.0
 const BOT_META := &"skirmish_bot"
 const BOT_TEAM_META := &"skirmish_bot_team"
 const MAP_PATH := "res://data/maps/skirmish.json"
@@ -305,24 +304,12 @@ static func _drive_waves(ctx: Dictionary, bot: Dictionary, mine: Dictionary, ene
 			switched = not hits.is_empty() and target != wave.target
 			wave.target = target
 		live.append(wave)
-		var ahead: Dictionary = _ahead(wave, mine, enemies.filter(func(enemy: Dictionary) -> bool: return enemy.id == wave.target), centre, ctx.tick)
-		var pool: Array = wave.ids.filter(func(id: int) -> bool: return not skip.has(id) and (switched or (_idle(mine[id]) and not ahead.has(id))))
-		if not pool.is_empty(): _send(ctx, {"type": "attack", "entity_ids": pool, "target_id": wave.target})
-		var halt: Array = ahead.keys().filter(func(id: int) -> bool: return mine[id].combat.mode == "attack" and mine[id].combat.target_id == wave.target)
-		if not halt.is_empty(): _send(ctx, {"type": "stop", "entity_ids": halt})
+		var pool: Array = wave.ids.filter(func(id: int) -> bool: return not skip.has(id) and (switched or _idle(mine[id])))
+		# BR8: marches at the slowest unit's speed; a detour fights at full speed.
+		var order := {"type": "attack", "entity_ids": pool, "target_id": wave.target}
+		if wave.detour == null: order.group_speed = true
+		if not pool.is_empty(): _send(ctx, order)
 	bot.waves = live
-
-# BR8: units farther than REGROUP_SPREAD from the centre and nearer the target than it; none while the wave is fighting.
-static func _ahead(wave: Dictionary, mine: Dictionary, goal: Array, centre: Vector2, tick: int) -> Dictionary:
-	var ahead := {}
-	if goal.is_empty() or tick - wave.hit_at < DETOUR_CALM: return ahead
-	var mark: float = _reach_squared(centre.x, centre.y, goal[0])
-	for id: int in wave.ids:
-		var at: Array = mine[id].position
-		var dx: float = at[0] - centre.x
-		var dy: float = at[1] - centre.y
-		if dx * dx + dy * dy > REGROUP_SPREAD * REGROUP_SPREAD and _reach_squared(at[0], at[1], goal[0]) < mark: ahead[id] = true
-	return ahead
 
 static func _new_wave(ids: Array, target: Variant, mine: Dictionary) -> Dictionary:
 	return {"ids": ids, "target": target, "detour": null, "diverted": false, "hit_at": -1, "let_go": {}, "hp": _hp_of(ids, mine)}
@@ -414,7 +401,7 @@ static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	var limit: int = WAVE0_UNITS / live.size() if clock.wave == 0 else ready.size()
 	var take: Array = _take(ready, mine, share, limit)
 	if not take.is_empty():
-		if not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective}): return
+		if not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective, "group_speed": true}): return
 		bot.waves.append(_new_wave(take, objective, mine))
 	clock.released_by = "wait_cap" if worth < target else ("timer" if clock.prev < clock.due else "size")
 	clock.launched_at = ctx.tick
@@ -438,7 +425,7 @@ static func _add_to_wave(ctx: Dictionary, bot: Dictionary, mine: Dictionary, ene
 	var take: Array = _take(ready, mine, share, limit)
 	if take.is_empty(): return
 	var objective: Variant = _follow(clock, _centre(take, mine), enemies)
-	if objective == null or not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective}): return
+	if objective == null or not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective, "group_speed": true}): return
 	bot.waves.append(_new_wave(take, objective, mine))
 	clock.left_cost = maxi(clock.left_cost - _cost_sum(take.map(func(id: int) -> String: return mine[id].kind)), 0)
 	if clock.left_units >= 0: clock.left_units -= take.size()

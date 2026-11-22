@@ -16,7 +16,7 @@ const B: int = 4
 const DUE: int = 1000
 
 func cases() -> Array[Callable]:
-	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_take_alternates_vehicles_and_infantry, test_wave_take_goes_on_with_the_other_kind_when_one_runs_out, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks, test_defence_near_objective_raises_target, test_defence_on_route_raises_target, test_defence_raises_target_by_def_units_times_unit_cost, test_wave_zero_not_raised_by_defence, test_softer_objective_when_target_unmet, test_no_soft_objective_goes_anyway, test_unfinished_defence_not_counted, test_defence_completing_in_the_judging_tick_counts_at_the_next_decision, test_team_waves_follow_the_softer_objective, test_detour_returns_to_the_softer_objective, test_defence_at_exactly_def_reach_counts, test_softer_takes_best_score_not_first_or_nearest, test_retarget_follows_br5_order_not_id, test_route_points_every_8_cells, test_defence_route_starts_at_team_mean_rally, test_br7_data_share_and_lapse, test_br7_hold_starts_at_wave_one, test_br7_barracks_spends_only_the_rest, test_br7_hold_ends_at_the_share, test_br7_hold_lapses_after_hold_lapse_without_income, test_br7_hold_kept_while_income_rises, test_br7_lowest_factory_id_buys, test_br7_rebuild_hold_while_builder_lives, test_br8_unit_far_ahead_of_its_wave_stops, test_br8_held_unit_waits_then_rejoins, test_br8_no_hold_within_detour_calm_of_a_hit, test_br8_defended_unit_is_not_stopped, test_br8_unit_attacking_another_target_is_not_stopped, test_br8_ahead_is_measured_to_the_new_objective]
+	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_take_alternates_vehicles_and_infantry, test_wave_take_goes_on_with_the_other_kind_when_one_runs_out, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks, test_defence_near_objective_raises_target, test_defence_on_route_raises_target, test_defence_raises_target_by_def_units_times_unit_cost, test_wave_zero_not_raised_by_defence, test_softer_objective_when_target_unmet, test_no_soft_objective_goes_anyway, test_unfinished_defence_not_counted, test_defence_completing_in_the_judging_tick_counts_at_the_next_decision, test_team_waves_follow_the_softer_objective, test_detour_returns_to_the_softer_objective, test_defence_at_exactly_def_reach_counts, test_softer_takes_best_score_not_first_or_nearest, test_retarget_follows_br5_order_not_id, test_route_points_every_8_cells, test_defence_route_starts_at_team_mean_rally, test_br7_data_share_and_lapse, test_br7_hold_starts_at_wave_one, test_br7_barracks_spends_only_the_rest, test_br7_hold_ends_at_the_share, test_br7_hold_lapses_after_hold_lapse_without_income, test_br7_hold_kept_while_income_rises, test_br7_lowest_factory_id_buys, test_br7_rebuild_hold_while_builder_lives, test_br8_wave_marches_at_its_slowest_speed, test_br8_detour_goes_uncapped_and_the_return_is_capped]
 
 func _world() -> RefCounted:
 	var sim = Simulation.new([], Vector2i(48, 32))
@@ -357,19 +357,14 @@ func test_bot_without_building_launches_no_wave(runner) -> bool:
 # Every attack order a bot sends on its decision tick; a launch is one that names a unit no earlier order named.
 func _team_play(sim: RefCounted, rec: Dictionary, until: int, seats: Array[int], attack_tick: int = DUE, remove: bool = true) -> void:
 	if not rec.has("orders"): rec.orders = []
-	if not rec.has("stops"): rec.stops = []
 	while sim.tick() < until:
 		Skirmish.issue_opponents(sim, seats, attack_tick)
 		var gone: Array = []
 		for command in sim.snapshot().pending_commands:
-			if command.type == "stop" and seats.has(command.player) and Skirmish.decides(sim.tick(), command.player):
-				var stopped: Array = command.entity_ids.duplicate()
-				stopped.sort()
-				rec.stops.append({"tick": sim.tick(), "player": command.player, "ids": stopped})
 			if command.type != "attack" or not seats.has(command.player) or not Skirmish.decides(sim.tick(), command.player): continue
 			var ids: Array = command.entity_ids.duplicate()
 			ids.sort()
-			var order := {"tick": sim.tick(), "player": command.player, "target": command.target_id, "ids": ids}
+			var order := {"tick": sim.tick(), "player": command.player, "target": command.target_id, "ids": ids, "group": command.get("group_speed", false)}
 			rec.orders.append(order)
 			if ids.all(func(id: int) -> bool: return rec.seen.has(id)): continue
 			for id in ids: rec.seen[id] = true
@@ -1297,139 +1292,40 @@ func _split(sim: RefCounted, rec: Dictionary) -> Array:
 func _kind_of(sim: RefCounted, ids: Array, kind: String) -> Array:
 	return ids.filter(func(id: int) -> bool: return _unit(sim, id).get("kind", "") == kind)
 
-func _goal_squared(at: Vector2, building: Dictionary) -> float:
-	var size: Vector2i = Registry.kind(building.kind).footprint
-	return at.distance_squared_to(Vector2(clampf(at.x, building.origin[0], building.origin[0] + size.x), clampf(at.y, building.origin[1], building.origin[1] + size.y)))
+func _pace_max(sim: RefCounted, rec: Dictionary, ids: Array, ticks: int) -> float:
+	var fastest: float = 0.0
+	for _tick in range(ticks):
+		var before: Array = ids.map(func(id: int) -> Vector2: return _where(sim, id))
+		_run_to(sim, rec, sim.tick())
+		for i in range(ids.size()): fastest = maxf(fastest, before[i].distance_to(_where(sim, ids[i])) * 30.0)
+	return fastest
 
-# BR8 in the spec's words: more than REGROUP_SPREAD from the wave's centre and nearer its target than the centre.
-func _ahead(sim: RefCounted, ids: Array, target: int) -> Array:
-	var building: Dictionary = Economy.object(sim, target)
-	var live: Array = ids.filter(func(id: int) -> bool: return not _unit(sim, id).is_empty())
-	var centre: Vector2 = _mean(sim, live)
-	var mark: float = _goal_squared(centre, building)
-	return live.filter(func(id: int) -> bool: return _where(sim, id).distance_to(centre) > Skirmish.REGROUP_SPREAD and _goal_squared(_where(sim, id), building) < mark)
-
-# Runs decision by decision to the first one whose state has a unit ahead; returns that tick and the ahead ids.
-func _first_hold(sim: RefCounted, rec: Dictionary, ids: Array, target: int) -> Dictionary:
-	var tick: int = Skirmish.next_decision(sim.tick() - 1, SEAT)
-	while tick < 1500:
-		_run_to(sim, rec, tick - 1)
-		var ahead: Array = _ahead(sim, ids, target)
-		_run_to(sim, rec, tick)
-		if not ahead.is_empty(): return {"tick": tick, "ahead": ahead}
-		tick += Skirmish.DECISION_TICKS
-	return {"tick": -1, "ahead": []}
-
-func _stops_at(rec: Dictionary, tick: int) -> Array:
-	return rec.stops.filter(func(row: Dictionary) -> bool: return row.tick == tick and row.player == SEAT)
-
-func _named_at(rec: Dictionary, tick: int) -> Array:
-	var ids: Array = []
-	for row: Dictionary in _orders_at(rec, tick): ids.append_array(row.ids)
-	return ids
-
-func _is_idle(sim: RefCounted, id: int) -> bool:
-	var unit: Dictionary = _unit(sim, id)
-	return unit.combat.mode == "guard" and unit.combat.target_id == null
-
-func test_br8_unit_far_ahead_of_its_wave_stops(runner) -> bool:
+func test_br8_wave_marches_at_its_slowest_speed(runner) -> bool:
 	var sim = _world()
 	var rec: Dictionary = _log()
 	var ids: Array = _split(sim, rec)
-	var hold: Dictionary = _first_hold(sim, rec, ids, rec.launches[0].target)
 	var scouts: Array = _kind_of(sim, ids, "usa_light_vehicle")
-	runner.check(ids.size() > scouts.size() and hold.tick > 0 and hold.ahead.all(func(id: int) -> bool: return scouts.has(id)), "BR8 premise: scouts and riflemen launch together and only scouts get ahead, got %s" % [hold])
-	runner.check(rec.stops.all(func(row: Dictionary) -> bool: return row.tick >= hold.tick), "BR8 no unit is stopped before one is ahead, got %s" % [rec.stops])
-	var stops: Array = _stops_at(rec, hold.tick)
-	runner.check(stops.size() == 1 and stops[0].ids == hold.ahead, "BR8 a marching unit more than REGROUP_SPREAD from its wave's centre and nearer the target than the centre gets one stop: %s, got %s" % [hold.ahead, stops])
+	var slowest: float = Registry.kind("usa_rifle_infantry").speed
+	runner.check(rec.launches[0].group and ids.all(func(id: int) -> bool: return _unit(sim, id).get("group_speed") == slowest), "BR8 a wave leaves with the group-speed order: every unit's cap is its slowest member's speed %s, got %s" % [slowest, rec.launches[0]])
+	var pace: float = _pace_max(sim, rec, scouts, 300)
+	runner.check(pace > 0.0 and pace <= slowest + 1e-3, "BR8 the wave's scouts march at the riflemen's pace, got %s" % pace)
+	runner.check(_orders_after(rec, rec.launches[0].tick).filter(func(row: Dictionary) -> bool: return row.ids.any(func(id: int) -> bool: return ids.has(id))).is_empty(), "BR8 the bot sends a marching wave no further order, got %s" % [_orders_after(rec, rec.launches[0].tick)])
+	var team = _crown()
+	stock(team, A, "usa_tank", 3)
+	stock(team, B, "usa_tank", 8)
+	var team_rec: Dictionary = _log()
+	_both(team, team_rec, DUE + 2 * Skirmish.DECISION_TICKS)
+	runner.check(team_rec.launches.size() == 2 and team_rec.launches.all(func(row: Dictionary) -> bool: return row.group), "BR8 the launcher's and the joiner's parts of a team wave both carry the group-speed order, got %s" % [team_rec.launches])
 	return true
 
-func test_br8_held_unit_waits_then_rejoins(runner) -> bool:
+func test_br8_detour_goes_uncapped_and_the_return_is_capped(runner) -> bool:
 	var sim = _world()
 	var rec: Dictionary = _log()
-	var ids: Array = _split(sim, rec)
-	var target: int = rec.launches[0].target
-	var hold: Dictionary = _first_hold(sim, rec, ids, target)
-	var back := {}
-	var early: Array = []
-	var tick: int = hold.tick + Skirmish.DECISION_TICKS
-	while tick < hold.tick + 1800 and back.size() < hold.ahead.size():
-		_run_to(sim, rec, tick - 1)
-		var ahead: Array = _ahead(sim, ids, target)
-		_run_to(sim, rec, tick)
-		var named: Array = _named_at(rec, tick)
-		for id: int in hold.ahead:
-			if back.has(id): continue
-			if ahead.has(id) and named.has(id): early.append([tick, id])
-			elif not ahead.has(id): back[id] = named.has(id)
-		tick += Skirmish.DECISION_TICKS
-	runner.check(hold.tick > 0 and early.is_empty(), "BR8 a held unit gets no attack order while it is still ahead, got %s" % [early])
-	runner.check(back.size() == hold.ahead.size() and back.values().all(func(sent: bool) -> bool: return sent), "BR8 a held unit gets the attack again at the first decision it is no longer ahead, got %s of %s" % [back, hold.ahead])
-	return true
-
-func test_br8_no_hold_within_detour_calm_of_a_hit(runner) -> bool:
-	var probe = _world()
-	var probe_rec: Dictionary = _log()
-	var probe_ids: Array = _split(probe, probe_rec)
-	var seen: Dictionary = _first_hold(probe, probe_rec, probe_ids, probe_rec.launches[0].target)
-	var sim = _world()
-	var rec: Dictionary = _log()
-	var ids: Array = _split(sim, rec)
-	_run_to(sim, rec, seen.tick - Skirmish.DECISION_TICKS)
-	_wound(sim, [_kind_of(sim, ids, "usa_light_vehicle")])
-	_run_to(sim, rec, seen.tick + Skirmish.DETOUR_CALM)
-	var quiet: Array = rec.stops.filter(func(row: Dictionary) -> bool: return row.tick < seen.tick + Skirmish.DETOUR_CALM)
-	runner.check(seen.tick > 0 and quiet.is_empty(), "BR8 no unit is held within DETOUR_CALM of the wave's hit, got %s" % [quiet])
-	runner.check(not _stops_at(rec, seen.tick + Skirmish.DETOUR_CALM).is_empty(), "BR8 the hold resumes DETOUR_CALM after the hit, got %s" % [rec.stops])
-	return true
-
-func test_br8_defended_unit_is_not_stopped(runner) -> bool:
-	var sim = _world()
-	var rec: Dictionary = _log()
-	var ids: Array = _split(sim, rec)
-	var hold: Dictionary = _first_hold(sim, rec, ids, rec.launches[0].target)
-	var intruder: int = _foe(sim, "usa_rifle_infantry", Vector2(38.5, 24.5))
-	var next: int = hold.tick + Skirmish.DECISION_TICKS
-	_run_to(sim, rec, next)
-	var sent: Array = _orders_at(rec, next).filter(func(row: Dictionary) -> bool: return row.target == intruder)
-	runner.check(hold.tick > 0 and intruder >= 0 and sent.size() == 1 and hold.ahead.all(func(id: int) -> bool: return sent[0].ids.has(id)), "BR8 premise: _defend sends the held units at the intruder, got %s" % [sent])
-	var stopped: Array = _stops_at(rec, next).filter(func(row: Dictionary) -> bool: return sent.size() == 1 and row.ids.any(func(id: int) -> bool: return sent[0].ids.has(id)))
-	runner.check(stopped.is_empty(), "BR8 a unit _defend sends is not stopped in the same decision, got %s" % [stopped])
-	return true
-
-func test_br8_ahead_is_measured_to_the_new_objective(runner) -> bool:
-	var sim = _world()
-	var rec: Dictionary = _log()
-	var ids: Array = _split(sim, rec)
-	var hold: Dictionary = _first_hold(sim, rec, ids, rec.launches[0].target)
-	var barracks: int = Economy.add_completed(sim, 1, "usa_barracks", Vector2i(4, 24))
-	sim.remove_object(rec.launches[0].target)
-	var next: int = hold.tick + Skirmish.DECISION_TICKS
-	_run_to(sim, rec, next - 1)
-	var ahead: Array = _ahead(sim, ids, barracks)
-	var idle: Array = ids.filter(func(id: int) -> bool: return _is_idle(sim, id) and not ahead.has(id))
-	_run_to(sim, rec, next)
-	var order: Array = _orders_at(rec, next)
-	runner.check(hold.tick > 0 and not ahead.is_empty() and order.size() == 1 and order[0].target == barracks, "BR8 premise: a unit is ahead toward the barracks and the wave re-picks it when its objective dies, got %s ahead %s" % [order, ahead])
-	runner.check(order.size() == 1 and order[0].ids == idle, "BR8 after the objective dies, ahead is measured to the new objective: idle units not ahead of it (%s) get the attack, ahead ones (%s) do not, got %s" % [idle, ahead, order])
-	return true
-
-func test_br8_unit_attacking_another_target_is_not_stopped(runner) -> bool:
-	var sim = _world()
-	var rec: Dictionary = _log()
-	var ids: Array = _split(sim, rec)
-	var target: int = rec.launches[0].target
-	var scout: int = _kind_of(sim, ids, "usa_light_vehicle")[0]
-	var prey: int = _foe(sim, "usa_builder", Vector2(19.5, 8.5))
-	Economy.send(sim, {"type": "attack", "entity_ids": [scout], "target_id": prey, "player": SEAT})
-	var seen: Array = []
-	var tick: int = Skirmish.next_decision(sim.tick(), SEAT)
-	while tick < rec.launches[0].tick + 600:
-		_run_to(sim, rec, tick - 1)
-		if _ahead(sim, ids, target).has(scout) and _unit(sim, scout).combat.target_id == prey: seen.append(tick)
-		_run_to(sim, rec, tick)
-		tick += Skirmish.DECISION_TICKS
-	var stopped: Array = rec.stops.filter(func(row: Dictionary) -> bool: return seen.has(row.tick) and row.ids.has(scout))
-	runner.check(prey >= 0 and not seen.is_empty(), "BR8 premise: the scout runs ahead of its wave while it attacks another target, got %s" % [seen])
-	runner.check(stopped.is_empty(), "BR8 an ahead unit attacking anything but its wave's target is not stopped, got %s" % [stopped])
+	var scene: Dictionary = _detour_set(sim, rec)
+	var detour: Array = _orders_at(rec, scene.first)
+	runner.check(detour.size() == 1 and detour[0].target == scene.battery and not detour[0].group, "BR8 a detour order carries no group-speed flag, got %s" % [detour])
+	runner.check(scene.ids.all(func(id: int) -> bool: return not _unit(sim, id).has("group_speed")), "BR8 a detouring unit has no cap")
+	_run_to(sim, rec, scene.first + Skirmish.DETOUR_CALM)
+	var back: Array = _orders_at(rec, scene.first + Skirmish.DETOUR_CALM)
+	runner.check(back.size() == 1 and back[0].target == scene.objective and back[0].group, "BR8 the order back to the objective carries the group-speed flag, got %s" % [back])
 	return true

@@ -3,16 +3,16 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-22 after BR8)
+Resume record (updated 2026-11-22 after BR8 group speed)
 Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 (2026-11-22, approved by the owner), order step 1 committed 8b292146 / T1-8a BR7 committed after this record
-Last green task / next incomplete task: T1-8e mixed take / BR8 as a group-speed order (replaces stop and wait), then T1-8c
+Last green task / next incomplete task: T1-8f BR8 group-speed order / owner match on it, then T1-8c
 Changed paths since last commit: none after the BR7 commit
-Last command / cases / checks / failures / exit / marker: full suite on the mixed take (build/suite-take.log) CASES 1359 CHECKS 153009 FAILURES 9 / exit 1 / no TESTS PASSED (the 9 re-pin names); `sh tools/run_checks.sh` CHECKS PASSED 5
+Last command / cases / checks / failures / exit / marker: full suite on the group-speed order (build/suite-gs.log) CASES 1362 CHECKS 153084 FAILURES 11 / exit 1 / no TESTS PASSED (red ledger row T1-8f); `sh tools/run_checks.sh` CHECKS PASSED 5
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Fm1 winner at T1-10, Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: BR8 as a group-speed order in a fresh session (private handoff `p7-group-speed-prompt.txt`); then T1-8c
+Next exact action: owner plays a match on the group-speed order (waves together and smooth?); then T1-8c
 ```
 
 ## Red ledger
@@ -29,6 +29,7 @@ Next exact action: BR8 as a group-speed order in a fresh session (private handof
 | T1-8a | Same nine names as T1-7 (after the `main` merge, same values). Values moved: TB3 digest c9da7864e460e7ee to c7bce6cedaadb001; TB4 team core series to 2150549136322465648; S1 core series to 797697861706021661; S1 pinned outcome (8667 to 9256, winner 1, inside 7000-17999); Fm1 (26833 to 30056, winner 2); Cs1 (20776, winner 2 to 23362, winner 1). Unchanged: VR1 digest (both checks), HUD1 texts. T1-10: Cs1's winner flips 2 to 1. | yes, all (T1-10) |
 | T1-8d | Same nine names as T1-8a. Values moved: TB3 digest c7bce6cedaadb001 to ebf1b1b82ccc0f12; TB4 team core series to 3677847588803602532; S1 core series to 1486928065811848988; S1 pinned outcome (9256 to 10043, winner 1, inside 7000-17999); Fm1 (30056 to 27018, winner 2); Cs1 (23362 to 20771, winner 1). Unchanged: VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10) |
 | T1-8e | Same nine names as T1-8d. Values moved: TB3 digest ebf1b1b82ccc0f12 to 961a50b34e9e5358; TB4 team core series to 8274204117302765247. Unchanged: S1 core series, S1 pinned outcome (10043, winner 1), Fm1 (27018, winner 2), Cs1 (20771, winner 1), VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10) |
+| T1-8f | The nine names of T1-8e plus S1 terminal inside the six-minute window and S1 economy, production and combat (S1 no longer ends; owner decision below). Values moved: TB3 digest 961a50b34e9e5358 to f3d2dab4fc4a0a4a; TB4 team core series to 5940764765599406711; S1 core series to 2416494683122998182; S1 pinned outcome (10043, winner 1 to -1 ongoing at 18,000); Fm1 (27018 to 14038, winner 2); Cs1 (20771 to 23750, winner 1). Unchanged: VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10; the two S1 checks change rule there) |
 
 ## Evidence
 
@@ -391,3 +392,26 @@ The 61 waves are not stalls. A traced rerun of `idle-af37-frc-frc-b1-s0` (scratc
 ### T1-8e Mixed take
 
 Tree `e364eee0` plus the change (`skirmish.gd` `_take`, `_by_cost`). Rule: plan, "After the owner's BR8 match". Red first: `test_wave_take_alternates_vehicles_and_infantry` (6 tanks, 5 riflemen: old rule took 5 tanks; new: tank, rifleman, tank, rifleman, tank, rifleman, tank, 4,275 first reaching 4,248). `test_wave_take_goes_on_with_the_other_kind_when_one_runs_out` replaces `test_wave_takes_highest_cost_first` (2 riflemen, 6 tanks: once the infantry runs out the take goes on with tanks, 4,950; the old rule took 5 tanks). Opus review (one): nothing blocking; its fixes taken: the first run-out test never reached the run-out branch (replaced by this one), a stale comment, a pointer in BR3's text. Noted: with a binding unit limit a mixed wave carries less cost per unit (wave 0 with three live bots: 3,150 instead of 4,500), so joiners get a larger `left_cost`; the arithmetic is unchanged. `test_bot_rules` CASES 78 CHECKS 178 FAILURES 0. Full suite CASES 1359 CHECKS 153009 FAILURES 9, the re-pin names (red ledger row T1-8e); `sh tools/run_checks.sh` CHECKS PASSED 5.
+
+### T1-8f BR8 as a group-speed order
+
+One page (2026-11-22). **What the player notices:** a bot wave leaves and arrives as one group and moves smoothly at its slowest unit's pace, with no stop-go at the front. **Refuting observation:** in the bot lab the median wave spread at first contact is not clearly below base (18-29 cells; stop and wait reached 8.3-8.6), waves stall (fewer non-mirror bot-vs-bot ends, an idle floor fails, the tower survives), or the owner still sees stop-go or a run-ahead in a match. **Slice:** an optional `group_speed: true` on `move`, `attack` and `attack_move`, a command a human can also give (key binding later). At the tick it applies, every unit the order commands gets `group_speed`, the lowest `speed` among those units; locomotion moves a unit at most at `min(speed, group_speed)` while its intent is the ordered one (`move`, `attack`, `attack_move`). Any later order to the unit without the flag removes the key. The bot sends waves, joiners and every re-send to the objective with the flag, and fight detours without it, so a wave fights at full speed and keeps the spread the fight left on its way back. BR8's stop and wait (`_ahead`, the stop, `REGROUP_SPREAD`), its tests and the lab's stop count go. **Out:** the human key binding; recomputing the cap when a member dies; a re-send that names only some of a wave's units (units back from `_defend`, units idle off-cycle) caps them at their own slowest speed, not the wave's; a catch-up allowance for stragglers; cohesion between teammates' parts of a team wave.
+
+Decided for you (reversible): one optional flag rather than a new command (the same-tick rules of the three commands stay as they are); the cap is taken once, at the tick the order applies, over the units that order commands at that tick (Recoil `SelectedUnitsAI.cpp:146,159,287-312`, a0240a9b5c: `groupMinMaxSpeed = std::min(groupMinMaxSpeed, unit->moveType->GetMaxSpeed())`, reset by every later order without Ctrl); not recomputed as members die (Zero Hour recomputes, `AIGroup.cpp:435-492`, afc2a103f, but the bot's waves lose units in fights, which already end in a detour and a flagged re-send over the living units); no damaged-unit exclusion (Zero Hour skips units its damage penalty slows; Wargrid has no damage speed penalty); air units obey the cap too (Recoil `HoverAirMoveType` clamps the same way); the key exists only while set, so states without a flagged order hash as before. Survey of the reference engines for this order: Recoil, Zero Hour and 0 A.D. (`Formation.js:932-963`, 136720dada, a formation controller) have one; OpenRA, Warzone 2100, Zero-K, Beyond All Reason and Permafrost were searched and showed none.
+
+Tree `4a2447f6` plus the change (`simulation.gd` `_validate`, `issue_command`, `_cap_group`; `locomotion.gd` `_cap`; `skirmish.gd` `_drive_waves`, `_form`, `_add_to_wave`; BR8's stop code, its six tests and the lab's stop count removed). Red first: `test_group_speed.gd` GS1-GS7 (51 failures before the change: march at the slowest speed, the flag on all three commands, a later order lifts the cap, refusals, the same-tick matrix against every command in both orders, removal before and after the order applies, retaliation not capped), then `test_br8_wave_marches_at_its_slowest_speed` and `test_br8_detour_goes_uncapped_and_the_return_is_capped` (5 failures before the bot change). Mutants caught: no mode check in `_cap` (GS7), no erase on a later order (GS3). Opus review (one): nothing blocking; taken: the cap is set only after the attack target check, the bot sends the key only when true, the mode list is a constant, the slice no longer claims a return regroups, the guide footer; recorded instead of built: the partial re-send (Out, above).
+
+Bot lab (`build/bot_lab/gs-base` = `4a2447f6` exported, stop and wait in it; `gs1` = the change before the review fixes, which do not change bot behaviour; 150 jobs each):
+
+| | Stop and wait `4a2447f6` | Group speed |
+|---|---|---|
+| Bot vs bot ended (of 18) | 14; not: China mirrors s0, s1, USA mirrors s0, s1 | 18 |
+| Idle defeat min / median: Dry Wells, Ashfall 2,6, Ashfall 3,7, BC 1v1, BC 1v2 | 7,897/8,232, 13,584/13,670, 13,112/13,630, 8,363/8,707, 8,074/8,493, all PASS | 8,019/8,490, 13,713/14,166, 13,442/13,915, 8,603/9,042, 8,320/8,778, all PASS |
+| Wave spread at first contact, farthest unit median / p90 cells (usa, china, frc) | 8.6/9.0, 8.2/9.5, 10.6/12.9 | 4.8/7.8, 4.6/6.5, 4.3/9.0 |
+| Centroid to the 3 slowest at first contact, median / p90 (usa, china, frc) | 3.1/5.8, 3.7/8.4, 8.9/10.6 | 1.9/3.0, 1.4/4.0, 2.2/4.6 |
+| One Rotary Gun Tower killed (usa, china, frc) | 7,380-7,416, 7,321-7,598, 7,184-7,192 | 7,524-8,021, 7,509-8,046, 7,632-8,045 |
+| Factories lost / rebuilt (usa, china, frc) | 3/1, 4/0, 15/5 | 7/2, 9/3, 10/3 |
+
+The refuting observation did not occur: spread at first contact is about half of stop and wait's and a sixth of the 18-29 before BR8, no wave stalls, every bot-vs-bot row ends (the equal mirrors too), the floors hold, the tower falls 150-850 ticks later because the wave walks at infantry pace. The owner's match judges the look.
+
+Full suite on the final tree (`build/suite-gs.log`): CASES 1362 CHECKS 153084 FAILURES 11, the names of red ledger row T1-8f; `sh tools/run_checks.sh` CHECKS PASSED 5. S1 (`test_skirmish_match.gd`) no longer ends: a probe to 40,000 ticks keeps both seats at 4-6 units and 4 buildings from tick 30,000. Its seat 1 is the same USA bot from tick 9,000 (`scripted_human.gd` calls `issue_opponent` for seat 1), so from then on S1 is an equal mirror. Owner decision (user, 2026-11-22): S1 is treated as a mirror, like the lab's: at T1-10 it pins its outcome at the 18,000-tick cap (ongoing) and keeps its economy, production and combat checks, measured up to the cap.

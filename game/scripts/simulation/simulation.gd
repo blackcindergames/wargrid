@@ -213,6 +213,7 @@ func issue_command(command: Dictionary) -> Dictionary:
 		normalized[key] = command[key].duplicate(true) if command[key] is Array else command[key]
 	if normalized.has("target"):
 		normalized.target = [float(command.target[0]),float(command.target[1])]
+	if command.get("group_speed",false): normalized.group_speed = true
 	_pending.append(normalized)
 	_last_sequences[command.player] = command.sequence
 	return {"ok":true,"error":""}
@@ -245,6 +246,7 @@ func _validate(command: Dictionary, due: bool = false) -> String:
 		return "Invalid tick, player or sequence"
 	if not due and command.sequence <= _last_sequences.get(command.player,-1): return "Sequence must increase"
 	if typeof(command.type) != TYPE_STRING or _payload_fields(command.type).is_empty(): return "Unsupported command type"
+	if command.has("group_speed") and (typeof(command.group_speed) != TYPE_BOOL or not command.type in ["move","attack","attack_move"]): return "Invalid group_speed"
 	var setup_error: String = _setup_error(command)
 	if not setup_error.is_empty(): return setup_error
 	var fields: Array = _payload_fields(command.type)
@@ -450,6 +452,7 @@ func _apply_orders() -> void:
 		var intent: Dictionary = final[id]
 		if intent.type in ["build","resume_build"] and not _buildings.has(intent.building_id): final.erase(id)
 	for id: Variant in final:
+		_entities[id].erase("group_speed")
 		_detach_task(_entities[id])
 		_entities[id].destination = null
 		_path_queue.erase(id)
@@ -483,13 +486,21 @@ func _apply_orders() -> void:
 			continue
 		if command.type == "attack":
 			if not Combat.valid_target(self,command.player,command.target_id): continue
+			if command.has("group_speed"): _cap_group(members)
 			for unit in members:
 				_stop_unit(unit)
 				_set_intent(unit,"attack",command.target_id)
 			continue
+		if command.has("group_speed"): _cap_group(members)
 		_assign_move(members, command.target)
 		var attack_move: bool = command.type == "attack_move"
 		for unit in members: _set_intent(unit,"attack_move" if attack_move else "move",null,command.target if attack_move else null)
+
+# Recoil's Ctrl-move: taken once, over the units this order commands at its tick.
+func _cap_group(members: Array[Dictionary]) -> void:
+	var slowest: float = INF
+	for unit in members: slowest = minf(slowest, Definitions.unit(unit.kind).speed)
+	for unit in members: unit.group_speed = slowest
 
 func _assign_move(members: Array[Dictionary], target: Array) -> void:
 	var point := Vector2(target[0], target[1])
