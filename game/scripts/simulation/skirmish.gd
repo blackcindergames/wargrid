@@ -24,6 +24,7 @@ const DISTANCE_STEP: float = 4.0
 const DETOUR_REACH: float = 10.0
 const DETOUR_CALM: int = 90
 const LET_GO_TICKS: int = 300
+const HOLD_LAPSE: int = 1800
 const BOT_META := &"skirmish_bot"
 const BOT_TEAM_META := &"skirmish_bot_team"
 const MAP_PATH := "res://data/maps/skirmish.json"
@@ -135,7 +136,7 @@ static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dicti
 	var buildings: Array = state.buildings.filter(func(building: Dictionary) -> bool: return building.owner == player)
 	var faction: String = _faction(state, player)
 	_build(ctx, state, buildings, faction)
-	_produce(ctx, state, buildings, faction)
+	_produce(ctx, state, buildings, faction, wave_clock)
 	var defending: Dictionary = _defend(ctx, state, buildings)
 	if wave_clock.wave > 0 or state.tick >= wave_clock.due: _attack(ctx, state, defending, wave_clock)
 	wave_clock.prev = state.tick
@@ -159,16 +160,22 @@ static func _build(ctx: Dictionary, state: Dictionary, buildings: Array, faction
 		if building.completed or building.has("hole_id"): continue
 		if building.builder_id == null: _send(ctx, {"type": "resume_build", "builder_id": builder, "building_id": building.id})
 		return
-	for kind: String in build_order(faction):
-		if buildings.any(func(building: Dictionary) -> bool: return building.kind == kind or building.get("rebuild", {}).get("kind") == kind): continue
-		var cost: int = Definitions.building(kind).cost
-		var site: Vector2i = _slot(ctx.sim, kind, ctx.player)
-		if ctx.credits >= cost and _send(ctx, {"type": "build", "builder_id": builder, "building_kind": kind, "origin": [site.x, site.y]}): ctx.credits -= cost
-		return
+	var kind: String = _first_missing(buildings, faction)
+	if kind.is_empty(): return
+	var cost: int = Definitions.building(kind).cost
+	var site: Vector2i = _slot(ctx.sim, kind, ctx.player)
+	if ctx.credits >= cost and _send(ctx, {"type": "build", "builder_id": builder, "building_kind": kind, "origin": [site.x, site.y]}): ctx.credits -= cost
 
-static func _produce(ctx: Dictionary, state: Dictionary, buildings: Array, faction: String) -> void:
+static func _first_missing(buildings: Array, faction: String) -> String:
+	for kind: String in build_order(faction):
+		if not buildings.any(func(building: Dictionary) -> bool: return building.kind == kind or building.get("rebuild", {}).get("kind") == kind): return kind
+	return ""
+
+static func _produce(ctx: Dictionary, state: Dictionary, buildings: Array, faction: String, clock: Dictionary) -> void:
 	var mine: Array = state.entities.filter(func(unit: Dictionary) -> bool: return unit.owner == ctx.player and not unit.has("hole_id"))
 	var replace_builder: bool = not mine.any(func(unit: Dictionary) -> bool: return Registry.is_builder(unit.kind))
+	var has_builder: bool = not replace_builder
+	var rest: Array = []
 	var start_unit: String = Registry.faction(faction).start_unit
 	var per_depot: int = Registry.faction(faction).bot_collectors_per_supply_center
 	var depots: int = buildings.filter(func(building: Dictionary) -> bool: return building.completed and not building.has("hole_id") and Registry.kind(building.kind).receives_supply).size()
@@ -182,12 +189,65 @@ static func _produce(ctx: Dictionary, state: Dictionary, buildings: Array, facti
 		var collector: String = _collector_kind(row)
 		if row.produces.has(start_unit) and replace_builder: kind = start_unit
 		elif not collector.is_empty() and owned.count(collector) + queued.count(collector) < per_depot * depots: kind = collector
+		elif clock.wave > 0:
+			rest.append(building)
+			continue
 		if kind.is_empty(): continue
-		var cost: int = Definitions.unit(kind).cost
-		if ctx.credits >= cost and _send(ctx, {"type": "produce", "building_id": building.id, "unit_kind": kind}):
-			ctx.credits -= cost
-			owned.append(kind)
+		_buy(ctx, building, kind, owned)
 		if kind == start_unit: replace_builder = false
+	if clock.wave > 0: _spend_rest(ctx, rest, buildings, faction, owned, queued, has_builder)
+
+static func _buy(ctx: Dictionary, building: Dictionary, kind: String, owned: Array) -> bool:
+	var cost: int = Definitions.unit(kind).cost
+	if ctx.credits < cost or not _send(ctx, {"type": "produce", "building_id": building.id, "unit_kind": kind}): return false
+	ctx.credits -= cost
+	owned.append(kind)
+	return true
+
+# BR7, from wave 1: an idle factory holds the credits while vehicles are short of the faction's share of army value, and a lost factory is saved for while the builder lives; either hold lapses after HOLD_LAPSE until a factory buys again.
+static func _spend_rest(ctx: Dictionary, rest: Array, buildings: Array, faction: String, owned: Array, queued: Array, has_builder: bool) -> void:
+	var bot: Dictionary = _bot(ctx.sim, ctx.player)
+	var share: int = Registry.faction(faction).bot_vehicle_share
+	var army: int = 0
+	var vehicles: int = 0
+	# A queued order is worth its full price: a quantity order yields several units.
+	var priced: Array = owned.map(func(kind: String) -> Array: return [kind, unit_cost(kind)]) + queued.map(func(kind: String) -> Array: return [kind, Definitions.unit(kind).cost])
+	for entry: Array in priced:
+		if not _is_army(entry[0]): continue
+		army += entry[1]
+		if _is_vehicle(entry[0]): vehicles += entry[1]
+	var lapsed: bool = bot.get("hold_lapsed", false)
+	var held: bool = not lapsed and has_builder and _is_factory(faction, _first_missing(buildings, faction))
+	var bought := {}
+	for building: Dictionary in rest:
+		if held or lapsed or vehicles * 100 >= share * army: break
+		if not _is_factory(faction, building.kind): continue
+		var pick: String = unit_for(faction, building.kind, owned)
+		if not _buy(ctx, building, pick, owned):
+			held = true
+			break
+		army += Definitions.unit(pick).cost
+		vehicles += Definitions.unit(pick).cost
+		bought[building.id] = true
+		bot.erase("hold_since")
+	if held:
+		var since: int = bot.get_or_add("hold_since", ctx.tick)
+		if ctx.tick - since < HOLD_LAPSE: return
+		bot.hold_lapsed = true
+	bot.erase("hold_since")
+	for building: Dictionary in rest:
+		if bought.has(building.id): continue
+		var kind: String = unit_for(faction, building.kind, owned)
+		if not kind.is_empty() and _buy(ctx, building, kind, owned) and _is_factory(faction, building.kind): bot.hold_lapsed = false
+
+static func _is_army(kind: String) -> bool:
+	return not Registry.is_builder(kind) and Registry.collects(kind).is_empty()
+
+static func _is_vehicle(kind: String) -> bool:
+	return Registry.kind(kind).get("class", "") == "vehicle"
+
+static func _is_factory(faction: String, kind: String) -> bool:
+	return Registry.faction(faction).units_for.get(kind, []).any(_is_vehicle)
 
 static func _collector_kind(row: Dictionary) -> String:
 	if not row.receives_supply: return ""

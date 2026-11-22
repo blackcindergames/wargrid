@@ -3,15 +3,16 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-21 21:40)
-Branch / base commit / working-tree state: p7-enemy-bots / e648c744 (T1-7 committed) / code unchanged (defaults kept); this file and the plan carry T1-8 and the owner decisions after it, uncommitted
-Last green task / next incomplete task: T1-7 / T1-8b (behaviour-identical cost cut, committed after this record) / T1-8a BR7: owner window check found infantry-only waves; BR7 kill check failed; retrospective first (2026-11-22)
-Changed paths since last commit: none (T1-8 docs and T1-8b committed 2026-11-21 late)
-Last command / cases / checks / failures / exit / marker: full suite with WAVE0_UNITS 4 (build/suite-T1-8.log) CASES 1316 CHECKS 152909 FAILURES 63 / exit 1 / no TESTS PASSED (9 re-pin names plus 54 others); lint exit 0, warnings exit 0 (190 files); then reverted to 16
+Resume record (updated 2026-11-22 10:20)
+Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 (2026-11-22, approved by the owner), order step 1 committed 8b292146 / T1-8a BR7 committed after this record
+Last green task / next incomplete task: T1-8a BR7 / owner match (10 minutes offline, two defences), then bot lab v1 and its hard-bar probe
+Changed paths since last commit: none after the BR7 commit
+Last command / cases / checks / failures / exit / marker: full suite on BR7 (build/suite-br7.log) CASES 1351 CHECKS 152994 FAILURES 9 / exit 1 / no TESTS PASSED (the 9 re-pin names); lint exit 0, warnings exit 0 (191 files)
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
-Approved decisions, pre-authorizations used, deferred gates: plan approved (user, 2026-11-21); T1-5 owner decisions 1-4 (user, 2026-11-21, T1-5 section); kill checks C and D decisions (user, 2026-11-21; plan "After kill check C/D"); gate review Gemini Neon high plus Opus high (user, 2026-11-21); (a) local commit per green task, (b) one branch push at the gate; T1-8 decisions and BR7 (user, 2026-11-21; plan "After T1-8's first matrix", "After the owner window check"); open: BR7 shape after its failed kill check (owner, after the retrospective), T1-8c, Fm1 winner at T1-10
+Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Fm1 winner at T1-10, Overlord affordability under BR7's lapse (below)
+Experiment 1: session start 2026-11-22 09:35; owner match hours and whether it confirmed BR7: not yet
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: P7 retrospective (private p7-retro-prompt.txt), then the owner decides BR7's shape (second kill check or a simpler cut)
+Next exact action: ask the owner for the 10-minute offline match (China, two defences) on the BR7 commit
 ```
 
 ## Red ledger
@@ -25,6 +26,7 @@ Next exact action: P7 retrospective (private p7-retro-prompt.txt), then the owne
 | T1-6 | Same nine names as T1-5b. Values moved: TB3 digest 8ab8cdf6cc4aa01c to db6f45719f3a69db; TB4 team core series to 7390405388462874494; S1 core series to 8473958222776080914; S1 pinned outcome unchanged (9062, winner 1); Fm1 (29710, winner 2 to 35503, winner 1); Cs1 (29359 to 29516, winner 2); VR1 digest to 0f6f0648eca07d66c16ddcf173c5dd075e978d4fd5c56ecea7209147c18e1370 (both checks); HUD1 texts. Fix round moved none of them. T1-10: Fm1's winner flips 2 to 1. | yes, all (T1-10) |
 | T1-6b | Same nine names as T1-6. Values moved: TB3 digest db6f45719f3a69db to df3949d798993aee; TB4 team core series to 2797995605787631826; S1 core series to 2924924538281131659; S1 pinned outcome (9062, winner 1 to 8667, winner 1, inside 7000-17999); Fm1 (35503, winner 1 to 26398, winner 2); Cs1 (29516 to 20776, winner 2). Unchanged: VR1 digest (both checks). HUD1 texts red, values unchanged. T1-10: Fm1's winner is 2 again. | yes, all (T1-10) |
 | T1-7 | Same nine names as T1-6b. Values moved: TB3 digest df3949d798993aee to c9da7864e460e7ee; TB4 team core series to 7355634108385083070; Fm1 (26398 to 26833, winner 2). Unchanged: S1 core series (2924924538281131659), S1 pinned outcome (8667, winner 1), Cs1 (20776, winner 2), VR1 digest (both checks), HUD1 texts (red, values unchanged). Fix round moved none of them. | yes, all (T1-10) |
+| T1-8a | Same nine names as T1-7 (after the `main` merge, same values). Values moved: TB3 digest c9da7864e460e7ee to c7bce6cedaadb001; TB4 team core series to 2150549136322465648; S1 core series to 797697861706021661; S1 pinned outcome (8667 to 9256, winner 1, inside 7000-17999); Fm1 (26833 to 30056, winner 2); Cs1 (20776, winner 2 to 23362, winner 1). Unchanged: VR1 digest (both checks), HUD1 texts. T1-10: Cs1's winner flips 2 to 1. | yes, all (T1-10) |
 
 ## Evidence
 
@@ -316,3 +318,21 @@ Each variant changes about half of the 90 Broken Crown 2v2 outcomes and raises n
 ### T1-8b BR6 decision cost
 
 Tree: `e648c744` plus `skirmish.gd` only (+47 / -25). `_form` filters enemy buildings once and passes them to `_victims`, `_pick` (its own unit fallback kept), `_armed`, `_row`, `_softer`; defence rectangles, centres and route windows are computed once per `_form` (`_defence_rects`, `DEFENCE_STRIDE` 7, `PackedFloat64Array`); `_guard_count` takes goal centre and line length once per candidate; `_guards` does no lookups or allocations per pair. Equivalence (scratch harness, old functions kept as copies): 0 mismatches over 9,004 goals and a 6,900-cell edge grid, and 0 over 1,500 whole `_form` decisions (objective, payloads, clock). Timing, in-process old vs new, 558 enemies, load 1.4-1.5: recurring decision 0.53-0.56 to 0.28-0.29 ms; release decision with defences 1.51-2.19 to 0.47-0.62 ms. `sh tools/run_profile.sh` before / after (load 1.4-2.1): team_match_pump `opponent.decide` max 2.264 / 2.250 ms, p95 1.439 / 1.441 ms, step max 8.877 / 8.916 ms (no measurable change: that match has few defences). Full suite CASES 1316 CHECKS 152909 FAILURES 9, exit 1, the nine re-pin names with the T1-7 values; lint exit 0, warnings exit 0 (190 files), `tools/test_sim_boundary.py` OK. Reviews: two Opus high reviewers (equivalence, claims), no findings. Research behind it (rejected: score-order early stop, spatial grid, caching between decisions): private `br6_cost.gd` / `br6_cost.log`.
+
+### Merge of `main` (2026-11-22)
+
+`git merge main` at `59ab4157` (17 commits, night 8 and the new `AGENTS.md`), approved by the owner, commit `ed871f17`. Conflicts: `skirmish.gd` `create` (main's `seat_count` signature, this branch's `"human"` default) and `test_sim_pump.gd` (both sides' cases kept). One more check failed only through the merge: PAL `test_pal_two_seat_create_unchanged` compared `create()` with an explicit `"ai"` (main's old default); it now passes `"human"`. Full suite on the merged tree before that fix: CASES 1343 CHECKS 152976 FAILURES 10 (the nine re-pin names with the T1-7 values, plus PAL); after it the PAL case passes alone (1/1/0).
+
+### Order step 1: desktop sittings with a match are filed
+
+Tree `ed871f17` plus the change, committed `8b292146`. `PlaytestSession.close_sitting` files a desktop sitting with at least one match even when the card is empty; the web keeps the old rule (an unfilled sitting is dropped); the card still never blocks. Red first: NB5b failed (no file). Old-rule checks rewritten: PO11b (leaving after a closed unfilled sitting files the match once), NB11 (pause quit and window close of an unfilled sitting with a match file it; launcher quit without a match files nothing; renamed `test_each_exit_files_filled_or_played`). `test_playtest*` CASES 92 CHECKS 685 FAILURES 0; full suite CASES 1344 CHECKS 152979 FAILURES 9 (re-pin names, T1-7 values); lint, warnings, Python checks exit 0. Guide chapter 5 updated.
+
+### T1-8a BR7
+
+Tree `8b292146` plus the change. Rule (`skirmish.gd` `_spend_rest`; data `bot_vehicle_share` 70 per faction in `factions.gd`, `HOLD_LAPSE` 1800): from team wave 1, builder replacement and collector quota first; while vehicle value (owned at unit cost, queued orders at order cost; builders and collectors excluded) `* 100 <` share `*` army value, the lowest-id idle completed factory buys its pick, and if it cannot pay nothing else buys; while the builder lives and a factory is the first missing building of the build order, nothing in the barracks buys either (rebuild hold). Either hold lapses `HOLD_LAPSE` ticks after its first held decision; after a lapse buying is as before until a factory buys. Wave 0 is the old loop unchanged; `_build`'s first-missing search moved to `_first_missing` (same result).
+
+Red first (constants and data added first, so each test failed on a check): BR7 data (passed with the data), hold from wave 1 only, barracks spends only the rest, hold ends at exactly 70 % in integer credits (2,100 of 3,000 met, of 3,225 not), lapse at first held decision + 1,800, lowest factory id buys and the second factory's shortfall still holds, rebuild hold (with builder; none without builder; none when the supply centre is the first missing). `test_bot_rules` CASES 70 CHECKS 163 FAILURES 0. Mutants caught: `>` for `>=` at the share, `<=` at the lapse, no builder condition, collectors counted as army, builders counted as vehicles; one near-equivalent survivor (`continue` for `break` after a factory cannot pay; differs only with a third factory whose pick is cheaper). Full suite: CASES 1351 CHECKS 152994 FAILURES 9, the re-pin names (values in the red ledger). Lint, warnings exit 0 (191 files).
+
+Opus review (one, per the plan): no defect against the rule; wave 0 and `_first_missing` identical; determinism fine (`bot_state().buildings` is id-sorted). Taken: two tests strengthened (two-factory case at 1,400 credits; collectors and a builder in the share case). Ruled, not changed: (1) right after the builder orders the factory, `_spend_rest` still sees it missing for that one decision (30 ticks of hold); (2) the lapse clock counts held decisions even when the barracks is busy; (3) with no army at all (only builder and collectors) the share counts as met, so the first unit after wave 0 may be infantry; (4) untested: hold reset after the share is met, lapse cleared by a factory buy, queued Militia pricing, FRC and China paths (read by the reviewer, not run).
+
+Open, from the night 14 review of P15: BR7's hold may lapse before a bot can afford P15's 2,000-credit Overlord; check it in the hard-bar probe once P15's data exists.
