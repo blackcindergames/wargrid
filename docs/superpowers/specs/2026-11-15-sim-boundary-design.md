@@ -227,7 +227,7 @@ Each line has its source: a change number of the sim boundary critique (private)
 - The running mode in the playtest header, the desync report and the F3 overlay (change 29, C4).
 - The suite runs under the flag in CI for as long as the flag exists (change 30, A6).
 - A bench scene running the real match screen on the pump in both modes, printing the go-rule metrics (change 31, D9).
-- The pairing guard accepts any note while `_taken` is empty, and catch-up is capped at input delay + 1 ticks per frame (SB4 review riders, [packages](../../packages.md#night-lane) item 6).
+- The pairing guard accepts any note while `_taken` is empty, and catch-up is bounded at input delay + 1 ticks per rendered frame, because own packets are sent from `drain` (SB4 review riders, [packages](../../packages.md#night-lane) item 6); the bound is an accepted limit, measured, not fixed (user, 2026-11-22).
 - Room before `take` (user, 2026-11-18; agent finding from the critique check): a refused post now ends an online match (`online_driver.gd`, `test_sb4_refused_post_ends_match`), so with a queue cap the driver needs room checked before `take` and the pending-build flag cleared when a pump stops or fails (changes 4 and 10, A1).
 
 ## Verification
