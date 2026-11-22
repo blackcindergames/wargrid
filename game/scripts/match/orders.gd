@@ -177,7 +177,8 @@ func _combat_input(event: InputEvent) -> bool:
 		if not event.pressed:
 			_set_attack_move(false)
 			var target: Vector2 = _ground(event)
-			_screen._submit({"type":"attack_move","entity_ids":selected_ids.duplicate(),"target":[target.x,target.y]})
+			var armed: Array = selected_ids.filter(func(id: int) -> bool: return HudModel.is_armed_unit(_screen.shown_state, id, _screen.local_player))
+			if not armed.is_empty(): _screen._submit({"type":"attack_move","entity_ids":armed,"target":[target.x,target.y]})
 		return true
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed and not is_selecting() and _order_defence(event):
 		return true

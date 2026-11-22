@@ -140,10 +140,11 @@ static func unload_target(view: Dictionary, selection: Dictionary, seat: int) ->
 	return -1
 
 static func has_armed_unit(view: Dictionary, ids: Array[int], seat: int) -> bool:
-	for id: int in ids:
-		var i: int = view.units.index_of(id)
-		if i != -1 and view.units.owner[i] == seat and not Registry.kind(view.units.kinds[view.units.kind[i]]).get("weapon", "").is_empty(): return true
-	return false
+	return ids.any(func(id: int) -> bool: return is_armed_unit(view, id, seat))
+
+static func is_armed_unit(view: Dictionary, id: int, seat: int) -> bool:
+	var i: int = view.units.index_of(id)
+	return i != -1 and view.units.owner[i] == seat and not Registry.kind(view.units.kinds[view.units.kind[i]]).get("weapon", "").is_empty()
 
 static func queue_rows(count: int, open: bool) -> Dictionary:
 	var capped: bool = count > QUEUE_SHOWN

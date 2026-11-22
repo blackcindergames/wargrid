@@ -11,7 +11,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 
 func cases() -> Array[Callable]:
-	return [test_no_chip_on_two_actions, test_slot_same_role_all_factions, test_lone_builder_card, test_modified_keys_press_nothing, test_prune_closes_the_sub_grid, test_production_cells_by_role, test_q_nothing_selected_refuses, test_grid_keys_with_attack_move_armed, test_card_keys_in_one_frame, test_produce_key_as_the_producer_dies, test_unarmed_units_stop]
+	return [test_no_chip_on_two_actions, test_slot_same_role_all_factions, test_lone_builder_card, test_modified_keys_press_nothing, test_prune_closes_the_sub_grid, test_production_cells_by_role, test_q_nothing_selected_refuses, test_grid_keys_with_attack_move_armed, test_card_keys_in_one_frame, test_produce_key_as_the_producer_dies, test_unarmed_units_stop, test_attack_move_takes_the_armed, test_attack_move_with_no_armed_unit, test_attack_move_click_then_stop_in_one_frame]
 
 func _world(runner) -> Array:
 	var main = await SkirmishTests.new()._setup(runner)
@@ -226,6 +226,76 @@ func test_unarmed_units_stop(runner) -> bool:
 	HudTests._select(main, [1, ids.collectors[0]])
 	_key(main, KEY_S)
 	runner.check(_types(main) == ["stop", "stop"], "CK11 a builder and a truck: S stops them, got %s" % [_types(main)])
+	main.free()
+	return true
+
+func _mixed_world(runner) -> Array:
+	var world: Array = await _world(runner)
+	var main = world[0]
+	var ids: Dictionary = world[1]
+	var sim = main.driver.pump.live()
+	var site: int = sim.snapshot().next_entity_id
+	Fixture.send(sim, {"type": "build", "builder_id": ids.builder, "building_kind": "china_power_plant", "origin": [4, 12]})
+	Fixture.send(sim, {"type": "gather", "entity_ids": [ids.collectors[0]], "source_id": ids.pile})
+	for i in 600:
+		if Fixture.object(sim, site).get("work", 0) > 0: break
+		sim.step()
+	ids.site = site
+	ids.mixed = [ids.tanks[0], ids.builder, ids.collectors[0]]
+	return [main, ids, sim]
+
+static func _click_ground(main, at: Vector2) -> void:
+	var ground: Vector2 = Iso.world_to_plane(at)
+	var helper = BaseScene.new()
+	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
+	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false)
+
+func test_attack_move_takes_the_armed(runner) -> bool:
+	var world: Array = await _mixed_world(runner)
+	var main = world[0]
+	var ids: Dictionary = world[1]
+	var sim = world[2]
+	var work: int = Fixture.object(sim, ids.site).work
+	runner.check(work > 0 and Fixture.object(sim, ids.collectors[0]).collection.target_id == ids.pile, "AM1 the site is under way and the truck gathers, work %d" % work)
+	HudTests._select(main, ids.mixed)
+	_key(main, KEY_A)
+	_click_ground(main, Vector2(12.5, 12.5))
+	var commands: Array = main.driver.queued()
+	runner.check(_types(main) == ["attack_move"] and commands[0].entity_ids == [ids.tanks[0]], "AM1 a mixed selection's attack move carries only the tank, got %s" % [commands])
+	BaseScene.tick(main)
+	for i in 10: BaseScene.tick(main)
+	runner.check(Fixture.object(sim, ids.site).work > work, "AM1 the site keeps progressing, work %d from %d" % [Fixture.object(sim, ids.site).work, work])
+	var truck: Dictionary = Fixture.object(sim, ids.collectors[0])
+	runner.check(truck.collection.target_id == ids.pile and truck.destination != [12.5, 12.5], "AM1 the truck keeps its gather order, got %s" % [truck])
+	runner.check(Fixture.object(sim, ids.tanks[0]).combat.mode == "attack_move", "AM1 the tank marches")
+	main.free()
+	return true
+
+func test_attack_move_with_no_armed_unit(runner) -> bool:
+	var world: Array = await _mixed_world(runner)
+	var main = world[0]
+	var ids: Dictionary = world[1]
+	HudTests._select(main, [ids.builder, ids.collectors[0]])
+	main.orders.arm_attack_move()
+	runner.check(main.orders._attack_move_mode, "AM2 attack move arms")
+	_click_ground(main, Vector2(12.5, 12.5))
+	runner.check(_types(main).is_empty() and not main.orders._attack_move_mode, "AM2 with no armed unit nothing is sent and it disarms, got %s" % [_types(main)])
+	main.free()
+	return true
+
+func test_attack_move_click_then_stop_in_one_frame(runner) -> bool:
+	var world: Array = await _mixed_world(runner)
+	var main = world[0]
+	var ids: Dictionary = world[1]
+	var sim = world[2]
+	HudTests._select(main, ids.mixed)
+	_key(main, KEY_A)
+	_click_ground(main, Vector2(12.5, 12.5))
+	_key(main, KEY_S)
+	var commands: Array = main.driver.queued()
+	runner.check(_types(main) == ["attack_move", "stop"] and commands[0].entity_ids == [ids.tanks[0]] and commands[1].entity_ids == ids.mixed, "AM3 the click carries the tank, the stop all three, in order, got %s" % [commands])
+	BaseScene.tick(main)
+	runner.check(Fixture.object(sim, ids.tanks[0]).combat.mode == "guard", "AM3 the stop wins the tick, got %s" % [Fixture.object(sim, ids.tanks[0]).combat.mode])
 	main.free()
 	return true
 
