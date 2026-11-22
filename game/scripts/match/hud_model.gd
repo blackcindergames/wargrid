@@ -77,16 +77,22 @@ static func card(view: Dictionary, selection: Dictionary, seat: int) -> Array:
 	var chosen: Dictionary = building(view, selection.building_id)
 	var builders: Array = _builder_kinds(view, selection.ids, seat)
 	if not chosen.is_empty():
-		if chosen.completed: cells = kind_cells(Registry.kind(chosen.kind).produces)
-	elif selection.sub_grid and builders.size() == 1:
+		if chosen.owner == seat and chosen.completed: cells = kind_cells(Registry.kind(chosen.kind).produces)
+	elif selection.get("sub_grid", false) and builders.size() == 1:
 		cells = kind_cells(Registry.kind(builders[0]).builds) + [[BACK_KEY, "back"]]
 	elif not builders.is_empty():
 		cells = [[BUILD_KEY, "build"]]
-	elif has_armed_unit(view, selection.ids, seat):
-		cells = [[ORDER_KEYS.attack_move, "attack_move"], [ORDER_KEYS.stop, "stop"]]
-	var host: int = selection.building_id if selection.building_id != -1 else (selection.ids[0] if selection.ids.size() == 1 else -1)
-	if is_container(view, host, seat): cells.append([ORDER_KEYS.unload, "unload"])
+	elif _has_own_unit(view, selection.ids, seat):
+		if has_armed_unit(view, selection.ids, seat): cells.append([ORDER_KEYS.attack_move, "attack_move"])
+		cells.append([ORDER_KEYS.stop, "stop"])
+	if unload_target(view, selection, seat) != -1: cells.append([ORDER_KEYS.unload, "unload"])
 	return cells
+
+static func _has_own_unit(view: Dictionary, ids: Array[int], seat: int) -> bool:
+	for id: int in ids:
+		var i: int = view.units.index_of(id)
+		if i != -1 and view.units.owner[i] == seat: return true
+	return false
 
 # The selected units' kinds when every one is an own builder, else none.
 static func _builder_kinds(view: Dictionary, ids: Array[int], seat: int) -> Array:

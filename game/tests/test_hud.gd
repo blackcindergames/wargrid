@@ -2423,7 +2423,7 @@ func test_accepted_answer_clears(runner) -> bool:
 	main._submit(skirmish._off_map_move(ids))
 	main._restart()
 	ids = skirmish._arena(main)
-	main.orders._unload_selected()
+	main.orders._open_build()
 	main._submit({"type": "stop", "entity_ids": [ids.tank]})
 	BaseScene.tick(main)
 	runner.check(main.hud.refusal == "" and not _line_shown(main), "RN3 after a restart dropped an unanswered order, the next accepted answer still clears a hint, got '%s'" % main.hud.refusal)

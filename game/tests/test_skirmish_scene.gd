@@ -855,17 +855,22 @@ func test_enter_unload_scene(runner) -> bool:
 	helper.key(main, KEY_U)
 	runner.check(orders.call("unload").is_empty(), "TU1 U no longer unloads")
 	helper.key(main, KEY_F)
-	var unloads: Array = orders.call("unload")
-	runner.check(unloads.size() == 1 and unloads[0].target_id == hub, "TU1 F with the hub selected submits unload")
+	runner.check(orders.call("unload").is_empty(), "TU1 F on the empty hub sends nothing (Unload hidden while empty)")
 	main.orders.selected_building_id = -1
 	main.orders.selected_ids.assign([rifle])
 	main._refresh()
 	helper.key(main, KEY_F)
-	runner.check(orders.call("unload").size() == 1 and main.hud.refusal.is_empty(), "TU1 F without a container is not on the card: nothing sent, no hint, got '%s'" % main.hud.refusal)
+	runner.check(orders.call("unload").is_empty() and main.hud.refusal.is_empty(), "TU1 F without a container is not on the card: nothing sent, no hint, got '%s'" % main.hud.refusal)
 	var hub_point: Vector2 = Iso.world_to_plane(Vector2(10.5, 10.5)) + Vector2(0, -8)
 	sim._entities[rifle].container_id = hub
 	sim._entities[rifle].position = [10.5, 10.5]
+	sim._players[1].tunnel = [rifle]
+	main.orders.selected_ids.clear()
+	main.orders.selected_building_id = hub
 	BaseScene.publish(main)
+	helper.key(main, KEY_F)
+	var unloads: Array = orders.call("unload")
+	runner.check(unloads.size() == 1 and unloads[0].target_id == hub, "TU1 F with the loaded hub selected submits unload")
 	runner.check(main._view.pick_object(hub_point) == hub, "TU1 clicking an occupied hub picks the hub, not an occupant")
 	BaseScene.slab_clear(runner, main, "TU1")
 	main.free()
@@ -1073,6 +1078,7 @@ func _ic_world(main) -> Dictionary:
 	ids.occupant = sim.spawn(1, Vector2(28.5, 22.5), "frc_rifle_infantry")
 	sim._entities[ids.occupant].container_id = ids.hub
 	sim._entities[ids.occupant].position = [30.5, 22.5]
+	sim._players[1].tunnel = [ids.occupant]
 	ids.pile = sim.add_supply_source(Vector2i(34, 8), 10)
 	sim.start_match([1, 2] as Array[int])
 	main.driver.adopt(sim)
@@ -1818,8 +1824,8 @@ func test_freeze_card_on_a_failed_pump(runner) -> bool:
 	for code: Key in [KEY_U, KEY_F]: _push_key(main, code)
 	main.orders.selected_ids.assign([ids.builder])
 	main._reshow()
-	_push_key(main, KEY_Q)
-	runner.check(types.call() == ["move"] and not main.orders.busy() and main.hud.refusal == refusal, "FN1 keys behind the card reach no order, got %s busy %s refusal '%s'" % [types.call(), main.orders.busy(), main.hud.refusal])
+	for code: Key in [KEY_Q, KEY_Q]: _push_key(main, code)
+	runner.check(types.call() == ["move"] and not main.orders.busy() and not main.orders._sub_grid and main.hud.refusal == refusal, "FN1 keys behind the card reach no order, got %s busy %s refusal '%s'" % [types.call(), main.orders.busy(), main.hud.refusal])
 	runner.check(_freeze_shown(main) and _focus_owner(main) == main.get_node(COPY), "FN1 the card stays up with the focus on Copy report")
 	main.get_node(COPY).pressed.emit()
 	main._reshow()

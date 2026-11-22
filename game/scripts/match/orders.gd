@@ -125,13 +125,15 @@ func _card_key(event: InputEvent) -> bool:
 	return true
 
 func _no_cell(code: Key) -> void:
-	if code != HudModel.BUILD_KEY or not selected_ids.is_empty() or selected_building_id != -1: return
+	if code != HudModel.BUILD_KEY or not selected_ids.is_empty() or selected_building_id != -1 or inspected_id != -1: return
 	_screen.refuse(HudModel.select_builder(_screen.shown_state, _screen.local_player))
 	_screen._reshow()
 
 func _open_build() -> void:
 	if _builder() == -1: _screen.refuse("Choose one builder", false)
-	else: _sub_grid = true
+	else:
+		_sub_grid = true
+		_set_attack_move(false)
 	_screen._reshow()
 
 # Back cancels a placement to the sub-grid, else closes the sub-grid; like Esc, it keeps a late refusal from reopening placement.
@@ -403,13 +405,8 @@ func _context_order(id: int) -> bool:
 func _unload_selected() -> void:
 	if not takes_orders() or busy(): return
 	_set_attack_move(false)
-	var state: Dictionary = _screen.shown_state
-	var id: int = selected_building_id if selected_building_id != -1 else (selected_ids[0] if selected_ids.size() == 1 else -1)
-	if not HudModel.is_container(state, id, _screen.local_player):
-		_screen.refuse("Select a container", false)
-		_screen._reshow()
-		return
-	_screen._submit({"type":"unload","target_id":id})
+	var id: int = HudModel.unload_target(_screen.shown_state, _screen._hud_selection(), _screen.local_player)
+	if id != -1: _screen._submit({"type":"unload","target_id":id})
 
 func _set_rally(plane: Vector2) -> bool:
 	var building: Dictionary = HudModel.building(_screen.shown_state,selected_building_id)

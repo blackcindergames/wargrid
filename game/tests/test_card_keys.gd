@@ -11,7 +11,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 
 func cases() -> Array[Callable]:
-	return [test_no_chip_on_two_actions, test_slot_same_role_all_factions, test_lone_builder_card, test_modified_keys_press_nothing, test_prune_closes_the_sub_grid, test_production_cells_by_role, test_q_nothing_selected_refuses, test_grid_keys_with_attack_move_armed, test_card_keys_in_one_frame, test_produce_key_as_the_producer_dies]
+	return [test_no_chip_on_two_actions, test_slot_same_role_all_factions, test_lone_builder_card, test_modified_keys_press_nothing, test_prune_closes_the_sub_grid, test_production_cells_by_role, test_q_nothing_selected_refuses, test_grid_keys_with_attack_move_armed, test_card_keys_in_one_frame, test_produce_key_as_the_producer_dies, test_unarmed_units_stop]
 
 func _world(runner) -> Array:
 	var main = await SkirmishTests.new()._setup(runner)
@@ -66,6 +66,8 @@ func test_slot_same_role_all_factions(runner) -> bool:
 			runner.check(HudModel.CELL_KEYS.has(role) and kind == "%s_%s" % [faction, role], "CK2 %s holds role '%s' with a cell, named after it" % [kind, role])
 	var frc: Array = _keys(HudModel.kind_cells(Registry.kind("frc_builder").builds))
 	runner.check(not frc.has(KEY_Q) and frc.has(KEY_W), "CK2 FRC's build Q stays empty, so Q means one role in every faction (3-13), got %s" % [frc])
+	var pinned: Array = _keys(HudModel.kind_cells(["usa_power_plant", "usa_barracks", "usa_factory", "usa_builder", "china_collector", "usa_tank", "china_tank"]))
+	runner.check(pinned == [KEY_Q, KEY_E, KEY_R, KEY_Q, KEY_Q, KEY_W, KEY_W], "CK2 Power Plant Q, Barracks E, Factory R, builder and collector Q, tanks W, got %s" % [pinned])
 	return true
 
 func test_lone_builder_card(runner) -> bool:
@@ -153,7 +155,15 @@ func test_production_cells_by_role(runner) -> bool:
 	HudTests._select(main, [ids.infantry])
 	_key(main, KEY_F)
 	runner.check(_types(main).count("unload") == 1 and main.hud.refusal.is_empty(), "CK6 F without a container is not on the card: nothing, no line, got '%s'" % main.hud.refusal)
+	runner.check(HudModel.card(main.shown_state, {"ids": [] as Array[int], "building_id": ids.barracks}, 2).is_empty(), "CK6 another seat's barracks shows no cells")
 	main.free()
+	var empty = await SkirmishTests.new()._setup(runner)
+	var bare: Dictionary = HudTests.new()._slab_world(runner, empty, false)
+	for chosen: Array in [[[bare.car], -1], [[], bare.hub]]:
+		HudTests._select(empty, chosen[0], chosen[1])
+		_key(empty, KEY_F)
+	runner.check(_types(empty).is_empty() and empty.hud.refusal.is_empty(), "CK6 an empty Scout Car or Tunnel Hub has no Unload cell (hidden while empty): F sends nothing, got %s" % [_types(empty)])
+	empty.free()
 	return true
 
 func test_q_nothing_selected_refuses(runner) -> bool:
@@ -167,6 +177,14 @@ func test_q_nothing_selected_refuses(runner) -> bool:
 		BaseScene.tick(main)
 		runner.check(_errors(main) == 1, "CK7 %s: the refusal beeps once, got %d" % [faction[0], _errors(main)])
 		main.free()
+	var world: Array = await _world(runner)
+	var main = world[0]
+	for inspected: String in ["enemy", "pile"]:
+		HudTests._select(main, [], -1, world[1][inspected])
+		_key(main, KEY_Q)
+		BaseScene.tick(main)
+		runner.check(main.hud.refusal.is_empty() and _errors(main) == 0 and not main.orders._sub_grid, "CK7 Q with the %s inspected has no card and no refusal, got '%s'" % [inspected, main.hud.refusal])
+	main.free()
 	return true
 
 func test_grid_keys_with_attack_move_armed(runner) -> bool:
@@ -183,6 +201,31 @@ func test_grid_keys_with_attack_move_armed(runner) -> bool:
 	_key(main, KEY_A)
 	_key(main, KEY_F)
 	runner.check(not main.orders._attack_move_mode and _types(main) == ["stop", "unload"], "CK8 F unloads and disarms, got %s" % [_types(main)])
+	HudTests._select(main, [1, ids.tanks[0]])
+	_key(main, KEY_A)
+	main.driver.pump.live().remove_object(ids.tanks[0])
+	BaseScene.tick(main)
+	_key(main, KEY_Q)
+	runner.check(main.orders._sub_grid and main.orders.selected_ids == [1], "CK8 fixture: the tank gone, Q opened the lone builder's sub-grid")
+	var helper = BaseScene.new()
+	var ground: Vector2 = Iso.world_to_plane(Vector2(12.5, 12.5))
+	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
+	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false)
+	runner.check(not main.orders._attack_move_mode and _types(main).count("attack_move") == 0, "CK8 Q disarms attack move: a ground click after it sends none, got %s" % [_types(main)])
+	main.free()
+	return true
+
+func test_unarmed_units_stop(runner) -> bool:
+	var world: Array = await _world(runner)
+	var main = world[0]
+	var ids: Dictionary = world[1]
+	HudTests._select(main, [ids.collectors[0]])
+	_key(main, KEY_A)
+	_key(main, KEY_S)
+	runner.check(_types(main) == ["stop"] and not main.orders._attack_move_mode, "CK11 a Supply Truck's A does nothing, S sends a stop, got %s" % [_types(main)])
+	HudTests._select(main, [1, ids.collectors[0]])
+	_key(main, KEY_S)
+	runner.check(_types(main) == ["stop", "stop"], "CK11 a builder and a truck: S stops them, got %s" % [_types(main)])
 	main.free()
 	return true
 
@@ -198,13 +241,21 @@ func test_card_keys_in_one_frame(runner) -> bool:
 	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false)
 	_key(main, KEY_S)
 	runner.check(_types(main) == ["attack_move", "stop"], "CK9 S in the frame an attack-move click was sent: both, in order, got %s" % [_types(main)])
+	var sim = main.driver.pump.live()
+	BaseScene.tick(main)
+	var modes: Array = ids.tanks.map(func(id: int) -> String: return Fixture.object(sim, id).combat.mode)
+	runner.check(modes == ["guard", "guard"], "CK9 the stop sent last wins the tick, got %s" % [modes])
 	HudTests._select(main, [ids.car])
 	_key(main, KEY_F)
 	_key(main, KEY_F)
 	runner.check(_types(main).count("unload") == 2, "CK9 F twice in a frame sends both")
 	BaseScene.tick(main)
 	runner.check(_contained(main) == 1, "CK9 the car empties; only the hub's rider stays inside, got %d" % _contained(main))
-	var sim = main.driver.pump.live()
+	HudTests._select(main, [], ids.hub)
+	_key(main, KEY_F)
+	sim.remove_object(ids.hub)
+	BaseScene.tick(main)
+	runner.check(main.hud.refusal == "Cannot unload this container" and _errors(main) == 1, "CK9 F the step the hub dies: the sim refuses with one beep, got '%s' %d" % [main.hud.refusal, _errors(main)])
 	for i in 8: Fixture.send(sim, {"type": "produce", "building_id": ids.barracks, "unit_kind": "usa_rifle_infantry"})
 	BaseScene.tick(main)
 	HudTests._select(main, [], ids.barracks)
