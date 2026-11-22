@@ -3,16 +3,16 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-22 after T1-10)
+Resume record (updated 2026-11-22 after T1-9)
 Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 (2026-11-22, approved by the owner), order step 1 committed 8b292146 / T1-8a BR7 committed after this record
-Last green task / next incomplete task: T1-10 re-pin / T1-9 2v2 trace
+Last green task / next incomplete task: T1-9 2v2 trace / T1-11 docs
 Changed paths since last commit: none after the BR7 commit
-Last command / cases / checks / failures / exit / marker: full suite on T1-10 (build/t110-suite.log) CASES 1370 CHECKS 153121 FAILURES 0 / exit 0 / TESTS PASSED 153121; `sh tools/run_checks.sh` CHECKS PASSED 5
+Last command / cases / checks / failures / exit / marker: full suite on T1-9 (build/t19-suite.log) CASES 1371 CHECKS 153123 FAILURES 0 / exit 0 / TESTS PASSED 153123; `sh tools/run_checks.sh` CHECKS PASSED 5
 Known red case or blocker: none (red ledger cleared at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: T1-9 2v2 trace, then T1-11 docs and the gate; after part 1's gate P2.3b comes before part 2 (user, 2026-11-22)
+Next exact action: T1-11 docs, then the gate; after part 1's gate P2.3b comes before part 2 (user, 2026-11-22)
 ```
 
 ## Red ledger
@@ -429,6 +429,14 @@ Tree `3fa379ed` plus the change. Red first: BL1-BL4 and PO20 (12 failures before
 
 Tree `5ee0f677` plus the re-pin. Every value is the T1-8f row's: TB3 `FINAL_DIGEST` f3d2dab4fc4a0a4a, TB4 `TEAM_CORE_SERIES` 5940764765599406711, Fm1 14038 winner 2, Cs1 23750 winner 1, VR1 digest 0f6f0648…1370, HUD1 first rifleman 146/180. S1 follows the owner's decision (T1-8f): its outcome check pins ongoing at the 18,000 cap, the six-minute window check is gone, the economy, production and combat check counts first events up to the cap, and the core series runs over the same 18,000 ticks (new pin 131957631752344359). Outside the suite: netplay `match` and `rematch` end at 8,997 (was 9,013, inside 7000-17999); the 3v3 team match (USA, China and FRC on each side, Ashfall) no longer ends: `TEAM MATCH cap tick=45000 winner=null units_peak=313` (was won 38,786 winner 2), pinned as an equal team mirror under the BR8 probe's exemption.
 
-Decided for you (reversible): the team match counts as an equal mirror (same three bots on each side), so its cap outcome is pinned rather than stopped on; S1's core series covers the cap instead of a terminal tick it no longer has.
+The team match counts as an equal mirror (same three bots on each side), so its cap outcome is pinned; T1-9's 2v2 trace decides whether team bots stall instead, which would need a tuning task before the gate (user, 2026-11-22). Decided for you (reversible): S1's core series covers the cap instead of a terminal tick it no longer has.
 
 Checks on that tree: full suite (`build/t110-suite.log`) CASES 1370 CHECKS 153121 FAILURES 0, exit 0, `TESTS PASSED 153121` (one check fewer: the window check); `sh tools/run_netplay.sh match` `NETPLAY PASSED match 13.6 s`, `rematch` `NETPLAY PASSED rematch 20.2 s`; `sh tools/run_team_match.sh` exit 0, `TEAM PATHS PASS`; `sh tools/run_shell_checks.sh` exit 0; `sh tools/run_checks.sh` CHECKS PASSED 5. Not run: `proxy-clean`, `proxy-burst` (need `WARGRID_NETFAULT_BIN`; CI covers them).
+
+### T1-9 Offline 2v2 trace
+
+`test_team2v2_trace` (TT1, `test_team_match.gd`): four USA bots on Broken Crown (`seat_fixture.gd` `QUAD_TEAMS`, teams `[1,1,2,2]`), cap 45,000 ticks; pins the outcome (won 24,106, winner 2) and the core series (3184809100396052222). Red first with placeholder pins (2 failures). Not in the cross-platform trace set. `CASE_SECONDS`: TT1 26.5 s, and S1's core series 11.5 s (it now runs to the cap), both timed alone on this host.
+
+The check on the team-match pin (T1-10): team bots do not stall. Deaths per 5,000 ticks in this match, from a probe line removed before commit: 0, 30, 113, 52, 46 up to the end at 24,106. So the 3v3 team match at its cap is a mirror stalemate, not a stall; no tuning task.
+
+Tree `c4855a86` plus TT1: full suite (`build/t19-suite.log`) CASES 1371 CHECKS 153123 FAILURES 0, exit 0, `TESTS PASSED 153123`; `sh tools/run_checks.sh` CHECKS PASSED 5.
