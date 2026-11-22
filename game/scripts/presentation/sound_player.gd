@@ -65,8 +65,8 @@ func order(payload: Dictionary) -> void:
 	_unit_voice.stream = load(path)
 	if DisplayServer.get_name() != "headless": _unit_voice.play()
 
-func rejected(error: String) -> void:
-	director.rejected(error)
+func rejected(sound: String) -> void:
+	director.rejected(sound)
 
 func last_requests() -> Array[Dictionary]:
 	return _last
@@ -118,9 +118,11 @@ func _on_node_added(node: Node) -> void:
 	if node is BaseButton and get_parent().is_ancestor_of(node): _watch(node)
 
 func _watch(button: Node) -> void:
-	(button as BaseButton).pressed.connect(_click)
+	(button as BaseButton).pressed.connect(_click.bind(button))
 
-func _click() -> void:
+func _click(button: BaseButton) -> void:
 	if not is_inside_tree(): return # a button that changes scene has already taken the screen out of the tree
+	# A blocked cell sounds its refusal instead, as its key does.
+	if not (button.get_meta("blocked", {}) as Dictionary).is_empty(): return
 	var requests: Array[Dictionary] = [director.ui_request("click")]
 	play(requests)

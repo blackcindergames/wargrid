@@ -207,7 +207,7 @@ func _take_answers() -> void:
 		_unanswered = maxi(_unanswered - 1, 0)
 		if _stale > 0: _stale -= 1
 		elif answer.ok: fresh = true
-	if not refused.is_empty(): refuse(refused.error)
+	if not refused.is_empty(): refuse(refused.error, SoundPlayer.SoundDirector.refusal_sound(refused.error))
 	elif fresh: hud.clear_refusal()
 	for answer: Dictionary in answers:
 		if answer.ok: _playtest.observe_command(answer.command)
@@ -423,7 +423,7 @@ func _take_results(state: Dictionary) -> void:
 	for result: Dictionary in stepped_results + state.command_results:
 		if result.player == local_player and (result.tick > _last_result_tick or (result.tick == _last_result_tick and result.sequence > _last_result_sequence)):
 			# The sound director already beeps for a due-time failure.
-			if not result.ok: refuse(result.error, false)
+			if not result.ok: refuse(result.error, "")
 			_last_result_tick = result.tick
 			_last_result_sequence = result.sequence
 
@@ -485,13 +485,13 @@ func _submit(payload: Dictionary) -> void:
 	_sound.order(payload)
 
 # The result and freeze cards already say why nothing is taken, as with the notice.
-func refuse(raw_error: String, sound: bool = true) -> void:
+func refuse(text: String, sound: String = "error") -> void:
 	if shown_over() or frozen(): return
 	_stale = _unanswered
-	if sound:
+	if not sound.is_empty():
 		_ensure_sound()
-		_sound.rejected(raw_error)
-	hud.refuse(raw_error)
+		_sound.rejected(sound)
+	hud.refuse(text)
 
 func _ensure_sound() -> void:
 	if _sound != null: return

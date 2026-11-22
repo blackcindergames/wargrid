@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_cell_card_timing, test_cell_card_lines, test_prerequisite_hint, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1192,6 +1192,13 @@ func _slab_world(runner, main, loaded: bool, credits: int = 50000) -> Dictionary
 	main._refresh()
 	return ids
 
+# Every prerequisite `_slab_world` lacks, so no build or factory cell there is blocked by one.
+static func _prerequisites(main) -> void:
+	var sim = main.driver.pump.live()
+	for row: Array in [["usa_power_plant", Vector2i(17, 26)], ["usa_supply_center", Vector2i(2, 22)], ["china_supply_center", Vector2i(6, 26)], ["frc_supply_center", Vector2i(10, 26)], ["frc_barracks", Vector2i(14, 26)]]:
+		Fixture.add_completed(sim, 1, row[0], row[1])
+	BaseScene.publish(main)
+
 # The slab's content rect: padding 8, 12 on the left (hud-v5-layout "Command card").
 static func _content(main) -> Rect2:
 	return _rect(main, "HUD/Economy").grow_individual(-12.0, -8.0, -8.0, -8.0)
@@ -1345,6 +1352,7 @@ func test_armed_button_look(runner) -> bool:
 	var helper = BaseScene.new()
 	var main = await SkirmishTests.new()._setup(runner)
 	var ids: Dictionary = _slab_world(runner, main, true)
+	_prerequisites(main)
 	for builder: int in [ids.usa_builder, ids.builder, ids.frc_builder]:
 		_sub_grid(main, builder)
 		var kind: String = main.shown_state.units.kinds[main.shown_state.units.kind[main.shown_state.units.index_of(builder)]]
@@ -1629,6 +1637,7 @@ static func _top_down(controls: Array) -> bool:
 func test_slab_buttons_hold_still(runner) -> bool:
 	var main = await SkirmishTests.new()._setup(runner)
 	var ids: Dictionary = _slab_world(runner, main, false)
+	_prerequisites(main)
 	_select(main, [], ids.factory)
 	await _frames(runner)
 	var at: Vector2 = _cell(main, "china_light_vehicle").get_global_rect().get_center()
@@ -1755,6 +1764,8 @@ func test_card_by_selection(runner) -> bool:
 	runner.check(_card(main) == ["1000 Q Power Plant", "1500 W Supply Depot", "500 E Barracks", "2000 R Vehicle Factory", "1200 A Rotary Gun Tower", "", "", "", "", "", "", "V Back"], "CD1 Build: the China sub-grid with Back on V, got %s" % [_card(main)])
 	_sub_grid(main, ids.frc_builder)
 	runner.check(_card(main) == ["", "1500 W Supply Cache", "500 E Barracks", "2500 R Vehicle Yard", "800 A Tunnel Hub", "", "", "", "", "", "", "V Back"], "CD1 Build: FRC's Q stays a well, got %s" % [_card(main)])
+	# At 500 credits the Supply Cache cell is blocked and arms nothing.
+	_set_credits(main, 1500)
 	BaseScene.new().key(main, KEY_W)
 	var armed: Array = _cells(main).filter(func(cell: Button) -> bool: return cell.theme_type_variation == &"HudButtonArmed").map(func(cell: Button) -> String: return str(cell.name))
 	runner.check(_card(main).back() == "V Cancel" and armed == ["W"], "CD1 placement: only the armed cell cyan and Back reads Cancel, got %s %s" % [armed, _card(main).back()])
@@ -1771,6 +1782,7 @@ func test_card_by_selection(runner) -> bool:
 func test_card_click_equals_key(runner) -> bool:
 	var main = await SkirmishTests.new()._setup(runner)
 	var ids: Dictionary = _slab_world(runner, main, true)
+	_prerequisites(main)
 	_select(main, [ids.builder])
 	await _frames(runner)
 	var well: Button = main.get_node("HUD/Economy/Card/W")
@@ -1866,7 +1878,7 @@ func test_cell_names_fit(runner) -> bool:
 	var cut: Array = []
 	for kind: String in kinds:
 		var cell: Button = economy.get_node("Card/Q")
-		hud._fill_cell(cell, kind, _armed(""), 0)
+		hud._fill_cell(cell, kind, _armed(""), {})
 		var name_label: Label = cell.get_node("Name")
 		if name_label.get_line_count() > 2 or name_label.get_visible_line_count() < name_label.get_line_count() or name_label.position.y + name_label.get_combined_minimum_size().y > 60.0 - 2.0: cut.append(name_label.text)
 	runner.check(kinds.size() > 20 and cut.is_empty(), "CD4 every one of %d names fits two lines inside its cell, got %s" % [kinds.size(), cut])
@@ -1889,6 +1901,242 @@ func test_cell_costs_by_credits(runner) -> bool:
 		HudModel.player(view, 1).credits = credits[0]
 		main._show(view)
 		runner.check(_colour(price) == _token(credits[1]) and main.hud.rebuilds == rebuilds and tower.get_node("Cost").get_instance_id() == node_id, "SL6 credits %d: the cost in %s, patched in place" % [credits[0], credits[1]])
+	main.free()
+	return true
+
+# USA builder 1 with no Power Plant, a second USA builder and a USA factory without its Supply Depot.
+static func _blocked_world(main, credits: int) -> Dictionary:
+	var sim = Fixture.make_world(credits)
+	var ids := {"builder": 1}
+	ids.builders = [1, sim.spawn(1, Vector2(6.5, 4.5), "usa_builder")]
+	ids.factory = Fixture.add_completed(sim, 1, "usa_factory", Vector2i(14, 14))
+	main.driver.adopt(sim)
+	main._refresh()
+	return ids
+
+static func _set_credits(main, credits: int) -> void:
+	var view: Dictionary = main.driver.current().view
+	HudModel.player(view, 1).credits = credits
+	main._show(view)
+
+static func _text_width(label: Label) -> float:
+	return label.get_theme_font("font").get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.get_theme_font_size("font_size")).x
+
+# One blocked cell read whole: its reason, the quiet look with a muted name, the cost's tone and the coin 4 after the bare cost.
+static func _blocked_look(runner, cell: Button, reason: String, cost_token: String, coin: bool, label: String) -> void:
+	var found: String = cell.get_meta("blocked", {}).get("reason", "")
+	runner.check(found == reason, "BC1 %s: reason '%s', got '%s'" % [label, reason, found])
+	var fill: StyleBoxFlat = cell.get_theme_stylebox("normal") as StyleBoxFlat
+	var blocked: bool = not reason.is_empty()
+	runner.check(fill != null and (fill.bg_color == _token("quiet")) == blocked and (_colour(cell.get_node("Name")) == _token("muted")) == blocked, "BC1 %s: quiet fill and muted name only when blocked (%s), got %s" % [label, blocked, fill.bg_color if fill != null else null])
+	var cost: Label = cell.get_node("Cost")
+	if cost.visible: runner.check(_colour(cost) == _token(cost_token), "BC1 %s: the cost in %s, got %s" % [label, cost_token, _colour(cost)])
+	var mark: Control = cell.get_node("Coin")
+	runner.check(mark.is_visible_in_tree() == coin, "BC1 %s: the coin shown %s" % [label, coin])
+	if not coin: return
+	var at: Rect2 = mark.get_global_rect()
+	var after: float = cost.get_global_rect().position.x + _text_width(cost) + 4.0
+	runner.check(at.size == Vector2(15, 15) and absf(at.position.x - after) <= 0.5 and absf(at.get_center().y - (cell.get_global_rect().position.y + 14.0)) <= 0.5, "BC1 %s: the 15 px coin 4 after the bare cost on line 1 (x %.1f), got %s" % [label, after, at])
+
+# Reasons in the simulation's order (prerequisite, queue, credits), the producer's prerequisite, the two-cause look, two builders.
+func test_blocked_cells(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _blocked_world(main, 1000)
+	_sub_grid(main, ids.builder)
+	await _frames(runner)
+	_blocked_look(runner, _cell(main, "usa_power_plant"), "", "text", false, "affordable Power Plant")
+	_blocked_look(runner, _cell(main, "usa_supply_center"), "Needs Power Plant", "muted", false, "Supply Depot short and missing its Power Plant")
+	_blocked_look(runner, _cell(main, "usa_factory"), "Needs Supply Depot", "muted", false, "Vehicle Factory short and missing its Supply Depot")
+	_blocked_look(runner, _cell(main, "usa_defence"), "Needs Power Plant", "muted", false, "Missile Battery at its exact cost, missing its Power Plant")
+	var sim = main.driver.pump.live()
+	Fixture.add_completed(sim, 1, "usa_power_plant", Vector2i(20, 4))
+	BaseScene.publish(main)
+	_set_credits(main, 500)
+	await _frames(runner)
+	_blocked_look(runner, _cell(main, "usa_power_plant"), "300 credits short", "warn", true, "Power Plant short alone")
+	_blocked_look(runner, _cell(main, "usa_supply_center"), "1500 credits short", "warn", true, "Supply Depot short alone")
+	_blocked_look(runner, _cell(main, "usa_barracks"), "100 credits short", "warn", true, "Barracks short alone")
+	_blocked_look(runner, _cell(main, "usa_factory"), "Needs Supply Depot", "muted", false, "Vehicle Factory with two causes")
+	_select(main, [], ids.factory)
+	await _frames(runner)
+	_blocked_look(runner, _cell(main, "usa_light_vehicle"), "Needs Supply Depot", "muted", false, "a unit cell under its factory's missing Supply Depot")
+	var depot: int = Fixture.add_completed(sim, 1, "usa_supply_center", Vector2i(20, 20))
+	BaseScene.publish(main)
+	_set_credits(main, 500)
+	await _frames(runner)
+	_blocked_look(runner, _cell(main, "usa_light_vehicle"), "200 credits short", "warn", true, "Scout Car short alone")
+	_queue_of(main, ids.factory, 9)
+	await _frames(runner)
+	_blocked_look(runner, _cell(main, "usa_light_vehicle"), "Queue full", "muted", false, "a full queue before the credits")
+	_set_credits(main, 50000)
+	_queue_of(main, ids.factory, 9)
+	_blocked_look(runner, _cell(main, "usa_tank"), "Queue full", "muted", false, "a full queue alone")
+	var view: Dictionary = main.driver.current().view
+	view.buildings = view.buildings.filter(func(found: Dictionary) -> bool: return found.id != depot)
+	main._show(view)
+	_blocked_look(runner, _cell(main, "usa_tank"), "Needs Supply Depot", "muted", false, "the prerequisite before a full queue")
+	_select(main, ids.builders)
+	await _frames(runner)
+	var build: Button = _cell(main, "build")
+	_blocked_look(runner, build, "Select one builder", "", false, "Build with two builders")
+	runner.check(_card(main) == ["Q Build ›", "", "", ""] + EIGHT_WELLS, "BC1 two builders keep the Build cell and its chip, got %s" % [_card(main)])
+	_select(main, [ids.builder])
+	await _frames(runner)
+	_blocked_look(runner, _cell(main, "build"), "", "", false, "Build with one builder")
+	main.free()
+	return true
+
+static func _sounds(main) -> Array:
+	main._show(main.driver.current().view)
+	return main._sound.last_requests().map(func(request: Dictionary) -> String: return request.cue)
+
+# A blocked cell's click does what its key does: nothing arms or is sent, the reason goes on the line with the reason's sound.
+func test_blocked_press_equals_key(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _blocked_world(main, 1000)
+	var sim = main.driver.pump.live()
+	var presses: Array = [
+		["missing prerequisite", [ids.builder], -1, true, "usa_supply_center", "Needs Power Plant", ["error"]],
+		["credits short", [ids.builder], -1, true, "usa_power_plant", "300 credits short", ["disabled"]],
+		["queue full", [], ids.factory, false, "usa_tank", "Queue full", ["error"]],
+		["two builders", ids.builders, -1, false, "build", "Select one builder", []]]
+	for case: Array in presses:
+		main.orders._clear_placement()
+		if case[0] == "credits short":
+			Fixture.add_completed(sim, 1, "usa_power_plant", Vector2i(20, 4))
+			BaseScene.publish(main)
+		if case[0] == "queue full": Fixture.add_completed(sim, 1, "usa_supply_center", Vector2i(20, 20))
+		BaseScene.publish(main)
+		_select(main, case[1], case[2])
+		main.orders._sub_grid = case[3]
+		if case[0] == "credits short": _set_credits(main, 500)
+		if case[0] == "queue full": _queue_of(main, ids.factory, 9)
+		main._reshow()
+		await _frames(runner)
+		var cell: Button = _cell(main, case[4])
+		var before: Array = _press_state(main, 0)
+		main.hud.clear_refusal()
+		BaseScene.new().key(main, HudModel.GRID_KEYS[cell.get_index()])
+		var by_key: Array = [_press_state(main, 0), main.hud.refusal, _sounds(main)]
+		main.hud.clear_refusal()
+		main._sound.last_requests().clear()
+		_click(runner, cell.get_global_rect().get_center())
+		var plain: Array = main._sound.last_requests().map(func(request: Dictionary) -> String: return request.cue)
+		var by_click: Array = [_press_state(main, 0), main.hud.refusal, _sounds(main)]
+		runner.check(by_key[0] == before and by_key[1] == case[5] and by_key[2] == case[6], "BC2 %s: the key arms and sends nothing, '%s' and %s, got %s" % [case[0], case[5], case[6], by_key])
+		runner.check(by_click == by_key and plain.is_empty(), "BC2 %s: the click equals the key, no button click, got %s %s" % [case[0], by_click, plain])
+	main.free()
+	return true
+
+# hud-v5-layout "Cell card": opens 250 ms after the pointer enters a cell, switches at once to a neighbour, closes on leaving and on a click.
+func test_cell_card_timing(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _blocked_world(main, 1000)
+	_sub_grid(main, ids.builder)
+	await _frames(runner)
+	var clock: Array[int] = [10000]
+	main.hud.now_msec = func() -> int: return clock[0]
+	var card: Control = main.get_node("HUD/Hud/CellCard")
+	var plant: Button = _cell(main, "usa_power_plant")
+	var depot: Button = _cell(main, "usa_supply_center")
+	var name_of = func() -> String: return (card.find_child("Name", true, false) as Label).text
+	plant.mouse_entered.emit()
+	main.hud._process(0.0)
+	runner.check(not card.visible, "CC1 no card the moment the pointer enters")
+	clock[0] += 249
+	main.hud._process(0.0)
+	runner.check(not card.visible, "CC1 no card at 249 ms")
+	clock[0] += 1
+	main.hud._process(0.0)
+	runner.check(card.visible and name_of.call() == "Power Plant", "CC1 the card opens at 250 ms, got %s '%s'" % [card.visible, name_of.call()])
+	plant.mouse_exited.emit()
+	main.hud._process(0.0)
+	runner.check(not card.visible, "CC1 the card closes in the gap between cells")
+	depot.mouse_entered.emit()
+	main.hud._process(0.0)
+	runner.check(card.visible and name_of.call() == "Supply Depot", "CC1 a neighbour's card opens at once, got %s '%s'" % [card.visible, name_of.call()])
+	depot.mouse_exited.emit()
+	main.get_node("HUD/Economy/Card").mouse_exited.emit()
+	plant.mouse_entered.emit()
+	main.hud._process(0.0)
+	runner.check(not card.visible, "CC1 back on the card after leaving it, the wait starts again")
+	clock[0] += 250
+	main.hud._process(0.0)
+	runner.check(card.visible, "CC1 then the card opens at 250 ms")
+	depot.mouse_entered.emit()
+	plant.mouse_exited.emit()
+	main.hud._process(0.0)
+	depot.pressed.emit()
+	clock[0] += 1000
+	main.hud._process(0.0)
+	runner.check(not card.visible, "CC1 a click closes the card until the pointer enters a cell again")
+	main.free()
+	return true
+
+# Line 1 the name and muted cost · time, line 2 the reason in warn; 248 wide, 8 above the slab, left-aligned with its cell, clamped 8 from the edge.
+func test_cell_card_lines(runner) -> bool:
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await OverlayTests.new()._scene(runner, Skirmish, port)
+		var ids: Dictionary = _blocked_world(main, 1000)
+		_sub_grid(main, ids.builder)
+		main.refuse("Needs Power Plant", "")
+		await _frames(runner)
+		main.hud.now_msec = func() -> int: return 0
+		var card: Control = main.get_node("HUD/Hud/CellCard")
+		for case: Array in [["usa_power_plant", "Power Plant", "800 · 10 s", ""], ["usa_supply_center", "Supply Depot", "2000 · 10 s", "Needs Power Plant"], ["usa_factory", "Vehicle Factory", "2000 · 15 s", "Needs Supply Depot"], ["usa_defence", "Missile Battery", "1000 · 25 s", "Needs Power Plant"]]:
+			var label: String = "%s at %s" % [case[1], size]
+			var cell: Button = _cell(main, case[0])
+			cell.mouse_entered.emit()
+			main.hud.now_msec = func() -> int: return 1000
+			main.hud._process(0.0)
+			await _frames(runner)
+			var lines: Array = card.find_child("Lines", true, false).get_children().filter(func(line: Control) -> bool: return line.visible).map(func(line: Control) -> String: return str(line.name))
+			var reason: Label = card.find_child("Reason", true, false)
+			var numbers: Label = card.find_child("Numbers", true, false)
+			runner.check(lines == (["Head", "Reason"] if not case[3].is_empty() else ["Head"]), "CC2 %s: the lines in order, got %s" % [label, lines])
+			runner.check((card.find_child("Name", true, false) as Label).text == case[1] and numbers.text == case[2] and _colour(numbers) == _token("muted"), "CC2 %s: line 1 '%s' then muted '%s', got '%s'" % [label, case[1], case[2], numbers.text])
+			if not case[3].is_empty(): runner.check(reason.text == case[3] and _colour(reason) == _token("warn"), "CC2 %s: line 2 '%s' in warn, got '%s'" % [label, case[3], reason.text])
+			var at: Rect2 = card.get_global_rect()
+			var slab: Rect2 = _rect(main, "HUD/Economy")
+			var left: float = clampf(cell.get_global_rect().position.x, 8.0, size.x - 8.0 - 248.0)
+			var high: float = 36.0 if case[3].is_empty() else 56.0
+			runner.check(at.size == Vector2(248, high) and is_equal_approx(at.position.x, left) and is_equal_approx(at.end.y, slab.position.y - 8.0), "CC2 %s: 248 x %.0f, x %.0f, 8 above the slab, got %s" % [label, high, left, at])
+			runner.check(view.grow(-8.0).encloses(at), "CC2 %s: 8 inside the view, got %s" % [label, at])
+			var panels: Dictionary = BaseScene.hud_panels(main)
+			panels["HUD/Hud/RefusalLine"] = _rect(main, "HUD/Hud/RefusalLine")
+			for path: String in panels: runner.check(not at.intersects(panels[path]), "CC2 %s: clear of %s %s" % [label, path, panels[path]])
+			cell.mouse_exited.emit()
+			main.hud._process(0.0)
+		port.free()
+	return true
+
+# 3-10: hovering a cell blocked by a prerequisite frames that prerequisite's cell in sel; nothing else does.
+func test_prerequisite_hint(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _blocked_world(main, 1000)
+	_sub_grid(main, ids.builder)
+	await _frames(runner)
+	var hinted = func() -> Array: return _cells(main).filter(func(cell: Control) -> bool: return cell.get_node("Hint").is_visible_in_tree()).map(func(cell: Control) -> String: return str(cell.name))
+	for case: Array in [["usa_supply_center", ["Q"]], ["usa_factory", ["W"]], ["usa_defence", ["Q"]], ["usa_power_plant", []], ["usa_barracks", []]]:
+		var cell: Button = _cell(main, case[0])
+		cell.mouse_entered.emit()
+		runner.check(hinted.call() == case[1], "PH1 hovering %s frames %s, got %s" % [case[0], case[1], hinted.call()])
+		cell.mouse_exited.emit()
+		runner.check(hinted.call().is_empty(), "PH1 leaving %s drops the frame" % case[0])
+	var frame: StyleBoxFlat = main.get_node("HUD/Economy/Card/Q/Hint").get_theme_stylebox("panel") as StyleBoxFlat
+	runner.check(frame != null and not frame.draw_center and frame.border_color == _token("sel") and frame.border_width_top == 1 and frame.border_width_left == 1, "PH1 the hint is a 1 px sel frame")
+	_cell(main, "usa_supply_center").mouse_entered.emit()
+	await _frames(runner)
+	var q: Button = main.get_node("HUD/Economy/Card/Q")
+	runner.check(q.get_node("Hint").get_global_rect().is_equal_approx(q.get_global_rect()), "PH1 the frame covers its cell, got %s" % q.get_node("Hint").get_global_rect())
+	_cell(main, "usa_supply_center").mouse_exited.emit()
+	_select(main, [], ids.factory)
+	await _frames(runner)
+	_cell(main, "usa_light_vehicle").mouse_entered.emit()
+	runner.check(hinted.call().is_empty(), "PH1 a factory's missing Supply Depot has no cell on its card: no frame, got %s" % [hinted.call()])
 	main.free()
 	return true
 
@@ -2804,7 +3052,7 @@ func test_refusal_line_place(runner) -> bool:
 			if other != "HUD/Hud/RefusalLine" and panels.has("HUD/Hud/RefusalLine"): runner.check(not panels["HUD/Hud/RefusalLine"].intersects(panels[other]), "RN1 the line clears %s%s" % [other, at])
 		var catches: Array = [line] + line.find_children("*", "Control", true, false)
 		runner.check(catches.all(func(part: Control) -> bool: return part.mouse_filter == Control.MOUSE_FILTER_IGNORE), "RN1 the line never catches the mouse%s" % at)
-		main.refuse("Footprint covers ground unit or destination", false)
+		main.refuse("Footprint covers ground unit or destination", "")
 		await _frames(runner)
 		rect = line.get_global_rect()
 		var tallest := Rect2(0, size.y - 158.0, 408.0, 158.0)
@@ -2841,7 +3089,7 @@ func test_refusal_timer_and_replace(runner) -> bool:
 	var main = await overlays._scene(runner, Skirmish)
 	main.hud.now_msec = func() -> int: return clock[0]
 	clock[0] = 30000
-	main.refuse("Target outside map", false)
+	main.refuse("Target outside map", "")
 	main._pause.open()
 	var tick: int = main.driver.current().tick
 	await _frames(runner)
@@ -2904,7 +3152,7 @@ func test_local_hints_on_the_line(runner) -> bool:
 	_select(main, builders)
 	BaseScene.new().key(main, HudModel.BUILD_KEY)
 	BaseScene.tick(main)
-	runner.check(_line_text(main) == "Choose one builder" and main.hud.refusal == "Choose one builder", "RN6 Build with two builders says so on the line, got '%s'" % _line_text(main))
+	runner.check(_line_text(main) == "Select one builder" and main.hud.refusal == "Select one builder", "RN6 Build with two builders says so on the line, got '%s'" % _line_text(main))
 	runner.check(skirmish._error_cues(main) == 0, "RN6 a local hint asks for no sound, got %d" % skirmish._error_cues(main))
 	main.free()
 	return true

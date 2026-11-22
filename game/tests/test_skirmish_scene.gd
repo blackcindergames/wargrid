@@ -129,6 +129,9 @@ func test_combat_context_input(runner) -> bool:
 	helper.build_key(main, "usa_power_plant")
 	runner.check(not main.orders._attack_move_mode and main.orders._placement_kind == "usa_power_plant", "K3 placement clears a stale attack-move mode")
 	helper.key(main, KEY_ESCAPE)
+	# The defence cell needs a completed Power Plant, else it is blocked and arms nothing.
+	Fixture.add_completed(main.driver.pump.live(), 1, "usa_power_plant", Skirmish.origin("usa_power_plant", 1))
+	BaseScene.publish(main)
 	main.orders.selected_ids.assign([1])
 	main._refresh()
 	helper.build_key(main, "usa_power_plant")
@@ -1526,7 +1529,7 @@ func test_no_refusal_over_a_card(runner) -> bool:
 	BaseScene.tick(main)
 	runner.check(main.shown_over(), "RN8 fixture: the match is won")
 	main._submit(_off_map_move(ids))
-	main.refuse("Choose one builder", false)
+	main.refuse("Choose one builder", "")
 	main.refuse("Target outside map")
 	var beeps: int = 0
 	for i in 2:
@@ -2203,7 +2206,7 @@ func test_hud_blocks_the_map(runner) -> bool:
 		await _frames(runner)
 		runner.check(main.orders.selected_ids.is_empty(), "MR1 %s: a click on open ground beside them deselects" % at)
 		main.orders.selected_ids.assign(before[0])
-		main.refuse("Target outside map", false)
+		main.refuse("Target outside map", "")
 		main._reshow()
 		await _frames(runner)
 		var line: Rect2 = _rect_of(main, "HUD/Hud/RefusalLine")

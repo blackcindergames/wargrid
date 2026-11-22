@@ -50,9 +50,14 @@ func consumed_ticks() -> Array[int]:
 func pending_step(index: int) -> Dictionary:
 	return _pending[index]
 
-func rejected(error: String) -> void:
-	if error == FUNDS_ERROR: _funds_rejected = true
-	else: _queued.append(ui_request("error"))
+# A local refusal's sound: "error" beeps, "funds" asks for the voice, "disabled" clicks short and asks for it (3-8).
+func rejected(sound: String) -> void:
+	if sound in ["error", "disabled"]: _queued.append(ui_request(sound))
+	if sound in ["funds", "disabled"]: _funds_rejected = true
+
+# Simulation refusals keep their raw words until P2.3a2, so their sound is read off them.
+static func refusal_sound(error: String) -> String:
+	return "funds" if error == FUNDS_ERROR else "error"
 
 func update(state: Dictionary) -> Array[Dictionary]:
 	var requests: Array[Dictionary] = _queued.duplicate()

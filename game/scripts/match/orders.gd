@@ -6,6 +6,7 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Construction = preload("res://scripts/simulation/construction.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
+const SoundDirector = preload("res://scripts/presentation/sound_director.gd")
 
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
@@ -135,6 +136,11 @@ func _card_key(event: InputEvent) -> bool:
 # A key or a click on a shown cell; the Hud's cells carry the actions of `HudModel.card`.
 func press_cell(action: String) -> void:
 	if not takes_orders(): return
+	var blocked: Dictionary = HudModel.blocked(_screen.shown_state, _screen._hud_selection(), _screen.local_player, action)
+	if not blocked.is_empty():
+		_screen.refuse(blocked.reason, blocked.sound)
+		_screen._reshow()
+		return
 	match action:
 		"build": _open_build()
 		"back": _back()
@@ -149,7 +155,7 @@ func _no_cell(code: Key) -> void:
 	_screen._reshow()
 
 func _open_build() -> void:
-	if _builder() == -1: _screen.refuse("Choose one builder", false)
+	if _builder() == -1: _screen.refuse(HudModel.SELECT_ONE_BUILDER, "")
 	else:
 		_sub_grid = true
 		_set_attack_move(false)
@@ -210,7 +216,7 @@ func _placement_input(event: InputEvent) -> void:
 			_update_preview(_screen._view.make_canvas_position_local(event.position))
 			# As Zero Hour: a spot this view already knows is refused is never sent, so no order voice plays.
 			if _known_refused():
-				_screen.refuse(_answer.error)
+				_screen.refuse(_answer.error, SoundDirector.refusal_sound(_answer.error))
 				return
 			_screen._submit({"type":"build","builder_id":_builder(),"building_kind":_placement_kind,"origin":[_preview_origin.x,_preview_origin.y]})
 			_awaiting_build = _placement_kind
@@ -358,7 +364,7 @@ func _enter_placement(kind: String) -> void:
 	gestures += 1
 	_set_attack_move(false)
 	if _builder() == -1:
-		_screen.refuse("Choose one builder", false)
+		_screen.refuse(HudModel.SELECT_ONE_BUILDER, "")
 		_screen._reshow()
 		return
 	_placement_kind = kind
@@ -409,7 +415,7 @@ func _context_order(id: int) -> bool:
 			if not unit.is_empty() and Registry.collects(unit.kind).is_empty(): collectors = false
 		if collectors: _screen._submit({"type":"gather","entity_ids":selected_ids.duplicate(),"source_id":id})
 		else:
-			_screen.refuse("Choose homogeneous collector selection", false)
+			_screen.refuse("Choose homogeneous collector selection", "")
 			_screen._reshow()
 		return true
 	var building: Dictionary = HudModel.building(state,id)
@@ -419,7 +425,7 @@ func _context_order(id: int) -> bool:
 	if not building.is_empty() and building.owner == _screen.local_player and not building.completed:
 		if _builder() != -1: _screen._submit({"type":"resume_build","builder_id":_builder(),"building_id":id})
 		else:
-			_screen.refuse("Choose one builder", false)
+			_screen.refuse(HudModel.SELECT_ONE_BUILDER, "")
 			_screen._reshow()
 		return true
 	return false

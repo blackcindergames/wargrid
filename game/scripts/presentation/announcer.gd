@@ -1,7 +1,7 @@
 extends RefCounted
 
 const EXPIRY_TICKS := 150
-const COOLDOWN_TICKS := {"base_under_attack": 900, "building_lost": 900, "low_power": 3600}
+const COOLDOWN_TICKS := {"base_under_attack": 900, "building_lost": 900, "low_power": 3600, "insufficient_funds": 900}
 # Zero Hour retail Eva.ini priorities; victory and defeat are not EVA lines, so they rank on top.
 const PRIORITY := {"victory": 9, "defeat": 9, "building_lost": 8, "base_under_attack": 7, "insufficient_funds": 3, "low_power": 2, "construction_complete": 1, "unit_ready": 1}
 

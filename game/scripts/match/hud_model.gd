@@ -91,6 +91,24 @@ static func _builder_kinds(view: Dictionary, ids: Array[int], seat: int) -> Arra
 		kinds.append(view.units.kinds[view.units.kind[i]])
 	return kinds
 
+const SELECT_ONE_BUILDER := "Select one builder"
+const QUEUE_LIMIT: int = 9
+
+# Why a shown cell cannot be pressed, in the simulation's order (prerequisite, queue, credits); a unit cell takes its producer's prerequisite.
+static func blocked(view: Dictionary, selection: Dictionary, seat: int, action: String) -> Dictionary:
+	if action == "build": return {"cause": "builders", "reason": SELECT_ONE_BUILDER, "sound": ""} if _builder_kinds(view, selection.ids, seat).size() > 1 else {}
+	if action.is_empty() or COMMANDS.has(action): return {}
+	var producer: Dictionary = building(view, selection.building_id)
+	var needs: String = Registry.kind(producer.kind if not producer.is_empty() else action).get("prerequisite", "")
+	if not needs.is_empty() and not _owns_completed(view, seat, needs): return {"cause": "prerequisite", "reason": "Needs %s" % Registry.kind(needs).display_name, "sound": "error", "missing": needs}
+	if producer.get("queue", []).size() >= QUEUE_LIMIT: return {"cause": "queue", "reason": "Queue full", "sound": "error"}
+	var short: int = Registry.kind(action).cost - player(view, seat).credits
+	if short > 0: return {"cause": "credits", "reason": "%d credits short" % short, "sound": "disabled"}
+	return {}
+
+static func _owns_completed(view: Dictionary, seat: int, kind: String) -> bool:
+	return view.buildings.any(func(found: Dictionary) -> bool: return found.owner == seat and found.kind == kind and found.completed)
+
 # The refusal for Build with nothing selected names the faction's own builder (user, 2026-11-21).
 static func select_builder(view: Dictionary, seat: int) -> String:
 	var faction: String = player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)

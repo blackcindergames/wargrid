@@ -11,7 +11,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 
 func cases() -> Array[Callable]:
-	return [test_no_chip_on_two_actions, test_slot_same_role_all_factions, test_lone_builder_card, test_modified_keys_press_nothing, test_prune_closes_the_sub_grid, test_production_cells_by_role, test_q_nothing_selected_refuses, test_grid_keys_with_attack_move_armed, test_card_keys_in_one_frame, test_produce_key_as_the_producer_dies, test_unarmed_units_stop, test_attack_move_takes_the_armed, test_attack_move_with_no_armed_unit, test_attack_move_click_then_stop_in_one_frame]
+	return [test_no_chip_on_two_actions, test_slot_same_role_all_factions, test_lone_builder_card, test_modified_keys_press_nothing, test_prune_closes_the_sub_grid, test_production_cells_by_role, test_q_nothing_selected_refuses, test_grid_keys_with_attack_move_armed, test_card_keys_in_one_frame, test_produce_key_as_the_producer_dies, test_unarmed_units_stop, test_attack_move_takes_the_armed, test_attack_move_with_no_armed_unit, test_attack_move_click_then_stop_in_one_frame, test_blocked_cell_same_tick]
 
 func _world(runner) -> Array:
 	var main = await SkirmishTests.new()._setup(runner)
@@ -73,6 +73,9 @@ func test_slot_same_role_all_factions(runner) -> bool:
 func test_lone_builder_card(runner) -> bool:
 	var world: Array = await _world(runner)
 	var main = world[0]
+	# The USA defence and Supply Depot need a USA Power Plant; without one their cells are blocked.
+	Fixture.add_completed(main.driver.pump.live(), 1, "usa_power_plant", Vector2i(24, 24))
+	BaseScene.publish(main)
 	HudTests._select(main, [1])
 	_key(main, KEY_A)
 	_key(main, KEY_S)
@@ -96,7 +99,7 @@ func test_lone_builder_card(runner) -> bool:
 	runner.check(main.orders._sub_grid, "CK3 the sub-grid shows again after a placement ends (3-28)")
 	HudTests._select(main, [1, world[1].builder])
 	_key(main, KEY_Q)
-	runner.check(not main.orders._sub_grid and main.orders._placement_kind.is_empty() and main.hud.refusal == "Choose one builder", "CK3 two builders: Q refuses with today's line until T7, got '%s'" % main.hud.refusal)
+	runner.check(not main.orders._sub_grid and main.orders._placement_kind.is_empty() and main.hud.refusal == "Select one builder", "CK3 two builders: Q refuses with Select one builder (3-7), got '%s'" % main.hud.refusal)
 	main.free()
 	return true
 
@@ -141,6 +144,7 @@ func test_production_cells_by_role(runner) -> bool:
 	var world: Array = await _world(runner)
 	var main = world[0]
 	var ids: Dictionary = world[1]
+	HudTests._prerequisites(main)
 	HudTests._select(main, [], ids.barracks)
 	for code: Key in [KEY_Q, KEY_W, KEY_E]: _key(main, code)
 	var kinds: Array = main.driver.queued().map(func(command: Dictionary) -> String: return command.unit_kind)
@@ -335,6 +339,37 @@ func test_card_keys_in_one_frame(runner) -> bool:
 	runner.check(queued == 8 and _types(main).count("produce") == 2, "CK9 two presses at 8 queued are both sent, queue %d" % queued)
 	BaseScene.tick(main)
 	runner.check(Fixture.object(sim, ids.barracks).queue.size() == 9 and main.hud.refusal == "Production queue full" and _errors(main) == 1, "CK9 the second is refused with a beep, got '%s' %d" % [main.hud.refusal, _errors(main)])
+	main.free()
+	return true
+
+# Same-tick cases for blocked cells: the producer's prerequisite dies the step its unit cell is pressed; credits spent elsewhere that tick.
+func test_blocked_cell_same_tick(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = HudTests._blocked_world(main, 1000)
+	var sim = main.driver.pump.live()
+	var depot: int = Fixture.add_completed(sim, 1, "usa_supply_center", Vector2i(20, 20))
+	BaseScene.publish(main)
+	HudTests._select(main, [], ids.factory)
+	_key(main, KEY_W)
+	sim.remove_object(depot)
+	BaseScene.tick(main)
+	runner.check(main.hud.refusal == "Missing completed prerequisite" and _errors(main) == 1, "BC3 a unit cell pressed the step its Supply Depot dies: the sim refuses with a beep, got '%s' %d" % [main.hud.refusal, _errors(main)])
+	_key(main, KEY_W)
+	runner.check(main.hud.refusal == "Needs Supply Depot" and _types(main).is_empty(), "BC3 the next view blocks the cell and sends nothing, got '%s' %s" % [main.hud.refusal, _types(main)])
+	Fixture.add_completed(sim, 1, "usa_supply_center", Vector2i(20, 20))
+	BaseScene.publish(main)
+	_key(main, KEY_W)
+	_key(main, KEY_W)
+	main._sound._voice.stream = null
+	BaseScene.tick(main)
+	main._refresh()
+	var voice: AudioStream = main._sound._voice.stream
+	runner.check(main.hud.refusal == "Insufficient credits" and _errors(main) == 0 and voice != null and voice.resource_path.ends_with("insufficient_funds.wav"), "BC3 two tanks pressed at 1000 credits: the first spends them that tick, the sim refuses the second with the voice, no beep, got '%s' %s" % [main.hud.refusal, voice])
+	main._sound._voice.stream = null
+	_key(main, KEY_W)
+	BaseScene.tick(main)
+	main._refresh()
+	runner.check(main.hud.refusal == "800 credits short" and main._sound._voice.stream == null, "BC3 a blocked press inside the voice's cooldown shows its line and stays quiet, got '%s'" % main.hud.refusal)
 	main.free()
 	return true
 

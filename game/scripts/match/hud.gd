@@ -24,6 +24,11 @@ const ITEM_NAME_SIZE: int = 12
 const WELL: Color = Color("#0f1820")
 # The cells' 15 px coin, its `$` in 1 px rects (cost step, user 2026-11-21).
 const DOLLAR: Array[Rect2] = [Rect2(7, 2, 1, 1), Rect2(5, 3, 5, 2), Rect2(4, 5, 2, 1), Rect2(7, 5, 1, 1), Rect2(5, 6, 5, 2), Rect2(7, 8, 1, 1), Rect2(9, 8, 2, 1), Rect2(5, 9, 5, 2), Rect2(7, 11, 1, 1)]
+const COIN: float = 15.0
+# hud-v5-layout "Cell card"; the delay is the decided tooltip rule (user, 2026-11-15).
+const CELL_CARD_WIDTH: float = 248.0
+const CELL_CARD_LINE: float = 20.0
+const CELL_CARD_DELAY_MSEC: int = 250
 
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -70,6 +75,11 @@ var _last: Array = []
 var _last_ids: Array[int] = []
 var _shape: Array = []
 var _hovered_cell: Button
+var _blocked: StyleBox
+var _hint_frame: StyleBoxFlat
+var _cell_card: PanelContainer
+var _tip_since: int = -1
+var _tip_open: bool = false
 var _strip_args: Array = []
 var _blockers: Array[Control] = []
 
@@ -164,7 +174,7 @@ func _arrow(parent: Control, arrow_name: String) -> void:
 func coin(parent: Control, coin_name: String) -> Control:
 	var mark := Control.new()
 	mark.name = coin_name
-	mark.custom_minimum_size = Vector2(15, 15)
+	mark.custom_minimum_size = Vector2(COIN, COIN)
 	mark.size_flags_vertical = SIZE_SHRINK_CENTER
 	mark.mouse_filter = MOUSE_FILTER_IGNORE
 	var warn: Color = get_theme_color("warn", &"Tokens")
@@ -299,6 +309,7 @@ func clear_refusal() -> void:
 # The timer only hides the line; `refusal` keeps the words until replaced, cleared or reset.
 func _process(_delta: float) -> void:
 	if _refusal_line.visible and now_msec.call() - _refused_at >= 3000: _refusal_line.visible = false
+	if _hovered_cell != null or (_cell_card != null and _cell_card.visible): _show_cell_card()
 
 # Esc's first job is to back out of a selection, placement or form; the chip shows only when Esc opens the menu, and fades so Menu keeps its width.
 func set_esc_chip(shown: bool) -> void:
@@ -332,6 +343,7 @@ func _build_slab() -> void:
 	_economy.sort_children.connect(_pad_slab)
 	_resume = _label(_economy, "ResumeHint", &"HudHint", "Right-click: resume")
 	_build_card()
+	_build_cell_card()
 	_square(_cancel_build)
 	_queue_header = _box(_economy, "QueueHeader", HBoxContainer.new(), 8) as HBoxContainer
 	_label(_queue_header, "Title", &"HudLabel", "QUEUE").size_flags_horizontal = SIZE_EXPAND_FILL
@@ -354,10 +366,16 @@ func _build_card() -> void:
 	_card.mouse_filter = MOUSE_FILTER_PASS
 	_card.mouse_entered.connect(_restrip, CONNECT_DEFERRED)
 	_card.mouse_exited.connect(_restrip, CONNECT_DEFERRED)
+	_card.mouse_exited.connect(func() -> void: _tip_open = false)
 	_well = StyleBoxFlat.new()
 	_well.bg_color = WELL
 	_well.border_color = get_theme_color("line", &"Tokens")
 	_well.set_border_width_all(1)
+	_blocked = get_theme_stylebox("disabled", &"HudButton")
+	_hint_frame = StyleBoxFlat.new()
+	_hint_frame.draw_center = false
+	_hint_frame.border_color = get_theme_color("sel", &"Tokens")
+	_hint_frame.set_border_width_all(1)
 	for code: Key in HudModel.GRID_KEYS:
 		var cell: Button = _button(_card, OS.get_keycode_string(code), CELL.x)
 		cell.custom_minimum_size.y = CELL.y
@@ -379,7 +397,35 @@ func _build_card() -> void:
 		# Item names keep the page's 14 px line pitch, so two lines end inside the cell.
 		name_label.add_theme_constant_override("line_spacing", -1)
 		_cell_label(cell, "More", &"HudRow", Vector2(CELL_PAD.x, NAME_TOP), Vector2(0, COMMAND_LINE)).add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+		var mark: Control = coin(cell, "Coin")
+		mark.size = mark.custom_minimum_size
+		mark.position.y = CELL_PAD.y + (CELL_LINE - COIN) / 2.0
+		mark.visible = false
+		var hint := Panel.new()
+		hint.name = "Hint"
+		hint.mouse_filter = MOUSE_FILTER_IGNORE
+		hint.add_theme_stylebox_override("panel", _hint_frame)
+		hint.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+		hint.visible = false
+		cell.add_child(hint)
 		_cell_look(cell, &"well")
+
+func _build_cell_card() -> void:
+	_cell_card = _slab("CellCard", Vector2.ZERO)
+	_cell_card.custom_minimum_size.x = CELL_CARD_WIDTH
+	var lines: BoxContainer = _box(_cell_card, "Lines", VBoxContainer.new(), 0)
+	var head: BoxContainer = _box(lines, "Head", HBoxContainer.new(), 4)
+	_label(head, "Name", &"HudRow").custom_minimum_size.y = CELL_CARD_LINE
+	_card_line(head, "Numbers")
+	_card_line(lines, "Reason").add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
+	_cell_card.visible = false
+
+# The card's regular 13 px lines (the picture's body text).
+func _card_line(parent: Control, line_name: String) -> Label:
+	var label: Label = _label(parent, line_name, &"HudHint")
+	label.add_theme_font_size_override("font_size", 13)
+	label.custom_minimum_size.y = CELL_CARD_LINE
+	return label
 
 static func _cell_label(cell: Button, label_name: String, variation: StringName, at: Vector2, minimum: Vector2) -> Label:
 	var label: Label = _label(cell, label_name, variation)
@@ -479,16 +525,17 @@ func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictio
 	var edge: Color = View.owner_color(seat, selection.bright_owners)
 	_resume.visible = selection.resume_id != -1
 	_cancel_build.visible = not building.is_empty() and not building.completed
-	_show_card(HudModel.card(view, selection, seat), selection, HudModel.player(view, seat).get("credits", 0))
+	_show_card(view, HudModel.card(view, selection, seat), selection, seat)
 	if edge != _edge:
 		_edge = edge
 		for row: Node in _queue.get_children(): (row.get_node("Track/Bar") as ColorRect).color = edge
 	_refresh_queue(building, edge)
 	_queue_gap.visible = _queue.visible and (_resume.visible or _card.visible or _cancel_build.visible)
 	_fit_slab()
+	_show_cell_card()
 
 # hud-v5-layout "Hug rule for rows": rows from the top-most one holding a cell down to the edge; every other position is a well.
-func _show_card(cells: Array, selection: Dictionary, credits: int) -> void:
+func _show_card(view: Dictionary, cells: Array, selection: Dictionary, seat: int) -> void:
 	var actions: Dictionary = {}
 	for cell: Array in cells: actions[cell[0]] = cell[1]
 	var top: int = HudModel.GRID_KEYS.size()
@@ -497,22 +544,32 @@ func _show_card(cells: Array, selection: Dictionary, credits: int) -> void:
 	for cell: Node in _card.get_children():
 		var at: int = cell.get_index()
 		cell.visible = at >= top - top % 4
-		_fill_cell(cell, actions.get(HudModel.GRID_KEYS[at], ""), selection, credits)
+		var action: String = actions.get(HudModel.GRID_KEYS[at], "")
+		_fill_cell(cell, action, selection, HudModel.blocked(view, selection, seat, action))
 	# A hidden cell or a well sends no exit, so its hover ends here.
 	if _hovered_cell != null and (not _hovered_cell.is_visible_in_tree() or str(_hovered_cell.get_meta("action")).is_empty()): _hovered_cell = null
+	_show_hint()
 
-func _fill_cell(cell: Button, action: String, selection: Dictionary, credits: int) -> void:
+# Blocked (hud-v5-layout "Looks"): quiet fill, muted name and cost; credits the sole blocker turn the cost warn with the coin 4 after it (3-2).
+func _fill_cell(cell: Button, action: String, selection: Dictionary, blocked: Dictionary) -> void:
 	cell.set_meta("action", action)
+	cell.set_meta("blocked", blocked)
 	var item: bool = not action.is_empty() and not HudModel.COMMANDS.has(action)
 	var armed: bool = action == selection.placement_kind or (action == "attack_move" and selection.attack_move)
-	_cell_look(cell, &"well" if action.is_empty() else (&"armed" if armed else &"ready"))
+	_cell_look(cell, &"well" if action.is_empty() else (&"armed" if armed else (&"blocked" if not blocked.is_empty() else &"ready")))
 	cell.get_node("Chip").visible = not action.is_empty()
-	cell.get_node("Cost").visible = item
+	var cost: Label = cell.get_node("Cost")
+	cost.visible = item
+	var short: bool = blocked.get("cause", "") == "credits"
 	if item:
-		var cost: int = Registry.kind(action).cost
-		_tint(cell.get_node("Cost"), str(cost), cost > credits)
+		cost.text = str(Registry.kind(action).cost)
+		_paint(cost, &"warn" if short else (&"muted" if not blocked.is_empty() else &""))
+	var mark: Control = cell.get_node("Coin")
+	mark.visible = item and short
+	if mark.visible: mark.position.x = cost.position.x + _text_width(cost, cost.text) + 4.0
 	var name_label: Label = cell.get_node("Name")
 	_name_form(name_label, item)
+	_paint(name_label, &"muted" if not blocked.is_empty() and not armed else &"")
 	var words: String = "" if action.is_empty() else HudModel.cell_name(action, selection.placement_kind)
 	cell.tooltip_text = "%s · %s or Esc" % [words, (cell.get_node("Chip") as Label).text] if action == "back" else ""
 	if name_label.text != words:
@@ -522,7 +579,10 @@ func _fill_cell(cell: Button, action: String, selection: Dictionary, credits: in
 	more.visible = action == "build"
 	if more.visible:
 		more.text = "\u203a"
-		more.position.x = name_label.position.x + name_label.get_theme_font("font").get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, name_label.get_theme_font_size("font_size")).x + 4.0
+		more.position.x = name_label.position.x + _text_width(name_label, words) + 4.0
+
+static func _text_width(label: Label, text: String) -> float:
+	return label.get_theme_font("font").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.get_theme_font_size("font_size")).x
 
 # Item names take the smaller two-line form, top-aligned; commands sit centred in their 28 px line.
 func _name_form(label: Label, item: bool) -> void:
@@ -532,19 +592,24 @@ func _name_form(label: Label, item: bool) -> void:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_TOP if item else VERTICAL_ALIGNMENT_CENTER
 	label.reset_size()
 
-# Ready cells take the queue rows' hover inset; the armed look keeps its own hover; a well takes no pointer.
+# Ready cells take the queue rows' hover inset; the armed look keeps its own hover; a well takes no pointer; a blocked cell still takes its click (click = key).
 func _cell_look(cell: Button, look: StringName) -> void:
 	if cell.get_meta("look", &"") == look: return
 	cell.set_meta("look", look)
 	cell.theme_type_variation = &"HudButtonArmed" if look == &"armed" else &"HudButton"
 	for state: String in ["normal", "hover", "pressed", "hover_pressed"]:
 		if look == &"well": cell.add_theme_stylebox_override(state, _well)
+		elif look == &"blocked": cell.add_theme_stylebox_override(state, _blocked)
 		elif look == &"ready" and state != "normal": cell.add_theme_stylebox_override(state, _inset)
 		else: cell.remove_theme_stylebox_override(state)
 	cell.mouse_filter = MOUSE_FILTER_IGNORE if look == &"well" else MOUSE_FILTER_STOP
-	cell.mouse_default_cursor_shape = CURSOR_ARROW if look == &"well" else CURSOR_POINTING_HAND
+	cell.mouse_default_cursor_shape = CURSOR_POINTING_HAND if look in [&"ready", &"armed"] else CURSOR_ARROW
 
+# A click closes the cell card until the pointer enters a cell again.
 func _press_cell(cell: Button) -> void:
+	_tip_since = -1
+	_tip_open = false
+	_show_cell_card()
 	var action: String = cell.get_meta("action")
 	if not action.is_empty(): cell_pressed.emit(action)
 
@@ -594,20 +659,58 @@ func _hovered_kind() -> String:
 
 func _tint(label: Label, text: String, warn: bool) -> void:
 	label.text = text
-	# Each override write re-themes the label, so only a flip may touch it.
-	if label.has_theme_color_override("font_color") == warn: return
-	if warn: label.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
-	else: label.remove_theme_color_override("font_color")
+	_paint(label, &"warn" if warn else &"")
+
+# A token's colour, or the theme's with none; each override write re-themes the label, so only a change may touch it.
+func _paint(label: Label, token: StringName) -> void:
+	if token.is_empty():
+		if label.has_theme_color_override("font_color"): label.remove_theme_color_override("font_color")
+		return
+	var colour: Color = get_theme_color(token, &"Tokens")
+	if not label.has_theme_color_override("font_color") or label.get_theme_color("font_color") != colour: label.add_theme_color_override("font_color", colour)
 
 func end_hover() -> void:
 	_hovered_cell = null
+	_show_cell_card()
 
 func _hover_cell(cell: Button, entered: bool) -> void:
 	# An ending without a card (desync, relay lost) leaves the card up but previews nothing.
 	if not _strip_args.is_empty() and _strip_args[1].over: return
 	if not entered and _hovered_cell != cell: return
 	_hovered_cell = cell if entered else null
+	if entered: _tip_since = now_msec.call()
+	_show_hint()
+	_show_cell_card()
 	_restrip()
+
+# 3-10: the missing prerequisite of the hovered cell, when the card shows it, gets a sel frame.
+func _show_hint() -> void:
+	var missing: String = "" if _hovered_cell == null else (_hovered_cell.get_meta("blocked", {}) as Dictionary).get("missing", "")
+	for cell: Node in _card.get_children(): (cell.get_node("Hint") as Control).visible = not missing.is_empty() and cell.get_meta("action") == missing
+
+# Opens 250 ms after the pointer enters a cell and at once on a neighbour while one was open (decided tooltip rules).
+func _show_cell_card() -> void:
+	if _cell_card == null: return
+	var shown: bool = _hovered_cell != null and _tip_since >= 0 and _has_card(_hovered_cell) and (_tip_open or now_msec.call() - _tip_since >= CELL_CARD_DELAY_MSEC)
+	_cell_card.visible = shown
+	if not shown: return
+	_tip_open = true
+	var action: String = _hovered_cell.get_meta("action")
+	var reason: String = (_hovered_cell.get_meta("blocked") as Dictionary).get("reason", "")
+	(_cell_card.find_child("Name", true, false) as Label).text = (_hovered_cell.get_node("Name") as Label).text
+	var numbers: Label = _cell_card.find_child("Numbers", true, false)
+	numbers.visible = not HudModel.COMMANDS.has(action)
+	if numbers.visible: numbers.text = "%d · %d s" % [Registry.kind(action).cost, ceili(Registry.kind(action).ticks / float(Engine.physics_ticks_per_second))]
+	var line: Label = _cell_card.find_child("Reason", true, false)
+	line.visible = not reason.is_empty()
+	line.text = reason
+	_cell_card.reset_size()
+	var cell: Rect2 = _hovered_cell.get_global_rect()
+	_cell_card.position = Vector2(clampf(cell.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _cell_card.size.x), slab_top() - 8.0 - _cell_card.size.y)
+
+# Item cells always; a command only while blocked, to name why.
+static func _has_card(cell: Button) -> bool:
+	return _forecasts(cell.get_meta("action")) or not (cell.get_meta("blocked", {}) as Dictionary).is_empty()
 
 func _restrip() -> void:
 	if not _strip_args.is_empty(): _show_strip.callv(_strip_args)

@@ -164,6 +164,9 @@ func test_placement_input(runner) -> bool:
 	if not state.pending_commands.is_empty(): runner.check(state.pending_commands[0].type == "build" and state.pending_commands[0].origin == [8,4] and state.pending_commands[0].builder_id == 1 and state.pending_commands[0].sequence == 0,"Bs2 envelope")
 	tick(main)
 	runner.check(main.orders._placement_kind.is_empty(),"Bs2 placement ends with the build's answer")
+	# The Supply Depot cell needs a completed Power Plant, else it is blocked and arms nothing.
+	Fixture.add_completed(main.driver.pump.live(),1,"usa_power_plant",Vector2i(20,20))
+	publish(main)
 	var queued: Dictionary = main.driver.pump.live().snapshot()
 	pointer(main,Iso.world_to_plane(Vector2(4.5,4.5)) + Vector2(0,-8),MOUSE_BUTTON_LEFT,true)
 	build_key(main,"usa_supply_center")

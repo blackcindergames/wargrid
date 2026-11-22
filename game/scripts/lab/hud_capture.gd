@@ -296,11 +296,11 @@ func _no_depot() -> void:
 func _refusal() -> void:
 	var ids: Dictionary = await _slab_world(500)
 	HudTests._select(_main, [], ids.factory)
-	_main.refuse("Insufficient credits", false)
+	_main.refuse("Insufficient credits", "")
 
 func _refusal_longest() -> void:
 	await _rows(HudTests.ROSTERS.china.map(func(kind: String) -> Array: return [kind, 1]))
-	_main.refuse(LONGEST, false)
+	_main.refuse(LONGEST, "")
 
 func _strip(used: int) -> void:
 	await _scene()

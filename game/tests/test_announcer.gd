@@ -10,7 +10,7 @@ const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const SkirmishScene = preload("res://scenes/skirmish.tscn")
 
 func cases() -> Array[Callable]:
-	return [test_second_base_attack_within_30s_is_silent, test_building_lost_cooldown_30s, test_low_power_cooldown_120s, test_insufficient_funds_has_no_cooldown, test_line_expires_after_5s, test_one_line_at_a_time_by_priority, test_waiting_line_not_queued_twice, test_triggers_from_snapshots, test_unit_ready_not_fired_by_spawns, test_rubble_is_not_base, test_unit_attack_is_not_base_attack, test_frc_never_low_power, test_announcer_follows_local_seat, test_match_end_lines, test_online_start_says_nothing, test_restart_starts_silent, test_restart_resets_tick_guard, test_match_end_drops_queued_lines, test_funds_line_from_results_and_rejections, test_submit_without_funds_announces]
+	return [test_second_base_attack_within_30s_is_silent, test_building_lost_cooldown_30s, test_low_power_cooldown_120s, test_insufficient_funds_cooldown_30s, test_line_expires_after_5s, test_one_line_at_a_time_by_priority, test_waiting_line_not_queued_twice, test_triggers_from_snapshots, test_unit_ready_not_fired_by_spawns, test_rubble_is_not_base, test_unit_attack_is_not_base_attack, test_frc_never_low_power, test_announcer_follows_local_seat, test_match_end_lines, test_online_start_says_nothing, test_restart_starts_silent, test_restart_resets_tick_guard, test_match_end_drops_queued_lines, test_funds_line_from_results_and_rejections, test_submit_without_funds_announces, test_blocked_presses_click_each_voice_once]
 
 func _starts(announcer, line: String, tick: int) -> bool:
 	announcer.request(line, tick)
@@ -37,9 +37,12 @@ func test_low_power_cooldown_120s(runner) -> bool:
 	runner.check(_starts(announcer, "low_power", 3600), "AN3 low_power at 3600 ticks starts")
 	return true
 
-func test_insufficient_funds_has_no_cooldown(runner) -> bool:
+# 3-8: the funds voice gets a 30 s cooldown so blocked presses on every key cannot repeat it.
+func test_insufficient_funds_cooldown_30s(runner) -> bool:
 	var announcer = Announcer.new()
-	runner.check(_starts(announcer, "insufficient_funds", 0) and _starts(announcer, "insufficient_funds", 1), "AN4 insufficient_funds repeats at once")
+	runner.check(_starts(announcer, "insufficient_funds", 0), "AN4 first insufficient_funds starts")
+	runner.check(not _starts(announcer, "insufficient_funds", 899), "AN4 insufficient_funds at 899 ticks dropped")
+	runner.check(_starts(announcer, "insufficient_funds", 900), "AN4 insufficient_funds at 900 ticks starts")
 	return true
 
 func test_line_expires_after_5s(runner) -> bool:
@@ -282,10 +285,22 @@ func test_funds_line_from_results_and_rejections(runner) -> bool:
 	director.update(_state(2, [], []))
 	runner.check(_lines(director, 2).is_empty(), "AN19 another seat's funds result says nothing")
 	director = _director(_state(1, [], []))
-	director.rejected("Insufficient credits")
+	director.rejected("funds")
 	requests = director.update(_state(2, [], []))
 	lines = _lines(director, 2)
 	runner.check(lines == ["insufficient_funds"] and requests.is_empty(), "AN19 local funds rejection gives the line and no beep, got %s %s" % [requests, lines])
+	return true
+
+# 3-8: every credit-blocked press clicks short; the voice keeps its cooldown, counted from its start.
+func test_blocked_presses_click_each_voice_once(runner) -> bool:
+	var director = _director(_state(1, [], []))
+	var heard: Array = []
+	for tick: int in [10, 20, 909, 911]:
+		director.rejected("disabled")
+		var requests: Array[Dictionary] = director.update(_state(tick, [], []))
+		heard.append([requests.map(func(request: Dictionary) -> String: return request.cue), _lines(director, tick)])
+	runner.check(heard[0] == [["disabled"], ["insufficient_funds"]] and heard[1] == [["disabled"], []], "AN21 two presses 10 ticks apart: two clicks, one voice, got %s" % [heard.slice(0, 2)])
+	runner.check(heard[2] == [["disabled"], []] and heard[3] == [["disabled"], ["insufficient_funds"]], "AN21 a press 901 ticks after the voice speaks again, one before it does not, got %s" % [heard.slice(2)])
 	return true
 
 func test_submit_without_funds_announces(runner) -> bool:

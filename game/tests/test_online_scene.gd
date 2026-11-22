@@ -1561,7 +1561,7 @@ func test_hint_outlives_an_earlier_order(runner) -> bool:
 	main.orders._open_build()
 	_run(main, 30)
 	runner.check(stops.call() == 1, "RN3 online fixture: the earlier stop was played and answered, got %d" % stops.call())
-	runner.check(main.hud.refusal == "Choose one builder" and main.get_node("HUD/Hud/RefusalLine").visible, "RN3 online: the earlier order's answer leaves the later hint, got '%s'" % main.hud.refusal)
+	runner.check(main.hud.refusal == "Select one builder" and main.get_node("HUD/Hud/RefusalLine").visible, "RN3 online: the earlier order's answer leaves the later hint, got '%s'" % main.hud.refusal)
 	main._submit({"type": "stop", "entity_ids": [3]})
 	_run(main, 30)
 	runner.check(stops.call() == 2 and main.hud.refusal.is_empty() and not main.get_node("HUD/Hud/RefusalLine").visible, "RN3 online: an order sent after the hint clears it, got '%s'" % main.hud.refusal)
