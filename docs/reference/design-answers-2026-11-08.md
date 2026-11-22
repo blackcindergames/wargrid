@@ -1608,6 +1608,7 @@ Plan not written; private input `p15-data.md`.
 - **Terrorist for bots (15-9):** not in the bots' barracks list, human only for now (user, 2026-11-21).
 - **Kind-row cap (15-10):** first in the package, roster order unchanged (user, 2026-11-21).
 - **Card slot (15-11):** the heavy goes last on the factory card, keys stay put (user, 2026-11-21).
+- **Display names (15-12):** `usa_heavy_tank` Heavy Tank, `china_heavy_tank` Twin-Gun Tank, `frc_heavy_tank` Scrap Tank, `frc_suicide_infantry` Sapper; named by weight, role or look like today's roster; Zero Hour's names (Paladin, Overlord, Marauder, Terrorist) stay source references only ([blueprint](../blueprint.md) §14) (user, 2026-11-22).
 
 ## Hybrid economy frame (user, 2026-11-22)
 
