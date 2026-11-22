@@ -105,13 +105,13 @@ Performance against the low-end budget (generated):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
+| Combat, normal fights | 🟢 OK | ███████░░░ 79% | 🔺 7% worse (busy host) | 2026-11-22 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same (busy host) | 2026-11-22 |
 | Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 57% | 🔻 2% better (busy host) | 2026-11-22 |
-| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 5% worse (busy host) | 2026-11-22 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 28% | 🔺 18% worse (busy host) | 2026-11-22 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same (busy host) | 2026-11-22 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 2% worse (busy host) | 2026-11-22 |
+| Unit movement | 🟢 OK | █████░░░░░ 54% | 🔺 29% worse (busy host) | 2026-11-22 |
+| Unit movement, slowest moments | 🟢 OK | ███░░░░░░░ 35% | 🔺 46% worse (busy host) | 2026-11-22 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 12% | 🔺 7% worse (busy host) | 2026-11-22 |
 | Smooth on a Steam Deck in Firefox, 3v3 match | Not measured yet | | | |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
@@ -122,11 +122,11 @@ These areas are over their limit and no known change brings them under it yet, s
 
 | Area | Change on this Mac | As of |
 | --- | --- | --- |
-| Background upkeep, huge crowds (stress) | same as 2026-11-21, mean 1.93 ms (busy host) | 2026-11-22 |
-| Combat, huge battles (stress) | same as 2026-11-22, p95 2.91 ms (busy host) | 2026-11-22 |
-| Background upkeep, armies on the move (stress) | 1% slower since 2026-11-22, mean 1.31 ms (busy host) | 2026-11-22 |
-| Combat, big armies in the open (stress) | same as 2026-11-21, p95 1.89 ms (busy host) | 2026-11-22 |
-| Combat, big armies packed close (stress) | same as 2026-11-21, p95 1.84 ms (busy host) | 2026-11-22 |
+| Background upkeep, huge crowds (stress) | 3% slower since 2026-11-21, mean 1.99 ms (busy host) | 2026-11-22 |
+| Combat, huge battles (stress) | same as 2026-11-22, p95 3.00 ms (busy host) | 2026-11-22 |
+| Background upkeep, armies on the move (stress) | 3% slower since 2026-11-22, mean 1.34 ms (busy host) | 2026-11-22 |
+| Combat, big armies in the open (stress) | same as 2026-11-21, p95 1.99 ms (busy host) | 2026-11-22 |
+| Combat, big armies packed close (stress) | same as 2026-11-21, p95 1.96 ms (busy host) | 2026-11-22 |
 | 3v3 match, background upkeep (headroom) | 3% slower since 2026-11-21, mean 1.15 ms (busy host) | 2026-11-22 |
 | 3v3 match, simulation (headroom) | 3% slower since 2026-11-22, p95 2.25 ms (busy host) | 2026-11-22 |
 | 3v3 match, bots and simulation (headroom) | 3% slower since 2026-11-22, p95 2.98 ms (busy host) | 2026-11-22 |

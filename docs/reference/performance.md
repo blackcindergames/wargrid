@@ -7,34 +7,34 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 213% | 🔺 1% worse (busy host) | 2026-11-22 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 218% | 🔺 3% worse (busy host) | 2026-11-22 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 165% | 🔺 3% worse (busy host) | 2026-11-22 |
 | **3v3 match, bots and simulation (headroom)** | 🔴 Over | ██████████▶ 164% | 🔺 3% worse (busy host) | 2026-11-22 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 160% | ➖ same (busy host) | 2026-11-22 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 144% | 🔺 1% worse (busy host) | 2026-11-22 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 147% | 🔺 3% worse (busy host) | 2026-11-22 |
 | **3v3 match, background upkeep (headroom)** | 🔴 Over | ██████████▶ 126% | 🔺 3% worse (busy host) | 2026-11-22 |
 | **3v3 match, simulation (headroom)** | 🔴 Over | ██████████▶ 124% | 🔺 3% worse (busy host) | 2026-11-22 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 79% | 🔺 7% worse (busy host) | 2026-11-22 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same (busy host) | 2026-11-22 |
 | Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 57% | 🔻 2% better (busy host) | 2026-11-22 |
-| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 5% worse (busy host) | 2026-11-22 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 28% | 🔺 18% worse (busy host) | 2026-11-22 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same (busy host) | 2026-11-22 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 2% worse (busy host) | 2026-11-22 |
+| Unit movement | 🟢 OK | █████░░░░░ 54% | 🔺 29% worse (busy host) | 2026-11-22 |
+| Unit movement, slowest moments | 🟢 OK | ███░░░░░░░ 35% | 🔺 46% worse (busy host) | 2026-11-22 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 12% | 🔺 7% worse (busy host) | 2026-11-22 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 44% of budget (auto 45daa17e, 2026-11-22), 5% slower than night 14 honest speed report (worst vs worst); run-to-run spread up to 50%, busy host (load 2.6)
-- movement p99: 28% of budget (auto 45daa17e, 2026-11-22), 18% slower than night 14 honest speed report (worst vs worst); run-to-run spread up to 50%, busy host (load 2.6)
-- combat gated p95: 74% of budget (auto 45daa17e, 2026-11-22), unchanged vs night 14 honest speed report (worst vs worst); run-to-run spread up to 58%, busy host (load 2.6)
-- combat gated p99: 57% of budget (auto 45daa17e, 2026-11-22), 2% faster than night 14 honest speed report (worst vs worst); run-to-run spread up to 58%, busy host (load 2.6)
-- combat stress p95: 160% of budget, exceeded (auto 45daa17e, 2026-11-22), unchanged vs night 14 honest speed report (worst vs worst); run-to-run spread up to 41%, busy host (load 2.6)
-- plumbing, movement layouts: 144% of budget, exceeded (auto 45daa17e, 2026-11-22), 1% slower than night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
-- plumbing, horde: 213% of budget, exceeded (auto 45daa17e, 2026-11-22), 1% slower than night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
+- movement p95: 54% of budget (auto 45daa17e, 2026-11-22), 29% slower than night 14 honest speed report (worst vs worst); run-to-run spread up to 50%, busy host (load 2.6)
+- movement p99: 35% of budget (auto 45daa17e, 2026-11-22), 46% slower than night 14 honest speed report (worst vs worst); run-to-run spread up to 50%, busy host (load 2.6)
+- combat gated p95: 79% of budget (auto 45daa17e, 2026-11-22), 7% slower than night 14 honest speed report (worst vs worst); run-to-run spread up to 58%, busy host (load 2.6)
+- combat gated p99: 59% of budget (auto 45daa17e, 2026-11-22), 2% slower than night 14 honest speed report (worst vs worst); run-to-run spread up to 58%, busy host (load 2.6)
+- combat stress p95: 165% of budget, exceeded (auto 45daa17e, 2026-11-22), 3% slower than night 14 honest speed report (worst vs worst); run-to-run spread up to 41%, busy host (load 2.6)
+- plumbing, movement layouts: 147% of budget, exceeded (auto 45daa17e, 2026-11-22), 3% slower than night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
+- plumbing, horde: 218% of budget, exceeded (auto 45daa17e, 2026-11-22), 3% slower than night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
 - rendered tick-frame p95: 73% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 74% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (auto 45daa17e, 2026-11-22), unchanged vs night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
+- lockstep p99: 12% of budget (auto 45daa17e, 2026-11-22), 7% slower than night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
 - 3v3 upkeep: 126% of budget, exceeded (auto 45daa17e, 2026-11-22), 3% slower than night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
 - 3v3 sim p95: 124% of budget, exceeded (auto 45daa17e, 2026-11-22), 3% slower than night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
 - 3v3 bots + sim p95: 164% of budget, exceeded (auto 45daa17e, 2026-11-22), 3% slower than night 14 honest speed report (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
