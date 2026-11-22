@@ -30,7 +30,7 @@ var _problems: PackedStringArray = []
 func shots() -> Array[Dictionary]:
 	var one: Array = [BaseScene.HUD_SIZES[0]]
 	return [
-		_shot("slab", _slab_armed.bind(4800, "china_defence"), "PREVIEW"),
+		_shot("slab", _slab_armed.bind(5300, "china_defence"), "4100"),
 		_shot("slab-attack-armed", _slab_attack, ""),
 		_shot("slab-army", _slab_army, ""),
 		_shot("slab-builder", _slab_pick.bind("builder", 50000), "Build"),
@@ -60,10 +60,10 @@ func shots() -> Array[Dictionary]:
 		_shot("refusal-longest", _refusal_longest, LONGEST),
 		_shot("strip", _strip.bind(8), "4800"),
 		_shot("low-power", _strip.bind(12), "LOW POWER · DEFENCES OFF"),
-		_shot("preview-short", _slab_armed.bind(500, "china_defence"), HudTests.MINUS + "1200"),
+		_shot("preview-short", _hover_build.bind(800, "china_factory"), HudTests.MINUS + "1200"),
 		_shot("preview-plant", _slab_armed.bind(4800, "usa_power_plant"), "8 / 15"),
-		_shot("preview-frc", _slab_armed.bind(4800, "frc_barracks", "frc"), "PREVIEW"),
-		_shot("preview-hover", _hover_unit, "PREVIEW", one),
+		_shot("preview-frc", _hover_build.bind(800, "frc_factory", "frc"), HudTests.MINUS + "1700"),
+		_shot("preview-hover", _hover_unit, "", one),
 		_shot("chips-menu-free", _menu_chip.bind(false), "Esc"),
 		_shot("chips-menu-held", _menu_chip.bind(true), ""),
 		_shot("chips", _chips_worst.bind(false), "PLAYTEST"),
@@ -172,13 +172,26 @@ func _slab_pick(key: String, credits: int) -> void:
 	HudTests._select(_main, ids[key] if ids[key] is Array else [ids[key]])
 
 func _slab_armed(credits: int, kind: String, faction: String = "") -> void:
+	var cell: Button = await _build_cell(credits, kind, faction)
+	if cell != null: cell.pressed.emit()
+
+# The pointer resting on a build cell, as ts-card-short and ts-card-frcshort draw it.
+func _hover_build(credits: int, kind: String, faction: String = "") -> void:
+	var cell: Button = await _build_cell(credits, kind, faction)
+	if cell == null: return
+	await _settle()
+	HudTests._move(_port, cell.get_global_rect().get_center())
+	await _settle()
+	check(cell.is_hovered() and HudTests._forecasting(_main.hud), "the pointer on %s forecasts it" % kind)
+
+func _build_cell(credits: int, kind: String, faction: String) -> Button:
 	var ids: Dictionary = await _slab_world(credits)
 	_economy(credits, 0 if faction == "frc" else 8, 0 if faction == "frc" else 10, faction)
 	var builder: int = {"china": ids.builder, "usa": ids.usa_builder, "frc": ids.frc_builder}[kind.get_slice("_", 0)]
 	HudTests._sub_grid(_main, builder)
 	var cell: Button = HudTests._cell(_main, kind)
 	check(cell != null, "%s not in the builder's sub-grid %s" % [kind, HudTests._card(_main)])
-	if cell != null: cell.pressed.emit()
+	return cell
 
 # The China builder's sub-grid: the card a build starts from.
 func _slab_build(credits: int) -> void:
@@ -193,7 +206,7 @@ func _hover_unit() -> void:
 	var button: Button = _main.get_node("HUD/Economy/Card/Q")
 	HudTests._move(_port, button.get_global_rect().get_center())
 	await _settle()
-	check(button.is_hovered() and HudTests._previewing(_main.hud), "the pointer on the first unit button previews it")
+	check(button.is_hovered() and HudTests._forecasting(_main.hud), "the pointer on the first unit button previews it")
 
 func _slab_attack() -> void:
 	await _slab_pick("tanks", 50000)

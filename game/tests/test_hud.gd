@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -337,55 +337,70 @@ func test_power_reads_used_over_available(runner) -> bool:
 	hud.get_parent().free()
 	return true
 
-func _no_arrow_or_short(runner, hud: Hud, label: String) -> void:
+func _no_arrow_glyph_or_label(runner, hud: Hud, label: String) -> void:
 	for found: Node in hud.find_children("*", "Label", true, false):
 		var text: String = (found as Label).text
-		if (found as Label).is_visible_in_tree(): runner.check(not text.contains("→") and not text.contains("short"), "TS2 %s: no arrow and no 'short' in '%s'" % [label, text])
+		if (found as Label).is_visible_in_tree(): runner.check(not text.contains("→") and not text.contains("short") and not text.contains("PREVIEW"), "TS2 %s: no arrow glyph, no 'short' and no PREVIEW in '%s'" % [label, text])
 
-static func _previewing(hud: Node) -> bool:
-	return _part(hud, "TopStrip", "Preview").is_visible_in_tree()
+# A forecast shows as an arrow on a slab whose number changes.
+static func _forecasting(hud: Node) -> bool:
+	return ["CreditsArrow", "PowerArrow"].any(func(part: String) -> bool: return _part(hud, "TopStrip", part).is_visible_in_tree())
 
 static func _border(slab: Control) -> Color:
 	return (slab.get_theme_stylebox("panel") as StyleBoxFlat).border_color
 
-# Gate B window feedback (user 2026-11-20): the strip itself forecasts, no card under it.
+static func _slabs(hud: Node) -> Array[Control]:
+	return [hud.get_node("TopStrip/CreditsGroup"), hud.get_node("TopStrip/PowerGroup")]
+
+static func _gap(left: Control, right: Control) -> float:
+	return right.get_global_rect().position.x - left.get_global_rect().end.x
+
+# One strip form: [credits, after or "", coin, power, power after or "", low power, credits frame, power frame].
+static func _form(hud: Node) -> Array:
+	var shown: Callable = func(part: String) -> bool: return _part(hud, "TopStrip", part).is_visible_in_tree()
+	var text: Callable = func(part: String) -> String: return (_part(hud, "TopStrip", part) as Label).text if shown.call(part) else ""
+	var slabs: Array[Control] = _slabs(hud)
+	return [text.call("Credits"), text.call("CreditsAfter"), shown.call("Coin"), text.call("Power"), text.call("PowerAfter"), shown.call("LowPower"), _border(slabs[0]) == _token("sel"), _border(slabs[1]) == _token("sel")]
+
+# Top strip round (user, 2026-11-22): today's number, a drawn arrow and the forecast; the sel frame on each slab whose number changes; no PREVIEW.
 func test_forecast_forms(runner) -> bool:
 	var hud: Hud = _bare_hud(runner)
-	var strip: Control = hud.get_node("TopStrip")
 	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
 	var credits: Label = _part(hud, "TopStrip", "Credits")
-	var delta: Label = _part(hud, "TopStrip", "Delta")
+	var after: Label = _part(hud, "TopStrip", "CreditsAfter")
+	var arrow: Control = _part(hud, "TopStrip", "CreditsArrow")
+	var coin: Control = _part(hud, "TopStrip", "Coin")
 	var power: Label = _part(hud, "TopStrip", "Power")
+	var power_after: Label = _part(hud, "TopStrip", "PowerAfter")
 	var low: Label = _part(hud, "TopStrip", "LowPower")
-	var preview: Label = _part(hud, "TopStrip", "Preview")
-	runner.check(hud.get_node_or_null("Forecast") == null and _previewing(hud) and preview.text == "PREVIEW" and _colour(preview) == _token("sel") and _border(strip) == _token("sel"), "TS2 a Rotary Gun Tower armed: the strip shows PREVIEW and its border in sel, no card")
-	var xs: Array[float] = [preview.global_position.x]
-	runner.check(credits.text == "3600" and _colour(credits) == _token("text") and delta.is_visible_in_tree() and delta.text == MINUS + "1200" and _colour(delta) == _token("muted"), "TS2 credits after purchase 3600 in text, a muted −1200 beside, got '%s' '%s'" % [credits.text, delta.text])
-	runner.check(power.text == "11 / 10" and _colour(power) == _token("warn") and low.is_visible_in_tree() and low.text == LOW and _colour(low) == _token("warn"), "TS2 power after purchase 11 / 10 and low power in warn, got %s" % [_texts(hud, "TopStrip")])
-	_no_arrow_or_short(runner, hud, "tower")
+	var slabs: Array[Control] = _slabs(hud)
+	runner.check(hud.find_child("Preview", true, false) == null and hud.find_child("Delta", true, false) == null, "TS2 no Preview label and no Delta number")
+	runner.check(_form(hud) == ["4800", "3600", false, "8 / 10", "11 / 10", true, true, true], "TS2 a Rotary Gun Tower armed: 4800 → 3600, 8 / 10 → 11 / 10 with LOW POWER, both slabs framed, got %s" % [_form(hud)])
+	runner.check(_colour(credits) == _token("text") and _colour(after) == _token("text") and _colour(power) == _token("text") and _colour(power_after) == _token("warn") and low.text == LOW and _colour(low) == _token("warn"), "TS2 today's numbers in text, the low-power forecast and its words in warn")
+	runner.check(arrow.get_global_rect().size == Vector2(12, 8) and is_equal_approx(arrow.get_global_rect().get_center().y, slabs[0].get_global_rect().get_center().y) and is_equal_approx(_gap(credits, arrow), 8.0) and is_equal_approx(_gap(arrow, after), 8.0), "TS2 the drawn 12 x 8 arrow sits centred, 8 px from each number, got %s gaps %.1f %.1f" % [arrow.get_global_rect(), _gap(credits, arrow), _gap(arrow, after)])
+	_no_arrow_glyph_or_label(runner, hud, "tower")
 	await _show(runner, hud, _strip_view(4800, 8, 10), "usa_power_plant")
-	runner.check(credits.text == "4000" and delta.text == MINUS + "800" and power.text == "8 / 15" and _colour(power) == _token("text") and not low.is_visible_in_tree(), "TS2 a Power Plant armed reads 4000 −800 and 8 / 15, no low power, got %s" % [_texts(hud, "TopStrip")])
-	xs.append(preview.global_position.x)
+	runner.check(_form(hud) == ["4800", "4000", false, "8 / 10", "8 / 15", false, true, true] and _colour(power_after) == _token("text"), "TS2 a Power Plant armed: 4800 → 4000 and 8 / 10 → 8 / 15, no low power, got %s" % [_form(hud)])
+	await _show(runner, hud, _strip_view(4800, 8, 10), "china_light_vehicle")
+	runner.check(_form(hud) == ["4800", "4000", false, "8 / 10", "", false, true, false], "TS2 a unit: only the credits slab forecasts and takes the frame, got %s" % [_form(hud)])
 	await _show(runner, hud, _strip_view(10650, 8, 10))
-	runner.check(credits.text == "10650" and power.text == "8 / 10" and not _previewing(hud) and not delta.is_visible_in_tree() and _border(strip) == _token("line"), "TS2 nothing armed: today's 10650 and 8 / 10, no PREVIEW, no delta, the line border, got '%s'" % credits.text)
+	runner.check(_form(hud) == ["10650", "", false, "8 / 10", "", false, false, false] and not _forecasting(hud), "TS2 nothing armed: 10650 and 8 / 10, no arrow, line borders, got %s" % [_form(hud)])
+	await _show(runner, hud, _strip_view(4800, 12, 10))
+	runner.check(_form(hud) == ["4800", "", false, "12 / 10", "", true, false, false] and _colour(power) == _token("warn"), "TS2 low power at rest: 12 / 10 in warn with its words, no frame, got %s" % [_form(hud)])
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
-	runner.check(credits.text == "500" and _colour(credits) == _token("text") and delta.text == MINUS + "1200" and _colour(delta) == _token("warn"), "TS2 short: today's 500 in text and the cost −1200 (U+2212) in warn, got '%s' '%s'" % [credits.text, delta.text])
-	xs.append(preview.global_position.x)
+	runner.check(_form(hud) == ["500", MINUS + "700", true, "8 / 10", "11 / 10", true, true, true], "TS2 short: 500 → −700 (U+2212) with the coin, power still forecasts, got %s" % [_form(hud)])
+	runner.check(_colour(credits) == _token("text") and _colour(after) == _token("warn") and coin.get_global_rect().size == Vector2(15, 15) and is_equal_approx(_gap(after, coin), 4.0), "TS2 short: the forecast in warn, the 15 px coin 4 px after it, got %s gap %.1f" % [coin.get_global_rect(), _gap(after, coin)])
 	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
-	runner.check(credits.text == "3600" and _colour(delta) == _token("muted"), "TS2 affordable again: the after value and a muted delta, got '%s'" % credits.text)
-	_no_arrow_or_short(runner, hud, "shortfall")
+	runner.check(_form(hud)[1] == "3600" and not _form(hud)[2] and _colour(after) == _token("text"), "TS2 affordable again: the forecast in text, no coin, got %s" % [_form(hud)])
+	_no_arrow_glyph_or_label(runner, hud, "shortfall")
 	for armed: String in ["", "frc_barracks"]:
 		await _show(runner, hud, _strip_view(4800, 0, 0, "frc"), armed)
-		var shown: Array = ["PowerLabel", "Power", "LowPower"].filter(func(part: String) -> bool: return _part(hud, "TopStrip", part).is_visible_in_tree())
-		runner.check(shown.is_empty() and credits.is_visible_in_tree() and _previewing(hud) != armed.is_empty(), "TS2 FRC uses no power, so no power group (armed '%s'), shown %s" % [armed, shown])
-	runner.check(credits.text == "4300" and delta.text == MINUS + "500", "TS2 FRC's preview keeps its credits, got '%s' '%s'" % [credits.text, delta.text])
-	xs.append(preview.global_position.x)
-	runner.check(xs.all(func(x: float) -> bool: return is_equal_approx(x, xs[0])), "TS2 PREVIEW keeps one x across the tower, plant, short and FRC forms, got %s" % [xs])
-	var free_view: Dictionary = _strip_view(4800, 8, 10)
+		runner.check(not slabs[1].is_visible_in_tree() and slabs[0].is_visible_in_tree() and hud.get_node("TopStrip").get_global_rect() == slabs[0].get_global_rect(), "TS2 FRC uses no power: the credits slab alone (armed '%s')" % armed)
+	runner.check(_form(hud).slice(0, 3) == ["4800", "4300", false] and _border(slabs[0]) == _token("sel"), "TS2 FRC forecasts its credits, got %s" % [_form(hud)])
 	Registry.add_test_kind("test_free_building", {"display_name": "Free", "cost": 0, "produces": []})
-	await _show(runner, hud, free_view, "test_free_building")
+	await _show(runner, hud, _strip_view(4800, 8, 10), "test_free_building")
 	Registry.clear_test_kinds()
-	runner.check(_previewing(hud) and credits.text == "4800" and not delta.is_visible_in_tree(), "TS2 a free building previews without a −0 delta, got '%s' '%s'" % [credits.text, delta.text])
+	runner.check(_form(hud) == ["4800", "", false, "8 / 10", "", false, false, false], "TS2 a free building without power changes no number: no arrow, no frame, got %s" % [_form(hud)])
 	hud.get_parent().free()
 	await _forecast_follows_the_placement(runner)
 	return true
@@ -397,36 +412,39 @@ func _forecast_follows_the_placement(runner) -> void:
 	main.orders.selected_ids.assign([1])
 	main._refresh()
 	helper.build_key(main, "usa_power_plant")
-	runner.check(_previewing(main.hud), "TS2 arming a building shows the preview")
+	runner.check(_forecasting(main.hud), "TS2 arming a building shows the preview")
 	helper.key(main, KEY_ESCAPE)
-	runner.check(not _previewing(main.hud), "TS2 cancelling the placement ends the preview")
+	runner.check(not _forecasting(main.hud), "TS2 cancelling the placement ends the preview")
 	helper.build_key(main, "usa_power_plant")
 	helper.hover(main, Iso.world_to_plane(Vector2(8.25, 4.25)))
 	helper.pointer(main, Iso.world_to_plane(Vector2(8.25, 4.25)), MOUSE_BUTTON_LEFT, false)
 	BaseScene.tick(main)
-	runner.check(main.orders._placement_kind.is_empty() and not _previewing(main.hud), "TS2 placing the building ends the preview")
+	runner.check(main.orders._placement_kind.is_empty() and not _forecasting(main.hud), "TS2 placing the building ends the preview")
 	main.free()
 	var skirmish = SkirmishTests.new()
 	main = await skirmish._setup(runner)
 	skirmish._arena(main)
 	main.orders._placement_kind = "usa_power_plant"
 	main._refresh()
-	runner.check(_previewing(main.hud), "TS2 the arena previews while armed")
+	runner.check(_forecasting(main.hud), "TS2 the arena previews while armed")
 	skirmish._victory(main)
-	runner.check(main.shown_over() and main.orders._placement_kind.is_empty() and not _previewing(main.hud), "TS2 the match ending clears the placement and ends the preview")
+	runner.check(main.shown_over() and main.orders._placement_kind.is_empty() and not _forecasting(main.hud), "TS2 the match ending clears the placement and ends the preview")
 	main.free()
 	var online: Dictionary = await OverlayTests.new()._online(runner)
 	main = online.main
 	main.orders._placement_kind = "usa_power_plant"
 	main._refresh()
-	runner.check(_previewing(main.hud), "TS2 online: the strip previews while armed")
+	runner.check(_forecasting(main.hud), "TS2 online: the strip previews while armed")
 	main.driver._finished = true
 	main._refresh()
-	runner.check(main.orders._placement_kind.is_empty() and not _previewing(main.hud), "TS2 an online lockstep ending clears the placement and ends the preview")
+	runner.check(main.orders._placement_kind.is_empty() and not _forecasting(main.hud), "TS2 an online lockstep ending clears the placement and ends the preview")
 	main.free()
 
+# The forecast's cost read off the strip: today's credits less the forecast; "" while the credits slab forecasts nothing.
 static func _delta(main) -> String:
-	return _part(main.hud, "TopStrip", "Delta").text if _previewing(main.hud) else ""
+	if not _part(main.hud, "TopStrip", "CreditsArrow").is_visible_in_tree(): return ""
+	var after: String = (_part(main.hud, "TopStrip", "CreditsAfter") as Label).text.replace(MINUS, "-")
+	return str(int((_part(main.hud, "TopStrip", "Credits") as Label).text) - int(after))
 
 # Strip preview follow-ups (user 2026-11-20): hovering a build or unit button previews it; an armed building returns on exit.
 func test_hover_previews_the_purchase(runner) -> bool:
@@ -434,20 +452,20 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	var ids: Dictionary = _slab_world(runner, main, false)
 	_sub_grid(main, ids.builder)
 	var tower: Button = _cell(main, "china_defence")
-	var plant: String = MINUS + str(Registry.kind("china_power_plant").cost)
+	var plant: String = str(Registry.kind("china_power_plant").cost)
 	var rebuilds: int = main.hud.rebuilds
 	tower.mouse_entered.emit()
-	runner.check(_delta(main) == MINUS + "1200" and main.orders._placement_kind.is_empty(), "TS6 hovering the tower previews −1200 without arming, got '%s'" % _delta(main))
+	runner.check(_delta(main) == "1200" and main.orders._placement_kind.is_empty(), "TS6 hovering the tower forecasts its 1200 without arming, got '%s'" % _delta(main))
 	var view: Dictionary = main.driver.current().view
 	HudModel.player(view, 1).credits = 3000
 	main._show(view)
-	runner.check(_part(main.hud, "TopStrip", "Credits").text == "1800", "TS6 the pointer resting on the tower: the preview follows a credit change to 1800, got '%s'" % _part(main.hud, "TopStrip", "Credits").text)
+	runner.check(_form(main.hud).slice(0, 2) == ["3000", "1800"], "TS6 the pointer resting on the tower: the forecast follows a credit change, 3000 → 1800, got %s" % [_form(main.hud)])
 	tower.mouse_exited.emit()
 	runner.check(_delta(main) == "" and main.hud.rebuilds == rebuilds, "TS6 off the tower: no preview, and hovering rebuilt nothing, got '%s'" % _delta(main))
 	_cell(main, "china_power_plant").pressed.emit()
 	runner.check(_delta(main) == plant, "TS6 fixture: the first building armed previews %s, got '%s'" % [plant, _delta(main)])
 	tower.mouse_entered.emit()
-	runner.check(_delta(main) == MINUS + "1200", "TS6 hovering the tower while armed previews the tower, got '%s'" % _delta(main))
+	runner.check(_delta(main) == "1200", "TS6 hovering the tower while armed forecasts the tower, got '%s'" % _delta(main))
 	tower.mouse_exited.emit()
 	runner.check(_delta(main) == plant, "TS6 off the tower while armed: back to the armed building, got '%s'" % _delta(main))
 	main.orders._clear_placement()
@@ -459,14 +477,14 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	_select(main, [], ids.factory)
 	var power: String = _part(main.hud, "TopStrip", "Power").text
 	_cell(main, "china_light_vehicle").mouse_entered.emit()
-	runner.check(_delta(main) == MINUS + str(Registry.kind("china_light_vehicle").cost) and _part(main.hud, "TopStrip", "Power").text == power, "TS6 hovering a unit previews its cost and leaves the power, got '%s' '%s'" % [_delta(main), _part(main.hud, "TopStrip", "Power").text])
+	runner.check(_delta(main) == str(Registry.kind("china_light_vehicle").cost) and _part(main.hud, "TopStrip", "Power").text == power and not _part(main.hud, "TopStrip", "PowerArrow").is_visible_in_tree(), "TS6 hovering a unit forecasts its cost and leaves the power, got '%s' '%s'" % [_delta(main), _part(main.hud, "TopStrip", "Power").text])
 	_select(main, ids.tanks)
 	runner.check(_delta(main) == "", "TS6 the item cell turned Attack Move under the pointer ends the preview, got '%s'" % _delta(main))
 	for pair: Array in [[ids.tanks, "A", "attack_move"], [ids.tanks, "S", "stop"], [[ids.builder], "Q", "build"]]:
 		_select(main, pair[0])
 		var command: Button = main.get_node("HUD/Economy/Card/" + pair[1])
 		command.mouse_entered.emit()
-		runner.check(command.get_meta("action") == pair[2] and _delta(main) == "" and not _previewing(main.hud), "TS6 hovering the %s command cell previews nothing, got '%s'" % [pair[2], _delta(main)])
+		runner.check(command.get_meta("action") == pair[2] and _delta(main) == "" and not _forecasting(main.hud), "TS6 hovering the %s command cell previews nothing, got '%s'" % [pair[2], _delta(main)])
 		command.mouse_exited.emit()
 	main.free()
 	var skirmish = SkirmishTests.new()
@@ -474,9 +492,9 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	skirmish._arena(main)
 	_sub_grid(main, OnlineTests.new()._builder(main, 1))
 	_cell(main, "usa_power_plant").mouse_entered.emit()
-	runner.check(_previewing(main.hud), "TS6 fixture: a build cell hovered in the arena previews it")
+	runner.check(_forecasting(main.hud), "TS6 fixture: a build cell hovered in the arena previews it")
 	skirmish._victory(main)
-	runner.check(main.shown_over() and not _previewing(main.hud), "TS6 the match ending under a hovered build cell ends the preview")
+	runner.check(main.shown_over() and not _forecasting(main.hud), "TS6 the match ending under a hovered build cell ends the preview")
 	main.free()
 	var online_tests = OnlineTests.new()
 	var online: Dictionary = await online_tests._online(runner, 1)
@@ -489,7 +507,7 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	var item: Button = _cell(main, "usa_power_plant")
 	runner.check(item != null and not main.shown_over() and not main.frozen(), "TS6 fixture: an online ending without a card leaves the card up")
 	if item != null: item.mouse_entered.emit()
-	runner.check(not _previewing(main.hud), "TS6 an ending without a card: hovering a build cell previews nothing")
+	runner.check(not _forecasting(main.hud), "TS6 an ending without a card: hovering a build cell previews nothing")
 	main.free()
 	return true
 
@@ -542,34 +560,94 @@ func test_strip_anchor_without_tick(runner) -> bool:
 		var main = await OverlayTests.new()._scene(runner, Skirmish, port)
 		var widths: Dictionary = {}
 		for faction: Array in [["usa", 8, 10, "usa_factory"], ["frc", 0, 0, "frc_factory"]]:
-			main.hud.update_hud(_strip_view(500, faction[1], faction[2], faction[0]), _armed(""), 1, 1)
-			await runner.process_frame
-			var strip: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
+			var rest: Array = await _strip_rects(runner, main, _strip_view(500, faction[1], faction[2], faction[0]), "")
+			var strip: Rect2 = rest[0]
 			widths[faction[0]] = strip.size.x
-			runner.check(strip.position == Vector2(8, 8) and strip.size.y == 32.0 and view_rect.encloses(strip), "TS4 %s: the strip sits at (8, 8), 32 high, inside the view at %s, got %s" % [faction[0], size, strip])
-			for state: Array in [["a short preview", _strip_view(500, faction[1], faction[2], faction[0]), faction[3]], ["low power", _strip_view(4800, faction[1] + 4, faction[2], faction[0]), ""], ["a five-digit preview with low power", _strip_view(99999, faction[1] + 4, faction[2], faction[0]), faction[3]]]:
-				main.hud.update_hud(state[1], _armed(state[2]), 1, 1)
-				await runner.process_frame
-				var now: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
-				runner.check(now == strip, "TS4 %s, %s keeps the strip's rect %s at %s, got %s" % [faction[0], state[0], strip, size, now])
+			runner.check(strip.position == Vector2(8, 8) and strip.size.y == 32.0 and view_rect.encloses(strip) and rest[1].position == Vector2(8, 8), "TS4 %s: the strip and its credits slab sit at (8, 8), 32 high, inside the view at %s, got %s" % [faction[0], size, rest])
+			if faction[0] == "usa": runner.check(rest[2].position == Vector2(rest[1].end.x + 8.0, 8.0) and rest[2].size.y == 32.0 and strip.end == rest[2].end, "TS4 usa: the power slab 8 px right of credits, 32 high, ending the strip at %s, got %s" % [size, rest])
+			else: runner.check(rest[2] == Rect2() and strip == rest[1], "TS4 frc: the credits slab alone at %s, got %s" % [size, rest])
+			var rich: Array = await _strip_rects(runner, main, _strip_view(50000, faction[1], faction[2], faction[0]), "")
+			runner.check(rich[1].size.x > rest[1].size.x and rich[1].position == rest[1].position, "TS4 %s at rest the credits slab hugs its number: 50000 wider than 500 at %s, got %s %s" % [faction[0], size, rich[1], rest[1]])
+			if faction[0] == "usa":
+				var low: Array = await _strip_rects(runner, main, _strip_view(500, faction[1] + 4, faction[2], faction[0]), "")
+				runner.check(low[2].size.x > rest[2].size.x and low[1] == rest[1], "TS4 usa at rest the power slab hugs its words: low power wider, credits unmoved at %s, got %s %s" % [size, low[2], rest[2]])
+			var held: Array = []
+			for state: Array in [["a short preview", _strip_view(500, faction[1], faction[2], faction[0]), faction[3]], ["low power while armed", _strip_view(4800, faction[1] + 4, faction[2], faction[0]), faction[0] + "_barracks"], ["a five-digit preview with low power", _strip_view(99999, faction[1] + 4, faction[2], faction[0]), faction[3]], ["armed at 500", _strip_view(500, faction[1], faction[2], faction[0]), faction[0] + "_barracks"]]:
+				var now: Array = await _strip_rects(runner, main, state[1], state[2])
+				if held.is_empty():
+					held = now
+					runner.check(now[1].size.x > rest[1].size.x and view_rect.encloses(now[0]) and now[0].position == Vector2(8, 8), "TS4 %s armed: the slabs grow to their widest forecast, inside the view at %s, got %s rest %s" % [faction[0], size, now, rest])
+				runner.check(now == held, "TS4 %s, %s keeps the held slabs %s at %s, got %s" % [faction[0], state[0], held, size, now])
 		runner.check(widths.frc < widths.usa, "TS4 FRC, with no power group, gets a narrower strip at %s, got %s" % [size, widths])
 		var text: String = BaseScene.hud_text(main)
 		runner.check(not text.contains("Tick") and not text.contains("You are"), "TS4 no tick and no seat line in the HUD at %s" % size)
 		port.free()
 	return true
 
+func _strip_rects(runner, main, view: Dictionary, kind: String) -> Array:
+	main.hud.update_hud(view, _armed(kind), 1, 1)
+	await runner.process_frame
+	return _strip_now(main)
+
+# [the strip, the credits slab, the power slab or an empty rect while it hides].
+static func _strip_now(main) -> Array:
+	var power: Control = main.get_node("HUD/Hud/TopStrip/PowerGroup")
+	return [main.get_node("HUD/Hud/TopStrip").get_global_rect(), main.get_node("HUD/Hud/TopStrip/CreditsGroup").get_global_rect(), power.get_global_rect() if power.is_visible_in_tree() else Rect2()]
+
+# Shape D (user, 2026-11-22): from entering the card until leaving it, or while a building is armed, no slab changes its rect.
+func test_strip_holds_while_on_the_card(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _slab_world(runner, main, false, 1500)
+	_sub_grid(main, ids.builder)
+	var map := Vector2(900, 200)
+	_move(port, map)
+	await _frames(runner)
+	var rest: Array = _strip_now(main)
+	var held: Array = []
+	for row: Array in [["china_power_plant", "500", false], ["china_defence", "300", false], ["china_factory", MINUS + "500", true], ["china_barracks", "1000", false]]:
+		var cell: Button = _cell(main, row[0])
+		_move(port, cell.get_global_rect().get_center())
+		await _frames(runner)
+		runner.check(cell.is_hovered() and _form(main.hud).slice(0, 3) == ["1500", row[1], row[2]], "TS7 the pointer on %s forecasts 1500 → %s (coin %s), got %s" % [row[0], row[1], row[2], _form(main.hud)])
+		if held.is_empty(): held = _strip_now(main)
+		runner.check(_strip_now(main) == held, "TS7 on %s the slabs keep their held rects %s, got %s" % [row[0], held, _strip_now(main)])
+	runner.check(held[1].size.x > rest[1].size.x and held[2].size.x > rest[2].size.x and held[1].position == rest[1].position, "TS7 entering the card grows both slabs to their widest forecast, rest %s held %s" % [rest, held])
+	var plant: Rect2 = _cell(main, "china_power_plant").get_global_rect()
+	var well: Button = main.get_node("HUD/Economy/Card/S")
+	for spot: Array in [["the gap between two cells", Vector2(plant.end.x + 2.0, plant.get_center().y)], ["a well", well.get_global_rect().get_center()]]:
+		_move(port, spot[1])
+		await _frames(runner)
+		runner.check(_strip_now(main) == held and not _forecasting(main.hud), "TS7 the pointer on %s: nothing forecasts, the slabs hold, got %s" % [spot[0], _strip_now(main)])
+	_move(port, map)
+	await _frames(runner)
+	runner.check(_strip_now(main) == rest, "TS7 the pointer left the card from a well: both slabs hug again, got %s rest %s" % [_strip_now(main), rest])
+	_move(port, plant.get_center())
+	_press(port, plant.get_center(), true)
+	_press(port, plant.get_center(), false)
+	await _frames(runner)
+	_move(port, map)
+	await _frames(runner)
+	runner.check(main.orders._placement_kind == "china_power_plant" and _strip_now(main) == held, "TS7 a building armed by a click holds the slabs off the card, got '%s' %s" % [main.orders._placement_kind, _strip_now(main)])
+	BaseScene.new().key(main, KEY_ESCAPE)
+	await _frames(runner)
+	runner.check(main.orders._placement_kind.is_empty() and _strip_now(main) == rest, "TS7 Esc cancels the building: the slabs hug again, got %s rest %s" % [_strip_now(main), rest])
+	_end_port(scene)
+	return true
+
 func test_strip_patches_values(runner) -> bool:
 	var hud: Hud = _bare_hud(runner)
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
 	var credits: Label = _part(hud, "TopStrip", "Credits")
-	var delta: Label = _part(hud, "TopStrip", "Delta")
-	for row: Array in [[500, "500", "warn"], [1000, "1000", "warn"], [1500, "300", "muted"]]:
+	var after: Label = _part(hud, "TopStrip", "CreditsAfter")
+	for row: Array in [[500, MINUS + "700", "warn", true], [1000, MINUS + "200", "warn", true], [1500, "300", "text", false]]:
 		await _show(runner, hud, _strip_view(row[0], 8, 10), "china_defence")
-		runner.check(credits.text == row[1] and _colour(credits) == _token("text") and _colour(delta) == _token(row[2]), "TS5 %d credits patch the previewing strip to %s with the delta in %s, got '%s'" % [row[0], row[1], row[2], credits.text])
-	runner.check(_part(hud, "TopStrip", "Credits") == credits, "TS5 patching values keeps the same labels")
+		runner.check(credits.text == str(row[0]) and after.text == row[1] and _colour(after) == _token(row[2]) and _form(hud)[2] == row[3], "TS5 %d credits patch the forecasting strip to %s in %s, coin %s, got %s" % [row[0], row[1], row[2], row[3], _form(hud)])
+	runner.check(_part(hud, "TopStrip", "Credits") == credits and _part(hud, "TopStrip", "CreditsAfter") == after, "TS5 patching values keeps the same labels")
 	var changes: Array[int] = [0]
-	for part: String in ["Credits", "Delta", "Power", "LowPower", "Preview"]: _part(hud, "TopStrip", part).theme_changed.connect(func() -> void: changes[0] += 1)
-	hud.get_node("TopStrip").theme_changed.connect(func() -> void: changes[0] += 1)
+	for part: String in ["Credits", "CreditsAfter", "Power", "PowerAfter", "LowPower"]: _part(hud, "TopStrip", part).theme_changed.connect(func() -> void: changes[0] += 1)
+	for slab: Control in _slabs(hud) + [hud.get_node("TopStrip")]: slab.theme_changed.connect(func() -> void: changes[0] += 1)
 	for i in 2: await _show(runner, hud, _strip_view(1500, 12, 10), "china_defence")
 	changes[0] = 0
 	await _show(runner, hud, _strip_view(1500, 12, 10), "china_defence")
@@ -1003,14 +1081,14 @@ func test_online_notice_top_centre(runner) -> bool:
 	online._run(main, 12)
 	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)
 	runner.check(main.driver.notice() == "Waiting for player 1" and label.is_visible_in_tree() and label.text == "Waiting for player 1" and _colour(label) == _token("muted"), "CH4 the waiting notice shows in muted, got '%s'" % label.text)
-	runner.check(_previewing(main.hud) and main.orders.busy(), "CH4 fixture: a building armed while the notice shows")
+	runner.check(_forecasting(main.hud) and main.orders.busy(), "CH4 fixture: a building armed while the notice shows")
 	runner.check(BaseScene.hud_text(main).count("Waiting for player 1") == 1, "CH4 the notice shows once")
 	var chips: Array = ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip"]
 	for strip: Array in [[8, "the longest preview"], [12, "low power in the strip"]]:
 		main.hud.update_hud(_strip_view(500, strip[0], 10), _armed("china_defence", false, main.driver.notice()), 1, 1)
 		await _frames(runner)
 		_notice_clear(runner, main, strip[1], chips)
-	runner.check(_part(main.hud, "TopStrip", "Delta").text == MINUS + "1200" and _part(main.hud, "TopStrip", "LowPower").is_visible_in_tree(), "CH4 fixture: the preview's longest form with low power")
+	runner.check(_form(main.hud) == ["500", MINUS + "700", true, "12 / 10", "15 / 10", true, true, true], "CH4 fixture: the forecast's longest form, short with the coin and low power, got %s" % [_form(main.hud)])
 	main.free()
 	await _ended_notice(runner, online, 1, func(lockstep, _transport) -> void: lockstep.receive('{"type":"left","seat":2,"after_tick":3}'), "Opponent left before the start (a different map or version, or their game tab was hidden)")
 	await _ended_notice(runner, online, 2, func(_lockstep, transport) -> void: transport.frames.append(OnlineTests.Wire.encode(OnlineTests.Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"}))), "Desync", 0)
@@ -1035,7 +1113,7 @@ func _ended_notice(runner, online, seat: int, end: Callable, words: String, line
 	await _frames(runner)
 	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)
 	runner.check(main.driver.over() and label.is_visible_in_tree() and label.text.begins_with(words), "CH4 %s: the ended match shows its notice, got '%s'" % [words, label.text])
-	runner.check(not _previewing(main.hud) and not main.orders.busy(), "CH4 %s: the ending cleared the armed building" % words)
+	runner.check(not _forecasting(main.hud) and not main.orders.busy(), "CH4 %s: the ending cleared the armed building" % words)
 	runner.check(BaseScene.hud_text(main).count(words) == 1, "CH4 %s: the notice shows once" % words)
 	_notice_clear(runner, main, words, ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip", "HUD/Playtest/Checklist"], lines)
 	main.free()

@@ -22,9 +22,8 @@ const COMMAND_LINE: float = 28.0
 const ITEM_NAME_SIZE: int = 12
 # The page's empty-well fill, a literal there too (hud-v5-layout "Colour tokens").
 const WELL: Color = Color("#0f1820")
-# Each fits its faction's widest five-digit preview (678 with power and low power, 343 without power, measured at 1280 x 720); longer numbers still widen the strip.
-const STRIP_WIDTH: float = 704.0
-const STRIP_WIDTH_UNPOWERED: float = 352.0
+# The cells' 15 px coin, its `$` in 1 px rects (cost step, user 2026-11-21).
+const DOLLAR: Array[Rect2] = [Rect2(7, 2, 1, 1), Rect2(5, 3, 5, 2), Rect2(4, 5, 2, 1), Rect2(7, 5, 1, 1), Rect2(5, 6, 5, 2), Rect2(7, 8, 1, 1), Rect2(9, 8, 2, 1), Rect2(5, 9, 5, 2), Rect2(7, 11, 1, 1)]
 
 const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
@@ -39,9 +38,12 @@ var _card: GridContainer
 var _well: StyleBoxFlat
 var _queue: Control
 var _cancel_build: Button
-var _top_strip: PanelContainer
+var _top_strip: HBoxContainer
+var _credits_slab: PanelContainer
+var _power_slab: PanelContainer
 var _strip_style: StyleBoxFlat
 var _preview_style: StyleBoxFlat
+var _held: Vector2
 var _menu: Button
 var _notice: PanelContainer
 var _notice_text: Label
@@ -75,7 +77,6 @@ func _init() -> void:
 	name = "Hud"
 	mouse_filter = MOUSE_FILTER_IGNORE
 	set_anchors_preset(PRESET_FULL_RECT)
-	_top_strip = _slab("TopStrip", Vector2(8, 8))
 	_build_strip()
 	_build_menu_chip()
 	_build_notice()
@@ -124,21 +125,55 @@ static func _label(parent: Control, label_name: String, variation: StringName, t
 	parent.add_child(label)
 	return label
 
-# Groups 24 apart, label to value 8 (hud-v5-layout "Top strip"); a fixed width, so the preview never moves the strip.
-func _groups(parent: Control) -> void:
-	var row: BoxContainer = _box(parent, "Row", HBoxContainer.new(), 24)
-	var credits: BoxContainer = _box(row, "CreditsGroup", HBoxContainer.new(), 8)
+# Label to value 8 (hud-v5-layout "Top strip"); a forecast follows today's number after the arrow, the coin 4 after a short one.
+func _groups() -> void:
+	var credits: BoxContainer = _box(_credits_slab, "Row", HBoxContainer.new(), 8)
+	var swatch := ColorRect.new()
+	swatch.name = "Swatch"
+	swatch.custom_minimum_size = Vector2(8, 8)
+	swatch.size_flags_vertical = SIZE_SHRINK_CENTER
+	swatch.mouse_filter = MOUSE_FILTER_IGNORE
+	credits.add_child(swatch)
 	_label(credits, "CreditsLabel", &"HudLabel", "CREDITS")
 	_label(credits, "Credits", &"HudCredits")
-	_label(credits, "Delta", &"HudNumber").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
-	var preview: Label = _label(row, "Preview", &"HudLabel", "PREVIEW")
-	preview.add_theme_color_override("font_color", get_theme_color("sel", &"Tokens"))
-	preview.visible = false
-	_spacer(row, "Gap", Vector2.ZERO).size_flags_horizontal = SIZE_EXPAND_FILL
-	var power: BoxContainer = _box(row, "PowerGroup", HBoxContainer.new(), 8)
+	_arrow(credits, "CreditsArrow")
+	var forecast: BoxContainer = _box(credits, "Forecast", HBoxContainer.new(), 4)
+	_label(forecast, "CreditsAfter", &"HudCredits")
+	coin(forecast, "Coin")
+	var power: BoxContainer = _box(_power_slab, "Row", HBoxContainer.new(), 8)
 	_label(power, "PowerLabel", &"HudLabel", "POWER")
 	_label(power, "Power", &"HudNumber")
+	_arrow(power, "PowerArrow")
+	_label(power, "PowerAfter", &"HudNumber")
 	_label(power, "LowPower", &"HudLabel", HudModel.LOW_POWER).add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
+
+# Drawn, since Public Sans has no U+2192 (the ts-* states' arrow).
+func _arrow(parent: Control, arrow_name: String) -> void:
+	var arrow := Control.new()
+	arrow.name = arrow_name
+	arrow.custom_minimum_size = Vector2(12, 8)
+	arrow.size_flags_vertical = SIZE_SHRINK_CENTER
+	arrow.mouse_filter = MOUSE_FILTER_IGNORE
+	var tone: Color = get_theme_color("muted", &"Tokens")
+	arrow.draw.connect(func() -> void:
+		arrow.draw_line(Vector2(0, 4), Vector2(10.5, 4), tone, 1.5, true)
+		arrow.draw_polyline(PackedVector2Array([Vector2(7, 0.5), Vector2(10.5, 4), Vector2(7, 7.5)]), tone, 1.5, true))
+	parent.add_child(arrow)
+
+# One mark for "short of credits" on the strip and the cells.
+func coin(parent: Control, coin_name: String) -> Control:
+	var mark := Control.new()
+	mark.name = coin_name
+	mark.custom_minimum_size = Vector2(15, 15)
+	mark.size_flags_vertical = SIZE_SHRINK_CENTER
+	mark.mouse_filter = MOUSE_FILTER_IGNORE
+	var warn: Color = get_theme_color("warn", &"Tokens")
+	var cut: Color = get_theme_color("quiet", &"Tokens")
+	mark.draw.connect(func() -> void:
+		mark.draw_circle(Vector2(7.5, 7.5), 7.5, warn, true, -1.0, true)
+		for rect: Rect2 in DOLLAR: mark.draw_rect(rect, cut))
+	parent.add_child(mark)
+	return mark
 
 # A one-line slab: no vertical padding, a fixed height that centres its line.
 func _flat(slab: PanelContainer, height: float) -> void:
@@ -148,26 +183,34 @@ func _flat(slab: PanelContainer, height: float) -> void:
 	slab.add_theme_stylebox_override("panel", style)
 	slab.custom_minimum_size.y = height
 
+# Two slabs 8 apart at (8, 8), each hugging its numbers at rest (top strip round D, user 2026-11-22).
 func _build_strip() -> void:
-	_flat(_top_strip, 32)
-	_strip_style = _top_strip.get_theme_stylebox("panel") as StyleBoxFlat
+	_top_strip = _box(self, "TopStrip", HBoxContainer.new(), 8) as HBoxContainer
+	_top_strip.position = Vector2(8, 8)
+	_credits_slab = _strip_slab("CreditsGroup")
+	_power_slab = _strip_slab("PowerGroup")
+	_strip_style = _credits_slab.get_theme_stylebox("panel") as StyleBoxFlat
+	_power_slab.add_theme_stylebox_override("panel", _strip_style)
 	_preview_style = _strip_style.duplicate() as StyleBoxFlat
 	_preview_style.border_color = get_theme_color("sel", &"Tokens")
-	_groups(_top_strip)
-	var swatch := ColorRect.new()
-	swatch.name = "Swatch"
-	swatch.custom_minimum_size = Vector2(8, 8)
-	swatch.size_flags_vertical = SIZE_SHRINK_CENTER
-	swatch.mouse_filter = MOUSE_FILTER_IGNORE
-	var credits: Control = _top_strip.get_node("Row/CreditsGroup")
-	credits.add_child(swatch)
-	credits.move_child(swatch, 0)
-	# Sized for the widest five-digit form, so PREVIEW keeps one x across forms (gate C, user 2026-11-20).
-	(credits.get_node("Credits") as Label).text = "00000"
-	(credits.get_node("Delta") as Label).text = "\u22120000"
-	credits.custom_minimum_size.x = credits.get_combined_minimum_size().x
-	(credits.get_node("Credits") as Label).text = ""
-	(credits.get_node("Delta") as Label).text = ""
+	_groups()
+
+# Measured in the tree: out of it a box has no theme separation and a label keeps a stale size.
+func _ready() -> void:
+	# Tabular digits: zeros measure every five-digit balance and four-digit shortfall; every part still shows.
+	var widest: Dictionary = {"Credits": "00000", "CreditsAfter": "\u22120000", "Power": "00 / 00", "PowerAfter": "00 / 00"}
+	for part: String in widest: (_top_strip.find_child(part, true, false) as Label).text = widest[part]
+	_held = Vector2(_credits_slab.get_combined_minimum_size().x, _power_slab.get_combined_minimum_size().x)
+	for part: String in widest: (_top_strip.find_child(part, true, false) as Label).text = ""
+
+func _strip_slab(slab_name: String) -> PanelContainer:
+	var slab := PanelContainer.new()
+	slab.name = slab_name
+	slab.theme_type_variation = &"HudSlab"
+	slab.mouse_filter = MOUSE_FILTER_IGNORE
+	_flat(slab, 32)
+	_top_strip.add_child(slab)
+	return slab
 
 # A top-right chip that hugs its row of labels (hud-v5-layout "Menu chip, Team chip, playtest chip").
 static func chip(chip_name: String, top: float, parts: Array) -> Button:
@@ -307,6 +350,10 @@ func _build_slab() -> void:
 # One cell per lattice position, named by its key; a cell keeps its position, only its words and look change.
 func _build_card() -> void:
 	_card = _grid("Card", 4)
+	# The card itself reports the pointer leaving it from a gap or a well, which no cell does.
+	_card.mouse_filter = MOUSE_FILTER_PASS
+	_card.mouse_entered.connect(_restrip, CONNECT_DEFERRED)
+	_card.mouse_exited.connect(_restrip, CONNECT_DEFERRED)
 	_well = StyleBoxFlat.new()
 	_well.bg_color = WELL
 	_well.border_color = get_theme_color("line", &"Tokens")
@@ -503,37 +550,47 @@ func _press_cell(cell: Button) -> void:
 
 func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> void:
 	var numbers: Dictionary = HudModel.strip(view, view_player, _hovered_kind() if not _hovered_kind().is_empty() else selection.placement_kind)
-	var powered: bool = HudModel.uses_power(HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
-	_top_strip.custom_minimum_size.x = STRIP_WIDTH if powered else STRIP_WIDTH_UNPOWERED
-	(_top_strip.get_node("Row/CreditsGroup/Swatch") as ColorRect).color = View.owner_color(view_player, selection.bright_owners)
-	var preview: bool = numbers.has("after_credits")
-	# Short of credits, today's balance stays and the cost turns warn, so two negatives never stack.
-	var short: bool = preview and numbers.after_credits < 0
-	var delta: Label = _top_strip.find_child("Delta", true, false)
-	delta.visible = preview and numbers.after_credits != numbers.credits
-	if preview: delta.text = "\u2212%d" % (numbers.credits - numbers.after_credits)
-	var tone: Color = get_theme_color("warn" if short else "muted", &"Tokens")
-	if delta.get_theme_color("font_color") != tone: delta.add_theme_color_override("font_color", tone)
-	var label: Label = _top_strip.find_child("Preview", true, false)
-	if label.visible != preview:
-		label.visible = preview
-		_top_strip.add_theme_stylebox_override("panel", _preview_style if preview else _strip_style)
-	var credits: int = numbers.after_credits if preview and not short else numbers.credits
-	_fill(_top_strip, str(credits), numbers.after_used if preview else numbers.used, numbers.after_available if preview else numbers.available, powered)
+	_power_slab.visible = HudModel.uses_power(HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
+	(_top_strip.find_child("Swatch", true, false) as ColorRect).color = View.owner_color(view_player, selection.bright_owners)
+	var after: int = numbers.get("after_credits", numbers.credits)
+	var credits: bool = _forecast(_credits_slab, "Credits", [str(numbers.credits), "\u2212%d" % -after if after < 0 else str(after)], [false, after < 0])
+	_credits_slab.find_child("Forecast", true, false).visible = credits
+	_credits_slab.find_child("Coin", true, false).visible = after < 0
+	var used: Array[int] = [numbers.used, numbers.get("after_used", numbers.used)]
+	var available: Array[int] = [numbers.available, numbers.get("after_available", numbers.available)]
+	_forecast(_power_slab, "Power", ["%d / %d" % [used[0], available[0]], "%d / %d" % [used[1], available[1]]], [used[0] > available[0], used[1] > available[1]])
+	_power_slab.find_child("LowPower", true, false).visible = used[1] > available[1]
+	var held: bool = _strip_held(selection)
+	_credits_slab.custom_minimum_size.x = _held.x if held else 0.0
+	_power_slab.custom_minimum_size.x = _held.y if held else 0.0
+	for slab: Control in [_credits_slab, _power_slab, _top_strip]: slab.reset_size()
+
+# Today's number, then the arrow and the forecast only when it differs, framed in sel (label A, user 2026-11-22).
+func _forecast(slab: PanelContainer, part: String, texts: Array[String], warns: Array[bool]) -> bool:
+	var changes: bool = texts[1] != texts[0]
+	_tint(slab.find_child(part, true, false), texts[0], warns[0])
+	_tint(slab.find_child(part + "After", true, false), texts[1], warns[1])
+	slab.find_child(part + "Arrow", true, false).visible = changes
+	slab.find_child(part + "After", true, false).visible = changes
+	var style: StyleBoxFlat = _preview_style if changes else _strip_style
+	if slab.get_theme_stylebox("panel") != style: slab.add_theme_stylebox_override("panel", style)
+	return changes
+
+# Shape D: while a forecast can show, both slabs keep their widest width, so nothing on the strip moves between cells.
+func _strip_held(selection: Dictionary) -> bool:
+	if selection.over: return false
+	if not selection.placement_kind.is_empty(): return true
+	if _card == null or not _card.is_visible_in_tree() or not _card.get_global_rect().has_point(_card.get_global_mouse_position()): return false
+	return _card.get_children().any(func(cell: Control) -> bool: return cell.visible and _forecasts(cell.get_meta("action")))
+
+static func _forecasts(action: String) -> bool:
+	return not action.is_empty() and not HudModel.COMMANDS.has(action)
 
 # Only an item cell previews; a command cell under the pointer previews nothing.
 func _hovered_kind() -> String:
 	if _hovered_cell == null: return ""
 	var action: String = _hovered_cell.get_meta("action")
-	return "" if HudModel.COMMANDS.has(action) else action
-
-func _fill(slab: PanelContainer, credits: String, used: int, available: int, powered: bool) -> void:
-	var low: bool = used > available
-	_tint(slab.find_child("Credits", true, false), credits, false)
-	_tint(slab.find_child("Power", true, false), "%d / %d" % [used, available], low)
-	slab.find_child("LowPower", true, false).visible = low
-	slab.find_child("PowerGroup", true, false).visible = powered
-	slab.reset_size()
+	return action if _forecasts(action) else ""
 
 func _tint(label: Label, text: String, warn: bool) -> void:
 	label.text = text
@@ -550,6 +607,9 @@ func _hover_cell(cell: Button, entered: bool) -> void:
 	if not _strip_args.is_empty() and _strip_args[1].over: return
 	if not entered and _hovered_cell != cell: return
 	_hovered_cell = cell if entered else null
+	_restrip()
+
+func _restrip() -> void:
 	if not _strip_args.is_empty(): _show_strip.callv(_strip_args)
 
 func _refresh_queue(building: Dictionary, edge: Color) -> void:

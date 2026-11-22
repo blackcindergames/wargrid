@@ -2330,7 +2330,7 @@ func test_releases_on_a_panel_are_the_huds(runner) -> bool:
 	main.orders.press_cell("usa_power_plant")
 	await _frames(runner)
 	var forecast: Control = main.get_node("HUD/Hud/TopStrip")
-	runner.check(not main.orders._placement_kind.is_empty() and forecast.find_child("Preview", true, false).is_visible_in_tree(), "MR5 fixture: a placement is armed and the strip previews it")
+	runner.check(not main.orders._placement_kind.is_empty() and forecast.find_child("CreditsArrow", true, false).is_visible_in_tree(), "MR5 fixture: a placement is armed and the strip forecasts it")
 	_push_move(port, map)
 	var ghost: Array = main.get_node("WorldView")._preview_cells.duplicate()
 	_push_move(port, panel)
