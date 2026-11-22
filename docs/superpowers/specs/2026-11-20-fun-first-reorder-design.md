@@ -29,6 +29,8 @@ A 2v2 with a friend against bots, with a real HUD and one or two new units.
 
 ## Lighter process for P2.3b, P7 and P15
 
+Superseded by [How a package runs](../../../AGENTS.md#how-a-package-runs) in `AGENTS.md` (user, 2026-11-22).
+
 - One short design-and-plan file per package instead of a spec plus a plan; aim for about a tenth of P2.3a1's 159 KB plan.
 - No A/B lab rounds unless the look itself is the question.
 - One owner check at the end (the visible-window checks in one batch, then the playtest) instead of stop gates A, B and C.

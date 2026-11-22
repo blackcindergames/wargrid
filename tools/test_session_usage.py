@@ -105,6 +105,19 @@ class SessionUsageTests(unittest.TestCase):
         self.assertIn("codex a", text)
         self.assertIn("TOTAL processed=4610", text)
 
+    def test_lanes_split_tokens_by_day_and_lines_by_area(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lines = claude_lines()
+            lines[1]["timestamp"] = "2026-11-21T10:00:00Z"
+            lines[3]["timestamp"] = "2026-11-22T10:00:00Z"
+            by_day = usage.claude_by_day(write(directory, "s.jsonl", lines))
+        self.assertEqual(sorted(by_day.values()), [1100, 3010])
+        self.assertEqual(
+            [usage.area(path) for path in ("game/scripts/a.gd", "game/tests/t.gd", "relay/a_test.go", "docs/x.md")],
+            ["game", "tests", "tests", "docs"],
+        )
+        self.assertEqual([usage.area(path) for path in ("tools/roadmap.py", "README.md")], ["tools", "docs"])
+
     def test_unknown_file_is_an_error(self):
         with tempfile.TemporaryDirectory() as directory:
             path = write(directory, "other.jsonl", [{"type": "nothing"}])

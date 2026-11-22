@@ -3,11 +3,14 @@
 "processed" is everything the model read per request (fresh + cached input), summed: the volume
 that grows with session length. It is not a price.
     python3 tools/session_usage.py ~/.claude/projects/<project>/<session>.jsonl ~/.codex/sessions/2026/11/03/rollout-*.jsonl
+    python3 tools/session_usage.py --lanes [days]   # kickoff lane table: tokens per worktree, lines landed on main
 """
 
 import collections
 import json
+import subprocess
 import sys
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +24,8 @@ def _events(path: Path):
                 continue
 
 
-def claude(path: Path) -> dict:
-    seen, contexts, output = set(), [], 0
-    models: collections.Counter[str] = collections.Counter()
+def _requests(path: Path):
+    seen = set()
     for event in _events(path):
         if event.get("type") != "assistant":
             continue
@@ -33,11 +35,17 @@ def claude(path: Path) -> dict:
             continue
         seen.add(request)
         used = message.get("usage") or {}
-        contexts.append(
-            sum(
-                used.get(key) or 0 for key in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
-            )
+        context = sum(
+            used.get(key) or 0 for key in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
         )
+        yield event, message, used, context
+
+
+def claude(path: Path) -> dict:
+    contexts, output = [], 0
+    models: collections.Counter[str] = collections.Counter()
+    for _event, message, used, context in _requests(path):
+        contexts.append(context)
         output += used.get("output_tokens") or 0
         if message.get("model"):
             models[message["model"]] += 1
@@ -115,10 +123,75 @@ def _kind(path: Path) -> str:
     return ""
 
 
+def claude_by_day(path: Path) -> collections.Counter:
+    days: collections.Counter[date] = collections.Counter()
+    for event, _message, _used, context in _requests(path):
+        try:
+            days[datetime.fromisoformat(event.get("timestamp", "").replace("Z", "+00:00")).astimezone().date()] += (
+                context
+            )
+        except ValueError:
+            continue
+    return days
+
+
+def area(path: str) -> str:
+    name = path.rsplit("/", 1)[-1]
+    if "/tests/" in path or name.startswith("test_") or name.endswith("_test.go"):
+        return "tests"
+    if path.startswith("game/"):
+        return "game"
+    if path.startswith("docs/") or name.endswith(".md"):
+        return "docs"
+    return "tools"
+
+
+def lanes(days: int, out) -> None:
+    since = date.today() - timedelta(days=days - 1)
+    prefix = str(Path.home()).replace("/", "-") + "-projects-"
+    tokens: dict[date, collections.Counter[str]] = collections.defaultdict(collections.Counter)
+    for directory in (Path.home() / ".claude" / "projects").glob(prefix + "wargrid*"):
+        lane = directory.name.removeprefix(prefix)
+        for path in directory.rglob("*.jsonl"):
+            if path.name == "journal.jsonl":  # workflow journals repeat their agents' requests
+                continue
+            key = lane if lane != "wargrid" else "wargrid/" + path.relative_to(directory).parts[0][:8]
+            for day, processed in claude_by_day(path).items():
+                if day >= since:
+                    tokens[day][key] += processed
+    landed: dict[date, collections.Counter[str]] = collections.defaultdict(collections.Counter)
+    log = subprocess.run(
+        ["git", "log", "main", f"--since={since} 00:00", "--numstat", "--format=@%ad", "--date=short"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    day = since
+    for line in log.splitlines():
+        if line.startswith("@"):
+            day = date.fromisoformat(line[1:])
+        elif line and line.split("\t")[0].isdigit():
+            added, _deleted, changed = line.split("\t", 2)
+            landed[day][area(changed)] += int(added)
+    for offset in range(days):
+        day = since + timedelta(days=offset)
+        print("== %s processed %dM" % (day, sum(tokens[day].values()) // 10**6), file=out)
+        for key, processed in tokens[day].most_common(9):
+            print("  %6dM  %s" % (processed // 10**6, key), file=out)
+        print(
+            "  landed on main (+lines): %s"
+            % " ".join(f"{a}={landed[day][a]}" for a in ("game", "tests", "docs", "tools")),
+            file=out,
+        )
+
+
 def main(argv: list, out=sys.stdout) -> int:
     if not argv:
         print(__doc__, file=out)
         return 2
+    if argv[0] == "--lanes":
+        lanes(int(argv[1]) if len(argv) > 1 else 3, out)
+        return 0
     total, codex_threads = 0, []
     for name in argv:
         path = Path(name)

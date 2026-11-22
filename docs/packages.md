@@ -89,11 +89,7 @@ Matching with friends beyond P2.2 (user, 2026-11-13): a permanent friend link an
 
 ## How a package runs
 
-1. Plan it; a day package gets a drafted focus card.
-2. The user approves plan and card.
-3. Day: deploy to the test app (needs approval) and play one 15 to 20 minute session with the helper; the session file replays headless (`sh tools/replay_session.sh`). Night: run unattended per [night run](night-run.md); the user reviews the morning summary.
-4. Problems in the package's focus are fixed before the next package; other findings go on the [findings list](STATUS.md#findings-list), which orders later packages.
-5. A day package ends with a release: version bump, tag and live deploy, each still with its own approval; night packages ship with the next day release (user, 2026-11-14).
+Packages follow [How a package runs](../AGENTS.md#how-a-package-runs). Findings outside a package's focus go on the [findings list](STATUS.md#findings-list), which orders later packages. One release follows P15, with test-app deploys in between, each with approval (user, 2026-11-22).
 
 ## Package notes
 
