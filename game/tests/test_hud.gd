@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -738,6 +738,143 @@ func test_esc_chip_only_when_esc_opens_the_menu(runner) -> bool:
 	overlays._end_offline(main)
 	main.get_viewport().gui_release_focus()
 	await _esc_matches_chip(runner, main, "the match ended with a selection held", true)
+	main.free()
+	overlays._end(saved)
+	return true
+
+func _esc_main(runner, overlays):
+	var main = await overlays._scene(runner, Skirmish)
+	overlays._camera(main)
+	return main
+
+# What one Esc may change: the layer it backs out of, and nothing under it.
+func _esc_state(runner, main, label: String, placement: String, sub_grid: bool, selected: Array, menu: bool) -> void:
+	var orders = main.orders
+	runner.check(orders._placement_kind == placement and orders._sub_grid == sub_grid and orders.selected_ids == selected and main._pause.visible == menu and not orders._attack_move_mode, "ES %s: placement '%s', sub-grid %s, selected %s, menu %s; got '%s', %s, %s, %s, attack move %s" % [label, placement, sub_grid, selected, menu, orders._placement_kind, orders._sub_grid, orders.selected_ids, main._pause.visible, orders._attack_move_mode])
+
+func test_esc_placement_layer(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var start: Array = main.orders.selected_ids.duplicate()
+	BaseScene.new().build_key(main, "usa_power_plant")
+	_esc_state(runner, main, "placement armed", "usa_power_plant", true, start, false)
+	overlays._key(runner, KEY_ESCAPE)
+	_esc_state(runner, main, "Esc over an armed placement leaves the sub-grid open and the builder selected", "", true, start, false)
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_attack_move_layer(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var start: Array = main.orders.selected_ids.duplicate()
+	main.orders.arm_attack_move()
+	runner.check(main.orders._attack_move_mode, "ES attack move fixture: armed")
+	overlays._key(runner, KEY_ESCAPE)
+	_esc_state(runner, main, "Esc over an armed attack move keeps the selection and opens no menu", "", false, start, false)
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_sub_grid_layer(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var start: Array = main.orders.selected_ids.duplicate()
+	BaseScene.new().key(main, HudModel.BUILD_KEY)
+	_esc_state(runner, main, "sub-grid open", "", true, start, false)
+	overlays._key(runner, KEY_ESCAPE)
+	_esc_state(runner, main, "Esc over the sub-grid closes it and keeps the builder selected", "", false, start, false)
+	runner.check(main.get_node("HUD/Economy/Card").is_visible_in_tree() and _cell(main, "build") != null, "ES sub-grid closed: the root card's Build cell is back")
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_selection_layer(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	runner.check(main.orders.selected_ids.size() == 1, "ES start fixture: the start builder is selected")
+	overlays._key(runner, KEY_ESCAPE)
+	_esc_state(runner, main, "first Esc of a match deselects the start builder", "", false, [], false)
+	overlays._key(runner, KEY_ESCAPE)
+	_esc_state(runner, main, "second Esc opens the menu", "", false, [], true)
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_inspection_layer(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var enemy: int = main.driver.pump.live().snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 2)[0].id
+	main.orders.selected_ids.clear()
+	main.orders.inspected_id = enemy
+	main._refresh()
+	overlays._key(runner, KEY_ESCAPE)
+	runner.check(main.orders.inspected_id == -1 and not main._pause.visible, "ES Esc over an inspected enemy drops the inspection and opens no menu")
+	overlays._key(runner, KEY_ESCAPE)
+	runner.check(main._pause.visible, "ES the next Esc opens the menu")
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_layers_in_order(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var start: Array = main.orders.selected_ids.duplicate()
+	BaseScene.new().build_key(main, "usa_power_plant")
+	var steps: Array = [
+		["placement", "", true, start, false],
+		["sub-grid", "", false, start, false],
+		["selection", "", false, [], false],
+		["menu", "", false, [], true]]
+	var chip: Control = main.get_node("HUD/MenuChip").find_child("EscChip", true, false)
+	for step: Array in steps:
+		main._show_esc_chip()
+		var promised: bool = chip.modulate.a == 1.0
+		overlays._key(runner, KEY_ESCAPE)
+		_esc_state(runner, main, "one Esc over the %s layer" % step[0], step[1], step[2], step[3], step[4])
+		runner.check(promised == step[4], "ES the Esc chip before the %s layer says %s" % [step[0], "menu" if promised else "back out"])
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_in_the_frame_of_a_card_key(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var helper = BaseScene.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var start: Array = main.orders.selected_ids.duplicate()
+	helper.key(main, HudModel.BUILD_KEY)
+	overlays._key(runner, KEY_ESCAPE)
+	_esc_state(runner, main, "Q then Esc before any view: both land, in order", "", false, start, false)
+	overlays._key(runner, KEY_ESCAPE)
+	helper.key(main, HudModel.BUILD_KEY)
+	_esc_state(runner, main, "Esc then Q before any view: the deselect stands, Q opens nothing", "", false, [], false)
+	overlays._key(runner, KEY_ESCAPE)
+	runner.check(main._pause.visible, "ES the Esc after that refused Q opens the menu")
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_as_the_builder_dies(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var helper = BaseScene.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var builder: int = main.orders.selected_ids[0]
+	helper.key(main, HudModel.BUILD_KEY)
+	main.driver.pump.live().remove_object(builder)
+	overlays._key(runner, KEY_ESCAPE)
+	runner.check(not main.orders._sub_grid and not main._pause.visible, "ES Esc in the step the builder died closes the sub-grid and opens no menu")
+	BaseScene.publish(main)
+	_esc_state(runner, main, "the next view drops the dead builder", "", false, [], false)
+	overlays._key(runner, KEY_ESCAPE)
+	runner.check(main._pause.visible, "ES with nothing left the next Esc opens the menu")
 	main.free()
 	overlays._end(saved)
 	return true

@@ -18,7 +18,7 @@ const IC1_ROWS: PackedStringArray = [
 	"15|sel=[]|bld=14|insp=-1|place=|sub=false|am=false|esc=true|menu=false|perf=true|{\"player\":1,\"sequence\":8,\"target_id\":14,\"tick\":1,\"type\":\"unload\"}",
 	"16|sel=[11]|bld=-1|insp=-1|place=|sub=false|am=false|esc=true|menu=false|perf=true|{\"entity_ids\":[11],\"player\":1,\"sequence\":9,\"target_id\":14,\"tick\":1,\"type\":\"enter\"}",
 	"17|sel=[10]|bld=-1|insp=-1|place=frc_supply_center|sub=true|am=false|esc=true|menu=false|perf=true|",
-	"18|sel=[]|bld=-1|insp=-1|place=|sub=false|am=false|esc=false|menu=false|perf=true|",
+	"18|sel=[10]|bld=-1|insp=-1|place=|sub=false|am=false|esc=true|menu=false|perf=true|",
 	"19|sel=[]|bld=-1|insp=9|place=|sub=false|am=false|esc=true|menu=false|perf=true||refusal=",
 	"20|sel=[10]|bld=-1|insp=-1|place=|sub=false|am=false|esc=true|menu=false|perf=true|{\"entity_ids\":[10],\"player\":1,\"sequence\":10,\"source_id\":16,\"tick\":1,\"type\":\"gather\"}",
 	"21|sel=[10]|bld=-1|insp=-1|place=|sub=false|am=false|esc=true|menu=false|perf=true||tick=2",
@@ -35,5 +35,5 @@ const IC2_ROWS: PackedStringArray = [
 	"10|sel=[3]|bld=-1|insp=-1|place=usa_power_plant|sub=true|am=false|esc=true|menu=false|perf=true|",
 	"11|sel=[3]|bld=-1|insp=-1|place=|sub=true|am=false|esc=true|menu=false|perf=true|{\"builder_id\":3,\"building_kind\":\"usa_power_plant\",\"origin\":[10,10],\"player\":1,\"sequence\":2,\"tick\":37,\"type\":\"build\"}",
 	"17|sel=[3]|bld=-1|insp=-1|place=usa_power_plant|sub=true|am=false|esc=true|menu=false|perf=true|",
-	"18|sel=[]|bld=-1|insp=-1|place=|sub=false|am=false|esc=false|menu=false|perf=true|",
+	"18|sel=[3]|bld=-1|insp=-1|place=|sub=false|am=false|esc=true|menu=false|perf=true|",
 ]

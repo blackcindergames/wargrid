@@ -1176,7 +1176,7 @@ func test_input_script_offline(runner) -> bool:
 	rows.append(_ic_row(main, 17, seen))
 	_ic_esc(main)
 	_ic_esc(main)
-	runner.check(main.orders._placement_kind.is_empty() and main.orders.selected_ids.is_empty(), "IC1 step 18 took effect")
+	runner.check(main.orders._placement_kind.is_empty() and not main.orders._sub_grid and main.orders.selected_ids == [ids.builder], "IC1 step 18 took effect")
 	rows.append(_ic_row(main, 18, seen))
 	_ic_click(helper, main, at.call(15.5, 6.5))
 	runner.check(main.orders.inspected_id == ids.enemy, "IC1 step 19 took effect")

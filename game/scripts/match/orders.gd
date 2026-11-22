@@ -47,7 +47,7 @@ func handle(event: InputEvent) -> void:
 	# A press that began on the map ends over a panel: only a drag goes on there, never a click, an order or the ghost.
 	if on_hud and not _selecting: return
 	if _card_key(event): return
-	if _placement_kind.is_empty() and _combat_input(event): return
+	if _placement_kind.is_empty() and (_combat_input(event) or _sub_grid_escape(event)): return
 	if not _placement_kind.is_empty():
 		_placement_input(event)
 		return
@@ -162,6 +162,11 @@ func _back() -> void:
 	else:
 		_sub_grid = false
 		_screen._reshow()
+
+func _sub_grid_escape(event: InputEvent) -> bool:
+	if not _sub_grid or not event.is_action_pressed("deselect"): return false
+	_back()
+	return true
 
 func _combat_input(event: InputEvent) -> bool:
 	if _attack_move_mode and (event.is_action_pressed("deselect") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed)):

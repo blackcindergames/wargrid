@@ -1531,7 +1531,7 @@ func test_input_script_online(runner) -> bool:
 	_ic_esc(main)
 	_ic_esc(main)
 	step.call(18, 3)
-	runner.check(main.orders._placement_kind.is_empty() and main.orders.selected_ids.is_empty(), "IC2 step 18 took effect")
+	runner.check(main.orders._placement_kind.is_empty() and not main.orders._sub_grid and main.orders.selected_ids.size() == 1, "IC2 step 18 took effect")
 	var first: int = _ic_first_difference(rows, IcRows.IC2_ROWS)
 	runner.check(first == -1, "IC2 row %d matches the chain recorded 2026-11-14, got %s" % [first, rows[first] if first >= 0 and first < rows.size() else "no row"])
 	main.free()
