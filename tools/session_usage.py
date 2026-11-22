@@ -8,6 +8,7 @@ that grows with session length. It is not a price.
 
 import collections
 import json
+import re
 import subprocess
 import sys
 from datetime import date, datetime, timedelta
@@ -24,8 +25,8 @@ def _events(path: Path):
                 continue
 
 
-def _requests(path: Path):
-    seen = set()
+def _requests(path: Path, seen: set | None = None):
+    seen = set() if seen is None else seen
     for event in _events(path):
         if event.get("type") != "assistant":
             continue
@@ -123,13 +124,12 @@ def _kind(path: Path) -> str:
     return ""
 
 
-def claude_by_day(path: Path) -> collections.Counter:
+def claude_by_day(path: Path, seen: set | None = None) -> collections.Counter:
     days: collections.Counter[date] = collections.Counter()
-    for event, _message, _used, context in _requests(path):
+    for event, _message, _used, context in _requests(path, seen):
         try:
-            days[datetime.fromisoformat(event.get("timestamp", "").replace("Z", "+00:00")).astimezone().date()] += (
-                context
-            )
+            stamp = (event.get("timestamp") or "").replace("Z", "+00:00")
+            days[datetime.fromisoformat(stamp).astimezone().date()] += context
         except ValueError:
             continue
     return days
@@ -146,9 +146,27 @@ def area(path: str) -> str:
     return "tools"
 
 
+GENERATED = ("_templ.go", "package-lock.json", "perf-history.csv")
+
+
+def landed(log: str) -> dict[date, collections.Counter[str]]:
+    lines: dict[date, collections.Counter[str]] = collections.defaultdict(collections.Counter)
+    day = date.min
+    for line in log.splitlines():
+        if line.startswith("@"):
+            day = date.fromisoformat(line[1:])
+        elif line and line.split("\t")[0].isdigit():  # binary files show "-"
+            added, _deleted, changed = line.split("\t", 2)
+            changed = re.sub(r"\{[^}]* => ([^}]*)\}", r"\1", changed).replace("//", "/").split(" => ")[-1]
+            if not changed.endswith(GENERATED):
+                lines[day][area(changed)] += int(added)
+    return lines
+
+
 def lanes(days: int, out) -> None:
     since = date.today() - timedelta(days=days - 1)
-    prefix = str(Path.home()).replace("/", "-") + "-projects-"
+    prefix = re.sub(r"[^A-Za-z0-9]", "-", str(Path.home())) + "-projects-"
+    seen: set = set()  # a resumed session repeats requests of the file it resumed
     tokens: dict[date, collections.Counter[str]] = collections.defaultdict(collections.Counter)
     for directory in (Path.home() / ".claude" / "projects").glob(prefix + "wargrid*"):
         lane = directory.name.removeprefix(prefix)
@@ -156,23 +174,16 @@ def lanes(days: int, out) -> None:
             if path.name == "journal.jsonl":  # workflow journals repeat their agents' requests
                 continue
             key = lane if lane != "wargrid" else "wargrid/" + path.relative_to(directory).parts[0][:8]
-            for day, processed in claude_by_day(path).items():
+            for day, processed in claude_by_day(path, seen).items():
                 if day >= since:
                     tokens[day][key] += processed
-    landed: dict[date, collections.Counter[str]] = collections.defaultdict(collections.Counter)
     log = subprocess.run(
-        ["git", "log", "main", f"--since={since} 00:00", "--numstat", "--format=@%ad", "--date=short"],
+        ["git", "log", "main", f"--since={since} 00:00", "--numstat", "--format=@%cd", "--date=short"],
         capture_output=True,
         text=True,
         check=True,
     ).stdout
-    day = since
-    for line in log.splitlines():
-        if line.startswith("@"):
-            day = date.fromisoformat(line[1:])
-        elif line and line.split("\t")[0].isdigit():
-            added, _deleted, changed = line.split("\t", 2)
-            landed[day][area(changed)] += int(added)
+    lines = landed(log)
     for offset in range(days):
         day = since + timedelta(days=offset)
         print("== %s processed %dM" % (day, sum(tokens[day].values()) // 10**6), file=out)
@@ -180,7 +191,7 @@ def lanes(days: int, out) -> None:
             print("  %6dM  %s" % (processed // 10**6, key), file=out)
         print(
             "  landed on main (+lines): %s"
-            % " ".join(f"{a}={landed[day][a]}" for a in ("game", "tests", "docs", "tools")),
+            % " ".join(f"{a}={lines[day][a]}" for a in ("game", "tests", "docs", "tools")),
             file=out,
         )
 

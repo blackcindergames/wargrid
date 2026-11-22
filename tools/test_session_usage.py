@@ -3,6 +3,7 @@ import json
 import sys
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -117,6 +118,20 @@ class SessionUsageTests(unittest.TestCase):
             ["game", "tests", "tests", "docs"],
         )
         self.assertEqual([usage.area(path) for path in ("tools/roadmap.py", "README.md")], ["tools", "docs"])
+
+    def test_landed_skips_binary_and_generated_files_and_follows_renames(self):
+        log = "@2026-11-22\n3\t1\tgame/a.gd\n-\t-\tdocs/x.webp\n5\t0\t{docs => game}/b.gd\n9\t0\twarroom/x_templ.go\n2\t0\tdocs/old.md => tools/new.py\n"
+        self.assertEqual(dict(usage.landed(log)[date(2026, 11, 22)]), {"game": 8, "tools": 2})
+
+    def test_request_seen_in_two_files_counts_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            lines = claude_lines()
+            for line in lines[1:]:
+                line["timestamp"] = "2026-11-22T10:00:00Z"
+            seen: set = set()
+            first = usage.claude_by_day(write(directory, "a.jsonl", lines), seen)
+            second = usage.claude_by_day(write(directory, "b.jsonl", lines), seen)
+        self.assertEqual((sum(first.values()), sum(second.values())), (1100 + 3010, 0))
 
     def test_unknown_file_is_an_error(self):
         with tempfile.TemporaryDirectory() as directory:
