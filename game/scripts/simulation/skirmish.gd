@@ -561,21 +561,28 @@ static func _cost_sum(kinds: Array) -> int:
 	for kind: String in kinds: sum += unit_cost(kind)
 	return sum
 
-# Highest unit cost first, ties lowest id, until the summed cost first reaches the share.
+# Vehicles and infantry in turn, each most expensive first (ties lowest id), until the cost share is reached.
 static func _take(ready: Array, mine: Dictionary, share: int, limit: int) -> Array:
-	var order: Array = ready.duplicate()
+	var vehicles: Array = _by_cost(ready.filter(func(id: int) -> bool: return _is_vehicle(mine[id].kind)), mine)
+	var others: Array = _by_cost(ready.filter(func(id: int) -> bool: return not _is_vehicle(mine[id].kind)), mine)
+	var taken: Array = []
+	var sum: int = 0
+	var vehicle_turn: bool = true
+	while sum < share and taken.size() < limit and not (vehicles.is_empty() and others.is_empty()):
+		var id: int = (vehicles if (vehicle_turn and not vehicles.is_empty()) or others.is_empty() else others).pop_front()
+		taken.append(id)
+		sum += unit_cost(mine[id].kind)
+		vehicle_turn = not vehicle_turn
+	taken.sort()
+	return taken
+
+static func _by_cost(ids: Array, mine: Dictionary) -> Array:
+	var order: Array = ids.duplicate()
 	order.sort_custom(func(a: int, b: int) -> bool:
 		var cost_a: int = unit_cost(mine[a].kind)
 		var cost_b: int = unit_cost(mine[b].kind)
 		return cost_a > cost_b or (cost_a == cost_b and a < b))
-	var taken: Array = []
-	var sum: int = 0
-	for id: int in order:
-		if sum >= share or taken.size() >= limit: break
-		taken.append(id)
-		sum += unit_cost(mine[id].kind)
-	taken.sort()
-	return taken
+	return order
 
 static func _rally(sim: RefCounted, player: int) -> Vector2:
 	var map: Dictionary = sim.map_data()

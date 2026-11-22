@@ -5,14 +5,14 @@ Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe r
 ```text
 Resume record (updated 2026-11-22 after BR8)
 Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 (2026-11-22, approved by the owner), order step 1 committed 8b292146 / T1-8a BR7 committed after this record
-Last green task / next incomplete task: T1-8d BR8 / owner decisions (hard bar, BR8 match), then T1-8c
+Last green task / next incomplete task: T1-8e mixed take / BR8 as a group-speed order (replaces stop and wait), then T1-8c
 Changed paths since last commit: none after the BR7 commit
-Last command / cases / checks / failures / exit / marker: full suite on BR8 (build/suite-br8.log) CASES 1358 CHECKS 153008 FAILURES 9 / exit 1 / no TESTS PASSED (the 9 re-pin names); `sh tools/run_checks.sh` CHECKS PASSED 5
+Last command / cases / checks / failures / exit / marker: full suite on the mixed take (build/suite-take.log) CASES 1359 CHECKS 153009 FAILURES 9 / exit 1 / no TESTS PASSED (the 9 re-pin names); `sh tools/run_checks.sh` CHECKS PASSED 5
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Fm1 winner at T1-10, Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: owner's BR8 match (offline, FRC bot, Dry Wells: waves together, stutter?); then T1-8c
+Next exact action: BR8 as a group-speed order in a fresh session (private handoff `p7-group-speed-prompt.txt`); then T1-8c
 ```
 
 ## Red ledger
@@ -28,6 +28,7 @@ Next exact action: owner's BR8 match (offline, FRC bot, Dry Wells: waves togethe
 | T1-7 | Same nine names as T1-6b. Values moved: TB3 digest df3949d798993aee to c9da7864e460e7ee; TB4 team core series to 7355634108385083070; Fm1 (26398 to 26833, winner 2). Unchanged: S1 core series (2924924538281131659), S1 pinned outcome (8667, winner 1), Cs1 (20776, winner 2), VR1 digest (both checks), HUD1 texts (red, values unchanged). Fix round moved none of them. | yes, all (T1-10) |
 | T1-8a | Same nine names as T1-7 (after the `main` merge, same values). Values moved: TB3 digest c9da7864e460e7ee to c7bce6cedaadb001; TB4 team core series to 2150549136322465648; S1 core series to 797697861706021661; S1 pinned outcome (8667 to 9256, winner 1, inside 7000-17999); Fm1 (26833 to 30056, winner 2); Cs1 (20776, winner 2 to 23362, winner 1). Unchanged: VR1 digest (both checks), HUD1 texts. T1-10: Cs1's winner flips 2 to 1. | yes, all (T1-10) |
 | T1-8d | Same nine names as T1-8a. Values moved: TB3 digest c7bce6cedaadb001 to ebf1b1b82ccc0f12; TB4 team core series to 3677847588803602532; S1 core series to 1486928065811848988; S1 pinned outcome (9256 to 10043, winner 1, inside 7000-17999); Fm1 (30056 to 27018, winner 2); Cs1 (23362 to 20771, winner 1). Unchanged: VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10) |
+| T1-8e | Same nine names as T1-8d. Values moved: TB3 digest ebf1b1b82ccc0f12 to 961a50b34e9e5358; TB4 team core series to 8274204117302765247. Unchanged: S1 core series, S1 pinned outcome (10043, winner 1), Fm1 (27018, winner 2), Cs1 (20771, winner 1), VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10) |
 
 ## Evidence
 
@@ -384,3 +385,9 @@ Bot lab (`build/bot_lab/br8-base` = `c682bc96` exported; `br8b` = the final work
 | One Rotary Gun Tower killed (usa, china, frc) | 7,092-7,380, 7,201-7,589, 6,784-6,888 | 7,380-7,416, 7,141-7,589, 6,784-6,888 |
 
 The 61 waves are not stalls. A traced rerun of `idle-af37-frc-frc-b1-s0` (scratch probe dumping wave positions every 300 ticks, ticks 8,100-11,000) shows both live waves moving at infantry speed, about 0.8 cells/s, toward a far objective, while the vehicles go stop-go at the front; the idle seat falls to earlier waves first. Waves now walk at their slowest units' pace, so contact comes later (p90 +1,660 ticks) and idle defeats come later on the big maps (Ashfall median +2,000). Hard bar "rows that end on stock still end": three equal mirrors run to the cap (USA s0, s1, China s0; the China one ended at 41,583 on base). Same cause in all three: identical bots, equal waves on one clock, annihilation mid-map, no factory lost. Owner decision (user, 2026-11-22): equal mirrors are exempt from the bar and reported, not failed; every non-mirror row still ends, so the bar holds.
+
+**Owner's BR8 match (user, 2026-11-22).** Offline, owner vs FRC bot, Dry Wells, tree `e364eee0`, with a 7.5 s screen recording (kept outside the repository). Observations: wave 0 sent only vehicles while the infantry stood in the base; the fast vehicles did not wait for the slower tanks; "the wait for slower units looks really strange". Diagnosis: wave 0 reproduces in every FRC Dry Wells lab row (3 pickups and 3 tanks, or 2 and 4): BR3's take, most expensive first, reaches wave 0's target with vehicles alone. The hold did fire (12-16 stops in those waves), but it was measured from the wave's centre: at first contact the pickups stood 8.6 cells ahead of it and the tanks 7.4 behind, so the groups were about 16 cells apart. The recording shows the stutter that the one page named as a risk: the front vehicles stop, turn and restart about once a second while the infantry walks smoothly. A version measured from the slowest units at 6 cells was built and tested, then dropped unplayed when the owner chose the group-speed order (plan, "After the owner's BR8 match").
+
+### T1-8e Mixed take
+
+Tree `e364eee0` plus the change (`skirmish.gd` `_take`, `_by_cost`). Rule: plan, "After the owner's BR8 match". Red first: `test_wave_take_alternates_vehicles_and_infantry` (6 tanks, 5 riflemen: old rule took 5 tanks; new: tank, rifleman, tank, rifleman, tank, rifleman, tank, 4,275 first reaching 4,248). `test_wave_take_goes_on_with_the_other_kind_when_one_runs_out` replaces `test_wave_takes_highest_cost_first` (2 riflemen, 6 tanks: once the infantry runs out the take goes on with tanks, 4,950; the old rule took 5 tanks). Opus review (one): nothing blocking; its fixes taken: the first run-out test never reached the run-out branch (replaced by this one), a stale comment, a pointer in BR3's text. Noted: with a binding unit limit a mixed wave carries less cost per unit (wave 0 with three live bots: 3,150 instead of 4,500), so joiners get a larger `left_cost`; the arithmetic is unchanged. `test_bot_rules` CASES 78 CHECKS 178 FAILURES 0. Full suite CASES 1359 CHECKS 153009 FAILURES 9, the re-pin names (red ledger row T1-8e); `sh tools/run_checks.sh` CHECKS PASSED 5.
