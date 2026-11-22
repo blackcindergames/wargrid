@@ -14,28 +14,28 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **3v3 match, background upkeep (headroom)** | 🔴 Over | ██████████▶ 123% | ➖ same | 2026-11-22 |
 | **3v3 match, simulation (headroom)** | 🔴 Over | ██████████▶ 119% | 🆕 first run | 2026-11-22 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-22 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 1% worse | 2026-11-22 |
 | Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-22 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔺 1% worse | 2026-11-22 |
 | Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔺 2% worse | 2026-11-22 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 1% worse | 2026-11-22 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-22 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 4% worse | 2026-11-22 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-22 |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 42% of budget (night 14 honest speed report, 2026-11-22), 2% slower than auto fe9089ee (worst vs worst); run-to-run spread up to 50%
-- movement p99: 24% of budget (night 14 honest speed report, 2026-11-22), 1% slower than auto fe9089ee (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 74% of budget (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (night 14 honest speed report, 2026-11-22), 1% faster than auto fe9089ee (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 160% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 143% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 211% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread not measured
+- movement p95: 42% of budget (night 14 honest speed report, 2026-11-22), 2% slower than night 8 play on after a leave (worst vs worst); run-to-run spread up to 50%
+- movement p99: 24% of budget (night 14 honest speed report, 2026-11-22), 4% slower than night 8 play on after a leave (worst vs worst); run-to-run spread up to 50%
+- combat gated p95: 74% of budget (night 14 honest speed report, 2026-11-22), 1% slower than night 8 play on after a leave (worst vs worst); run-to-run spread up to 58%
+- combat gated p99: 58% of budget (night 14 honest speed report, 2026-11-22), 1% slower than night 8 play on after a leave (worst vs worst); run-to-run spread up to 58%
+- combat stress p95: 160% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs night 8 play on after a leave (worst vs worst); run-to-run spread up to 41%
+- plumbing, movement layouts: 143% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs night 8 play on after a leave (worst vs worst); run-to-run spread not measured
+- plumbing, horde: 211% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs night 8 play on after a leave (worst vs worst); run-to-run spread not measured
 - rendered tick-frame p95: 73% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 74% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (night 14 honest speed report, 2026-11-22), 3% faster than auto fe9089ee (worst vs worst); run-to-run spread not measured
-- 3v3 upkeep: 123% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs auto fe9089ee (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (night 14 honest speed report, 2026-11-22), unchanged vs night 8 play on after a leave (worst vs worst); run-to-run spread not measured
+- 3v3 upkeep: 123% of budget, exceeded (night 14 honest speed report, 2026-11-22), unchanged vs night 8 play on after a leave (worst vs worst); run-to-run spread not measured
 - 3v3 sim p95: 119% of budget, exceeded (night 14 honest speed report, 2026-11-22), no previous run; run-to-run spread not measured
 - 3v3 bots + sim p95: 158% of budget, exceeded (night 14 honest speed report, 2026-11-22), no previous run; run-to-run spread not measured
 <!-- perf-charts:end -->

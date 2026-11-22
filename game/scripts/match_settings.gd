@@ -27,10 +27,13 @@ static func refusal(settings: Dictionary) -> String:
 static func report_fields(id: String, match_seed: int, chosen: Array[int]) -> Dictionary:
 	return {"map": id, "seed": match_seed, "starts": chosen}
 
-static func starts(id: String, match_seed: int) -> Array[int]:
+static func starts(id: String, match_seed: int, teams: Array[int] = [1, 2]) -> Array[int]:
 	# The test map keeps seat N on start N so pinned traces hold.
 	if id == TEST_MAP: return []
-	return StartSpots.assign(MapData.load(map_path(id)), match_seed, [1, 2], [0, 0])
+	var chosen: Array[int] = []
+	chosen.resize(teams.size())
+	chosen.fill(0)
+	return StartSpots.assign(MapData.load(map_path(id)), match_seed, teams, chosen)
 
 static func _valid_id(id: String) -> bool:
 	var pattern := RegEx.new()

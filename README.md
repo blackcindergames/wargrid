@@ -106,12 +106,12 @@ Performance against the low-end budget (generated):
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-22 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 1% worse | 2026-11-22 |
 | Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-22 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔺 1% worse | 2026-11-22 |
 | Unit movement | 🟢 OK | ████░░░░░░ 42% | 🔺 2% worse | 2026-11-22 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 1% worse | 2026-11-22 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-22 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 24% | 🔺 4% worse | 2026-11-22 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | ➖ same | 2026-11-22 |
 | Smooth on a Steam Deck in Firefox, 3v3 match | Not measured yet | | | |
 
 Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
