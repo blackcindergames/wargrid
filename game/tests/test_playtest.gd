@@ -16,7 +16,7 @@ var sessions: String = "user://test-playtests-%d" % OS.get_process_id()
 var saved_dir: String = ""
 
 func cases() -> Array[Callable]:
-	return [test_shipped_focus_file_valid, test_focus_validation, test_trigger_matching, test_switch_defaults_and_override, test_build_id, test_launcher_focus_card, test_switch_saves_without_cards, test_launcher_shows_open_sitting_card, test_capture_bounds, test_marker_fields, test_session_schema, test_session_web_download, test_session_web_backup_fails, test_session_desktop_write, test_session_resumes_after_restart, test_marker_written_mid_match, test_finish_replaces_unfinished, test_restart_keeps_cut_short_entry, test_filled_rules, test_close_sitting_unfilled_leaves_nothing, test_legacy_current_is_filed, test_settle_rules, test_web_copies_never_overwritten, test_suite_playtest_dir_redirected, test_web_launcher_downloads_once, test_card_pick_ends_sitting, test_failed_card_pick_keeps_card, test_marker_row_shows_match_time, test_failed_mirror_keeps_current]
+	return [test_shipped_focus_file_valid, test_focus_validation, test_trigger_matching, test_switch_defaults_and_override, test_build_id, test_launcher_focus_card, test_switch_saves_without_cards, test_launcher_shows_open_sitting_card, test_capture_bounds, test_marker_fields, test_session_schema, test_session_web_download, test_session_web_backup_fails, test_session_desktop_write, test_session_resumes_after_restart, test_marker_written_mid_match, test_finish_replaces_unfinished, test_restart_keeps_cut_short_entry, test_filled_rules, test_close_sitting_unfilled_leaves_nothing, test_close_sitting_files_desktop_match_without_card, test_legacy_current_is_filed, test_settle_rules, test_web_copies_never_overwritten, test_suite_playtest_dir_redirected, test_web_launcher_downloads_once, test_card_pick_ends_sitting, test_failed_card_pick_keeps_card, test_marker_row_shows_match_time, test_failed_mirror_keeps_current]
 
 func _begin() -> String:
 	var saved: String = AudioSettings.path
@@ -506,6 +506,23 @@ func test_close_sitting_unfilled_leaves_nothing(runner) -> bool:
 	var downloads: Array = []
 	PlaytestSession.close_sitting(false, _recorder(downloads))
 	runner.check(_session_files().is_empty() and not FileAccess.file_exists(sessions.path_join("current.json")) and downloads.is_empty() and PlaytestSession.current == null, "NB5 an unfilled sitting leaves no file, no download and no open sitting")
+	_end(saved)
+	return true
+
+func test_close_sitting_files_desktop_match_without_card(runner) -> bool:
+	var saved := _begin()
+	var session := _fresh()
+	session.finish_match(_record(1))
+	runner.check(not session.filled(), "NB5b fixture: a finished match alone leaves the card empty")
+	var downloads: Array = []
+	PlaytestSession.close_sitting(true, _recorder(downloads))
+	runner.check(downloads.is_empty() and _session_files().is_empty() and PlaytestSession.current == null, "NB5b the browser still drops a sitting with an empty card")
+	session = _fresh()
+	session.finish_match(_record(1))
+	PlaytestSession.close_sitting(false, _recorder(downloads))
+	var files := _session_files()
+	var filed: Variant = JSON.parse_string(FileAccess.get_file_as_string(sessions.path_join(files[0]))) if files.size() == 1 else null
+	runner.check(filed is Dictionary and filed.matches.size() == 1 and downloads.is_empty() and not FileAccess.file_exists(sessions.path_join("current.json")), "NB5b a desktop sitting with a match is filed even with an empty card, got %s" % [files])
 	_end(saved)
 	return true
 
