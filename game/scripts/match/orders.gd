@@ -164,7 +164,7 @@ func _back() -> void:
 		_screen._reshow()
 
 func _sub_grid_escape(event: InputEvent) -> bool:
-	if not _sub_grid or not event.is_action_pressed("deselect"): return false
+	if not _sub_grid or is_selecting() or not event.is_action_pressed("deselect"): return false
 	_back()
 	return true
 

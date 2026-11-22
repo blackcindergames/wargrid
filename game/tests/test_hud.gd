@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -855,8 +855,49 @@ func test_esc_in_the_frame_of_a_card_key(runner) -> bool:
 	overlays._key(runner, KEY_ESCAPE)
 	helper.key(main, HudModel.BUILD_KEY)
 	_esc_state(runner, main, "Esc then Q before any view: the deselect stands, Q opens nothing", "", false, [], false)
+	runner.check(main.hud.refusal == "Select a Bulldozer", "ES Esc then Q refuses with the builder's name, got '%s'" % main.hud.refusal)
 	overlays._key(runner, KEY_ESCAPE)
 	runner.check(main._pause.visible, "ES the Esc after that refused Q opens the menu")
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_and_back_in_one_frame(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var helper = BaseScene.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var start: Array = main.orders.selected_ids.duplicate()
+	helper.key(main, HudModel.BUILD_KEY)
+	overlays._key(runner, KEY_ESCAPE)
+	helper.key(main, KEY_V)
+	_esc_state(runner, main, "Esc then V: one layer, V finds no Back to press", "", false, start, false)
+	helper.key(main, HudModel.BUILD_KEY)
+	helper.key(main, KEY_V)
+	overlays._key(runner, KEY_ESCAPE)
+	_esc_state(runner, main, "V then Esc: two layers, no menu", "", false, [], false)
+	main.free()
+	overlays._end(saved)
+	return true
+
+func test_esc_during_a_drag_with_the_sub_grid_open(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var helper = BaseScene.new()
+	var saved: String = overlays._begin()
+	var main = await _esc_main(runner, overlays)
+	var from: Vector2 = main.get_node("WorldView").get_global_transform_with_canvas().affine_inverse() * Vector2(300, 300)
+	helper.key(main, HudModel.BUILD_KEY)
+	helper.pointer(main, from, MOUSE_BUTTON_LEFT, true)
+	var motion := InputEventMouseMotion.new()
+	motion.position = main.get_node("WorldView").get_global_transform_with_canvas() * from + Vector2(60, 40)
+	main._unhandled_input(motion)
+	var box: Control = main.get_node("HUD/SelectionBox")
+	runner.check(main.orders._sub_grid and main.orders.is_selecting() and box.visible, "ES drag fixture: sub-grid open, drag box shown")
+	overlays._key(runner, KEY_ESCAPE)
+	runner.check(not main.orders.is_selecting() and not box.visible and not main._pause.visible, "ES Esc during a drag cancels the drag and opens no menu")
+	_esc_state(runner, main, "Esc during a drag cancels it as before the sub-grid layer: the selection goes and the sub-grid closes with it", "", false, [], false)
+	helper.pointer(main, from, MOUSE_BUTTON_LEFT, false)
+	runner.check(main.orders.selected_ids.is_empty() and not box.visible, "ES the release after the cancelled drag selects nothing")
 	main.free()
 	overlays._end(saved)
 	return true
@@ -870,7 +911,7 @@ func test_esc_as_the_builder_dies(runner) -> bool:
 	helper.key(main, HudModel.BUILD_KEY)
 	main.driver.pump.live().remove_object(builder)
 	overlays._key(runner, KEY_ESCAPE)
-	runner.check(not main.orders._sub_grid and not main._pause.visible, "ES Esc in the step the builder died closes the sub-grid and opens no menu")
+	_esc_state(runner, main, "Esc in the step the builder died closes the sub-grid and keeps the selection until the next view", "", false, [builder], false)
 	BaseScene.publish(main)
 	_esc_state(runner, main, "the next view drops the dead builder", "", false, [], false)
 	overlays._key(runner, KEY_ESCAPE)
