@@ -118,18 +118,20 @@ Percent of the limit for a low-end device, estimated from this Mac (see the ledg
 
 **Tracked, no route under the limit yet**
 
-These areas are over their limit and no known change brings them under it yet, so they show only how they move: the last run against the median of the three runs before it, with a change inside the run-to-run spread shown as same. Stress = far more units than a real match; headroom = a real 3v3 match on this Mac. Every limit is in the ledger.
+These areas are over their limit and no known change brings them under it yet, so they show only how they move: the last run against the median of the three runs before it, with a change inside the run-to-run spread shown as same. Recent runs: one bar per run, oldest first; each step is about 5% above or below those runs' median. Stress = far more units than a real match; headroom = a real 3v3 match on this Mac. Every limit is in the ledger.
 
-| Area | Change on this Mac | As of |
-| --- | --- | --- |
-| Background upkeep, huge crowds (stress) | 3% slower since 2026-11-21, mean 1.99 ms (busy host) | 2026-11-22 |
-| Combat, huge battles (stress) | same as 2026-11-22, p95 3.00 ms (busy host) | 2026-11-22 |
-| Background upkeep, armies on the move (stress) | 3% slower since 2026-11-22, mean 1.34 ms (busy host) | 2026-11-22 |
-| Combat, big armies in the open (stress) | same as 2026-11-21, p95 1.99 ms (busy host) | 2026-11-22 |
-| Combat, big armies packed close (stress) | same as 2026-11-21, p95 1.96 ms (busy host) | 2026-11-22 |
-| 3v3 match, background upkeep (headroom) | 3% slower since 2026-11-21, mean 1.15 ms (busy host) | 2026-11-22 |
-| 3v3 match, simulation (headroom) | 3% slower since 2026-11-22, p95 2.25 ms (busy host) | 2026-11-22 |
-| 3v3 match, bots and simulation (headroom) | 3% slower since 2026-11-22, p95 2.98 ms (busy host) | 2026-11-22 |
+| Area | Latest on this Mac | Recent runs | vs recent runs | As of |
+| --- | --- | --- | --- | --- |
+| Background upkeep, huge crowds (stress) | mean 1.99 ms | ▄▄▄▄▄▄▄▅ | 🔺 3% slower | 2026-11-22 |
+| Combat, huge battles (stress) | p95 3.00 ms | ▄▄▄▄▄▄▄▅ | ➖ same, +3% (noise ±41%) | 2026-11-22 |
+| Background upkeep, armies on the move (stress) | mean 1.34 ms | ▄▄▄▄▄▄▄▅ | 🔺 3% slower | 2026-11-22 |
+| Combat, big armies in the open (stress) | p95 1.99 ms | ▄▄▄▄▄▄▄▅ | ➖ same, +6% (noise ±41%) | 2026-11-22 |
+| Combat, big armies packed close (stress) | p95 1.96 ms | ▄▄▄▄▄▄▄▅ | ➖ same, +6% (noise ±41%) | 2026-11-22 |
+| 3v3 match, background upkeep (headroom) | mean 1.15 ms | ▄▄▄▄▄▄▄▅ | 🔺 3% slower | 2026-11-22 |
+| 3v3 match, simulation (headroom) | p95 2.25 ms | ▄▅ | 🔺 3% slower | 2026-11-22 |
+| 3v3 match, bots and simulation (headroom) | p95 2.98 ms | ▄▅ | 🔺 3% slower | 2026-11-22 |
+
+The latest run of every tracked area was on a busy host.
 
 Details: [performance ledger](docs/reference/performance.md).
 <!-- perf-table:end -->
