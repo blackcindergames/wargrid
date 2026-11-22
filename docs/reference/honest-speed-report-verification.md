@@ -5,13 +5,13 @@ Plan: [honest speed report](../superpowers/plans/2026-11-21-honest-speed-report.
 ```text
 Resume record (updated 2026-11-22, Tasks 1 to 8 and the gate fix round committed; stopped at the gate)
 Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 1eb6a1d3 (Tasks 1 to 8 and the gate fix round committed), tree clean
-Last green task / next incomplete task: Gate (fix round done) / none; the advisory War Room round n14-speed-report waits for the owner
+Last green task / next incomplete task: Gate (fix round done) / none; the advisory War Room round n14-speed-report was retired on 2026-11-22 and its open questions answered directly ([design answers](design-answers-2026-11-08.md#low-end-report-loose-ends-user-2026-11-20))
 Changed paths since last commit: none after this file's own update
 Last command / cases / checks / failures / exit / marker: python3 -I gap12_digest.py deck / exit 0 / GAP12 DIGEST OK; six Deck pages, BENCH DONE and cross_origin_isolated=1 in all, TEAM MATCH identical (won tick=38786); no repo code changed; Deck folder removed
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: one local commit per green task (pre-authorized); no push, PR, merge or fly deploy; D3 and D4 at the SB6 plan; the plan's owner answers (user, 2026-11-21) all took the recommendations
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: owner answers the advisory round n14-speed-report and decides the merge; no implementation left
+Next exact action: none; merged 2026-11-22, round retired the same day
 ```
 
 ## Tasks

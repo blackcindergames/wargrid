@@ -1595,3 +1595,32 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-22,45daa17e,auto 45daa17e,dev,plumbing,team_match_pump:profile,1,,,1.1451,P1,2.64,log sha256:90bd73e81139
 2026-11-22,45daa17e,auto 45daa17e,dev,team_tick,team_match:profile,1,2.978,,1.587,P1,2.64,log sha256:90bd73e81139
 2026-11-22,45daa17e,auto 45daa17e,dev,step,team_match:profile,1,2.25,,1.4131,P1,2.64,log sha256:90bd73e81139
+2026-11-22,2fadde72,auto 45daa17e,dev,movement_tick,open,2,0.986,1.293,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,movement_tick,dense,2,0.99,1.228,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,open,2,1.994,2.52,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,dense,2,1.96,2.563,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,contact,2,1.286,1.781,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,skirmish3v3,2,1.441,1.637,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,transports,2,1.161,1.261,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,defences,2,0.802,2.171,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,docks,2,0.616,0.7,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,hordes300,2,3.003,3.482,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,ramp,2,0.672,1.233,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,combat_tick,frc,2,0.915,1.11,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,lockstep_overhead,contact,2,0.017,0.072,,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,movement_open:profile,2,,,1.3367,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,movement_dense:profile,2,,,1.3386,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,combat_contact:profile,2,,,0.3406,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,combat_skirmish3v3:profile,2,,,0.5463,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,combat_open:profile,2,,,0.9208,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,skirmish_match:profile,2,,,0.2524,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,large_196:profile,2,,,1.7488,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,combat_dense:profile,2,,,0.8042,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,combat_hordes300:profile,2,,,1.985,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,team_match:profile,2,,,1.1501,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,team_match_pump:profile,2,,,1.1553,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,team_tick,team_match:profile,2,2.962,,1.5869,P1,1.98,log sha256:7629801e0737
+2026-11-22,2fadde72,auto 45daa17e,dev,step,team_match:profile,2,2.241,,1.4137,P1,1.98,log sha256:7629801e0737
+2026-11-22,d5a60035,Deck frame goal main,deck-firefox,frame_cpu,team,1,31.32,35.34,,match-bench,1.33,log sha256:5cba1e6afbd0
+2026-11-22,d5a60035,Deck frame goal main,deck-firefox,frame_cpu,team,2,30.88,35.86,,match-bench,1.31,log sha256:d9d7cccf3177
+2026-11-22,d5a60035,Deck frame goal main,deck-firefox,frame_cpu,team,3,30.62,35.22,,match-bench,1.35,log sha256:ec85890bf797

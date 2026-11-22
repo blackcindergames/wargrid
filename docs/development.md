@@ -79,6 +79,8 @@ sh tools/run_checks.sh   # the five static gates at once, one PASS/FAIL line eac
 python3 -m unittest discover -s tools -p 'test_*.py'
 python3 tools/zh_ini.py dump   # Zero Hour INI blocks to build/zh_ini/inizh.jsonl (gitignored, never committed); needs the local retail archive
 python3 tools/zh_w3d.py dump   # Zero Hour model sizes (mesh boxes, body box, bone positions) to build/zh_w3d/w3d.jsonl (gitignored, never committed); needs the local retail archives
+python3 tools/zh_generals.py report   # what each Zero Hour general adds, removes and changes, from the INI dump, to build/zh_generals/ (gitignored, never committed)
+# In a worktree without its own dump: --dump ~/projects/wargrid/build/zh_ini/inizh.jsonl, and ZH_INI_DUMP=<same path> for tools/test_zh_generals.py, whose real-data test otherwise skips
 sh tools/run_python_checks.sh   # ruff format + lint, mypy, Python tests; creates `tools/.venv` with uv on the first run and updates it when `tools/requirements-dev.txt` changes (`tools/ensure_venv.sh`)
 sh tools/run_shell_checks.sh   # ShellCheck on every tracked *.sh (shellcheck-py from the same venv; .shellcheckrc)
 sh warroom/tools/quality.sh   # War Room's gate (Go and island checks); cd warroom && go run . open lists unanswered rounds
@@ -94,7 +96,7 @@ Python tooling: ruff and mypy are configured in `tools/pyproject.toml`, pinned i
 
 Profiling (report-only, never gates): `sh tools/run_profile.sh` prints per-zone timings for the benchmark workloads, the scripted skirmish match and a synthetic 196×196 map; the rendered benchmark takes `-- --profile` for the same zones plus a 196×196 leg. Results: [performance spike](reference/performance-spike.md).
 
-Milestone runs follow the reusable [milestone prompt](milestone-prompt.md) (resume record, restart at gates, pre-authorized local commits, gate reviews). Reviewers by day and by night: [coordinator rules](night-run.md#coordinator-rules). Token usage per session for the resume record: `python3 tools/session_usage.py <Claude session or Codex rollout files>`.
+Milestone runs follow the reusable [milestone prompt](milestone-prompt.md) (resume record, session start, pre-authorized local commits, stop conditions). Reviewers: [How a package runs](../AGENTS.md#how-a-package-runs). Token usage per session for the resume record: `python3 tools/session_usage.py <Claude session or Codex rollout files>`; `--lanes` prints the kickoff lane table.
 
 CI runs Linux and Windows and compares their replay traces. Workflow `CI` (`.github/workflows/ci.yml`) skips pushes that change only docs or Markdown; Dependabot (`.github/dependabot.yml`) proposes weekly updates for actions, Go modules, pip and Docker images, and `godot-release.yml` opens an issue when a newer Godot stable is out (Godot pins are bumped by hand). macOS was dropped from CI on 2026-11-03 because hosted macOS runners repeatedly failed to start within the job timeout; at each milestone gate compare this Mac against a CI run instead: `sh tools/compare_local_traces.sh RUN_ID` (runs the suite with all three trace paths, downloads that run's Linux and Windows traces with `gh`, prints `REPLAYS MATCHED 1200` per scenario).
 
