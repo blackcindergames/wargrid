@@ -2513,5 +2513,37 @@ func test_match_starts_with_builder_selected(runner) -> bool:
 	main._restart()
 	start = start_unit_id(main)
 	runner.check(start != -1 and main.orders.selected_ids == [start], "SS2 rematch: the restart selects the new start builder %d, got %s" % [start, main.orders.selected_ids])
+	main.driver.pump.live().remove_object(start)
+	BaseScene.tick(main)
+	runner.check(main.orders.selected_ids.is_empty() and not main.get_node("HUD/Economy/Card").is_visible_in_tree(), "SS7 the start builder dying in the first step: nothing selected, no card, got %s" % str(main.orders.selected_ids))
+	var screen: Script = main.get_script()
+	var factions: Dictionary = screen.factions
+	screen.factions = {1: "frc", 2: "usa"}
+	main._restart()
+	screen.factions = factions
+	start = start_unit_id(main)
+	runner.check(start != -1 and main.orders.selected_ids == [start] and main.driver.pump.live().snapshot().entities.any(func(unit: Dictionary) -> bool: return unit.id == start and unit.kind == "frc_builder"), "SS8 an FRC start selects its Laborer %d, got %s" % [start, main.orders.selected_ids])
 	main.free()
+	await _start_waits_for_orders(runner)
 	return true
+
+# Only a seat that takes orders gets the start selection; it waits for the first view that does.
+func _start_waits_for_orders(runner) -> void:
+	for holder: String in ["note", "result", "freeze"]:
+		var main = await _setup(runner)
+		if holder == "note": main.get_node("HUD/Playtest/MarkerDialog").show()
+		elif holder == "result": _victory(main)
+		else:
+			_frozen_arena(main).pump.fail_next = true
+			BaseScene.tick(main)
+		var start: int = start_unit_id(main)
+		runner.check(start != -1, "SS9 fixture: the seat under the %s owns a start builder" % holder)
+		runner.check(not main.orders.takes_orders(), "SS9 fixture: the %s holds the match" % holder)
+		main.orders.reset()
+		main._reshow()
+		runner.check(main.orders.selected_ids.is_empty(), "SS9 a start view under the %s selects nothing, got %s" % [holder, main.orders.selected_ids])
+		if holder == "note":
+			main.get_node("HUD/Playtest/MarkerDialog").hide()
+			main._reshow()
+			runner.check(main.orders.selected_ids == [start], "SS9 the note closed, the next view selects the start builder %d, got %s" % [start, main.orders.selected_ids])
+		main.free()

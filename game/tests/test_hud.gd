@@ -462,6 +462,12 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	runner.check(_delta(main) == MINUS + str(Registry.kind("china_light_vehicle").cost) and _part(main.hud, "TopStrip", "Power").text == power, "TS6 hovering a unit previews its cost and leaves the power, got '%s' '%s'" % [_delta(main), _part(main.hud, "TopStrip", "Power").text])
 	_select(main, ids.tanks)
 	runner.check(_delta(main) == "", "TS6 the item cell turned Attack Move under the pointer ends the preview, got '%s'" % _delta(main))
+	for pair: Array in [[ids.tanks, "A", "attack_move"], [ids.tanks, "S", "stop"], [[ids.builder], "Q", "build"]]:
+		_select(main, pair[0])
+		var command: Button = main.get_node("HUD/Economy/Card/" + pair[1])
+		command.mouse_entered.emit()
+		runner.check(command.get_meta("action") == pair[2] and _delta(main) == "" and not _previewing(main.hud), "TS6 hovering the %s command cell previews nothing, got '%s'" % [pair[2], _delta(main)])
+		command.mouse_exited.emit()
 	main.free()
 	var skirmish = SkirmishTests.new()
 	main = await skirmish._setup(runner)
@@ -497,12 +503,15 @@ func test_build_button_hover_inset(runner) -> bool:
 	for look: String in ["hover", "pressed", "hover_pressed"]:
 		var style: StyleBoxFlat = plant.get_theme_stylebox(look) as StyleBoxFlat
 		runner.check(style != null and style.border_color == _token("muted") and style.border_width_left == 1 and style.border_width_bottom == 1 and style.bg_color == plain.bg_color, "SL9 a build cell's %s look is the queue rows' 1 px muted inset" % look)
+	runner.check(plant.mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND, "SL9 a ready cell takes the pointing hand")
 	plant.pressed.emit()
 	var armed: StyleBoxFlat = plant.get_theme_stylebox("hover") as StyleBoxFlat
 	runner.check(plant.theme_type_variation == &"HudButtonArmed" and armed.border_color == _token("sel") and armed.border_width_left == 2, "SL9 the armed build cell keeps its cyan look under the pointer")
+	runner.check(plant.mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND, "SL9 an armed cell keeps the pointing hand")
 	var well: Button = main.get_node("HUD/Economy/Card/S")
 	var fill: StyleBoxFlat = well.get_theme_stylebox("normal") as StyleBoxFlat
 	runner.check(fill.bg_color == Color("#0f1820") and fill.border_color == _token("line") and fill.border_width_left == 1 and fill.border_width_bottom == 1 and well.get_theme_stylebox("hover") == fill, "SL9 a well: the page's #0f1820 with a 1 px line outline (3-14), no hover look")
+	runner.check(well.mouse_default_cursor_shape == Control.CURSOR_ARROW, "SL9 a well keeps the arrow")
 	main.orders._clear_placement()
 	main._refresh()
 	runner.check((plant.get_theme_stylebox("hover") as StyleBoxFlat).border_color == _token("muted"), "SL9 disarmed, the inset comes back")
@@ -1511,32 +1520,53 @@ func test_card_click_equals_key(runner) -> bool:
 	var well: Button = main.get_node("HUD/Economy/Card/W")
 	_click(runner, well.get_global_rect().get_center())
 	runner.check(main.driver.queued().is_empty() and not main.orders._sub_grid and well.mouse_filter == Control.MOUSE_FILTER_IGNORE, "CD2 a click on a well does nothing")
-	_click(runner, _cell(main, "build").get_global_rect().get_center())
+	_key_then_click(runner, main, _cell(main, "build"), "Build")
 	runner.check(main.orders._sub_grid, "CD2 a click on Build opens the sub-grid")
 	await _frames(runner)
-	_click(runner, _cell(main, "china_power_plant").get_global_rect().get_center())
+	_key_then_click(runner, main, _cell(main, "china_power_plant"), "Power Plant")
 	runner.check(main.orders._placement_kind == "china_power_plant", "CD2 a click on Power Plant arms it")
-	_click(runner, _cell(main, "back").get_global_rect().get_center())
+	_key_then_click(runner, main, _cell(main, "back"), "Cancel")
 	runner.check(main.orders._placement_kind.is_empty() and main.orders._sub_grid, "CD2 a click on Cancel ends the placement, the sub-grid stays")
-	_click(runner, _cell(main, "back").get_global_rect().get_center())
+	_key_then_click(runner, main, _cell(main, "back"), "Back")
 	runner.check(not main.orders._sub_grid and _cell(main, "build") != null, "CD2 a click on Back closes the sub-grid")
 	_select(main, ids.collectors)
 	await _frames(runner)
-	_click(runner, _cell(main, "stop").get_global_rect().get_center())
+	_key_then_click(runner, main, _cell(main, "stop"), "Stop")
 	runner.check(_queued(main, "stop").size() == 1 and _queued(main, "stop")[0].entity_ids == ids.collectors, "CD2 a click on the collectors' Stop sends one stop, got %s" % [_queued(main, "stop")])
 	_select(main, [ids.car])
 	await _frames(runner)
-	_click(runner, _cell(main, "attack_move").get_global_rect().get_center())
+	_key_then_click(runner, main, _cell(main, "attack_move"), "Attack Move")
 	runner.check(main.orders._attack_move_mode and _cell(main, "attack_move").theme_type_variation == &"HudButtonArmed", "CD2 a click on Attack Move arms it, the cell cyan")
-	_click(runner, _cell(main, "unload").get_global_rect().get_center())
+	_key_then_click(runner, main, _cell(main, "unload"), "Unload")
 	runner.check(_queued(main, "unload").size() == 1 and _queued(main, "unload")[0].target_id == ids.car and not main.orders._attack_move_mode, "CD2 a click on Unload unloads the car and disarms, got %s" % [_queued(main, "unload")])
 	_select(main, [], ids.factory)
 	await _frames(runner)
-	_click(runner, _cell(main, "china_light_vehicle").get_global_rect().get_center())
+	_key_then_click(runner, main, _cell(main, "china_light_vehicle"), "Medium Tank")
 	var made: Array = _queued(main, "produce")
 	runner.check(made.size() == 1 and made[0].unit_kind == "china_light_vehicle" and made[0].building_id == ids.factory, "CD2 a click on the factory's Q cell queues a Medium Tank, got %s" % [made])
 	main.free()
 	return true
+
+# Presses the cell by its key, rewinds the orders and the queue, then clicks it: both must leave the same.
+static func _key_then_click(runner, main, cell: Button, what: String) -> void:
+	var queued: int = main.driver.queued().size()
+	var before: Array = _press_state(main, queued)
+	BaseScene.new().key(main, HudModel.GRID_KEYS[cell.get_index()])
+	var by_key: Array = _press_state(main, queued)
+	main.orders.selected_ids.assign(before[0])
+	main.orders.selected_building_id = before[1]
+	main.orders._sub_grid = before[2]
+	main.orders._placement_kind = before[3]
+	main.orders._set_attack_move(before[4])
+	main.driver.queued().resize(queued)
+	main._refresh()
+	_click(runner, cell.get_global_rect().get_center())
+	var by_click: Array = _press_state(main, queued)
+	runner.check(by_key != before and by_key == by_click, "CD2 %s: its key and its click do the same, got key %s click %s" % [what, by_key, by_click])
+
+static func _press_state(main, queued: int) -> Array:
+	var orders = main.orders
+	return [orders.selected_ids.duplicate(), orders.selected_building_id, orders._sub_grid, orders._placement_kind, orders._attack_move_mode, main.driver.queued().slice(queued)]
 
 # hud-v5-layout "Command card": cells at x W-420+104i, y H-196+64r, 100x60; the slab hugs from the top row, 8 above it.
 func test_card_lattice(runner) -> bool:
@@ -1612,6 +1642,11 @@ static func _name_centre(button: Button) -> float:
 	var rect: Rect2 = button.get_global_rect()
 	return rect.position.y + (style.get_margin(SIDE_TOP) + rect.size.y - style.get_margin(SIDE_BOTTOM)) / 2.0
 
+static func _chip_ends_inside(runner, cell: Button, what: String) -> void:
+	var box: Rect2 = cell.get_global_rect()
+	var chip: Rect2 = (cell.get_node("Chip") as Control).get_global_rect()
+	runner.check(chip.size.x >= 18.0 and is_equal_approx(chip.size.y, 18.0) and is_equal_approx(chip.end.x, box.end.x - 8.0) and chip.position.x >= box.position.x + 8.0, "SL7 %s: the chip ends 8 inside the right edge and stays in the cell, got %s in %s" % [what, chip, box])
+
 static func _on_the_name_line(runner, button: Button, part: String, label: String) -> void:
 	var centre: float = (button.get_node(part) as Control).get_global_rect().get_center().y
 	runner.check(absf(centre - button.get_global_rect().get_center().y) <= 1.0 and absf(centre - _name_centre(button)) <= 1.0, "SL7 %s: %s centred on the button %.1f and its name %.1f, got %.1f" % [label, part, button.get_global_rect().get_center().y, _name_centre(button), centre])
@@ -1633,6 +1668,20 @@ func test_right_labels_on_the_name_line(runner) -> bool:
 	var back_cell: Button = main.get_node("HUD/Economy/Card/V")
 	var back: Rect2 = (back_cell.get_node("Name") as Control).get_global_rect()
 	runner.check(is_equal_approx(back.get_center().y, back_cell.get_global_rect().position.y + 42.0) and (back_cell.get_node("Name") as Label).get_theme_font_size("font_size") == 13, "SL7 a command's 13 px name centres in its 28 px line, got %s" % back)
+	runner.check(back_cell.tooltip_text == "Back · V or Esc" and tower.tooltip_text.is_empty(), "SL7 Back's tooltip names Esc beside its V, other cells none, got '%s' '%s'" % [back_cell.tooltip_text, tower.tooltip_text])
+	_chip_ends_inside(runner, main.get_node("HUD/Economy/Card/W"), "the widest letter W")
+	var platform: Callable = HudModel.layout_label
+	HudModel.layout_label = func(_physical: Key) -> Key: return KEY_APOSTROPHE
+	main.hud.reset()
+	main._refresh()
+	await _frames(runner)
+	_chip_ends_inside(runner, tower, "a layout's multi-character label")
+	HudModel.layout_label = platform
+	main.hud.reset()
+	main._refresh()
+	await _frames(runner)
+	chip = (tower.get_node("Chip") as Control).get_global_rect()
+	runner.check(chip.size == Vector2(18, 18) and is_equal_approx(chip.end.x, cell.end.x - 8.0), "SL7 back to a one-letter label the chip shrinks to 18 px at its right edge, got %s" % chip)
 	_select(main, [], ids.factory)
 	_queue_of(main, ids.factory, 3)
 	await _frames(runner)

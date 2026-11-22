@@ -92,11 +92,11 @@ func reset() -> void:
 	_dragged = false
 	_start_pending = true
 
-# Online the seat owns nothing until its choose_faction step, so the start is the first view it owns anything in (3-6).
+# Online the seat owns nothing until its choose_faction step, so the start is the first view it owns anything in and takes orders in (3-6).
 func select_start(state: Dictionary) -> void:
 	var seat: int = _screen.local_player
 	var units: RefCounted = state.units
-	if not _start_pending or (not units.owner.has(seat) and not state.get("buildings", []).any(func(found: Dictionary) -> bool: return found.owner == seat)): return
+	if not _start_pending or not takes_orders() or (not units.owner.has(seat) and not state.get("buildings", []).any(func(found: Dictionary) -> bool: return found.owner == seat)): return
 	_start_pending = false
 	if escape_pending(): return
 	var kind: String = Registry.faction(HudModel.player(state, seat).get("faction", Registry.Factions.DEFAULT_FACTION)).get("start_unit", "")

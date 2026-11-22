@@ -319,7 +319,14 @@ func _build_card() -> void:
 		cell.mouse_entered.connect(_hover_cell.bind(cell, true))
 		cell.mouse_exited.connect(_hover_cell.bind(cell, false))
 		_cell_label(cell, "Cost", &"HudNumber", Vector2(CELL_PAD.x, CELL_PAD.y), Vector2(CELL.x - 2.0 * CELL_PAD.x - 22.0, CELL_LINE))
-		_cell_label(cell, "Chip", &"HudKey", Vector2(CELL.x - CELL_PAD.x - 18.0, CELL_PAD.y + 1.0), Vector2(18, 18)).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var key: Label = _cell_label(cell, "Chip", &"HudKey", Vector2(0, CELL_PAD.y + 1.0), Vector2(18, 18))
+		key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		# A wide glyph or a layout's multi-character label grows the chip leftward, so it never leaves the cell.
+		key.anchor_left = 1.0
+		key.anchor_right = 1.0
+		key.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		key.offset_left = -CELL_PAD.x - 18.0
+		key.offset_right = -CELL_PAD.x
 		var name_label: Label = _cell_label(cell, "Name", &"HudRow", Vector2(CELL_PAD.x, NAME_TOP), Vector2(CELL.x - 2.0 * CELL_PAD.x, COMMAND_LINE))
 		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		# Item names keep the page's 14 px line pitch, so two lines end inside the cell.
@@ -460,6 +467,7 @@ func _fill_cell(cell: Button, action: String, selection: Dictionary, credits: in
 	var name_label: Label = cell.get_node("Name")
 	_name_form(name_label, item)
 	var words: String = "" if action.is_empty() else HudModel.cell_name(action, selection.placement_kind)
+	cell.tooltip_text = "%s · %s or Esc" % [words, (cell.get_node("Chip") as Label).text] if action == "back" else ""
 	if name_label.text != words:
 		name_label.text = words
 		name_label.reset_size()
@@ -487,6 +495,7 @@ func _cell_look(cell: Button, look: StringName) -> void:
 		elif look == &"ready" and state != "normal": cell.add_theme_stylebox_override(state, _inset)
 		else: cell.remove_theme_stylebox_override(state)
 	cell.mouse_filter = MOUSE_FILTER_IGNORE if look == &"well" else MOUSE_FILTER_STOP
+	cell.mouse_default_cursor_shape = CURSOR_ARROW if look == &"well" else CURSOR_POINTING_HAND
 
 func _press_cell(cell: Button) -> void:
 	var action: String = cell.get_meta("action")

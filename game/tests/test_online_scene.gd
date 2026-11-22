@@ -2255,7 +2255,7 @@ func test_match_starts_with_builder_selected(runner) -> bool:
 	start = SkirmishScene.start_unit_id(main)
 	live.remove_object(start)
 	BaseScene.publish(main)
-	runner.check(main.orders.selected_ids.is_empty(), "SS5 start builder gone before the first view: nothing selected, got %s" % str(main.orders.selected_ids))
+	runner.check(main.orders.selected_ids.is_empty() and not main.get_node("HUD/Economy/Card").is_visible_in_tree(), "SS5 start builder gone before the first view: nothing selected, no card, got %s" % str(main.orders.selected_ids))
 	live.spawn(2, Vector2(20.5, 20.5), "usa_builder")
 	BaseScene.publish(main)
 	runner.check(main.orders.selected_ids.is_empty(), "SS5 a later builder is never the start selection, got %s" % str(main.orders.selected_ids))
@@ -2271,5 +2271,18 @@ func test_match_starts_with_builder_selected(runner) -> bool:
 	_peer_packets(online.transport, 1, 4, PEER_TICKS)
 	_run(main, 8)
 	runner.check(main.orders.is_selecting() and main.orders.selected_ids.is_empty(), "SS6 a drag begun before the start view keeps the player's selection, got %s" % str(main.orders.selected_ids))
+	main.free()
+
+	online = await _online(runner, 2)
+	main = online.main
+	var note: Control = main.get_node("HUD/Playtest/MarkerDialog")
+	note.show()
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	start = SkirmishScene.start_unit_id(main)
+	runner.check(start != -1 and main.orders.selected_ids.is_empty(), "SS9 online: the seat's first view under an open note selects nothing, got %s" % str(main.orders.selected_ids))
+	note.hide()
+	_run(main, 1)
+	runner.check(main.orders.selected_ids == [start], "SS9 online: the note closed, the start builder %d is selected, got %s" % [start, main.orders.selected_ids])
 	main.free()
 	return true
