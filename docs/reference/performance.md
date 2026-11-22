@@ -16,8 +16,8 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 129% | 🔺 2% worse | 2026-11-22 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔻 6% better | 2026-11-22 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔻 3% better | 2026-11-21 |
-| Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 3% better | 2026-11-21 |
+| Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-22 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔻 4% better | 2026-11-22 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔻 1% better | 2026-11-22 |
 | Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔻 18% better | 2026-11-22 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 26% | 🔻 25% better | 2026-11-22 |
@@ -34,8 +34,8 @@ Details:
 - combat stress p95: 164% of budget, exceeded (P7 part 1 enemy bots, 2026-11-22), unchanged vs auto 45daa17e (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 143% of budget, exceeded (P7 part 1 enemy bots, 2026-11-22), 3% faster than auto 45daa17e (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 212% of budget, exceeded (P7 part 1 enemy bots, 2026-11-22), 3% faster than auto 45daa17e (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 73% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 74% of budget (tooling-night merge, 2026-11-21), 3% faster than P2.3a1 gate C (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 73% of budget (P7 part 1 enemy bots, 2026-11-22), 1% faster than tooling-night merge (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 71% of budget (P7 part 1 enemy bots, 2026-11-22), 4% faster than tooling-night merge (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (P7 part 1 enemy bots, 2026-11-22), 4% faster than auto 45daa17e (worst vs worst); run-to-run spread not measured
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
