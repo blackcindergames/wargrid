@@ -1606,3 +1606,21 @@ Plan not written; private input `p15-data.md`.
 - **Terrorist for bots (15-9):** not in the bots' barracks list, human only for now (user, 2026-11-21).
 - **Kind-row cap (15-10):** first in the package, roster order unchanged (user, 2026-11-21).
 - **Card slot (15-11):** the heavy goes last on the factory card, keys stay put (user, 2026-11-21).
+
+## Hybrid economy frame (user, 2026-11-22)
+
+Input: the owner's brief on a hybrid economy with strategic locations (private `research/hybrid-economy-brief-2026-11-22.md`), critiqued and answered in a 12-question round; facts and open questions in [late-game income](../questions/next-economy-late-income.md). This is the frame for a design proposal, not a package: nothing is built from this section alone.
+
+- **Three layers:** finite supply piles with collectors stay the primary economy, as Zero Hour; capturable income points add a territorial economy; capped passive income (Supply Drop Zone, Hackers and Black Market in ground batch A) keeps players alive after the piles run out (user, 2026-11-22).
+- **Principle, a floor and not parity:** a player who ignores points keeps a working economy and stays a useful teammate in 3v3, but an equal opponent who holds them is ahead. Essential units and technologies never require holding a point (user, 2026-11-22).
+- **Baseline in two steps:** step 1 is Zero Hour's oil derrick as it is, fixed pay with nothing built on it (200 every 12 s, `civilianbuilding.ini:25108-25111`), measured in bot matches and a playtest; step 2, a post built and upgraded on the point (the Dawn of War reference), is designed with those numbers in hand (user, 2026-11-22).
+- **Income target, measure first:** no number yet. The brief's +15 % for one point and +30 % for two are dropped as a target because they had no baseline; a Zero Hour derrick is about 35 % of one working depot's 2,880 per minute (inferred). Bot matches measure how far holding half the points swings a game, and the design then states the target as a share of total income (user, 2026-11-22).
+- **Pay per extra point:** flat in step 1, as Zero Hour; falling returns (the Zero-K overdrive pattern) only if the measurement shows the leader running away (user, 2026-11-22).
+- **Team pay:** a point pays only the player who holds it, as Zero Hour (user, 2026-11-22).
+- **Capture rule:** any infantry, no upgrade, with a set capture time that pauses while an enemy unit stands nearby. A recorded departure from Zero Hour's 1,000 upgrade and 23 s channel (`upgrade.ini:163-166`, `specialpower.ini:491-493`), because points must be cheap to take and retake all match (user, 2026-11-22). Time and radius are open.
+- **Passive cap rule:** a player's capped passive income in total stays clearly below one working depot, so points still matter late. The brief's four Supply Drop Zones pay 3,000 per minute together (inferred from 750 each), which is too many under this rule. Counts per faction are open (question file Q8 to Q11) and would revise the uncapped ground batch A answer (user, 2026-11-22).
+- **Caches:** the first experiment once the baseline plays well: a neutral point builds up a capped bonus, paid to whoever captures it, a variation of the derrick's one-time 1,000 (`AutoDepositUpdate.cpp:120-141`) (user, 2026-11-22).
+- **Networks parked:** trade routes, hubs and link raids are neither designed nor prototyped; revisit only after capture points have been playtested, since they need authored maps, a link display and bots that reason about a graph (user, 2026-11-22).
+- **Research:** the four engines with local source (Zero Hour, Warzone 2100, Zero-K, OpenRA) plus one fetched primary source for Dawn of War's strategic points and listening posts; Company of Heroes is left out (user, 2026-11-22).
+- **Placement:** a Later item of its own, Fight over income points, split from map life; the design proposal says what it needs (capture, fog or not, bots, maps) and the owner places it then (user, 2026-11-22).
+- **Open for the design:** where points sit on each map (Ashfall has 8 derrick spots, the others were not found), a point whose building dies, a leaver's points, how bots take and contest points, the HUD's income display, the faction look, and every number above.

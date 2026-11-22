@@ -8,6 +8,8 @@ Already decided, not asked again: secondary income is needed once the boxes run 
 
 Direction (user, 2026-11-22, later the same day): the design should combine Dawn of War 1 and 2's requisition from captured points with listening posts, elements from Warzone 2100 and Zero-K, and ideas of Wargrid's own, to make Zero Hour's income more fun. A direction for the design session, not an answer to any question below; Dawn of War still has no local source, so its rules need a primary source before they are used as numbers.
 
+Answered in part (user, 2026-11-22; [hybrid economy frame](../reference/design-answers-2026-11-08.md#hybrid-economy-frame-user-2026-11-22)): Q1 piles, points and capped passives together (nearest option b, with piles staying primary); Q2 a for step 1, b for step 2; Q4 b, but only as step 2; Q5 not set, measured in bot matches first; Q6 b; Q7 piles stay finite (whether an empty pile refills a little, option b, was not asked); Q8 to Q11 get the rule that capped passive income in total stays clearly below one working depot, counts open. Still open: Q3, the counts in Q8 to Q11, Q12 to Q15.
+
 ## Findings (short, cited)
 
 Zero Hour supply (finite):
