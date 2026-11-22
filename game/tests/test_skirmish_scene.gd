@@ -992,7 +992,7 @@ func test_auto_pick_samples_present_time(runner) -> bool:
 	main.free()
 	return true
 
-const HUD_TEXTS: Array[String] = ["Rifleman · 156 / 180 · ", "Supply Helicopter · 300 / 300 · WAITING AT PILE", "Supply Helicopter · 300 / 300 · TO PILE", "Bulldozer · 250 / 250 · ", "Rifleman · 180 / 180 · ", "Headquarters · 5000 / 5000 · "]
+const HUD_TEXTS: Array[String] = ["Rifleman · 146 / 180 · ", "Supply Helicopter · 300 / 300 · WAITING AT PILE", "Supply Helicopter · 300 / 300 · TO PILE", "Bulldozer · 250 / 250 · ", "Rifleman · 180 / 180 · ", "Headquarters · 5000 / 5000 · "]
 
 static func _panel_text(main, part: String) -> String:
 	var label: Label = main.get_node("HUD/Hud/SelectionPanel").find_child(part, true, false)

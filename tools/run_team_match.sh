@@ -9,6 +9,6 @@ code=$?
 cat "$log_dir/match.log"
 [ "$code" -eq 0 ] || exit 1
 if grep -E 'ERROR:|SCRIPT ERROR:' "$log_dir/match.log"; then exit 1; fi
-# Pinned outcome: won inside the 45000 cap; re-pinned for staggered bots and the route-cell path budget (Flatter worst ticks).
-grep -Eq '^TEAM MATCH won tick=38786 winner=2 units_peak=268$' "$log_dir/match.log" || exit 1
+# Pinned outcome: equal team mirror, ongoing at the 45000 cap since BR8's group speed (exempt from the end bar, user 2026-11-22).
+grep -Eq '^TEAM MATCH cap tick=45000 winner=null units_peak=313$' "$log_dir/match.log" || exit 1
 grep -Eq '^TEAM PATHS PASS ' "$log_dir/match.log" || exit 1

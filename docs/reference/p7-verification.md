@@ -3,16 +3,16 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-22 after T1-8c)
+Resume record (updated 2026-11-22 after T1-10)
 Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 (2026-11-22, approved by the owner), order step 1 committed 8b292146 / T1-8a BR7 committed after this record
-Last green task / next incomplete task: T1-8c bot debug lines / T1-10 re-pin
+Last green task / next incomplete task: T1-10 re-pin / T1-9 2v2 trace
 Changed paths since last commit: none after the BR7 commit
-Last command / cases / checks / failures / exit / marker: full suite on T1-8c (build/suite-t18c-final.log) CASES 1370 CHECKS 153122 FAILURES 11 / exit 1 / no TESTS PASSED (red ledger row T1-8f); `sh tools/run_checks.sh` CHECKS PASSED 5
-Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
-Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Fm1 winner at T1-10, Overlord affordability under BR7's lapse (below)
+Last command / cases / checks / failures / exit / marker: full suite on T1-10 (build/t110-suite.log) CASES 1370 CHECKS 153121 FAILURES 0 / exit 0 / TESTS PASSED 153121; `sh tools/run_checks.sh` CHECKS PASSED 5
+Known red case or blocker: none (red ledger cleared at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
+Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: T1-10 re-pin; after part 1's gate P2.3b comes before part 2 (user, 2026-11-22)
+Next exact action: T1-9 2v2 trace, then T1-11 docs and the gate; after part 1's gate P2.3b comes before part 2 (user, 2026-11-22)
 ```
 
 ## Red ledger
@@ -30,6 +30,7 @@ Next exact action: T1-10 re-pin; after part 1's gate P2.3b comes before part 2 (
 | T1-8d | Same nine names as T1-8a. Values moved: TB3 digest c7bce6cedaadb001 to ebf1b1b82ccc0f12; TB4 team core series to 3677847588803602532; S1 core series to 1486928065811848988; S1 pinned outcome (9256 to 10043, winner 1, inside 7000-17999); Fm1 (30056 to 27018, winner 2); Cs1 (23362 to 20771, winner 1). Unchanged: VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10) |
 | T1-8e | Same nine names as T1-8d. Values moved: TB3 digest ebf1b1b82ccc0f12 to 961a50b34e9e5358; TB4 team core series to 8274204117302765247. Unchanged: S1 core series, S1 pinned outcome (10043, winner 1), Fm1 (27018, winner 2), Cs1 (20771, winner 1), VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10) |
 | T1-8f | The nine names of T1-8e plus S1 terminal inside the six-minute window and S1 economy, production and combat (S1 no longer ends; owner decision below). Values moved: TB3 digest 961a50b34e9e5358 to f3d2dab4fc4a0a4a; TB4 team core series to 5940764765599406711; S1 core series to 2416494683122998182; S1 pinned outcome (10043, winner 1 to -1 ongoing at 18,000); Fm1 (27018 to 14038, winner 2); Cs1 (20771 to 23750, winner 1). Unchanged: VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10; the two S1 checks change rule there) |
+| T1-10 | none: every name above re-pinned to its T1-8f value; S1 pins ongoing at the cap | done |
 
 ## Evidence
 
@@ -423,3 +424,11 @@ Full suite on the final tree (`build/suite-gs.log`): CASES 1362 CHECKS 153084 FA
 Design: [short design](../superpowers/specs/2026-11-22-p7-bot-debug-lines-design.md), one line per bot (user, 2026-11-22). Offline matches against bots only: with F3 open the offline driver asks the pump every 30 ticks for `Skirmish.debug_lines`, which reads bot memory without creating any; the online driver never asks. Example (BL1, after wave 0): `Bot 2 usa | W1 in 89s | ready 7,875/6,372 | home 3i/8v | $475 | B:Rifleman F:- | ->Headquarters#2`. `_form`'s objective and guard scan is shared through `_scan_target`, so the shown target is the one the wave waits for.
 
 Tree `3fa379ed` plus the change. Red first: BL1-BL4 and PO20 (12 failures before the code), the fix round's tests (8 failures before the fix). Full suite (`build/suite-t18c-final.log`): CASES 1370 CHECKS 153122 FAILURES 11, the `FAIL:` lines identical to the baseline at `3fa379ed` (red ledger row T1-8f, names and values); `sh tools/run_checks.sh` CHECKS PASSED 5. Worst-case line (longest producer and unit names of the three factions, `$999,999`, `late 999/60s`) 905 px; inside every `HUD_SIZES` viewport and clear of the HUD panels (PO3), also beside the open playtest checklist and form (PO21); the first worst-case line, with the command centre and supply producers, measured about 1,292 px, so the line lists army producers only. Reviews: Opus (no blocking finding; taken: worst case from real names, refresh every 30 ticks so F3's own step p95 stays clean, stronger BL1 and BL4) and player-experience (taken: labels `ready`, `home`, `in`, `late`, field order timer first, the guide's leave rule, no stale line on reopening F3, `development.md` F3 line); not taken: a guard marker after the target and a BR7 hold marker (for the next window check if it still asks why). `/ponytail-review`: one cut (-4 lines in `_form`), suite re-run as above.
+
+### T1-10 Re-pin
+
+Tree `5ee0f677` plus the re-pin. Every value is the T1-8f row's: TB3 `FINAL_DIGEST` f3d2dab4fc4a0a4a, TB4 `TEAM_CORE_SERIES` 5940764765599406711, Fm1 14038 winner 2, Cs1 23750 winner 1, VR1 digest 0f6f0648…1370, HUD1 first rifleman 146/180. S1 follows the owner's decision (T1-8f): its outcome check pins ongoing at the 18,000 cap, the six-minute window check is gone, the economy, production and combat check counts first events up to the cap, and the core series runs over the same 18,000 ticks (new pin 131957631752344359). Outside the suite: netplay `match` and `rematch` end at 8,997 (was 9,013, inside 7000-17999); the 3v3 team match (USA, China and FRC on each side, Ashfall) no longer ends: `TEAM MATCH cap tick=45000 winner=null units_peak=313` (was won 38,786 winner 2), pinned as an equal team mirror under the BR8 probe's exemption.
+
+Decided for you (reversible): the team match counts as an equal mirror (same three bots on each side), so its cap outcome is pinned rather than stopped on; S1's core series covers the cap instead of a terminal tick it no longer has.
+
+Checks on that tree: full suite (`build/t110-suite.log`) CASES 1370 CHECKS 153121 FAILURES 0, exit 0, `TESTS PASSED 153121` (one check fewer: the window check); `sh tools/run_netplay.sh match` `NETPLAY PASSED match 13.6 s`, `rematch` `NETPLAY PASSED rematch 20.2 s`; `sh tools/run_team_match.sh` exit 0, `TEAM PATHS PASS`; `sh tools/run_shell_checks.sh` exit 0; `sh tools/run_checks.sh` CHECKS PASSED 5. Not run: `proxy-clean`, `proxy-burst` (need `WARGRID_NETFAULT_BIN`; CI covers them).
