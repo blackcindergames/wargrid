@@ -309,6 +309,12 @@ static func _armed(kind: String, bright: bool = false, notice: String = "") -> D
 	var ids: Array[int] = []
 	return {"ids": ids, "building_id": -1, "inspected_id": -1, "placement_kind": kind, "resume_id": -1, "notice": notice, "bright_owners": bright, "over": false, "esc_opens_menu": true, "attack_move": false}
 
+# Placement closes the moment its builder is gone, so an armed placement needs a selected one.
+func _select_new_builder(main) -> void:
+	var builder: int = main.driver.pump.live().spawn(main.local_player, Vector2(9.5, 10.5), "usa_builder")
+	BaseScene.publish(main)
+	main.orders.selected_ids.assign([builder])
+
 func _bare_hud(runner) -> Hud:
 	var port := SubViewport.new()
 	port.size = Vector2i(1280, 720)
@@ -424,6 +430,7 @@ func _forecast_follows_the_placement(runner) -> void:
 	var skirmish = SkirmishTests.new()
 	main = await skirmish._setup(runner)
 	skirmish._arena(main)
+	_select_new_builder(main)
 	main.orders._placement_kind = "usa_power_plant"
 	main._refresh()
 	runner.check(_forecasting(main.hud), "TS2 the arena previews while armed")
@@ -432,6 +439,7 @@ func _forecast_follows_the_placement(runner) -> void:
 	main.free()
 	var online: Dictionary = await OverlayTests.new()._online(runner)
 	main = online.main
+	_select_new_builder(main)
 	main.orders._placement_kind = "usa_power_plant"
 	main._refresh()
 	runner.check(_forecasting(main.hud), "TS2 online: the strip previews while armed")
@@ -796,6 +804,7 @@ func test_esc_chip_only_when_esc_opens_the_menu(runner) -> bool:
 	main._refresh()
 	await _esc_matches_chip(runner, main, "a selection", false)
 	await _esc_matches_chip(runner, main, "after Esc backed out of the selection", true)
+	main.orders.selected_ids.assign([own])
 	main.orders._placement_kind = "usa_power_plant"
 	main._refresh()
 	await _esc_matches_chip(runner, main, "an armed placement", false)
@@ -1077,6 +1086,7 @@ func test_online_notice_top_centre(runner) -> bool:
 	bare.get_parent().free()
 	var waiting: Dictionary = await online._online(runner, 2)
 	var main = waiting.main
+	_select_new_builder(main)
 	main.orders._placement_kind = "usa_power_plant"
 	online._run(main, 12)
 	var label: Label = main.get_node("HUD/Hud/Notice").find_child("Text", true, false)

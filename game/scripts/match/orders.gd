@@ -111,6 +111,9 @@ func prune(state: Dictionary) -> void:
 	selected_ids.assign(selected_ids.filter(func(id: int) -> bool: return state.units.index_of(id) != -1))
 	if HudModel.inspected(state, inspected_id).is_empty(): inspected_id = -1
 	if _sub_grid and _builder() == -1: _sub_grid = false
+	if not _placement_kind.is_empty() and _builder() == -1:
+		_clear_placement()
+		_screen.refuse("Builder lost")
 
 func view_selection() -> Array[int]:
 	var ids: Array[int] = []
