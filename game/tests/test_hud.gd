@@ -398,7 +398,7 @@ func test_forecast_forms(runner) -> bool:
 	await _show(runner, hud, _strip_view(4800, 12, 10), "china_defence")
 	runner.check(_form(hud) == ["4800", "3600", false, "12 / 10", "15 / 10", false, true, true] and _colour(power) == _token("warn") and _colour(power_after) == _token("warn"), "TS2 already low: 12 / 10 → 15 / 10 both in warn, no LOW POWER words, got %s" % [_form(hud)])
 	await _show(runner, hud, _strip_view(4800, 12, 10), "china_light_vehicle")
-	runner.check(_form(hud) == ["4800", "4000", false, "12 / 10", "", true, true, false], "TS2 already low, a unit changes no power: the rest form's words stay, got %s" % [_form(hud)])
+	runner.check(_form(hud) == ["4800", "4000", false, "12 / 10", "", false, true, false] and _colour(power) == _token("warn"), "TS2 already low, a unit changes no power: 12 / 10 in warn, no LOW POWER words while it forecasts, got %s" % [_form(hud)])
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
 	runner.check(_form(hud) == ["500", MINUS + "700", true, "8 / 10", "11 / 10", true, true, true], "TS2 short: 500 → −700 (U+2212) with the coin, power still forecasts, got %s" % [_form(hud)])
 	runner.check(_colour(credits) == _token("text") and _colour(after) == _token("warn") and coin.get_global_rect().size == Vector2(15, 15) and is_equal_approx(_gap(after, coin), 4.0), "TS2 short: the forecast in warn, the 15 px coin 4 px after it, got %s gap %.1f" % [coin.get_global_rect(), _gap(after, coin)])
@@ -2237,13 +2237,9 @@ func test_prerequisite_hint(runner) -> bool:
 
 # Counter classes by armour, three representatives each from all rosters (plan Design "Counter line").
 const COUNTER_CLASSES := {"infantry": ["usa_rifle_infantry", "china_rifle_infantry", "frc_rifle_infantry"], "light vehicles": ["usa_light_vehicle", "china_tank", "frc_light_vehicle"], "tanks": ["usa_tank", "china_light_vehicle", "frc_tank"]}
-# Intended counters, [strong against, weak against], from each unit's Zero Hour role: Ranger, Red Guard and Rebel hunt infantry and fall to tanks; rocket infantry hunt vehicles and fall to infantry; Humvee, Technical and Gattling Tank hunt infantry and fall to tanks; Crusader, Battlemaster and Scorpion hunt light vehicles.
-const INTENDED := {
-	"usa_rifle_infantry": [["infantry"], ["tanks"]], "china_rifle_infantry": [["infantry"], ["tanks"]], "frc_rifle_infantry": [["infantry"], ["tanks"]],
-	"usa_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]], "china_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]], "frc_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]],
-	"usa_light_vehicle": [["infantry"], ["tanks"]], "frc_light_vehicle": [["infantry"], ["tanks"]], "china_tank": [["infantry"], ["tanks"]],
-	"usa_tank": [["light vehicles"], []], "china_light_vehicle": [["light vehicles"], []], "frc_tank": [["light vehicles"], []]}
+const INTENDED := HudModel.COUNTER_INTENDED
 const COUNTER_VERBS: Array[String] = ["Beats", "Good against", "Weak against"]
+const SPIN := " at full spin"
 
 # combat.gd's sustained rate per tick: a clip's shots over its delays and reload, a ramp weapon at its last percent, FRC at its base tier, scaled by the target's armour.
 static func _counter_rate(attacker: String, target: String) -> float:
@@ -2279,9 +2275,14 @@ static func _counter_expected(kind: String) -> String:
 		var best: Array = ["", INF]
 		for against: String in INTENDED[kind][side]:
 			var verdict: Array = _counter_verdict(kind, against)
-			if not verdict[0].is_empty() and (verdict[0] == "Weak against") == (side == 1) and verdict[1] < best[1]: best = ["%s %s" % [verdict[0], against], verdict[1]]
+			# A strong claim measured at the ramp's last percent names it; a weak one holds at base damage too.
+			if not verdict[0].is_empty() and (verdict[0] == "Weak against") == (side == 1) and verdict[1] < best[1]: best = ["%s %s%s" % [verdict[0], against, SPIN if side == 0 and _ramps(kind) else ""], verdict[1]]
 		if not best[0].is_empty(): claims.append(best[0])
 	return " · ".join(claims)
+
+static func _ramps(kind: String) -> bool:
+	var row: Dictionary = Registry.kind(kind)
+	return Shared.WEAPONS[row.get("weapon_tiers", [row.weapon])[0]].has("ramp")
 
 # The claims of a line the damage numbers refute.
 static func _refuted(kind: String, line: String) -> Array:
@@ -2289,7 +2290,7 @@ static func _refuted(kind: String, line: String) -> Array:
 
 static func _claim_holds(kind: String, claim: String) -> bool:
 	for verb: String in COUNTER_VERBS:
-		var against: String = claim.trim_prefix(verb + " ")
+		var against: String = claim.trim_suffix(SPIN).trim_prefix(verb + " ")
 		if against == claim or not COUNTER_CLASSES.has(against): continue
 		var verdict: String = _counter_verdict(kind, against)[0]
 		return verdict == verb or (verb == "Good against" and verdict == "Beats")
@@ -2317,7 +2318,7 @@ func test_counter_lines_match_damage(runner) -> bool:
 	runner.check(not HudModel.COUNTER_LINES.keys().any(func(kind: String) -> bool: return Registry.is_builder(kind) or not Registry.collects(kind).is_empty()), "CL1 no line for builders and collectors")
 	runner.check(_refuted("usa_rifle_infantry", "Weak against tanks") == ["Weak against tanks"], "CL1 the same check refutes a false fixture: Rifleman 'Weak against tanks'")
 	runner.check(_refuted("usa_rocket_infantry", "Beats tanks · Weak against infantry").is_empty() and _refuted("usa_tank", "Good against light vehicles").is_empty(), "CL1 the check holds true claims, Good under a Beats verdict too")
-	runner.check(HudModel.COUNTER_LINES.get("china_tank", "").begins_with("Good against infantry") and _counter_time("china_tank", "usa_rifle_infantry") * 3.0 > _counter_time("usa_rifle_infantry", "china_tank"), "CL1 the Rotary Gun Tank is good against infantry at its rotary gun's 300 % ramp; at base damage the Rifleman would win")
+	runner.check(HudModel.COUNTER_LINES.get("china_tank", "").begins_with("Good against infantry at full spin") and _counter_time("china_tank", "usa_rifle_infantry") * 3.0 > _counter_time("usa_rifle_infantry", "china_tank"), "CL1 the Rotary Gun Tank is good against infantry at its rotary gun's 300 % ramp; at base damage the Rifleman would win")
 	await _no_counter_in_panels(runner)
 	return true
 
@@ -2351,7 +2352,8 @@ func test_counter_line_on_the_cell_card(runner) -> bool:
 		var china: int = Fixture.add_completed(sim, 1, "china_factory", Vector2i(26, 14))
 		BaseScene.publish(main)
 		var card: Control = main.get_node("HUD/Hud/CellCard")
-		for case: Array in [["usa_tank", ids.factory, 1000, ["Head", "Counter"], 1], ["usa_tank", ids.factory, 500, ["Head", "Reason", "Counter"], 1], ["usa_light_vehicle", ids.factory, 1000, ["Head", "Counter"], 1], ["china_tank", china, 1000, ["Head", "Counter"], 2], ["china_tank", china, 500, ["Head", "Reason", "Counter"], 2]]:
+		var rotary := "Good against infantry at full spin\nWeak against tanks"
+		for case: Array in [["usa_tank", ids.factory, 1000, ["Head", "Counter"], "Beats light vehicles"], ["usa_tank", ids.factory, 500, ["Head", "Reason", "Counter"], "Beats light vehicles"], ["usa_light_vehicle", ids.factory, 1000, ["Head", "Counter"], "Weak against tanks"], ["china_tank", china, 1000, ["Head", "Counter"], rotary], ["china_tank", china, 500, ["Head", "Reason", "Counter"], rotary]]:
 			var label: String = "%s at %d credits at %s" % [case[0], case[2], size]
 			_select(main, [], case[1])
 			_set_credits(main, case[2])
@@ -2364,14 +2366,18 @@ func test_counter_line_on_the_cell_card(runner) -> bool:
 			await _frames(runner)
 			var lines: Array = card.find_child("Lines", true, false).get_children().filter(func(line: Control) -> bool: return line.visible).map(func(line: Control) -> String: return str(line.name))
 			var counter: Label = card.find_child("Counter", true, false)
-			var words: String = HudModel.COUNTER_LINES[case[0]] if case[4] == 1 else HudModel.COUNTER_LINES[case[0]].replace(" · ", "\n")
-			runner.check(lines == case[3] and counter.text == words and _colour(counter) == _token("text"), "CL2 %s: lines %s, the counter line '%s' in text, got %s '%s'" % [label, case[3], words, lines, counter.text])
+			var words: String = case[4]
+			runner.check(lines == case[3] and counter.is_visible_in_tree() and counter.text == words and _colour(counter) == _token("text"), "CL2 %s: lines %s, the counter line '%s' in text, got %s '%s'" % [label, case[3], words, lines, counter.text])
 			var at: Rect2 = card.get_global_rect()
-			var high: float = 16.0 + 20.0 * (case[3].size() - 1 + case[4])
+			var high: float = 16.0 + 20.0 * (case[3].size() + words.count("\n"))
 			runner.check(at.size == Vector2(248, high) and is_equal_approx(at.end.y, _rect(main, "HUD/Economy").position.y - 8.0) and view.grow(-8.0).encloses(at), "CL2 %s: 248 x %.0f, 8 above the slab, 8 inside the view, got %s" % [label, high, at])
 			var panels: Dictionary = BaseScene.hud_panels(main)
 			panels["HUD/Hud/RefusalLine"] = _rect(main, "HUD/Hud/RefusalLine")
 			for path: String in panels: runner.check(not at.intersects(panels[path]), "CL2 %s: clear of %s %s" % [label, path, panels[path]])
+			counter.text = "unchanged"
+			main._refresh()
+			runner.check(counter.text == "unchanged", "CL2 %s: a refresh with the same words and width lays the counter line out once" % label)
+			counter.text = words
 			cell.mouse_exited.emit()
 			main.hud._process(0.0)
 		var counter: Label = card.find_child("Counter", true, false)

@@ -635,7 +635,7 @@ func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> v
 	var low: Array[bool] = [used[0] > available[0], used[1] > available[1]]
 	var power: bool = _forecast(_power_slab, "Power", ["%d / %d" % [used[0], available[0]], "%d / %d" % [used[1], available[1]]], low)
 	# 3-5: a forecast names low power only when the purchase flips it; already low, its warn numbers say so.
-	_power_slab.find_child("LowPower", true, false).visible = low[1] and not (power and low[0])
+	_power_slab.find_child("LowPower", true, false).visible = low[1] and not ((credits or power) and low[0])
 	var held: bool = _strip_held(selection)
 	_credits_slab.custom_minimum_size.x = _held.x if held else 0.0
 	_power_slab.custom_minimum_size.x = _held.y if held else 0.0
@@ -717,9 +717,13 @@ func _show_cell_card() -> void:
 	line.text = reason
 	var counter: Label = _cell_card.find_child("Counter", true, false)
 	var words: String = HudModel.COUNTER_LINES.get(action, "")
-	# Too wide for the card, the line breaks between its claims, never inside one.
-	counter.text = words if _text_width(counter, words) <= CELL_CARD_WIDTH - _cell_card.get_theme_stylebox("panel").get_minimum_size().x else words.replace(" · ", "\n")
-	counter.custom_minimum_size.y = CELL_CARD_LINE * (counter.text.count("\n") + 1)
+	var room: float = CELL_CARD_WIDTH - _cell_card.get_theme_stylebox("panel").get_minimum_size().x
+	# The card refreshes every view; only new words or a new width measure again.
+	if counter.get_meta("fit", []) != [words, room]:
+		counter.set_meta("fit", [words, room])
+		# Too wide for the card, the line breaks between its claims, never inside one.
+		counter.text = words if _text_width(counter, words) <= room else words.replace(" · ", "\n")
+		counter.custom_minimum_size.y = CELL_CARD_LINE * (counter.text.count("\n") + 1)
 	counter.visible = not words.is_empty()
 	_cell_card.reset_size()
 	var cell: Rect2 = _hovered_cell.get_global_rect()

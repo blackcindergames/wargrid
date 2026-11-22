@@ -114,10 +114,16 @@ static func select_builder(view: Dictionary, seat: int) -> String:
 	var faction: String = player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)
 	return "Select a %s" % Registry.kind(Registry.faction(faction).get("start_unit", "")).display_name
 
-# The cell card's counter line: each unit's Zero Hour role, only the claims its damage numbers hold (test_hud.gd CL1 derives every one).
+# Intended counters, [strong against, weak against], from each unit's Zero Hour role: Ranger, Red Guard and Rebel hunt infantry and fall to tanks; rocket infantry hunt vehicles and fall to infantry; Humvee, Technical and Gattling Tank hunt infantry and fall to tanks; Crusader, Battlemaster and Scorpion hunt light vehicles.
+const COUNTER_INTENDED := {
+	"usa_rifle_infantry": [["infantry"], ["tanks"]], "china_rifle_infantry": [["infantry"], ["tanks"]], "frc_rifle_infantry": [["infantry"], ["tanks"]],
+	"usa_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]], "china_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]], "frc_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]],
+	"usa_light_vehicle": [["infantry"], ["tanks"]], "frc_light_vehicle": [["infantry"], ["tanks"]], "china_tank": [["infantry"], ["tanks"]],
+	"usa_tank": [["light vehicles"], []], "china_light_vehicle": [["light vehicles"], []], "frc_tank": [["light vehicles"], []]}
+# The cell card's counter line: the COUNTER_INTENDED claims its damage numbers hold (test_hud.gd CL1 derives every one).
 const COUNTER_LINES := {
 	"usa_rocket_infantry": "Beats tanks · Weak against infantry", "china_rocket_infantry": "Beats tanks · Weak against infantry", "frc_rocket_infantry": "Beats tanks · Weak against infantry",
-	"usa_light_vehicle": "Weak against tanks", "frc_light_vehicle": "Weak against tanks", "china_tank": "Good against infantry · Weak against tanks",
+	"usa_light_vehicle": "Weak against tanks", "frc_light_vehicle": "Weak against tanks", "china_tank": "Good against infantry at full spin · Weak against tanks",
 	"usa_tank": "Beats light vehicles", "china_light_vehicle": "Beats light vehicles", "frc_tank": "Beats light vehicles"}
 
 const SLAB_WIDTH: float = 432.0

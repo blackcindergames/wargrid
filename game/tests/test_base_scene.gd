@@ -556,7 +556,8 @@ func test_f33_red_ghost_refused_after_a_two_step_frame(runner) -> bool:
 	main._physics_process(1.0 / 30.0)
 	main._drain_notes()
 	pointer(main,cell,MOUSE_BUTTON_LEFT,false)
-	runner.check(main.driver.queued().is_empty() and not main.hud.refusal.is_empty(),"F33 a click on a still red ghost after a two-step frame is refused on the spot, held %d, tick %d, answer %s" % [main.driver.queued().size(), main.shown_state.tick, main.driver.preview_answer()])
+	var answer: Dictionary = main.driver.preview_answer()
+	runner.check(main.driver.queued().is_empty() and answer.get("tick",-1) == main.shown_state.tick and not answer.get("ok",true) and main.hud.refusal == answer.get("error",""),"F33 a click on a still red ghost after a two-step frame is refused on the spot, held %d, tick %d, answer %s" % [main.driver.queued().size(), main.shown_state.tick, main.driver.preview_answer()])
 	main.free()
 	return true
 
