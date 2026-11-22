@@ -8,7 +8,7 @@ Runs while the user is reachable, at the PC or on the phone.
 
 0. Before picking work, run the previous-run check below (the same as Start step 2). Open items of an earlier run are raised first, so a new run never buries them.
 
-1. Read the session notes (`~/projects/wargrid-private/docs/session-notes.md`: Next action, Deferred experiments and research) and [packages](packages.md). Offer two or three ranked candidates that suit unattended work (no playtest, no visible window, no push); the user picks.
+1. Read the session notes (`~/projects/wargrid-private/docs/session-notes.md`: Next action, Deferred experiments and research) and [packages](packages.md). Offer two or three candidates ranked by `AGENTS.md` [How a package runs](../AGENTS.md#how-a-package-runs) step 5 (no playtest, no visible window, no push); the user picks.
 2. Pick one or two small independent backup tasks (research, reruns, tooling) for when the main task ends or parks.
 3. Refine the plan so a coordinator on any model can run it: exact paths, verify commands, stop conditions. A run that ends at an owner look prepares a [War Room](../warroom/README.md) round for it (YAML in `warroom/rounds/`), not a loose page. The coordinator may run on Opus (user, 2026-11-18: the pump night's coordinator ran on Opus despite `/model sonnet`; accepted).
 4. Dispatch a fresh Opus (high) readiness review of the plan: vague steps, missing paths, commands behind an `ask` rule. Apply its fixes.
