@@ -211,6 +211,7 @@ func test_grid_keys_with_attack_move_armed(runner) -> bool:
 	BaseScene.tick(main)
 	_key(main, KEY_Q)
 	runner.check(main.orders._sub_grid and main.orders.selected_ids == [1], "CK8 fixture: the tank gone, Q opened the lone builder's sub-grid")
+	runner.check(not main.orders._attack_move_mode, "CK8 Q disarms attack move")
 	var helper = BaseScene.new()
 	var ground: Vector2 = Iso.world_to_plane(Vector2(12.5, 12.5))
 	helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
@@ -279,9 +280,12 @@ func test_attack_move_with_no_armed_unit(runner) -> bool:
 	var world: Array = await _mixed_world(runner)
 	var main = world[0]
 	var ids: Dictionary = world[1]
-	HudTests._select(main, [ids.builder, ids.collectors[0]])
-	main.orders.arm_attack_move()
+	var sim = world[2]
+	HudTests._select(main, [ids.tanks[0], ids.builder])
+	_key(main, KEY_A)
 	runner.check(main.orders._attack_move_mode, "AM2 attack move arms")
+	sim.remove_object(ids.tanks[0])
+	BaseScene.tick(main)
 	_click_ground(main, Vector2(12.5, 12.5))
 	runner.check(_types(main).is_empty() and not main.orders._attack_move_mode, "AM2 with no armed unit nothing is sent and it disarms, got %s" % [_types(main)])
 	main.free()
