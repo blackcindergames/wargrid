@@ -91,6 +91,22 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual([r["job"] for r in rows], ["good"])
         self.assertEqual(failed, ["bad", "silent"])
 
+    def test_load_rows_fails_a_job_with_a_missing_or_broken_row_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / "crashed.exit").write_text("exit=1 seconds=0 crashed\n")
+            (folder / "lost.exit").write_text("exit=0 seconds=0 lost\n")
+            (folder / "torn.exit").write_text("exit=0 seconds=0 torn\n")
+            (folder / "torn.jsonl").write_text('BOTLAB {"map": \n')
+            rows, failed = lab.load_rows(folder)
+        self.assertEqual(rows, [])
+        self.assertEqual(failed, ["crashed", "lost", "torn"])
+
+    def test_no_rows_fails(self) -> None:
+        text, ok = lab.summarise([], [])
+        self.assertFalse(ok)
+        self.assertIn("BOT LAB 0 matches", text)
+
 
 if __name__ == "__main__":
     unittest.main()

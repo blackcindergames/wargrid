@@ -12,13 +12,13 @@ const SeatFixture = preload("res://tests/seat_fixture.gd")
 const PREFIX_TICKS: int = 20000
 const PAIR_TICKS: int = 3000
 const TRACE_INTERVAL: int = 200
-const FINAL_DIGEST: String = "f3d2dab4fc4a0a4a"
+const FINAL_DIGEST: String = "af8debc40c53ba74"
 const BUILD_CHECK_TICK: int = 3000
-const TEAM_CORE_SERIES: int = 5940764765599406711
+const TEAM_CORE_SERIES: int = 2977490706014509312
 const DUO_TICK_CAP: int = 45000
-const DUO_TERMINAL_TICK: int = 24106
+const DUO_TERMINAL_TICK: int = 28061
 const DUO_WINNER: int = 2
-const DUO_CORE_SERIES: int = 3184809100396052222
+const DUO_CORE_SERIES: int = 1493862968646511655
 
 func cases() -> Array[Callable]:
 	return [test_bot_never_targets_ally, test_dead_seat_bot_is_silent, test_team_match_prefix, test_team_match_pair, test_team2v2_trace]

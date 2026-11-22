@@ -259,6 +259,13 @@ func test_oracle_controller_arg(runner) -> bool:
 	var client = _replay(PackedStringArray(), {"factions": "frc,china", "controller": "human", "oracle-ticks": "1"})
 	runner.check(client._sim.snapshot().players.map(func(player: Dictionary) -> String: return player.controller) == ["human", "human"], "RP10 --controller human makes the second seat human")
 	client.free()
+	client = OracleClient.new()
+	for value: String in ["human", "ai"]:
+		client._args = {"controller": value}
+		runner.check(client._controller_error() == "", "RP10 --controller %s passes" % value)
+	client._args = {"controller": "bot"}
+	runner.check(client._controller_error().contains("'bot'"), "RP10 an unknown --controller is refused and named, got '%s'" % client._controller_error())
+	client.free()
 	return true
 
 func test_oracle_state_rows(runner) -> bool:

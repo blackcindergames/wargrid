@@ -113,6 +113,10 @@ class PlaytestSessionTest(unittest.TestCase):
         rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
         self.assertEqual(rows[0][9], "human")
         self.assertEqual(rows[1][9], "-", "a record without a controller passes none, so the oracle replays it as ai")
+        data["matches"][0]["controller"] = None
+        path = self._write(data)
+        rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
+        self.assertEqual(rows[0][9], "-", "a null controller passes none")
 
     def test_float_numbers_from_a_resumed_sitting(self):
         floaty = session()

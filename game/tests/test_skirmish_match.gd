@@ -5,10 +5,11 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const ScriptedHuman = preload("res://scripts/simulation/scripted_human.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 
-# Equal mirror from the scripted human's bot takeover at tick 9000; BR8's group speed keeps it level to the cap (user, 2026-11-22).
 const TICK_LIMIT: int = 18000
+const TERMINAL_TICK: int = 9765
+const WINNER: int = 1
 
-const S1_CORE_SERIES: int = 131957631752344359
+const S1_CORE_SERIES: int = 8946823222927603917
 
 func cases() -> Array[Callable]:
 	return [test_mirror_match_script, test_skirmish_core_series, test_china_skirmish_match, test_frc_skirmish_match]
@@ -16,7 +17,7 @@ func cases() -> Array[Callable]:
 func test_skirmish_core_series(runner) -> bool:
 	var sim = Skirmish.create()
 	var series: int = 0
-	for tick in range(TICK_LIMIT):
+	for tick in range(TERMINAL_TICK + 1):
 		ScriptedHuman.issue(sim)
 		Skirmish.issue_opponent(sim)
 		sim.step()
@@ -95,13 +96,14 @@ func test_mirror_match_script(runner) -> bool:
 		if tick % 600 == 599: await runner.process_frame
 	var end: Dictionary = a.snapshot()
 	runner.check(diverged == -1, "S1 two fresh worlds stay identical, first divergence " + str(diverged))
-	runner.check(terminal == -1 and end.match.status == "ongoing" and end.tick == TICK_LIMIT, "S1 pinned outcome ongoing at the cap, got " + str(terminal) + " " + str(end.match))
-	runner.check([1, 2].all(func(owner: int) -> bool: return Skirmish.build_order(Skirmish.default_faction()).all(func(kind: String) -> bool: return kinds.get(owner, {}).has(kind))) and not first.values().has(-1), "S1 economy, production and combat all happened before the cap, got " + str(first) + " " + str(kinds))
+	runner.check(terminal == TERMINAL_TICK and end.match.winner == WINNER and end.match.ended_tick == TERMINAL_TICK and end.tick == TERMINAL_TICK + 1, "S1 pinned outcome, got " + str(terminal) + " " + str(end.match))
+	runner.check(terminal >= 7000 and terminal <= TICK_LIMIT - 1, "S1 terminal inside the six-minute window")
+	runner.check([1, 2].all(func(owner: int) -> bool: return Skirmish.build_order(Skirmish.default_faction()).all(func(kind: String) -> bool: return kinds.get(owner, {}).has(kind))) and not first.values().has(-1) and first.values().all(func(tick: int) -> bool: return tick < terminal), "S1 economy, production and combat all happened before the end, got " + str(first) + " " + str(kinds))
 	runner.check(deposits[1] > 0 and deposits[2] > 0 and boxes_ok and negatives == 0, "S1 both owners deposited, supply conserved, nothing negative: " + str(deposits))
 	return true
 
 const CHINA_TICK_CAP: int = 45000
-const CHINA_TERMINAL_TICK: int = 23750
+const CHINA_TERMINAL_TICK: int = 29122
 const CHINA_WINNER: int = 1
 
 func test_china_skirmish_match(runner) -> bool:
@@ -139,7 +141,7 @@ func test_china_skirmish_match(runner) -> bool:
 
 # No end-game income yet: supply runs out and bots grind (blueprint M8 "End-game income").
 const FRC_TICK_CAP: int = 50000
-const FRC_TERMINAL_TICK: int = 14038
+const FRC_TERMINAL_TICK: int = 28171
 const FRC_WINNER: int = 2
 
 func test_frc_skirmish_match(runner) -> bool:

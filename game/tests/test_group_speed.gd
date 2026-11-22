@@ -4,13 +4,15 @@ extends RefCounted
 const Fixture = preload("res://tests/combat_fixture.gd")
 const EconomyFixture = preload("res://tests/economy_fixture.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
+const Locomotion = preload("res://scripts/simulation/locomotion.gd")
 
 const GOAL := [26.5, 11.5]
 # Positions read back as Vector2 (32-bit floats).
 const SLACK: float = 1e-3
 
 func cases() -> Array[Callable]:
-	return [test_gs1_group_marches_at_its_slowest_speed, test_gs2_move_attack_and_attack_move_take_the_flag, test_gs3_order_without_the_flag_lifts_the_cap, test_gs4_flag_rejections, test_gs5_same_tick_cases, test_gs6_removal, test_gs7_cap_holds_only_while_the_order_does]
+	return [test_gs1_group_marches_at_its_slowest_speed, test_gs2_move_attack_and_attack_move_take_the_flag, test_gs3_order_without_the_flag_lifts_the_cap, test_gs4_flag_rejections, test_gs5_same_tick_cases, test_gs6_removal, test_gs7_cap_holds_only_while_the_order_does, test_gs8_capped_wheels_turn_at_their_own_turn_speed]
 
 func _world() -> Dictionary:
 	var sim = Fixture.world()
@@ -186,4 +188,22 @@ func test_gs7_cap_holds_only_while_the_order_does(runner) -> bool:
 	Fixture.send(sim, {"type": "attack", "entity_ids": [rocket], "target_id": ids.scout, "player": 2})
 	var pace: Dictionary = _pace(sim, [ids.scout], 90)
 	runner.check(pace[ids.scout] > _speed("usa_tank") + 0.5, "GS7 the cap holds only while the unit's intent is the ordered move, attack or attack-move: the retaliating scout runs at its own speed, got %s" % pace[ids.scout])
+	return true
+
+# One locomotion step of a unit heading east at the cap, its route turning 30 degrees.
+func _turn_speed(kind: String, cap: float) -> float:
+	var unit := {"position": [0.0, 0.0], "heading": [1.0, 0.0], "speed": cap, "route": [[8.660254, 5.0], [8.660254, 20.0]], "move_after": 0, "combat": {"mode": "move"}, "group_speed": cap}
+	Locomotion.step(unit, Definitions.unit(kind), 1)
+	return unit.speed
+
+func test_gs8_capped_wheels_turn_at_their_own_turn_speed(runner) -> bool:
+	var slowest: float = _speed("usa_rifle_infantry")
+	var scout: Dictionary = Definitions.unit("usa_light_vehicle")
+	var own_turn: float = maxf(scout.min_turn_speed, scout.speed / 4.0)
+	var turning: float = _turn_speed("usa_light_vehicle", slowest)
+	runner.check(absf(turning - minf(slowest, own_turn)) < SLACK, "GS8 a scout capped at %s turns at its own turn speed under the cap (%s), not the cap times its turn factor (%s), got %s" % [slowest, minf(slowest, own_turn), slowest * own_turn / scout.speed, turning])
+	var factor: float = 1.0 - Locomotion.angle_between(Vector2(1.0, 0.0), Vector2(8.660254, 5.0).normalized()) / 45.0
+	for row: Array in [["usa_tank", slowest], ["usa_rifle_infantry", 0.5]]:
+		var speed: float = _turn_speed(row[0], row[1])
+		runner.check(absf(speed - row[1] * factor) < SLACK, "GS8 a capped %s still turns at the cap times its turn factor %s, got %s" % [row[0], row[1] * factor, speed])
 	return true

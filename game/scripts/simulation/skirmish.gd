@@ -143,7 +143,8 @@ static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dicti
 	_produce(ctx, state, buildings, faction, wave_clock)
 	var defending: Dictionary = _defend(ctx, state, buildings)
 	if wave_clock.wave > 0 or state.tick >= wave_clock.due: _attack(ctx, state, defending, wave_clock)
-	wave_clock.prev = state.tick
+	# Only a live seat's decision is a team decision for released_by.
+	if buildings.any(func(building: Dictionary) -> bool: return Registry.kind(building.kind).counts_for_victory): wave_clock.prev = state.tick
 
 static func _send(ctx: Dictionary, payload: Dictionary) -> bool:
 	payload.tick = ctx.tick
@@ -208,7 +209,7 @@ static func _buy(ctx: Dictionary, building: Dictionary, kind: String, owned: Arr
 	owned.append(kind)
 	return true
 
-# BR7, from wave 1: an idle factory holds the credits while vehicles are short of the faction's share of army value, and a lost factory is saved for while the builder lives; a hold lapses for one decision after HOLD_LAPSE ticks without income.
+# BR7, from wave 1: an idle factory short of its pick's price holds the credits while vehicles are short of the faction's share of army value, and a lost factory is saved for while the builder lives and its price is not met; a hold lapses for one decision after HOLD_LAPSE ticks without income.
 static func _spend_rest(ctx: Dictionary, rest: Array, buildings: Array, faction: String, owned: Array, queued: Array, has_builder: bool) -> void:
 	var bot: Dictionary = _bot(ctx.sim, ctx.player)
 	var share: int = Registry.faction(faction).bot_vehicle_share
@@ -220,13 +221,15 @@ static func _spend_rest(ctx: Dictionary, rest: Array, buildings: Array, faction:
 		if not _is_army(entry[0]): continue
 		army += entry[1]
 		if _is_vehicle(entry[0]): vehicles += entry[1]
-	var held: bool = has_builder and _is_factory(faction, _first_missing(buildings, faction))
+	var missing: String = _first_missing(buildings, faction)
+	var held: bool = has_builder and _is_factory(faction, missing) and ctx.credits < Definitions.building(missing).cost
 	var bought := {}
 	for building: Dictionary in rest:
 		if held or vehicles * 100 >= share * army: break
 		if not _is_factory(faction, building.kind): continue
 		var pick: String = unit_for(faction, building.kind, owned)
 		if not _buy(ctx, building, pick, owned):
+			if ctx.credits >= Definitions.unit(pick).cost: continue
 			held = true
 			break
 		army += Definitions.unit(pick).cost
@@ -240,10 +243,10 @@ static func _spend_rest(ctx: Dictionary, rest: Array, buildings: Array, faction:
 		var kind: String = unit_for(faction, building.kind, owned)
 		if not kind.is_empty(): _buy(ctx, building, kind, owned)
 
-# The lapse clock restarts whenever credits rose since the last held decision; read before this decision's buys, so a buy never hides income.
+# The lapse clock restarts whenever credits rose since the last held decision; stored after this decision's buys, so a buy never hides income.
 static func _lapses(bot: Dictionary, ctx: Dictionary) -> bool:
 	if ctx.start_credits > bot.get("hold_credits", -1): bot.hold_since = ctx.tick
-	bot.hold_credits = ctx.start_credits
+	bot.hold_credits = ctx.credits
 	return ctx.tick - bot.hold_since >= HOLD_LAPSE
 
 static func _is_army(kind: String) -> bool:
@@ -363,10 +366,13 @@ static func _reach_squared(x: float, y: float, enemy: Dictionary) -> float:
 		near = [clampf(x, enemy.origin[0], enemy.origin[0] + size.x), clampf(y, enemy.origin[1], enemy.origin[1] + size.y)]
 	return (x - near[0]) * (x - near[0]) + (y - near[1]) * (y - near[1])
 
-# The team objective while it stands; a dead one is replaced once, by the first wave that notices.
+# The team objective while it stands; a dead one is replaced once, by the first wave that notices, from the live victims' buildings.
 static func _follow(clock: Dictionary, centre: Vector2, enemies: Array) -> Variant:
 	if enemies.any(func(enemy: Dictionary) -> bool: return enemy.id == clock.objective): return clock.objective
-	var target: Variant = _pick(centre, enemies)
+	var buildings: Array = enemies.filter(_is_building)
+	var victims: Array = _victims(buildings, clock)
+	var standing: Array = buildings.filter(func(building: Dictionary) -> bool: return victims.has(building.owner))
+	var target: Variant = _pick(centre, enemies if standing.is_empty() else standing)
 	if target != null: clock.objective = target
 	return target
 
@@ -394,14 +400,17 @@ static func _gather(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: D
 
 static func _wave(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary) -> void:
 	var live: Array[int] = _live_bots(ctx, state)
-	if not live.has(ctx.player): return
+	if not live.has(ctx.player):
+		clock.joiners.erase(ctx.player)
+		return
 	if clock.joiners.has(ctx.player): _add_to_wave(ctx, bot, mine, enemies, ready, clock, live)
 	elif ctx.tick >= clock.due: _form(ctx, state, bot, mine, enemies, ready, clock, live)
 
 # The first live bot to see the team's ready cost reach the target (or the wait cap) forms the wave; the others join at their next decision.
 static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary, live: Array[int]) -> void:
 	var kinds: Array = ready.map(func(id: int) -> String: return mine[id].kind)
-	kinds.append_array(_mates_ready(ctx, state, live))
+	var mates: Array = _mates_ready(ctx, state, live)
+	kinds.append_array(mates)
 	var worth: int = _cost_sum(kinds)
 	var capped: bool = ctx.tick >= clock.due + WAVE_WAIT and not kinds.is_empty()
 	# Defences only raise the target, so a wave short of the plain one waits without the scan.
@@ -412,10 +421,11 @@ static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	var target: int = scan.target
 	if worth < target and not capped: return
 	if worth < target and scan.guards > 0: objective = _softer(scan.rally, scan.order, scan.buildings, scan.defences, objective)
+	# The launcher also takes what its mates' ready units cannot cover.
 	@warning_ignore("integer_division")
-	var share: int = target / live.size()
+	var share: int = maxi(target / live.size(), target - _cost_sum(mates))
 	@warning_ignore("integer_division")
-	var limit: int = WAVE0_UNITS / live.size() if clock.wave == 0 else ready.size()
+	var limit: int = maxi(WAVE0_UNITS / live.size(), WAVE0_UNITS - mates.size()) if clock.wave == 0 else ready.size()
 	var take: Array = _take(ready, mine, share, limit)
 	if not take.is_empty():
 		if not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective, "group_speed": true}): return

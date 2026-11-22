@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarise bot lab rows: bot_lab_summary.py <build/bot_lab/LABEL>. Exits 1 when a job failed or an idle floor is missed."""
+"""Summarise bot lab rows: bot_lab_summary.py <build/bot_lab/LABEL>. Exits 1 when a job failed, no row loaded or an idle floor is missed."""
 
 import json
 import math
@@ -21,17 +21,20 @@ FLOORS: dict[str, int] = {
 FACTIONS = ("usa", "china", "frc")
 
 
+def read_found(path: Path) -> list[Row] | None:
+    try:
+        return [json.loads(line[7:]) for line in path.read_text().splitlines() if line.startswith("BOTLAB ")]
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def load_rows(folder: Path) -> tuple[list[Row], list[str]]:
     rows: list[Row] = []
     failed: list[str] = []
     for marker in sorted(folder.glob("*.exit")):
         job = marker.name.removesuffix(".exit")
-        found = [
-            json.loads(line[7:])
-            for line in (folder / f"{job}.jsonl").read_text().splitlines()
-            if line.startswith("BOTLAB ")
-        ]
-        if not marker.read_text().startswith("exit=0 ") or len(found) != 1:
+        found = read_found(folder / f"{job}.jsonl") if marker.read_text().startswith("exit=0 ") else None
+        if found is None or len(found) != 1:
             failed.append(job)
             continue
         found[0]["job"] = job
@@ -168,7 +171,7 @@ def summarise(rows: list[Row], failed: list[str]) -> tuple[str, bool]:
         credit_lines(rows),
     ):
         lines += section
-    return "\n".join(lines), floors_held and not failed
+    return "\n".join(lines), bool(rows) and floors_held and not failed
 
 
 def main() -> int:

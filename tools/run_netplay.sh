@@ -183,7 +183,7 @@ case $scenario in
     wait_exit "$pid1" "$match_wait"; wait_exit "$pid2" "$match_wait"
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
-    [ "$(end_tick s1)" = 8997 ] || fail "terminal tick $(end_tick s1), pinned 8997"
+    [ "$(end_tick s1)" = 9746 ] || fail "terminal tick $(end_tick s1), pinned 9746"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     [ -n "$remote" ] || ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     [ "$scenario" = match ] || proxies_accepted
@@ -201,10 +201,10 @@ case $scenario in
     wait_exit "$pid1" $((2 * match_wait)); wait_exit "$pid2" $((2 * match_wait))
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
-    [ "$(end_tick s1)" = 8997 ] || fail "second match terminal tick $(end_tick s1), pinned 8997"
+    [ "$(end_tick s1)" = 9746 ] || fail "second match terminal tick $(end_tick s1), pinned 9746"
     for name in s1 s2; do
       [ "$(grep -c '^NETCLIENT MAP' "$out/$name.log")" = 2 ] || fail "$name: expected two MAP lines"
-      [ "$(grep -c '^NETCLIENT OVER TICK 8997$' "$out/$name.log")" = 1 ] || fail "$name: expected one OVER TICK 8997"
+      [ "$(grep -c '^NETCLIENT OVER TICK 9746$' "$out/$name.log")" = 1 ] || fail "$name: expected one OVER TICK 9746"
     done
     grep -q '^NETCLIENT AGAIN SEAT 2$' "$out/s1.log" || fail "s1: no AGAIN line from seat 2"
     grep -q '^NETCLIENT AGAIN SEAT 1$' "$out/s2.log" || fail "s2: no AGAIN line from seat 1"

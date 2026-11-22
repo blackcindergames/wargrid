@@ -17,7 +17,7 @@ const B: int = 4
 const DUE: int = 1000
 
 func cases() -> Array[Callable]:
-	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_take_alternates_vehicles_and_infantry, test_wave_take_goes_on_with_the_other_kind_when_one_runs_out, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks, test_defence_near_objective_raises_target, test_defence_on_route_raises_target, test_defence_raises_target_by_def_units_times_unit_cost, test_wave_zero_not_raised_by_defence, test_softer_objective_when_target_unmet, test_no_soft_objective_goes_anyway, test_unfinished_defence_not_counted, test_defence_completing_in_the_judging_tick_counts_at_the_next_decision, test_team_waves_follow_the_softer_objective, test_detour_returns_to_the_softer_objective, test_defence_at_exactly_def_reach_counts, test_softer_takes_best_score_not_first_or_nearest, test_retarget_follows_br5_order_not_id, test_route_points_every_8_cells, test_defence_route_starts_at_team_mean_rally, test_br7_data_share_and_lapse, test_br7_hold_starts_at_wave_one, test_br7_barracks_spends_only_the_rest, test_br7_hold_ends_at_the_share, test_br7_hold_lapses_after_hold_lapse_without_income, test_br7_hold_kept_while_income_rises, test_br7_lowest_factory_id_buys, test_br7_rebuild_hold_while_builder_lives, test_br8_wave_marches_at_its_slowest_speed, test_br8_detour_goes_uncapped_and_the_return_is_capped, test_bot_line_shows_each_field, test_bot_line_after_launch_counts_exactly, test_bot_line_late_and_gone, test_bot_line_leaves_state_and_memory, test_bot_line_counts_ready_against_guarded_target]
+	return [test_bot_collector_quota_per_supply_centre, test_bot_seat_idle_unit_ignores_enemy_beyond_reach, test_no_enemy_building_attack_before_first_wave, test_wave_gaps_90_then_60, test_wave_leaves_when_ready_cost_reaches_target, test_wave_size_counts_unit_cost_not_count, test_unit_cost_is_build_list_mean, test_wave_take_alternates_vehicles_and_infantry, test_wave_take_goes_on_with_the_other_kind_when_one_runs_out, test_wave_stops_at_exact_target, test_wave_capped_by_cost_rest_guards_home, test_wave_zero_takes_at_most_16, test_wave_leaves_at_wait_cap, test_nothing_ready_at_wait_cap_leaves_with_first_ready, test_late_arrival_waits_for_next_wave, test_wave_targets_grow_then_hold_at_32, test_attack_tick_gates_gather, test_released_by_timer_size_wait_cap, test_bot_without_building_launches_no_wave, test_team_bots_leave_within_one_round, test_team_wave_takes_from_every_live_bot, test_team_target_sums_cost_of_live_bots, test_teammate_without_first_decision_not_counted, test_team_waves_share_objective, test_defeated_enemy_with_defence_is_no_victim, test_team_waves_alternate_human_target, test_three_enemies_least_recent_first, test_objective_repicked_once_for_team, test_detouring_wave_returns_to_team_objective, test_lone_bot_is_team_of_one, test_dead_teammate_does_not_hold_clock, test_last_live_joiner_takes_up_to_left, test_rally_units_sent_to_defend_skip_the_join, test_team_forms_on_either_side_of_due, test_released_by_is_first_team_decision, test_dead_teammate_decision_keeps_released_by_timer, test_stale_joiner_does_not_join_the_old_wave, test_repick_skips_a_defeated_players_defence, test_team_share_covers_what_mates_cannot, test_unhit_wave_ignores_enemy_unit_in_defence_radius, test_hit_wave_takes_best_scored_armed_enemy_within_reach, test_detour_scores_units_and_buildings_together, test_unarmed_enemy_is_never_a_detour, test_detour_is_measured_from_the_hit_units, test_unit_death_counts_as_a_hit, test_hit_without_candidate_carries_on, test_detour_ends_when_target_dies, test_detour_ends_after_calm_without_a_hit, test_detour_is_kept_while_hits_continue, test_objective_dies_during_detour, test_detour_target_dies_the_tick_it_is_chosen, test_two_waves_hit_at_once_detour_separately, test_kiter_is_let_go_then_taken_after_let_go_ticks, test_defence_near_objective_raises_target, test_defence_on_route_raises_target, test_defence_raises_target_by_def_units_times_unit_cost, test_wave_zero_not_raised_by_defence, test_softer_objective_when_target_unmet, test_no_soft_objective_goes_anyway, test_unfinished_defence_not_counted, test_defence_completing_in_the_judging_tick_counts_at_the_next_decision, test_team_waves_follow_the_softer_objective, test_detour_returns_to_the_softer_objective, test_defence_at_exactly_def_reach_counts, test_softer_takes_best_score_not_first_or_nearest, test_retarget_follows_br5_order_not_id, test_route_points_every_8_cells, test_defence_route_starts_at_team_mean_rally, test_br7_data_share_and_lapse, test_br7_hold_starts_at_wave_one, test_br7_barracks_spends_only_the_rest, test_br7_hold_ends_at_the_share, test_br7_hold_lapses_after_hold_lapse_without_income, test_br7_hold_kept_while_income_rises, test_br7_lowest_factory_id_buys, test_br7_rebuild_hold_while_builder_lives, test_br7_rebuild_hold_only_while_short_of_the_price, test_br7_factory_refused_for_another_reason_does_not_hold, test_br7_lapse_clock_sees_income_after_a_buy, test_br8_wave_marches_at_its_slowest_speed, test_br8_detour_goes_uncapped_and_the_return_is_capped, test_bot_line_shows_each_field, test_bot_line_after_launch_counts_exactly, test_bot_line_late_and_gone, test_bot_line_leaves_state_and_memory, test_bot_line_counts_ready_against_guarded_target]
 
 func _world() -> RefCounted:
 	var sim = Simulation.new([], Vector2i(48, 32))
@@ -605,6 +605,81 @@ func test_released_by_is_first_team_decision(runner) -> bool:
 	stock(timer, B, "usa_tank", 5)
 	_team_play(timer, _log(), DUE + 100, [A, B])
 	runner.check(Skirmish.team_memory(timer, 2).released_by == "timer", "BR4 target met at the first team decision from due is released by timer, got %s" % [Skirmish.team_memory(timer, 2).released_by])
+	return true
+
+func _remove_headquarters(sim: RefCounted, seat: int) -> Vector2i:
+	for entry in sim.snapshot().buildings:
+		if entry.owner != seat or entry.kind != "usa_command_center": continue
+		sim.remove_object(entry.id)
+		return Vector2i(entry.origin[0], entry.origin[1])
+	return Vector2i(-1, -1)
+
+func test_dead_teammate_decision_keeps_released_by_timer(runner) -> bool:
+	var sim = _crown()
+	_remove_headquarters(sim, A)
+	stock(sim, B, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + 2 * Skirmish.DECISION_TICKS)
+	runner.check(_first_decision_from(DUE, A) < _first_decision_from(DUE, B) and rec.launches.size() == 1 and rec.launches[0].player == B and rec.launches[0].tick == _first_decision_from(DUE, B), "BR4 premise: defeated seat 3 decides past due before seat 4 forms at its first decision, got %s" % [rec.launches])
+	runner.check(Skirmish.team_memory(sim, 2).released_by == "timer", "BR4 a defeated teammate's decision is no team decision: the wave met at the live seat's first decision from due is released by timer, got %s" % [Skirmish.team_memory(sim, 2).released_by])
+	return true
+
+func test_stale_joiner_does_not_join_the_old_wave(runner) -> bool:
+	var sim = _crown()
+	stock(sim, A, "usa_tank", 5)
+	stock(sim, B, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	var first: int = _first_decision_from(DUE, A)
+	_both(sim, rec, first + 1)
+	runner.check(rec.launches.size() == 1 and Skirmish.team_memory(sim, 2).joiners == [B], "BR4 premise: seat 3 formed the wave and seat 4 is its joiner, got %s" % [Skirmish.team_memory(sim, 2)])
+	var origin: Vector2i = _remove_headquarters(sim, B)
+	_both(sim, rec, _first_decision_from(first, B) + 1)
+	Economy.add_completed(sim, B, "usa_command_center", origin)
+	_both(sim, rec, first + 4 * Skirmish.DECISION_TICKS)
+	runner.check(_of(rec, B).is_empty() and Skirmish.team_memory(sim, 2).joiners == [], "BR4 a joiner that was defeated at its decision leaves the joiners and, rebuilt before the next due, does not join the old wave, got %s, joiners %s" % [_of(rec, B), Skirmish.team_memory(sim, 2).joiners])
+	return true
+
+func test_repick_skips_a_defeated_players_defence(runner) -> bool:
+	var sim = _crown()
+	for entry in sim.snapshot().buildings:
+		if entry.owner == 1: sim.remove_object(entry.id)
+	var tanks: Array = stock(sim, A, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_team_play(sim, rec, _first_decision_from(DUE, A) + 1, [A], DUE, false)
+	var old: Variant = Skirmish.team_memory(sim, 2).objective
+	runner.check(old != null and _owner_of(sim, old) == 2, "BR5 premise: the wave goes to live player 2, got %s" % [old])
+	if old != null: sim.remove_object(old)
+	var battery: int = _dark_battery(sim, _mean(sim, tanks) + Vector2(4, 0))
+	_team_play(sim, rec, _first_decision_from(DUE, A) + Skirmish.DECISION_TICKS + 1, [A], DUE, false)
+	var fresh: Variant = Skirmish.team_memory(sim, 2).objective
+	runner.check(battery >= 0 and fresh != null and fresh != battery and _owner_of(sim, fresh) == 2, "BR5 the re-pick scores only the buildings of live victims: not defeated player 1's battery beside the wave, got %s (battery %d)" % [fresh, battery])
+	return true
+
+func _team_wave_one(a_tanks: int, b_tanks: int) -> Array:
+	var sim = _crown()
+	stock(sim, A, "usa_tank", 5)
+	stock(sim, B, "usa_tank", 5)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + 100)
+	stock(sim, A, "usa_tank", a_tanks)
+	stock(sim, B, "usa_tank", b_tanks)
+	var due: int = Skirmish.team_memory(sim, 2).due
+	_both(sim, rec, due + 2 * Skirmish.DECISION_TICKS)
+	return rec.launches.filter(func(row: Dictionary) -> bool: return row.tick >= due).map(func(row: Dictionary) -> int: return row.ids.size())
+
+func test_team_share_covers_what_mates_cannot(runner) -> bool:
+	var target: int = Skirmish.WAVE_SIZES[1] * 2 * Skirmish.faction_unit_cost("usa")
+	var many_first: Array = _team_wave_one(12, 3)
+	runner.check(many_first == [12, 3], "BR4 wave 1: the launcher with twelve tanks takes up to the %d target less its mate's 2,700, so with the mate's three the wave reaches the target, got %s" % [target, many_first])
+	var few_first: Array = _team_wave_one(3, 12)
+	runner.check(few_first == [3, 12], "BR4 the reverse order gives the same fifteen tanks, got %s" % [few_first])
+	var sim = _crown()
+	stock(sim, A, "usa_rifle_infantry", 14)
+	stock(sim, B, "usa_rifle_infantry", 2)
+	var rec: Dictionary = _log()
+	_both(sim, rec, DUE + Skirmish.WAVE_WAIT + 2 * Skirmish.DECISION_TICKS)
+	var sizes: Array = rec.launches.map(func(row: Dictionary) -> int: return row.ids.size())
+	runner.check(sizes == [14, 2], "BR4 wave 0's unit limit covers what the mate's two ready riflemen cannot: fourteen and two, sixteen in all, got %s" % [sizes])
 	return true
 
 func _unit(sim: RefCounted, id: int) -> Dictionary:
@@ -1283,6 +1358,48 @@ func test_br7_rebuild_hold_while_builder_lives(runner) -> bool:
 	runner.check(_decide_br7(earlier) == ["usa_rocket_infantry"], "BR7 with an earlier building missing (supply centre) there is no rebuild hold, got %s" % [_produced(earlier)])
 	return true
 
+func test_br7_rebuild_hold_only_while_short_of_the_price(runner) -> bool:
+	var sim: RefCounted = _br7(2500, ["usa_power_plant", "usa_supply_center", "usa_barracks"], 2)
+	stock(sim, SEAT, "usa_builder", 1)
+	stock(sim, SEAT, "usa_collector", 3)
+	var slot: Vector2i = MapData.slot(sim.map_data(), SEAT, "usa_factory")
+	var blocker: int = sim.spawn(SEAT, Vector2(slot) + Vector2(1.5, 1.5), "usa_rifle_infantry")
+	var kinds: Array = _decide_br7(sim)
+	var built: Array = sim.snapshot().pending_commands.filter(func(command: Dictionary) -> bool: return command.player == SEAT and command.type == "build")
+	runner.check(blocker >= 0 and built.is_empty(), "BR7 premise: a unit on the factory slot refuses the rebuild, got %s" % [built])
+	runner.check(kinds == ["usa_rocket_infantry"], "BR7 with 2,500 credits, above the factory's 2,000, price is not what stops the rebuild: no hold, the barracks buys, got %s" % [_produced(sim)])
+	return true
+
+func test_br7_factory_refused_for_another_reason_does_not_hold(runner) -> bool:
+	var sim: RefCounted = _br7(1100, ["usa_power_plant", "usa_barracks", "usa_factory"], 2)
+	runner.check(_decide_br7(sim) == ["usa_rocket_infantry"], "BR7 a factory refused for its missing supply centre with 1,100 credits, above the tank's 900, holds nothing: the barracks buys, got %s" % [_produced(sim)])
+	return true
+
+func _queue_head(sim: RefCounted, kind: String) -> Dictionary:
+	for building: Dictionary in sim.snapshot().buildings:
+		if building.owner == SEAT and building.kind == kind and not building.queue.is_empty(): return {"building_id": building.id, "production_id": building.queue[0].id}
+	return {}
+
+func test_br7_lapse_clock_sees_income_after_a_buy(runner) -> bool:
+	var sim: RefCounted = _br7(1500, ["usa_power_plant", "usa_supply_center", "usa_barracks"], 2)
+	stock(sim, SEAT, "usa_builder", 1)
+	stock(sim, SEAT, "usa_collector", 2)
+	var first: int = Skirmish.next_decision(-1, SEAT)
+	while sim.tick() < first: sim.step()
+	var bought: Array = _decide_br7(sim)
+	sim.step()
+	var order: Dictionary = _queue_head(sim, "usa_supply_center")
+	stock(sim, SEAT, "usa_collector", 1)
+	var cancel: Dictionary = sim.issue_command({"type": "cancel_production", "building_id": order.get("building_id", -1), "production_id": order.get("production_id", -1), "tick": sim.tick(), "player": SEAT, "sequence": sim.last_sequence(SEAT) + 1})
+	sim.step()
+	runner.check(bought == ["usa_collector"] and cancel.ok and _credits(sim) == 1500, "BR7 premise: the first held decision buys a collector and its refund brings back 1,200 credits, got %s, %s, %d" % [bought, cancel, _credits(sim)])
+	var trained: int = -1
+	while sim.tick() < first + Skirmish.HOLD_LAPSE + 2 * Skirmish.DECISION_TICKS and trained < 0:
+		if Skirmish.decides(sim.tick(), SEAT) and _decide_br7(sim).has("usa_rocket_infantry"): trained = sim.tick()
+		sim.step()
+	runner.check(trained == first + Skirmish.HOLD_LAPSE + Skirmish.DECISION_TICKS, "BR7 income equal to the collector's price is still income: the lapse clock restarts at the next held decision and the barracks buys at tick %d, got %d" % [first + Skirmish.HOLD_LAPSE + Skirmish.DECISION_TICKS, trained])
+	return true
+
 # Four scouts (2.4 cells/s) and riflemen (0.8) launched as one wave; the scouts pull ahead.
 func _split(sim: RefCounted, rec: Dictionary) -> Array:
 	_ready(sim, "usa_light_vehicle", 4)
@@ -1406,6 +1523,7 @@ func test_bot_line_after_launch_counts_exactly(runner) -> bool:
 func test_bot_line_late_and_gone(runner) -> bool:
 	var sim: RefCounted = _lone_bot(0)
 	_decide_to(sim, 65)
+	# team_memory returns a copy; a past due or a vanished objective needs the live clock.
 	var clock: Dictionary = sim.get_meta(Skirmish.BOT_TEAM_META)[SEAT]
 	clock.due = sim.tick() - 100
 	runner.check(_bot_line(sim).contains(" | W0 late 3/60s | "), "BL1 100 ticks past due reads 'late 3/60s', got '%s'" % _bot_line(sim))
