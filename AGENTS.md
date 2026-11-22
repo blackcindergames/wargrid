@@ -29,7 +29,7 @@ Current setup lives in the [development notes](docs/development.md); package sta
 
 1. **One page first:** what the player will notice, the observation that would refute it, the first playable slice, what is out. Look for the refuting observation in data that already exists before running anything new.
 2. **Player-facing packages** build the smallest playable slice first, test-first for simulation rules; then the owner plays it for ten minutes. Measuring and polishing come after that match and aim at what it showed. Other packages name a headless check on their one page as first evidence.
-3. **Harden once, at the end:** pins and traces, one fresh Opus review of the whole branch, the benchmark row, one status line, the guide chapter. Diffs in the simulation, netplay, `relay/` or `protocol/` also get a review per task.
+3. **Harden once, at the end:** pins and traces, one fresh Opus review of the whole branch, the benchmark row, one status line, the guide chapter. Diffs in the simulation, netplay, `relay/` or `protocol/` also get a review per task. A branch that touches those areas, or changes more than about 500 lines, also gets Gemini 4 Neon (high) through `agy` as a second gate reviewer; skip it and say so when `agy` is missing or out of quota (user, 2026-11-22, after the reviewer benchmark, private).
 4. **Builders run on Sonnet;** UI, HUD, mock-up and art builders on Opus.
 5. **Night runs** take work whose result a headless check, offscreen screenshots or a War Room round can show; work that needs a match to judge waits for the day.
 
