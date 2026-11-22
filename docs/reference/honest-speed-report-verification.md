@@ -3,15 +3,15 @@
 Plan: [honest speed report](../superpowers/plans/2026-11-21-honest-speed-report.md). Decisions: [design answers, low-end report loose ends (user, 2026-11-20)](design-answers-2026-11-08.md#low-end-report-loose-ends-user-2026-11-20); owner rulings for the plan (user, 2026-11-21) in the plan header. Night lane item 14 in [packages](../packages.md#night-lane).
 
 ```text
-Resume record (updated 2026-11-22, Tasks 1 to 8 committed, gate fix round uncommitted)
-Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD bc369633 (Tasks 1 to 8 committed), gate fix round changes uncommitted
-Last green task / next incomplete task: Task 8 / Gate
-Changed paths since last commit: tools/perf_record.py, tools/test_perf_charts.py, docs/reference/performance.md, docs/STATUS.md, this file
+Resume record (updated 2026-11-22, Tasks 1 to 8 and the gate fix round committed; stopped at the gate)
+Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 1eb6a1d3 (Tasks 1 to 8 and the gate fix round committed), tree clean
+Last green task / next incomplete task: Gate (fix round done) / none; the advisory War Room round n14-speed-report waits for the owner
+Changed paths since last commit: none after this file's own update
 Last command / cases / checks / failures / exit / marker: python3 -I gap12_digest.py deck / exit 0 / GAP12 DIGEST OK; six Deck pages, BENCH DONE and cross_origin_isolated=1 in all, TEAM MATCH identical (won tick=38786); no repo code changed; Deck folder removed
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: one local commit per green task (pre-authorized); no push, PR, merge or fly deploy; D3 and D4 at the SB6 plan; the plan's owner answers (user, 2026-11-21) all took the recommendations
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: Gate fix round, then the advisory War Room round (owner)
+Next exact action: owner answers the advisory round n14-speed-report and decides the merge; no implementation left
 ```
 
 ## Tasks
@@ -26,7 +26,7 @@ Next exact action: Gate fix round, then the advisory War Room round (owner)
 | 6 | Gate benchmark | Sonnet low | green | 6e054df6 |
 | 7 | Gap 12, Mac half | Sonnet high | green | 724644cf |
 | 8 | Gap 12, Wasm half on the Steam Deck | Sonnet high | green | bc369633 |
-| Gate | Reviews, fix round, stop at the advisory round | Opus high and the gate set | not started | |
+| Gate | Reviews, fix round, stop at the advisory round | Opus high and the gate set | green, stopped at the advisory round | 1eb6a1d3 |
 
 ## Evidence
 
