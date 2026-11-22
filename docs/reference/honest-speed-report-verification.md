@@ -3,15 +3,15 @@
 Plan: [honest speed report](../superpowers/plans/2026-11-21-honest-speed-report.md). Decisions: [design answers, low-end report loose ends (user, 2026-11-20)](design-answers-2026-11-08.md#low-end-report-loose-ends-user-2026-11-20); owner rulings for the plan (user, 2026-11-21) in the plan header. Night lane item 14 in [packages](../packages.md#night-lane).
 
 ```text
-Resume record (updated 2026-11-22, Task 8 green, uncommitted)
-Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD 724644cf (Tasks 1 to 7 committed), Task 8 changes uncommitted
-Last green task / next incomplete task: Task 8 (awaiting the coordinator's commit) / Gate
-Changed paths since last commit: docs/reference/performance.md, this file (exports and logs live outside the repo in night-14/deck)
+Resume record (updated 2026-11-22, Tasks 1 to 8 committed, gate fix round uncommitted)
+Branch / base commit / working-tree state: honest-speed-report in ~/projects/wargrid-wt-speed, HEAD bc369633 (Tasks 1 to 8 committed), gate fix round changes uncommitted
+Last green task / next incomplete task: Task 8 / Gate
+Changed paths since last commit: tools/perf_record.py, tools/test_perf_charts.py, docs/reference/performance.md, docs/STATUS.md, this file
 Last command / cases / checks / failures / exit / marker: python3 -I gap12_digest.py deck / exit 0 / GAP12 DIGEST OK; six Deck pages, BENCH DONE and cross_origin_isolated=1 in all, TEAM MATCH identical (won tick=38786); no repo code changed; Deck folder removed
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: one local commit per green task (pre-authorized); no push, PR, merge or fly deploy; D3 and D4 at the SB6 plan; the plan's owner answers (user, 2026-11-21) all took the recommendations
 Usage so far (python3 tools/session_usage.py <session files>): none
-Next exact action: coordinator commits "Record gap 12, Wasm half", then the Gate
+Next exact action: Gate fix round, then the advisory War Room round (owner)
 ```
 
 ## Tasks
@@ -25,7 +25,7 @@ Next exact action: coordinator commits "Record gap 12, Wasm half", then the Gate
 | 5 | War Room round page (`n14-speed-report`) | Sonnet high | green | 590b968b |
 | 6 | Gate benchmark | Sonnet low | green | 6e054df6 |
 | 7 | Gap 12, Mac half | Sonnet high | green | 724644cf |
-| 8 | Gap 12, Wasm half on the Steam Deck | Sonnet high | green, uncommitted | |
+| 8 | Gap 12, Wasm half on the Steam Deck | Sonnet high | green | bc369633 |
 | Gate | Reviews, fix round, stop at the advisory round | Opus high and the gate set | not started | |
 
 ## Evidence
@@ -48,11 +48,11 @@ Next exact action: coordinator commits "Record gap 12, Wasm half", then the Gate
 | 2026-11-22 | 6 | `sh tools/run_checks.sh`; `sh tools/run_tests.sh` | both exit 0; `TESTS PASSED 152754` | honest-speed-report 990ac6f5 |
 | 2026-11-22 | 6 | `wait-quiet.sh` then `PERF_LABEL="night 14 honest speed report" sh tools/run_benchmark.sh` alone; `tools/.venv/bin/python3 tools/perf_chart.py` | exit 0; `LOCKSTEP BUDGET PASS`, `PROFILE COMPLETE 11`, `BUDGET EXCEEDED open dense hordes300`, `recorded 26 rows`; uptime load 2.36 at start (00:17), 2.30 at end (00:22); step p95 2.174, team_tick p95 2.878, plumbing mean 1.1163 | honest-speed-report 990ac6f5 plus Task 6 changes |
 | 2026-11-22 | 7 | `copy-tree.sh` twice, patch of `run_profile.gd` `_team_match()` (flag and label differ only), `godot --import` both, six runs `on off on off on off` alone; `python3 -I gap12_digest.py mac <g12> ~/projects/wargrid-wt-speed` | all exit 0; `GAP12 DIGEST OK`; `PROFILE_END team_match` same in all 6 (`ticks=38786 status=won peak_entities=268`); timed hand-off off 1.1416 ms, on 1.1589 ms, overhead +0.0173 ms (+1.5%); zone sum on 1.1154 ms (Task 6 row: 1.1163); uptime load 1.82 at start (00:23), 2.10 at end (00:49), max 2.31 | honest-speed-report 6e054df6 (copies in night-14/gap12) |
+| 2026-11-22 | 8 | Preflight, two exports (`tree-on`, `tree-off`: only `bench_runner.gd` `_team` `Profiler.enabled` differs), `shellcheck -s sh deck-job14.sh`, six pages on the Deck, `deck-wait.sh` | preflight AC on, display set, Firefox 160.0.1; imports and exports exit 0; shellcheck 0; `deck-wait.sh` exit 0 (`DONE14`); Mac load 2.0 to 2.9 during the exports, alone otherwise | honest-speed-report 724644cf |
+| 2026-11-22 | 8 | `python3 -I gap12_digest.py deck <deck>/logs` | exit 0, `GAP12 DIGEST OK`; `TEAM MATCH` same in all 6 runs; team p95 on 15.32 [15.28-15.42], off 14.78 [14.76-15.06], +3.7%; row added to the ledger History | honest-speed-report 724644cf plus the ledger row |
+| 2026-11-22 | 8 | `ssh deck@<address> rm -rf wargrid-n14`; unit state | folder gone, `wargrid-n14-job` inactive | Deck |
 
 ## Rulings
 
 | Date | Ruling | Why | Cost if wrong |
 |---|---|---|---|
-| 2026-11-22 | 8 | Preflight, two exports (`tree-on`, `tree-off`: only `bench_runner.gd` `_team` `Profiler.enabled` differs), `shellcheck -s sh deck-job14.sh`, six pages on the Deck, `deck-wait.sh` | preflight AC on, display set, Firefox 160.0.1; imports and exports exit 0; shellcheck 0; `deck-wait.sh` exit 0 (`DONE14`); Mac load 2.0 to 2.9 during the exports, alone otherwise | honest-speed-report 724644cf |
-| 2026-11-22 | 8 | `python3 -I gap12_digest.py deck <deck>/logs` | exit 0, `GAP12 DIGEST OK`; `TEAM MATCH` same in all 6 runs; team p95 on 15.32 [15.28-15.42], off 14.78 [14.76-15.06], +3.7%; row added to the ledger History | honest-speed-report 724644cf plus the ledger row |
-| 2026-11-22 | 8 | `ssh deck@<address> rm -rf wargrid-n14`; unit state | folder gone, `wargrid-n14-job` inactive | Deck |

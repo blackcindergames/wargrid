@@ -44,6 +44,7 @@ PROFILE = re.compile(r"^PROFILE rendered_(\S+) zone=(\S+) mean_ms=([\d.]+)", re.
 # Direct team match only: the trailing space skips team_match.warmup and team_match_pump.
 TEAM = re.compile(r"^PROFILE team_match zone=(step|team\.tick) mean_ms=([\d.]+) .*? p95=([\d.]+)", re.M)
 TEAM_METRICS = {"step": "step", "team.tick": "team_tick"}
+TEAM_LABEL = re.compile(r"^PROFILE team_match ", re.M)
 HANDOFF = re.compile(r"^PROFILE (?!rendered_)(\S+) zone=(\S+) mean_ms=([\d.]+)", re.M)
 # view_state replaced snapshot and view.batch replaced view.copy on 2026-11-11 (performance next).
 HANDOFF_EXTRA = ("view.copy", "view.sort", "view.batch")
@@ -96,10 +97,14 @@ def _headless_handoff(text: str) -> list[Sample]:
 
 
 def _team_samples(text: str) -> list[Sample]:
-    return [
+    samples = [
         Sample(TEAM_METRICS[zone], "team_match:profile", float(p95), None, float(mean))
         for zone, mean, p95 in TEAM.findall(text)
     ]
+    missing = sorted(set(TEAM_METRICS.values()) - {s.metric for s in samples})
+    if missing and TEAM_LABEL.search(text):
+        raise ValueError(f"missing team_match zones: {', '.join(missing)}")
+    return samples
 
 
 def parse_log(text: str) -> list[Sample]:

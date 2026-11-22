@@ -461,6 +461,54 @@ class PerfChartTest(unittest.TestCase):
         rows = [self.pl("a", 0.0, date="2026-11-01"), self.pl("b", 1.0, date="2026-11-02")]
         self.assertEqual(self.trend(rows), "first run, mean 1.00 ms")
 
+    def test_trend_at_exactly_the_noise_limit_reads_same(self) -> None:
+        line = self.trend_line("Combat, huge battles (stress)")
+
+        def combat(label: str, p95: str, date: str) -> dict[str, str]:
+            return row(label=label, date=date, metric="combat_tick", scenario="hordes300", p95_ms=p95)
+
+        base = combat("a", "2.00", "2026-11-01")
+        # 2.814 / 2.00 is exactly +40.7 %, the combat stress NOISE_PCT, in floating point too.
+        self.assertEqual(
+            perf_chart.trend_text([base, combat("b", "2.814", "2026-11-02")], line), "same as 2026-11-01, p95 2.81 ms"
+        )
+        self.assertEqual(
+            perf_chart.trend_text([base, combat("b", "2.815", "2026-11-02")], line),
+            "41% slower since 2026-11-01, p95 2.81 ms",
+        )
+        self.assertEqual(
+            perf_chart.trend_text([base, combat("b", "1.185", "2026-11-02")], line),
+            "41% faster since 2026-11-01, p95 1.19 ms",
+        )
+
+    def team_rows(self) -> list[dict[str, str]]:
+        team, pump = "team_match:profile", "team_match_pump:profile"
+        return [
+            row(label="a", metric="step", scenario=team, p95_ms="2.176", mean_ms="1.344"),
+            row(label="a", metric="team_tick", scenario=team, p95_ms="2.861", mean_ms="1.54"),
+            row(label="a", metric="plumbing", scenario=team, mean_ms="1.12"),
+            row(label="a", metric="step", scenario=pump, p95_ms="7.0", mean_ms="7.0"),
+            row(label="a", metric="team_tick", scenario=pump, p95_ms="7.5", mean_ms="7.5"),
+            row(label="a", metric="plumbing", scenario=pump, mean_ms="6.0"),
+        ]
+
+    def goal_trend(self, title: str) -> str | None:
+        return perf_chart.trend_text(self.team_rows(), next(g for g in perf_chart.GOAL if g.title == title))
+
+    def test_goal_sim_line_reads_team_match_step(self) -> None:
+        self.assertEqual(self.goal_trend("3v3 sim p95"), "first run, p95 2.18 ms")
+
+    def test_goal_bots_line_reads_team_match_team_tick(self) -> None:
+        self.assertEqual(self.goal_trend("3v3 bots + sim p95"), "first run, p95 2.86 ms")
+
+    def test_goal_upkeep_line_reads_team_match_plumbing_mean(self) -> None:
+        self.assertEqual(self.goal_trend("3v3 upkeep"), "first run, mean 1.12 ms")
+
+    def test_other_machines_never_feed_the_trend(self) -> None:
+        rows = [self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 5.0, date="2026-11-02", machine="deck")]
+        self.assertEqual(len(perf_chart.series(rows, self.trend_line())), 1)
+        self.assertEqual(self.trend(rows), "first run, mean 1.00 ms")
+
     def test_goal_lines_judged_against_their_limits(self) -> None:
         rows = [row(label="a", metric="team_tick", scenario="team_match:profile", p95_ms="2.861")]
         self.assertTrue(any(s.startswith("3v3 bots + sim p95: 157% of budget") for s in perf_chart.summary_lines(rows)))
@@ -543,6 +591,17 @@ class PerfRecordTest(unittest.TestCase):
         lines = [x for x in TEAM_PROFILE_LOG.splitlines() if "zone=view" not in x and "COMPLETE" not in x]
         log = "\n".join(lines) + "\n"
         with self.assertRaisesRegex(ValueError, "missing marker: PROFILE COMPLETE 11"):
+            perf_record.parse_log(log)
+
+    def test_renamed_team_zone_refused(self) -> None:
+        log = TEAM_PROFILE_LOG.replace("team_match zone=team.tick", "team_match zone=bots.tick")
+        with self.assertRaisesRegex(ValueError, "missing team_match zones: team_tick"):
+            perf_record.parse_log(log)
+
+    def test_team_step_without_p95_refused(self) -> None:
+        log = TEAM_PROFILE_LOG.replace("p50=1.2000 p95=2.1760 ", "p50=1.2000 ")
+        self.assertNotEqual(log, TEAM_PROFILE_LOG)
+        with self.assertRaisesRegex(ValueError, "missing team_match zones: step"):
             perf_record.parse_log(log)
 
     def test_team_rows_written_with_p95_and_mean(self) -> None:
