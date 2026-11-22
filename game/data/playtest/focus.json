@@ -1,6 +1,22 @@
 [
+ {"id": "p2.3b-slice", "title": "Build from the dock",
+  "new": ["The build buttons now sit in a card at the bottom right. Select your builder, press Q or click Build, then pick a building. Each button shows its key in the corner: Q Power Plant, E Barracks.", "V or the Back button leaves the build grid. Esc does too. Esc backs out one step at a time: a placement first, then the build grid, then your selection, then the menu.", "A factory's card has the units to queue, each on its own key.", "You start with your builder already selected.", "W A S D no longer pan the map. Use the arrow keys.", "The top strip is two small boxes, credits and power. Point at something and the numbers it changes show an arrow and what you would have after it. If you cannot afford it, the number goes below zero in red with a $ coin."],
+  "try": [
+   {"id": "power", "text": "Build a Power Plant: press Q, then Q again, then place it", "trigger": "build"},
+   {"id": "barracks", "text": "Build a Barracks by clicking: Build, then Barracks, then place it", "trigger": "build"},
+   {"id": "back", "text": "Open the build grid and leave it with V. Open it again and leave it with Esc. Then press Esc with a building armed and see what it does first"},
+   {"id": "queue", "text": "Select a factory and queue units from its card by key and by click", "trigger": "produce"},
+   {"id": "start", "text": "At the start your builder is already selected. Note whether that helped or got in the way"},
+   {"id": "pan", "text": "Pan with the arrow keys. Note anything you missed without W A S D"},
+   {"id": "poor", "text": "Point at a building you cannot afford and read the top strip"}],
+  "questions": [
+   {"id": "keys_fast", "text": "Building by key was quick"},
+   {"id": "back_clear", "text": "I always knew how to back out"},
+   {"id": "start_helped", "text": "Starting with the builder selected helped"},
+   {"id": "pan_ok", "text": "I did not miss W A S D for panning"},
+   {"id": "strip_clear", "text": "The top strip told me what I could not afford"}]},
  {"id": "p2.3a1-see-your-selection", "title": "See your selection",
-  "new": ["Credits (and power, if your side uses it) sit on the top edge. Point at a buy button or place a building and the strip turns cyan, says PREVIEW and shows what you would have after it.", "Select something and a panel at the bottom left shows it: one unit, a group by kind, a building, a building going up, a supply pile or an enemy.", "A refused order shows the game's reason on a line at the bottom of the screen, between the panel and the buttons (still in the game's own words; plainer words come next).", "The bottom-right buttons follow your selection: build buttons when nothing or one builder is selected, Attack move and Stop for armed units, Unload for a loaded vehicle or Tunnel Hub. Keys are on the buttons; Unload moved from U to F. A factory's queue sits above its buttons; click a row to cancel it. E no longer produces: use the numbered buttons or 1-9.", "Right-click acts on what is under the pointer: move, attack, collect from a pile, or enter a Scout Car or Tunnel Hub. Esc or a right-click cancels a placement or an attack move."],
+  "new": ["Credits (and power, if your side uses it) sit on the top edge. Point at a buy button or place a building and the numbers it changes show an arrow and what you would have after it.", "Select something and a panel at the bottom left shows it: one unit, a group by kind, a building, a building going up, a supply pile or an enemy.", "A refused order shows the game's reason on a line at the bottom of the screen, between the panel and the buttons (still in the game's own words; plainer words come next).", "The bottom-right buttons follow your selection: Build for one builder, Attack move and Stop for armed units, Unload for a loaded vehicle or Tunnel Hub. Keys are on the buttons; Unload moved from U to F. A factory's queue sits above its buttons; click a row to cancel it. E no longer produces: press the key shown on the button.", "Right-click acts on what is under the pointer: move, attack, collect from a pile, or enter a Scout Car or Tunnel Hub. Esc or a right-click cancels a placement or an attack move."],
   "try": [
    {"id": "group", "text": "Select a mixed group, drop one kind with the panel's kind rows, then try to get it back"},
    {"id": "collectors", "text": "Select your collectors (trucks, helicopters or Laborers) and read what the panel says they are doing"},
@@ -14,7 +30,7 @@
    {"id": "found_it", "text": "I could always tell what I had selected"},
    {"id": "hud_clicks", "text": "The HUD and the open checklist never took a click I meant for the battlefield"},
    {"id": "buttons_fit", "text": "The bottom-right buttons showed what I could do with my selection"},
-   {"id": "preview_read", "text": "When I pointed at a buy button, I could tell the top numbers were a preview, not what I had"},
+   {"id": "preview_read", "text": "When I pointed at a buy button, I could tell the top numbers showed what I would have, not what I had"},
    {"id": "queue_cancel", "text": "I could cancel the queued unit I meant and never cancelled one by accident"}]},
  {"id": "p12-notes", "title": "Notes that never block",
   "new": ["The playtest notes live in one panel: checklist, questions and markers, any time during or after a match. The key left of 1 (shown in the panel title) opens it.", "The panel never pauses or blocks play and has no Save button: notes save themselves. Only the marker box (N) pauses an offline match while it is open.", "On desktop your notes are filed when you quit or close the window; in the browser they download when you come back to the launcher."],
