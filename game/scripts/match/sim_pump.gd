@@ -17,6 +17,7 @@ class Job:
 	var want_ring: bool = false
 	var want_tick_hash: bool = false
 	var want_log: bool = false
+	var want_bot_lines: bool = false
 	var preview: Dictionary = {}
 	var stamp_sequence: bool = false
 
@@ -35,6 +36,7 @@ class Note:
 	var tick_hash: String = ""
 	@warning_ignore("shadowed_global_identifier")
 	var log: Array[Dictionary] = []
+	var bot_lines: PackedStringArray = PackedStringArray()
 	var preview: Dictionary = {}
 	var starts: Dictionary = {}
 	var stats: Array[Dictionary] = []
@@ -164,6 +166,7 @@ static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job
 	if job.want_ring: note.ring = sim.hash_ring()
 	if job.want_tick_hash: note.tick_hash = sim.tick_hash()
 	if job.want_log: note.log.assign(command_recorder.commands().duplicate(true))
+	if job.want_bot_lines: note.bot_lines = Skirmish.debug_lines(sim, job.bots)
 	if slot != null:
 		slot.tick = sim.tick()
 		slot.view = sim.view_state()

@@ -58,7 +58,8 @@ static func _open_sitting() -> PlaytestSession:
 static func close_sitting(web: bool, download: Callable) -> void:
 	var session: PlaytestSession = _open_sitting()
 	if session == null: return
-	if not session.filled():
+	# A desktop match is worth filing for its replay even with an empty card; the web keeps the old rule.
+	if not session.filled() and (web or session.data.matches.is_empty()):
 		session.discard()
 		return
 	var filed: String = session.write(web, download)

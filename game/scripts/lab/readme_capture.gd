@@ -47,7 +47,7 @@ func _run(directory: String) -> void:
 	if DirAccess.make_dir_recursive_absolute(directory.path_join("clip")) != OK:
 		_fail("cannot create %s" % directory)
 		return
-	var sim: RefCounted = Skirmish.create(true, "ai", FACTIONS, MAP)
+	var sim: RefCounted = Skirmish.create(true, "human", FACTIONS, MAP)
 	var clash: Variant = await _fight(sim)
 	if _failed: return
 	if clash == null:

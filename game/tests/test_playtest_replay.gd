@@ -21,7 +21,7 @@ class OracleClient extends Client:
 		pass
 
 func cases() -> Array[Callable]:
-	return [test_recorder_logs_accepted_commands, test_bot_through_recorder_keeps_memory, test_log_lines_format, test_offline_scene_replays_to_same_digest, test_replay_names_first_differing_row, test_offline_record_tick_hashes, test_restart_starts_new_record, test_oracle_factions_arg, test_oracle_state_rows, test_oracle_ring_log]
+	return [test_recorder_logs_accepted_commands, test_bot_through_recorder_keeps_memory, test_log_lines_format, test_offline_scene_replays_to_same_digest, test_replay_names_first_differing_row, test_offline_record_tick_hashes, test_restart_starts_new_record, test_oracle_factions_arg, test_old_record_replays_as_ai, test_oracle_controller_arg, test_oracle_state_rows, test_oracle_ring_log]
 
 func _stop(sim, sequence: int, tick: int = 0) -> Dictionary:
 	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1)[0].id
@@ -125,6 +125,7 @@ func test_offline_scene_replays_to_same_digest(runner) -> bool:
 	var record: Dictionary = main.playtest_match()
 	runner.check(record.mode == "offline" and record.map == "dry_wells" and record.seed == 7, "RP4 record names mode, map and seed")
 	runner.check(record.factions == ["frc", "china"] and record.seat == 1, "RP4 record names factions and seat")
+	runner.check(record.get("controller") == "human", "RP4 record names the second seat's controller, got %s" % [record.get("controller")])
 	runner.check(record.build == PlaytestSettings.build_id(), "RP4 record names its build, got %s" % record.get("build"))
 	runner.check(record.end_tick == STEPS, "RP4 end tick is %d, got %d" % [STEPS, record.end_tick])
 	runner.check(record.end_digest == StateHash.digest(main.driver.pump.live().snapshot()), "RP4 end digest is the live digest")
@@ -133,7 +134,7 @@ func test_offline_scene_replays_to_same_digest(runner) -> bool:
 	for line in lines:
 		for command in Wire.decode(line).message.commands: players[command.player] = true
 	runner.check(players.has(1) and players.has(2), "RP4 lines hold commands of both players, got %s" % str(players.keys()))
-	var args := {"map": "dry_wells", "seed": "7", "factions": "frc,china", "oracle-ticks": str(STEPS)}
+	var args := {"map": "dry_wells", "seed": "7", "factions": "frc,china", "controller": "human", "oracle-ticks": str(STEPS)}
 	var client = _replay(lines, args)
 	runner.check(client._sim.tick() == STEPS, "RP4 the oracle reaches tick %d" % STEPS)
 	runner.check(StateHash.digest(client._sim.snapshot()) == record.end_digest, "RP4 the oracle replays to the recorded digest")
@@ -183,7 +184,7 @@ func test_replay_names_first_differing_row(runner) -> bool:
 	_step_main(main, STEPS, _send_move.bind(main))
 	var record: Dictionary = main.playtest_match()
 	var lines: PackedStringArray = record.commands
-	var args := {"map": "dry_wells", "seed": "7", "factions": "frc,china", "oracle-ticks": str(STEPS)}
+	var args := {"map": "dry_wells", "seed": "7", "factions": "frc,china", "controller": "human", "oracle-ticks": str(STEPS)}
 	var ring := _ring_rows(lines, args)
 	var by_tick: Dictionary = {}
 	for row in ring: by_tick[row.get_slice("\t", 0)] = row
@@ -242,6 +243,28 @@ func test_oracle_factions_arg(runner) -> bool:
 	runner.check(client._faction_error() != "", "RP6 an unknown --factions entry is refused")
 	client._args = {"factions": "frc,china"}
 	runner.check(client._faction_error() == "", "RP6 known --factions entries pass")
+	client.free()
+	return true
+
+func test_old_record_replays_as_ai(runner) -> bool:
+	var record: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://benchmarks/p2_playtest_match.json"))
+	runner.check(not record.has("controller"), "RP9 the fixture is a record without a controller")
+	var args := {"map": record.map, "seed": str(int(record.seed)), "factions": ",".join(record.factions), "oracle-ticks": "1"}
+	var client = _replay(PackedStringArray(), args)
+	runner.check(client._sim.snapshot().players.map(func(player: Dictionary) -> String: return player.controller) == ["human", "ai"], "RP9 a record without a controller replays with an ai second seat")
+	client.free()
+	return true
+
+func test_oracle_controller_arg(runner) -> bool:
+	var client = _replay(PackedStringArray(), {"factions": "frc,china", "controller": "human", "oracle-ticks": "1"})
+	runner.check(client._sim.snapshot().players.map(func(player: Dictionary) -> String: return player.controller) == ["human", "human"], "RP10 --controller human makes the second seat human")
+	client.free()
+	client = OracleClient.new()
+	for value: String in ["human", "ai"]:
+		client._args = {"controller": value}
+		runner.check(client._controller_error() == "", "RP10 --controller %s passes" % value)
+	client._args = {"controller": "bot"}
+	runner.check(client._controller_error().contains("'bot'"), "RP10 an unknown --controller is refused and named, got '%s'" % client._controller_error())
 	client.free()
 	return true
 

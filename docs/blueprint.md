@@ -29,6 +29,7 @@ Wargrid is a passion/learning project: a modern, scriptable, testable RTS with i
 - **Combat:** infantry, vehicles, aircraft, weapons, targeting, armor, range, veterancy, garrisons, crushing and support powers.
 - **Player experience:** responsive selection, move/attack-move/guard behavior, tactical readability, recognizable pacing, useful minimap, fog of war, hotkeys.
 - **Strategic structure:** escalation from early economy to late-game units, technologies and superweapons.
+- **Enemy bots:** the rules of today's bot (P7 part 1) are in the [P7 part 1 plan](superpowers/plans/2026-11-21-p7-enemy-bots.md) and [guide chapter 9](guide/09-ai.md); bots beyond them are M8.
 
 ### What to change
 

@@ -127,6 +127,9 @@ func _ready() -> void:
 	rng.randomize()
 	music.play_match(rng, MusicPlayer.GAP_SECONDS)
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
+	if driver.has_method("bot_line"):
+		_perf.extra = driver.bot_line
+		_perf.visibility_changed.connect(func() -> void: driver.show_bots = _perf.visible)
 	driver.start()
 
 func _enter_tree() -> void:
@@ -184,7 +187,7 @@ func playtest_header() -> Dictionary:
 	return _header(played.mode, played.factions)
 
 func _header(mode: String, match_factions: Array) -> Dictionary:
-	return {"mode": mode, "map": _map_id(), "seed": match_seed, "factions": match_factions, "seat": local_player, "build": PlaytestSettings.build_id()}
+	return {"mode": mode, "map": _map_id(), "seed": match_seed, "factions": match_factions, "seat": local_player, "controller": "human", "build": PlaytestSettings.build_id()}
 
 func _map_id() -> String:
 	return map_path.get_file().get_basename()

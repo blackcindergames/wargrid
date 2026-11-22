@@ -49,7 +49,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_only, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states, test_match_end_keeps_field_focus, test_new_scene_starts_new_entry, test_resumed_sitting_lists_markers, test_match_end_keeps_marker_draft, test_mute_key_stays_in_field, test_match_end_scrolls_to_markers, test_ph_header_builds_no_log, test_ph_every_exit_stops_pump_before_record]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_or_played, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states, test_match_end_keeps_field_focus, test_new_scene_starts_new_entry, test_resumed_sitting_lists_markers, test_match_end_keeps_marker_draft, test_mute_key_stays_in_field, test_match_end_scrolls_to_markers, test_ph_header_builds_no_log, test_ph_every_exit_stops_pump_before_record]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -504,7 +504,7 @@ func test_leave_after_closed_sitting(runner) -> bool:
 		var scenes := _scenes(main)
 		main.get_node("HUD/PauseMenu").leave_requested.emit()
 		var filed: Array = _saved_session().get("matches", [])
-		runner.check(scenes == [LAUNCHER] and _no_form(main) and filed.size() == (1 if filled else 0) and _current_text().is_empty(), "PO11b leaving after a closed sitting (filled %s) reaches the launcher at once and files nothing again, scenes %s, filed %d" % [filled, scenes, filed.size()])
+		runner.check(scenes == [LAUNCHER] and _no_form(main) and filed.size() == 1 and _current_text().is_empty(), "PO11b leaving after a closed sitting (filled %s) reaches the launcher at once and files the match only once, scenes %s, filed %d" % [filled, scenes, filed.size()])
 		main.free()
 		_end(saved)
 	return true
@@ -684,7 +684,7 @@ func test_quit_with_write_error_still_quits(runner) -> bool:
 	_end(saved)
 	return true
 
-func test_each_exit_files_filled_only(runner) -> bool:
+func test_each_exit_files_filled_or_played(runner) -> bool:
 	for exit_name: String in ["pause quit", "launcher quit", "window close"]:
 		for filled: bool in [true, false]:
 			var saved: String = _begin()
@@ -704,7 +704,7 @@ func test_each_exit_files_filled_only(runner) -> bool:
 				if exit_name == "pause quit": main.get_node("HUD/PauseMenu").quit_requested.emit()
 				else: _close_window(main)
 				main.free()
-			runner.check(_session_files().size() == (1 if filled else 0) and _current_text().is_empty(), "NB11 %s: files %s and removes current.json" % [label, _session_files()])
+			runner.check(_session_files().size() == (1 if filled or exit_name != "launcher quit" else 0) and _current_text().is_empty(), "NB11 %s: files %s and removes current.json" % [label, _session_files()])
 			_end(saved)
 	return true
 

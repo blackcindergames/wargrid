@@ -57,7 +57,8 @@ func refresh_text() -> void:
 	var step: Dictionary = _summary(_steps, _step_count)
 	var lines: String = "FPS %d\nFrame %.1f / p95 %.1f / max %.1f ms\nSim step %.2f / p95 %.2f ms\nUnits %d | Buildings %d | Tick %d | split %d%%" % [
 		Engine.get_frames_per_second(), frame.last, frame.p95, frame.max, step.last, step.p95, _units, _buildings, _tick, roundi(split_share * 100.0)]
-	if extra.is_valid(): lines += "\n" + str(extra.call())
+	var more: String = str(extra.call()) if extra.is_valid() else ""
+	if not more.is_empty(): lines += "\n" + more
 	text = lines
 
 static func _summary(ring: PackedFloat64Array, count: int) -> Dictionary:

@@ -2193,7 +2193,7 @@ func test_view_player_after_the_online_seat(runner) -> bool:
 
 func test_pal_two_seat_create_unchanged(runner) -> bool:
 	var plain: RefCounted = Skirmish.create()
-	var explicit: RefCounted = Skirmish.create(true, "ai", Skirmish.Registry.Factions.DEFAULT_SKIRMISH, Skirmish.MAP_PATH, [] as Array[int], 2)
+	var explicit: RefCounted = Skirmish.create(true, "human", Skirmish.Registry.Factions.DEFAULT_SKIRMISH, Skirmish.MAP_PATH, [] as Array[int], 2)
 	runner.check(plain.tick_hash() == explicit.tick_hash() and plain.snapshot() == explicit.snapshot(), "PAL two-seat create is unchanged by the seat count")
 	return true
 

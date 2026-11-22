@@ -7,16 +7,21 @@ const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const Combat = preload("res://scripts/simulation/combat.gd")
 const Fixture = preload("res://tests/combat_fixture.gd")
 const Economy = preload("res://tests/economy_fixture.gd")
+const SeatFixture = preload("res://tests/seat_fixture.gd")
 
 const PREFIX_TICKS: int = 20000
 const PAIR_TICKS: int = 3000
 const TRACE_INTERVAL: int = 200
-const FINAL_DIGEST: String = "d2f386fa273a0048"
+const FINAL_DIGEST: String = "c9bdc710874637a5"
 const BUILD_CHECK_TICK: int = 3000
-const TEAM_CORE_SERIES: int = 7092199221456895974
+const TEAM_CORE_SERIES: int = 1689024008192241881
+const DUO_TICK_CAP: int = 45000
+const DUO_TERMINAL_TICK: int = 28061
+const DUO_WINNER: int = 2
+const DUO_CORE_SERIES: int = 1493862968646511655
 
 func cases() -> Array[Callable]:
-	return [test_bot_never_targets_ally, test_dead_seat_bot_is_silent, test_team_match_prefix, test_team_match_pair]
+	return [test_bot_never_targets_ally, test_dead_seat_bot_is_silent, test_team_match_prefix, test_team_match_pair, test_team2v2_trace]
 
 func _bot_world() -> RefCounted:
 	var sim = Fixture.world()
@@ -34,7 +39,7 @@ func test_bot_never_targets_ally(runner) -> bool:
 	sim.start_match([1, 2, 3] as Array[int])
 	var attacks: int = 0
 	var bad: int = 0
-	for tick in range(Skirmish.WAVE_TIMEOUT + Skirmish.DECISION_TICKS * 30):
+	for tick in range(Skirmish.WAVE_WAIT + Skirmish.DECISION_TICKS * 30):
 		sim.step()
 		Skirmish.issue_opponent(sim, 1, 0)
 		for command in sim.snapshot().pending_commands:
@@ -114,3 +119,22 @@ func _completed_buildings(sim: RefCounted) -> Dictionary:
 	for building in sim.snapshot().buildings:
 		if building.completed: counts[building.owner] = counts.get(building.owner, 0) + 1
 	return counts
+
+func test_team2v2_trace(runner) -> bool:
+	var sim = SeatFixture.sim(SeatFixture.QUAD_TEAMS)
+	var seats: Array[int] = [1, 2, 3, 4]
+	var series: int = 0
+	var terminal: int = -1
+	for tick in range(DUO_TICK_CAP):
+		Skirmish.issue_opponents(sim, seats)
+		sim.step()
+		var state: Dictionary = sim.snapshot()
+		series = (series * 31 + StateHash.core_check(state)) & 0x7fffffffffffffff
+		if state.match.status != "ongoing":
+			terminal = tick
+			break
+		if tick % 600 == 599: await runner.process_frame
+	var end: Dictionary = sim.snapshot()
+	runner.check(terminal == DUO_TERMINAL_TICK and end.match.winner == DUO_WINNER, "TT1 2v2 pinned outcome, got " + str(terminal) + " " + str(end.match))
+	runner.check(series == DUO_CORE_SERIES, "TT1 2v2 core series pinned, got " + str(series))
+	return true

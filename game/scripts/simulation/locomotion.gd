@@ -1,7 +1,9 @@
 extends RefCounted
 
+const ORDERED: Array[String] = ["move", "attack", "attack_move"]
+
 static func step(unit: Dictionary, kind_def: Dictionary, tick: int) -> float:
-	var cap: float = kind_def.speed
+	var cap: float = _cap(unit, kind_def)
 	var locomotor: String = kind_def.locomotor
 	if locomotor == "air":
 		_snap_heading(unit)
@@ -26,9 +28,18 @@ static func step(unit: Dictionary, kind_def: Dictionary, tick: int) -> float:
 	var remaining: float = _route_length_until(unit, 2.0 * brake, cap * cap, cap / 30.0)
 	var stoppable: float = sqrt(2.0 * brake * remaining)
 	var accel: float = kind_def.accel
-	speed = minf(minf(speed + accel / 30.0, cap * factor), stoppable)
+	# A wheel factor is the unit's own turn speed over its own speed, not a share of a group cap.
+	var limit: float = minf(cap, kind_def.speed * factor) if locomotor == "wheels" else cap * factor
+	speed = minf(minf(speed + accel / 30.0, limit), stoppable)
 	unit.speed = speed
 	return minf(speed / 30.0, remaining)
+
+# A group-speed order holds only while the unit's intent is still the ordered one.
+static func _cap(unit: Dictionary, kind_def: Dictionary) -> float:
+	var own: float = kind_def.speed
+	if not unit.has("group_speed"): return own
+	if unit.combat != null and not unit.combat.mode in ORDERED: return own
+	return minf(own, unit.group_speed)
 
 # Wheels turn in proportion to speed up to turn speed (Locomotor.cpp moveTowardsPositionWheels, turnFactor); the step uses sin(k a) = k sin(a), exact enough at 3 degrees.
 static func _wheel_turn(heading: Vector2, desired: Vector2, speed: float, kind_def: Dictionary) -> Vector2:

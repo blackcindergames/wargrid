@@ -9,16 +9,45 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 
 const START_CREDITS: int = 10000
 const DECISION_TICKS: int = 30
-const ATTACK_TICK: int = 5400
+const TICKS_PER_SECOND: int = 30
 const DEFENCE_RADIUS: float = 10.0
-const WAVE_MIN: int = 6
-const WAVE_TIMEOUT: int = 1800
+const FIRST_WAVE_TICK: int = 5400
+const WAVE_GAPS: Array[int] = [2700, 2700, 1800]
+const WAVE_WAIT: int = 1800
+const WAVE_SIZES: Array[int] = [8, 12, 16, 20, 24, 28, 32]
+const WAVE0_UNITS: int = 16
+const DEF_UNITS: int = 4
+const DEF_REACH: float = 8.0
+const ROUTE_STEP: float = 8.0
+const DEFENCE_STRIDE: int = 7
 const RALLY_RADIUS: float = 6.0
 const DISTANCE_STEP: float = 4.0
+const DETOUR_REACH: float = 10.0
+const DETOUR_CALM: int = 90
+const LET_GO_TICKS: int = 300
+const HOLD_LAPSE: int = 1800
 const BOT_META := &"skirmish_bot"
+const BOT_TEAM_META := &"skirmish_bot_team"
 const MAP_PATH := "res://data/maps/skirmish.json"
 
 static var _skirmish_map: Dictionary = {}
+
+# Cost per unit: a quantity order (Militia) pays for several units at once.
+static func unit_cost(kind: String) -> int:
+	var row: Dictionary = Registry.kind(kind)
+	@warning_ignore("integer_division")
+	return int(row.get("cost", 0)) / int(row.get("quantity", 1))
+
+# Integer mean over the faction's build list, never scaled.
+static func faction_unit_cost(faction_id: String) -> int:
+	var kinds: Array = []
+	var producers: Dictionary = Registry.faction(faction_id).units_for
+	for producer: String in producers: kinds.append_array(producers[producer])
+	@warning_ignore("integer_division")
+	return _cost_sum(kinds) / kinds.size()
+
+static func team_memory(seat_or_sim: RefCounted, team: int) -> Dictionary:
+	return _real(seat_or_sim).get_meta(BOT_TEAM_META, {}).get(team, {}).duplicate(true)
 
 static func default_faction() -> String:
 	return Registry.Factions.DEFAULT_FACTION
@@ -50,7 +79,7 @@ static func _slot(sim: RefCounted, kind: String, player: int) -> Vector2i:
 	var map: Dictionary = sim.map_data()
 	return MapData.slot(map if not map.is_empty() else _default_map(), player, kind)
 
-static func create(with_match: bool = true, second_controller: String = "ai", factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH, map_path: String = MAP_PATH, starts: Array[int] = [], seat_count: int = 2) -> Simulation:
+static func create(with_match: bool = true, second_controller: String = "human", factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH, map_path: String = MAP_PATH, starts: Array[int] = [], seat_count: int = 2) -> Simulation:
 	var ids: Array[int] = []
 	var seats: Array[Dictionary] = []
 	for seat in range(1, seat_count + 1):
@@ -69,10 +98,10 @@ static func create(with_match: bool = true, second_controller: String = "ai", fa
 	else: sim.start_match(ids)
 	return sim
 
-static func issue_opponent(sim: RefCounted, player: int = 2, attack_tick: int = ATTACK_TICK) -> void:
+static func issue_opponent(sim: RefCounted, player: int = 2, attack_tick: int = FIRST_WAVE_TICK) -> void:
 	issue_opponents(sim, [player], attack_tick)
 
-static func issue_opponents(sim: RefCounted, players: Array[int], attack_tick: int = ATTACK_TICK) -> void:
+static func issue_opponents(sim: RefCounted, players: Array[int], attack_tick: int = FIRST_WAVE_TICK) -> void:
 	for player in players:
 		if not decides(sim.tick(), player): continue
 		var zone: int = Profiler.begin()
@@ -86,14 +115,14 @@ static func decides(tick: int, player: int) -> bool:
 static func next_decision(tick: int, player: int) -> int:
 	return tick + 1 + posmod(player - tick - 1, DECISION_TICKS)
 
-static func decide(sim: RefCounted, player: int, attack_tick: int = ATTACK_TICK) -> void:
+static func decide(sim: RefCounted, player: int, attack_tick: int = FIRST_WAVE_TICK) -> void:
 	_decide(sim, player, attack_tick, _real(sim).bot_state())
 
 # A seat wrapper or command recorder is rebuilt every decision; memory and state live on the simulation.
 static func _real(seat_or_sim: RefCounted) -> RefCounted:
 	return seat_or_sim.simulation() if seat_or_sim.has_method("simulation") else seat_or_sim
 
-static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dictionary) -> void:
+static func _context(sim: RefCounted, player: int, state: Dictionary) -> Dictionary:
 	var sequence: int = -1
 	for entry: Variant in state.last_sequences:
 		if entry.player == player: sequence = entry.sequence
@@ -102,13 +131,20 @@ static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dicti
 		if entry.id == player: credits = entry.credits
 	var teams := {}
 	for entry: Dictionary in state.players: teams[entry.id] = entry.team
-	var ctx := {"sim": sim, "player": player, "tick": state.tick, "sequence": sequence, "credits": credits, "teams": teams}
+	return {"sim": sim, "player": player, "tick": state.tick, "sequence": sequence, "credits": credits, "start_credits": credits, "teams": teams}
+
+static func _decide(sim: RefCounted, player: int, attack_tick: int, state: Dictionary) -> void:
+	var ctx: Dictionary = _context(sim, player, state)
+	_bot(sim, player)
+	var wave_clock: Dictionary = _team_entry(sim, ctx.teams.get(player, player), attack_tick)
 	var buildings: Array = state.buildings.filter(func(building: Dictionary) -> bool: return building.owner == player)
 	var faction: String = _faction(state, player)
 	_build(ctx, state, buildings, faction)
-	_produce(ctx, state, buildings, faction)
+	_produce(ctx, state, buildings, faction, wave_clock)
 	var defending: Dictionary = _defend(ctx, state, buildings)
-	if state.tick >= attack_tick: _attack(ctx, state, defending)
+	if wave_clock.wave > 0 or state.tick >= wave_clock.due: _attack(ctx, state, defending, wave_clock)
+	# Only a live seat's decision is a team decision for released_by.
+	if buildings.any(func(building: Dictionary) -> bool: return Registry.kind(building.kind).counts_for_victory): wave_clock.prev = state.tick
 
 static func _send(ctx: Dictionary, payload: Dictionary) -> bool:
 	payload.tick = ctx.tick
@@ -129,16 +165,22 @@ static func _build(ctx: Dictionary, state: Dictionary, buildings: Array, faction
 		if building.completed or building.has("hole_id"): continue
 		if building.builder_id == null: _send(ctx, {"type": "resume_build", "builder_id": builder, "building_id": building.id})
 		return
-	for kind: String in build_order(faction):
-		if buildings.any(func(building: Dictionary) -> bool: return building.kind == kind or building.get("rebuild", {}).get("kind") == kind): continue
-		var cost: int = Definitions.building(kind).cost
-		var site: Vector2i = _slot(ctx.sim, kind, ctx.player)
-		if ctx.credits >= cost and _send(ctx, {"type": "build", "builder_id": builder, "building_kind": kind, "origin": [site.x, site.y]}): ctx.credits -= cost
-		return
+	var kind: String = _first_missing(buildings, faction)
+	if kind.is_empty(): return
+	var cost: int = Definitions.building(kind).cost
+	var site: Vector2i = _slot(ctx.sim, kind, ctx.player)
+	if ctx.credits >= cost and _send(ctx, {"type": "build", "builder_id": builder, "building_kind": kind, "origin": [site.x, site.y]}): ctx.credits -= cost
 
-static func _produce(ctx: Dictionary, state: Dictionary, buildings: Array, faction: String) -> void:
+static func _first_missing(buildings: Array, faction: String) -> String:
+	for kind: String in build_order(faction):
+		if not buildings.any(func(building: Dictionary) -> bool: return building.kind == kind or building.get("rebuild", {}).get("kind") == kind): return kind
+	return ""
+
+static func _produce(ctx: Dictionary, state: Dictionary, buildings: Array, faction: String, clock: Dictionary) -> void:
 	var mine: Array = state.entities.filter(func(unit: Dictionary) -> bool: return unit.owner == ctx.player and not unit.has("hole_id"))
 	var replace_builder: bool = not mine.any(func(unit: Dictionary) -> bool: return Registry.is_builder(unit.kind))
+	var has_builder: bool = not replace_builder
+	var rest: Array = []
 	var start_unit: String = Registry.faction(faction).start_unit
 	var per_depot: int = Registry.faction(faction).bot_collectors_per_supply_center
 	var depots: int = buildings.filter(func(building: Dictionary) -> bool: return building.completed and not building.has("hole_id") and Registry.kind(building.kind).receives_supply).size()
@@ -152,12 +194,69 @@ static func _produce(ctx: Dictionary, state: Dictionary, buildings: Array, facti
 		var collector: String = _collector_kind(row)
 		if row.produces.has(start_unit) and replace_builder: kind = start_unit
 		elif not collector.is_empty() and owned.count(collector) + queued.count(collector) < per_depot * depots: kind = collector
+		elif clock.wave > 0:
+			rest.append(building)
+			continue
 		if kind.is_empty(): continue
-		var cost: int = Definitions.unit(kind).cost
-		if ctx.credits >= cost and _send(ctx, {"type": "produce", "building_id": building.id, "unit_kind": kind}):
-			ctx.credits -= cost
-			owned.append(kind)
+		_buy(ctx, building, kind, owned)
 		if kind == start_unit: replace_builder = false
+	if clock.wave > 0: _spend_rest(ctx, rest, buildings, faction, owned, queued, has_builder)
+
+static func _buy(ctx: Dictionary, building: Dictionary, kind: String, owned: Array) -> bool:
+	var cost: int = Definitions.unit(kind).cost
+	if ctx.credits < cost or not _send(ctx, {"type": "produce", "building_id": building.id, "unit_kind": kind}): return false
+	ctx.credits -= cost
+	owned.append(kind)
+	return true
+
+# BR7, from wave 1: an idle factory short of its pick's price holds the credits while vehicles are short of the faction's share of army value, and a lost factory is saved for while the builder lives and its price is not met; a hold lapses for one decision after HOLD_LAPSE ticks without income.
+static func _spend_rest(ctx: Dictionary, rest: Array, buildings: Array, faction: String, owned: Array, queued: Array, has_builder: bool) -> void:
+	var bot: Dictionary = _bot(ctx.sim, ctx.player)
+	var share: int = Registry.faction(faction).bot_vehicle_share
+	var army: int = 0
+	var vehicles: int = 0
+	# A queued order is worth its full price: a quantity order yields several units.
+	var priced: Array = owned.map(func(kind: String) -> Array: return [kind, unit_cost(kind)]) + queued.map(func(kind: String) -> Array: return [kind, Definitions.unit(kind).cost])
+	for entry: Array in priced:
+		if not _is_army(entry[0]): continue
+		army += entry[1]
+		if _is_vehicle(entry[0]): vehicles += entry[1]
+	var missing: String = _first_missing(buildings, faction)
+	var held: bool = has_builder and _is_factory(faction, missing) and ctx.credits < Definitions.building(missing).cost
+	var bought := {}
+	for building: Dictionary in rest:
+		if held or vehicles * 100 >= share * army: break
+		if not _is_factory(faction, building.kind): continue
+		var pick: String = unit_for(faction, building.kind, owned)
+		if not _buy(ctx, building, pick, owned):
+			if ctx.credits >= Definitions.unit(pick).cost: continue
+			held = true
+			break
+		army += Definitions.unit(pick).cost
+		vehicles += Definitions.unit(pick).cost
+		bought[building.id] = true
+	if held and not _lapses(bot, ctx): return
+	bot.erase("hold_since")
+	bot.erase("hold_credits")
+	for building: Dictionary in rest:
+		if bought.has(building.id): continue
+		var kind: String = unit_for(faction, building.kind, owned)
+		if not kind.is_empty(): _buy(ctx, building, kind, owned)
+
+# The lapse clock restarts whenever credits rose since the last held decision; stored after this decision's buys, so a buy never hides income.
+static func _lapses(bot: Dictionary, ctx: Dictionary) -> bool:
+	if ctx.start_credits > bot.get("hold_credits", -1): bot.hold_since = ctx.tick
+	bot.hold_credits = ctx.credits
+	return ctx.tick - bot.hold_since >= HOLD_LAPSE
+
+static func _is_army(kind: String) -> bool:
+	return not Registry.is_builder(kind) and Registry.collects(kind).is_empty()
+
+static func _is_vehicle(kind: String) -> bool:
+	return Registry.kind(kind).get("class", "") == "vehicle"
+
+static func _is_factory(faction: String, kind: String) -> bool:
+	return Registry.faction(faction).units_for.get(kind, []).any(_is_vehicle)
 
 static func _collector_kind(row: Dictionary) -> String:
 	if not row.receives_supply: return ""
@@ -170,64 +269,350 @@ static func _faction(state: Dictionary, player: int) -> String:
 		if entry.id == player: return entry.get("faction", Registry.Factions.DEFAULT_FACTION)
 	return Registry.Factions.DEFAULT_FACTION
 
-static func _attack(ctx: Dictionary, state: Dictionary, skip: Dictionary = {}) -> void:
+static func _enemies(ctx: Dictionary, state: Dictionary) -> Array:
 	var enemies: Array = state.entities.filter(func(unit: Dictionary) -> bool: return _hostile(ctx, unit.owner) and not Registry.air_kinds.has(unit.kind) and not unit.has("container_id"))
 	enemies.append_array(state.buildings.filter(func(building: Dictionary) -> bool: return _hostile(ctx, building.owner) and not Combat.masked(building)))
+	return enemies
+
+static func _own_units(ctx: Dictionary, state: Dictionary) -> Dictionary:
 	var mine := {}
 	for unit: Dictionary in state.entities:
 		if unit.owner == ctx.player: mine[unit.id] = unit
+	return mine
+
+static func _attack(ctx: Dictionary, state: Dictionary, skip: Dictionary, clock: Dictionary) -> void:
+	var enemies: Array = _enemies(ctx, state)
+	var mine: Dictionary = _own_units(ctx, state)
 	var bot: Dictionary = _bot(ctx.sim, ctx.player)
-	_drive_waves(ctx, bot, mine, enemies, skip)
-	_gather(ctx, bot, mine, enemies, skip)
+	_drive_waves(ctx, bot, mine, enemies, skip, clock)
+	_gather(ctx, state, bot, mine, enemies, skip, clock)
 
-static func _bot(seat_or_sim: RefCounted, player: int) -> Dictionary:
+static func _memory(seat_or_sim: RefCounted, key: StringName) -> Dictionary:
 	var sim: RefCounted = _real(seat_or_sim)
-	if not sim.has_meta(BOT_META): sim.set_meta(BOT_META, {})
-	return sim.get_meta(BOT_META).get_or_add(player, {"since": -1, "waves": []})
+	if not sim.has_meta(key): sim.set_meta(key, {})
+	return sim.get_meta(key)
 
-static func _drive_waves(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary) -> void:
+# Creating the entry is what makes a seat a live bot, so it happens before any gate.
+static func _bot(seat_or_sim: RefCounted, player: int) -> Dictionary:
+	return _memory(seat_or_sim, BOT_META).get_or_add(player, {"waves": []})
+
+# left_units is -1 after wave 0: only the first wave has a unit cap.
+static func _team_entry(seat_or_sim: RefCounted, team: int, first_due: int) -> Dictionary:
+	return _memory(seat_or_sim, BOT_TEAM_META).get_or_add(team, {"wave": 0, "due": first_due, "prev": -1, "released_by": "", "launched_at": -1, "objective": null, "attacked_at": {}, "left_cost": 0, "left_units": 0, "joiners": []})
+
+static func _drive_waves(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary, clock: Dictionary) -> void:
 	var live: Array = []
 	for wave: Dictionary in bot.waves:
+		var hurt: Variant = _hurt(wave, mine)
 		wave.ids = wave.ids.filter(func(id: int) -> bool: return mine.has(id))
 		if wave.ids.is_empty(): continue
 		var centre: Vector2 = _centre(wave.ids, mine)
+		if hurt != null: wave.hit_at = ctx.tick
+		_end_detour(wave, mine, enemies, ctx.tick)
+		if hurt != null and wave.detour == null: wave.detour = _detour(wave, centre if hurt.is_empty() else _centre(hurt, mine), enemies, ctx.tick)
 		var hits: Array = enemies.filter(func(enemy: Dictionary) -> bool: return enemy.id == wave.target)
 		var switched: bool = false
-		if hits.is_empty() or (_is_building(hits[0]) and _engaged(centre, enemies)):
-			var target: Variant = _pick(centre, enemies)
+		if wave.detour != null or hits.is_empty() or wave.diverted:
+			var target: Variant = wave.detour if wave.detour != null else _follow(clock, centre, enemies)
+			wave.diverted = wave.detour != null
 			if target == null: continue
 			switched = not hits.is_empty() and target != wave.target
 			wave.target = target
 		live.append(wave)
 		var pool: Array = wave.ids.filter(func(id: int) -> bool: return not skip.has(id) and (switched or _idle(mine[id])))
-		if not pool.is_empty(): _send(ctx, {"type": "attack", "entity_ids": pool, "target_id": wave.target})
+		# BR8: marches at the slowest unit's speed; a detour fights at full speed.
+		var order := {"type": "attack", "entity_ids": pool, "target_id": wave.target}
+		if wave.detour == null: order.group_speed = true
+		if not pool.is_empty(): _send(ctx, order)
 	bot.waves = live
 
-static func _gather(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary) -> void:
+static func _new_wave(ids: Array, target: Variant, mine: Dictionary) -> Dictionary:
+	return {"ids": ids, "target": target, "detour": null, "diverted": false, "hit_at": -1, "let_go": {}, "hp": _hp_of(ids, mine)}
+
+static func _hp_of(ids: Array, mine: Dictionary) -> Dictionary:
+	var hp := {}
+	for id: int in ids: hp[id] = mine[id].hp
+	return hp
+
+static func _hurt(wave: Dictionary, mine: Dictionary) -> Variant:
+	var before: Dictionary = wave.hp
+	var hurt: Array = before.keys().filter(func(id: int) -> bool: return mine.has(id) and mine[id].hp < before[id])
+	var died: bool = before.keys().any(func(id: int) -> bool: return not mine.has(id))
+	wave.hp = _hp_of(wave.ids.filter(func(id: int) -> bool: return mine.has(id)), mine)
+	return hurt if died or not hurt.is_empty() else null
+
+static func _end_detour(wave: Dictionary, mine: Dictionary, enemies: Array, tick: int) -> void:
+	if wave.detour == null: return
+	var found: Array = enemies.filter(func(enemy: Dictionary) -> bool: return enemy.id == wave.detour)
+	if found.is_empty():
+		wave.detour = null
+	elif not wave.ids.any(func(id: int) -> bool: return _reach_squared(mine[id].position[0], mine[id].position[1], found[0]) <= DETOUR_REACH * DETOUR_REACH):
+		wave.let_go[wave.detour] = tick
+		wave.detour = null
+	elif tick - wave.hit_at >= DETOUR_CALM:
+		wave.detour = null
+
+static func _detour(wave: Dictionary, at: Vector2, enemies: Array, tick: int) -> Variant:
+	return _best(at, enemies.filter(func(enemy: Dictionary) -> bool:
+		if Registry.kind(enemy.kind).get("weapon", "").is_empty(): return false
+		if wave.let_go.has(enemy.id) and tick - wave.let_go[enemy.id] < LET_GO_TICKS: return false
+		return _reach_squared(at.x, at.y, enemy) <= DETOUR_REACH * DETOUR_REACH))
+
+# Squared distance from a point to an enemy unit or to the nearest cell of an enemy building, on plain floats.
+static func _reach_squared(x: float, y: float, enemy: Dictionary) -> float:
+	var near: Array = enemy.get("position", [])
+	if enemy.has("origin"):
+		var size: Vector2i = Definitions.building(enemy.kind).footprint
+		near = [clampf(x, enemy.origin[0], enemy.origin[0] + size.x), clampf(y, enemy.origin[1], enemy.origin[1] + size.y)]
+	return (x - near[0]) * (x - near[0]) + (y - near[1]) * (y - near[1])
+
+# The team objective while it stands; a dead one is replaced once, by the first wave that notices, from the live victims' buildings.
+static func _follow(clock: Dictionary, centre: Vector2, enemies: Array) -> Variant:
+	if enemies.any(func(enemy: Dictionary) -> bool: return enemy.id == clock.objective): return clock.objective
+	var buildings: Array = enemies.filter(_is_building)
+	var victims: Array = _victims(buildings, clock)
+	var standing: Array = buildings.filter(func(building: Dictionary) -> bool: return victims.has(building.owner))
+	var target: Variant = _pick(centre, enemies if standing.is_empty() else standing)
+	if target != null: clock.objective = target
+	return target
+
+static func _waving(bot: Dictionary) -> Dictionary:
 	var waving := {}
 	for wave: Dictionary in bot.waves:
 		for id: int in wave.ids: waving[id] = true
-	var rally: Vector2 = _rally(ctx)
+	return waving
+
+# Idle units outside any wave, split by whether they already stand at the rally.
+static func _rally_split(bot: Dictionary, mine: Dictionary, skip: Dictionary, rally: Vector2) -> Dictionary:
+	var waving: Dictionary = _waving(bot)
 	var ready: Array = []
 	var walking: Array = []
 	for id: int in mine:
 		if waving.has(id) or skip.has(id) or not _idle(mine[id]): continue
-		var at := Vector2(mine[id].position[0], mine[id].position[1])
-		(ready if at.distance_to(rally) <= RALLY_RADIUS else walking).append(id)
-	if not walking.is_empty(): _send(ctx, {"type": "move", "entity_ids": walking, "target": [rally.x, rally.y]})
-	if ready.is_empty():
-		bot.since = -1
-		return
-	if bot.since < 0: bot.since = ctx.tick
-	if ready.size() < WAVE_MIN and ctx.tick - bot.since < WAVE_TIMEOUT: return
-	var target: Variant = _pick(_centre(ready, mine), enemies)
-	if target == null or not _send(ctx, {"type": "attack", "entity_ids": ready, "target_id": target}): return
-	bot.waves.append({"ids": ready, "target": target})
-	bot.since = -1
+		(ready if _at_rally(mine[id].position, rally) else walking).append(id)
+	return {"ready": ready, "walking": walking}
 
-static func _rally(ctx: Dictionary) -> Vector2:
-	var map: Dictionary = ctx.sim.map_data()
-	return Vector2(MapData.start_cell(map if not map.is_empty() else _default_map(), ctx.player)) + Vector2(0.5, 0.5)
+static func _gather(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, skip: Dictionary, clock: Dictionary) -> void:
+	var rally: Vector2 = _rally(ctx.sim, ctx.player)
+	var split: Dictionary = _rally_split(bot, mine, skip, rally)
+	if not split.walking.is_empty(): _send(ctx, {"type": "move", "entity_ids": split.walking, "target": [rally.x, rally.y]})
+	_wave(ctx, state, bot, mine, enemies, split.ready, clock)
+
+static func _wave(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary) -> void:
+	var live: Array[int] = _live_bots(ctx, state)
+	if not live.has(ctx.player):
+		clock.joiners.erase(ctx.player)
+		return
+	if clock.joiners.has(ctx.player): _add_to_wave(ctx, state, bot, mine, enemies, ready, clock, live)
+	elif ctx.tick >= clock.due: _form(ctx, state, bot, mine, enemies, ready, clock, live)
+
+# The first live bot to see the team's ready cost reach the target (or the wait cap) forms the wave; the others join at their next decision.
+static func _form(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary, live: Array[int]) -> void:
+	var kinds: Array = ready.map(func(id: int) -> String: return mine[id].kind)
+	var mates: Array = _mates_ready(ctx, state, live)
+	kinds.append_array(mates)
+	var worth: int = _cost_sum(kinds)
+	var capped: bool = ctx.tick >= clock.due + WAVE_WAIT and not kinds.is_empty()
+	# Defences only raise the target, so a wave short of the plain one waits without the scan.
+	if worth < _wave_target(clock.wave, state, live, 0) and not capped: return
+	var scan: Dictionary = _scan_target(ctx, state, enemies, clock, live)
+	if scan.is_empty(): return
+	var objective: Variant = scan.objective
+	var target: int = scan.target
+	if worth < target and not capped: return
+	if worth < target and scan.guards > 0: objective = _softer(scan.rally, scan.order, scan.buildings, scan.defences, objective)
+	# The launcher also takes what its mates' ready units cannot cover.
+	@warning_ignore("integer_division")
+	var share: int = maxi(target / live.size(), target - _cost_sum(mates))
+	@warning_ignore("integer_division")
+	var limit: int = maxi(WAVE0_UNITS / live.size(), WAVE0_UNITS - mates.size()) if clock.wave == 0 else ready.size()
+	var take: Array = _take(ready, mine, share, limit)
+	if not take.is_empty():
+		if not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective, "group_speed": true}): return
+		bot.waves.append(_new_wave(take, objective, mine))
+	clock.released_by = "wait_cap" if worth < target else ("timer" if clock.prev < clock.due else "size")
+	clock.launched_at = ctx.tick
+	clock.objective = objective
+	clock.attacked_at[_row(scan.buildings, objective).owner] = ctx.tick
+	clock.left_cost = maxi(target - _cost_sum(take.map(func(id: int) -> String: return mine[id].kind)), 0)
+	clock.left_units = WAVE0_UNITS - take.size() if clock.wave == 0 else -1
+	clock.joiners = _joiners(ctx, live)
+	clock.due = ctx.tick + WAVE_GAPS[mini(clock.wave, WAVE_GAPS.size() - 1)]
+	clock.wave += 1
+
+# Empty when no enemy keeps a building; else the objective, its guards and the wave target they raise.
+static func _scan_target(ctx: Dictionary, state: Dictionary, enemies: Array, clock: Dictionary, live: Array[int]) -> Dictionary:
+	var buildings: Array = enemies.filter(_is_building)
+	var order: Array = _victims(buildings, clock)
+	if order.is_empty(): return {}
+	var rally: Vector2 = _mean_rally(ctx, live)
+	var objective: Variant = _pick(rally, buildings.filter(func(building: Dictionary) -> bool: return building.owner == order[0]))
+	var defences: PackedFloat64Array = _defence_rects(_armed(buildings))
+	var guards: int = _guard_count(rally, _row(buildings, objective), defences, false)
+	return {"buildings": buildings, "order": order, "rally": rally, "objective": objective, "defences": defences, "guards": guards, "target": _wave_target(clock.wave, state, live, guards)}
+
+# A joiner takes its share of what is left and what the joiners after it cannot cover; the last live one takes all of it.
+static func _add_to_wave(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary, live: Array[int]) -> void:
+	clock.joiners = clock.joiners.filter(func(player: int) -> bool: return live.has(player))
+	var remaining: int = clock.joiners.size()
+	clock.joiners.erase(ctx.player)
+	var after: Array = _mates_ready(ctx, state, clock.joiners)
+	@warning_ignore("integer_division")
+	var share: int = maxi(clock.left_cost / remaining, clock.left_cost - _cost_sum(after))
+	@warning_ignore("integer_division")
+	var limit: int = ready.size() if clock.left_units < 0 else maxi(clock.left_units / remaining, clock.left_units - after.size())
+	var take: Array = _take(ready, mine, share, limit)
+	if take.is_empty(): return
+	var objective: Variant = _follow(clock, _centre(take, mine), enemies)
+	if objective == null or not _send(ctx, {"type": "attack", "entity_ids": take, "target_id": objective, "group_speed": true}): return
+	bot.waves.append(_new_wave(take, objective, mine))
+	clock.left_cost = maxi(clock.left_cost - _cost_sum(take.map(func(id: int) -> String: return mine[id].kind)), 0)
+	if clock.left_units >= 0: clock.left_units -= take.size()
+
+static func _joiners(ctx: Dictionary, live: Array[int]) -> Array:
+	var others: Array = live.filter(func(player: int) -> bool: return player != ctx.player)
+	others.sort_custom(func(a: int, b: int) -> bool: return next_decision(ctx.tick, a) < next_decision(ctx.tick, b))
+	return others
+
+# Ready units of the live teammates, counted before they decide; their own _defend may still take some at the join.
+static func _mates_ready(ctx: Dictionary, state: Dictionary, live: Array) -> Array:
+	var rallies := {}
+	var waving := {}
+	for player: int in live:
+		if player == ctx.player: continue
+		rallies[player] = _rally(ctx.sim, player)
+		for wave: Dictionary in _bot(ctx.sim, player).waves:
+			for id: int in wave.ids: waving[id] = true
+	var kinds: Array = []
+	for unit: Dictionary in state.entities:
+		if not rallies.has(unit.owner) or waving.has(unit.id) or not _idle(unit): continue
+		if _at_rally(unit.position, rallies[unit.owner]): kinds.append(unit.kind)
+	return kinds
+
+static func _at_rally(position: Array, rally: Vector2) -> bool:
+	var dx: float = position[0] - rally.x
+	var dy: float = position[1] - rally.y
+	return dx * dx + dy * dy <= RALLY_RADIUS * RALLY_RADIUS
+
+# Enemies with a building that keeps them in the match, the one attacked least recently first (never: -1), ties lowest id.
+static func _victims(buildings: Array, clock: Dictionary) -> Array:
+	var owners: Array = []
+	for building: Dictionary in buildings:
+		if Registry.kind(building.kind).counts_for_victory and not owners.has(building.owner): owners.append(building.owner)
+	owners.sort_custom(func(a: int, b: int) -> bool:
+		var seen_a: int = clock.attacked_at.get(a, -1)
+		var seen_b: int = clock.attacked_at.get(b, -1)
+		return seen_a < seen_b or (seen_a == seen_b and a < b))
+	return owners
+
+static func _row(rows: Array, id: Variant) -> Dictionary:
+	for row: Dictionary in rows:
+		if row.id == id: return row
+	return {}
+
+static func _armed(buildings: Array) -> Array:
+	return buildings.filter(func(building: Dictionary) -> bool: return building.completed and not Registry.kind(building.kind).get("weapon", "").is_empty())
+
+# Per defence, DEFENCE_STRIDE floats: footprint min x, min y, max x, max y, centre x, centre y, route window.
+static func _defence_rects(armed: Array) -> PackedFloat64Array:
+	var rects := PackedFloat64Array()
+	for defence: Dictionary in armed:
+		var box: Vector2i = Definitions.building(defence.kind).footprint
+		rects.append_array([defence.origin[0], defence.origin[1], defence.origin[0] + box.x, defence.origin[1] + box.y, defence.origin[0] + box.x / 2.0, defence.origin[1] + box.y / 2.0, DEF_REACH + sqrt(box.x * box.x + box.y * box.y) / 2.0 + 1.0])
+	return rects
+
+static func _rect_reach_squared(x: float, y: float, defences: PackedFloat64Array, at: int) -> float:
+	var near_x: float = clampf(x, defences[at], defences[at + 2])
+	var near_y: float = clampf(y, defences[at + 1], defences[at + 3])
+	return (x - near_x) * (x - near_x) + (y - near_y) * (y - near_y)
+
+static func _guard_count(rally: Vector2, goal: Dictionary, defences: PackedFloat64Array, stop_at_first: bool) -> int:
+	if defences.is_empty(): return 0
+	var size: Vector2i = Definitions.building(goal.kind).footprint
+	var goal_x: float = goal.origin[0] + size.x / 2.0
+	var goal_y: float = goal.origin[1] + size.y / 2.0
+	var length: float = sqrt((goal_x - rally.x) * (goal_x - rally.x) + (goal_y - rally.y) * (goal_y - rally.y))
+	var count: int = 0
+	for at: int in range(0, defences.size(), DEFENCE_STRIDE):
+		if not _guards(rally, goal_x, goal_y, length, defences, at): continue
+		count += 1
+		if stop_at_first: break
+	return count
+
+# A defence counts within DEF_REACH of the goal centre or of a point every ROUTE_STEP cells on the line of that length from the rally to it.
+static func _guards(rally: Vector2, goal_x: float, goal_y: float, length: float, defences: PackedFloat64Array, at: int) -> bool:
+	if _rect_reach_squared(goal_x, goal_y, defences, at) <= DEF_REACH * DEF_REACH: return true
+	if length <= ROUTE_STEP: return false
+	var centre_x: float = defences[at + 4]
+	var centre_y: float = defences[at + 5]
+	# A route point within reach of the footprint lies within reach plus half its diagonal of its centre, so farther steps cannot count; +1 absorbs rounding.
+	var window: float = defences[at + 6]
+	if absf((centre_x - rally.x) * (goal_y - rally.y) - (centre_y - rally.y) * (goal_x - rally.x)) > window * length: return false
+	var near: float = ((centre_x - rally.x) * (goal_x - rally.x) + (centre_y - rally.y) * (goal_y - rally.y)) / length
+	for step: int in range(maxi(ceili((near - window) / ROUTE_STEP), 1), floori((near + window) / ROUTE_STEP) + 1):
+		var along: float = step * ROUTE_STEP
+		if along >= length: return false
+		if _rect_reach_squared(rally.x + (goal_x - rally.x) * along / length, rally.y + (goal_y - rally.y) * along / length, defences, at) <= DEF_REACH * DEF_REACH: return true
+	return false
+
+# The best building without a counted defence: the objective's player first, then the least recently attacked.
+static func _softer(rally: Vector2, order: Array, buildings: Array, defences: PackedFloat64Array, objective: Variant) -> Variant:
+	for owner: int in order:
+		var open: Array = buildings.filter(func(building: Dictionary) -> bool: return building.owner == owner and _guard_count(rally, building, defences, true) == 0)
+		if not open.is_empty(): return _best(rally, open)
+	return objective
+
+static func _mean_rally(ctx: Dictionary, live: Array[int]) -> Vector2:
+	var sum := Vector2.ZERO
+	for player: int in live: sum += _rally(ctx.sim, player)
+	return sum / live.size()
+
+# A seat is a live bot once it has decided and while it still owns a building that keeps it in the match.
+static func _live_bots(ctx: Dictionary, state: Dictionary) -> Array[int]:
+	var decided: Dictionary = _memory(ctx.sim, BOT_META)
+	var live: Array[int] = []
+	for entry: Dictionary in state.players:
+		if ctx.teams[entry.id] != ctx.teams[ctx.player] or not decided.has(entry.id): continue
+		if state.buildings.any(func(building: Dictionary) -> bool: return building.owner == entry.id and Registry.kind(building.kind).counts_for_victory): live.append(entry.id)
+	return live
+
+static func _wave_target(wave: int, state: Dictionary, live: Array[int], guards: int) -> int:
+	var mean: int = 0
+	for player in live: mean += faction_unit_cost(_faction(state, player))
+	@warning_ignore("integer_division")
+	return (WAVE_SIZES[mini(wave, WAVE_SIZES.size() - 1)] * live.size() + (DEF_UNITS * guards if wave > 0 else 0)) * (mean / live.size())
+
+static func _cost_sum(kinds: Array) -> int:
+	var sum: int = 0
+	for kind: String in kinds: sum += unit_cost(kind)
+	return sum
+
+# Vehicles and infantry in turn, each most expensive first (ties lowest id), until the cost share is reached.
+static func _take(ready: Array, mine: Dictionary, share: int, limit: int) -> Array:
+	var vehicles: Array = _by_cost(ready.filter(func(id: int) -> bool: return _is_vehicle(mine[id].kind)), mine)
+	var others: Array = _by_cost(ready.filter(func(id: int) -> bool: return not _is_vehicle(mine[id].kind)), mine)
+	var taken: Array = []
+	var sum: int = 0
+	var vehicle_turn: bool = true
+	while sum < share and taken.size() < limit and not (vehicles.is_empty() and others.is_empty()):
+		var id: int = (vehicles if (vehicle_turn and not vehicles.is_empty()) or others.is_empty() else others).pop_front()
+		taken.append(id)
+		sum += unit_cost(mine[id].kind)
+		vehicle_turn = not vehicle_turn
+	taken.sort()
+	return taken
+
+static func _by_cost(ids: Array, mine: Dictionary) -> Array:
+	var order: Array = ids.duplicate()
+	order.sort_custom(func(a: int, b: int) -> bool:
+		var cost_a: int = unit_cost(mine[a].kind)
+		var cost_b: int = unit_cost(mine[b].kind)
+		return cost_a > cost_b or (cost_a == cost_b and a < b))
+	return order
+
+static func _rally(sim: RefCounted, player: int) -> Vector2:
+	var map: Dictionary = sim.map_data()
+	return Vector2(MapData.start_cell(map if not map.is_empty() else _default_map(), player)) + Vector2(0.5, 0.5)
 
 static func _centre(ids: Array, mine: Dictionary) -> Vector2:
 	var sum := Vector2.ZERO
@@ -260,11 +645,15 @@ static func _defend(ctx: Dictionary, state: Dictionary, buildings: Array) -> Dic
 		for id: Variant in groups[target]: sent[id] = true
 	return sent
 
-# Score = priority - one point per DISTANCE_STEP cells (min 1): the Zero Hour attack-priority rule, numbers in docs/reference/m7-verification-archive-research.md.
 static func _pick(position: Vector2, enemies: Array) -> Variant:
+	var buildings: Array = enemies.filter(_is_building)
+	return _best(position, enemies if buildings.is_empty() else buildings)
+
+# Score = priority - one point per DISTANCE_STEP cells (min 1): the Zero Hour attack-priority rule, numbers in docs/reference/m7-verification-archive-research.md.
+static func _best(position: Vector2, candidates: Array) -> Variant:
 	var best: Variant = null
 	var best_score: int = 0
-	for enemy: Dictionary in _candidates(position, enemies):
+	for enemy: Dictionary in candidates:
 		var score: int = maxi(_priority(enemy.kind) - floori(sqrt(Combat.distance_squared(position, enemy)) / DISTANCE_STEP), 1)
 		if best == null or score > best_score or (score == best_score and enemy.id < best):
 			best = enemy.id
@@ -273,14 +662,6 @@ static func _pick(position: Vector2, enemies: Array) -> Variant:
 
 static func _is_building(enemy: Dictionary) -> bool:
 	return not Registry.kind(enemy.kind).has("class")
-
-# A wave heads for a building, not for a far unit it would trickle into, until an enemy unit comes within defence reach.
-static func _engaged(position: Vector2, enemies: Array) -> bool:
-	return enemies.any(func(enemy: Dictionary) -> bool: return not _is_building(enemy) and Combat.distance_squared(position, enemy) <= DEFENCE_RADIUS * DEFENCE_RADIUS)
-
-static func _candidates(position: Vector2, enemies: Array) -> Array:
-	var buildings: Array = enemies.filter(_is_building)
-	return enemies if buildings.is_empty() or _engaged(position, enemies) else buildings
 
 static func _priority(kind: String) -> int:
 	var row: Dictionary = Registry.kind(kind)
@@ -301,3 +682,85 @@ static func _nearest(unit: Dictionary, enemies: Array) -> int:
 			best = enemy.id
 			best_distance = distance
 	return best
+
+# F3 text, one line per bot seat; reads memory but never creates any, so it cannot move a digest.
+static func debug_lines(sim: RefCounted, players: Array[int]) -> PackedStringArray:
+	var lines := PackedStringArray()
+	var real: RefCounted = _real(sim)
+	if not real.has_meta(BOT_META) or not real.has_meta(BOT_TEAM_META): return lines
+	var state: Dictionary = real.bot_state()
+	for player: int in players:
+		var line: String = _debug_line(_context(real, player, state), state)
+		if not line.is_empty(): lines.append(line)
+	return lines
+
+static func _debug_line(ctx: Dictionary, state: Dictionary) -> String:
+	var player: int = ctx.player
+	var clocks: Dictionary = ctx.sim.get_meta(BOT_TEAM_META)
+	var bots: Dictionary = ctx.sim.get_meta(BOT_META)
+	var team: int = ctx.teams.get(player, player)
+	if not bots.has(player) or not clocks.has(team): return ""
+	var clock: Dictionary = clocks[team]
+	var bot: Dictionary = bots[player]
+	var mine: Dictionary = _own_units(ctx, state)
+	var live: Array[int] = _live_bots(ctx, state)
+	if live.is_empty(): live.append(player)
+	return " | ".join([
+		"Bot %d %s" % [player, _faction(state, player)],
+		"W%d %s" % [clock.wave, _due_text(clock.due, ctx.tick)],
+		"ready " + _ready_text(ctx, state, bot, mine, clock, live),
+		"home " + _home_text(bot, mine),
+		"$" + _commas(ctx.credits),
+		_producers_text(state, player),
+		_objective_text(state, clock)])
+
+static func _commas(value: int) -> String:
+	var digits: String = str(value)
+	var text: String = ""
+	while digits.length() > 3:
+		text = "," + digits.substr(digits.length() - 3) + text
+		digits = digits.left(digits.length() - 3)
+	return digits + text
+
+static func _initials(kind: String) -> String:
+	var text: String = ""
+	for word: String in kind.substr(kind.find("_") + 1).split("_"): text += word.left(1).to_upper()
+	return text
+
+static func _producers_text(state: Dictionary, player: int) -> String:
+	var parts := PackedStringArray()
+	for building: Dictionary in state.buildings:
+		if building.owner != player or not building.completed or building.has("hole_id") or not Registry.kind(building.kind).produces.any(_is_army): continue
+		parts.append("%s:%s" % [_initials(building.kind), Registry.kind(building.queue[0].kind).display_name if not building.queue.is_empty() else "-"])
+	return " ".join(parts) if not parts.is_empty() else "-"
+
+static func _due_text(due: int, tick: int) -> String:
+	if tick < due: return "in %ds" % ceili((due - tick) / float(TICKS_PER_SECOND))
+	@warning_ignore("integer_division")
+	return "late %d/%ds" % [floori((tick - due) / float(TICKS_PER_SECOND)), WAVE_WAIT / TICKS_PER_SECOND]
+
+static func _home_text(bot: Dictionary, mine: Dictionary) -> String:
+	var waving: Dictionary = _waving(bot)
+	var vehicles: int = 0
+	var infantry: int = 0
+	for unit: Dictionary in mine.values():
+		if waving.has(unit.id) or not _is_army(unit.kind): continue
+		if _is_vehicle(unit.kind): vehicles += 1
+		else: infantry += 1
+	return "%di/%dv" % [infantry, vehicles]
+
+# The target is the number _form compares: the plain one until an enemy building gives it guards.
+static func _ready_text(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, clock: Dictionary, live: Array[int]) -> String:
+	var ready: Array = _rally_split(bot, mine, {}, _rally(ctx.sim, ctx.player)).ready
+	var kinds: Array = ready.map(func(id: int) -> String: return mine[id].kind)
+	kinds.append_array(_mates_ready(ctx, state, live))
+	var scan: Dictionary = _scan_target(ctx, state, _enemies(ctx, state), clock, live)
+	var target: int = scan.target if not scan.is_empty() else _wave_target(clock.wave, state, live, 0)
+	return "%s/%s" % [_commas(_cost_sum(kinds)), _commas(target)]
+
+static func _objective_text(state: Dictionary, clock: Dictionary) -> String:
+	if clock.objective == null: return "->none"
+	var row: Dictionary = _row(state.buildings, clock.objective)
+	if row.is_empty(): row = _row(state.entities, clock.objective)
+	if row.is_empty(): return "->#%d gone" % clock.objective
+	return "->%s#%d" % [Registry.kind(row.kind).display_name, row.id]

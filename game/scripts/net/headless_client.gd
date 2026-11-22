@@ -41,6 +41,7 @@ func _ready() -> void:
 	_args = _parse(OS.get_cmdline_user_args())
 	var arg_error: String = _faction_error()
 	if arg_error == "": arg_error = _defeat_error()
+	if arg_error == "": arg_error = _controller_error()
 	if arg_error != "":
 		printerr(arg_error)
 		get_tree().quit(2)
@@ -160,7 +161,7 @@ func _oracle_sim() -> Simulation:
 	var chosen: Array[int] = MatchSettings.starts(id, int(_args.get("seed", "0")))
 	if not _args.has("factions"): return _match_sim(id, chosen)
 	var names: PackedStringArray = str(_args["factions"]).split(",")
-	return Skirmish.create(true, "ai", {1: names[0], 2: names[1]}, MatchSettings.map_path(id), chosen)
+	return Skirmish.create(true, str(_args.get("controller", "ai")), {1: names[0], 2: names[1]}, MatchSettings.map_path(id), chosen)
 
 func _run_steps(limit: int) -> void:
 	if _driver != null:
@@ -376,6 +377,10 @@ func _faction_error() -> String:
 	if listed != "": return listed
 	var faction: String = _args.get("faction", Skirmish.default_faction())
 	return "" if not Registry.faction(faction).is_empty() else "Unknown --faction '%s'; expected one of: %s" % [faction, ", ".join(Registry.Factions.FACTIONS.keys())]
+
+func _controller_error() -> String:
+	var controller: String = str(_args.get("controller", "ai"))
+	return "" if controller in ["human", "ai"] else "Unknown --controller '%s'; expected human or ai" % controller
 
 func _defeat_error() -> String:
 	if not _args.has("defeat"): return ""
