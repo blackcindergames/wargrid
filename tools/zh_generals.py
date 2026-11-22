@@ -7,8 +7,9 @@ Usage:
 
 Method (docs/reference/zh-generals-prep.md): each playable PlayerTemplate is a roster root (starting building and
 units). The roster is every object reachable through command sets (`DOZER_CONSTRUCT`, `UNIT_BUILD`,
-`SPECIAL_POWER_CONSTRUCT` buttons, including command sets swapped in by upgrades). A general's object pairs with
-the base faction's object of the same name once the general's prefix (`AirF_`, `Lazr_`, ...) is stripped.
+`SPECIAL_POWER_CONSTRUCT` and its shortcut form, including command sets swapped in by upgrades, plus
+`BuildVariations`). A general's object pairs with the base faction's object of the same name once the general's
+prefix (`AirF_`, `Lazr_`, ...) is stripped.
 """
 
 import argparse
@@ -23,7 +24,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DUMP = ROOT / "build/zh_ini/inizh.jsonl"
 DEFAULT_OUT = ROOT / "build/zh_generals"
 
-BUILD_COMMANDS = frozenset({"DOZER_CONSTRUCT", "UNIT_BUILD", "SPECIAL_POWER_CONSTRUCT"})
+BUILD_COMMANDS = frozenset(
+    {"DOZER_CONSTRUCT", "UNIT_BUILD", "SPECIAL_POWER_CONSTRUCT", "SPECIAL_POWER_CONSTRUCT_FROM_SHORTCUT"}
+)
 UPGRADE_COMMANDS = frozenset({"PLAYER_UPGRADE", "OBJECT_UPGRADE"})
 POWER_COMMANDS = frozenset(
     {
@@ -64,6 +67,8 @@ WEAPON_KEYS = (
     "ProjectileObject",
     "RadiusDamageAffects",
 )
+# Block kinds the report reads by name; a name defined twice in any other kind (MappedImage, Terrain, Upgrade) changes nothing in it.
+READ_KINDS = frozenset({"Object", "CommandSet", "CommandButton", "PlayerTemplate", "Weapon", "SpecialPower", "Science"})
 PREFIX = re.compile(r"^([A-Za-z]+)_(?=[A-Z])")
 
 Block = dict[str, Any]
@@ -154,7 +159,11 @@ class Roster:
 
 def command_sets_of(index: Index, obj: str) -> list[str]:
     fields = index.fields("Object", obj)
-    return [v.split()[0] for v in values(fields, "CommandSet") + values(fields, "CommandSetAlt") if v.split()]
+    # The engine parses CommandSetAlt only inside a CommandSetUpgrade module (CommandSetUpgrade.cpp:46).
+    in_modules = [f["value"] for f in fields if f["path"] and f["key"] in ("CommandSet", "CommandSetAlt")]
+    chosen = [top(fields, "CommandSet"), *in_modules]
+    names = [v.replace("=", " ").split() for v in chosen if v]
+    return [n[0] for n in names if n]
 
 
 def buttons(index: Index, command_set: str, roster: Roster) -> list[dict[str, Any]]:
@@ -165,6 +174,8 @@ def buttons(index: Index, command_set: str, roster: Roster) -> list[dict[str, An
     found = []
     for field in block["fields"]:
         if field["path"] or not field["key"].isdigit():
+            continue
+        if not field["value"].split():
             continue
         button = index.get("CommandButton", field["value"].split()[0])
         if button is None:
@@ -182,6 +193,11 @@ def walk_roster(index: Index, template: Block) -> Roster:
         value = top(fields, key)
         if value:
             queue.append((value, "start"))
+    for key in (*SCIENCE_SETS, "SpecialPowerShortcutCommandSet"):
+        player_set = top(fields, key)
+        if player_set:
+            for button in buttons(index, player_set, roster):
+                _take_button(button, "player", roster, queue)
     seen_sets: set[str] = set()
     while queue:
         obj, reached = queue.pop(0)
@@ -191,17 +207,15 @@ def walk_roster(index: Index, template: Block) -> Roster:
             roster.missing.add(f"Object {obj}")
             continue
         roster.objects[obj] = reached
+        queue.extend(
+            (name, f"variant of {obj}") for name in (top(index.fields("Object", obj), "BuildVariations") or "").split()
+        )
         for command_set in command_sets_of(index, obj):
             if command_set in seen_sets:
                 continue
             seen_sets.add(command_set)
             for button in buttons(index, command_set, roster):
                 _take_button(button, obj, roster, queue)
-    for key in (*SCIENCE_SETS, "SpecialPowerShortcutCommandSet"):
-        player_set = top(fields, key)
-        if player_set:
-            for button in buttons(index, player_set, roster):
-                _take_button(button, "player", roster, queue)
     for science in (top(fields, "IntrinsicSciences") or "").split():
         roster.sciences.add(science)
     return roster
@@ -226,13 +240,15 @@ def object_summary(index: Index, obj: str, prefix: str) -> dict[str, Any]:
     fields = index.fields("Object", obj)
     summary: dict[str, Any] = {key: top(fields, key) for key in OBJECT_KEYS}
     summary["KindOf"] = " ".join(sorted((summary["KindOf"] or "").split())) or None
-    summary["MaxHealth"] = next((f["value"] for f in fields if f["key"] == "MaxHealth"), None)
+    summary["MaxHealth"] = ([f["value"] for f in fields if f["key"] == "MaxHealth"] or [None])[-1]
     # Weapon names keep their prefix: a general's own weapon definition is itself a change.
     summary["Weapons"] = sorted({_weapon_name(v) for v in values(fields, "Weapon")} - {"", "NONE", "None"})
     summary["Armor"] = sorted({v for f in fields if f["key"] == "Armor" for v in [f["value"]]})
     summary["Locomotor"] = sorted({v.split()[-1] for v in values(fields, "Locomotor") if v.split()})
     summary["Prerequisites"] = sorted(
-        strip_prefix(f["value"], prefix) for f in fields if f["path"][:1] == ["Prerequisites"]
+        " ".join(strip_prefix(token, prefix) for token in f["value"].split())
+        for f in fields
+        if f["path"][:1] == ["Prerequisites"]
     )
     summary["Modules"] = module_classes(fields)
     return summary
@@ -328,7 +344,11 @@ def _weapon_deltas(index: Index, obj: str, counterpart: str, prefix: str) -> dic
     deltas: dict[str, Any] = {}
     for name in mine:
         base_name = strip_prefix(name, prefix)
-        if name == base_name or base_name not in theirs or index.get("Weapon", base_name) is None:
+        if (
+            name == base_name
+            or base_name not in theirs
+            or None in (index.get("Weapon", base_name), index.get("Weapon", name))
+        ):
             continue
         delta = diff(weapon_summary(index, base_name), weapon_summary(index, name))
         if delta:
@@ -390,8 +410,9 @@ def build_report(blocks: list[Block], include_all: bool = False) -> dict[str, An
         for general in group:
             if general is not base:
                 report["generals"].append(compare(index, base, general) | {"base_side": side})
-    if index.duplicates:
-        report["problems"].append(f"{len(index.duplicates)} names defined twice (last wins): {index.duplicates[:10]}")
+    duplicates = [d for d in index.duplicates if d.split()[0] in READ_KINDS]
+    if duplicates:
+        report["problems"].append(f"{len(duplicates)} names defined twice (last wins): {duplicates[:10]}")
     return report
 
 
