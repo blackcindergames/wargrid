@@ -139,7 +139,7 @@ Both modes: `_physics_process` calls `driver.step()`, which posts; `_process` ca
 
 | | Inline | Worker |
 |---|---|---|
-| queue | result stored directly | `Mutex` + `Semaphore`, `MAX_QUEUED = 2` |
+| queue | result stored directly | `Mutex` + `Semaphore`, `MAX_QUEUED = 3`, running job counted (user, 2026-11-22, [SB5a plan](../plans/2026-11-22-sim-boundary-sb5a.md#owner-answers-user-2026-11-22)) |
 | backlog | never | `post` false, game time slows |
 | stall, dead thread | n/a | `STALL_MSEC` check, `is_alive()` |
 | stop | nothing | join, at most one job |
