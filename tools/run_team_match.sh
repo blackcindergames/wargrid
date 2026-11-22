@@ -9,6 +9,6 @@ code=$?
 cat "$log_dir/match.log"
 [ "$code" -eq 0 ] || exit 1
 if grep -E 'ERROR:|SCRIPT ERROR:' "$log_dir/match.log"; then exit 1; fi
-# Pinned outcome: equal team mirror, ongoing at the 45000 cap since BR8's group speed (exempt from the end bar, user 2026-11-22).
-grep -Eq '^TEAM MATCH cap tick=45000 winner=null units_peak=329$' "$log_dir/match.log" || exit 1
+# Pinned outcome: equal team mirror; it ends again since gate fix round 2's joiner share (the end bar stays waived, user 2026-11-22).
+grep -Eq '^TEAM MATCH won tick=40182 winner=2 units_peak=314$' "$log_dir/match.log" || exit 1
 grep -Eq '^TEAM PATHS PASS ' "$log_dir/match.log" || exit 1

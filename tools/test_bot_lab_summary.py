@@ -98,9 +98,11 @@ class SummaryTests(unittest.TestCase):
             (folder / "lost.exit").write_text("exit=0 seconds=0 lost\n")
             (folder / "torn.exit").write_text("exit=0 seconds=0 torn\n")
             (folder / "torn.jsonl").write_text('BOTLAB {"map": \n')
+            (folder / "garbled.exit").write_text("exit=0 seconds=0 garbled\n")
+            (folder / "garbled.jsonl").write_bytes(b"BOTLAB \xff\xfe\n")
             rows, failed = lab.load_rows(folder)
         self.assertEqual(rows, [])
-        self.assertEqual(failed, ["crashed", "lost", "torn"])
+        self.assertEqual(failed, ["crashed", "garbled", "lost", "torn"])
 
     def test_no_rows_fails(self) -> None:
         text, ok = lab.summarise([], [])

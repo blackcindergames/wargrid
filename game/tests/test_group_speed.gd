@@ -200,8 +200,10 @@ func test_gs8_capped_wheels_turn_at_their_own_turn_speed(runner) -> bool:
 	var slowest: float = _speed("usa_rifle_infantry")
 	var scout: Dictionary = Definitions.unit("usa_light_vehicle")
 	var own_turn: float = maxf(scout.min_turn_speed, scout.speed / 4.0)
-	var turning: float = _turn_speed("usa_light_vehicle", slowest)
-	runner.check(absf(turning - minf(slowest, own_turn)) < SLACK, "GS8 a scout capped at %s turns at its own turn speed under the cap (%s), not the cap times its turn factor (%s), got %s" % [slowest, minf(slowest, own_turn), slowest * own_turn / scout.speed, turning])
+	runner.check(scout.speed > 1.2 and own_turn < 1.2, "GS8 premise: the scout is faster than 1.2 and turns slower, got %s and %s" % [scout.speed, own_turn])
+	for cap: float in [slowest, 1.2]:
+		var turning: float = _turn_speed("usa_light_vehicle", cap)
+		runner.check(absf(turning - minf(cap, own_turn)) < SLACK, "GS8 a scout capped at %s turns at its own turn speed under the cap (%s), not the cap times its turn factor (%s), got %s" % [cap, minf(cap, own_turn), cap * own_turn / scout.speed, turning])
 	var factor: float = 1.0 - Locomotion.angle_between(Vector2(1.0, 0.0), Vector2(8.660254, 5.0).normalized()) / 45.0
 	for row: Array in [["usa_tank", slowest], ["usa_rifle_infantry", 0.5]]:
 		var speed: float = _turn_speed(row[0], row[1])

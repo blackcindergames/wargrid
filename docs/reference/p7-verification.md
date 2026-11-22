@@ -3,12 +3,12 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-22 at the gate fix round)
-Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 and again at 3705a2fb (2026-11-22), T1-11 committed 20932d8c / gate fix round uncommitted in the working tree
-Last green task / next incomplete task: gate fix round / gate re-run
-Changed paths since last commit: the gate fix round (skirmish.gd, locomotion.gd, headless_client.gd, bot lab and playtest tools, their tests, the pins, guide 09, 10, 11, 13, plan, design answers, this file)
-Last command / cases / checks / failures / exit / marker: full suite on the fix tree (build/suite-fix.log) CASES 1379 CHECKS 153144 FAILURES 0 / exit 0 / TESTS PASSED 153144; `sh tools/run_checks.sh` CHECKS PASSED 5
-Known red case or blocker: none (red ledger cleared at the gate fix re-pin); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
+Resume record (updated 2026-11-22 at gate fix round 2)
+Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 and again at 3705a2fb (2026-11-22), T1-11 committed 20932d8c, gate fix round committed b148b47d, gate benchmark row 5ad9979f / gate fix round 2 uncommitted in the working tree
+Last green task / next incomplete task: gate fix round 2 / gate re-run
+Changed paths since last commit: gate fix round 2 (skirmish.gd, bot_lab_summary.py, test_bot_rules.gd, test_group_speed.gd, test_bot_lab_summary.py, test_team_match.gd, run_team_match.sh, guide 09, 10, 11, 13, plan, design answers, this file)
+Last command / cases / checks / failures / exit / marker: full suite on the fix-2 tree (build/suite-fix2.log) CASES 1380 CHECKS 153149 FAILURES 0 / exit 0 / TESTS PASSED 153149; `sh tools/run_checks.sh` CHECKS PASSED 5. Gate benchmark row (5ad9979f, tree b148b47d): `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, load 1.5 at start, no heavy app running, stress alarms open, dense and hordes300 at main's level (report only)
+Known red case or blocker: none (red ledger cleared at the gate fix 2 re-pin); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
@@ -32,6 +32,7 @@ Next exact action: the gate (plan, Gate part 1); after part 1's gate P2.3b comes
 | T1-8f | The nine names of T1-8e plus S1 terminal inside the six-minute window and S1 economy, production and combat (S1 no longer ends; owner decision below). Values moved: TB3 digest 961a50b34e9e5358 to f3d2dab4fc4a0a4a; TB4 team core series to 5940764765599406711; S1 core series to 2416494683122998182; S1 pinned outcome (10043, winner 1 to -1 ongoing at 18,000); Fm1 (27018 to 14038, winner 2); Cs1 (20771 to 23750, winner 1). Unchanged: VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10; the two S1 checks change rule there) |
 | T1-10 | none: every name above re-pinned to its T1-8f value; S1 pins ongoing at the cap | done |
 | Gate fix | TB3 final digest; TB4 team core series; TT1 2v2 pinned outcome and core series; S1 pinned outcome (ongoing at the cap to won 9,765, winner 1); S1 core series; Fm1 (14038 to 28171, winner 2); Cs1 (23750 to 29122, winner 1); outside the suite netplay 8,997 to 9,746 and the team match `units_peak` 313 to 329. Unchanged: VR1 digest, HUD1, K2. Values in [Gate fix round](#gate-fix-round). | done: re-pinned in the same round, ledger clear |
+| Gate fix 2 | TB3 final digest; TB4 team core series; outside the suite the team match line (`cap tick=45000 winner=null units_peak=329` to `won tick=40182 winner=2 units_peak=314`). Unchanged: TT1, S1, Fm1, Cs1, VR1, HUD1, K2, netplay 9,746. Values in [Gate fix round 2](#gate-fix-round-2). | done: re-pinned in the same round, ledger clear |
 
 ## Evidence
 
@@ -469,3 +470,20 @@ Moved pins, old to new (re-pinned, red ledger row "Gate fix"): TB3 `FINAL_DIGEST
 Decided for you (reversible): S1 ends again, inside 7000-17999, so its checks return to their pre-T1-10 shape: pinned terminal tick and winner, the six-minute window check, economy before the end, and the core series up to the terminal tick (new pin 8946823222927603917; over the 18,000-tick cap it would be 7055474445845459693). Test 1a uses one decision instead of a run with income: the lapse cannot fire on the first held decision, so a buy there shows the hold did not apply.
 
 Checks on that tree (code as in the suite run; docs edited after): full suite (`build/suite-fix.log`) CASES 1379 CHECKS 153144 FAILURES 0, exit 0, `TESTS PASSED 153144`; `sh tools/run_checks.sh` exit 0, `CHECKS PASSED 5`; `sh tools/run_netplay.sh match` `NETPLAY PASSED match 11.4 s`, `rematch` `NETPLAY PASSED rematch 20.0 s` (both end on 9,746); `sh tools/run_team_match.sh` exit 0, `TEAM MATCH cap tick=45000 winner=null units_peak=329`, `TEAM PATHS PASS`. Not run: the benchmark (gate step), `proxy-clean` and `proxy-burst` (need `WARGRID_NETFAULT_BIN`; CI covers them).
+
+### Gate fix round 2
+
+Tree `b148b47d` plus gate fix round 2 (working tree, not committed). Item 1 extends the owner's BR4 share rule ("the launcher covers what its mates cannot", user, 2026-11-22) to joiners: decided for the owner at this round, reversible on the owner's word. Each test ran red before its fix (`build/fx2-red-*.log`), green after it (`build/fx2-green-*.log`), and red with only its fix reverted (`build/fx2-mut-*.log`).
+
+| Item | Test (suite) | Production change that makes it fail when reverted |
+|---|---|---|
+| 1 joiner share, 3+ bots | `test_team_share_with_three_bots_does_not_hang_on_joiner_order` (bot rules; Ashfall 3v3, wave 1 target 19,116: launcher 10 tanks, first joiner 20, last 1 gives 8 + 13 + 1 = 22 tanks, was 8 + 7 + 1 = 16 (14,400); swapped joiners 8 + 1 + 13; wave 0 riflemen 2, 12, 2 give 2 + 12 + 2, was 2 + 7 + 2) | `_add_to_wave`: share `maxi(left_cost / remaining, left_cost - ready cost of the joiners after it)`; wave-0 limit `maxi(left_units / remaining, left_units - their ready count)` (`_mates_ready` over the remaining joiners; two mutations, both red) |
+| 2 GS8 above the turn speed | `test_gs8_capped_wheels_turn_at_their_own_turn_speed` extended: a scout capped at 1.2 turns at 0.8 | `locomotion.gd` wheels `minf(cap, kind_def.speed * factor)`; the mutation `limit = cap` gives 1.2, red |
+| 3 RP10 through `_ready` | none: `_ready` reads `OS.get_cmdline_user_args()`, and the `--factions` error (RP6) is tested the same direct way (`_faction_error()`), so RP10 keeps the direct `_controller_error()` check; the `_ready` call that chains it is not covered by a test | - |
+| 4 non-UTF-8 row file | `test_load_rows_fails_a_job_with_a_missing_or_broken_row_file` extended with a `garbled` job (`.jsonl` bytes `ff fe`; was a `UnicodeDecodeError`) | `bot_lab_summary.py` `read_found` catches `ValueError` (covers `JSONDecodeError` and `UnicodeDecodeError`) with `OSError` |
+
+Moved pins, old to new (red ledger row "Gate fix 2"): TB3 `FINAL_DIGEST` af8debc40c53ba74 to c9bdc710874637a5; TB4 `TEAM_CORE_SERIES` 2977490706014509312 to 1689024008192241881; 3v3 team match `cap tick=45000 winner=null units_peak=329` to `won tick=40182 winner=2 units_peak=314` (`tools/run_team_match.sh`; the match ends, so no stall check). Unchanged: TT1 (28,061 winner 2) and its core series, S1 (9,765 winner 1), Fm1 (28171 winner 2), Cs1 (29122 winner 1), VR1, HUD1, K2, netplay `match`/`rematch` 9,746: two-bot teams and 1v1 have at most one joiner, whose share was already all of what is left.
+
+Open, found at this round (also in the plan's open list): the seat wrapper (`seat_sim.gd`) approves bot orders without issue-time validation, so offline-only refusals (blocked slot, missing prerequisite) never reach the bot online and a BR7 hold over a refused build cannot lapse in the netplay harness; fix before any online bot seat (validate in `SeatSim.issue_command`).
+
+Checks on that tree: full suite (`build/suite-fix2.log`) CASES 1380 CHECKS 153149 FAILURES 0, exit 0, `TESTS PASSED 153149`; `sh tools/run_checks.sh` exit 0, `CHECKS PASSED 5`; `sh tools/run_netplay.sh match` exit 0, `NETPLAY PASSED match 17.3 s`, `rematch` exit 0, `NETPLAY PASSED rematch 30.0 s` (both end on 9,746); `sh tools/run_team_match.sh` exit 0, `TEAM MATCH won tick=40182 winner=2 units_peak=314`, `TEAM PATHS PASS`. Not run: the benchmark, `proxy-clean` and `proxy-burst` (need `WARGRID_NETFAULT_BIN`; CI covers them).

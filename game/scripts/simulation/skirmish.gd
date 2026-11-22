@@ -403,7 +403,7 @@ static func _wave(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dic
 	if not live.has(ctx.player):
 		clock.joiners.erase(ctx.player)
 		return
-	if clock.joiners.has(ctx.player): _add_to_wave(ctx, bot, mine, enemies, ready, clock, live)
+	if clock.joiners.has(ctx.player): _add_to_wave(ctx, state, bot, mine, enemies, ready, clock, live)
 	elif ctx.tick >= clock.due: _form(ctx, state, bot, mine, enemies, ready, clock, live)
 
 # The first live bot to see the team's ready cost reach the target (or the wait cap) forms the wave; the others join at their next decision.
@@ -451,15 +451,16 @@ static func _scan_target(ctx: Dictionary, state: Dictionary, enemies: Array, clo
 	var guards: int = _guard_count(rally, _row(buildings, objective), defences, false)
 	return {"buildings": buildings, "order": order, "rally": rally, "objective": objective, "defences": defences, "guards": guards, "target": _wave_target(clock.wave, state, live, guards)}
 
-# A joiner takes its share of what the launcher left; the last live one takes all of it.
-static func _add_to_wave(ctx: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary, live: Array[int]) -> void:
+# A joiner takes its share of what is left and what the joiners after it cannot cover; the last live one takes all of it.
+static func _add_to_wave(ctx: Dictionary, state: Dictionary, bot: Dictionary, mine: Dictionary, enemies: Array, ready: Array, clock: Dictionary, live: Array[int]) -> void:
 	clock.joiners = clock.joiners.filter(func(player: int) -> bool: return live.has(player))
 	var remaining: int = clock.joiners.size()
 	clock.joiners.erase(ctx.player)
+	var after: Array = _mates_ready(ctx, state, clock.joiners)
 	@warning_ignore("integer_division")
-	var share: int = clock.left_cost / remaining
+	var share: int = maxi(clock.left_cost / remaining, clock.left_cost - _cost_sum(after))
 	@warning_ignore("integer_division")
-	var limit: int = ready.size() if clock.left_units < 0 else clock.left_units / remaining
+	var limit: int = ready.size() if clock.left_units < 0 else maxi(clock.left_units / remaining, clock.left_units - after.size())
 	var take: Array = _take(ready, mine, share, limit)
 	if take.is_empty(): return
 	var objective: Variant = _follow(clock, _centre(take, mine), enemies)
@@ -474,7 +475,7 @@ static func _joiners(ctx: Dictionary, live: Array[int]) -> Array:
 	return others
 
 # Ready units of the live teammates, counted before they decide; their own _defend may still take some at the join.
-static func _mates_ready(ctx: Dictionary, state: Dictionary, live: Array[int]) -> Array:
+static func _mates_ready(ctx: Dictionary, state: Dictionary, live: Array) -> Array:
 	var rallies := {}
 	var waving := {}
 	for player: int in live:

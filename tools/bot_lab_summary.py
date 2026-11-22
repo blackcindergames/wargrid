@@ -24,7 +24,7 @@ FACTIONS = ("usa", "china", "frc")
 def read_found(path: Path) -> list[Row] | None:
     try:
         return [json.loads(line[7:]) for line in path.read_text().splitlines() if line.startswith("BOTLAB ")]
-    except (OSError, json.JSONDecodeError):
+    except (OSError, ValueError):
         return None
 
 
