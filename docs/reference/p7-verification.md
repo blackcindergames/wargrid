@@ -3,16 +3,16 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-22 at gate fix round 2)
-Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 and again at 3705a2fb (2026-11-22), T1-11 committed 20932d8c, gate fix round committed b148b47d, gate benchmark row 5ad9979f / gate fix round 2 uncommitted in the working tree
-Last green task / next incomplete task: gate fix round 2 / gate re-run
-Changed paths since last commit: gate fix round 2 (skirmish.gd, bot_lab_summary.py, test_bot_rules.gd, test_group_speed.gd, test_bot_lab_summary.py, test_team_match.gd, run_team_match.sh, guide 09, 10, 11, 13, plan, design answers, this file)
-Last command / cases / checks / failures / exit / marker: full suite on the fix-2 tree (build/suite-fix2.log) CASES 1380 CHECKS 153149 FAILURES 0 / exit 0 / TESTS PASSED 153149; `sh tools/run_checks.sh` CHECKS PASSED 5. Gate benchmark row (5ad9979f, tree b148b47d): `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, load 1.5 at start, no heavy app running, stress alarms open, dense and hordes300 at main's level (report only)
-Known red case or blocker: none (red ledger cleared at the gate fix 2 re-pin); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
-Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Overlord affordability under BR7's lapse (below)
+Resume record (updated 2026-11-22 at the gate and merge)
+Branch / base commit / working-tree state: p7-enemy-bots / local main b4e841e9 (plus its benchmark row 5dcb0edc) merged in at 526192a6 (2026-11-22, approved by the owner) / clean before the gate docs commit
+Last green task / next incomplete task: gate (part 1) / squash merge into local main (owner, 2026-11-22), then After a merge
+Changed paths since last commit: this file, STATUS.md, plan (open list)
+Last command / cases / checks / failures / exit / marker: full suite on 526192a6 (build/suite-merge.log) CASES 1380 CHECKS 153149 FAILURES 0 / exit 0 / TESTS PASSED 153149; `sh tools/run_checks.sh` CHECKS PASSED 5; netplay match and rematch passed; team match won 40182 winner 2
+Known red case or blocker: none; p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
+Approved decisions, pre-authorizations used, deferred gates: as before, plus the gate decisions below (user, 2026-11-22); (a) local commits per task and (b) one branch push used
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: the gate (plan, Gate part 1); after part 1's gate P2.3b comes before part 2 (user, 2026-11-22)
+Next exact action: squash merge into local main; after part 1, P2.3b comes before part 2 and repeats its re-pin when it merges (user, 2026-11-22)
 ```
 
 ## Red ledger
@@ -487,3 +487,13 @@ Moved pins, old to new (red ledger row "Gate fix 2"): TB3 `FINAL_DIGEST` af8debc
 Open, found at this round (also in the plan's open list): the seat wrapper (`seat_sim.gd`) approves bot orders without issue-time validation, so offline-only refusals (blocked slot, missing prerequisite) never reach the bot online and a BR7 hold over a refused build cannot lapse in the netplay harness; fix before any online bot seat (validate in `SeatSim.issue_command`).
 
 Checks on that tree: full suite (`build/suite-fix2.log`) CASES 1380 CHECKS 153149 FAILURES 0, exit 0, `TESTS PASSED 153149`; `sh tools/run_checks.sh` exit 0, `CHECKS PASSED 5`; `sh tools/run_netplay.sh match` exit 0, `NETPLAY PASSED match 17.3 s`, `rematch` exit 0, `NETPLAY PASSED rematch 30.0 s` (both end on 9,746); `sh tools/run_team_match.sh` exit 0, `TEAM MATCH won tick=40182 winner=2 units_peak=314`, `TEAM PATHS PASS`. Not run: the benchmark, `proxy-clean` and `proxy-burst` (need `WARGRID_NETFAULT_BIN`; CI covers them).
+
+### Gate
+
+Tree `695b702c` (branch tip before the `main` merge) unless named.
+
+- Reviews of the whole branch (`221ce491..3705a2fb`): `/ponytail-review` (nothing to cut), Gemini 4 Neon high through `agy`, one Opus high pass, and one Fable 5.2 high pass the owner asked for this once (user, 2026-11-22); the player-experience reviewer on the F3 line (ready with follow-ups, all S2/S3; moved to the plan's open list, user, 2026-11-22). Findings fixed in the two gate fix rounds above (owner picks, user, 2026-11-22: all bot bugs now, the BR4 share fix, re-pin on moves); the fix round 1 commit had its own Opus high review, whose findings became fix round 2.
+- Headless benchmark on `b148b47d` (`5ad9979f`): `BENCHMARK PASSED 2`, `COMBAT BENCHMARK PASSED 10`, `LOCKSTEP BENCHMARK PASSED 1`, load 1.5 at start, no heavy app running; stress alarms open, dense and hordes300 at `main`'s level (report only). An earlier run on `3705a2fb` with the host under load (load 5.6) failed skirmish3v3 (p95 1.913 against 1.82); every layout rose 20-45 % against `main`'s rows, so it was not recorded and the run was repeated quiet.
+- Rendered benchmark on `2fabf03d` (`695b702c`): `RENDERED BENCHMARK PASSED 4`, load 1.7 to 2.3.
+- CI run 45032170483 on `695b702c`: success (Linux and Windows tests, exported builds, Compare replays, relay, tools). `sh tools/compare_local_traces.sh 45032170483`: replay, economy and combat `REPLAYS MATCHED 1200`, team `100`, netplay `325`.
+- `main` merge `526192a6` (docs and War Room only on the `main` side; conflicts in `packages.md` kept both sides, generated tables regenerated): full suite CASES 1380 CHECKS 153149 FAILURES 0, `run_checks` CHECKS PASSED 5, netplay match and rematch passed, team match `won tick=40182 winner=2 units_peak=314`; every pin equals its pre-merge value. No separate merge review: the resolution touched docs and generated tables only.

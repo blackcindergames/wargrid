@@ -41,6 +41,7 @@ Written into the rules below: **7-1** UR1 (inside the one re-pin; old records re
 - With 150 s tested, which gap ships: owner pick at T1-8 from the two probe rows and the window check.
 - Not decided, not built: 0 A.D.'s "don't shoot defences unless one is the objective" (`RB`).
 - Seat wrapper (`seat_sim.gd`) approves bot orders without issue-time validation, so offline-only refusals (blocked slot, missing prerequisite) never reach the bot online and a BR7 hold over a refused build cannot lapse in the netplay harness; fix before any online bot seat (validate in `SeatSim.issue_command`). Found at gate fix round 2 (2026-11-22).
+- After the gate (user, 2026-11-22, later): the F3 line's decision tokens (hold, guards, release reason), the owner instead of `#id`, a steady left edge; the pre-wave gather (units sit at the producer's rally until wave 0 is due, so the line reads `ready 0`), older than this branch.
 - **At approval:** (a) local commits per task on `p7-enemy-bots` (recommended yes); (b) one branch push at the gate for CI and `compare_local_traces.sh` (recommended yes; never `main`).
 
 ### Design
