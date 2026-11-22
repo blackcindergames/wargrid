@@ -83,6 +83,10 @@ def mv(label: str, p95: str, **kw: str) -> dict[str, str]:
     return row(label=label, metric="movement_tick", scenario="open", p95_ms=p95, **kw)
 
 
+def deck(label: str, p95: str, p99: str, **kw: str) -> dict[str, str]:
+    return row(label=label, machine="deck-firefox", metric="frame_cpu", scenario="team", p95_ms=p95, p99_ms=p99, **kw)
+
+
 class PerfChartTest(unittest.TestCase):
     def test_worst_over_runs(self) -> None:
         rows = [mv("a", v, run=str(i + 1)) for i, v in enumerate(["1.0", "1.1", "1.5"])]
@@ -230,7 +234,7 @@ class PerfChartTest(unittest.TestCase):
         self.assertEqual(perf_chart.status_table([mv("a", "1.0")]).splitlines()[0], "**Nothing over budget**")
         self.assertIn(perf_chart.CAPTION, perf_chart.status_table(rows))
 
-    def test_readme_checked_rows_are_the_seven(self) -> None:
+    def test_readme_checked_rows_are_the_nine(self) -> None:
         self.assertEqual(
             [x.name for x in perf_chart.PASS_FAIL],
             [
@@ -241,6 +245,8 @@ class PerfChartTest(unittest.TestCase):
                 "Drawing the screen",
                 "Drawing the screen, big map (Ashfall)",
                 "Online play overhead",
+                "Steam Deck in Firefox, 3v3 match: CPU time per frame",
+                "Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments",
             ],
         )
 
@@ -258,14 +264,15 @@ class PerfChartTest(unittest.TestCase):
         ]
         self.assertEqual([x for x in lines if x][:3], expected)
         keep = [x for x in lines if x]
-        at = keep.index(perf_chart.DECK_ROW)
+        at = keep.index(perf_chart.CAPTION) - 1
+        self.assertTrue(keep[at].startswith("| **Unit movement** |"))
         self.assertEqual(
             keep[at + 1 : at + 5],
             [
                 perf_chart.CAPTION,
                 perf_chart.TREND_HEAD,
                 perf_chart.TREND_INTRO,
-                "| Area | Latest on this Mac | Recent runs | vs recent runs | As of |",
+                "| Area | Latest on this Mac | Recent runs → | vs recent runs | As of |",
             ],
         )
         tracked = keep[at + 6 : -1]
@@ -286,6 +293,30 @@ class PerfChartTest(unittest.TestCase):
         mixed = [busy[0], {**busy[1], "load": "1.0"}]
         self.assertNotIn("every tracked area", perf_chart._readme_block(mixed))
 
+    def test_deck_rows_feed_only_the_deck_lines(self) -> None:
+        p95, p99 = (next(x for x in perf_chart.LINES if x.title == t) for t in ("deck frame p95", "deck frame p99"))
+        rows = [deck("d", "30.88", "35.86"), mv("a", "1.0")]
+        self.assertEqual([x.worst_pct for x in perf_chart.series(rows, p95)], [30.88 / 16.7 * 100])
+        self.assertEqual([x.worst_pct for x in perf_chart.series(rows, p99)], [35.86 / 33.3 * 100])
+        on_dev = row(label="x", metric="frame_cpu", scenario="team", p95_ms="1.0", p99_ms="1.0")
+        self.assertEqual(perf_chart.series([on_dev], p95), [])
+        on_deck = {**mv("d", "9.0"), "machine": perf_chart.DECK_FF}
+        self.assertEqual(perf_chart.series([on_deck], perf_chart.LINES[0]), [])
+
+    def test_deck_lines_are_checked_and_counted(self) -> None:
+        rows = [deck("d", "30.88", "35.86")]
+        name = "Steam Deck in Firefox, 3v3 match: CPU time per frame"
+        self.assertTrue(self.table_row(rows, name).startswith(f"| **{name}** | \U0001f534 Over |"))
+        self.assertTrue(self.table_row(rows, f"{name}, slowest moments").startswith("| **"))
+        self.assertEqual(perf_chart.status_table(rows).splitlines()[0], "**2 of 2 areas over budget**")
+        block = perf_chart._readme_block(rows)
+        self.assertIn("**Checked against the limit: 2 of 2 areas over budget**", block)
+        self.assertNotIn("Not measured yet", block)
+        self.assertIn(perf_chart.DECK_NOTE, block)
+        without_deck = perf_chart._readme_block([mv("a", "1.0")])
+        self.assertNotIn("Not measured yet", without_deck)
+        self.assertNotIn(perf_chart.DECK_NOTE, without_deck)
+
     def test_readme_headline_when_nothing_checked_is_over(self) -> None:
         self.assertIn("**Checked against the limit: nothing over budget**", perf_chart._readme_block([mv("a", "1.0")]))
 
@@ -300,7 +331,7 @@ class PerfChartTest(unittest.TestCase):
         self.assertIn("combat stress p95: ", block)
         rows.append(row(label="a", metric="team_tick", scenario="team_match:profile", p95_ms="2.861"))
         self.assertIn(
-            "| **3v3 match, bots and simulation (headroom)** | \U0001f534 Over |", perf_chart._ledger_block(rows)
+            "| **3v3 match, bots and simulation (real 3v3)** | \U0001f534 Over |", perf_chart._ledger_block(rows)
         )
 
     def test_table_over_close_ok_rows(self) -> None:

@@ -12,6 +12,7 @@ from typing import NamedTuple
 
 BUSY_LOAD = 2.5
 DEV = "dev"
+DECK_FF = "deck-firefox"
 
 
 class Budget(NamedTuple):
@@ -26,6 +27,7 @@ class Line(NamedTuple):
     budget: Budget
     scenarios: tuple[str, ...]
     name: str
+    machine: str = DEV
 
 
 class Point(NamedTuple):
@@ -44,19 +46,21 @@ SIM_P95 = Budget(10.0, 1.82, "p95")
 SIM_P99 = Budget(20.0, 3.64, "p99")
 PLUMBING = Budget(5.0, 0.91, "mean")
 FRAME = Budget(16.7, 3.04, "p95")
+DECK_P95 = Budget(16.7, 16.7, "p95")
+DECK_P99 = Budget(33.3, 33.3, "p99")
 LOCKSTEP = Budget(3.3, 0.6, "p99")
 GATED = ("contact", "skirmish3v3", "transports", "defences", "docks", "ramp", "frc")
 
 RENDERED_METRICS = ("tick_frame", "frame_interval")
 GOAL = (
-    Line("3v3 upkeep", ("plumbing",), PLUMBING, ("team_match:profile",), "3v3 match, background upkeep (headroom)"),
-    Line("3v3 sim p95", ("step",), SIM_P95, ("team_match:profile",), "3v3 match, simulation (headroom)"),
+    Line("3v3 upkeep", ("plumbing",), PLUMBING, ("team_match:profile",), "3v3 match, background upkeep (real 3v3)"),
+    Line("3v3 sim p95", ("step",), SIM_P95, ("team_match:profile",), "3v3 match, simulation (real 3v3)"),
     Line(
         "3v3 bots + sim p95",
         ("team_tick",),
         SIM_P95,
         ("team_match:profile",),
-        "3v3 match, bots and simulation (headroom)",
+        "3v3 match, bots and simulation (real 3v3)",
     ),
 )
 LINES = (
@@ -82,6 +86,23 @@ LINES = (
     Line("rendered tick-frame p95", RENDERED_METRICS, FRAME, ("open", "dense"), "Drawing the screen"),
     Line("Ashfall tick-frame p95", RENDERED_METRICS, FRAME, ("ashfall",), "Drawing the screen, big map (Ashfall)"),
     Line("lockstep p99", ("lockstep_overhead",), LOCKSTEP, ("contact",), "Online play overhead"),
+    # shortcut: only the two CPU limits of the Deck frame goal are charted; frames per second and long frames per second live in the ledger, upgrade when a line can hold a non-millisecond limit.
+    Line(
+        "deck frame p95",
+        ("frame_cpu",),
+        DECK_P95,
+        ("team",),
+        "Steam Deck in Firefox, 3v3 match: CPU time per frame",
+        DECK_FF,
+    ),
+    Line(
+        "deck frame p99",
+        ("frame_cpu",),
+        DECK_P99,
+        ("team",),
+        "Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments",
+        DECK_FF,
+    ),
     *GOAL,
 )
 _REF = Path(__file__).resolve().parent.parent / "docs" / "reference"
@@ -115,7 +136,7 @@ def _preferred(group: list[dict[str, str]], line: Line) -> list[dict[str, str]]:
 def series(rows: list[dict[str, str]], line: Line) -> list[Point]:
     groups: dict[str, list[dict[str, str]]] = {}
     for r in rows:
-        if r["machine"] == DEV and r["metric"] in line.metrics and r["scenario"] in line.scenarios:
+        if r["machine"] == line.machine and r["metric"] in line.metrics and r["scenario"] in line.scenarios:
             groups.setdefault(r["label"], []).append(r)
     points = []
     for label, all_rows in groups.items():
@@ -281,9 +302,14 @@ def update_ledger(text: str, block: str, begin: str = BEGIN, end: str = END) -> 
 
 
 CAPTION = (
-    "Percent of the limit for a low-end device, estimated from this Mac (see the ledger for how). "
+    "Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). "
     "\U0001f53a = used more of the limit than last run. Small changes can be run-to-run noise. "
     "As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates."
+)
+DECK_NOTE = (
+    "The two Steam Deck rows are one goal. The 3v3 match ran at 58 frames per second there on 2026-11-22, "
+    "but the CPU work behind a frame must fit in 16.7 ms on most frames (p95) and 33.3 ms on the slowest (p99); "
+    "the planned worker thread is the route to that, not yet measured on this build."
 )
 BAR_CELLS = 10
 CLOSE_PCT = 85
@@ -343,13 +369,12 @@ def _ledger_block(rows: list[dict[str, str]]) -> str:
     return f"{status_table(rows)}\n\nDetails:\n\n{details}"
 
 
-DECK_ROW = "| Smooth on a Steam Deck in Firefox, 3v3 match | Not measured yet | | | |"
 TREND_HEAD = "**Tracked, no route under the limit yet**"
 TREND_INTRO = (
     "These areas are over their limit and no known change brings them under it yet, so they show only how they move: "
     "the last run against the median of the three runs before it, with a change inside the run-to-run spread shown as same. "
     "Recent runs: one bar per run, oldest first; each step is about 5% above or below those runs' median. "
-    "Stress = far more units than a real match; headroom = a real 3v3 match on this Mac. Every limit is in the ledger."
+    "Stress = far more units than a real match; real 3v3 = a 3v3 team match measured on this Mac. Every limit is in the ledger."
 )
 
 
@@ -375,14 +400,15 @@ def _readme_block(rows: list[dict[str, str]]) -> str:
         tracked_rows = [r.replace(" (busy host)", "") for r in tracked_rows]
         busy_note = ["The latest run of every tracked area was on a busy host."]
     tracked = [
-        "| Area | Latest on this Mac | Recent runs | vs recent runs | As of |",
+        "| Area | Latest on this Mac | Recent runs → | vs recent runs | As of |",
         "| --- | --- | --- | --- | --- |",
         *tracked_rows,
     ]
     parts = [
         "Performance against the low-end budget (generated):",
-        "\n".join([head, "", *_table_rows(entries), DECK_ROW]),
+        "\n".join([head, "", *_table_rows(entries)]),
         CAPTION,
+        *([DECK_NOTE] if any(line.machine == DECK_FF for line, _, _ in entries) else []),
         TREND_HEAD,
         TREND_INTRO,
         "\n".join(tracked),

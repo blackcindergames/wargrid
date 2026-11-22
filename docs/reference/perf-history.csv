@@ -1621,3 +1621,6 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-22,2fadde72,auto 45daa17e,dev,plumbing,team_match_pump:profile,2,,,1.1553,P1,1.98,log sha256:7629801e0737
 2026-11-22,2fadde72,auto 45daa17e,dev,team_tick,team_match:profile,2,2.962,,1.5869,P1,1.98,log sha256:7629801e0737
 2026-11-22,2fadde72,auto 45daa17e,dev,step,team_match:profile,2,2.241,,1.4137,P1,1.98,log sha256:7629801e0737
+2026-11-22,d5a60035,Deck frame goal main,deck-firefox,frame_cpu,team,1,31.32,35.34,,match-bench,1.33,log sha256:5cba1e6afbd0
+2026-11-22,d5a60035,Deck frame goal main,deck-firefox,frame_cpu,team,2,30.88,35.86,,match-bench,1.31,log sha256:d9d7cccf3177
+2026-11-22,d5a60035,Deck frame goal main,deck-firefox,frame_cpu,team,3,30.62,35.22,,match-bench,1.35,log sha256:ec85890bf797
