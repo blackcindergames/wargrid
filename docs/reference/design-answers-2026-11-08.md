@@ -1618,6 +1618,7 @@ Plan not written; private input `p15-data.md`.
 - **Kind-row cap (15-10):** first in the package, roster order unchanged (user, 2026-11-21).
 - **Card slot (15-11):** the heavy goes last on the factory card, keys stay put (user, 2026-11-21).
 - **Display names (15-12):** `usa_heavy_tank` Heavy Tank, `china_heavy_tank` Twin-Gun Tank, `frc_heavy_tank` Scrap Tank, `frc_suicide_infantry` Sapper; named by weight, role or look like today's roster; Zero Hour's names (Paladin, Overlord, Marauder, Terrorist) stay source references only ([blueprint](../blueprint.md) §14) (user, 2026-11-22).
+- **Heavy tank looks (15-13):** the three heavies get very different silhouettes per faction, as Zero Hour's do; the China heavy should be as iconic as Zero Hour's Overlord, in Wargrid's own geometric shapes, never a copy. Picked in a blocking War Room round before P15's first slice, since the look is the question (user, 2026-11-22).
 
 ## Hybrid economy frame (user, 2026-11-22)
 
