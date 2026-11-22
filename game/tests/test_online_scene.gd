@@ -66,7 +66,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -788,6 +788,34 @@ func test_funds_rejection_is_announced(runner) -> bool:
 	var stream: AudioStream = main._sound._voice.stream
 	runner.check(stream != null and stream.resource_path.get_file() == "insufficient_funds.wav", "N6 online funds rejection says insufficient_funds")
 	runner.check(not cues.has("error"), "N6 online funds rejection gives no error beep, got %s" % [cues])
+	main.free()
+	return true
+
+# A credit-blocked press while lockstep waits for the peer clicks and speaks on the next frame, not when the peer resumes.
+func test_blocked_press_sounds_while_waiting(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_peer_packets(online.transport, 2, 4, 12)
+	_run(main, 8)
+	var tick: int = -1
+	for i in 30:
+		if main.driver._lockstep.status() == "waiting" and main.driver.pump.live().tick() == tick: break
+		tick = main.driver.pump.live().tick()
+		_run(main, 1)
+	var view: Dictionary = main.driver.current().view
+	BaseScene.HudModel.player(view, 1).credits = 0
+	main.orders.selected_ids.assign([_builder(main, 1)])
+	main._show(view)
+	main.set_process(true)
+	main._sound._voice.stream = null
+	main._sound.last_requests().clear()
+	BaseScene.new().build_key(main, "usa_power_plant")
+	runner.check(main.driver._lockstep.status() == "waiting" and main.hud.refusal == "800 credits short", "N7 fixture: stalled, the press refused, got %s '%s'" % [main.driver._lockstep.status(), main.hud.refusal])
+	_run(main, 1)
+	var cues: Array = main._sound.last_requests().map(func(request: Dictionary) -> String: return request.cue)
+	var stream: AudioStream = main._sound._voice.stream
+	runner.check(main.driver.pump.live().tick() == tick and cues == ["disabled"], "N7 the next stalled frame clicks short, tick %d of %d, got %s" % [main.driver.pump.live().tick(), tick, cues])
+	runner.check(stream != null and stream.resource_path.get_file() == "insufficient_funds.wav", "N7 and says insufficient_funds")
 	main.free()
 	return true
 
@@ -1651,6 +1679,7 @@ func test_sb2_online_refusal_after_a_later_gesture(runner) -> bool:
 			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
 			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false),
 		"a right-click move": func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true),
+		"a blocked Supply Depot press": func() -> void: helper.build_key(main, "usa_supply_center"),
 		"Esc, then the same builder again": func() -> void:
 			helper.key(main, KEY_ESCAPE)
 			main.orders.selected_ids.assign([3])

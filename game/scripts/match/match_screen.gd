@@ -146,6 +146,7 @@ func _add_playtest() -> void:
 	_pause.playtest_changed.connect(_playtest.set_active)
 	_playtest.set_active(PlaytestSettings.enabled())
 	for surface: Control in _playtest.surfaces(): hud.block(surface)
+	hud.helpers = _playtest.surfaces()
 	_playtest.stack_changed.connect(_place_perf)
 	$HUD/Economy.item_rect_changed.connect(_place_floor)
 	$HUD/Economy.visibility_changed.connect(_place_floor)
@@ -396,7 +397,8 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 		hud.end_hover()
 		orders._selecting = false
 		_selection_box.hide()
-	_shown_note = _note()
+	# A repaint leaves the note unshown, so a refusal's sound gets its fresh refresh next frame even while lockstep waits.
+	if fresh: _shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()

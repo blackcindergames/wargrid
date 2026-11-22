@@ -82,6 +82,8 @@ var _tip_since: int = -1
 var _tip_open: bool = false
 var _strip_args: Array = []
 var _blockers: Array[Control] = []
+# The playtest helper's surfaces draw above the cell card, so the card steps left of them.
+var helpers: Array[Control] = []
 
 func _init() -> void:
 	name = "Hud"
@@ -309,7 +311,8 @@ func clear_refusal() -> void:
 # The timer only hides the line; `refusal` keeps the words until replaced, cleared or reset.
 func _process(_delta: float) -> void:
 	if _refusal_line.visible and now_msec.call() - _refused_at >= 3000: _refusal_line.visible = false
-	if _hovered_cell != null or (_cell_card != null and _cell_card.visible): _show_cell_card()
+	# Only the 250 ms wait needs the frame; hover and refresh lay out an open card.
+	if _hovered_cell != null and not _cell_card.visible: _show_cell_card()
 
 # Esc's first job is to back out of a selection, placement or form; the chip shows only when Esc opens the menu, and fades so Menu keeps its width.
 func set_esc_chip(shown: bool) -> void:
@@ -611,6 +614,8 @@ func _press_cell(cell: Button) -> void:
 	_tip_open = false
 	_show_cell_card()
 	var action: String = cell.get_meta("action")
+	# The sound player hears this press after the action has refilled the cell (Build opens the sub-grid in place).
+	cell.set_meta("pressed_blocked", cell.get_meta("blocked"))
 	if not action.is_empty(): cell_pressed.emit(action)
 
 func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> void:
@@ -706,7 +711,10 @@ func _show_cell_card() -> void:
 	line.text = reason
 	_cell_card.reset_size()
 	var cell: Rect2 = _hovered_cell.get_global_rect()
-	_cell_card.position = Vector2(clampf(cell.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _cell_card.size.x), slab_top() - 8.0 - _cell_card.size.y)
+	var at := Rect2(Vector2(clampf(cell.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _cell_card.size.x), slab_top() - 8.0 - _cell_card.size.y), _cell_card.size)
+	for helper: Control in helpers:
+		if helper.is_visible_in_tree() and at.intersects(helper.get_global_rect()): at.position.x = helper.get_global_rect().position.x - 8.0 - at.size.x
+	_cell_card.position = at.position
 
 # Item cells always; a command only while blocked, to name why.
 static func _has_card(cell: Button) -> bool:

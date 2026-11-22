@@ -123,6 +123,6 @@ func _watch(button: Node) -> void:
 func _click(button: BaseButton) -> void:
 	if not is_inside_tree(): return # a button that changes scene has already taken the screen out of the tree
 	# A blocked cell sounds its refusal instead, as its key does.
-	if not (button.get_meta("blocked", {}) as Dictionary).is_empty(): return
+	if not (button.get_meta("pressed_blocked", {}) as Dictionary).is_empty(): return
 	var requests: Array[Dictionary] = [director.ui_request("click")]
 	play(requests)

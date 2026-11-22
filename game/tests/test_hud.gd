@@ -28,7 +28,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_cell_card_timing, test_cell_card_lines, test_prerequisite_hint, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -2083,13 +2083,50 @@ func test_cell_card_timing(runner) -> bool:
 	main.free()
 	return true
 
+# An open card is laid out when the hover or the view changes, not on every frame (plan Design, F38).
+func test_open_cell_card_waits_for_a_change(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _blocked_world(main, 1000)
+	_sub_grid(main, ids.builder)
+	await _frames(runner)
+	main.hud.now_msec = func() -> int: return 10000
+	var card: Control = main.get_node("HUD/Hud/CellCard")
+	_cell(main, "usa_power_plant").mouse_entered.emit()
+	main.hud.now_msec = func() -> int: return 10250
+	main.hud._process(0.0)
+	var placed: Vector2 = card.position
+	card.position = Vector2(-1.0, -1.0)
+	main.hud._process(0.0)
+	runner.check(card.visible and card.position == Vector2(-1.0, -1.0), "CC3 a frame leaves an open card alone, got %s %s" % [card.visible, card.position])
+	main._reshow()
+	runner.check(card.visible and card.position == placed, "CC3 a refresh lays it out again at %s, got %s" % [placed, card.position])
+	main.free()
+	return true
+
+# The ready Build cell clicks, though within the press the same cell turns into the unaffordable Power Plant.
+func test_build_click_sounds(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = _blocked_world(main, 500)
+	_select(main, [ids.builder])
+	await _frames(runner)
+	var cell: Button = _cell(main, "build")
+	main._sound.last_requests().clear()
+	_click(runner, cell.get_global_rect().get_center())
+	var cues: Array = main._sound.last_requests().map(func(request: Dictionary) -> String: return request.cue)
+	runner.check(main.orders._sub_grid and _cell(main, "usa_power_plant") == cell and not (cell.get_meta("blocked") as Dictionary).is_empty(), "BC4 fixture: Build opened the sub-grid and its cell is now the blocked Power Plant")
+	runner.check(cues == ["click"], "BC4 the Build click sounds, got %s" % [cues])
+	main.free()
+	return true
+
 # Line 1 the name and muted cost · time, line 2 the reason in warn; 248 wide, 8 above the slab, left-aligned with its cell, clamped 8 from the edge.
 func test_cell_card_lines(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin(true, _longest_card().id)
 	for pair: Array in BaseScene.HUD_SIZES:
 		var size: Vector2i = pair[1]
 		var view := Rect2(Vector2.ZERO, Vector2(size))
 		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
-		var main = await OverlayTests.new()._scene(runner, Skirmish, port)
+		var main = await overlays._scene(runner, Skirmish, port)
 		var ids: Dictionary = _blocked_world(main, 1000)
 		_sub_grid(main, ids.builder)
 		main.refuse("Needs Power Plant", "")
@@ -2113,15 +2150,48 @@ func test_cell_card_lines(runner) -> bool:
 			var slab: Rect2 = _rect(main, "HUD/Economy")
 			var left: float = clampf(cell.get_global_rect().position.x, 8.0, size.x - 8.0 - 248.0)
 			var high: float = 36.0 if case[3].is_empty() else 56.0
-			runner.check(at.size == Vector2(248, high) and is_equal_approx(at.position.x, left) and is_equal_approx(at.end.y, slab.position.y - 8.0), "CC2 %s: 248 x %.0f, x %.0f, 8 above the slab, got %s" % [label, high, left, at])
+			var checklist: Rect2 = _rect(main, "HUD/Playtest/Checklist")
+			if Rect2(left, slab.position.y - 8.0 - high, 248.0, high).intersects(checklist): left = checklist.position.x - 8.0 - 248.0
+			runner.check(at.size == Vector2(248, high) and is_equal_approx(at.position.x, left) and is_equal_approx(at.end.y, slab.position.y - 8.0), "CC2 %s: 248 x %.0f, x %.0f (its cell's, else 8 left of the checklist), 8 above the slab, got %s" % [label, high, left, at])
 			runner.check(view.grow(-8.0).encloses(at), "CC2 %s: 8 inside the view, got %s" % [label, at])
 			var panels: Dictionary = BaseScene.hud_panels(main)
 			panels["HUD/Hud/RefusalLine"] = _rect(main, "HUD/Hud/RefusalLine")
 			for path: String in panels: runner.check(not at.intersects(panels[path]), "CC2 %s: clear of %s %s" % [label, path, panels[path]])
+			_clear_of_helpers(runner, main, at, label)
 			cell.mouse_exited.emit()
 			main.hud._process(0.0)
+		await _factory_card_clear(runner, main, ids, view, size)
 		port.free()
+	overlays._end(saved)
 	return true
+
+# Nine queued and shown in full, with the helper's checklist open: the factory's Queue full card stays clear of it.
+func _factory_card_clear(runner, main, ids: Dictionary, view: Rect2, size: Vector2i) -> void:
+	Fixture.add_completed(main.driver.pump.live(), 1, "usa_supply_center", Vector2i(20, 20))
+	BaseScene.publish(main)
+	_select(main, [], ids.factory)
+	_queue_of(main, ids.factory, 9)
+	main.get_node("HUD/Economy/QueueMore").pressed.emit()
+	await _frames(runner)
+	var label: String = "the factory's Queue full at %s" % size
+	var cell: Button = _cell(main, "usa_tank")
+	main.hud.now_msec = func() -> int: return 0
+	cell.mouse_entered.emit()
+	main.hud.now_msec = func() -> int: return 1000
+	main.hud._process(0.0)
+	await _frames(runner)
+	var card: Control = main.get_node("HUD/Hud/CellCard")
+	var at: Rect2 = card.get_global_rect()
+	runner.check(card.visible and (card.find_child("Reason", true, false) as Label).text == "Queue full", "CC2 %s: the card shows the reason" % label)
+	runner.check(view.grow(-8.0).encloses(at) and is_equal_approx(at.end.y, _rect(main, "HUD/Economy").position.y - 8.0), "CC2 %s: 8 inside the view, 8 above the slab, got %s" % [label, at])
+	_clear_of_helpers(runner, main, at, label)
+	cell.mouse_exited.emit()
+	main.hud._process(0.0)
+
+static func _clear_of_helpers(runner, main, at: Rect2, label: String) -> void:
+	runner.check(main.get_node("HUD/Playtest/Checklist").visible, "CC2 %s: fixture: the checklist is open" % label)
+	for path: String in ["HUD/Playtest/Chip", "HUD/Playtest/Checklist", "HUD/Playtest/MarkerDialog"]:
+		if main.get_node(path).visible: runner.check(not at.intersects(_rect(main, path)), "CC2 %s: clear of %s, card %s, panel %s" % [label, path.get_file(), at, _rect(main, path)])
 
 # 3-10: hovering a cell blocked by a prerequisite frames that prerequisite's cell in sel; nothing else does.
 func test_prerequisite_hint(runner) -> bool:

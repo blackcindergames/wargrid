@@ -141,6 +141,7 @@ func press_cell(action: String) -> void:
 	if not takes_orders(): return
 	var blocked: Dictionary = HudModel.blocked(_screen.shown_state, _screen._hud_selection(), _screen.local_player, action)
 	if not blocked.is_empty():
+		gestures += 1
 		_screen.refuse(blocked.reason, blocked.sound)
 		_screen._reshow()
 		return
