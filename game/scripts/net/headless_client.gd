@@ -9,6 +9,7 @@ const MatchSettings = preload("res://scripts/match_settings.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const ScriptedHuman = preload("res://scripts/simulation/scripted_human.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
+const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const UNCAPPED_STEPS: int = 64
 const CAPPED_STEPS: int = 2
@@ -18,6 +19,8 @@ const ORACLE_MAX_TICKS: int = 30000
 var _args: Dictionary = {}
 var _transport: RefCounted
 var _lockstep: RefCounted
+var _driver: OnlineDriver
+var _hooked_tick: int = -1
 var _sim: Simulation
 var _seat: int = 0
 var _hello_sent: bool = false
@@ -31,18 +34,21 @@ var _match_map: String = MatchSettings.TEST_MAP
 var _chosen: Array[int] = []
 var _match_seed: int = 0
 var _rematch_state: String = ""
+var _defeats: Dictionary = {}
 var state_rows := PackedStringArray()
 
 func _ready() -> void:
 	_args = _parse(OS.get_cmdline_user_args())
-	var faction_error: String = _faction_error()
-	if faction_error != "":
-		printerr(faction_error)
+	var arg_error: String = _faction_error()
+	if arg_error == "": arg_error = _defeat_error()
+	if arg_error != "":
+		printerr(arg_error)
 		get_tree().quit(2)
 		return
 	if _args.has("replay-log"):
 		_replay_oracle()
 		return
+	_defeats = _parse_defeats(str(_args.get("defeat", "")))
 	_transport = RelayTransport.new()
 	var url: String = _args.get("relay", _args.get("probe-relay", ""))
 	_connect_msec = Time.get_ticks_msec()
@@ -120,10 +126,18 @@ func _start(message: Dictionary) -> void:
 	var id: String = message.settings.map
 	_match_map = id
 	_match_seed = message.seed
-	_chosen = MatchSettings.starts(id, _match_seed)
+	var count: int = message.seats.size()
+	var teams: Array[int] = []
+	for seat in range(1, count + 1): teams.append(seat)
+	_chosen = MatchSettings.starts(id, _match_seed, teams)
 	print("NETCLIENT MAP ", id, " SEED ", message.seed, " STARTS ", ",".join(_chosen.map(str)) if not _chosen.is_empty() else "-")
-	_sim = _match_sim(id, _chosen)
+	_sim = _match_sim(id, _chosen, count)
 	_lockstep = Lockstep.for_start(_seat, message)
+	if _args.has("pump"):
+		_driver = OnlineDriver.new(_transport, _lockstep, _args.get("faction", Skirmish.default_faction()), _seat)
+		_driver.adopt(_sim)
+		_driver.start()
+		return
 	_lockstep.session_handler = _on_session
 	_lockstep.send = _transport.send_text
 	_lockstep.submit({"type": "choose_faction", "faction": _args.get("faction", Skirmish.default_faction())})
@@ -138,8 +152,8 @@ func _on_session(message: Dictionary) -> bool:
 	_start(message) # swap now so the peer's tick 4 in the same poll batch reaches the new lockstep
 	return true
 
-func _match_sim(id: String, chosen: Array[int]) -> Simulation:
-	return Skirmish.create(true, "human", {}, MatchSettings.map_path(id), chosen)
+func _match_sim(id: String, chosen: Array[int], count: int = 2) -> Simulation:
+	return Skirmish.create(true, "human", {}, MatchSettings.map_path(id), chosen, count)
 
 func _oracle_sim() -> Simulation:
 	var id: String = _map_id()
@@ -149,6 +163,9 @@ func _oracle_sim() -> Simulation:
 	return Skirmish.create(true, "ai", {1: names[0], 2: names[1]}, MatchSettings.map_path(id), chosen)
 
 func _run_steps(limit: int) -> void:
+	if _driver != null:
+		_pump_steps(limit)
+		return
 	for i in limit:
 		if _ending: return
 		if _transport.closed() or _transport.silent(Time.get_ticks_usec()): _lockstep.set_relay_lost()
@@ -160,6 +177,24 @@ func _run_steps(limit: int) -> void:
 			_finish(_lockstep.status(), _lockstep.end_reason())
 			return
 		if not _step_once(): break
+
+func _pump_steps(limit: int) -> void:
+	for i in limit:
+		if _ending: return
+		if _driver.over():
+			var ended: bool = _lockstep.status().begins_with("ended")
+			_finish(_lockstep.status() if ended else "match_over", _lockstep.end_reason() if ended else "")
+			return
+		var tick: int = _sim.tick()
+		if tick != _hooked_tick and _lockstep.can_step(tick):
+			_hooked_tick = tick
+			if _test_hooks(tick): return
+			_run_script()
+		# step() polls before it takes, so it may take only the tick whose hooks and script just ran.
+		_driver._credit = 0 if tick == _hooked_tick else -1
+		_driver.step()
+		_driver.drain()
+		if _sim.tick() == tick and (tick == _hooked_tick or not _lockstep.can_step(tick)): return
 
 func _rematch_step() -> bool:
 	if not _args.has("rematch") or _rematch_state == "done": return false
@@ -194,6 +229,7 @@ func _run_script() -> void:
 
 func _test_hooks(tick: int) -> bool:
 	if _int_arg("perturb-at-tick") == tick: _sim._players[_seat].credits += 1
+	_apply_defeats(tick)
 	if _int_arg("stop-at-tick") == tick:
 		_finish("stopped", "")
 		return true
@@ -206,6 +242,30 @@ func _test_hooks(tick: int) -> bool:
 		OS.delay_msec(int(float(_args.get("stall-seconds", "1")) * 1000.0))
 		_receive(_transport.poll())
 	return false
+
+func _apply_defeats(tick: int) -> void:
+	for seat: int in _defeats.get(tick, []):
+		while _remove_buildings(seat): pass
+		print("NETCLIENT DEFEAT ", seat, " AT ", tick)
+	_defeats.erase(tick)
+
+# Repeated because removed FRC buildings open rebuild holes, which count for victory.
+func _remove_buildings(seat: int) -> bool:
+	var removed: bool = false
+	for building: Dictionary in _sim.snapshot().buildings:
+		if building.owner == seat:
+			_sim.remove_object(building.id)
+			removed = true
+	return removed
+
+func _parse_defeats(spec: String) -> Dictionary:
+	var parsed: Dictionary = {}
+	for entry in spec.split(",", false):
+		var parts: PackedStringArray = entry.split("@")
+		if parts.size() != 2: continue
+		var tick: int = int(parts[1])
+		parsed[tick] = parsed.get(tick, []) + [int(parts[0])]
+	return parsed
 
 func _finish(status: String, reason: String) -> void:
 	if _ending: return
@@ -316,6 +376,13 @@ func _faction_error() -> String:
 	if listed != "": return listed
 	var faction: String = _args.get("faction", Skirmish.default_faction())
 	return "" if not Registry.faction(faction).is_empty() else "Unknown --faction '%s'; expected one of: %s" % [faction, ", ".join(Registry.Factions.FACTIONS.keys())]
+
+func _defeat_error() -> String:
+	if not _args.has("defeat"): return ""
+	var entry := RegEx.create_from_string("^[1-9][0-9]*@[1-9][0-9]*$")
+	for spec: String in str(_args.defeat).split(","):
+		if entry.search(spec) == null: return "Bad --defeat entry '%s'; expected SEAT@TICK[,SEAT@TICK] with seat and tick above 0" % spec
+	return ""
 
 func _parse(raw: PackedStringArray) -> Dictionary:
 	var parsed: Dictionary = {}

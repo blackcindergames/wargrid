@@ -41,6 +41,10 @@ COMBAT = re.compile(r"^COMBAT ([a-z0-9_]+) tick_ms=(\{[^}]*\})", re.M)
 LOCKSTEP = re.compile(r"^LOCKSTEP overhead_ms=(\{[^}]*\})", re.M)
 RENDERED = re.compile(r"^RENDERED SAMPLE (\S+) .*? tick_ms=(\{[^}]*\}).*? frame_interval_ms=(\{[^}]*\})", re.M)
 PROFILE = re.compile(r"^PROFILE rendered_(\S+) zone=(\S+) mean_ms=([\d.]+)", re.M)
+# Direct team match only: the trailing space skips team_match.warmup and team_match_pump.
+TEAM = re.compile(r"^PROFILE team_match zone=(step|team\.tick) mean_ms=([\d.]+) .*? p95=([\d.]+)", re.M)
+TEAM_METRICS = {"step": "step", "team.tick": "team_tick"}
+TEAM_LABEL = re.compile(r"^PROFILE team_match ", re.M)
 HANDOFF = re.compile(r"^PROFILE (?!rendered_)(\S+) zone=(\S+) mean_ms=([\d.]+)", re.M)
 # view_state replaced snapshot and view.batch replaced view.copy on 2026-11-11 (performance next).
 HANDOFF_EXTRA = ("view.copy", "view.sort", "view.batch")
@@ -92,6 +96,17 @@ def _headless_handoff(text: str) -> list[Sample]:
     return [Sample("plumbing", f"{label}:profile", None, None, t) for label, t in totals.items() if t is not None]
 
 
+def _team_samples(text: str) -> list[Sample]:
+    samples = [
+        Sample(TEAM_METRICS[zone], "team_match:profile", float(p95), None, float(mean))
+        for zone, mean, p95 in TEAM.findall(text)
+    ]
+    missing = sorted(set(TEAM_METRICS.values()) - {s.metric for s in samples})
+    if missing and TEAM_LABEL.search(text):
+        raise ValueError(f"missing team_match zones: {', '.join(missing)}")
+    return samples
+
+
 def parse_log(text: str) -> list[Sample]:
     error = re.search(r"^.*ERROR:.*$", text, re.M)
     if error:
@@ -121,7 +136,7 @@ def parse_log(text: str) -> list[Sample]:
         samples.append(_percentiles("frame_interval", layout + suffix, frame_raw))
         samples.append(_percentiles(TICK_FRAME, layout + suffix, tick_raw))
     samples += profile
-    handoff = _headless_handoff(text)
+    handoff = _headless_handoff(text) + _team_samples(text)
     if handoff:
         found.add("profile")
         samples += handoff

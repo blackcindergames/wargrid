@@ -29,8 +29,9 @@ var _hash_order: Array[int] = []
 var _hash_snapshot: Dictionary = {}
 var _command_log: Array[Dictionary] = []
 var _latency: PackedInt64Array = PackedInt64Array()
-var _left_seat: int = 0
-var _left_after: int = 0
+var _left: Dictionary = {} # seat -> after_tick
+var _played_on: Dictionary = {}
+var _ended_by: int = 0
 var _end_reason: String = ""
 var _desync_tick: int = -1
 var _rejections: Array[Dictionary] = []
@@ -101,17 +102,24 @@ func waiting_for() -> Array[int]:
 func waiting_for_tick(sim_tick: int) -> Array[int]:
 	var missing: Array[int] = []
 	for s in _seats:
-		if not _packets[s].has(sim_tick): missing.append(s)
+		if _counts(s, sim_tick) and not _packets[s].has(sim_tick): missing.append(s)
 	return missing
 
 # quiet: the caller cannot tell yet whether the tick before ended the match, so a wait, leave or hash refusal keeps the status; a wrong tick always ends.
-func take(tick: int, quiet: bool = false) -> Variant:
+# survivors: match players still in the match after step(tick - 1) (every player during faction setup); null means the caller cannot tell, so a leave ends the match.
+func take(tick: int, quiet: bool = false, survivors: Variant = null) -> Variant:
 	if _ended(): return null
 	if tick != _next_tick:
 		_end("ended_protocol", "take tick %d, expected %d" % [tick, _next_tick])
 		return null
-	if _left_seat != 0 and (tick > _left_after or not _packets[_left_seat].has(tick)):
-		if not quiet: _end("ended_left", "player %d disconnected" % _left_seat)
+	for s in _seats:
+		if not _left.has(s) or _played_on.has(s) or (tick <= _left[s] and _packets[s].has(tick)): continue
+		if quiet: return null
+		if _defeated(s, tick, survivors):
+			_played_on[s] = true
+			continue
+		_ended_by = s
+		_end("ended_left", "player %d disconnected" % s)
 		return null
 	if not can_step(tick):
 		if not quiet: _status = "waiting"
@@ -119,6 +127,7 @@ func take(tick: int, quiet: bool = false) -> Variant:
 	if not _verify_hashes(tick, quiet): return null
 	var commands: Array[Dictionary] = []
 	for s in _seats:
+		if not _counts(s, tick): continue
 		for command: Dictionary in _packets[s][tick].commands: commands.append(command)
 		_packets[s].erase(tick)
 	_next_tick = tick + 1
@@ -138,7 +147,7 @@ func record(tick: int, issued: Array[Dictionary]) -> void:
 func advance(sim: Simulation) -> bool:
 	if sim.match_over(): return false
 	var tick: int = sim.tick()
-	var commands: Variant = take(tick)
+	var commands: Variant = take(tick, false, sim.survivors() if _left.values().has(tick - 1) else null)
 	if commands == null: return false
 	var issued: Array[Dictionary] = []
 	for command: Dictionary in commands:
@@ -193,13 +202,16 @@ func set_protocol_error(reason: String) -> void:
 	_end("ended_protocol", reason)
 
 func left_before_start() -> bool:
-	return _left_seat != 0 and _left_after < _delay
+	return left_seat() != 0 and _left[left_seat()] < _delay
 
 func opponent_left() -> bool:
 	return _status == "ended_left" and not left_before_start() and _seats.size() == 2
 
 func left_seat() -> int:
-	return _left_seat
+	if _ended_by != 0: return _ended_by
+	for s in _seats:
+		if _left.has(s): return s
+	return 0
 
 func end_reason() -> String:
 	return _end_reason
@@ -265,11 +277,14 @@ func _receive_left(message: Dictionary) -> void:
 	if message.seat == _seat or not _seats.has(message.seat):
 		_end("ended_protocol", "bad left seat")
 		return
-	_left_seat = message.seat
-	_left_after = message.after_tick
+	if _left.has(message.seat):
+		_end("ended_protocol", "repeated left for seat %d" % message.seat)
+		return
+	_left[message.seat] = message.after_tick
 
 func _verify_hashes(tick: int, quiet: bool = false) -> bool:
 	for s in _seats:
+		if not _counts(s, tick): continue
 		var packet: Dictionary = _packets[s][tick]
 		if not packet.has("hash"): continue
 		var hash_entry: Dictionary = packet.hash
@@ -279,3 +294,9 @@ func _verify_hashes(tick: int, quiet: bool = false) -> bool:
 			_end("ended_desync", "hash mismatch at tick %d (seat %d)" % [hash_entry.tick, s])
 			return false
 	return true
+
+func _counts(s: int, tick: int) -> bool:
+	return not _left.has(s) or tick <= _left[s]
+
+func _defeated(s: int, tick: int, survivors: Variant) -> bool:
+	return tick == _left[s] + 1 and _left[s] >= _delay and survivors is Array and not (survivors as Array).has(s)
