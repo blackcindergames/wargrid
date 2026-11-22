@@ -114,6 +114,12 @@ static func select_builder(view: Dictionary, seat: int) -> String:
 	var faction: String = player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)
 	return "Select a %s" % Registry.kind(Registry.faction(faction).get("start_unit", "")).display_name
 
+# The cell card's counter line: each unit's Zero Hour role, only the claims its damage numbers hold (test_hud.gd CL1 derives every one).
+const COUNTER_LINES := {
+	"usa_rocket_infantry": "Beats tanks · Weak against infantry", "china_rocket_infantry": "Beats tanks · Weak against infantry", "frc_rocket_infantry": "Beats tanks · Weak against infantry",
+	"usa_light_vehicle": "Weak against tanks", "frc_light_vehicle": "Weak against tanks", "china_tank": "Good against infantry · Weak against tanks",
+	"usa_tank": "Beats light vehicles", "china_light_vehicle": "Beats light vehicles", "frc_tank": "Beats light vehicles"}
+
 const SLAB_WIDTH: float = 432.0
 const SLAB_CONTENT: float = SLAB_WIDTH - 20.0
 const COMMANDS := {"build": "Build", "back": "Back", "attack_move": "Attack Move", "stop": "Stop", "unload": "Unload"}

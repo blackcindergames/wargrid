@@ -421,6 +421,10 @@ func _build_cell_card() -> void:
 	_label(head, "Name", &"HudRow").custom_minimum_size.y = CELL_CARD_LINE
 	_card_line(head, "Numbers")
 	_card_line(lines, "Reason").add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
+	var counter: Label = _card_line(lines, "Counter")
+	counter.add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
+	# A broken counter line keeps the card's 20 px line pitch.
+	counter.add_theme_constant_override("line_spacing", roundi(CELL_CARD_LINE - counter.get_theme_font("font").get_height(13)))
 	_cell_card.visible = false
 
 # The card's regular 13 px lines (the picture's body text).
@@ -628,8 +632,10 @@ func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> v
 	_credits_slab.find_child("Coin", true, false).visible = after < 0
 	var used: Array[int] = [numbers.used, numbers.get("after_used", numbers.used)]
 	var available: Array[int] = [numbers.available, numbers.get("after_available", numbers.available)]
-	_forecast(_power_slab, "Power", ["%d / %d" % [used[0], available[0]], "%d / %d" % [used[1], available[1]]], [used[0] > available[0], used[1] > available[1]])
-	_power_slab.find_child("LowPower", true, false).visible = used[1] > available[1]
+	var low: Array[bool] = [used[0] > available[0], used[1] > available[1]]
+	var power: bool = _forecast(_power_slab, "Power", ["%d / %d" % [used[0], available[0]], "%d / %d" % [used[1], available[1]]], low)
+	# 3-5: a forecast names low power only when the purchase flips it; already low, its warn numbers say so.
+	_power_slab.find_child("LowPower", true, false).visible = low[1] and not (power and low[0])
 	var held: bool = _strip_held(selection)
 	_credits_slab.custom_minimum_size.x = _held.x if held else 0.0
 	_power_slab.custom_minimum_size.x = _held.y if held else 0.0
@@ -709,6 +715,12 @@ func _show_cell_card() -> void:
 	var line: Label = _cell_card.find_child("Reason", true, false)
 	line.visible = not reason.is_empty()
 	line.text = reason
+	var counter: Label = _cell_card.find_child("Counter", true, false)
+	var words: String = HudModel.COUNTER_LINES.get(action, "")
+	# Too wide for the card, the line breaks between its claims, never inside one.
+	counter.text = words if _text_width(counter, words) <= CELL_CARD_WIDTH - _cell_card.get_theme_stylebox("panel").get_minimum_size().x else words.replace(" · ", "\n")
+	counter.custom_minimum_size.y = CELL_CARD_LINE * (counter.text.count("\n") + 1)
+	counter.visible = not words.is_empty()
 	_cell_card.reset_size()
 	var cell: Rect2 = _hovered_cell.get_global_rect()
 	var at := Rect2(Vector2(clampf(cell.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _cell_card.size.x), slab_top() - 8.0 - _cell_card.size.y), _cell_card.size)

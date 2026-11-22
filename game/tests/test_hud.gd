@@ -9,6 +9,7 @@ const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const BaseScene = preload("res://tests/test_base_scene.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const Shared = preload("res://scripts/simulation/definitions/shared.gd")
 const Hud = preload("res://scripts/match/hud.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
 const SkirmishTests = preload("res://tests/test_skirmish_scene.gd")
@@ -28,7 +29,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -369,6 +370,7 @@ static func _form(hud: Node) -> Array:
 	return [text.call("Credits"), text.call("CreditsAfter"), shown.call("Coin"), text.call("Power"), text.call("PowerAfter"), shown.call("LowPower"), _border(slabs[0]) == _token("sel"), _border(slabs[1]) == _token("sel")]
 
 # Top strip round (user, 2026-11-22): today's number, a drawn arrow and the forecast; the sel frame on each slab whose number changes; no PREVIEW.
+# LOW POWER preview (3-5): the words only when the purchase flips power low; already low, the numbers alone turn warn.
 func test_forecast_forms(runner) -> bool:
 	var hud: Hud = _bare_hud(runner)
 	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
@@ -393,6 +395,10 @@ func test_forecast_forms(runner) -> bool:
 	runner.check(_form(hud) == ["10650", "", false, "8 / 10", "", false, false, false] and not _forecasting(hud), "TS2 nothing armed: 10650 and 8 / 10, no arrow, line borders, got %s" % [_form(hud)])
 	await _show(runner, hud, _strip_view(4800, 12, 10))
 	runner.check(_form(hud) == ["4800", "", false, "12 / 10", "", true, false, false] and _colour(power) == _token("warn"), "TS2 low power at rest: 12 / 10 in warn with its words, no frame, got %s" % [_form(hud)])
+	await _show(runner, hud, _strip_view(4800, 12, 10), "china_defence")
+	runner.check(_form(hud) == ["4800", "3600", false, "12 / 10", "15 / 10", false, true, true] and _colour(power) == _token("warn") and _colour(power_after) == _token("warn"), "TS2 already low: 12 / 10 → 15 / 10 both in warn, no LOW POWER words, got %s" % [_form(hud)])
+	await _show(runner, hud, _strip_view(4800, 12, 10), "china_light_vehicle")
+	runner.check(_form(hud) == ["4800", "4000", false, "12 / 10", "", true, true, false], "TS2 already low, a unit changes no power: the rest form's words stay, got %s" % [_form(hud)])
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
 	runner.check(_form(hud) == ["500", MINUS + "700", true, "8 / 10", "11 / 10", true, true, true], "TS2 short: 500 → −700 (U+2212) with the coin, power still forecasts, got %s" % [_form(hud)])
 	runner.check(_colour(credits) == _token("text") and _colour(after) == _token("warn") and coin.get_global_rect().size == Vector2(15, 15) and is_equal_approx(_gap(after, coin), 4.0), "TS2 short: the forecast in warn, the 15 px coin 4 px after it, got %s gap %.1f" % [coin.get_global_rect(), _gap(after, coin)])
@@ -417,6 +423,15 @@ func _forecast_follows_the_placement(runner) -> void:
 	main.driver.adopt(Fixture.make_world())
 	main.orders.selected_ids.assign([1])
 	main._refresh()
+	_sub_grid(main, 1)
+	main.hud.now_msec = func() -> int: return 0
+	_cell(main, "usa_power_plant").mouse_entered.emit()
+	main.hud.now_msec = func() -> int: return 1000
+	main.hud._process(0.0)
+	var card: Control = main.get_node("HUD/Hud/CellCard")
+	var said: Array = card.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree()).map(func(label: Label) -> String: return label.text)
+	runner.check(card.visible and _forecasting(main.hud) and said == ["Power Plant", "800 · 10 s"], "TS2 no forecast on the cell card (3-4): the strip forecasts, the card reads its name and cost · time alone, got %s" % [said])
+	_cell(main, "usa_power_plant").mouse_exited.emit()
 	helper.build_key(main, "usa_power_plant")
 	runner.check(_forecasting(main.hud), "TS2 arming a building shows the preview")
 	helper.key(main, KEY_ESCAPE)
@@ -1094,11 +1109,11 @@ func test_online_notice_top_centre(runner) -> bool:
 	runner.check(_forecasting(main.hud) and main.orders.busy(), "CH4 fixture: a building armed while the notice shows")
 	runner.check(BaseScene.hud_text(main).count("Waiting for player 1") == 1, "CH4 the notice shows once")
 	var chips: Array = ["HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Playtest/Chip"]
-	for strip: Array in [[8, "the longest preview"], [12, "low power in the strip"]]:
+	for strip: Array in [[12, "low power in the strip"], [8, "the longest preview"]]:
 		main.hud.update_hud(_strip_view(500, strip[0], 10), _armed("china_defence", false, main.driver.notice()), 1, 1)
 		await _frames(runner)
 		_notice_clear(runner, main, strip[1], chips)
-	runner.check(_form(main.hud) == ["500", MINUS + "700", true, "12 / 10", "15 / 10", true, true, true], "CH4 fixture: the forecast's longest form, short with the coin and low power, got %s" % [_form(main.hud)])
+	runner.check(_form(main.hud) == ["500", MINUS + "700", true, "8 / 10", "11 / 10", true, true, true], "CH4 fixture: the forecast's longest form, short with the coin and low power, got %s" % [_form(main.hud)])
 	main.free()
 	await _ended_notice(runner, online, 1, func(lockstep, _transport) -> void: lockstep.receive('{"type":"left","seat":2,"after_tick":3}'), "Opponent left before the start (a different map or version, or their game tab was hidden)")
 	await _ended_notice(runner, online, 2, func(_lockstep, transport) -> void: transport.frames.append(OnlineTests.Wire.encode(OnlineTests.Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"}))), "Desync", 0)
@@ -2218,6 +2233,152 @@ func test_prerequisite_hint(runner) -> bool:
 	_cell(main, "usa_light_vehicle").mouse_entered.emit()
 	runner.check(hinted.call().is_empty(), "PH1 a factory's missing Supply Depot has no cell on its card: no frame, got %s" % [hinted.call()])
 	main.free()
+	return true
+
+# Counter classes by armour, three representatives each from all rosters (plan Design "Counter line").
+const COUNTER_CLASSES := {"infantry": ["usa_rifle_infantry", "china_rifle_infantry", "frc_rifle_infantry"], "light vehicles": ["usa_light_vehicle", "china_tank", "frc_light_vehicle"], "tanks": ["usa_tank", "china_light_vehicle", "frc_tank"]}
+# Intended counters, [strong against, weak against], from each unit's Zero Hour role: Ranger, Red Guard and Rebel hunt infantry and fall to tanks; rocket infantry hunt vehicles and fall to infantry; Humvee, Technical and Gattling Tank hunt infantry and fall to tanks; Crusader, Battlemaster and Scorpion hunt light vehicles.
+const INTENDED := {
+	"usa_rifle_infantry": [["infantry"], ["tanks"]], "china_rifle_infantry": [["infantry"], ["tanks"]], "frc_rifle_infantry": [["infantry"], ["tanks"]],
+	"usa_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]], "china_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]], "frc_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]],
+	"usa_light_vehicle": [["infantry"], ["tanks"]], "frc_light_vehicle": [["infantry"], ["tanks"]], "china_tank": [["infantry"], ["tanks"]],
+	"usa_tank": [["light vehicles"], []], "china_light_vehicle": [["light vehicles"], []], "frc_tank": [["light vehicles"], []]}
+const COUNTER_VERBS: Array[String] = ["Beats", "Good against", "Weak against"]
+
+# combat.gd's sustained rate per tick: a clip's shots over its delays and reload, a ramp weapon at its last percent, FRC at its base tier, scaled by the target's armour.
+static func _counter_rate(attacker: String, target: String) -> float:
+	var row: Dictionary = Registry.kind(attacker)
+	if row.get("weapon", "").is_empty(): return 0.0
+	var weapon: Dictionary = Shared.WEAPONS[row.get("weapon_tiers", [row.weapon])[0]]
+	var damage: float = weapon.damage * (weapon.ramp.percent[-1] / 100.0 if weapon.has("ramp") else 1.0)
+	var rate: float = weapon.clip_size * damage / ((weapon.clip_size - 1) * weapon.delay_ticks + weapon.reload_ticks) if weapon.clip_size > 0 else damage / weapon.delay_ticks
+	return rate * Shared.ARMOR[Registry.kind(target).armor][weapon.damage_type] / 100.0
+
+# Equal credits on both sides: the time the attackers need to kill the targets (a squad's cost split over its quantity).
+static func _counter_time(attacker: String, target: String) -> float:
+	var rate: float = _counter_rate(attacker, target)
+	if rate == 0.0: return INF
+	return Registry.kind(target).max_hp * _unit_cost(attacker) / (rate * _unit_cost(target))
+
+static func _unit_cost(kind: String) -> float:
+	return Registry.kind(kind).cost / float(Registry.kind(kind).get("quantity", 1))
+
+# [verb, rank]: Beats when every representative falls in at most half the time it needs against us, Good against when we win each, Weak against when each needs at most half ours; a lower rank is the stronger claim.
+static func _counter_verdict(kind: String, against: String) -> Array:
+	var ratios: Array = COUNTER_CLASSES[against].filter(func(other: String) -> bool: return other != kind).map(func(other: String) -> float: return _counter_time(kind, other) / _counter_time(other, kind))
+	if ratios.max() <= 0.5: return ["Beats", ratios.max()]
+	if ratios.max() < 1.0: return ["Good against", 1.0 + ratios.max()]
+	if ratios.min() >= 2.0: return ["Weak against", 1.0 / ratios.min()]
+	return ["", INF]
+
+# The line the rule prints: the strongest true intended Beats or Good, then the strongest true intended Weak; none for unarmed kinds.
+static func _counter_expected(kind: String) -> String:
+	if Registry.kind(kind).get("weapon", "").is_empty() or not INTENDED.has(kind): return ""
+	var claims: Array[String] = []
+	for side: int in 2:
+		var best: Array = ["", INF]
+		for against: String in INTENDED[kind][side]:
+			var verdict: Array = _counter_verdict(kind, against)
+			if not verdict[0].is_empty() and (verdict[0] == "Weak against") == (side == 1) and verdict[1] < best[1]: best = ["%s %s" % [verdict[0], against], verdict[1]]
+		if not best[0].is_empty(): claims.append(best[0])
+	return " · ".join(claims)
+
+# The claims of a line the damage numbers refute.
+static func _refuted(kind: String, line: String) -> Array:
+	return Array(line.split(" · ", false)).filter(func(claim: String) -> bool: return not _claim_holds(kind, claim))
+
+static func _claim_holds(kind: String, claim: String) -> bool:
+	for verb: String in COUNTER_VERBS:
+		var against: String = claim.trim_prefix(verb + " ")
+		if against == claim or not COUNTER_CLASSES.has(against): continue
+		var verdict: String = _counter_verdict(kind, against)[0]
+		return verdict == verb or (verb == "Good against" and verdict == "Beats")
+	return false
+
+# The rule's verdicts the Zero Hour roles do not intend, and intended claims the numbers refute: the balance gaps for playtests (one STATUS finding).
+static func _counter_gaps(kind: String) -> Array[String]:
+	var gaps: Array[String] = []
+	for against: String in COUNTER_CLASSES:
+		var verb: String = _counter_verdict(kind, against)[0]
+		var side: int = 1 if verb == "Weak against" else 0
+		if not verb.is_empty() and not INTENDED[kind][side].has(against): gaps.append("true, not intended: %s %s" % [verb, against])
+		for intended: int in 2:
+			if INTENDED[kind][intended].has(against) and (verb.is_empty() or side != intended): gaps.append("intended, refuted: %s %s" % ["Weak against" if intended == 1 else "Strong against", against])
+	return gaps
+
+func test_counter_lines_match_damage(runner) -> bool:
+	for kind: String in Registry.units():
+		var line: String = HudModel.COUNTER_LINES.get(kind, "")
+		var armed: bool = not Registry.kind(kind).get("weapon", "").is_empty()
+		runner.check(not armed or INTENDED.has(kind), "CL1 %s has an intended row from its Zero Hour role" % kind)
+		runner.check(line == _counter_expected(kind), "CL1 %s reads the rule's '%s', got '%s'" % [kind, _counter_expected(kind), line])
+		runner.check(_refuted(kind, line).is_empty(), "CL1 every claim on %s's line holds, refuted %s" % [kind, _refuted(kind, line)])
+		if armed and INTENDED.has(kind): print("CL1 %s '%s' gaps %s" % [kind, line, _counter_gaps(kind)])
+	runner.check(not HudModel.COUNTER_LINES.keys().any(func(kind: String) -> bool: return Registry.is_builder(kind) or not Registry.collects(kind).is_empty()), "CL1 no line for builders and collectors")
+	runner.check(_refuted("usa_rifle_infantry", "Weak against tanks") == ["Weak against tanks"], "CL1 the same check refutes a false fixture: Rifleman 'Weak against tanks'")
+	runner.check(_refuted("usa_rocket_infantry", "Beats tanks · Weak against infantry").is_empty() and _refuted("usa_tank", "Good against light vehicles").is_empty(), "CL1 the check holds true claims, Good under a Beats verdict too")
+	runner.check(HudModel.COUNTER_LINES.get("china_tank", "").begins_with("Good against infantry") and _counter_time("china_tank", "usa_rifle_infantry") * 3.0 > _counter_time("usa_rifle_infantry", "china_tank"), "CL1 the Rotary Gun Tank is good against infantry at its rotary gun's 300 % ramp; at base damage the Rifleman would win")
+	await _no_counter_in_panels(runner)
+	return true
+
+# 3-12: the counter line sits on the cell card only, never in the one-unit or inspected-enemy panel.
+func _no_counter_in_panels(runner) -> void:
+	var main = await SkirmishTests.new()._setup(runner)
+	var sim = Fixture.make_world(50000)
+	sim.add_player(2, 1000)
+	var own: int = sim.spawn(1, Vector2(8.5, 8.5), "usa_tank")
+	var enemy: int = sim.spawn(2, Vector2(20.5, 20.5), "china_light_vehicle")
+	main.driver.adopt(sim)
+	for case: Array in [["the one-unit panel", [own], -1, "Battle Tank"], ["the inspected enemy's panel", [], enemy, "Medium Tank"]]:
+		_pick(main, case[1], -1, case[2])
+		await _frames(runner)
+		var text: String = BaseScene.hud_text(main)
+		runner.check(text.contains(case[3]) and not COUNTER_VERBS.any(func(verb: String) -> bool: return text.contains(verb)), "CL1 %s shows %s with no counter line, got '%s'" % [case[0], case[3], text.replace("\n", " | ")])
+	main.free()
+
+# HUD headless layout: a unit cell's card carries its counter line in text, line 2 when ready, line 3 under a reason, at every HUD_SIZES size;
+# the Rotary Gun Tank's line, wider than the card, breaks between its claims.
+func test_counter_line_on_the_cell_card(runner) -> bool:
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await OverlayTests.new()._scene(runner, Skirmish, port)
+		var ids: Dictionary = _blocked_world(main, 1000)
+		var sim = main.driver.pump.live()
+		Fixture.add_completed(sim, 1, "usa_supply_center", Vector2i(20, 20))
+		Fixture.add_completed(sim, 1, "china_supply_center", Vector2i(26, 8))
+		var china: int = Fixture.add_completed(sim, 1, "china_factory", Vector2i(26, 14))
+		BaseScene.publish(main)
+		var card: Control = main.get_node("HUD/Hud/CellCard")
+		for case: Array in [["usa_tank", ids.factory, 1000, ["Head", "Counter"], 1], ["usa_tank", ids.factory, 500, ["Head", "Reason", "Counter"], 1], ["usa_light_vehicle", ids.factory, 1000, ["Head", "Counter"], 1], ["china_tank", china, 1000, ["Head", "Counter"], 2], ["china_tank", china, 500, ["Head", "Reason", "Counter"], 2]]:
+			var label: String = "%s at %d credits at %s" % [case[0], case[2], size]
+			_select(main, [], case[1])
+			_set_credits(main, case[2])
+			await _frames(runner)
+			var cell: Button = _cell(main, case[0])
+			main.hud.now_msec = func() -> int: return 0
+			cell.mouse_entered.emit()
+			main.hud.now_msec = func() -> int: return 1000
+			main.hud._process(0.0)
+			await _frames(runner)
+			var lines: Array = card.find_child("Lines", true, false).get_children().filter(func(line: Control) -> bool: return line.visible).map(func(line: Control) -> String: return str(line.name))
+			var counter: Label = card.find_child("Counter", true, false)
+			var words: String = HudModel.COUNTER_LINES[case[0]] if case[4] == 1 else HudModel.COUNTER_LINES[case[0]].replace(" · ", "\n")
+			runner.check(lines == case[3] and counter.text == words and _colour(counter) == _token("text"), "CL2 %s: lines %s, the counter line '%s' in text, got %s '%s'" % [label, case[3], words, lines, counter.text])
+			var at: Rect2 = card.get_global_rect()
+			var high: float = 16.0 + 20.0 * (case[3].size() - 1 + case[4])
+			runner.check(at.size == Vector2(248, high) and is_equal_approx(at.end.y, _rect(main, "HUD/Economy").position.y - 8.0) and view.grow(-8.0).encloses(at), "CL2 %s: 248 x %.0f, 8 above the slab, 8 inside the view, got %s" % [label, high, at])
+			var panels: Dictionary = BaseScene.hud_panels(main)
+			panels["HUD/Hud/RefusalLine"] = _rect(main, "HUD/Hud/RefusalLine")
+			for path: String in panels: runner.check(not at.intersects(panels[path]), "CL2 %s: clear of %s %s" % [label, path, panels[path]])
+			cell.mouse_exited.emit()
+			main.hud._process(0.0)
+		var counter: Label = card.find_child("Counter", true, false)
+		for kind: String in HudModel.COUNTER_LINES:
+			var claims: Array = Array(HudModel.COUNTER_LINES[kind].split(" · ")).map(func(claim: String) -> float: return counter.get_theme_font("font").get_string_size(claim, HORIZONTAL_ALIGNMENT_LEFT, -1, counter.get_theme_font_size("font_size")).x)
+			runner.check(claims.max() <= 248.0 - 16.0, "CL2 each claim of %s fits the card's 232 px, widest %.1f at %s" % [kind, claims.max(), size])
+		port.free()
 	return true
 
 # The button draws its name centred between its top and bottom content margins.
