@@ -50,6 +50,19 @@ PROFILE movement_open zone=view.sort mean_ms=0.0550 share=8.5% p50=0.0550 p95=0.
 PROFILE COMPLETE 11
 """
 
+TEAM_PROFILE_LOG = """\
+PROFILE team_match.warmup zone=step mean_ms=9.0000 share=100.0% p50=9.0000 p95=9.0000 max=9.000 calls_per_tick=1.00
+PROFILE team_match.warmup zone=team.tick mean_ms=9.5000 share=105.0% p50=9.5000 p95=9.5000 max=9.500 calls_per_tick=1.00
+PROFILE team_match zone=team.tick mean_ms=1.5400 share=114.6% p50=1.3000 p95=2.8610 max=12.000 calls_per_tick=1.00
+PROFILE team_match zone=step mean_ms=1.3440 share=100.0% p50=1.2000 p95=2.1760 max=11.000 calls_per_tick=1.00
+PROFILE team_match zone=view_state mean_ms=0.4000 share=29.8% p50=0.4000 p95=0.5000 max=1.000 calls_per_tick=1.00
+PROFILE team_match zone=view.sort mean_ms=0.0500 share=3.7% p50=0.0500 p95=0.0600 max=0.100 calls_per_tick=1.00
+PROFILE team_match zone=view.batch mean_ms=0.6700 share=49.9% p50=0.6700 p95=0.8000 max=1.500 calls_per_tick=1.00
+PROFILE team_match_pump zone=step mean_ms=7.0000 share=100.0% p50=7.0000 p95=7.0000 max=7.000 calls_per_tick=1.00
+PROFILE team_match_pump zone=team.tick mean_ms=7.5000 share=107.0% p50=7.5000 p95=7.5000 max=7.500 calls_per_tick=1.00
+PROFILE COMPLETE 11
+"""
+
 HEADLESS_P95_OPEN = 0.707
 LOCKSTEP_P99 = 0.07
 
@@ -217,6 +230,70 @@ class PerfChartTest(unittest.TestCase):
         self.assertEqual(perf_chart.status_table([mv("a", "1.0")]).splitlines()[0], "**Nothing over budget**")
         self.assertIn(perf_chart.CAPTION, perf_chart.status_table(rows))
 
+    def test_readme_checked_rows_are_the_seven(self) -> None:
+        self.assertEqual(
+            [x.name for x in perf_chart.PASS_FAIL],
+            [
+                "Unit movement",
+                "Unit movement, slowest moments",
+                "Combat, normal fights",
+                "Combat, normal fights, slowest moments",
+                "Drawing the screen",
+                "Drawing the screen, big map (Ashfall)",
+                "Online play overhead",
+            ],
+        )
+
+    def test_readme_block_layout(self) -> None:
+        rows = [
+            mv("a", "2.73"),
+            row(label="a", metric="combat_tick", scenario="hordes300", p95_ms="2.9"),
+            row(label="a", metric="plumbing", scenario="combat_hordes300:profile", mean_ms="1.93"),
+        ]
+        lines = perf_chart._readme_block(rows).splitlines()
+        expected = [
+            "Performance against the low-end budget (generated):",
+            "**Checked against the limit: 1 of 1 areas over budget**",
+            "| Area | Status | Budget used | vs last run | As of |",
+        ]
+        self.assertEqual([x for x in lines if x][:3], expected)
+        keep = [x for x in lines if x]
+        at = keep.index(perf_chart.DECK_ROW)
+        self.assertEqual(
+            keep[at + 1 : at + 5],
+            [
+                perf_chart.CAPTION,
+                perf_chart.TREND_HEAD,
+                perf_chart.TREND_INTRO,
+                "| Area | Change on this Mac | As of |",
+            ],
+        )
+        tracked = keep[at + 6 : -1]
+        self.assertEqual(len(tracked), 2)
+        self.assertTrue(tracked[0].startswith("| Background upkeep, huge crowds (stress) |"))
+        self.assertTrue(tracked[1].startswith("| Combat, huge battles (stress) |"))
+        self.assertEqual(keep[-1], "Details: [performance ledger](docs/reference/performance.md).")
+        for text in keep[at + 1 :]:
+            for banned in ("\u2588", "\U0001f534", "% of"):
+                self.assertNotIn(banned, text)
+
+    def test_readme_headline_when_nothing_checked_is_over(self) -> None:
+        self.assertIn("**Checked against the limit: nothing over budget**", perf_chart._readme_block([mv("a", "1.0")]))
+
+    def test_ledger_keeps_every_verdict(self) -> None:
+        rows = [
+            mv("a", "2.73"),
+            row(label="a", metric="combat_tick", scenario="hordes300", p95_ms="2.9"),
+            row(label="a", metric="plumbing", scenario="combat_hordes300:profile", mean_ms="1.93"),
+        ]
+        block = perf_chart._ledger_block(rows)
+        self.assertIn("| **Combat, huge battles** | \U0001f534 Over |", block)
+        self.assertIn("combat stress p95: ", block)
+        rows.append(row(label="a", metric="team_tick", scenario="team_match:profile", p95_ms="2.861"))
+        self.assertIn(
+            "| **3v3 match, bots and simulation (headroom)** | \U0001f534 Over |", perf_chart._ledger_block(rows)
+        )
+
     def test_table_over_close_ok_rows(self) -> None:
         over = self.table_row([mv("a", "2.73")], "Unit movement")
         self.assertEqual(
@@ -299,6 +376,166 @@ class PerfChartTest(unittest.TestCase):
         busy = self.table_row([mv("a", "1.0", load="3.1")], "Unit movement")
         self.assertTrue(busy.endswith("\U0001f195 first run (busy host) | 2026-11-09 |"))
 
+    def pl(self, label: str, mean: float, **kw: str) -> dict[str, str]:
+        return row(label=label, metric="plumbing", scenario="combat_hordes300:profile", mean_ms=str(mean), **kw)
+
+    def trend_line(self, name: str = "Background upkeep, huge crowds (stress)") -> perf_chart.Line:
+        return next(t for t in perf_chart.TRENDS if t.name == name)
+
+    def trend(self, rows: list[dict[str, str]]) -> str | None:
+        return perf_chart.trend_text(rows, self.trend_line())
+
+    def test_trend_against_median_of_last_three(self) -> None:
+        rows = [
+            self.pl("a", 0.5, date="2026-11-01"),
+            self.pl("b", 1.3, date="2026-11-02"),
+            self.pl("c", 1.0, date="2026-11-03"),
+            self.pl("d", 1.1, date="2026-11-04"),
+            self.pl("e", 1.21, date="2026-11-05"),
+        ]
+        self.assertEqual(self.trend(rows), "10% slower since 2026-11-04, mean 1.21 ms")
+
+    def test_trend_skips_other_methods(self) -> None:
+        rows = [
+            self.pl("b", 1.0, date="2026-11-02"),
+            self.pl("c", 9.0, date="2026-11-03", method="pre-P1"),
+            self.pl("d", 1.1, date="2026-11-04"),
+            self.pl("e", 1.21, date="2026-11-05"),
+        ]
+        self.assertEqual(self.trend(rows), "21% slower since 2026-11-02, mean 1.21 ms")
+
+    def test_trend_inside_noise_reads_same(self) -> None:
+        line = self.trend_line("Combat, huge battles (stress)")
+
+        def combat(label: str, p95: str, date: str) -> dict[str, str]:
+            return row(label=label, date=date, metric="combat_tick", scenario="hordes300", p95_ms=p95)
+
+        base = [combat("a", "2.90", "2026-11-01"), combat("b", "2.90", "2026-11-02"), combat("c", "2.90", "2026-11-03")]
+        self.assertEqual(
+            perf_chart.trend_text([*base, combat("d", "3.90", "2026-11-04")], line), "same as 2026-11-02, p95 3.90 ms"
+        )
+        self.assertEqual(
+            perf_chart.trend_text([*base, combat("d", "4.21", "2026-11-04")], line),
+            "45% slower since 2026-11-02, p95 4.21 ms",
+        )
+
+    def test_trend_without_noise_rounds_to_same(self) -> None:
+        first = self.pl("a", 1.0, date="2026-11-01")
+        same = self.trend([first, self.pl("b", 1.004, date="2026-11-02")])
+        self.assertIsNotNone(same)
+        assert same is not None
+        self.assertTrue(same.startswith("same as "))
+        faster = self.trend([first, self.pl("b", 0.98, date="2026-11-02")])
+        assert faster is not None
+        self.assertTrue(faster.startswith("2% faster since "))
+
+    def test_trend_first_runs(self) -> None:
+        self.assertEqual(self.trend([self.pl("a", 1.0)]), "first run, mean 1.00 ms")
+        rows = [self.pl("a", 5.0, date="2026-11-01", method="pre-P1"), self.pl("b", 1.0, date="2026-11-02")]
+        self.assertEqual(self.trend(rows), "first run of method P1, mean 1.00 ms")
+        self.assertIsNone(self.trend([]))
+
+    def test_trend_text_has_no_colour_or_limit(self) -> None:
+        texts = [
+            self.trend([self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 1.21, date="2026-11-02")]),
+            self.trend([self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 1.004, date="2026-11-02")]),
+            self.trend([self.pl("a", 1.0)]),
+            self.trend([self.pl("a", 5.0, method="pre-P1", date="2026-11-01"), self.pl("b", 1.0, date="2026-11-02")]),
+        ]
+        for text in texts:
+            assert text is not None
+            self.assertTrue(text.isascii())
+            self.assertNotIn("budget", text)
+        busy_runs = [
+            [self.pl("a", 1.0, load="3.1")],
+            [self.pl("a", 5.0, method="pre-P1", date="2026-11-01"), self.pl("b", 1.0, load="3.1")],
+            [self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 1.004, load="3.1")],
+            [self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 1.21, load="3.1")],
+        ]
+        for rows in busy_runs:
+            busy = self.trend(rows)
+            assert busy is not None
+            self.assertTrue(busy.endswith(" (busy host)"), busy)
+
+    def test_trend_zero_baseline_is_first_run(self) -> None:
+        rows = [self.pl("a", 0.0, date="2026-11-01"), self.pl("b", 1.0, date="2026-11-02")]
+        self.assertEqual(self.trend(rows), "first run, mean 1.00 ms")
+
+    def test_trend_at_exactly_the_noise_limit_reads_same(self) -> None:
+        line = self.trend_line("Combat, huge battles (stress)")
+
+        def combat(label: str, p95: str, date: str) -> dict[str, str]:
+            return row(label=label, date=date, metric="combat_tick", scenario="hordes300", p95_ms=p95)
+
+        base = combat("a", "2.00", "2026-11-01")
+        # 2.814 / 2.00 is exactly +40.7 %, the combat stress NOISE_PCT, in floating point too.
+        self.assertEqual(
+            perf_chart.trend_text([base, combat("b", "2.814", "2026-11-02")], line), "same as 2026-11-01, p95 2.81 ms"
+        )
+        self.assertEqual(
+            perf_chart.trend_text([base, combat("b", "2.815", "2026-11-02")], line),
+            "41% slower since 2026-11-01, p95 2.81 ms",
+        )
+        self.assertEqual(
+            perf_chart.trend_text([base, combat("b", "1.185", "2026-11-02")], line),
+            "41% faster since 2026-11-01, p95 1.19 ms",
+        )
+
+    def team_rows(self) -> list[dict[str, str]]:
+        team, pump = "team_match:profile", "team_match_pump:profile"
+        return [
+            row(label="a", metric="step", scenario=team, p95_ms="2.176", mean_ms="1.344"),
+            row(label="a", metric="team_tick", scenario=team, p95_ms="2.861", mean_ms="1.54"),
+            row(label="a", metric="plumbing", scenario=team, mean_ms="1.12"),
+            row(label="a", metric="step", scenario=pump, p95_ms="7.0", mean_ms="7.0"),
+            row(label="a", metric="team_tick", scenario=pump, p95_ms="7.5", mean_ms="7.5"),
+            row(label="a", metric="plumbing", scenario=pump, mean_ms="6.0"),
+        ]
+
+    def goal_trend(self, title: str) -> str | None:
+        return perf_chart.trend_text(self.team_rows(), next(g for g in perf_chart.GOAL if g.title == title))
+
+    def test_goal_sim_line_reads_team_match_step(self) -> None:
+        self.assertEqual(self.goal_trend("3v3 sim p95"), "first run, p95 2.18 ms")
+
+    def test_goal_bots_line_reads_team_match_team_tick(self) -> None:
+        self.assertEqual(self.goal_trend("3v3 bots + sim p95"), "first run, p95 2.86 ms")
+
+    def test_goal_upkeep_line_reads_team_match_plumbing_mean(self) -> None:
+        self.assertEqual(self.goal_trend("3v3 upkeep"), "first run, mean 1.12 ms")
+
+    def test_other_machines_never_feed_the_trend(self) -> None:
+        rows = [self.pl("a", 1.0, date="2026-11-01"), self.pl("b", 5.0, date="2026-11-02", machine="deck")]
+        self.assertEqual(len(perf_chart.series(rows, self.trend_line())), 1)
+        self.assertEqual(self.trend(rows), "first run, mean 1.00 ms")
+
+    def test_goal_lines_judged_against_their_limits(self) -> None:
+        rows = [row(label="a", metric="team_tick", scenario="team_match:profile", p95_ms="2.861")]
+        self.assertTrue(any(s.startswith("3v3 bots + sim p95: 157% of budget") for s in perf_chart.summary_lines(rows)))
+        goal = {g.title: g for g in perf_chart.GOAL}
+        self.assertEqual(goal["3v3 bots + sim p95"].budget, perf_chart.SIM_P95)
+        self.assertEqual(goal["3v3 sim p95"].budget, perf_chart.SIM_P95)
+        self.assertEqual(goal["3v3 upkeep"].budget, perf_chart.PLUMBING)
+
+    def test_limits_unchanged(self) -> None:
+        self.assertEqual(perf_chart.SIM_P95, perf_chart.Budget(10.0, 1.82, "p95"))
+        self.assertEqual(perf_chart.SIM_P99, perf_chart.Budget(20.0, 3.64, "p99"))
+        self.assertEqual(perf_chart.PLUMBING, perf_chart.Budget(5.0, 0.91, "mean"))
+        self.assertEqual(perf_chart.FRAME, perf_chart.Budget(16.7, 3.04, "p95"))
+        self.assertEqual(perf_chart.LOCKSTEP, perf_chart.Budget(3.3, 0.6, "p99"))
+        self.assertEqual(
+            perf_chart.NOISE_PCT,
+            {
+                "movement p95": 50.3,
+                "movement p99": 50.3,
+                "combat gated p95": 57.5,
+                "combat gated p99": 57.5,
+                "combat stress p95": 40.7,
+            },
+        )
+        self.assertEqual(perf_chart.BUSY_LOAD, 2.5)
+        self.assertEqual(perf_chart.CLOSE_PCT, 85)
+
 
 class PerfRecordTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -337,6 +574,44 @@ class PerfRecordTest(unittest.TestCase):
         s = {(x.metric, x.scenario): x for x in perf_record.parse_log(HANDOFF_PROFILE_LOG)}
         self.assertEqual(set(s), {("plumbing", "movement_open:profile")})
         self.assertAlmostEqual(s["plumbing", "movement_open:profile"].mean_ms or 0, 0.3022 + 0.0550 + 0.9335)
+
+    def test_team_match_profile_records_sim_rows(self) -> None:
+        s = {(x.metric, x.scenario): x for x in perf_record.parse_log(TEAM_PROFILE_LOG)}
+        self.assertIn(("step", "team_match:profile"), s)
+        self.assertEqual(s["step", "team_match:profile"].p95_ms, 2.176)
+        self.assertEqual(s["step", "team_match:profile"].mean_ms, 1.344)
+        self.assertIsNone(s["step", "team_match:profile"].p99_ms)
+        self.assertEqual(s["team_tick", "team_match:profile"].p95_ms, 2.861)
+        self.assertEqual(s["team_tick", "team_match:profile"].mean_ms, 1.54)
+        self.assertNotIn(("step", "team_match_pump:profile"), s)
+        self.assertNotIn(("team_tick", "team_match_pump:profile"), s)
+        self.assertAlmostEqual(s["plumbing", "team_match:profile"].mean_ms or 0, 0.4 + 0.05 + 0.67)
+
+    def test_team_rows_need_the_profile_marker(self) -> None:
+        lines = [x for x in TEAM_PROFILE_LOG.splitlines() if "zone=view" not in x and "COMPLETE" not in x]
+        log = "\n".join(lines) + "\n"
+        with self.assertRaisesRegex(ValueError, "missing marker: PROFILE COMPLETE 11"):
+            perf_record.parse_log(log)
+
+    def test_renamed_team_zone_refused(self) -> None:
+        log = TEAM_PROFILE_LOG.replace("team_match zone=team.tick", "team_match zone=bots.tick")
+        with self.assertRaisesRegex(ValueError, "missing team_match zones: team_tick"):
+            perf_record.parse_log(log)
+
+    def test_team_step_without_p95_refused(self) -> None:
+        log = TEAM_PROFILE_LOG.replace("p50=1.2000 p95=2.1760 ", "p50=1.2000 ")
+        self.assertNotEqual(log, TEAM_PROFILE_LOG)
+        with self.assertRaisesRegex(ValueError, "missing team_match zones: step"):
+            perf_record.parse_log(log)
+
+    def test_team_rows_written_with_p95_and_mean(self) -> None:
+        self.assertEqual(self.record(self.write_log("t.log", TEAM_PROFILE_LOG), "--method", "P1"), 0)
+        rows = [r for r in read_rows(self.csv) if r["metric"] == "team_tick"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["scenario"], "team_match:profile")
+        self.assertEqual(rows[0]["p95_ms"], "2.861")
+        self.assertEqual(rows[0]["mean_ms"], "1.54")
+        self.assertEqual(rows[0]["p99_ms"], "")
 
     def test_rendered_profile_with_view_state_zones(self) -> None:
         log = RENDERED_PROFILE_LOG.replace("zone=snapshot", "zone=view_state").replace(

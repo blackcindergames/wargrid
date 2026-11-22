@@ -48,6 +48,17 @@ LOCKSTEP = Budget(3.3, 0.6, "p99")
 GATED = ("contact", "skirmish3v3", "transports", "defences", "docks", "ramp", "frc")
 
 RENDERED_METRICS = ("tick_frame", "frame_interval")
+GOAL = (
+    Line("3v3 upkeep", ("plumbing",), PLUMBING, ("team_match:profile",), "3v3 match, background upkeep (headroom)"),
+    Line("3v3 sim p95", ("step",), SIM_P95, ("team_match:profile",), "3v3 match, simulation (headroom)"),
+    Line(
+        "3v3 bots + sim p95",
+        ("team_tick",),
+        SIM_P95,
+        ("team_match:profile",),
+        "3v3 match, bots and simulation (headroom)",
+    ),
+)
 LINES = (
     Line("movement p95", ("movement_tick",), SIM_P95, ("open", "dense"), "Unit movement"),
     Line("movement p99", ("movement_tick",), SIM_P99, ("open", "dense"), "Unit movement, slowest moments"),
@@ -71,6 +82,7 @@ LINES = (
     Line("rendered tick-frame p95", RENDERED_METRICS, FRAME, ("open", "dense"), "Drawing the screen"),
     Line("Ashfall tick-frame p95", RENDERED_METRICS, FRAME, ("ashfall",), "Drawing the screen, big map (Ashfall)"),
     Line("lockstep p99", ("lockstep_overhead",), LOCKSTEP, ("contact",), "Online play overhead"),
+    *GOAL,
 )
 _REF = Path(__file__).resolve().parent.parent / "docs" / "reference"
 DEFAULT_CSV = _REF / "perf-history.csv"
@@ -140,6 +152,28 @@ NOISE_PCT: dict[str, float] = {
     "combat stress p95": _STRESS_SPREAD,
 }
 
+# A trend line keeps its source line's title, so its NOISE_PCT entry applies unchanged.
+TRENDS = (
+    Line(
+        "plumbing, horde",
+        ("plumbing",),
+        PLUMBING,
+        ("combat_hordes300:profile",),
+        "Background upkeep, huge crowds (stress)",
+    ),
+    Line("combat stress p95", ("combat_tick",), SIM_P95, ("hordes300",), "Combat, huge battles (stress)"),
+    Line(
+        "plumbing, movement layouts",
+        ("plumbing",),
+        PLUMBING,
+        ("movement_dense:profile",),
+        "Background upkeep, armies on the move (stress)",
+    ),
+    Line("combat stress p95", ("combat_tick",), SIM_P95, ("open",), "Combat, big armies in the open (stress)"),
+    Line("combat stress p95", ("combat_tick",), SIM_P95, ("dense",), "Combat, big armies packed close (stress)"),
+    *GOAL,
+)
+
 
 class Change(NamedTuple):
     kind: str  # "new", "method" or "pct"
@@ -155,9 +189,34 @@ def _change(latest: Point, prev: Point | None) -> Change:
     return Change("pct", (latest.worst_pct / prev.worst_pct - 1) * 100, prev)
 
 
-def areas(rows: list[dict[str, str]]) -> list[tuple[Line, Point, Change]]:
+def trend_text(rows: list[dict[str, str]], line: Line) -> str | None:
+    points = series(rows, line)
+    if not points:
+        return None
+    latest = points[-1]
+    value = f"{line.budget.stat} {latest.worst_pct * line.budget.dev_ms / 100:.2f} ms"
+    busy = " (busy host)" if latest.busy else ""
+    if len(points) == 1:
+        return f"first run, {value}{busy}"
+    earlier = [p for p in points[:-1] if p.method == latest.method][-3:]
+    if not earlier:
+        return f"first run of method {latest.method}, {value}{busy}"
+    base = sorted(earlier, key=lambda p: p.worst_pct)[(len(earlier) - 1) // 2]
+    if base.worst_pct == 0:
+        return f"first run, {value}{busy}"
+    pct = (latest.worst_pct / base.worst_pct - 1) * 100
+    noise = NOISE_PCT.get(line.title)
+    if abs(pct) <= noise if noise is not None else f"{abs(pct):.0f}" == "0":
+        return f"same as {base.date}, {value}{busy}"
+    return f"{abs(pct):.0f}% {'slower' if pct > 0 else 'faster'} since {base.date}, {value}{busy}"
+
+
+PASS_FAIL = tuple(x for x in LINES if x.title not in {t.title for t in TRENDS})
+
+
+def areas(rows: list[dict[str, str]], lines: tuple[Line, ...] = LINES) -> list[tuple[Line, Point, Change]]:
     out = []
-    for line in LINES:
+    for line in lines:
         dev = series(rows, line)
         if dev:
             out.append((line, dev[-1], _change(dev[-1], dev[-2] if len(dev) > 1 else None)))
@@ -236,17 +295,28 @@ def _status(worst_pct: float) -> str:
     return "\U0001f7e1 Close" if worst_pct >= CLOSE_PCT else "\U0001f7e2 OK"
 
 
-def status_table(rows: list[dict[str, str]]) -> str:
-    entries = areas(rows)
-    entries.sort(key=lambda e: e[1].worst_pct, reverse=True)
-    over = sum(1 for _, latest, _ in entries if latest.worst_pct >= 100)
-    head = f"**{over} of {len(entries)} areas over budget**" if over else "**Nothing over budget**"
+def _sorted_entries(rows: list[dict[str, str]], lines: tuple[Line, ...]) -> list[tuple[Line, Point, Change]]:
+    return sorted(areas(rows, lines), key=lambda e: e[1].worst_pct, reverse=True)
+
+
+def _over(entries: list[tuple[Line, Point, Change]]) -> int:
+    return sum(1 for _, latest, _ in entries if latest.worst_pct >= 100)
+
+
+def _table_rows(entries: list[tuple[Line, Point, Change]]) -> list[str]:
     table = ["| Area | Status | Budget used | vs last run | As of |", "| --- | --- | --- | --- | --- |"]
     for line, latest, change in entries:
         name = f"**{line.name}**" if latest.worst_pct >= 100 else line.name
         vs = _vs_last(change) + (" (busy host)" if latest.busy else "")
         table.append(f"| {name} | {_status(latest.worst_pct)} | {_used(latest.worst_pct)} | {vs} | {latest.date} |")
-    return "\n".join([head, "", *table, "", CAPTION])
+    return table
+
+
+def status_table(rows: list[dict[str, str]]) -> str:
+    entries = _sorted_entries(rows, LINES)
+    over = _over(entries)
+    head = f"**{over} of {len(entries)} areas over budget**" if over else "**Nothing over budget**"
+    return "\n".join([head, "", *_table_rows(entries), "", CAPTION])
 
 
 def _ledger_block(rows: list[dict[str, str]]) -> str:
@@ -254,11 +324,43 @@ def _ledger_block(rows: list[dict[str, str]]) -> str:
     return f"{status_table(rows)}\n\nDetails:\n\n{details}"
 
 
+DECK_ROW = "| Smooth on a Steam Deck in Firefox, 3v3 match | Not measured yet | | | |"
+TREND_HEAD = "**Tracked, no route under the limit yet**"
+TREND_INTRO = (
+    "These areas are over their limit and no known change brings them under it yet, so they show only how they move: "
+    "the last run against the median of the three runs before it, with a change inside the run-to-run spread shown as same. "
+    "Stress = far more units than a real match; headroom = a real 3v3 match on this Mac. Every limit is in the ledger."
+)
+
+
+def _tracked_rows(rows: list[dict[str, str]]) -> list[str]:
+    out = []
+    for line in TRENDS:
+        text = trend_text(rows, line)
+        if text is not None:
+            out.append(f"| {line.name} | {text} | {series(rows, line)[-1].date} |")
+    return out
+
+
 def _readme_block(rows: list[dict[str, str]]) -> str:
-    return (
-        "Performance against the low-end budget (generated):\n\n"
-        f"{status_table(rows)}\n\nDetails: [performance ledger](docs/reference/performance.md)."
+    entries = _sorted_entries(rows, PASS_FAIL)
+    over = _over(entries)
+    head = (
+        f"**Checked against the limit: {over} of {len(entries)} areas over budget**"
+        if over
+        else "**Checked against the limit: nothing over budget**"
     )
+    tracked = ["| Area | Change on this Mac | As of |", "| --- | --- | --- |", *_tracked_rows(rows)]
+    parts = [
+        "Performance against the low-end budget (generated):",
+        "\n".join([head, "", *_table_rows(entries), DECK_ROW]),
+        CAPTION,
+        TREND_HEAD,
+        TREND_INTRO,
+        "\n".join(tracked),
+        "Details: [performance ledger](docs/reference/performance.md).",
+    ]
+    return "\n\n".join(parts)
 
 
 def write_all(files: list[tuple[Path, str]]) -> None:
