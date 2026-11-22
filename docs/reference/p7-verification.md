@@ -3,16 +3,16 @@
 Plan: [P7 part 1](../superpowers/plans/2026-11-21-p7-enemy-bots.md). Raw probe rows are private (`~/projects/wargrid-private/docs/better-bots/probe/p7/`).
 
 ```text
-Resume record (updated 2026-11-22 10:20)
+Resume record (updated 2026-11-22 after BR8)
 Branch / base commit / working-tree state: p7-enemy-bots / main merged in at ed871f17 (2026-11-22, approved by the owner), order step 1 committed 8b292146 / T1-8a BR7 committed after this record
-Last green task / next incomplete task: T1-8a BR7 / owner match (10 minutes offline, two defences), then bot lab v1 and its hard-bar probe
+Last green task / next incomplete task: T1-8d BR8 / owner decisions (hard bar, BR8 match), then T1-8c
 Changed paths since last commit: none after the BR7 commit
-Last command / cases / checks / failures / exit / marker: full suite on BR7 (build/suite-br7.log) CASES 1351 CHECKS 152994 FAILURES 9 / exit 1 / no TESTS PASSED (the 9 re-pin names); lint exit 0, warnings exit 0 (191 files)
+Last command / cases / checks / failures / exit / marker: full suite on BR8 (build/suite-br8.log) CASES 1358 CHECKS 153008 FAILURES 9 / exit 1 / no TESTS PASSED (the 9 re-pin names); `sh tools/run_checks.sh` CHECKS PASSED 5
 Known red case or blocker: the names in the red ledger (re-pin at T1-10); p2_playtest_match.json report-only drift since main 56cfcb2c (see T1-3 evidence)
 Approved decisions, pre-authorizations used, deferred gates: as before, plus the 2026-11-22 decisions in the plan ("After the BR7 kill check and the retrospective"); (a) local commit per green task used for order step 1 and T1-8a; open: Fm1 winner at T1-10, Overlord affordability under BR7's lapse (below)
 Experiment 1: session start 2026-11-22 09:35; owner match about 10:25 (0.8 h); vehicles in wave 1 confirmed, factory rebuild refuted then fixed (lapse rule)
 Usage so far (python3 tools/session_usage.py <session files>): not measured
-Next exact action: BR8 (wave cohesion by ordinary orders), test-first; then re-run the bot lab (USA mirrors), then T1-8c
+Next exact action: owner decisions on the hard bar (three mirrors not ending) and a BR8 match; then T1-8c
 ```
 
 ## Red ledger
@@ -27,6 +27,7 @@ Next exact action: BR8 (wave cohesion by ordinary orders), test-first; then re-r
 | T1-6b | Same nine names as T1-6. Values moved: TB3 digest db6f45719f3a69db to df3949d798993aee; TB4 team core series to 2797995605787631826; S1 core series to 2924924538281131659; S1 pinned outcome (9062, winner 1 to 8667, winner 1, inside 7000-17999); Fm1 (35503, winner 1 to 26398, winner 2); Cs1 (29516 to 20776, winner 2). Unchanged: VR1 digest (both checks). HUD1 texts red, values unchanged. T1-10: Fm1's winner is 2 again. | yes, all (T1-10) |
 | T1-7 | Same nine names as T1-6b. Values moved: TB3 digest df3949d798993aee to c9da7864e460e7ee; TB4 team core series to 7355634108385083070; Fm1 (26398 to 26833, winner 2). Unchanged: S1 core series (2924924538281131659), S1 pinned outcome (8667, winner 1), Cs1 (20776, winner 2), VR1 digest (both checks), HUD1 texts (red, values unchanged). Fix round moved none of them. | yes, all (T1-10) |
 | T1-8a | Same nine names as T1-7 (after the `main` merge, same values). Values moved: TB3 digest c9da7864e460e7ee to c7bce6cedaadb001; TB4 team core series to 2150549136322465648; S1 core series to 797697861706021661; S1 pinned outcome (8667 to 9256, winner 1, inside 7000-17999); Fm1 (26833 to 30056, winner 2); Cs1 (20776, winner 2 to 23362, winner 1). Unchanged: VR1 digest (both checks), HUD1 texts. T1-10: Cs1's winner flips 2 to 1. | yes, all (T1-10) |
+| T1-8d | Same nine names as T1-8a. Values moved: TB3 digest c7bce6cedaadb001 to ebf1b1b82ccc0f12; TB4 team core series to 3677847588803602532; S1 core series to 1486928065811848988; S1 pinned outcome (9256 to 10043, winner 1, inside 7000-17999); Fm1 (30056 to 27018, winner 2); Cs1 (23362 to 20771, winner 1). Unchanged: VR1 digest (both checks). HUD1 texts red. | yes, all (T1-10) |
 
 ## Evidence
 
@@ -361,3 +362,25 @@ Opus review of the lapse fix and bot lab (one): no blocking defect. Fixed: the l
 Every factory never rebuilt under the fix belongs to a seat that loses 1,000-3,300 ticks later (base overrun); losses with time left came back within 1,000-1,700 ticks. Hard bars: the floors hold; the two USA mirrors that did not end at share 70 in the kill check still do not end by 45,000 (bar 2 of night 12 is "rows that end on stock still end": the stock USA mirrors ended), so this bar fails. Cause: both bots launch equal waves (about 5,000 value) on the same 3,600-tick wait-cap clock, at most 180 ticks apart; they meet mid-map about 550 ticks later and annihilate each other; no factory is ever lost. Owner decision (user, 2026-11-22): the bar stays as written and open until BR8, which changes these mid-map fights; re-probe after BR8 and decide then. Wave spread grows from about 4 cells at launch to 18-29 at first contact (median), the BR8 evidence.
 
 Open, from the night 14 review of P15: BR7's hold may lapse before a bot can afford P15's 2,000-credit Overlord; check it in the hard-bar probe once P15's data exists.
+
+### T1-8d BR8 wave cohesion
+
+One page (2026-11-22). **What the player notices:** a bot wave arrives as one group. Its fast units stop about 8 cells ahead of the wave and wait for the slow ones, then move on, instead of a tank column arriving 20-30 cells ahead of the infantry (owner's BR7 match). **Refuting observation:** in the bot lab rerun, the median wave spread at first contact stays above 12 cells, or waves stall: fewer bot-vs-bot rows end than the 16 of 18 above, an idle floor fails, the one tower is no longer killed, or waves get stops but never reach contact. The existing rows already show the problem: about 4 cells at launch, 18-29 at first contact. **Slice:** in `_drive_waves`, while a wave is not detouring and has not been hit for `DETOUR_CALM`, a unit is *ahead* when it is more than `REGROUP_SPREAD` 8 cells from the wave's centre and nearer the wave's target than the centre. An ahead unit that is still marching (attack mode) gets one `stop`. An ahead unit gets no attack re-send; once it is no longer ahead, the idle re-send gives it the attack again. These are ordinary orders, as a human would give them. 8 cells sits above the launch p90 (5.1-6.0), so a wave is not held at launch. **Out:** a speed cap; cohesion between teammates' waves; a stuck-straggler drop (OpenRA's 63-tick guard) unless the lab shows stalls; regrouping before launch.
+
+Sources: OpenRA `GroundStates.cs:166-177` (b4d95a5671) stops the leader and sends the stragglers to it. Warzone 2100 Nexus `nb_includes/tactics.js:269-312` (b904885ff) sends units outside the main cluster to its centre and stops the main cluster while it holds less than half the group. Zero-K CAI `ai_CAI.lua:1749-1805` (54ef574db) sends the whole group to its average position when the group's box is wider than 450 + 30 per unit. Zero Hour, Recoil and Permafrost cap speed instead (private `wave-cohesion-research.md`).
+
+Tree `c682bc96` plus the change (`skirmish.gd` `_ahead`, `_drive_waves`; `REGROUP_SPREAD` 8.0). Red first (the constant added first): `test_br8_unit_far_ahead_of_its_wave_stops`, `test_br8_held_unit_waits_then_rejoins`, `test_br8_no_hold_within_detour_calm_of_a_hit` (a scout wounded the decision before the first hold: no stop for `DETOUR_CALM`, then the hold resumes), `test_br8_defended_unit_is_not_stopped` (same-tick case against `_defend`), `test_br8_ahead_is_measured_to_the_new_objective` (objective death). 5 failures before the rule, `test_br8` CASES 5 CHECKS 11 FAILURES 0 after. Mutants caught: ahead units kept in the re-send pool, no calm lift, ahead measured to the old target, no spread test, a stop for any unit that is not in attack mode, a stop for a unit attacking something other than the wave's target. Joiners: each bot's part of a team wave keeps its own centre (out of the slice). Opus review (one): nothing blocking. Fixed: only a unit attacking its wave's target is stopped (a unit `_defend` sent at an unarmed intruder could otherwise be stopped and re-sent every decision), with `test_br8_unit_attacking_another_target_is_not_stopped` red without it; a target switch re-sends ahead units too; the new-objective test now asserts a unit is ahead. Ruled, not changed: a two-unit wave whose slow unit is blocked for good holds its fast unit (stuck-straggler guard is out of the slice; the lab shows no stall, below). Full suite CASES 1358 CHECKS 153008 FAILURES 9, the re-pin names (values in the red ledger); `sh tools/run_checks.sh` CHECKS PASSED 5. The bot lab counts stops per wave unit (`_count_stops`, summary line "BR8 stops per wave unit").
+
+Bot lab (`build/bot_lab/br8-base` = `c682bc96` exported; `br8b` = the final working tree; 150 jobs each):
+
+| | Base `c682bc96` | BR8 |
+|---|---|---|
+| Bot vs bot ended (of 18) | 16; not: USA mirrors s0, s1 | 15; not: USA mirrors s0, s1, China mirror s0 |
+| Idle defeat min / median: Dry Wells, Ashfall 2,6, Ashfall 3,7, BC 1v1, BC 1v2 | 7,683/8,186, 10,864/11,550, 10,512/12,018, 8,045/8,624, 7,574/8,107, all PASS | 7,897/8,299, 11,179/13,540, 10,813/13,526, 8,072/8,745, 7,886/8,400, all PASS |
+| Wave spread at first contact, farthest unit median / p90 cells (usa, china, frc) | 29.1/79.2, 18.1/48.2, 29.4/64.1 | 8.5/9.0, 8.3/16.2, 8.6/12.6 |
+| Ticks from launch to first contact, median / p90 | 825 / 2,565 | 959 / 4,228 |
+| Stops per wave unit, median / p90 (usa, china, frc); per unit per minute of walk | 0 | 1.50/10.64, 1.33/12.22, 2.44/17.50; 3.96 / 8.97 |
+| Waves without contact 60 s or more before the match ended | 0 of 530 | 61 of 565 (37 Ashfall, 24 Broken Crown, idle rows) |
+| One Rotary Gun Tower killed (usa, china, frc) | 7,092-7,380, 7,201-7,589, 6,784-6,888 | 7,380-7,416, 7,141-7,589, 6,784-6,888 |
+
+The 61 waves are not stalls. A traced rerun of `idle-af37-frc-frc-b1-s0` (scratch probe dumping wave positions every 300 ticks, ticks 8,100-11,000) shows both live waves moving at infantry speed, about 0.8 cells/s, toward a far objective, while the vehicles go stop-go at the front; the idle seat falls to earlier waves first. Waves now walk at their slowest units' pace, so contact comes later (p90 +1,660 ticks) and idle defeats come later on the big maps (Ashfall median +2,000). Hard bar "rows that end on stock still end": still failing, now three mirrors (owner decision pending, as agreed for after BR8).

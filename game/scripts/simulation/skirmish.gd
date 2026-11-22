@@ -25,6 +25,7 @@ const DETOUR_REACH: float = 10.0
 const DETOUR_CALM: int = 90
 const LET_GO_TICKS: int = 300
 const HOLD_LAPSE: int = 1800
+const REGROUP_SPREAD: float = 8.0
 const BOT_META := &"skirmish_bot"
 const BOT_TEAM_META := &"skirmish_bot_team"
 const MAP_PATH := "res://data/maps/skirmish.json"
@@ -304,9 +305,24 @@ static func _drive_waves(ctx: Dictionary, bot: Dictionary, mine: Dictionary, ene
 			switched = not hits.is_empty() and target != wave.target
 			wave.target = target
 		live.append(wave)
-		var pool: Array = wave.ids.filter(func(id: int) -> bool: return not skip.has(id) and (switched or _idle(mine[id])))
+		var ahead: Dictionary = _ahead(wave, mine, enemies.filter(func(enemy: Dictionary) -> bool: return enemy.id == wave.target), centre, ctx.tick)
+		var pool: Array = wave.ids.filter(func(id: int) -> bool: return not skip.has(id) and (switched or (_idle(mine[id]) and not ahead.has(id))))
 		if not pool.is_empty(): _send(ctx, {"type": "attack", "entity_ids": pool, "target_id": wave.target})
+		var halt: Array = ahead.keys().filter(func(id: int) -> bool: return mine[id].combat.mode == "attack" and mine[id].combat.target_id == wave.target)
+		if not halt.is_empty(): _send(ctx, {"type": "stop", "entity_ids": halt})
 	bot.waves = live
+
+# BR8: units farther than REGROUP_SPREAD from the centre and nearer the target than it; none while the wave is fighting.
+static func _ahead(wave: Dictionary, mine: Dictionary, goal: Array, centre: Vector2, tick: int) -> Dictionary:
+	var ahead := {}
+	if goal.is_empty() or tick - wave.hit_at < DETOUR_CALM: return ahead
+	var mark: float = _reach_squared(centre.x, centre.y, goal[0])
+	for id: int in wave.ids:
+		var at: Array = mine[id].position
+		var dx: float = at[0] - centre.x
+		var dy: float = at[1] - centre.y
+		if dx * dx + dy * dy > REGROUP_SPREAD * REGROUP_SPREAD and _reach_squared(at[0], at[1], goal[0]) < mark: ahead[id] = true
+	return ahead
 
 static func _new_wave(ids: Array, target: Variant, mine: Dictionary) -> Dictionary:
 	return {"ids": ids, "target": target, "detour": null, "diverted": false, "hit_at": -1, "let_go": {}, "hp": _hp_of(ids, mine)}
