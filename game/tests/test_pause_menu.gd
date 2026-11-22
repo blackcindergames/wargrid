@@ -47,6 +47,16 @@ func _esc(main) -> void:
 	event.pressed = true
 	main._input(event)
 
+# A match starts with its builder selected (3-6): the first Esc deselects it through the orders, the second opens the menu.
+func _open_menu(main) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = KEY_ESCAPE
+	event.keycode = KEY_ESCAPE
+	event.pressed = true
+	main._input(event)
+	main._unhandled_input(event)
+	_esc(main)
+
 func _scene(runner, packed, parent = null):
 	var main = packed.instantiate()
 	(parent if parent != null else runner.root).add_child(main)
@@ -109,7 +119,7 @@ func test_offline_pauses_sim(runner) -> bool:
 	BaseScene.tick(main)
 	var tick: int = main.driver.pump.live().tick()
 	runner.check(tick > 0, "E2 fixture: sim advances while closed")
-	_esc(main)
+	_open_menu(main)
 	for i in 5: BaseScene.tick(main)
 	runner.check(main.driver.pump.live().tick() == tick, "E2 tick frozen while the menu is open")
 	_click(main, "Resume")
@@ -124,7 +134,7 @@ func test_offline_leave_and_quit(runner) -> bool:
 	var main = await _scene(runner, Skirmish)
 	var scenes: Array[String] = []
 	main.change_scene = func(path: String) -> void: scenes.append(path)
-	_esc(main)
+	_open_menu(main)
 	_click(main, "Back to main menu")
 	runner.check(scenes == [LAUNCHER], "E3 offline leave goes straight to the launcher, got " + str(scenes))
 	_helper_restore(saved)
@@ -226,7 +236,7 @@ func test_menu_layout(runner) -> bool:
 		var size: Vector2i = pair[1]
 		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
-		_esc(main)
+		_open_menu(main)
 		BaseScene.select_own_unit(main)
 		await runner.process_frame
 		await runner.process_frame

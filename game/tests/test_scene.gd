@@ -23,6 +23,8 @@ func _m2_world() -> Simulation:
 
 func _install_world(main) -> void:
 	main.driver.adopt(_m2_world())
+	# A new world is a new match: the default world's start selection must not carry over by id.
+	main.orders.reset()
 	main._reset_camera()
 	main._refresh()
 

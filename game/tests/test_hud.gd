@@ -703,6 +703,7 @@ func test_esc_chip_only_when_esc_opens_the_menu(runner) -> bool:
 	overlays._camera(main)
 	var own: int = overlays._own_unit(main)
 	var enemy: int = main.driver.pump.live().snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 2)[0].id
+	await _esc_matches_chip(runner, main, "the start builder selected", false)
 	await _esc_matches_chip(runner, main, "nothing pending", true)
 	main.orders.selected_ids.assign([own])
 	main._refresh()
@@ -739,6 +740,8 @@ func test_menu_chip_keeps_its_width(runner) -> bool:
 	var main = await overlays._scene(runner, Skirmish)
 	var chip: Control = main.get_node("HUD/MenuChip")
 	var esc: Label = chip.find_child("EscChip", true, false)
+	main.orders.selected_ids.clear()
+	main._refresh()
 	await _frames(runner)
 	var free_rect: Rect2 = chip.get_global_rect()
 	var free_x: float = chip.find_child("Label", true, false).get_global_rect().position.x

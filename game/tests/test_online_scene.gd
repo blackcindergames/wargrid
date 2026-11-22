@@ -10,6 +10,7 @@ const MatchSettings = preload("res://scripts/match_settings.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const SkirmishMain = preload("res://scripts/match/match_screen.gd")
 const BaseScene = preload("res://tests/test_base_scene.gd")
+const SkirmishScene = preload("res://tests/test_skirmish_scene.gd")
 const IcRows = preload("res://tests/input_script_rows.gd")
 const JoinLink = preload("res://scripts/join_link.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
@@ -65,7 +66,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected]
 
 func _online(runner, seat: int) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -2213,4 +2214,62 @@ func test_pal_three_seat_starts(runner) -> bool:
 	for start in got: distinct[start] = true
 	runner.check(got.size() == 3 and distinct.size() == 3, "PAL three distinct starts, got " + str(got))
 	runner.check(got == MatchSettings.starts("broken_crown", 7, [1, 2, 3] as Array[int]), "PAL three starts are stable for one seed")
+	return true
+
+# Online the seat owns nothing until its choose_faction step, so the start selection waits for that view.
+func test_match_starts_with_builder_selected(runner) -> bool:
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	runner.check(main.orders.selected_ids.is_empty(), "SS3 online: nothing to select before choose_faction, got %s" % str(main.orders.selected_ids))
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	var start: int = SkirmishScene.start_unit_id(main)
+	runner.check(start != -1 and main.orders.selected_ids == [start], "SS3 online: the first view holding the seat's units selects its start builder %d, got %s" % [start, main.orders.selected_ids])
+	runner.check(main._sound._unit_voice.stream == null, "SS3 online: no voice")
+	main.orders.selected_ids.clear()
+	_run(main, 2)
+	runner.check(main.orders.selected_ids.is_empty(), "SS3 online: a deselect holds, got %s" % str(main.orders.selected_ids))
+	main.driver.pump.live().remove_object(4)
+	main.driver.pump.live().remove_object(6)
+	_run(main, 2)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	online.transport.frames.append(_rematch_start(99))
+	_run(main, 1)
+	runner.check(main.orders.selected_ids.is_empty(), "SS4 online rematch: nothing selected before the new choose_faction, got %s" % str(main.orders.selected_ids))
+	_peer_packets(online.transport, 1, 4, 12)
+	_run(main, 8)
+	start = SkirmishScene.start_unit_id(main)
+	runner.check(start != -1 and main.orders.selected_ids == [start], "SS4 online rematch: the new start builder %d is selected, got %s" % [start, main.orders.selected_ids])
+	main.free()
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
+
+	online = await _online(runner, 2)
+	main = online.main
+	var live = main.driver.pump.live()
+	live.setup_seat(2, "usa")
+	start = SkirmishScene.start_unit_id(main)
+	live.remove_object(start)
+	BaseScene.publish(main)
+	runner.check(main.orders.selected_ids.is_empty(), "SS5 start builder gone before the first view: nothing selected, got %s" % str(main.orders.selected_ids))
+	live.spawn(2, Vector2(20.5, 20.5), "usa_builder")
+	BaseScene.publish(main)
+	runner.check(main.orders.selected_ids.is_empty(), "SS5 a later builder is never the start selection, got %s" % str(main.orders.selected_ids))
+	main.free()
+
+	online = await _online(runner, 2)
+	main = online.main
+	var press := InputEventMouseButton.new()
+	press.position = main.get_viewport().get_visible_rect().size / 2.0
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	main._unhandled_input(press)
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	runner.check(main.orders.is_selecting() and main.orders.selected_ids.is_empty(), "SS6 a drag begun before the start view keeps the player's selection, got %s" % str(main.orders.selected_ids))
+	main.free()
 	return true

@@ -296,6 +296,7 @@ func _strip(used: int) -> void:
 func _menu_chip(held: bool) -> void:
 	await _scene()
 	if held: BaseScene.select_own_unit(_main)
+	else: HudTests._select(_main, [])
 	_main._show_esc_chip()
 	var esc: Control = _main.get_node("HUD/MenuChip").find_child("EscChip", true, false)
 	check(esc.modulate.a == (0.0 if held else 1.0), "the Esc chip %s" % ("faded" if held else "shown"))

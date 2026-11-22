@@ -107,6 +107,11 @@ func _key(runner, code: Key, unicode: int = 0) -> void:
 	event.pressed = true
 	runner.root.push_input(event)
 
+# A match starts with its builder selected (3-6): the first Esc deselects it, the second opens the menu.
+func _open_menu(runner) -> void:
+	_key(runner, KEY_ESCAPE)
+	_key(runner, KEY_ESCAPE)
+
 func _click(main, name: String) -> void:
 	for button: Button in main.get_node("HUD/PauseMenu").find_children("*", "Button", true, false):
 		if button.text == name and button.is_visible_in_tree():
@@ -204,7 +209,7 @@ func test_marker_ignored_when_menu_or_over(runner) -> bool:
 	var saved: String = _begin()
 	var main = await _scene(runner)
 	_camera(main)
-	_key(runner, KEY_ESCAPE)
+	_open_menu(runner)
 	runner.check(main.get_node("HUD/PauseMenu").visible, "PO5 fixture: pause menu open")
 	_key(runner, KEY_N)
 	runner.check(not _dialog(main).visible, "PO5 N with the pause menu open opens nothing")
@@ -252,6 +257,8 @@ func test_checklist_triggers(runner) -> bool:
 	overlay = main.get_node("HUD/Playtest")
 	runner.check(not overlay.checked("esc"), "PO6 fixture: esc item open")
 	_key(runner, KEY_ESCAPE)
+	runner.check(not overlay.checked("esc") and main.orders.selected_ids.is_empty(), "PO6 the first Esc deselects the start builder and ticks nothing")
+	_key(runner, KEY_ESCAPE)
 	runner.check(overlay.checked("esc"), "PO6 opening the Esc menu ticks the esc_menu item")
 	main.free()
 	_end(saved)
@@ -266,7 +273,7 @@ func test_helper_off_changes_nothing(runner) -> bool:
 	_key(runner, KEY_N)
 	runner.check(not overlay.get_node("Checklist").visible and not _dialog(main).visible and not overlay.is_active(), "PO7 off: ` and N do nothing")
 	runner.check(main.menu_open() == main.get_node("HUD/PauseMenu").visible and PlaytestSession.current == null, "PO7 off: menu_open is the pause menu and no session exists")
-	_key(runner, KEY_ESCAPE)
+	_open_menu(runner)
 	runner.check(main.menu_open(), "PO7 off: Esc still opens the pause menu")
 	_key(runner, KEY_ESCAPE)
 	var sim = SkirmishRules.create(true, "ai", {1: "frc", 2: "usa"})
@@ -418,7 +425,7 @@ func test_leave_flow(runner) -> bool:
 	var saved: String = _begin()
 	var main = await _scene(runner)
 	var scenes := _scenes(main)
-	_key(runner, KEY_ESCAPE)
+	_open_menu(runner)
 	_click(main, "Back to main menu")
 	runner.check(scenes == [LAUNCHER] and _no_form(main), "PO9 leaving with the helper on changes scene at once and shows no form, scenes %s" % [scenes])
 	runner.check(PlaytestSession.current != null and PlaytestSession.current.data.matches.size() == 1, "PO9 the left match lands in the open sitting")
@@ -427,7 +434,7 @@ func test_leave_flow(runner) -> bool:
 	saved = _begin(false)
 	main = await _scene(runner)
 	scenes = _scenes(main)
-	_key(runner, KEY_ESCAPE)
+	_open_menu(runner)
 	_click(main, "Back to main menu")
 	runner.check(scenes == [LAUNCHER] and _no_form(main) and PlaytestSession.current == null, "PO9 helper off: leaving changes scene at once and no form shows, got %s" % [scenes])
 	main.free()
@@ -1001,7 +1008,9 @@ func test_escape_in_field(runner) -> bool:
 		_key(runner, KEY_ESCAPE)
 		runner.check(main.get_viewport().gui_get_focus_owner() == null and _stored_answer(questions[0].id) == "escaped" and not main.get_node("HUD/PauseMenu").visible, "PO26 Esc in a field releases and saves it and leaves the pause menu closed")
 		_key(runner, KEY_ESCAPE)
-		runner.check(main.get_node("HUD/PauseMenu").visible, "PO26 a second Esc opens the pause menu")
+		runner.check(main.orders.selected_ids.is_empty() and not main.get_node("HUD/PauseMenu").visible, "PO26 a second Esc deselects the start builder")
+		_key(runner, KEY_ESCAPE)
+		runner.check(main.get_node("HUD/PauseMenu").visible, "PO26 a third Esc opens the pause menu")
 	main.free()
 	_end(saved)
 	return true
@@ -1325,7 +1334,7 @@ func test_new_scene_starts_new_entry(runner) -> bool:
 	_mark(overlay, "bad", "first scene")
 	PlaytestSettings.save_enabled(false)
 	overlay.set_active(false)
-	_key(runner, KEY_ESCAPE)
+	_open_menu(runner)
 	_click(main, "Back to main menu")
 	runner.check(scenes == [LAUNCHER], "PO38 fixture: Back to menu with the helper off leaves")
 	main.free()

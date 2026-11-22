@@ -401,6 +401,7 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()
 	orders.prune(state)
+	orders.select_start(state)
 	_drop_stale_attack_move()
 	orders.show_preview(driver.preview_answer())
 	Profiler.end(&"refresh.selection", zone)

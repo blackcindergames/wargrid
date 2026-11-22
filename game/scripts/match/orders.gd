@@ -29,6 +29,7 @@ var _awaiting_build: String = ""
 var gestures: int = 0
 var _awaiting_from: Array = []
 var _answer: Dictionary = {}
+var _start_pending: bool = true
 # Headless reads of the cursor shape stay at the arrow, so tests swap this for a recorder.
 static var set_cursor: Callable = Input.set_default_cursor_shape
 
@@ -89,6 +90,20 @@ func reset() -> void:
 	_answer = {}
 	_selecting = false
 	_dragged = false
+	_start_pending = true
+
+# Online the seat owns nothing until its choose_faction step, so the start is the first view it owns anything in (3-6).
+func select_start(state: Dictionary) -> void:
+	var seat: int = _screen.local_player
+	var units: RefCounted = state.units
+	if not _start_pending or (not units.owner.has(seat) and not state.get("buildings", []).any(func(found: Dictionary) -> bool: return found.owner == seat)): return
+	_start_pending = false
+	if escape_pending(): return
+	var kind: String = Registry.faction(HudModel.player(state, seat).get("faction", Registry.Factions.DEFAULT_FACTION)).get("start_unit", "")
+	var start: int = -1
+	for i: int in units.size():
+		if units.owner[i] == seat and units.kinds[units.kind[i]] == kind and (start == -1 or units.id[i] < start): start = units.id[i]
+	if start != -1: selected_ids.assign([start])
 
 func prune(state: Dictionary) -> void:
 	if selected_building_id != -1 and HudModel.building(state, selected_building_id).is_empty(): selected_building_id = -1
