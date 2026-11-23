@@ -151,17 +151,26 @@ static func cell_name(action: String, placement_kind: String) -> String:
 	if COMMANDS.has(action): return COMMANDS[action]
 	return Registry.kind(action).display_name
 
-const QUEUE_TILES: int = 4
+# Consecutive entries of one kind as one run {kind, count}; a count is orders, so Militia's pairs count once (queue follow-up round).
+static func runs(queue: Array) -> Array:
+	var merged: Array = []
+	for entry: Dictionary in queue:
+		if merged.is_empty() or merged.back().kind != entry.kind: merged.append({"kind": entry.kind, "count": 0})
+		merged.back().count += 1
+	return merged
 
-# The entry in production alone, then adjacent waiting entries of one kind together: {kind, ids, refund} (3-3, `DA:1475`).
-static func queue_tiles(queue: Array) -> Array:
-	var tiles: Array = []
-	for i: int in queue.size():
-		var entry: Dictionary = queue[i]
-		if i < 2 or tiles.back().kind != entry.kind: tiles.append({"kind": entry.kind, "ids": []})
-		tiles.back().ids.append(entry.id)
-		tiles.back().refund = entry.paid_cost
-	return tiles
+static func run_name(run: Dictionary) -> String:
+	return Registry.kind(run.kind).display_name + (" ×%d" % run.count if run.count > 1 else "")
+
+const EXIT_BLOCKED := "Exit blocked"
+const LOW_POWER_HINT := "Low power"
+
+# Seconds left rounded up, from `production.gd` `step`: work in milli-units, `work_rate` added per tick.
+# A finished entry still queued found no free exit (`step`'s `continue`).
+static func time_left(entry: Dictionary, work_rate: int) -> String:
+	var remaining: int = Definitions.unit(entry.kind).ticks * 1000 - entry.work
+	if remaining <= 0: return EXIT_BLOCKED
+	return "%ds" % ceili(float(remaining) / (work_rate * Engine.physics_ticks_per_second))
 
 static func newest_of_kind(queue: Array, kind: String) -> int:
 	for i: int in range(queue.size() - 1, -1, -1):
@@ -231,10 +240,11 @@ static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: S
 	if not own: return row
 	if not Registry.kind(object.kind).get("produces", []).is_empty():
 		row.queue = object.queue
-		if not object.queue.is_empty(): row.right = "QUEUE %d / %d" % [object.queue.size(), QUEUE_LIMIT]
+		row.work_rate = player(view, seat).get("work_rate", 1000)
 	var power: int = Registry.kind(object.kind).get("power", 0)
 	if power > 0: row.merge({"key": "POWER", "value": "+%d" % power})
-	if Registry.can_rally(object.kind): row.footer = RALLY
+	# Only while idle, so NEXT keeps its row in the 198 px panel (queue follow-up round).
+	if Registry.can_rally(object.kind) and object.queue.is_empty(): row.footer = RALLY
 	return row
 
 # combat.gd's `_short_of_power`, read from the view's player rows.

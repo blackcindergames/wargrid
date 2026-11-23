@@ -203,7 +203,7 @@ func test_production_ui(runner) -> bool:
 	var queue: Array = Fixture.object(main.driver.pump.live(),depot).queue
 	if queue.size() == 2:
 		await runner.process_frame
-		var button: Control = queue_tile(main, queue[1].id)
+		var button: Control = now_row(main)
 		var viewport_point: Vector2 = button.get_global_rect().get_center() if button != null else Vector2.ZERO
 		var press := InputEventMouseButton.new()
 		press.position = runner.root.get_final_transform() * viewport_point
@@ -221,9 +221,9 @@ func test_production_ui(runner) -> bool:
 		Input.parse_input_event(release)
 		await runner.process_frame
 		var commands: Array = main.driver.queued()
-		runner.check(commands.size() == 1 and commands[0].type == "cancel_production" and commands[0].production_id == queue[1].id,"Bs3 real GUI release after tick cancels exact entry once")
+		runner.check(commands.size() == 1 and commands[0].type == "cancel_production" and commands[0].production_id == queue[0].id,"Bs3 real GUI release on NOW after tick cancels exact entry once")
 		tick(main)
-		runner.check(Fixture.object(main.driver.pump.live(),depot).queue.size() == 1 and Fixture.object(main.driver.pump.live(),depot).queue[0].id == queue[0].id,"Bs3 stable cancel entry ID")
+		runner.check(Fixture.object(main.driver.pump.live(),depot).queue.size() == 1 and Fixture.object(main.driver.pump.live(),depot).queue[0].id == queue[1].id,"Bs3 stable cancel entry ID: the waiting entry stays")
 	else: runner.check(false,"Bs3 queue populated")
 	runner.check(main.has_node("HUD/Economy/CancelBuild") and main.get_node("HUD/Economy/CancelBuild").mouse_filter == Control.MOUSE_FILTER_STOP,"Bs3 GUI consumes mouse")
 	main.driver.pump.live().remove_object(depot)
@@ -428,23 +428,17 @@ func test_resume_status(runner) -> bool:
 	main.free()
 	return true
 
-const QUEUE_ROW: String = "HUD/Hud/SelectionPanel/Box/Body/Queue"
+const PRODUCTION: String = "HUD/Hud/SelectionPanel/Box/Body/Production"
 
-# The selected producer's shown queue tiles, left to right, `+N more` left out.
-static func queue_tiles(main) -> Array:
-	var row: Node = main.get_node_or_null(QUEUE_ROW)
-	if row == null: return []
-	return row.get_children().filter(func(tile: Node) -> bool: return str(tile.name).begins_with("Tile") and (tile as Control).is_visible_in_tree())
-
-static func queue_tile(main, id: int) -> Control:
-	for tile: Control in queue_tiles(main):
-		if Array(tile.get_meta("ids", [])).has(id): return tile
-	return null
+# The selected producer's NOW PRODUCING row, null while idle.
+static func now_row(main) -> Control:
+	var now: Control = main.get_node_or_null(PRODUCTION + "/Now")
+	return now if now != null and now.is_visible_in_tree() else null
 
 static func shown_texts(node: Node) -> Array:
 	return node.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree()).map(func(label: Label) -> String: return label.text)
 
-# P2.3b T8: tiles carry no digits (3-3); the started entry's tile says NOW.
+# P16 T1: NOW reads the started entry's name and seconds left, NEXT the waiting one by name, no position digits.
 func test_queue_label(runner) -> bool:
 	var main = await setup(runner)
 	var sim = Fixture.make_world()
@@ -455,11 +449,10 @@ func test_queue_label(runner) -> bool:
 	HudModel.building(view,factory).queue = [{"id":10,"kind":"usa_tank","paid_cost":900,"work":270000},{"id":12,"kind":"usa_tank","paid_cost":900,"work":0}]
 	main._show(view)
 	await runner.process_frame
-	var chip: String = HudModel.key_label(KEY_W)
-	var started: Control = queue_tile(main,10)
-	var waiting: Control = queue_tile(main,12)
-	runner.check(started != null and shown_texts(started) == ["NOW",chip,"Battle Tank"],"Bs5 a started entry's tile shows NOW, its cell's key and its name, no percent, id or raw work, got %s" % [shown_texts(started) if started != null else []])
-	runner.check(waiting != null and waiting != started and shown_texts(waiting) == [chip,"Battle Tank"],"Bs5 an unstarted entry's tile shows its key and name, no percent, got %s" % [shown_texts(waiting) if waiting != null else []])
+	var started: Array = shown_texts(now_row(main)) if now_row(main) != null else []
+	runner.check(started.size() == 2 and started[0] == "Battle Tank" and started[1].ends_with("s") and not started[1].contains("%") and not started[1].contains("270"),"Bs5 NOW shows the started entry's name and seconds left, no percent, id or raw work, got %s" % [started])
+	var next: Node = main.get_node_or_null(PRODUCTION + "/Next")
+	runner.check(next != null and shown_texts(next) == ["NEXT","Battle Tank"],"Bs5 the unstarted entry shows on NEXT by name, no position digits, got %s" % [shown_texts(next) if next != null else []])
 	main.free()
 	return true
 

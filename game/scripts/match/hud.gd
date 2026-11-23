@@ -12,9 +12,20 @@ const PAD_LEFT: float = 12.0
 const PAD_Y: float = 8.0
 const GAP: int = 4
 const ROW: float = 32.0
-const TILE: Vector2 = Vector2(91, 60)
 const TILE_PAD: float = 4.0
-const FACTORY_PANEL: float = 152.0
+# Queue follow-up round (draft v2, user 2026-11-23): one producer panel height in every state.
+const PRODUCER_PANEL: float = 198.0
+const NOW_ROW: float = 46.0
+const NOW_PAD: float = 8.0
+const NOW_GLYPH: float = 32.0
+const NEXT_GLYPH: float = 26.0
+const CELL_GLYPH: float = 19.0
+# Wide enough for `Exit blocked`, so the bar never moves between states.
+const TIME_WIDTH: float = 84.0
+# Shrunk from the draft's 84 so the idle rally line fits under it.
+const IDLE_BOX: float = 72.0
+# The AFTER NEXT list ends 8 above the refusal line's top (H - 36).
+const AFTER_FLOOR: float = 44.0
 # hud-v5-layout "Command card": 100 x 60 cells, padding 4 8, line 1 20 high, the name 4 under it.
 const CELL: Vector2 = Vector2(100, 60)
 const CELL_PAD: Vector2 = Vector2(8, 4)
@@ -37,6 +48,8 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const MousePan = preload("res://scripts/match/mouse_pan.gd")
+const UnitGlyphs = preload("res://scripts/presentation/unit_glyphs.gd")
+const DashedPanel = preload("res://scripts/presentation/dashed_panel.gd")
 
 var refusal: String = ""
 var now_msec: Callable = Time.get_ticks_msec
@@ -68,13 +81,20 @@ var _alert_text: Label
 var _alerted_at: int = 0
 var _esc: Label
 var _resume: Label
-var _queue: HBoxContainer
-var _queue_more: Button
-var _queue_empty: Label
+var _production: VBoxContainer
+var _now: Button
+var _next: HBoxContainer
+var _more: Button
+var _idle: PanelContainer
+var _after_next: PanelContainer
+var _after_hover: bool = false
+var _after_pinned: bool = false
 var _queue_shown: Array = []
 var _queue_for: int = -1
+var _work_rate: int = 1000
+var _now_entry: Dictionary = {}
+var _cancelled_id: int = -1
 var _count_style: StyleBoxFlat
-var _now_style: StyleBoxFlat
 var _inset: StyleBoxFlat
 var _edge: Color = Color.WHITE
 var _panel: PanelContainer
@@ -111,6 +131,7 @@ func _init() -> void:
 	_build_looks()
 	_build_panel()
 	for surface: Control in [_top_strip, _menu, _panel]: block(surface)
+	entry_cancelled.connect(func(id: int) -> void: _cancelled_id = id)
 
 # The spec's HUD blocks: a click, drag release or wheel on a panel never reaches the map.
 func block(surface: Control) -> void:
@@ -401,12 +422,10 @@ func _build_slab() -> void:
 	var rows: Array[Control] = [_resume, _card, _cancel_build]
 	for i in rows.size(): _economy.move_child(rows[i], i)
 
-# The hover inset of ready cells and tiles, the NOW tile's fill, the `×N` badge (hud-v5-layout "Item cell").
+# The hover inset of ready cells and NOW, the `×N` badge (hud-v5-layout "Item cell").
 func _build_looks() -> void:
 	_inset = get_theme_stylebox("hover", &"HudButton").duplicate() as StyleBoxFlat
 	_inset.border_color = get_theme_color("muted", &"Tokens")
-	_now_style = get_theme_stylebox("normal", &"HudButton").duplicate() as StyleBoxFlat
-	_now_style.bg_color = get_theme_color("panel2", &"Tokens")
 	_count_style = StyleBoxFlat.new()
 	_count_style.bg_color = get_theme_color("well", &"Tokens")
 	_count_style.content_margin_left = 4
@@ -441,6 +460,7 @@ func _build_card() -> void:
 		cell.mouse_entered.connect(_hover_cell.bind(cell, true))
 		cell.mouse_exited.connect(_hover_cell.bind(cell, false))
 		_cell_label(cell, "Cost", &"HudNumber", Vector2(CELL_PAD.x, CELL_PAD.y), Vector2(CELL.x - 2.0 * CELL_PAD.x - 22.0, CELL_LINE))
+		_glyph(cell, "Glyph", CELL_GLYPH).position = Vector2(CELL_PAD.x, CELL_PAD.y + (CELL_LINE - CELL_GLYPH) / 2.0)
 		var key: Label = _cell_label(cell, "Chip", &"HudKey", Vector2(0, CELL_PAD.y + 1.0), Vector2(18, 18))
 		key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		# A wide glyph or a layout's multi-character label grows the chip leftward, so it never leaves the cell.
@@ -507,21 +527,30 @@ static func _show_count(count: Label, queued: int, least: int) -> void:
 	count.visible = queued >= least
 	if count.visible: count.text = "×%d" % queued
 
-# A 4 px `you` bar along the bottom edge, its right anchor the progress.
-func _bar(parent: Control, bar_name: String) -> ColorRect:
-	var bar := ColorRect.new()
-	bar.name = bar_name
-	bar.mouse_filter = MOUSE_FILTER_IGNORE
-	bar.anchor_top = 1.0
-	bar.anchor_bottom = 1.0
-	bar.offset_top = -4
-	bar.visible = false
-	parent.add_child(bar)
-	return bar
+# The right anchor is the progress; only a change touches it (F38).
+static func _show_progress(bar: ColorRect, fraction: float, colour: Color) -> void:
+	if bar.color != colour: bar.color = colour
+	if bar.anchor_right != fraction: bar.set_anchor(SIDE_RIGHT, fraction, true)
 
-static func _show_progress(bar: ColorRect, entry: Dictionary, colour: Color) -> void:
-	bar.color = colour
-	bar.set_anchor(SIDE_RIGHT, minf(1.0, float(entry.work) / (Definitions.unit(entry.kind).ticks * 1000)), true)
+static func _glyph(parent: Control, glyph_name: String, side: float) -> TextureRect:
+	var glyph := TextureRect.new()
+	glyph.name = glyph_name
+	glyph.mouse_filter = MOUSE_FILTER_IGNORE
+	glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glyph.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	glyph.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	glyph.custom_minimum_size = Vector2(side, side)
+	glyph.size = glyph.custom_minimum_size
+	glyph.visible = false
+	parent.add_child(glyph)
+	return glyph
+
+# Shows the kind's glyph; a kind without one, or no kind, hides it and says so.
+static func _set_glyph(glyph: TextureRect, kind: String) -> bool:
+	var texture: Texture2D = null if kind.is_empty() else UnitGlyphs.texture(kind)
+	if glyph.texture != texture: glyph.texture = texture
+	glyph.visible = texture != null
+	return glyph.visible
 
 static func _cell_label(cell: Button, label_name: String, variation: StringName, at: Vector2, minimum: Vector2) -> Label:
 	var label: Label = _label(cell, label_name, variation)
@@ -638,6 +667,12 @@ func _fill_cell(cell: Button, action: String, selection: Dictionary, blocked: Di
 	var cost: Label = cell.get_node("Cost")
 	cost.visible = item
 	var short: bool = blocked.get("cause", "") == "credits"
+	# The draft's 19 px unit glyph 4 before the cost; the cost keeps its end 4 before the chip.
+	var cost_x: float = CELL_PAD.x + (CELL_GLYPH + 4.0 if _set_glyph(cell.get_node("Glyph"), action if item else "") else 0.0)
+	if cost.position.x != cost_x:
+		cost.position.x = cost_x
+		cost.custom_minimum_size.x = CELL.x - CELL_PAD.x - 22.0 - cost_x
+		cost.size.x = cost.custom_minimum_size.x
 	if item:
 		cost.text = str(Registry.kind(action).cost)
 		_paint(cost, &"warn" if short else (&"muted" if not blocked.is_empty() else &""))
@@ -692,7 +727,7 @@ func _press_cell(cell: Button) -> void:
 	cell.set_meta("pressed_blocked", cell.get_meta("blocked"))
 	if not action.is_empty(): cell_pressed.emit(action)
 
-# Progress shows only on the NOW tile, never twice (user, 2026-11-23).
+# Progress shows only on NOW, never twice (user, 2026-11-23).
 func _show_queued(cell: Button) -> void:
 	var action: String = cell.get_meta("action")
 	_show_count(cell.get_node("Count") as Label, _cell_queue.filter(func(entry: Dictionary) -> bool: return entry.kind == action).size(), 1)
@@ -833,149 +868,186 @@ static func _has_card(cell: Button) -> bool:
 func _restrip() -> void:
 	if not _strip_args.is_empty(): _show_strip.callv(_strip_args)
 
-# hud-v5-layout "Selection panel" (P2.3b, 3-3): one row of four 91 x 60 tiles under the identity, in every own producer's panel.
-func _build_queue(body: BoxContainer) -> void:
-	_queue = _box(body, "Queue", HBoxContainer.new(), GAP) as HBoxContainer
-	_queue.custom_minimum_size.y = TILE.y
-	# The row itself reports the pointer leaving it from a gap, which no tile does.
-	_queue.mouse_filter = MOUSE_FILTER_PASS
-	_queue.mouse_exited.connect(_release_queue, CONNECT_DEFERRED)
-	for i in HudModel.QUEUE_TILES: _tile("Tile%d" % (i + 1))
-	_queue_more = _queue_tile("More")
-	var plain: StyleBox = get_theme_stylebox("normal", &"HudButton")
-	for look: String in ["normal", "hover", "pressed", "hover_pressed"]: _queue_more.add_theme_stylebox_override(look, plain)
-	_queue_more.mouse_default_cursor_shape = CURSOR_ARROW
-	var more: Label = _cell_label(_queue_more, "Count", &"HudNumber", Vector2(0, 13), Vector2(TILE.x, 16))
-	more.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
-	more.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_cell_label(_queue_more, "Label", &"HudHint", Vector2(0, 31), Vector2(TILE.x, 15)).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	(_queue_more.get_node("Label") as Label).text = "more"
-	_queue_empty = _label(_queue, "Empty", &"HudHint", "Nothing in production")
-	_queue_empty.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+# Queue follow-up round (owner's draft v2, user 2026-11-23): under a rule, NOW PRODUCING and QUEUE n / 9, the NOW row, NEXT with `+N more`,
+# or the dashed idle box; replaces P2.3b's tiles in every own producer's panel.
+func _build_production(body: BoxContainer) -> void:
+	_production = _box(body, "Production", VBoxContainer.new(), 6) as VBoxContainer
+	_rule("Rule")
+	var strip: BoxContainer = _box(_production, "Strip", HBoxContainer.new(), 8)
+	_label(strip, "Tag", &"HudLabel")
+	var count: Label = _label(strip, "Count", &"HudLabel")
+	count.size_flags_horizontal = SIZE_EXPAND_FILL
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_build_now()
+	_rule("NextRule")
+	_build_next()
+	_idle = DashedPanel.new()
+	_idle.name = "Idle"
+	_idle.color = get_theme_color("line", &"Tokens")
+	_idle.mouse_filter = MOUSE_FILTER_IGNORE
+	_idle.custom_minimum_size.y = IDLE_BOX
+	_idle.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	_production.add_child(_idle)
+	var lines: BoxContainer = _box(_idle, "Lines", VBoxContainer.new(), 0)
+	lines.alignment = BoxContainer.ALIGNMENT_CENTER
+	_label(lines, "Title", &"HudRow", "Nothing in production").horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label(lines, "Hint", &"HudHint", "Click a unit on the right to build it").horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
-func _queue_tile(tile_name: String) -> Button:
-	var tile: Button = _button(_queue, tile_name, TILE.x)
-	tile.custom_minimum_size.y = TILE.y
-	tile.size_flags_vertical = SIZE_SHRINK_BEGIN
-	return tile
+func _rule(rule_name: String) -> void:
+	var rule := ColorRect.new()
+	rule.name = rule_name
+	rule.color = get_theme_color("line", &"Tokens")
+	rule.custom_minimum_size.y = 1
+	rule.mouse_filter = MOUSE_FILTER_IGNORE
+	_production.add_child(rule)
 
-# Name, the making cell's chip, NOW and the bar on the entry in production, `×N` on a run; no digits (3-3).
-func _tile(tile_name: String) -> void:
-	var tile: Button = _queue_tile(tile_name)
-	_cell_look(tile, &"ready")
-	tile.set_meta("ids", [])
-	tile.pressed.connect(_cancel_tile.bind(tile))
-	tile.mouse_entered.connect(_hover_tile.bind(tile, true))
-	tile.mouse_exited.connect(_hover_tile.bind(tile, false))
-	tile.mouse_exited.connect(_release_queue, CONNECT_DEFERRED)
-	_cell_label(tile, "Now", &"HudLabel", Vector2(TILE_PAD, TILE_PAD), Vector2(0, CELL_LINE)).text = "NOW"
-	var key: Label = _cell_label(tile, "Chip", &"HudKey", Vector2(0, TILE_PAD + 1.0), Vector2(18, 18))
-	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	key.anchor_left = 1.0
-	key.anchor_right = 1.0
-	key.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	key.offset_left = -TILE_PAD - 18.0
-	key.offset_right = -TILE_PAD
-	var name_label: Label = _cell_label(tile, "Name", &"HudRow", Vector2(TILE_PAD, TILE_PAD + CELL_LINE + 2.0), Vector2(TILE.x - 2.0 * TILE_PAD, COMMAND_LINE))
-	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	name_label.add_theme_font_size_override("font_size", ITEM_NAME_SIZE)
-	name_label.add_theme_constant_override("line_spacing", -1)
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	_badge(tile)
-	var track: ColorRect = _bar(tile, "Track")
+# The glyph, the name over a 4 px `you` bar, the seconds left at the right; a click cancels the unit, as the NOW tile's did (P2.3b).
+func _build_now() -> void:
+	_now = _button(_production, "Now", 0.0)
+	_now.custom_minimum_size.y = NOW_ROW
+	_cell_look(_now, &"ready")
+	_now.pressed.connect(_cancel_now)
+	_now.mouse_exited.connect(_release_now, CONNECT_DEFERRED)
+	_glyph(_now, "Glyph", NOW_GLYPH).position = Vector2(NOW_PAD, (NOW_ROW - NOW_GLYPH) / 2.0)
+	var name_label: Label = _label(_now, "Name", &"HudRow")
+	name_label.mouse_filter = MOUSE_FILTER_IGNORE
+	_span(name_label, 9.0, 27.0)
+	var track := ColorRect.new()
+	track.name = "Track"
 	track.color = get_theme_color("well", &"Tokens")
-	track.anchor_right = 1.0
-	_bar(track, "Bar").visible = true
+	track.mouse_filter = MOUSE_FILTER_IGNORE
+	_now.add_child(track)
+	_span(track, 33.0, 37.0)
+	var bar := ColorRect.new()
+	bar.name = "Bar"
+	bar.mouse_filter = MOUSE_FILTER_IGNORE
+	bar.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
+	track.add_child(bar)
+	var time: Label = _label(_now, "Time", &"HudNumber")
+	time.mouse_filter = MOUSE_FILTER_IGNORE
+	time.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	time.set_anchors_preset(PRESET_RIGHT_WIDE)
+	time.grow_horizontal = GROW_DIRECTION_BEGIN
+	time.offset_left = -NOW_PAD - TIME_WIDTH
+	time.offset_right = -NOW_PAD
 
-func _show_queue(queue: Array, building_id: int) -> void:
-	var held: bool = building_id == _queue_for and not _queue_shown.is_empty() and _queue_held()
+# From after the glyph to 8 before the time column; `_fill_now` moves the left edge when a kind has no glyph.
+static func _span(part: Control, top: float, bottom: float) -> void:
+	part.anchor_right = 1.0
+	part.offset_left = 2.0 * NOW_PAD + NOW_GLYPH
+	part.offset_right = -2.0 * NOW_PAD - TIME_WIDTH
+	part.offset_top = top
+	part.offset_bottom = bottom
+
+# No click target but `+N more`, which opens the read-only AFTER NEXT list on hover and on a click (a tap).
+func _build_next() -> void:
+	_next = _box(_production, "Next", HBoxContainer.new(), 8) as HBoxContainer
+	_label(_next, "Tag", &"HudLabel", "NEXT")
+	_glyph(_next, "Glyph", NEXT_GLYPH).size_flags_vertical = SIZE_SHRINK_CENTER
+	_label(_next, "Name", &"HudRow").size_flags_horizontal = SIZE_EXPAND_FILL
+	_more = Button.new()
+	_more.name = "More"
+	_more.focus_mode = FOCUS_NONE
+	_more.theme_type_variation = &"HudButton"
+	_more.mouse_default_cursor_shape = CURSOR_HELP
+	var plain := StyleBoxEmpty.new()
+	for look: String in ["normal", "hover", "pressed", "hover_pressed", "focus"]: _more.add_theme_stylebox_override(look, plain)
+	for look: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]: _more.add_theme_color_override(look, get_theme_color("muted", &"Tokens"))
+	_more.mouse_entered.connect(_hover_more.bind(true))
+	_more.mouse_exited.connect(_hover_more.bind(false))
+	_more.pressed.connect(_pin_more)
+	_next.add_child(_more)
+	_after_next = _slab("AfterNext", Vector2.ZERO)
+	var lines: BoxContainer = _box(_after_next, "Lines", VBoxContainer.new(), 4)
+	_label(lines, "Tag", &"HudLabel", "AFTER NEXT")
+	_label(lines, "List", &"HudRow")
+	_after_next.visible = false
+	block(_after_next)
+
+func _cancel_now() -> void:
+	if not _now_entry.is_empty(): entry_cancelled.emit(_now_entry.id)
+
+func _pin_more() -> void:
+	_after_pinned = not _after_pinned
+	_show_after()
+
+func _hover_more(hovered: bool) -> void:
+	_after_hover = hovered
+	_show_after()
+
+# Beside the panel, its bottom clear of the refusal line; a pinned list closes once `+N more` goes.
+func _show_after() -> void:
+	if not _more.is_visible_in_tree(): _after_pinned = false
+	_after_next.visible = _more.is_visible_in_tree() and (_after_hover or _after_pinned)
+	if not _after_next.visible: return
+	_after_next.reset_size()
+	_after_next.position = Vector2(_panel.get_global_rect().end.x + 8.0, get_viewport_rect().size.y - AFTER_FLOOR - _after_next.size.y)
+
+func _show_queue(queue: Array, building_id: int, work_rate: int) -> void:
+	if building_id != _queue_for: _after_pinned = false
+	var held: bool = building_id == _queue_for and not _now_entry.is_empty() and _now_hovered() and not queue.any(func(entry: Dictionary) -> bool: return entry.id == _now_entry.id)
 	_queue_for = building_id
 	_queue_shown = queue
-	if held: _keep_tiles(queue)
-	else: _fill_tiles(queue)
+	_work_rate = work_rate
+	_fill_production(queue, held)
 
-# As the kind rows' hold: the mouse position outlives a window leave, the hovered control does not.
-func _queue_held() -> bool:
-	return _queue.is_visible_in_tree() and get_viewport().gui_get_hovered_control() != null and _queue.get_global_rect().has_point(_queue.get_global_mouse_position())
+# As the kind rows' hold: the hovered control goes with a window leave.
+func _now_hovered() -> bool:
+	return _now.is_visible_in_tree() and get_viewport().gui_get_hovered_control() == _now
 
-func _release_queue() -> void:
-	if _queue.is_visible_in_tree() and not _queue_held(): _fill_tiles(_queue_shown)
+func _release_now() -> void:
+	if _production.is_visible_in_tree() and not _now_hovered(): _fill_production(_queue_shown, false)
 
-# Over four tiles: three, then `+N more` counting the hidden entries (DA:1475).
-func _fill_tiles(queue: Array) -> void:
-	var tiles: Array = HudModel.queue_tiles(queue)
-	var shown: int = tiles.size() if tiles.size() <= HudModel.QUEUE_TILES else HudModel.QUEUE_TILES - 1
-	for i in HudModel.QUEUE_TILES:
-		var tile: Button = _queue.get_child(i)
-		tile.visible = i < shown
-		if tile.visible: _fill_tile(tile, tiles[i], queue[0] if i == 0 else {})
-	_queue_more.visible = tiles.size() > shown
-	if _queue_more.visible: _fill_more(tiles.slice(shown))
-	_queue_empty.visible = queue.is_empty()
+# Held (P2.3b's rule carried to NOW): the entry gone from under the pointer stays on NOW, muted, the live queue behind it.
+func _fill_production(queue: Array, held: bool) -> void:
+	if not held: _now_entry = queue[0] if not queue.is_empty() else {}
+	var busy: bool = not _now_entry.is_empty()
+	(_production.get_node("Strip/Tag") as Label).text = "NOW PRODUCING" if busy else "PRODUCTION"
+	(_production.get_node("Strip/Count") as Label).text = "QUEUE %d / %d" % [queue.size(), HudModel.QUEUE_LIMIT]
+	_now.visible = busy
+	_idle.visible = not busy
+	if busy: _fill_now(held)
+	_fill_next(HudModel.runs(queue if held else queue.slice(1)))
 
-func _fill_tile(tile: Button, run: Dictionary, producing: Dictionary) -> void:
-	tile.set_meta("ids", run.ids)
-	tile.set_meta("key", HudModel.key_label(HudModel.CELL_KEYS.get(HudModel.role(run.kind), KEY_NONE)))
-	var name_label: Label = tile.get_node("Name")
-	if name_label.text != Registry.kind(run.kind).display_name:
-		name_label.text = Registry.kind(run.kind).display_name
-		name_label.reset_size()
-	if not tile.is_hovered(): (tile.get_node("Chip") as Label).text = tile.get_meta("key")
-	tile.tooltip_text = "Cancel · refunds %d" % run.refund
-	_show_count(tile.get_node("Count") as Label, run.ids.size(), 2)
-	_mute_tile(tile, false)
-	_mark_now(tile, producing)
+func _fill_now(held: bool) -> void:
+	var kind: String = _now_entry.kind
+	var left: float = NOW_PAD + (NOW_GLYPH + NOW_PAD if _set_glyph(_now.get_node("Glyph"), kind) else 0.0)
+	for part: Control in [_now.get_node("Name"), _now.get_node("Track")]:
+		if part.offset_left != left: part.offset_left = left
+	var glyph: CanvasItem = _now.get_node("Glyph")
+	glyph.self_modulate.a = 0.5 if held else 1.0
+	var name_label: Label = _now.get_node("Name")
+	name_label.text = Registry.kind(kind).display_name
+	_paint(name_label, &"muted" if held else &"")
+	var time: Label = _now.get_node("Time")
+	var required: float = Definitions.unit(kind).ticks * 1000.0
+	var fraction: float = minf(1.0, _now_entry.work / required)
+	if held:
+		var done: bool = _now_entry.id != _cancelled_id
+		time.text = "Done" if done else ""
+		if done: fraction = 1.0
+	else:
+		time.text = HudModel.time_left(_now_entry, _work_rate)
+	var slowed: bool = not held and (_work_rate < 1000 or time.text == HudModel.EXIT_BLOCKED)
+	_paint(time, &"warn" if slowed else (&"muted" if held else &""))
+	_show_progress(_now.get_node("Track/Bar"), fraction, get_theme_color("muted", &"Tokens") if held else _panel_style.border_color)
+	var cancel: String = "Cancel · refunds %d" % _now_entry.paid_cost
+	_now.tooltip_text = "" if held else (HudModel.LOW_POWER_HINT + "\n" + cancel if _work_rate < 1000 else cancel)
+	_now.disabled = held
+	_now.mouse_default_cursor_shape = CURSOR_ARROW if held else CURSOR_POINTING_HAND
 
-func _mark_now(tile: Button, producing: Dictionary) -> void:
-	(tile.get_node("Now") as Control).visible = not producing.is_empty()
-	(tile.get_node("Track") as Control).visible = not producing.is_empty()
-	if not producing.is_empty(): _show_progress(tile.get_node("Track/Bar") as ColorRect, producing, _panel_style.border_color)
-	if producing.is_empty(): tile.remove_theme_stylebox_override("normal")
-	else: tile.add_theme_stylebox_override("normal", _now_style)
-
-func _fill_more(runs: Array) -> void:
-	var count: int = 0
-	var lines: PackedStringArray = []
-	for run: Dictionary in runs:
-		count += run.ids.size()
-		lines.append(Registry.kind(run.kind).display_name + (" ×%d" % run.ids.size() if run.ids.size() > 1 else ""))
-	(_queue_more.get_node("Count") as Label).text = "+%d" % count
-	_queue_more.tooltip_text = "\n".join(lines)
-
-# Held under the pointer: no tile moves; each keeps its entries still queued, NOW follows the entry in production, an emptied tile mutes.
-func _keep_tiles(queue: Array) -> void:
-	var queued: Array = queue.map(func(entry: Dictionary) -> int: return entry.id)
-	for i in HudModel.QUEUE_TILES:
-		var tile: Button = _queue.get_child(i)
-		if not tile.visible: continue
-		var live: Array = Array(tile.get_meta("ids")).filter(func(id: int) -> bool: return queued.has(id))
-		tile.set_meta("ids", live)
-		_show_count(tile.get_node("Count") as Label, live.size(), 2)
-		_mute_tile(tile, live.is_empty())
-		_mark_now(tile, queue[0] if not queue.is_empty() and live.has(queue[0].id) else {})
-
-# As a held kind row: muted, with no cancel to offer.
-func _mute_tile(tile: Button, muted: bool) -> void:
-	if tile.disabled == muted: return
-	tile.disabled = muted
-	tile.mouse_default_cursor_shape = CURSOR_ARROW if muted else CURSOR_POINTING_HAND
-	if muted: tile.tooltip_text = ""
-	if muted: tile.get_node("Name").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
-	else: tile.get_node("Name").remove_theme_color_override("font_color")
-	_hover_tile(tile, tile.is_hovered())
-
-# The newest stored entry of the run, so the older ones keep their order; never another entry.
-func _cancel_tile(tile: Button) -> void:
-	var ids: Array = tile.get_meta("ids")
-	if not ids.is_empty(): entry_cancelled.emit(ids.back())
-
-func _hover_tile(tile: Button, hovered: bool) -> void:
-	var mark: Label = tile.get_node("Chip")
-	hovered = hovered and not tile.disabled
-	mark.text = "×" if hovered else str(tile.get_meta("key", ""))
-	if hovered: mark.add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
-	else: mark.remove_theme_color_override("font_color")
-	_inset_track(tile, hovered, 4.0)
+# The first run waiting, `+N more` counting the entries after it; their runs make the AFTER NEXT list.
+func _fill_next(runs: Array) -> void:
+	_next.visible = not runs.is_empty()
+	(_production.get_node("NextRule") as Control).visible = _next.visible
+	_more.visible = runs.size() > 1
+	if _next.visible:
+		_set_glyph(_next.get_node("Glyph"), runs[0].kind)
+		(_next.get_node("Name") as Label).text = HudModel.run_name(runs[0])
+		var after: Array = runs.slice(1)
+		_more.text = "+%d more" % after.reduce(func(sum: int, run: Dictionary) -> int: return sum + run.count, 0)
+		(_after_next.get_node("Lines/List") as Label).text = "\n".join(after.map(HudModel.run_name))
+	if _after_hover or _after_pinned or _after_next.visible: _show_after()
 
 # hud-v5-layout "Selection panel": x 0, 408 wide, bottom on H, height hugs; the 4 px owner edge is the style's left border.
 func _build_panel() -> void:
@@ -1004,7 +1076,7 @@ func _build_panel() -> void:
 	var pair: BoxContainer = _box(body, "KeyRow", HBoxContainer.new(), 0)
 	_label(pair, "Key", &"HudLabel").custom_minimum_size.x = 112
 	_label(pair, "Value", &"HudNumber")
-	_build_queue(body)
+	_build_production(body)
 	_label(body, "Footer", &"HudHint", HudModel.RALLY)
 	_build_rows(box)
 	_panel.visible = false
@@ -1069,19 +1141,19 @@ func _show_selection(view: Dictionary, selection: Dictionary, seat: int, faction
 	_panel.get_node("Box/Top").visible = not many
 	_panel.get_node("Box/Body").visible = not many
 	if many:
-		_queue.visible = false
+		_production.visible = false
 		_panel.custom_minimum_size.y = 0.0
 		_show_rows(view, selection.ids, seat, selection.bright_owners)
 	else:
 		_counts = {}
 		var row: Dictionary = HudModel.panel(view, selection, seat, faction, _labels)
 		_show_panel(row, selection.bright_owners)
-		# Never hidden in between: a hide drops the pointer's hover and with it the tiles' hold.
-		_queue.visible = row.has("queue")
-		# Fixed, so a queue change never moves the panel's top (3-3); a rally footer's 15 px line box adds 1.
-		_panel.custom_minimum_size.y = FACTORY_PANEL if _queue.visible else 0.0
-		if _queue.visible: _show_queue(row.queue, selection.building_id)
-	if not _queue.visible: _queue_for = -1
+		# Never hidden in between: a hide drops the pointer's hover and with it NOW's hold.
+		_production.visible = row.has("queue")
+		# Fixed, so a queue change never moves the panel's top (queue follow-up round).
+		_panel.custom_minimum_size.y = PRODUCER_PANEL if _production.visible else 0.0
+		if _production.visible: _show_queue(row.queue, selection.building_id, row.work_rate)
+	if not _production.visible: _show_after()
 
 # The row set holds while the pointer is over the panel, so a row never moves under it.
 # The mouse position outlives a window leave; the hovered control does not.

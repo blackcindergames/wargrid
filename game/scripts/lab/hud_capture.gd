@@ -217,19 +217,19 @@ func _slab_army() -> void:
 	await _slab_pick("tanks", 50000)
 	check(HudTests._cell(_main, "attack_move") != null and HudTests._cell(_main, "build") == null, "the order cells alone, no Build")
 
-# P2.3b T8: the nine-entry queue as tiles; `empty` the factory with nothing queued.
+# P16 T1: the nine-entry queue on the production panel, the pointer on NOW; `empty` the factory with nothing queued.
 func _queue(empty: bool, hovered: bool = true) -> void:
 	var ids: Dictionary = await _slab_world(50000)
 	HudTests._select(_main, [], ids.factory)
 	if not empty: HudTests._nine(_main, ids.factory)
 	await _settle()
 	if empty or not hovered: return
-	var tile: Control = BaseScene.queue_tile(_main, 900)
-	check(tile != null, "the first queue tile shows")
-	if tile == null: return
-	HudTests._move(_port, tile.get_global_rect().get_center())
+	var now: Control = BaseScene.now_row(_main)
+	check(now != null, "NOW shows")
+	if now == null: return
+	HudTests._move(_port, now.get_global_rect().get_center())
 	await _settle()
-	check((tile as Button).is_hovered(), "the pointer is on the first queue tile")
+	check((now as Button).is_hovered(), "the pointer is on NOW")
 
 func _unload() -> void:
 	var ids: Dictionary = await _slab_world(50000, true)
