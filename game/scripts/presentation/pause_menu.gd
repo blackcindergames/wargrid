@@ -99,7 +99,7 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 			["", "Alt+double-click", "Select that kind on the map", []],
 			["", "Right-click", "Move, attack, gather or enter", []],
 			["", "Right-click", "Set the rally point (factory or barracks selected)", []],
-			["", "Right-click", "Cancel the newest queued one (on a unit's button)", []],
+			["", "Right-click", "Cancel a unit's newest (on its button; or click its queue tile)", []],
 			["", "Left-click", "Place the building (right-click cancels)", []],
 			["", "Wheel", "Zoom", []]]],
 		["Camera", [

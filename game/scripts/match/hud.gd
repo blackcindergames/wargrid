@@ -878,7 +878,7 @@ func _tile(tile_name: String) -> void:
 	_bar(track, "Bar").visible = true
 
 func _show_queue(queue: Array, building_id: int) -> void:
-	var held: bool = building_id == _queue_for and _queue_held()
+	var held: bool = building_id == _queue_for and not _queue_shown.is_empty() and _queue_held()
 	_queue_for = building_id
 	_queue_shown = queue
 	if held: _keep_tiles(queue)
@@ -937,6 +937,7 @@ func _keep_tiles(queue: Array) -> void:
 		if not tile.visible or live.is_empty(): continue
 		tile.set_meta("ids", live)
 		_show_count(tile.get_node("Count") as Label, live.size(), 2)
+		if i == 0 and live.has(queue[0].id): _show_progress(tile.get_node("Track/Bar") as ColorRect, queue[0], _panel_style.border_color)
 
 # The newest stored entry of the run, so the older ones keep their order; never another entry.
 func _cancel_tile(tile: Button) -> void:
@@ -1041,15 +1042,20 @@ func _show_selection(view: Dictionary, selection: Dictionary, seat: int, faction
 	_many.visible = many
 	_panel.get_node("Box/Top").visible = not many
 	_panel.get_node("Box/Body").visible = not many
-	if many: _show_rows(view, selection.ids, seat, selection.bright_owners)
+	if many:
+		_queue.visible = false
+		_panel.custom_minimum_size.y = 0.0
+		_show_rows(view, selection.ids, seat, selection.bright_owners)
 	else:
 		_counts = {}
 		var row: Dictionary = HudModel.panel(view, selection, seat, faction, _labels)
 		_show_panel(row, selection.bright_owners)
+		# Never hidden in between: a hide drops the pointer's hover and with it the tiles' hold.
 		_queue.visible = row.has("queue")
 		# Fixed, so a queue change never moves the panel's top (3-3); a rally footer's 15 px line box adds 1.
 		_panel.custom_minimum_size.y = FACTORY_PANEL if _queue.visible else 0.0
 		if _queue.visible: _show_queue(row.queue, selection.building_id)
+	if not _queue.visible: _queue_for = -1
 
 # The row set holds while the pointer is over the panel, so a row never moves under it.
 # The mouse position outlives a window leave; the hovered control does not.

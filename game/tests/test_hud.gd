@@ -29,7 +29,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_queue_tiles_merge_adjacent_waiting, test_queue_tile_click_cancels_newest_of_run, test_queue_tiles_keep_entry_ids, test_queue_tiles_hold_under_pointer, test_queue_more_counts_hidden, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_factory_panel_fixed_152, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_queue_tiles_merge_adjacent_waiting, test_queue_tile_click_cancels_newest_of_run, test_queue_tiles_keep_entry_ids, test_queue_tiles_hold_under_pointer, test_queue_hold_keeps_progress, test_queue_fresh_after_kind_rows, test_queue_more_counts_hidden, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_factory_panel_fixed_152, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -1360,8 +1360,7 @@ func test_slab_china_with_overlays(runner) -> bool:
 		var overlay = main.get_node("HUD/Playtest")
 		main.get_node("HUD/PerfOverlay").toggle()
 		overlay.open_marker()
-		# P2.3b T8: the queue left the slab for the panel, so "open" has no toggle and shows as "collapsed" does.
-		var states: Array = [["a lone China builder", [ids.builder], -1, "Card"], ["own tanks", ids.tanks, -1, "Card"], ["nine queued, collapsed", [], ids.factory, "Card"], ["nine queued, open", [], ids.factory, "Card"]]
+		var states: Array = [["a lone China builder", [ids.builder], -1, "Card"], ["own tanks", ids.tanks, -1, "Card"], ["nine queued", [], ids.factory, "Card"]]
 		for state: Array in states:
 			var label: String = "%s at %s" % [state[0], size]
 			_select(main, state[1], state[2])
@@ -1846,6 +1845,64 @@ func test_queue_tiles_hold_under_pointer(runner) -> bool:
 	_end_port(scene)
 	return true
 
+# The NOW tile's bar is the only progress display, so it moves under a held pointer too; a hold never keeps an empty row or another selection's tiles.
+func test_queue_hold_keeps_progress(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	_queue_kinds(main, ids.factory, [MEDIUM, MEDIUM])
+	await _frames(runner)
+	var tiles: Array = _tiles(main)
+	runner.check(tiles.size() == 2, "QT11 fixture: two tiles, got %s" % [_tile_ids(main)])
+	if tiles.size() != 2:
+		_end_port(scene)
+		return true
+	var bar: ColorRect = (tiles[0] as Node).get_node("Track/Bar")
+	runner.check(is_equal_approx(bar.anchor_right, 0.42) and bar.color == View.owner_color(1, main._view.bright_owners()), "QT11 the NOW bar fills 42 %% in the own colour, got %.2f %s" % [bar.anchor_right, bar.color])
+	_move(port, _centre(tiles[1]))
+	await _frames(runner)
+	_queue_kinds(main, ids.factory, [MEDIUM, MEDIUM], 252000)
+	await _frames(runner)
+	runner.check(_tile_ids(main) == [[900], [901]] and is_equal_approx(bar.anchor_right, 0.84), "QT11 under the pointer the NOW bar follows progress to 84 %%, got %.2f %s" % [bar.anchor_right, _tile_ids(main)])
+	_queue_kinds(main, ids.factory, [])
+	_move(port, Vector2(900, 200))
+	await _frames(runner)
+	_move(port, _centre(_tile_row(main).get_node("Empty")))
+	await _frames(runner)
+	_queue_kinds(main, ids.factory, [MEDIUM])
+	await _frames(runner)
+	runner.check(_tile_ids(main) == [[900]], "QT13 an empty row under the pointer shows the new entry at once, got %s" % [_tile_ids(main)])
+	_end_port(scene)
+	return true
+
+# A control group can bring the factory back while the pointer rests where its tiles were, on the kind rows.
+func test_queue_fresh_after_kind_rows(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _panel_world(main)
+	_select(main, [], ids.factory)
+	_queue_kinds(main, ids.factory, ["usa_tank", "usa_tank"])
+	await _frames(runner)
+	var tiles: Array = _tiles(main)
+	runner.check(tiles.size() == 2, "QT12 fixture: two tiles, got %s" % [_tile_ids(main)])
+	if tiles.size() != 2:
+		_end_port(scene)
+		return true
+	var old: Rect2 = (tiles[0] as Control).get_global_rect()
+	_select(main, [ids.tank, ids.collector])
+	await _frames(runner)
+	_move(port, Vector2(old.get_center().x, old.end.y - 8.0))
+	await _frames(runner)
+	runner.check(port.gui_get_hovered_control() != null, "QT12 fixture: the pointer on the kind rows inside the tiles' old rect, got %s" % port.gui_get_hovered_control())
+	_queue_kinds(main, ids.factory, ["usa_light_vehicle"])
+	_select(main, [], ids.factory)
+	await _frames(runner)
+	runner.check(_tile_ids(main) == [[900]] and _shown_text(_tiles(main)[0], "Name") == Registry.kind("usa_light_vehicle").display_name, "QT12 the factory selected again under the pointer shows its new queue, got %s" % [_tile_ids(main)])
+	_end_port(scene)
+	return true
+
 # Past four tiles: three and a muted `+N more` counting the hidden entries, no click, its tooltip listing them.
 func test_queue_more_counts_hidden(runner) -> bool:
 	var scene: Array = await _port_scene(runner)
@@ -1882,7 +1939,7 @@ func test_queue_more_counts_hidden(runner) -> bool:
 	_end_port(scene)
 	return true
 
-# The cell making the entry in production carries the 4 px `you` bar; every cell counts its kind's queued entries.
+# No cell carries a progress bar, only the NOW tile; every cell counts its kind's queued entries.
 func test_cells_count_without_a_bar(runner) -> bool:
 	var scene: Array = await _port_scene(runner)
 	var main = scene[3]
@@ -2899,7 +2956,7 @@ func _panel_world(main) -> Dictionary:
 # [label, selected ids, building, inspected, height, short owner] (spec "Selection panel" table).
 static func _panel_cases(ids: Dictionary) -> Array:
 	return [["one unit", [ids.tank], -1, -1, 62, 0], ["own building", [], ids.depot, -1, 152, 0], ["own offline defence", [], ids.defence, -1, 62, 1],
-		["power plant", [], ids.plant, -1, 86, 0], ["factory", [], ids.factory, -1, 152, 0], ["own site", [], ids.site, -1, 86, 0], ["own paused site", [], ids.paused, -1, 86, 0],
+		["power plant", [], ids.plant, -1, 86, 0], ["factory", [], ids.factory, -1, 152, 0], ["two kinds after the factory", [ids.tank, ids.collector], -1, -1, 98, 0],["own site", [], ids.site, -1, 86, 0], ["own paused site", [], ids.paused, -1, 86, 0],
 		["enemy unit", [], -1, ids.enemy, 62, 0], ["enemy building", [], -1, ids.enemy_building, 62, 0], ["enemy site", [], -1, ids.enemy_site, 86, 0],
 		["allied unit", [], -1, ids.ally, 62, 0], ["allied building", [], -1, ids.ally_building, 62, 0], ["allied site", [], -1, ids.ally_site, 86, 0],
 		["pile", [], -1, ids.pile, 62, 0], ["empty pile", [], -1, ids.empty, 62, 0]]

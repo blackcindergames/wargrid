@@ -309,7 +309,7 @@ static func _shown_texts(list: Control) -> Array:
 	return list.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
 
 # Written apart from controls(), so dropping a gesture or a qualifier from the table fails here.
-const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "Set the rally point"], ["Right-click", "Cancel the newest queued"], ["Left-click", "right-click cancels"], ["Wheel", "Zoom"], ["Screen edge", "Pan"]]
+const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "Set the rally point"], ["Right-click", "Cancel a unit's newest (on its button; or click its queue tile)"], ["Left-click", "right-click cancels"], ["Wheel", "Zoom"], ["Screen edge", "Pan"]]
 const REQUIRED_WORDS := {"attack_move": "armed units", "last_attack": "your or an ally's base"}
 
 func test_controls_list_shows_every_row(runner) -> bool:
