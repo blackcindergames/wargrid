@@ -344,7 +344,7 @@ func _process(delta: float) -> void:
 	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
 	var presented_at: int = Time.get_ticks_usec()
 	if _present_if_due() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - presented_at
-	var arrows: Vector2 = Vector2.ZERO if _typing() else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	var arrows: Vector2 = Vector2.ZERO if _typing() or menu_open() or input_over() else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	if arrows != Vector2.ZERO: pan_camera(arrows, delta)
 	else: edge_scroll(delta)
 	_view.advance_frame()
@@ -543,6 +543,8 @@ func refuse(text: String, sound: String = "error") -> void:
 		_ensure_sound()
 		_sound.rejected(sound)
 	hud.refuse(text)
+	# A repeat keeps the note's words, so its sound would wait for the peer without a fresh refresh.
+	_shown_note = ""
 
 func _ensure_sound() -> void:
 	if _sound != null: return

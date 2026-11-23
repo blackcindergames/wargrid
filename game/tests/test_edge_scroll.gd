@@ -301,6 +301,11 @@ func test_process_pans_and_arrows_take_precedence(runner) -> bool:
 	start = camera.position
 	main._process(0.016)
 	runner.check(is_equal_approx(camera.position.x - start.x, -400.0 * 0.016), "ES11 Left held at the right edge moves left, got %s" % (camera.position - start))
+	main._pause.open()
+	start = camera.position
+	main._process(0.016)
+	runner.check(camera.position == start, "ES11 Left held behind the open menu holds the camera, as edge scroll does, got %s" % (camera.position - start))
+	main._pause.close()
 	Input.action_release("ui_left")
 	port.free()
 	overlays._end(saved)

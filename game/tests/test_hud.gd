@@ -29,7 +29,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_queue_cap, test_slab_buttons_hold_still, test_slab_queue_toggle_holds_still, test_unload_row_above_the_orders, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -497,6 +497,9 @@ func test_hover_previews_the_purchase(runner) -> bool:
 	runner.check(_delta(main) == "" and tower.get_meta("action") == "", "TS6 the hovered cell turned a well by a selection change ends the preview, got '%s'" % _delta(main))
 	_sub_grid(main, ids.builder)
 	runner.check(_delta(main) == "" and tower.get_meta("action") == "china_defence", "TS6 the sub-grid back under a resting pointer brings no stale preview, got '%s'" % _delta(main))
+	# The factory's Supply Depot, so its unit is refused for nothing and forecasts.
+	Fixture.add_completed(main.driver.pump.live(), 1, "china_supply_center", Vector2i(6, 26))
+	BaseScene.publish(main)
 	_select(main, [], ids.factory)
 	var power: String = _part(main.hud, "TopStrip", "Power").text
 	_cell(main, "china_light_vehicle").mouse_entered.emit()
@@ -623,6 +626,8 @@ func test_strip_holds_while_on_the_card(runner) -> bool:
 	var port: SubViewport = scene[2]
 	var main = scene[3]
 	var ids: Dictionary = _slab_world(runner, main, false, 1500)
+	# The factory then lacks only credits, the one refusal that forecasts.
+	_prerequisites(main)
 	_sub_grid(main, ids.builder)
 	var map := Vector2(900, 200)
 	_move(port, map)
@@ -656,6 +661,44 @@ func test_strip_holds_while_on_the_card(runner) -> bool:
 	BaseScene.new().key(main, KEY_ESCAPE)
 	await _frames(runner)
 	runner.check(main.orders._placement_kind.is_empty() and _strip_now(main) == rest, "TS7 Esc cancels the building: the slabs hug again, got %s rest %s" % [_strip_now(main), rest])
+	port.notify_mouse_entered()
+	_move(port, plant.get_center())
+	await _frames(runner)
+	runner.check(_strip_now(main) == held, "TS7 fixture: back on the card the slabs hold, got %s" % [_strip_now(main)])
+	# As a real window leave: the card gets `mouse_exited`, the mouse position stays on it.
+	port.notify_mouse_exited()
+	await _frames(runner)
+	runner.check(_strip_now(main) == rest, "TS7 the pointer leaving the window from the card lets the slabs hug again, got %s rest %s" % [_strip_now(main), rest])
+	_end_port(scene)
+	return true
+
+# Only a credits shortfall forecasts a refused purchase (TS round B); a missing prerequisite or a full queue previews nothing.
+func test_strip_skips_refused_purchases(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _slab_world(runner, main, false, 1500)
+	_sub_grid(main, ids.builder)
+	_move(port, Vector2(900, 200))
+	await _frames(runner)
+	var rest: Array = _form(main.hud)
+	var factory: Button = _cell(main, "china_factory")
+	_move(port, factory.get_global_rect().get_center())
+	await _frames(runner)
+	runner.check(factory.is_hovered() and (factory.get_meta("blocked") as Dictionary).get("cause") == "prerequisite", "TS7 fixture: the Vehicle Factory lacks its Supply Depot, got %s" % [factory.get_meta("blocked")])
+	runner.check(_form(main.hud) == rest and not _forecasting(main.hud), "TS7 a prerequisite-blocked cell forecasts nothing, got %s rest %s" % [_form(main.hud), rest])
+	Fixture.add_completed(main.driver.pump.live(), 1, "china_supply_center", Vector2i(6, 26))
+	BaseScene.publish(main)
+	_select(main, [], ids.factory)
+	_queue_of(main, ids.factory, 9)
+	_move(port, Vector2(900, 200))
+	await _frames(runner)
+	rest = _form(main.hud)
+	var tank: Button = _cell(main, "china_tank")
+	_move(port, tank.get_global_rect().get_center())
+	await _frames(runner)
+	runner.check(tank.is_hovered() and (tank.get_meta("blocked") as Dictionary).get("cause") == "queue", "TS7 fixture: the factory's queue is full, got %s" % [tank.get_meta("blocked")])
+	runner.check(_form(main.hud) == rest and not _forecasting(main.hud), "TS7 a queue-full cell forecasts nothing, got %s rest %s" % [_form(main.hud), rest])
 	_end_port(scene)
 	return true
 
@@ -2099,6 +2142,14 @@ func test_cell_card_timing(runner) -> bool:
 	clock[0] += 1000
 	main.hud._process(0.0)
 	runner.check(not card.visible, "CC1 a click closes the card until the pointer enters a cell again")
+	plant.mouse_entered.emit()
+	clock[0] += 250
+	main.hud._process(0.0)
+	runner.check(card.visible, "CC1 fixture: the card is open before the reset")
+	main.hud.reset()
+	depot.mouse_entered.emit()
+	main.hud._process(0.0)
+	runner.check(not card.visible, "CC1 after a reset the next cell waits its 250 ms again")
 	main.free()
 	return true
 

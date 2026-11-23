@@ -255,5 +255,8 @@ func test_alert_line_layout(runner) -> bool:
 		runner.check(longer.position.is_equal_approx(Vector2(8, 48)) and longer.size.y == 28.0 and longer.size.x > rect.size.x, "CK9 the allied text keeps the line's place and height and widens it%s, got %s then %s" % [at, rect, longer])
 		for path: String in panels:
 			if path != LINE: runner.check(not longer.intersects(panels[path]), "CK9 the allied line clears %s%s" % [path, at])
+		main.hud.alert("Base under attack")
+		await HudTests._frames(runner)
+		runner.check(HudTests._rect(main, LINE) == rect, "CK9 the shorter text shrinks the line back%s, got %s want %s" % [at, HudTests._rect(main, LINE), rect])
 		port.free()
 	return true

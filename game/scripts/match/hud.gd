@@ -377,7 +377,9 @@ func reset() -> void:
 	_last = []
 	_last_ids = []
 	_counts = {}
-	if _economy != null: read_keys()
+	if _economy != null:
+		end_hover()
+		read_keys()
 
 # hud-v5-layout "Command card": the VBox lays out rows, the Hud pads, fills and edges it.
 func _build_slab() -> void:
@@ -591,6 +593,8 @@ func _show_card(view: Dictionary, cells: Array, selection: Dictionary, seat: int
 	var top: int = HudModel.GRID_KEYS.size()
 	for code: Key in actions: top = mini(top, HudModel.GRID_KEYS.find(code))
 	_card.visible = not actions.is_empty()
+	# A hidden card sends no exit, so the next hover waits again.
+	if not _card.visible: _tip_open = false
 	for cell: Node in _card.get_children():
 		var at: int = cell.get_index()
 		cell.visible = at >= top - top % 4
@@ -699,17 +703,19 @@ func _forecast(slab: PanelContainer, part: String, texts: Array[String], warns: 
 func _strip_held(selection: Dictionary) -> bool:
 	if selection.over: return false
 	if not selection.placement_kind.is_empty(): return true
-	if _card == null or not _card.is_visible_in_tree() or not _card.get_global_rect().has_point(_card.get_global_mouse_position()): return false
+	# The mouse position outlives a window leave; the hovered control does not.
+	if _card == null or not _card.is_visible_in_tree() or _card.get_viewport().gui_get_hovered_control() == null or not _card.get_global_rect().has_point(_card.get_global_mouse_position()): return false
 	return _card.get_children().any(func(cell: Control) -> bool: return cell.visible and _forecasts(cell.get_meta("action")))
 
 static func _forecasts(action: String) -> bool:
 	return not action.is_empty() and not HudModel.COMMANDS.has(action)
 
-# Only an item cell previews; a command cell under the pointer previews nothing.
+# Only an item cell previews; of the refused ones only a credits shortfall does (TS round B), never a missing prerequisite or a full queue.
 func _hovered_kind() -> String:
 	if _hovered_cell == null: return ""
 	var action: String = _hovered_cell.get_meta("action")
-	return action if _forecasts(action) else ""
+	var cause: String = (_hovered_cell.get_meta("blocked", {}) as Dictionary).get("cause", "")
+	return action if _forecasts(action) and cause in ["", "credits"] else ""
 
 func _tint(label: Label, text: String, warn: bool) -> void:
 	label.text = text
@@ -725,6 +731,9 @@ func _paint(label: Label, token: StringName) -> void:
 
 func end_hover() -> void:
 	_hovered_cell = null
+	_tip_open = false
+	_tip_since = -1
+	_show_hint()
 	_show_cell_card()
 
 func _hover_cell(cell: Button, entered: bool) -> void:

@@ -9,6 +9,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const SoundDirector = preload("res://scripts/presentation/sound_director.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
 const BUILDER_LOST: String = "Builder lost"
+const GROUPS_UNITS_ONLY: String = "Groups hold units only"
 
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
@@ -133,7 +134,7 @@ func view_selection() -> Array[int]:
 func is_selecting() -> bool:
 	return _selecting
 
-# Every unmodified grid key is the card's: it presses the cell shown under it, else nothing; never during a drag.
+# Every grid key without Ctrl, Cmd or Alt is the card's (Shift too, so a held Shift never eats a press): it presses the cell shown under it, else nothing; never during a drag.
 func _card_key(event: InputEvent) -> bool:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo or not HudModel.GRID_KEYS.has(key.physical_keycode): return false
@@ -169,7 +170,10 @@ func _camera_key(event: InputEvent) -> bool:
 func _save_group(slot: int) -> void:
 	if not selected_ids.is_empty(): groups.save(slot, selected_ids)
 	elif selected_building_id == -1 and inspected_id == -1: groups.clear(slot)
-	else: return
+	else:
+		# Without a line a veteran reads the key as broken (PX F6).
+		if selected_building_id != -1: _screen.refuse(GROUPS_UNITS_ONLY, "")
+		return
 	_report_group(slot)
 
 func _add_to_group(slot: int) -> void:
@@ -305,7 +309,8 @@ func answered(answer: Dictionary) -> void:
 	_awaiting_build = ""
 	var online: bool = _screen.driver.closes_placement_on_click()
 	if answer.ok and not online: _clear_placement()
-	elif not answer.ok and online and not _awaiting_from.is_empty() and _unit(_awaiting_from[0]).is_empty(): _screen.refuse(BUILDER_LOST, "")
+	# The drained view, not the shown one: the builder may have died in a tick drained with this answer.
+	elif not answer.ok and online and not _awaiting_from.is_empty() and _screen.driver.current().view.units.index_of(_awaiting_from[0]) == -1: _screen.refuse(BUILDER_LOST, "")
 	# A gesture begun since the click keeps its release; reopening would turn it into a build.
 	elif not answer.ok and online and not busy() and [_builder(), gestures] == _awaiting_from: _enter_placement(kind)
 	# Set after the reopen, whose own repaint would otherwise spend it before the view that shows the builder gone.

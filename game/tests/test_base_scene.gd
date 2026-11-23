@@ -45,7 +45,7 @@ static func sized_port(runner, window: Vector2i, logical: Vector2i) -> SubViewpo
 	return port
 
 func cases() -> Array[Callable]:
-	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_red_answer_elsewhere_does_not_block,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_f23_placement_closes_when_builder_dies,test_f23_builder_dies_in_the_click_step,test_f23_builder_lost_after_an_earlier_refusal,test_ghost_funds_refusal_clicks_each_time,test_f33_red_ghost_refused_after_a_two_step_frame,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
+	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_red_answer_elsewhere_does_not_block,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_f23_placement_closes_when_builder_dies,test_f23_builder_dies_in_the_click_step,test_f23_builder_lost_after_an_earlier_refusal,test_ghost_funds_refusal_clicks_each_time,test_f33_red_ghost_refused_after_a_two_step_frame,test_preview_once_per_physics_step,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
 
 func _m3_world() -> Simulation:
 	var sim: Simulation = Fixture.make_world()
@@ -602,6 +602,24 @@ func test_f33_red_ghost_refused_after_a_two_step_frame(runner) -> bool:
 	pointer(main,cell,MOUSE_BUTTON_LEFT,false)
 	var answer: Dictionary = main.driver.preview_answer()
 	runner.check(main.driver.queued().is_empty() and answer.get("tick",-1) == main.shown_state.tick and not answer.get("ok",true) and main.hud.refusal == answer.get("error",""),"F33 a click on a still red ghost after a two-step frame is refused on the spot, held %d, tick %d, answer %s" % [main.driver.queued().size(), main.shown_state.tick, main.driver.preview_answer()])
+	main.free()
+	return true
+
+# The armed preview runs once per physics step, so a slow frame pays it up to max_physics_steps_per_frame times (guide 12).
+func test_preview_once_per_physics_step(runner) -> bool:
+	var main = await _placing(runner)
+	var sim = main.driver.pump.live()
+	Fixture.add_completed(sim,1,"usa_barracks",Vector2i(6,10))
+	Fixture.add_completed(sim,1,"usa_barracks",Vector2i(10,10))
+	publish(main)
+	hover(main,Iso.world_to_plane(Vector2(8.25,10.25)))
+	var first: int = sim.navigation_builds()
+	tick(main)
+	runner.check(sim.navigation_builds() == first + 1,"PV1 fixture: a Power Plant closing the gap between two barracks needs a full grid, got %d builds" % (sim.navigation_builds() - first))
+	var before: int = sim.navigation_builds()
+	for i in 4: main._physics_process(1.0 / 30.0)
+	main._drain_notes()
+	runner.check(sim.navigation_builds() - before == 4,"PV1 four physics steps and one drain cost four previews, got %d" % (sim.navigation_builds() - before))
 	main.free()
 	return true
 
