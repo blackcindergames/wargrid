@@ -1540,7 +1540,7 @@ func test_input_script_online(runner) -> bool:
 	helper.pointer(main, corners[1], MOUSE_BUTTON_LEFT, false)
 	step.call(1, 3)
 	runner.check(main.orders.selected_ids.has(3), "IC2 step 1 took effect")
-	helper.pointer(main, Iso.world_to_plane(Vector2(12.5, 18.5)), MOUSE_BUTTON_RIGHT, true)
+	helper.right_click(main, Iso.world_to_plane(Vector2(12.5, 18.5)))
 	step.call(2, 3)
 	runner.check(commands.call("move") == 1, "IC2 step 2 took effect")
 	helper.key(main, KEY_S)
@@ -1704,7 +1704,7 @@ func test_sb2_online_refusal_after_a_later_gesture(runner) -> bool:
 			main.orders.arm_attack_move()
 			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
 			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false),
-		"a right-click move": func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true),
+		"a right-click move": func() -> void: helper.right_click(main, ground),
 		"a blocked Supply Depot press": func() -> void: helper.build_key(main, "usa_supply_center"),
 		"a recall of a group holding just this builder": func() -> void: helper.key(main, KEY_1),
 		"Esc, then the same builder again": func() -> void:

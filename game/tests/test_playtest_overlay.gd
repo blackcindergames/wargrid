@@ -986,6 +986,9 @@ func test_world_click_releases_field(runner) -> bool:
 		click.button_index = MOUSE_BUTTON_RIGHT
 		click.pressed = true
 		main._unhandled_input(click)
+		var release: InputEventMouseButton = click.duplicate()
+		release.pressed = false
+		main._unhandled_input(release)
 		runner.check(main.get_viewport().gui_get_focus_owner() == null and PlaytestSession.current.data.matches[0].markers[0].comment == "clicked", "PO25 a right click on the ground releases and saves the field, focus %s" % main.get_viewport().gui_get_focus_owner())
 		runner.check(_pending(main, "move") == 1, "PO25 the same click sends the move")
 		main.orders.selected_ids.assign([main.driver.pump.live().spawn(main.local_player, target, "usa_tank")])

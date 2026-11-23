@@ -36,6 +36,7 @@ const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const View = preload("res://scripts/presentation/world_view.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
+const MousePan = preload("res://scripts/match/mouse_pan.gd")
 
 var refusal: String = ""
 var now_msec: Callable = Time.get_ticks_msec
@@ -44,6 +45,7 @@ var _economy: VBoxContainer
 var _card: GridContainer
 var _well: StyleBoxFlat
 var _cell_queue: Array = []
+var _cell_press: Vector2
 var _cancel_build: Button
 var _top_strip: HBoxContainer
 var _credits_slab: PanelContainer
@@ -694,10 +696,14 @@ func _show_queued(cell: Button) -> void:
 	var action: String = cell.get_meta("action")
 	_show_count(cell.get_node("Count") as Label, _cell_queue.filter(func(entry: Dictionary) -> bool: return entry.kind == action).size(), 1)
 
-# OpenRA's right-click (user, 2026-11-21): cancels the newest entry of the cell's kind; none queued, nothing sent.
+# OpenRA's right-click (user, 2026-11-21), on release as every right-click (P17): cancels the newest entry of the cell's kind; none queued, nothing sent.
 func _cell_input(event: InputEvent, cell: Button) -> void:
 	var click := event as InputEventMouseButton
-	if click == null or click.button_index != MOUSE_BUTTON_RIGHT or not click.pressed: return
+	if click == null or click.button_index != MOUSE_BUTTON_RIGHT: return
+	if click.pressed:
+		_cell_press = click.position
+		return
+	if click.position.distance_to(_cell_press) > MousePan.SLOP: return
 	var id: int = HudModel.newest_of_kind(_cell_queue, cell.get_meta("action"))
 	if id != -1: entry_cancelled.emit(id)
 

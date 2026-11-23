@@ -8,6 +8,7 @@ const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.g
 const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const Orders = preload("res://scripts/match/orders.gd")
+const MousePan = preload("res://scripts/match/mouse_pan.gd")
 const Hud = preload("res://scripts/match/hud.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const ResultPanel = preload("res://scripts/match/result_panel.gd")
@@ -28,8 +29,6 @@ const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 const EDGE_BAND: float = 3.0
 const EDGE_STEP_MAX: float = 0.05
-# shortcut: on Windows screen_get_max_scale() is 1, so this is 40 physical px (thin on a 200 % display), scale by the window's DPI if Windows players miss it.
-const OUTSIDE_MARGIN: float = 40.0
 # Zero Hour snaps (View::lookAt); the owner found the snap disorienting (user, 2026-11-23).
 const GLIDE_MIN_SECONDS: float = 0.15
 const GLIDE_MAX_SECONDS: float = 0.45
@@ -43,6 +42,7 @@ static var starts: Array[int] = []
 static var match_seed: int = 0
 var driver: RefCounted
 var orders: RefCounted = Orders.new(self)
+var mouse_pan: RefCounted = MousePan.new(self)
 var hud: Hud
 var local_player: int = 1
 var view_player: int = 1
@@ -156,6 +156,7 @@ func _enter_tree() -> void:
 	ViewCaps.apply(get_tree().root)
 
 func _exit_tree() -> void:
+	mouse_pan.drop()
 	orders._set_attack_move(false)
 	driver.detach()
 	ViewCaps.release(get_tree().root)
@@ -267,7 +268,9 @@ func _notification(what: int) -> void:
 		NOTIFICATION_WM_CLOSE_REQUEST:
 			if not _playtest.web: close_match(true) # web files at the next launcher open instead
 		NOTIFICATION_WM_MOUSE_EXIT: _pointer_in = false
-		NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_FOCUS_OUT: _focused = false
+		NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_FOCUS_OUT:
+			_focused = false
+			mouse_pan.drop()
 		NOTIFICATION_WM_WINDOW_FOCUS_IN, NOTIFICATION_APPLICATION_FOCUS_IN: _focused = true
 
 func _change_scene(path: String) -> void:
@@ -277,6 +280,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouse:
 		_pointer = event.position
 		_pointer_in = get_viewport().get_visible_rect().has_point(event.position)
+	mouse_pan.follow(event)
 	if event is InputEventMouse and not _pointer_in: _off_picture = event
 	elif event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event) # a STOP panel takes motion before `_unhandled_input`: the drag box keeps up and the hover clears
 	if not (event is InputEventKey and event.pressed and not event.echo): return
@@ -362,6 +366,7 @@ func _process(delta: float) -> void:
 	if _present_if_due() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - presented_at
 	var arrows: Vector2 = Vector2.ZERO if _typing() or menu_open() or input_over() else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	if arrows != Vector2.ZERO: pan_camera(arrows, delta)
+	elif mouse_pan.anchoring() and not menu_open() and not input_over() and not orders.is_selecting(): _pan_by(mouse_pan.anchor_offset() * minf(delta, EDGE_STEP_MAX))
 	else: edge_scroll(delta)
 	glide_camera(delta)
 	_view.advance_frame()
@@ -391,8 +396,16 @@ func _auto_sample(frame_ms: float) -> void:
 func pan_camera(direction: Vector2, delta: float) -> void:
 	if orders.is_selecting() or direction == Vector2.ZERO:
 		return
+	_pan_by(direction.normalized() * 400.0 * delta)
+
+func _pan_by(canvas: Vector2) -> void:
 	_glide_left = 0.0
-	_move_camera(_camera.position + direction.normalized() * 400.0 * delta / _camera.zoom.x)
+	_move_camera(_camera.position + canvas / _camera.zoom.x)
+
+func grab_camera(step: Vector2) -> void:
+	if menu_open() or input_over() or orders.is_selecting(): return
+	_glide_left = 0.0
+	_move_camera(_camera.position + step)
 
 func edge_scroll(delta: float) -> void:
 	pan_camera(edge_direction(), minf(delta, EDGE_STEP_MAX))
@@ -404,17 +417,17 @@ func edge_direction() -> Vector2:
 	var view: Rect2 = get_viewport().get_visible_rect()
 	return Vector2(_edge_sign(_pointer.x, view.position.x, view.end.x), _edge_sign(_pointer.y, view.position.y, view.end.y))
 
-# A windowed pointer slides out past the band; just outside the window keeps panning (user, 2026-11-23).
+# A windowed pointer slides out past the band; outside a focused window keeps panning at any distance, as Warzone 2100 (user, 2026-11-23).
 # Godot 4.7.2 on macOS and Windows gives these in one screen space: content rect, frame with title bar, pointer.
 func _outside_probe() -> Vector2:
 	if DisplayServer.get_name() == "headless": return Vector2.ZERO
 	var window := Rect2(DisplayServer.window_get_position(), DisplayServer.window_get_size())
 	var frame := Rect2(DisplayServer.window_get_position_with_decorations(), DisplayServer.window_get_size_with_decorations())
-	return outside_direction(DisplayServer.mouse_get_position(), window, frame, get_viewport().get_visible_rect().size, OUTSIDE_MARGIN * DisplayServer.screen_get_max_scale())
+	return outside_direction(DisplayServer.mouse_get_position(), window, frame, get_viewport().get_visible_rect().size)
 
 # The frame is the player's to drag and close; past a stretch-cap bar (more than one picture px wide) that axis holds, as the bar does (3-26).
-static func outside_direction(pointer: Vector2, window: Rect2, frame: Rect2, picture: Vector2, margin: float) -> Vector2:
-	if window.has_point(pointer) or frame.has_point(pointer) or not window.grow(margin).has_point(pointer): return Vector2.ZERO
+static func outside_direction(pointer: Vector2, window: Rect2, frame: Rect2, picture: Vector2) -> Vector2:
+	if window.has_point(pointer) or frame.has_point(pointer): return Vector2.ZERO
 	var bars: Vector2 = window.size / minf(window.size.x / picture.x, window.size.y / picture.y) - picture
 	var beyond: Vector2 = (pointer - pointer.clamp(window.position, window.end - Vector2.ONE)).sign()
 	return Vector2(0.0 if bars.x > 1.0 else beyond.x, 0.0 if bars.y > 1.0 else beyond.y)
@@ -469,6 +482,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var click := event as InputEventMouseButton
 	if click != null and click.pressed and click.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT] and _typing() and not _playtest.holds_match(): get_viewport().gui_release_focus()
+	if not input_over() and not menu_open() and mouse_pan.take(event): return
 	orders.handle(event)
 
 func _refresh() -> void:

@@ -158,6 +158,7 @@ func test_bars_take_no_clicks(runner) -> bool:
 	runner.check(not before.is_empty() and main.orders.selected_ids == before and main.driver.queued().size() == queued, "ST6 a left and a right click in the bar of a 3840x1080 window change no selection and queue nothing, got %s, %d queued" % [main.orders.selected_ids, main.driver.queued().size() - queued])
 	main.orders.selected_ids.assign(before)
 	_window_click(root, Vector2(1920, 300), MOUSE_BUTTON_RIGHT, true)
+	_window_click(root, Vector2(1920, 300), MOUSE_BUTTON_RIGHT, false)
 	runner.check(main.driver.queued().size() == queued + 1, "ST6 fixture: a right-click inside the picture reaches the map")
 	var to_world: Transform2D = main.get_node("WorldView").get_global_transform_with_canvas().affine_inverse()
 	var spawned: Array[int] = []
