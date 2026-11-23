@@ -1770,7 +1770,7 @@ func test_queue_tile_click_cancels_newest_of_run(runner) -> bool:
 	_end_port(scene)
 	return true
 
-# A unit finishing between hover and click: the click sends the tile's stored entry and the simulation refuses it, never another entry.
+# A unit finishing under the pointer: NOW and the bar move to the next entry's tile; the emptied tile offers no cancel, never another entry.
 func test_queue_tiles_keep_entry_ids(runner) -> bool:
 	var scene: Array = await _port_scene(runner)
 	var port: SubViewport = scene[2]
@@ -1790,18 +1790,21 @@ func test_queue_tiles_keep_entry_ids(runner) -> bool:
 	for step in 2000:
 		if _sim_queue(main, ids.factory).size() < 3: break
 		sim.step()
+	for step in 60: sim.step()
 	BaseScene.publish(main)
 	await _frames(runner)
 	runner.check(_sim_queue(main, ids.factory) == [queue[1], queue[2]], "QT3 fixture: the unit in production finished under the pointer, got %s" % [_sim_queue(main, ids.factory)])
-	runner.check(_tile_ids(main) == [[queue[0]], [queue[1], queue[2]]], "QT3 the tiles keep their stored entries while the pointer is on them, got %s" % [_tile_ids(main)])
-	var credits: int = _own_credits(main)
-	_click_in(port, _centre(_tiles(main)[0]))
-	var sent: Array = _queued(main, "cancel_production")
-	runner.check(sent.size() == 1 and sent[0].production_id == queue[0], "QT3 a click on the finished NOW tile sends its own entry %d, never the next, got %s" % [queue[0], sent])
-	BaseScene.tick(main)
-	await _frames(runner)
-	runner.check(main.hud.refusal == "Missing production entry" and _sim_queue(main, ids.factory) == [queue[1], queue[2]] and _own_credits(main) == credits, "QT3 the simulation refuses it: Missing production entry, both entries kept, no refund, got '%s' %s" % [main.hud.refusal, _sim_queue(main, ids.factory)])
-	_click_in(port, _centre(_tiles(main)[1]))
+	runner.check(_tile_ids(main) == [[], [queue[1], queue[2]]], "QT3 the tiles hold their places; the finished one keeps no entry, got %s" % [_tile_ids(main)])
+	var gone: Button = _tiles(main)[0]
+	var next: Button = _tiles(main)[1]
+	var producing: Dictionary = HudModel.building(main.driver.current().view, ids.factory).queue[0]
+	var fraction: float = float(producing.work) / (Economy.unit(producing.kind).ticks * 1000)
+	var bar: ColorRect = next.get_node("Track/Bar")
+	runner.check(fraction > 0.0 and next.get_node("Now").is_visible_in_tree() and next.get_node("Track").is_visible_in_tree() and is_equal_approx(bar.anchor_right, fraction), "QT3 NOW and the bar follow the entry in production to the next tile at %.3f, got %s %.3f" % [fraction, next.get_node("Now").is_visible_in_tree(), bar.anchor_right])
+	runner.check(not gone.get_node("Now").is_visible_in_tree() and not gone.get_node("Track").is_visible_in_tree() and gone.disabled and _shown_text(gone, "Chip") != "×" and gone.tooltip_text.is_empty(), "QT3 the hovered, emptied tile drops NOW, its bar and its ×, got chip '%s'" % _shown_text(gone, "Chip"))
+	_click_in(port, _centre(gone))
+	runner.check(_queued(main, "cancel_production").is_empty(), "QT3 a click on the emptied tile sends no cancel, got %s" % [_queued(main, "cancel_production")])
+	_click_in(port, _centre(next))
 	runner.check(_queued(main, "cancel_production").back().production_id == queue[2], "QT3 a click on the run's tile cancels its stored newest entry %d" % queue[2])
 	_end_port(scene)
 	return true
@@ -1826,13 +1829,13 @@ func test_queue_tiles_hold_under_pointer(runner) -> bool:
 	HudModel.building(view, ids.factory).queue = [{"id": 901, "kind": MEDIUM, "paid_cost": 800, "work": 3000}, {"id": 902, "kind": ROTARY, "paid_cost": 800, "work": 0}, {"id": 903, "kind": ROTARY, "paid_cost": 800, "work": 0}]
 	main._show(view)
 	await _frames(runner)
-	runner.check(_tile_ids(main) == [[900], [901], [902]] and _rects(_tiles(main)) == rects and _shown_text(_tiles(main)[2], "Count") == "", "QT4 a finished unit and a new one under the pointer: the three tiles hold, got %s" % [_tile_ids(main)])
+	runner.check(_tile_ids(main) == [[], [901], [902]] and _rects(_tiles(main)) == rects and _shown_text(_tiles(main)[2], "Count") == "", "QT4 a finished unit and a new one under the pointer: the three tiles hold, got %s" % [_tile_ids(main)])
 	_move(port, _centre(tiles[2]))
 	await _frames(runner)
-	runner.check(_tile_ids(main) == [[900], [901], [902]], "QT4 moving to the next tile keeps the hold")
+	runner.check(_tile_ids(main) == [[], [901], [902]], "QT4 moving to the next tile keeps the hold")
 	_move(port, Vector2((tiles[1] as Control).get_global_rect().end.x + 2.0, _centre(tiles[1]).y))
 	await _frames(runner)
-	runner.check(_tile_ids(main) == [[900], [901], [902]], "QT4 the gap between two tiles keeps the hold")
+	runner.check(_tile_ids(main) == [[], [901], [902]], "QT4 the gap between two tiles keeps the hold")
 	_move(port, Vector2(900, 200))
 	await _frames(runner)
 	runner.check(_tile_ids(main) == [[901], [902, 903]] and _shown_text(_tiles(main)[1], "Count") == "×2", "QT4 the pointer left the row, no new view: the tiles regroup, got %s" % [_tile_ids(main)])

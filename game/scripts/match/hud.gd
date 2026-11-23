@@ -913,6 +913,10 @@ func _fill_tile(tile: Button, run: Dictionary, producing: Dictionary) -> void:
 	if not tile.is_hovered(): (tile.get_node("Chip") as Label).text = tile.get_meta("key")
 	tile.tooltip_text = "Cancel · refunds %d" % run.refund
 	_show_count(tile.get_node("Count") as Label, run.ids.size(), 2)
+	_mute_tile(tile, false)
+	_mark_now(tile, producing)
+
+func _mark_now(tile: Button, producing: Dictionary) -> void:
 	(tile.get_node("Now") as Control).visible = not producing.is_empty()
 	(tile.get_node("Track") as Control).visible = not producing.is_empty()
 	if not producing.is_empty(): _show_progress(tile.get_node("Track/Bar") as ColorRect, producing, _panel_style.border_color)
@@ -928,16 +932,27 @@ func _fill_more(runs: Array) -> void:
 	(_queue_more.get_node("Count") as Label).text = "+%d" % count
 	_queue_more.tooltip_text = "\n".join(lines)
 
-# Held under the pointer: no tile moves; each keeps its entries still queued, or its last, whose cancel the simulation refuses.
+# Held under the pointer: no tile moves; each keeps its entries still queued, NOW follows the entry in production, an emptied tile mutes.
 func _keep_tiles(queue: Array) -> void:
 	var queued: Array = queue.map(func(entry: Dictionary) -> int: return entry.id)
 	for i in HudModel.QUEUE_TILES:
 		var tile: Button = _queue.get_child(i)
+		if not tile.visible: continue
 		var live: Array = Array(tile.get_meta("ids")).filter(func(id: int) -> bool: return queued.has(id))
-		if not tile.visible or live.is_empty(): continue
 		tile.set_meta("ids", live)
 		_show_count(tile.get_node("Count") as Label, live.size(), 2)
-		if i == 0 and live.has(queue[0].id): _show_progress(tile.get_node("Track/Bar") as ColorRect, queue[0], _panel_style.border_color)
+		_mute_tile(tile, live.is_empty())
+		_mark_now(tile, queue[0] if not queue.is_empty() and live.has(queue[0].id) else {})
+
+# As a held kind row: muted, with no cancel to offer.
+func _mute_tile(tile: Button, muted: bool) -> void:
+	if tile.disabled == muted: return
+	tile.disabled = muted
+	tile.mouse_default_cursor_shape = CURSOR_ARROW if muted else CURSOR_POINTING_HAND
+	if muted: tile.tooltip_text = ""
+	if muted: tile.get_node("Name").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	else: tile.get_node("Name").remove_theme_color_override("font_color")
+	_hover_tile(tile, tile.is_hovered())
 
 # The newest stored entry of the run, so the older ones keep their order; never another entry.
 func _cancel_tile(tile: Button) -> void:
@@ -946,6 +961,7 @@ func _cancel_tile(tile: Button) -> void:
 
 func _hover_tile(tile: Button, hovered: bool) -> void:
 	var mark: Label = tile.get_node("Chip")
+	hovered = hovered and not tile.disabled
 	mark.text = "×" if hovered else str(tile.get_meta("key", ""))
 	if hovered: mark.add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
 	else: mark.remove_theme_color_override("font_color")
