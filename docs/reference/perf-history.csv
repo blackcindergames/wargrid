@@ -1774,3 +1774,37 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-23,3e660f25,P2.3b,dev,tick_frame,hud_select_1280x720,3,1.686,1.738,,tick-frame,2.41,log sha256:5d978fbebd41
 2026-11-23,3e660f25,P2.3b,dev,frame_interval,hud_select_2560x1080,4,3.418,4.486,,P1,2.41,log sha256:a7e20e09cdc1
 2026-11-23,3e660f25,P2.3b,dev,tick_frame,hud_select_2560x1080,4,1.504,1.568,,tick-frame,2.41,log sha256:a7e20e09cdc1
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,movement_tick,open,1,0.805,0.915,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,movement_tick,dense,1,0.788,0.912,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,open,1,1.915,2.253,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,dense,1,1.871,2.178,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,contact,1,1.196,1.545,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,skirmish3v3,1,1.352,1.46,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,transports,1,1.252,1.451,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,defences,1,1.122,2.375,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,docks,1,0.608,0.687,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,hordes300,1,3.0,3.521,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,ramp,1,0.66,1.231,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,combat_tick,frc,1,0.891,1.079,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,lockstep_overhead,contact,1,0.016,0.066,,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,movement_open:profile,1,,,1.3087,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,movement_dense:profile,1,,,1.3079,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,combat_contact:profile,1,,,0.3333,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5329,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,combat_open:profile,1,,,0.8995,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,skirmish_match:profile,1,,,0.2736,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,large_196:profile,1,,,1.7032,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,combat_dense:profile,1,,,0.7848,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,combat_hordes300:profile,1,,,1.9368,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,team_match:profile,1,,,1.1323,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,plumbing,team_match_pump:profile,1,,,1.1331,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,team_tick,team_match:profile,1,3.249,,1.5811,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,auto aa00b2cf,dev,step,team_match:profile,1,2.677,,1.4264,P1,1.55,log sha256:769205458874
+2026-11-23,aa00b2cf,P2.3b merge,dev,frame_interval,open,1,0.505,3.07,,P1,2.57,log sha256:cd51e525a574
+2026-11-23,aa00b2cf,P2.3b merge,dev,tick_frame,open,1,2.516,2.66,,tick-frame,2.57,log sha256:cd51e525a574
+2026-11-23,aa00b2cf,P2.3b merge,dev,frame_interval,dense,1,2.152,3.747,,P1,2.57,log sha256:cd51e525a574
+2026-11-23,aa00b2cf,P2.3b merge,dev,tick_frame,dense,1,2.222,2.367,,tick-frame,2.57,log sha256:cd51e525a574
+2026-11-23,aa00b2cf,P2.3b merge,dev,frame_interval,ashfall,1,2.915,4.278,,P1,2.57,log sha256:cd51e525a574
+2026-11-23,aa00b2cf,P2.3b merge,dev,tick_frame,ashfall,1,2.275,2.423,,tick-frame,2.57,log sha256:cd51e525a574
+2026-11-23,aa00b2cf,P2.3b merge,dev,frame_interval,horde,1,0.762,4.777,,P1,2.57,log sha256:cd51e525a574
+2026-11-23,aa00b2cf,P2.3b merge,dev,tick_frame,horde,1,5.192,5.571,,tick-frame,2.57,log sha256:cd51e525a574
