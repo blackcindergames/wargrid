@@ -1,4 +1,20 @@
 [
+ {"id": "p16-factory", "title": "Know what your factory is making",
+  "new": ["Select a factory: NOW PRODUCING shows the unit, its bar and the seconds left; NEXT shows what comes after it, with repeats merged as ×N; +N more lists the rest. QUEUE n / 9 says how full it is.", "Click or right-click NOW PRODUCING to cancel that unit. Right-click a unit's button to cancel the last one of that kind. Hold Shift to queue or cancel five.", "Slow or stuck production says why: the seconds turn red under low power, and NOW reads Exit blocked when the unit cannot get out.", "The top right shows one chip per producer: click to select it, double-click to go there. F7 (fn+F7 on a Mac keyboard) switches the chip bars between flat and upright.", "Every unit button has a picture now, and the $ coin is gone: a cost you cannot afford is red."],
+  "try": [
+   {"id": "read", "text": "Queue a mix at one factory, look away for 30 seconds, then select it. Can you say within a few seconds what it makes, roughly when, what is next and how many wait?", "trigger": "produce"},
+   {"id": "shift", "text": "Hold Shift and click a unit's button to queue five, then Shift-right-click it to cancel five", "trigger": "produce"},
+   {"id": "cancel", "text": "Cancel the unit in production by clicking NOW PRODUCING, and one queued unit by right-clicking its button", "trigger": "cancel_production"},
+   {"id": "strip", "text": "With two or more producers busy, click a chip at the top right, then double-click another"},
+   {"id": "bars", "text": "Press F7 a few times on a busy base and compare the flat and upright bars"},
+   {"id": "stuck", "text": "Let power run low while a factory works, and read the NOW row"}
+  ],
+  "questions": [
+   {"id": "read_fast", "text": "I could tell at a glance what my factory was making and what came next"},
+   {"id": "cancel_ok", "text": "I never cancelled something by accident"},
+   {"id": "strip_useful", "text": "The chips at the top right helped me keep my producers busy"},
+   {"id": "bars_pick", "text": "I preferred the flat bars over the upright ones"}
+  ]},
  {"id": "p2.3b-slice", "title": "Build from the dock",
   "new": ["The build buttons now sit in a card at the bottom right. Select your builder, press Q or click Build, then pick a building. Each button shows its key in the corner: Q Power Plant (USA or China; FRC has no Power Plant), E Barracks.", "V or the Back button leaves the build grid. Esc does too. Esc backs out one step at a time: a placement first, then the build grid, then your selection, then the menu.", "A factory's card has the units to queue, each on its own key.", "You start with your builder already selected.", "W A S D no longer pan the map. Use the arrow keys.", "The top strip is two small boxes, credits and power. Point at something and the numbers it changes show an arrow and what you would have after it. If you cannot afford it, the number goes below zero in red.", "A producer's panel shows its queue as tiles; click one to cancel, or right-click the unit's button.", "H and Space glide to the HQ or the last attack; in a window, edge scroll keeps going just past the edge."],
   "try": [
