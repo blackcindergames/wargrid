@@ -10,7 +10,7 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const Skirmish = preload("res://scenes/skirmish.tscn")
 
 func cases() -> Array[Callable]:
-	return [test_band_pans_at_every_edge_over_a_panel, test_band_is_three_pixels_of_the_picture, test_picture_rect_at_3440, test_no_focus_no_pan, test_pointer_exit_stops_the_pan, test_drag_box_holds_the_camera, test_placement_pans_with_the_ghost_under_the_pointer, test_h_in_placement_reruns_the_preview, test_step_is_capped, test_menu_and_result_hold_the_camera]
+	return [test_process_pans_and_arrows_take_precedence, test_resize_drops_the_cached_pointer, test_band_pans_at_every_edge_over_a_panel, test_band_is_three_pixels_of_the_picture, test_picture_rect_at_3440, test_no_focus_no_pan, test_pointer_exit_stops_the_pan, test_drag_box_holds_the_camera, test_placement_pans_with_the_ghost_under_the_pointer, test_h_in_placement_reruns_the_preview, test_step_is_capped, test_menu_and_result_hold_the_camera]
 
 # A port with a builder and buildings, the camera mid-map, and the pointer entered but not yet moved.
 func _scene(runner, overlays, size: Array) -> Array:
@@ -112,10 +112,10 @@ func test_picture_rect_at_3440(runner) -> bool:
 	runner.check(_step(main) == Vector2.ZERO, "ES3 eight logical pixels inside the picture does not pan")
 	motion.position = Vector2(view.end.x + 40.0, 300)
 	main._input(motion)
-	runner.check(_step(main).x > 0.0, "ES3 a pointer in a bar past the picture counts as at its edge, pans right")
+	runner.check(_step(main) == Vector2.ZERO, "ES3 a pointer in a bar past the picture does not pan")
 	motion.position = Vector2(-40.0, 300)
 	main._input(motion)
-	runner.check(_step(main).x < 0.0, "ES3 a pointer in the left bar pans left")
+	runner.check(_step(main) == Vector2.ZERO, "ES3 a pointer in the left bar does not pan")
 	port.free()
 	overlays._end(saved)
 	return true
@@ -150,6 +150,12 @@ func test_pointer_exit_stops_the_pan(runner) -> bool:
 	runner.check(_step(main) == Vector2.ZERO, "ES5 the pointer leaving the window stops the pan")
 	SkirmishTests._push_move(port, Vector2(1279.0, 300))
 	runner.check(_step(main).x > 0.0, "ES5 the next motion inside resumes it")
+	main.notification(Node.NOTIFICATION_WM_MOUSE_EXIT)
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.position = Vector2(1400.0, 300)
+	main._input(release)
+	runner.check(_step(main) == Vector2.ZERO, "ES5 a captured release outside the window after the exit does not pan")
 	port.free()
 	overlays._end(saved)
 	return true
@@ -184,7 +190,7 @@ func test_placement_pans_with_the_ghost_under_the_pointer(runner) -> bool:
 	var before: Vector2i = main.orders._preview_origin
 	var moved: Vector2 = Vector2.ZERO
 	for frame in 8: moved += _step(main, 0.05)
-	var under := Vector2i(Iso.plane_to_world(main.get_node("WorldView").get_local_mouse_position()).floor())
+	var under := Vector2i(SkirmishTests._world_at(main, Vector2(1279.0, 300)).floor())
 	runner.check(moved.x > 0.0, "ES7 the right edge pans during placement, got %s" % moved)
 	runner.check(main.orders._preview_origin == under and under != before, "ES7 the ghost is re-run under the pointer, wanted %s (was %s), got %s" % [under, before, main.orders._preview_origin])
 	runner.check(main.orders._placement_kind == "china_power_plant", "ES7 placement stays armed")
@@ -207,7 +213,7 @@ func test_h_in_placement_reruns_the_preview(runner) -> bool:
 	main.orders.camera_moved()
 	var before: Vector2i = main.orders._preview_origin
 	BaseScene.new().key(main, KEY_H)
-	var under := Vector2i(Iso.plane_to_world(main.get_node("WorldView").get_local_mouse_position()).floor())
+	var under := Vector2i(SkirmishTests._world_at(main, Vector2(640.0, 360.0)).floor())
 	runner.check(main.orders._preview_origin == under and under != before, "ES8 H in placement re-runs the preview under the pointer, wanted %s (was %s), got %s" % [under, before, main.orders._preview_origin])
 	runner.check(main.orders._placement_kind == "china_power_plant", "ES8 placement stays armed after H")
 	port.free()
@@ -240,6 +246,50 @@ func test_menu_and_result_hold_the_camera(runner) -> bool:
 	runner.check(_step(main) == Vector2.ZERO, "ES10 the open menu holds the camera")
 	main._pause.close()
 	runner.check(_step(main).x > 0.0, "ES10 closing it frees the camera")
+	main.shown_state = main.shown_state.duplicate(true)
+	main.shown_state.match = {"status": "won", "winner": 1}
+	runner.check(main.shown_over() and _step(main) == Vector2.ZERO, "ES10 a shown result holds the camera")
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_process_pans_and_arrows_take_precedence(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await _scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	var camera: Camera2D = main.get_node("Camera2D")
+	SkirmishTests._push_move(port, Vector2(1279.0, 300))
+	var start: Vector2 = camera.position
+	main._process(0.016)
+	runner.check(is_equal_approx(camera.position.x - start.x, 400.0 * 0.016), "ES11 a frame through _process pans by the edge step, got %s" % (camera.position - start))
+	Input.action_press("ui_right")
+	start = camera.position
+	main._process(0.016)
+	runner.check(is_equal_approx(camera.position.x - start.x, 400.0 * 0.016), "ES11 Right held at the right edge moves one step, not two, got %s" % (camera.position - start))
+	Input.action_release("ui_right")
+	Input.action_press("ui_left")
+	start = camera.position
+	main._process(0.016)
+	runner.check(is_equal_approx(camera.position.x - start.x, -400.0 * 0.016), "ES11 Left held at the right edge moves left, got %s" % (camera.position - start))
+	Input.action_release("ui_left")
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_resize_drops_the_cached_pointer(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await _scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	SkirmishTests._push_move(port, Vector2(1279.0, 300))
+	runner.check(_step(main).x > 0.0, "ES12 fixture: the right edge pans")
+	port.size = Vector2i(1920, 1080)
+	runner.check(_step(main) == Vector2.ZERO, "ES12 a resize with a still pointer does not keep panning on the old coordinate")
+	SkirmishTests._push_move(port, Vector2(1279.0, 300))
+	runner.check(_step(main).x > 0.0, "ES12 the next motion resumes it")
 	port.free()
 	overlays._end(saved)
 	return true
