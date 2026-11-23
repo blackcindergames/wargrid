@@ -78,7 +78,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -1040,4 +1040,19 @@ func test_pump_bot_lines_on_request(runner) -> bool:
 	none.want_bot_lines = true
 	none.step = false
 	runner.check(asked.query(none).bot_lines.is_empty(), "BL4 a job with no bot seats has no lines")
+	return true
+
+func test_shot_carries_its_building_target(runner) -> bool:
+	var sim = Fixture.make_world()
+	sim.add_player(2, 0)
+	var barracks: int = Fixture.add_completed(sim, 1, "usa_barracks", Vector2i(10, 10))
+	sim.spawn(2, Vector2(8.5, 11.5), "usa_tank")
+	var recorder = CommandRecorder.new(sim)
+	var target: Dictionary = {}
+	for i in 90:
+		var note = SimPump.run_job(sim, recorder, SimPump.Job.new(), SimPump.Slot.new())
+		for event: Dictionary in note.events:
+			if event.type == "shot" and event.target_id == barracks: target = event.get("target_building", {})
+		if not target.is_empty(): break
+	runner.check(not target.is_empty() and target.id == barracks and target.owner == 1 and target.kind == "usa_barracks" and target.origin.size() == 2, "PH shot at a building carries its row, got %s" % [target])
 	return true

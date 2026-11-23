@@ -30,14 +30,14 @@ var _problems: PackedStringArray = []
 func shots() -> Array[Dictionary]:
 	var one: Array = [BaseScene.HUD_SIZES[0]]
 	return [
-		_shot("slab", _slab_armed.bind(4800, "china_defence"), "PREVIEW"),
+		_shot("slab", _slab_armed.bind(5300, "china_defence"), "4100"),
 		_shot("slab-attack-armed", _slab_attack, ""),
 		_shot("slab-army", _slab_army, ""),
-		_shot("slab-builder", _slab_pick.bind("builder", 50000), "$1200"),
-		_shot("slab-poor", _slab_pick.bind("builder", 500), "$500"),
-		_shot("queue", _queue.bind(false), "QUEUE"),
-		_shot("queue-open", _queue.bind(true), "QUEUE"),
-		_shot("queue-rest", _queue.bind(false, false), "QUEUE", one),
+		_shot("slab-builder", _slab_pick.bind("builder", 50000), "Build"),
+		_shot("slab-poor", _slab_build.bind(500), "1200"),
+		_shot("queue", _queue.bind(false), "QUEUE 9 / 9"),
+		_shot("queue-empty", _queue.bind(true), "Nothing in production"),
+		_shot("queue-rest", _queue.bind(false, false), "QUEUE 9 / 9", one),
 		_shot("unload", _unload, ""),
 		_shot("offline", _offline, "OFFLINE · LOW POWER"),
 		_shot("sites", _panel.bind("", "paused", ""), "PAUSED · NO BUILDER"),
@@ -60,10 +60,10 @@ func shots() -> Array[Dictionary]:
 		_shot("refusal-longest", _refusal_longest, LONGEST),
 		_shot("strip", _strip.bind(8), "4800"),
 		_shot("low-power", _strip.bind(12), "LOW POWER · DEFENCES OFF"),
-		_shot("preview-short", _slab_armed.bind(500, "china_defence"), HudTests.MINUS + "1200"),
+		_shot("preview-short", _hover_build.bind(800, "china_factory"), HudTests.MINUS + "1200"),
 		_shot("preview-plant", _slab_armed.bind(4800, "usa_power_plant"), "8 / 15"),
-		_shot("preview-frc", _slab_armed.bind(4800, "frc_barracks", "frc"), "PREVIEW"),
-		_shot("preview-hover", _hover_unit, "PREVIEW", one),
+		_shot("preview-frc", _hover_build.bind(800, "frc_factory", "frc"), HudTests.MINUS + "1700"),
+		_shot("preview-hover", _hover_unit, "", one),
 		_shot("chips-menu-free", _menu_chip.bind(false), "Esc"),
 		_shot("chips-menu-held", _menu_chip.bind(true), ""),
 		_shot("chips", _chips_worst.bind(false), "PLAYTEST"),
@@ -141,6 +141,8 @@ func _run(directory: String) -> void:
 
 func _settle() -> void:
 	for i in SETTLE_FRAMES: await process_frame
+	# Process frames can run ahead of the renderer on a loaded host; read the picture only after a draw.
+	await RenderingServer.frame_post_draw
 
 func _scene() -> void:
 	_main = await _overlays._scene(self, Skirmish, _port)
@@ -170,22 +172,41 @@ func _slab_pick(key: String, credits: int) -> void:
 	HudTests._select(_main, ids[key] if ids[key] is Array else [ids[key]])
 
 func _slab_armed(credits: int, kind: String, faction: String = "") -> void:
+	var cell: Button = await _build_cell(credits, kind, faction)
+	if cell != null: cell.pressed.emit()
+
+# The pointer resting on a build cell, as ts-card-short and ts-card-frcshort draw it.
+func _hover_build(credits: int, kind: String, faction: String = "") -> void:
+	var cell: Button = await _build_cell(credits, kind, faction)
+	if cell == null: return
+	await _settle()
+	HudTests._move(_port, cell.get_global_rect().get_center())
+	await _settle()
+	check(cell.is_hovered() and HudTests._forecasting(_main.hud), "the pointer on %s forecasts it" % kind)
+
+func _build_cell(credits: int, kind: String, faction: String) -> Button:
 	var ids: Dictionary = await _slab_world(credits)
 	_economy(credits, 0 if faction == "frc" else 8, 0 if faction == "frc" else 10, faction)
 	var builder: int = {"china": ids.builder, "usa": ids.usa_builder, "frc": ids.frc_builder}[kind.get_slice("_", 0)]
-	HudTests._select(_main, [builder])
-	var index: int = _main.hud.menu_kinds.find(kind)
-	check(index != -1, "%s not in the builder's menu %s" % [kind, _main.hud.menu_kinds])
-	if index != -1: _main.get_node("HUD/Economy/BuildMenu").get_child(index).pressed.emit()
+	HudTests._sub_grid(_main, builder)
+	var cell: Button = HudTests._cell(_main, kind)
+	check(cell != null, "%s not in the builder's sub-grid %s" % [kind, HudTests._card(_main)])
+	return cell
+
+# The China builder's sub-grid: the card a build starts from.
+func _slab_build(credits: int) -> void:
+	var ids: Dictionary = await _slab_world(credits)
+	HudTests._sub_grid(_main, ids.builder)
+	check(HudTests._cell(_main, "china_defence") != null, "the sub-grid shows the tower")
 
 func _hover_unit() -> void:
 	var ids: Dictionary = await _slab_world(50000)
 	HudTests._select(_main, [], ids.factory)
 	await _settle()
-	var button: Button = _main.get_node("HUD/Economy/BuildMenu").get_child(0)
+	var button: Button = _main.get_node("HUD/Economy/Card/Q")
 	HudTests._move(_port, button.get_global_rect().get_center())
 	await _settle()
-	check(button.is_hovered() and HudTests._previewing(_main.hud), "the pointer on the first unit button previews it")
+	check(button.is_hovered() and HudTests._forecasting(_main.hud), "the pointer on the first unit button previews it")
 
 func _slab_attack() -> void:
 	await _slab_pick("tanks", 50000)
@@ -194,25 +215,26 @@ func _slab_attack() -> void:
 
 func _slab_army() -> void:
 	await _slab_pick("tanks", 50000)
-	check(HudTests._shown(_main, "Orders/AttackMove") and not HudTests._shown(_main, "BuildMenu"), "the order row alone, no build menu")
+	check(HudTests._cell(_main, "attack_move") != null and HudTests._cell(_main, "build") == null, "the order cells alone, no Build")
 
-func _queue(open: bool, hovered: bool = true) -> void:
+# P2.3b T8: the nine-entry queue as tiles; `empty` the factory with nothing queued.
+func _queue(empty: bool, hovered: bool = true) -> void:
 	var ids: Dictionary = await _slab_world(50000)
 	HudTests._select(_main, [], ids.factory)
-	HudTests._nine(_main, ids.factory)
-	if open: _main.get_node("HUD/Economy/QueueMore").pressed.emit()
+	if not empty: HudTests._nine(_main, ids.factory)
 	await _settle()
-	if not hovered: return
-	var row: Button = _main.get_node("HUD/Economy/Queue/900")
-	HudTests._move(_port, row.get_global_rect().get_center())
+	if empty or not hovered: return
+	var tile: Control = BaseScene.queue_tile(_main, 900)
+	check(tile != null, "the first queue tile shows")
+	if tile == null: return
+	HudTests._move(_port, tile.get_global_rect().get_center())
 	await _settle()
-	check(row.is_hovered(), "the pointer is on the first queue row")
+	check((tile as Button).is_hovered(), "the pointer is on the first queue tile")
 
 func _unload() -> void:
 	var ids: Dictionary = await _slab_world(50000, true)
 	HudTests._select(_main, [ids.car])
-	var unload: Button = _main.get_node("HUD/Economy/Orders/Unload")
-	check(unload.is_visible_in_tree() and unload.text.begins_with("Unload ("), "Unload shown for the loaded Scout Car")
+	check(HudTests._cell(_main, "unload") != null, "Unload shown for the loaded Scout Car")
 
 func _offline() -> void:
 	await _scene()
@@ -276,11 +298,11 @@ func _no_depot() -> void:
 func _refusal() -> void:
 	var ids: Dictionary = await _slab_world(500)
 	HudTests._select(_main, [], ids.factory)
-	_main.refuse("Insufficient credits", false)
+	_main.refuse("Insufficient credits", "")
 
 func _refusal_longest() -> void:
 	await _rows(HudTests.ROSTERS.china.map(func(kind: String) -> Array: return [kind, 1]))
-	_main.refuse(LONGEST, false)
+	_main.refuse(LONGEST, "")
 
 func _strip(used: int) -> void:
 	await _scene()
@@ -289,6 +311,7 @@ func _strip(used: int) -> void:
 func _menu_chip(held: bool) -> void:
 	await _scene()
 	if held: BaseScene.select_own_unit(_main)
+	else: HudTests._select(_main, [])
 	_main._show_esc_chip()
 	var esc: Control = _main.get_node("HUD/MenuChip").find_child("EscChip", true, false)
 	check(esc.modulate.a == (0.0 if held else 1.0), "the Esc chip %s" % ("faded" if held else "shown"))

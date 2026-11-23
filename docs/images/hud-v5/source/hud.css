@@ -79,7 +79,7 @@
 .hud .cell .cost{display:block;line-height:14px}
 .hud .cell.fade{opacity:.45}
 .hud .cell.quiet{background:var(--quiet)}
-.hud .cell.quiet .nm2,.hud .cell.quiet .nm1,.hud .cell.quiet .cost:not(.amb),.hud .cell.quiet .gl{color:var(--muted)}
+.hud .cell.quiet .nm2,.hud .cell.quiet .nm1,.hud .cell.quiet .cost:not(.amb):not(.warn),.hud .cell.quiet .gl{color:var(--muted)}
 .hud .cell .cn{font-size:13px;font-weight:600;white-space:nowrap}
 .hud .cell.two .cn{display:block;margin-top:4px;line-height:28px}
 .hud .cell.one.cmd{display:flex;align-items:center;gap:8px}
@@ -94,3 +94,26 @@
 .hud .ccard>div{height:20px;line-height:20px;white-space:nowrap}
 .hud .ccard b{font-weight:600}
 .hud .cl{color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+
+/* P2.3b, Core as built (from p2-3a1-states.html): warn, hover inset, prerequisite frame, lined wells, the two-slab top strip, queue tiles. */
+.hud .warn{color:var(--warn)}
+.hud .cell.quiet .cn{color:var(--muted)}
+.hud .cell.hov{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--muted)}
+.hud .cell.hinted{box-shadow:inset 0 0 0 1px var(--sel)}
+.hud .well.lined{box-shadow:inset 0 0 0 1px var(--line)}
+.hud .sw{display:block;width:8px;height:8px;flex:none}
+.hud .tsrow{display:flex;gap:8px;align-items:flex-start}
+.hud .tsrow>.strip{position:relative}
+.hud .rsv{display:grid}
+.hud .rsv>*{grid-area:1/1}
+.hud .rsv>.ghost{visibility:hidden}
+.hud .neg{display:flex;align-items:center;gap:4px}
+.hud .qtrow{display:flex;gap:4px}
+.hud .qt{display:block;position:relative;flex:none;width:91px;height:60px;padding:4px;background:var(--btn);overflow:hidden}
+.hud .qt .r1{display:flex;align-items:center;justify-content:space-between;height:20px}
+.hud .qt .nm2{display:block;margin-top:4px;font-size:12px;font-weight:600;line-height:14px}
+.hud .qt.now{background:var(--panel2)}
+.hud .qt.hov{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--muted)}
+.hud .qt.more{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.hud .qline{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--well)}
+.hud .qline b{display:block;height:100%;background:var(--you)}

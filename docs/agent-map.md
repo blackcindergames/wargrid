@@ -16,7 +16,7 @@ Read blueprint §2, the [art direction](art-direction/ART_DIRECTION.md) and the 
 
 ## Sound
 
-Covers `game/scripts/presentation/sound_*.gd`, `announcer.gd`, `music_player.gd`, `audio_settings.gd`, `volume_sliders.gd`, `game/audio/` and `tools/audio/`. Read the sound spike [design](superpowers/specs/2026-11-08-sound-spike-design.md), [evidence note](reference/sound-spike.md) and [plan](superpowers/plans/2026-11-08-sound-spike.md); handoff `sound-spike-prompt.txt` (private); resume record [sound spike verification](reference/sound-spike-verification.md). Sound is presentation only: no simulation or trace change.
+Covers `game/scripts/presentation/sound_*.gd`, `announcer.gd`, `music_player.gd`, `audio_settings.gd`, `volume_sliders.gd`, `game/audio/` and `tools/audio/`. Read the sound spike [design](superpowers/specs/2026-11-08-sound-spike-design.md), [evidence note](reference/sound-spike.md) and [plan](superpowers/plans/2026-11-08-sound-spike.md); handoff `sound-spike-prompt.txt` (private); resume record [sound spike verification](reference/sound-spike-verification.md). Sound is presentation only: no simulation or trace change. A new announcer line takes five places: its raw Piper render in `sourcing/voice/raw/kristin/` under `~/projects/wargrid-sound-work/` (outside this repository; render only the new line, never the existing raws, so they stay as they were), `LINES` in `tools/audio/synth.py` (then a full run must leave every existing file byte-identical, `cmp`), `VOICE` in `tools/test_audio_assets.py`, a `game/audio/CREDITS.md` row and `Announcer.PRIORITY` and `COOLDOWN_TICKS`; add its loudness line to the [evidence note](reference/sound-spike.md#assets-and-levels).
 
 ## Performance
 

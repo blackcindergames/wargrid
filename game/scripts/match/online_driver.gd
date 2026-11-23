@@ -116,20 +116,18 @@ func step() -> void:
 		var commands: Variant = _lockstep.take(_next_tick, not _taken.is_empty(), _last.survivors if _last.tick == _next_tick else null)
 		if commands == null: break
 		_credit -= 1
-		var last: bool = i == CATCH_UP_STEPS - 1 or _credit < 1 or not _lockstep.can_step(_next_tick + 1)
 		# The tick's packets are already consumed, so a refused job cannot be retried.
-		if not pump.post(_tick_job(commands, last)):
+		if not pump.post(_tick_job(commands)):
 			_lockstep.set_protocol_error("sim pump refused tick %d" % _next_tick)
 			break
 		_taken.append(_next_tick)
 		_next_tick += 1
-		if last: _preview_request = {}
 	if _phase == "playing" and _lockstep.received_any(): _transport.patient = false
 
-func _tick_job(commands: Array[Dictionary], with_preview: bool) -> SimPump.Job:
+func _tick_job(commands: Array[Dictionary]) -> SimPump.Job:
 	var job := SimPump.Job.new()
 	job.commands = commands
-	if with_preview: job.preview = _preview_request
+	job.preview = _preview_request
 	job.want_digest = _lockstep.wants_snapshot(_next_tick + 1)
 	return job
 

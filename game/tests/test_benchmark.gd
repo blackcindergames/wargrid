@@ -452,6 +452,9 @@ func test_hud_layout_in_the_window(runner) -> bool:
 	runner.check(probe.last_failure == "", "BH2 the guard passes a drawn selection, got '%s'" % probe.last_failure)
 	var header: String = probe.get_node("HUD/Hud/SelectionPanel/Box/Many/Header").text
 	runner.check(header.begins_with("120 selected"), "BH2 the panel header names the selection, got '%s'" % header)
+	var card: Control = probe.get_node_or_null("HUD/Economy/Card")
+	var filled: Array = card.get_children().filter(func(cell: Control) -> bool: return cell.is_visible_in_tree() and not str(cell.get_meta("action", "")).is_empty()) if card != null else []
+	runner.check(card != null and card.is_visible_in_tree() and not filled.is_empty(), "BH2 the 120 selected units show their command card, got %d filled cells" % filled.size())
 	runner.check(probe._view.drawn_selection_lines == 120 * 8, "BH2 the view drew 8 line points per selected unit, got %d" % probe._view.drawn_selection_lines)
 	runner.check(probe._sample_ticks > 0 and probe._hud_drawn_ticks > 0 and probe._hud_ids.size() == 120, "BH2 sampled ticks ran against a drawn frame")
 	runner.check(probe._simulation.view_state().match == null, "BH2 the match stays unstarted")

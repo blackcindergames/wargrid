@@ -71,7 +71,6 @@ func step() -> void:
 		return
 	_next_tick += 1
 	_queue = []
-	_preview_request = {}
 
 func drain() -> Array[SimPump.Note]:
 	var notes: Array[SimPump.Note] = pump.drain()

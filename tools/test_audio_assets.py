@@ -18,6 +18,7 @@ SFX = {
     "vehicle_death",
 }
 VOICE = {
+    "allied_base_under_attack",
     "base_under_attack",
     "building_lost",
     "construction_complete",

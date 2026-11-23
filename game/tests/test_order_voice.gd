@@ -9,13 +9,15 @@ const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const SkirmishScene = preload("res://scenes/skirmish.tscn")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
+const HudModel = preload("res://scripts/match/hud_model.gd")
+const Fixture = preload("res://tests/economy_fixture.gd")
 
 const EXPECTED_ROLES := {"usa_builder": "worker", "usa_collector": "worker", "china_builder": "worker", "china_collector": "worker", "frc_builder": "worker", "usa_rifle_infantry": "infantry", "usa_rocket_infantry": "infantry", "china_rifle_infantry": "infantry", "china_rocket_infantry": "infantry", "frc_rifle_infantry": "infantry", "frc_rocket_infantry": "infantry", "usa_light_vehicle": "vehicle", "usa_tank": "vehicle", "china_light_vehicle": "vehicle", "china_tank": "vehicle", "frc_light_vehicle": "vehicle", "frc_tank": "vehicle"}
 const SILENT := ["stop", "set_rally", "produce", "cancel_build", "cancel_production", "defence_attack"]
 const PREFIX := "res://audio/voice/units/"
 
 func cases() -> Array[Callable]:
-	return [test_order_roles_cover_every_unit, test_order_line_per_command, test_first_unit_with_a_line_speaks, test_order_voice_skips_while_busy, test_order_variant_is_presentation_random, test_order_lines_exist, test_offline_order_speaks, test_offline_rejected_order_only_errors, test_online_order_speaks_on_submit, test_headless_playback_off, test_valid_order_speaks_despite_older_rejection, test_restart_then_order_speaks, test_restart_stops_a_playing_unit_line, test_unit_line_blocks_orders_announcer_does_not]
+	return [test_order_roles_cover_every_unit, test_order_line_per_command, test_first_unit_with_a_line_speaks, test_order_voice_skips_while_busy, test_order_variant_is_presentation_random, test_order_lines_exist, test_offline_order_speaks, test_offline_rejected_order_only_errors, test_online_order_speaks_on_submit, test_headless_playback_off, test_valid_order_speaks_despite_older_rejection, test_restart_then_order_speaks, test_restart_stops_a_playing_unit_line, test_unit_line_blocks_orders_announcer_does_not, test_credit_blocked_presses]
 
 func _unit(id: int, kind: String, owner: int) -> Dictionary:
 	return {"id": id, "owner": owner, "kind": kind, "position": [float(id), 1.0], "combat": {"tier": 0}}
@@ -241,3 +243,40 @@ func test_unit_line_blocks_orders_announcer_does_not(runner) -> bool:
 	announcer.stop()
 	skirmish.free()
 	return true
+
+# 3-8 through the screen: credit-blocked key presses 10 ticks apart click short and show the line twice, the voice once; 901 ticks after the voice it speaks again.
+func test_credit_blocked_presses(runner) -> bool:
+	var skirmish = await _scene(runner)
+	skirmish.driver.adopt(Fixture.make_world(0))
+	skirmish._refresh()
+	var builder: int = _builder(skirmish, 1)
+	skirmish.orders.selected_ids.assign([builder])
+	skirmish._refresh()
+	var helper = BaseScene.new()
+	helper.key(skirmish, HudModel.BUILD_KEY)
+	var barracks: String = Registry.kind(_kind(skirmish, builder)).builds.filter(func(kind: String) -> bool: return HudModel.role(kind) == "barracks")[0]
+	var line: String = "%d credits short" % Registry.kind(barracks).cost
+	var view: Dictionary = skirmish.driver.current().view
+	var start: int = view.tick
+	var heard: Array = []
+	for tick: int in [start, start + 10, start + 901]:
+		skirmish.hud.clear_refusal()
+		skirmish._sound._voice.stream = null
+		helper.key(skirmish, HudModel.CELL_KEYS.barracks)
+		var refused: String = skirmish.hud.refusal
+		view.tick = tick
+		skirmish._show(view)
+		heard.append([refused, _cues(skirmish).count("disabled"), _voice(skirmish)])
+	runner.check(skirmish.orders._placement_kind.is_empty() and skirmish.driver.queued().is_empty(), "OV14 no press arms or sends anything")
+	runner.check(heard[0] == [line, 1, "insufficient_funds"] and heard[1] == [line, 1, ""], "OV14 two presses 10 ticks apart: two clicks, two lines, one voice, got %s" % [heard.slice(0, 2)])
+	runner.check(heard[2] == [line, 1, "insufficient_funds"], "OV14 a press 901 ticks after the voice speaks again, got %s" % [heard[2]])
+	skirmish.free()
+	return true
+
+func _kind(main, id: int) -> String:
+	var rows = main.shown_state.units
+	return rows.kinds[rows.kind[rows.index_of(id)]]
+
+func _voice(main) -> String:
+	var stream: AudioStream = main._sound._voice.stream
+	return "" if stream == null else stream.resource_path.get_file().get_basename()

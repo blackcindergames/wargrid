@@ -37,6 +37,3 @@ mouse_filter = 2
 theme_type_variation = &"HudButton"
 text = "Cancel construction"
 mouse_filter = 0
-
-[node name="Queue" type="VBoxContainer" parent="HUD/Economy"]
-mouse_filter = 2
