@@ -46,6 +46,7 @@ var _card: GridContainer
 var _well: StyleBoxFlat
 var _cell_queue: Array = []
 var _cell_press: Vector2
+var _cell_pressed: Button = null
 var _cancel_build: Button
 var _top_strip: HBoxContainer
 var _credits_slab: PanelContainer
@@ -702,8 +703,11 @@ func _cell_input(event: InputEvent, cell: Button) -> void:
 	if click == null or click.button_index != MOUSE_BUTTON_RIGHT: return
 	if click.pressed:
 		_cell_press = click.position
+		_cell_pressed = cell
 		return
-	if click.position.distance_to(_cell_press) > MousePan.SLOP: return
+	var pressed_here: bool = _cell_pressed == cell
+	_cell_pressed = null
+	if not pressed_here or click.position.distance_to(_cell_press) > MousePan.SLOP: return
 	var id: int = HudModel.newest_of_kind(_cell_queue, cell.get_meta("action"))
 	if id != -1: entry_cancelled.emit(id)
 

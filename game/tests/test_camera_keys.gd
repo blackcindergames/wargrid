@@ -172,6 +172,18 @@ func test_h_again_returns_to_where_you_were(runner) -> bool:
 	_key(main, KEY_H, false, false)
 	_key(main, KEY_H)
 	runner.check(camera.position.is_equal_approx(AWAY), "CK14 a double tap during the glide returns, got %s" % camera.position)
+	camera.position = AWAY
+	_key(main, KEY_H)
+	main.pan_camera(Vector2.RIGHT, 0.01)
+	_key(main, KEY_H)
+	runner.check(camera.position.is_equal_approx(home), "CK14 a pan after arriving forgets the back spot: H centres again, got %s" % camera.position)
+	var near: Vector2 = home + Vector2(15, 0) / camera.zoom.x
+	camera.position = near
+	main._jump_back = null
+	_key(main, KEY_H)
+	_key(main, KEY_H)
+	_key(main, KEY_H)
+	runner.check(camera.position.is_equal_approx(home), "CK14 from 15 px off: home, back, then home again, never stuck, got %s" % camera.position)
 	main.free()
 	return true
 
@@ -184,8 +196,13 @@ func test_arrival_ring(runner) -> bool:
 	Fixture.add_completed(main.driver.pump.live(), 1, "usa_command_center", Vector2i(4, 4))
 	BaseScene.publish(main)
 	runner.check(view.arrival_ring(0).is_empty(), "CK15 no ring before a jump")
-	_key(main, KEY_H)
+	var layer: int = view.get_node("Arrival").get_index()
+	runner.check(layer > view.get_node("Structures").get_index() and layer < view.get_node("Bodies").get_index(), "CK15 the ring is a ground mark: over the footprints, under buildings and units")
+	var pressed: int = Time.get_ticks_usec()
+	_key(main, KEY_H, false, false)
 	var start: int = view.arrival_started_usec()
+	runner.check(start >= pressed + int(main._glide_seconds * 1.0e6) and main._glide_seconds > 0.1, "CK15 the ring starts when the %.2f s glide lands, %d usec after the press" % [main._glide_seconds, start - pressed])
+	main.glide_camera(1.0)
 	var first: Dictionary = view.arrival_ring(start)
 	var footprint: PackedVector2Array = view._cell_polygon(Vector2(4, 4), Vector2(3, 3))
 	runner.check(not first.is_empty() and first.color == View.ARRIVAL_HOME and _same_polygon(first.polygon, footprint) and first.alpha > 0.9, "CK15 H starts a ring on the Headquarters footprint, got %s" % [first])

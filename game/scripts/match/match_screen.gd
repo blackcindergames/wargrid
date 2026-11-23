@@ -189,6 +189,7 @@ func _place_perf() -> void:
 	_perf.place(_playtest.slot_for(_perf.size))
 
 func _reset_camera() -> void:
+	_jump_back = null
 	var size: Array = driver.current().view.map.size
 	_camera_bounds = Rect2(Vector2.ZERO, Vector2.ZERO)
 	for corner: Variant in [Vector2(size[0], 0), Vector2(0, size[1]), Vector2(size[0], size[1])]:
@@ -362,6 +363,7 @@ func _present_if_due() -> bool:
 
 func _process(delta: float) -> void:
 	_show_esc_chip()
+	if menu_open() or input_over(): mouse_pan.drop()
 	_drop_stale_attack_move()
 	var drained_at: int = Time.get_ticks_usec()
 	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
@@ -369,8 +371,8 @@ func _process(delta: float) -> void:
 	if _present_if_due() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - presented_at
 	var arrows: Vector2 = Vector2.ZERO if _typing() or menu_open() or input_over() else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	if arrows != Vector2.ZERO: pan_camera(arrows, delta)
-	elif mouse_pan.anchoring() and not menu_open() and not input_over() and not orders.is_selecting(): _pan_by(mouse_pan.anchor_offset() * minf(delta, EDGE_STEP_MAX))
-	else: edge_scroll(delta)
+	elif mouse_pan.anchoring() and not orders.is_selecting(): _pan_by(mouse_pan.anchor_offset() * minf(delta, EDGE_STEP_MAX))
+	elif not mouse_pan.grabbing(): edge_scroll(delta)
 	glide_camera(delta)
 	_view.advance_frame()
 	if not _auto_pending: return
@@ -403,11 +405,13 @@ func pan_camera(direction: Vector2, delta: float) -> void:
 
 func _pan_by(canvas: Vector2) -> void:
 	_glide_left = 0.0
+	_jump_back = null
 	_move_camera(_camera.position + canvas / _camera.zoom.x)
 
 func grab_camera(step: Vector2) -> void:
 	if menu_open() or input_over() or orders.is_selecting(): return
 	_glide_left = 0.0
+	_jump_back = null
 	_move_camera(_camera.position + step)
 
 func edge_scroll(delta: float) -> void:
@@ -426,11 +430,13 @@ func _outside_probe() -> Vector2:
 	if DisplayServer.get_name() == "headless": return Vector2.ZERO
 	var window := Rect2(DisplayServer.window_get_position(), DisplayServer.window_get_size())
 	var frame := Rect2(DisplayServer.window_get_position_with_decorations(), DisplayServer.window_get_size_with_decorations())
-	return outside_direction(DisplayServer.mouse_get_position(), window, frame, get_viewport().get_visible_rect().size)
+	var screen: int = DisplayServer.window_get_current_screen()
+	return outside_direction(DisplayServer.mouse_get_position(), window, frame, get_viewport().get_visible_rect().size, Rect2(DisplayServer.screen_get_position(screen), DisplayServer.screen_get_size(screen)))
 
 # The frame is the player's to drag and close; past a stretch-cap bar (more than one picture px wide) that axis holds, as the bar does (3-26).
-static func outside_direction(pointer: Vector2, window: Rect2, frame: Rect2, picture: Vector2) -> Vector2:
-	if window.has_point(pointer) or frame.has_point(pointer): return Vector2.ZERO
+# Only on the window's own screen: a pointer resting on another monitor must not pan (user, 2026-11-23).
+static func outside_direction(pointer: Vector2, window: Rect2, frame: Rect2, picture: Vector2, screen: Rect2) -> Vector2:
+	if window.has_point(pointer) or frame.has_point(pointer) or not screen.has_point(pointer): return Vector2.ZERO
 	var bars: Vector2 = window.size / minf(window.size.x / picture.x, window.size.y / picture.y) - picture
 	var beyond: Vector2 = (pointer - pointer.clamp(window.position, window.end - Vector2.ONE)).sign()
 	return Vector2(0.0 if bars.x > 1.0 else beyond.x, 0.0 if bars.y > 1.0 else beyond.y)
@@ -440,7 +446,9 @@ static func _edge_sign(at: float, low: float, high: float) -> float:
 	return 1.0 if at >= high - EDGE_BAND else 0.0
 
 # The target lands mid-way between the top and the dock line; HUD px are canvas px under the stretch, so only the zoom converts.
+# Any pan or other jump forgets H's back spot, so H goes back only right after H (user, 2026-11-23).
 func centre_camera(world: Vector2) -> void:
+	_jump_back = null
 	_glide_world = world
 	_glide_to = _landing(world)
 	_glide_from = _camera.position
@@ -457,13 +465,18 @@ func _landing(world: Vector2) -> Vector2:
 
 # 0 A.D.'s jumpCamera (136720dada selection_panels_helpers.js:243-260): the key again on arrival, or mid-glide, goes back.
 # True when it goes home, false when it goes back.
+func glide_seconds_left() -> float:
+	return _glide_left
+
+
 func jump_home(world: Vector2) -> bool:
 	var heading: Vector2 = _glide_to if _glide_left > 0.0 else _camera.position
 	if _jump_back != null and heading.distance_to(_landing(world)) * _camera.zoom.x <= JUMP_NEAR_PX:
 		centre_camera(_jump_back)
 		return false
-	_jump_back = Iso.plane_to_world(heading - _below())
+	var back: Vector2 = Iso.plane_to_world(heading - _below())
 	centre_camera(world)
+	_jump_back = back
 	return true
 
 # A drag box ends the glide, as it holds a pan.
@@ -491,7 +504,10 @@ func change_zoom(direction: int) -> void:
 	_camera.zoom = Vector2.ONE * ZOOMS[index]
 	_view.set_zoom(ZOOMS[index])
 	# The dock offset is in screen px, so a glide under way retargets for the new zoom.
-	if _glide_left > 0.0: centre_camera(_glide_world)
+	if _glide_left <= 0.0: return
+	var back: Variant = _jump_back
+	centre_camera(_glide_world)
+	_jump_back = back
 
 func _unhandled_input(event: InputEvent) -> void:
 	# A field passes on shortcuts it does not use (Cmd+S, Ctrl+1); orders ignore modifiers, so they would fire.

@@ -105,7 +105,7 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 		["Camera", [
 			["pan", "Arrows", "Pan", [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]],
 			["", "Screen edge", "Pan with the pointer", []],
-			_key_row("home", KEY_H, "Centre on your Headquarters"),
+			_key_row("home", KEY_H, "Centre on your Headquarters, again to go back"),
 			_key_row("last_attack", KEY_SPACE, "Jump to your or an ally's base under attack")]],
 		["Commands", [
 			["grid", " · ".join(cards), "The button in that spot of the bottom-right card", grid],

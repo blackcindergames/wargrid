@@ -41,6 +41,7 @@ var _waiting: Dictionary = {}
 var _canvas: CanvasItem
 var draw_usec: int = 0
 var _arrival: Dictionary = {}
+var _arrival_layer := Node2D.new()
 var drawn_selection_lines: int = -1
 var _items: Array[Dictionary] = []
 var time_draws: bool = false
@@ -79,6 +80,11 @@ func _init() -> void:
 	_structures.name = "Structures"
 	_structures.show_behind_parent = true
 	add_child(_structures)
+	# A ground mark: over the footprints, under buildings and units (the round's picture, user 2026-11-23).
+	_arrival_layer.name = "Arrival"
+	_arrival_layer.show_behind_parent = true
+	_arrival_layer.draw.connect(_draw_arrival)
+	add_child(_arrival_layer)
 	_bodies.name = "Bodies"
 	_bodies.show_behind_parent = true
 	add_child(_bodies)
@@ -288,7 +294,7 @@ func blend(alpha: float) -> void:
 
 # Called once per rendered frame. The frame that carried a tick already drew alpha 0.
 func advance_frame(now_usec: int = -1) -> void:
-	if not _arrival.is_empty(): queue_redraw()
+	if not _arrival.is_empty(): _arrival_layer.queue_redraw()
 	if _fresh:
 		_fresh = false
 		return
@@ -437,7 +443,6 @@ func _draw() -> void:
 	_draw_inspected()
 	_draw_resume_outline()
 	_draw_rally()
-	_draw_arrival()
 	_draw_hints()
 	_draw_cues()
 	_draw_labels()
@@ -566,9 +571,10 @@ func _draw_hints() -> void:
 		var center: Vector2 = Iso.world_to_plane(hint.point)
 		draw_arc(center, 14.0 * age + 4.0, 0.0, TAU, 16, Color(SELECT_COLOR, hint_alpha(age)), 2.0)
 
-func show_arrival(origin: Vector2, size: Vector2, color: Color) -> void:
-	_arrival = {"polygon": _cell_polygon(origin, size), "centre": Iso.world_to_plane(origin + size / 2.0), "color": color, "started": Time.get_ticks_usec()}
-	queue_redraw()
+# It plays once the glide lands (the round's picture), so `delay` is the glide's time left.
+func show_arrival(origin: Vector2, size: Vector2, color: Color, delay: float) -> void:
+	_arrival = {"polygon": _cell_polygon(origin, size), "centre": Iso.world_to_plane(origin + size / 2.0), "color": color, "started": Time.get_ticks_usec() + int(delay * 1.0e6)}
+	_arrival_layer.queue_redraw()
 
 func arrival_started_usec() -> int:
 	return _arrival.get("started", -1)
@@ -584,14 +590,15 @@ func arrival_ring(now_usec: int) -> Dictionary:
 	return {"polygon": polygon, "color": _arrival.color, "alpha": 0.95 * (1.0 - t)}
 
 func _draw_arrival() -> void:
-	var ring: Dictionary = arrival_ring(Time.get_ticks_usec())
+	var now: int = Time.get_ticks_usec()
+	var ring: Dictionary = arrival_ring(now)
 	if ring.is_empty():
-		_arrival = {}
+		if now >= _arrival.get("started", 0): _arrival = {}
 		return
 	var closed: PackedVector2Array = ring.polygon
 	closed.append(closed[0])
-	draw_polyline(closed, Color(ARRIVAL_UNDER, ring.alpha), 5.0)
-	draw_polyline(closed, Color(ring.color, ring.alpha), 3.0)
+	_arrival_layer.draw_polyline(closed, Color(ARRIVAL_UNDER, ring.alpha), 5.0)
+	_arrival_layer.draw_polyline(closed, Color(ring.color, ring.alpha), 3.0)
 
 func rally_marker() -> Array:
 	for building: Dictionary in _state.get("buildings", []):

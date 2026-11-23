@@ -70,7 +70,8 @@ func takes_orders() -> bool:
 func _set_attack_move(on: bool) -> void:
 	if on: gestures += 1
 	_attack_move_mode = on
-	set_cursor.call(Input.CURSOR_CROSS if on else Input.CURSOR_ARROW)
+	# The pan's move cursor stays; its release restores the right one.
+	if not _screen.mouse_pan.anchoring(): set_cursor.call(Input.CURSOR_CROSS if on else Input.CURSOR_ARROW)
 
 func arm_attack_move() -> void:
 	if not takes_orders() or busy() or selected_ids.is_empty(): return
@@ -169,12 +170,12 @@ func _camera_key(event: InputEvent) -> bool:
 		if home.is_empty(): return true
 		var origin := Vector2(home.origin[0], home.origin[1])
 		var size := Vector2(Registry.kind(home.kind).get("footprint", Vector2i.ONE))
-		if _screen.jump_home(origin + size / 2.0): _screen._view.show_arrival(origin, size, _screen._view.ARRIVAL_HOME)
+		if _screen.jump_home(origin + size / 2.0): _screen._view.show_arrival(origin, size, _screen._view.ARRIVAL_HOME, _screen.glide_seconds_left())
 		return true
 	var attack: Variant = _screen._sound.director.last_attack()
 	if attack == null: return true
 	_screen.centre_camera(attack)
-	_screen._view.show_arrival(attack - SPOT_CELLS / 2.0, SPOT_CELLS, _screen._view.ARRIVAL_ATTACK)
+	_screen._view.show_arrival(attack - SPOT_CELLS / 2.0, SPOT_CELLS, _screen._view.ARRIVAL_ATTACK, _screen.glide_seconds_left())
 	return true
 
 # Units only; a building or an inspected enemy leaves the group be, nothing selected empties it.

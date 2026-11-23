@@ -24,6 +24,9 @@ func _init(screen: Node) -> void:
 func anchoring() -> bool:
 	return _anchoring
 
+func grabbing() -> bool:
+	return _grabbing
+
 # Zero Hour's anchor scroll (GeneralsGameCode afc2a103f LookAtXlat.cpp:256-281, :476-483): speed grows with distance from the press.
 func anchor_offset() -> Vector2:
 	return (_pointer - _press.position) * ANCHOR_SPEED if _anchoring else Vector2.ZERO
@@ -33,6 +36,8 @@ func take(event: InputEvent) -> bool:
 	var button := event as InputEventMouseButton
 	# Zero Hour starts no RMB scroll under a drag box (LookAtXlat.cpp:266); orders ignore these presses there.
 	if button != null and button.pressed and _screen.orders.is_selecting(): return false
+	# A left press ends a pan whose release the platform lost.
+	if button != null and button.pressed and button.button_index == MOUSE_BUTTON_LEFT and _anchoring: drop()
 	# A release lost off-window must not swallow the next click.
 	if button != null and button.pressed and button.button_index in [MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]: drop()
 	if button != null and button.pressed and button.button_index == MOUSE_BUTTON_RIGHT:
@@ -49,7 +54,8 @@ func take(event: InputEvent) -> bool:
 	if event is InputEventMagnifyGesture:
 		_pinched((event as InputEventMagnifyGesture).factor)
 		return true
-	return follow(event)
+	follow(event)
+	return false
 
 func _pinched(factor: float) -> void:
 	_pinch *= factor
@@ -57,7 +63,8 @@ func _pinched(factor: float) -> void:
 	_screen.change_zoom(1 if _pinch > 1.0 else -1)
 	_pinch = 1.0
 
-func follow(event: InputEvent) -> bool:
+# Orders ignore right and middle releases, so nothing here needs swallowing.
+func follow(event: InputEvent) -> void:
 	var motion := event as InputEventMouseMotion
 	if motion != null:
 		_pointer = motion.position
@@ -65,24 +72,21 @@ func follow(event: InputEvent) -> bool:
 		# Relative steps, so a zoom mid-grab does not jump; the second call per event moves zero.
 		if _grabbing: _screen.grab_camera((_grab_last - _pointer) / _screen.get_node("Camera2D").zoom.x)
 		_grab_last = _pointer
-		return false
+		return
 	var button := event as InputEventMouseButton
-	if button == null or button.pressed: return false
-	if button.button_index == MOUSE_BUTTON_MIDDLE and _grabbing:
-		_grabbing = false
-		return true
-	if button.button_index != MOUSE_BUTTON_RIGHT or _press == null: return false
+	if button == null or button.pressed: return
+	if button.button_index == MOUSE_BUTTON_MIDDLE: _grabbing = false
+	if button.button_index != MOUSE_BUTTON_RIGHT or _press == null: return
 	var press: InputEventMouseButton = _press
 	_press = null
-	if _anchoring:
-		_set_anchoring(false)
-		return true
-	if not _screen.menu_open(): _screen.orders.handle(press)
-	return false
+	if _anchoring: _set_anchoring(false)
+	# A release far from the press with no motion between is a drag too.
+	elif button.position.distance_to(press.position) <= SLOP and not _screen.menu_open() and not _screen.input_over(): _screen.orders.handle(press)
 
 func drop() -> void:
 	_press = null
 	_grabbing = false
+	_pinch = 1.0
 	if _anchoring: _set_anchoring(false)
 
 func _set_anchoring(on: bool) -> void:

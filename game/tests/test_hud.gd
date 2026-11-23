@@ -2003,6 +2003,14 @@ func test_right_click_cell_cancels_newest_of_kind(runner) -> bool:
 	var produced: int = _queued(main, "produce").size()
 	_right_click_in(port, _centre(_cell(main, MEDIUM)), Vector2(12, 0))
 	runner.check(_queued(main, "cancel_production").is_empty(), "QT8 a right-drag of 12 px on the cell cancels nothing, got %s" % [_queued(main, "cancel_production")])
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_RIGHT
+		event.pressed = pressed
+		event.position = Vector2(300, 300) if pressed else _centre(_cell(main, MEDIUM))
+		event.global_position = event.position
+		port.push_input(event, true)
+	runner.check(_queued(main, "cancel_production").is_empty(), "QT8 a map pan released on the cell cancels nothing, got %s" % [_queued(main, "cancel_production")])
 	_right_click_in(port, _centre(_cell(main, MEDIUM)))
 	runner.check(_queued(main, "cancel_production").map(func(command: Dictionary) -> int: return command.production_id) == [queue[4]], "QT8 a right-click on the Medium Tank cell cancels its newest entry %d, got %s" % [queue[4], _queued(main, "cancel_production")])
 	_right_click_in(port, _centre(_cell(main, ROTARY)))

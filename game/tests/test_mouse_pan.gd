@@ -10,7 +10,7 @@ const MousePan = preload("res://scripts/match/mouse_pan.gd")
 const AT := Vector2(640, 300)
 
 func cases() -> Array[Callable]:
-	return [test_still_right_click_orders_on_release, test_right_drag_sends_nothing_and_keeps_selection, test_right_drag_keeps_placement, test_right_drag_keeps_attack_move, test_right_drag_pans_faster_further_out, test_middle_drag_grabs_the_map, test_drag_box_holds_right_and_middle, test_zoom_mid_grab_does_not_jump, test_lost_release_frees_the_next_click, test_open_menu_holds_order_and_grab, test_trackpad_scroll_pans_and_pinch_zooms]
+	return [test_still_right_click_orders_on_release, test_right_drag_sends_nothing_and_keeps_selection, test_right_drag_keeps_placement, test_right_drag_keeps_attack_move, test_right_drag_pans_faster_further_out, test_middle_drag_grabs_the_map, test_drag_box_holds_a_right_press, test_drag_box_holds_a_middle_grab, test_grab_holds_edge_scroll, test_menu_and_left_click_end_a_pan, test_zoom_mid_grab_does_not_jump, test_lost_release_frees_the_next_click, test_open_menu_holds_order_and_grab, test_trackpad_scroll_pans_and_pinch_zooms]
 
 func _drag(port: SubViewport, button: MouseButton, to: Vector2, release: bool = true) -> void:
 	SkirmishTests._push_move(port, AT)
@@ -135,27 +135,93 @@ func test_middle_drag_grabs_the_map(runner) -> bool:
 	overlays._end(saved)
 	return true
 
-func test_drag_box_holds_right_and_middle(runner) -> bool:
+func _box(port: SubViewport) -> void:
+	SkirmishTests._push_move(port, AT)
+	SkirmishTests._push_button(port, AT, MOUSE_BUTTON_LEFT, true)
+	SkirmishTests._push_move(port, AT + Vector2(20, 20))
+
+func test_drag_box_holds_a_right_press(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await EdgeTests.new()._scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	var sent: int = main._unanswered
+	_box(port)
+	SkirmishTests._push_button(port, AT + Vector2(20, 20), MOUSE_BUTTON_RIGHT, true)
+	SkirmishTests._push_button(port, AT + Vector2(20, 20), MOUSE_BUTTON_LEFT, false)
+	SkirmishTests._push_button(port, AT + Vector2(20, 20), MOUSE_BUTTON_RIGHT, false)
+	runner.check(main._unanswered == sent, "MP7 a right press made under the box sends nothing after the box ends, sent %d" % (main._unanswered - sent))
+	_box(port)
+	SkirmishTests._push_button(port, AT + Vector2(20, 20), MOUSE_BUTTON_RIGHT, true)
+	SkirmishTests._push_move(port, AT + Vector2(120, 60))
+	runner.check(not main.mouse_pan.anchoring(), "MP7 a right drag under the box does not pan")
+	SkirmishTests._push_button(port, AT + Vector2(120, 60), MOUSE_BUTTON_LEFT, false)
+	SkirmishTests._push_button(port, AT + Vector2(120, 60), MOUSE_BUTTON_RIGHT, false)
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_drag_box_holds_a_middle_grab(runner) -> bool:
 	var overlays = OverlayTests.new()
 	var saved: String = overlays._begin()
 	var scene: Array = await EdgeTests.new()._scene(runner, overlays, BaseScene.HUD_SIZES[0])
 	var port: SubViewport = scene[0]
 	var main = scene[1]
 	var camera: Camera2D = main.get_node("Camera2D")
-	var start: Vector2 = camera.position
-	var sent: int = main._unanswered
-	SkirmishTests._push_move(port, AT)
-	SkirmishTests._push_button(port, AT, MOUSE_BUTTON_LEFT, true)
-	SkirmishTests._push_move(port, AT + Vector2(20, 20))
-	SkirmishTests._push_button(port, AT + Vector2(20, 20), MOUSE_BUTTON_RIGHT, true)
+	_box(port)
 	SkirmishTests._push_button(port, AT + Vector2(20, 20), MOUSE_BUTTON_MIDDLE, true)
+	SkirmishTests._push_button(port, AT + Vector2(20, 20), MOUSE_BUTTON_LEFT, false)
+	var start: Vector2 = camera.position
 	SkirmishTests._push_move(port, AT + Vector2(120, 60))
-	main._process(0.016)
-	runner.check(camera.position == start, "MP7 right and middle under a drag box hold the camera, got %s" % (camera.position - start))
-	SkirmishTests._push_button(port, AT + Vector2(120, 60), MOUSE_BUTTON_LEFT, false)
+	runner.check(camera.position == start, "MP7 a middle press made under the box does not grab after the box ends, got %s" % (camera.position - start))
 	SkirmishTests._push_button(port, AT + Vector2(120, 60), MOUSE_BUTTON_MIDDLE, false)
-	SkirmishTests._push_button(port, AT + Vector2(120, 60), MOUSE_BUTTON_RIGHT, false)
-	runner.check(main._unanswered == sent, "MP7 a right press made under the box sends nothing after the box ends, sent %d" % (main._unanswered - sent))
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_grab_holds_edge_scroll(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await EdgeTests.new()._scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	var camera: Camera2D = main.get_node("Camera2D")
+	_drag(port, MOUSE_BUTTON_MIDDLE, Vector2(1279.0, 300), false)
+	var start: Vector2 = camera.position
+	main._process(0.016)
+	runner.check(camera.position == start, "MP12 a middle grab in the edge band does not edge scroll, got %s" % (camera.position - start))
+	SkirmishTests._push_button(port, Vector2(1279.0, 300), MOUSE_BUTTON_MIDDLE, false)
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_menu_and_left_click_end_a_pan(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await EdgeTests.new()._scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	var shapes: Array[int] = []
+	Orders.set_cursor = func(shape: int) -> void: shapes.append(shape)
+	_drag(port, MOUSE_BUTTON_RIGHT, AT + Vector2(50, 0), false)
+	main._pause.open()
+	main._process(0.016)
+	runner.check(not main.mouse_pan.anchoring() and shapes.back() == Input.CURSOR_ARROW, "MP13 the open menu ends the pan and its cursor, got %s" % [shapes])
+	main._pause.close()
+	_drag(port, MOUSE_BUTTON_RIGHT, AT + Vector2(50, 0), false)
+	SkirmishTests._push_button(port, AT + Vector2(50, 0), MOUSE_BUTTON_LEFT, true)
+	runner.check(not main.mouse_pan.anchoring(), "MP13 a left press ends a pan whose release was lost")
+	SkirmishTests._push_button(port, AT + Vector2(50, 0), MOUSE_BUTTON_LEFT, false)
+	main.orders.selected_ids.assign(scene[2].tanks)
+	main.orders.arm_attack_move()
+	shapes.clear()
+	_drag(port, MOUSE_BUTTON_RIGHT, AT + Vector2(50, 0), false)
+	main.orders._set_attack_move(false)
+	runner.check(shapes == [Input.CURSOR_MOVE], "MP13 disarming mid-pan keeps the move cursor, got %s" % [shapes])
+	SkirmishTests._push_button(port, AT + Vector2(50, 0), MOUSE_BUTTON_RIGHT, false)
+	runner.check(shapes.back() == Input.CURSOR_ARROW, "MP13 the release then shows the arrow, got %s" % [shapes])
+	Orders.set_cursor = Input.set_default_cursor_shape
 	port.free()
 	overlays._end(saved)
 	return true

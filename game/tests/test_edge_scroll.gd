@@ -328,20 +328,25 @@ func test_resize_drops_the_cached_pointer(runner) -> bool:
 	overlays._end(saved)
 	return true
 
+const SCREEN := Rect2(-3000, -3000, 9000, 9000)
+
 func test_outside_direction(runner) -> bool:
 	var MatchScreen = load("res://scripts/match/match_screen.gd")
 	var window := Rect2(100, 50, 1280, 720)
 	for row: Array in [[Vector2(90, 300), Vector2(-1, 0), "just left"], [Vector2(1385, 300), Vector2(1, 0), "just right"], [Vector2(500, 40), Vector2(0, -1), "just above"], [Vector2(500, 780), Vector2(0, 1), "just below"], [Vector2(1380, 770), Vector2(1, 1), "the bottom right corner"], [Vector2(90, 40), Vector2(-1, -1), "the top left corner"], [Vector2(59, 300), Vector2(-1, 0), "well left (no margin, as Warzone 2100)"], [Vector2(-2000, 300), Vector2(-1, 0), "far left, as a flick overshoots"], [Vector2(90, 9), Vector2(-1, -1), "a corner well out on one axis"], [Vector2(700, 400), Vector2.ZERO, "inside away from the band"], [Vector2(101, 300), Vector2.ZERO, "inside in the band (the band rule's)"]]:
-		runner.check(MatchScreen.outside_direction(row[0], window, window, window.size) == row[1], "ES14 a pointer %s of the window" % row[2])
+		runner.check(MatchScreen.outside_direction(row[0], window, window, window.size, SCREEN) == row[1], "ES14 a pointer %s of the window" % row[2])
+	var own := Rect2(0, 0, 1380, 1080)
+	runner.check(MatchScreen.outside_direction(Vector2(1500, 300), window, window, window.size, own) == Vector2.ZERO, "ES14 a pointer on another screen does not pan")
+	runner.check(MatchScreen.outside_direction(Vector2(1379, 300), Rect2(100, 50, 1270, 720), Rect2(100, 50, 1270, 720), Vector2(1270, 720), own) == Vector2(1, 0), "ES14 a pointer outside the window on its own screen pans")
 	var wide := Rect2(100, 50, 3840, 1080)
 	var tall := Rect2(100, 50, 1280, 1024)
 	var odd := Rect2(100, 50, 2561, 1440)
 	for row: Array in [[wide, Vector2(1728, 720), Vector2(90, 300), Vector2.ZERO, "just left past a left bar"], [wide, Vector2(1728, 720), Vector2(3945, 300), Vector2.ZERO, "just right past a right bar"], [wide, Vector2(1728, 720), Vector2(90, 40), Vector2(0, -1), "the top left corner beside bars: only up"], [tall, Vector2(1280, 800), Vector2(500, 1080), Vector2.ZERO, "just below past a bottom bar"], [tall, Vector2(1280, 800), Vector2(1385, 300), Vector2(1, 0), "just right beside top and bottom bars"], [odd, Vector2(1280, 720), Vector2(2665, 300), Vector2(1, 0), "just right of an expanded picture half a pixel short"]]:
-		runner.check(MatchScreen.outside_direction(row[2], row[0], row[0], row[1]) == row[3], "ES16 a pointer %s" % row[4])
+		runner.check(MatchScreen.outside_direction(row[2], row[0], row[0], row[1], SCREEN) == row[3], "ES16 a pointer %s" % row[4])
 	var titled := Rect2(100, 22, 1280, 748)
 	var bordered := Rect2(93, 19, 1294, 758)
 	for row: Array in [[titled, Vector2(500, 40), Vector2.ZERO, "on a macOS title bar"], [titled, Vector2(500, 15), Vector2(0, -1), "above the title bar"], [titled, Vector2(90, 300), Vector2(-1, 0), "left of a frame with no side border"], [bordered, Vector2(95, 300), Vector2.ZERO, "on a Windows resize border"], [bordered, Vector2(90, 300), Vector2(-1, 0), "past the resize border"]]:
-		runner.check(MatchScreen.outside_direction(row[1], window, row[0], window.size) == row[2], "ES17 a pointer %s" % row[3])
+		runner.check(MatchScreen.outside_direction(row[1], window, row[0], window.size, SCREEN) == row[2], "ES17 a pointer %s" % row[3])
 	return true
 
 func test_just_outside_the_window_pans(runner) -> bool:
