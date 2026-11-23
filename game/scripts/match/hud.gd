@@ -5,6 +5,7 @@ signal entry_cancelled(entry_id: int)
 signal cancel_build_pressed()
 signal menu_pressed()
 signal row_clicked(kind: String, shift: bool)
+signal producer_pressed(id: int, jump: bool)
 
 # Wider notices wrap, so a long desync path grows down, clear of the chips at 1280.
 const NOTICE_WIDTH: float = 600.0
@@ -51,6 +52,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const MousePan = preload("res://scripts/match/mouse_pan.gd")
 const UnitGlyphs = preload("res://scripts/presentation/unit_glyphs.gd")
 const DashedPanel = preload("res://scripts/presentation/dashed_panel.gd")
+const ProductionStrip = preload("res://scripts/match/production_strip.gd")
 
 var refusal: String = ""
 var now_msec: Callable = Time.get_ticks_msec
@@ -121,14 +123,23 @@ var _tip_since: int = -1
 var _tip_open: bool = false
 var _strip_args: Array = []
 var _blockers: Array[Control] = []
-# The playtest helper's surfaces draw above the cell card, so the card steps left of them.
-var helpers: Array[Control] = []
+var _producers: ProductionStrip
+# Each producer's newest unit in production, for its idle chip (`HudModel.strip_chips`).
+var _last_made: Dictionary = {}
+# The playtest helper's surfaces draw above the cell card and the strip's cards, so those step left of them.
+var helpers: Array[Control] = []:
+	set(surfaces):
+		helpers = surfaces
+		_producers.helpers = surfaces
 
 func _init() -> void:
 	name = "Hud"
 	mouse_filter = MOUSE_FILTER_IGNORE
 	set_anchors_preset(PRESET_FULL_RECT)
 	_build_strip()
+	_producers = ProductionStrip.new()
+	_producers.producer_pressed.connect(producer_pressed.emit)
+	add_child(_producers)
 	_build_menu_chip()
 	_build_notice()
 	_build_refusal_line()
@@ -136,7 +147,7 @@ func _init() -> void:
 	_build_alert_line()
 	_build_looks()
 	_build_panel()
-	for surface: Control in [_top_strip, _menu, _panel]: block(surface)
+	for surface: Control in [_top_strip, _producers, _menu, _panel]: block(surface)
 
 # The spec's HUD blocks: a click, drag release or wheel on a panel never reaches the map.
 func block(surface: Control) -> void:
@@ -283,6 +294,15 @@ func _build_menu_chip() -> void:
 	_esc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_esc.size_flags_vertical = SIZE_SHRINK_CENTER
 	_menu.pressed.connect(menu_pressed.emit)
+	_menu.resized.connect(_beside_menu)
+
+func toggle_upright() -> void:
+	_producers.set_upright(not ProductionStrip.upright)
+
+# Anchor C (strip round): the strip ends 8 left of Menu, so the held slabs never move it.
+func _beside_menu() -> void:
+	_producers.offset_left = -16.0 - _menu.size.x
+	_producers.offset_right = _producers.offset_left
 
 func _build_notice() -> void:
 	_notice = _slab("Notice", Vector2.ZERO)
@@ -400,6 +420,8 @@ func reset() -> void:
 	_counts = {}
 	pending_cancels = {}
 	next_clicks = 0
+	_last_made = {}
+	_producers.reset()
 	_cancelled_id = -1
 	if _economy != null:
 		end_hover()
@@ -612,6 +634,7 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	if _economy != null: _economy_controls(view, building, selection, seat)
 	_strip_args = [view, selection, view_player]
 	_show_strip(view, selection, view_player)
+	_producers.show_chips(HudModel.strip_chips(view, seat, _last_made), selection.building_id, View.owner_color(seat, selection.bright_owners))
 	_count_rebuild(selection)
 
 # Structural changes only; values patch in place.

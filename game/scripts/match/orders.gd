@@ -222,6 +222,18 @@ func _recall_group(slot: int) -> void:
 		if centre: _screen.centre_camera(_centroid(live))
 	_screen._reshow()
 
+# The production strip: a click ends a placement and selects the producer where it stands (`prune` and `_drop_stale_attack_move` then end the sub-grid and attack move); a double click also glides there.
+func select_producer(id: int, jump: bool) -> void:
+	var found: Dictionary = HudModel.building(_screen.shown_state, id)
+	if not takes_orders() or found.get("owner", -1) != _screen.local_player or not found.get("completed", false): return
+	if not _placement_kind.is_empty(): _clear_placement()
+	gestures += 1
+	selected_ids.clear()
+	selected_building_id = id
+	inspected_id = -1
+	if jump: _screen.centre_camera(Vector2(found.origin[0], found.origin[1]) + Vector2(Registry.kind(found.kind).get("footprint", Vector2i.ONE)) / 2.0)
+	_screen._reshow()
+
 func _centroid(units: Array[int]) -> Vector2:
 	var rows: RefCounted = _screen.shown_state.units
 	var sum := Vector2.ZERO
@@ -300,10 +312,17 @@ func _hover(event: InputEvent, on_hud: bool) -> void:
 			_screen._view.set_hovered(hovered)
 			_screen._reshow()
 
+# F3 the performance numbers, F7 the strip's upright bars; neither reaches here while a text field has the focus.
+func _debug_key(event: InputEvent) -> bool:
+	var key := event as InputEventKey
+	if key == null or not key.pressed or key.echo: return false
+	if key.physical_keycode == KEY_F3: _screen._perf.toggle()
+	elif key.physical_keycode == KEY_F7: _screen.hud.toggle_upright()
+	else: return false
+	return true
+
 func _placement_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F3:
-		_screen._perf.toggle()
-		return
+	if _debug_key(event): return
 	if event.is_action_pressed("deselect"):
 		_clear_placement()
 	elif event is InputEventMouseMotion:
@@ -345,9 +364,8 @@ func _building_input(event: InputEvent) -> bool:
 	return false
 
 func _selection_input(event: InputEvent, on_hud: bool) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F3:
-		_screen._perf.toggle()
-	elif event.is_action_pressed("deselect"):
+	if _debug_key(event): return
+	if event.is_action_pressed("deselect"):
 		selected_ids.clear()
 		_selecting = false
 		_screen._selection_box.hide()

@@ -113,6 +113,7 @@ func _ready() -> void:
 	hud.entry_cancelled.connect(orders._cancel_entry)
 	hud.cancel_build_pressed.connect(orders._cancel_build)
 	hud.row_clicked.connect(_select_kind)
+	hud.producer_pressed.connect(orders.select_producer)
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()

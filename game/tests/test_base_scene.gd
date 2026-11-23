@@ -12,7 +12,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 # [window, logical]: what the match's stretch caps lay each window out at
 const HUD_SIZES: Array[Array] = [[Vector2i(1280, 720), Vector2i(1280, 720)], [Vector2i(1280, 800), Vector2i(1280, 800)], [Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(3440, 1440), Vector2i(1720, 720)]]
 
-const HUD_PANELS: Array[String] = ["HUD/Economy", "HUD/Hud/TopStrip", "HUD/MenuChip", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/Hud/GroupLine", "HUD/Hud/AlertLine", "HUD/Hud/SelectionPanel"]
+const HUD_PANELS: Array[String] = ["HUD/Economy", "HUD/Hud/TopStrip", "HUD/Hud/ProductionStrip", "HUD/MenuChip", "HUD/Hud/Notice", "HUD/Hud/RefusalLine", "HUD/Hud/GroupLine", "HUD/Hud/AlertLine", "HUD/Hud/SelectionPanel"]
 
 # The no-overlap lists: each shown HUD panel by path, sized as the layout tests always read them.
 static func hud_panels(main) -> Dictionary:
