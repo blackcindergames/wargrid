@@ -10,7 +10,7 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const Skirmish = preload("res://scenes/skirmish.tscn")
 
 func cases() -> Array[Callable]:
-	return [test_process_pans_and_arrows_take_precedence, test_resize_drops_the_cached_pointer, test_band_pans_at_every_edge_over_a_panel, test_band_is_three_pixels_of_the_picture, test_picture_rect_at_3440, test_no_focus_no_pan, test_pointer_exit_stops_the_pan, test_drag_box_holds_the_camera, test_placement_pans_with_the_ghost_under_the_pointer, test_placement_ghost_stays_when_the_pointer_is_over_a_panel, test_h_in_placement_reruns_the_preview, test_step_is_capped, test_menu_and_result_hold_the_camera]
+	return [test_process_pans_and_arrows_take_precedence, test_resize_drops_the_cached_pointer, test_band_pans_at_every_edge_over_a_panel, test_band_is_three_pixels_of_the_picture, test_picture_rect_at_3440, test_no_focus_no_pan, test_pointer_exit_stops_the_pan, test_drag_box_holds_the_camera, test_placement_pans_with_the_ghost_under_the_pointer, test_placement_ghost_stays_when_the_pointer_is_over_a_panel, test_h_in_placement_reruns_the_preview, test_step_is_capped, test_menu_and_result_hold_the_camera, test_pointer_kept_in_the_window]
 
 # A port with a builder and buildings, the camera mid-map, and the pointer entered but not yet moved.
 func _scene(runner, overlays, size: Array) -> Array:
@@ -324,6 +324,44 @@ func test_resize_drops_the_cached_pointer(runner) -> bool:
 	runner.check(_step(main) == Vector2.ZERO, "ES12 a resize with a still pointer does not keep panning on the old coordinate")
 	SkirmishTests._push_move(port, Vector2(1279.0, 300))
 	runner.check(_step(main).x > 0.0, "ES12 the next motion resumes it")
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_pointer_kept_in_the_window(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await _scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	runner.check(main.pointer_mode() == Input.MOUSE_MODE_CONFINED, "ES14 a live match keeps the pointer in the window")
+	main._pause.open()
+	runner.check(main.pointer_mode() == Input.MOUSE_MODE_VISIBLE, "ES14 the open menu releases it")
+	main._pause.close()
+	runner.check(main.pointer_mode() == Input.MOUSE_MODE_CONFINED, "ES14 closing the menu keeps it again")
+	main.notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	runner.check(main.pointer_mode() == Input.MOUSE_MODE_VISIBLE, "ES14 a focus out releases it")
+	main.notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	runner.check(main.pointer_mode() == Input.MOUSE_MODE_CONFINED, "ES14 a focus in keeps it again")
+	var field := LineEdit.new()
+	main.get_node("HUD").add_child(field)
+	field.grab_focus()
+	runner.check(main._typing() and main.pointer_mode() == Input.MOUSE_MODE_VISIBLE, "ES14 a text field releases it")
+	field.free()
+	main._playtest.web = true
+	runner.check(main.pointer_mode() == Input.MOUSE_MODE_VISIBLE, "ES14 the web build never confines it")
+	main._playtest.web = false
+	main.driver._failure = "pump failed"
+	runner.check(main.frozen() and main.pointer_mode() == Input.MOUSE_MODE_VISIBLE, "ES14 the freeze card releases it")
+	main.driver._failure = ""
+	main.shown_state = main.shown_state.duplicate(true)
+	main.shown_state.match = {"status": "won", "winner": 1}
+	runner.check(main.shown_over() and main.pointer_mode() == Input.MOUSE_MODE_VISIBLE, "ES14 the result card releases it")
+	main.shown_state.match = {"status": "ongoing"}
+	runner.check(main.pointer_mode() == Input.MOUSE_MODE_CONFINED, "ES14 fixture: an ongoing match keeps it")
+	main.change_scene = func(_path: String) -> void: pass
+	main._pause.leave_requested.emit()
+	runner.check(main.pointer_mode() == Input.MOUSE_MODE_VISIBLE, "ES14 leaving the match releases it")
 	port.free()
 	overlays._end(saved)
 	return true
