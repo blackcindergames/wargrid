@@ -6,12 +6,15 @@ const Shared = preload("res://scripts/simulation/definitions/shared.gd")
 
 const KNOWN_KEYS := ["display_name", "class", "cost", "ticks", "speed", "accel", "brake", "locomotor", "turn_cos", "turn_sin", "max_hp", "armor", "weapon", "radius", "builds", "min_turn_speed", "collects", "vision", "horde", "quantity", "salvage", "weapon_tiers", "contains", "power", "footprint", "prerequisite", "produces", "receives_supply", "counts_for_victory", "icon", "slot", "spawns_on_complete", "powered", "supply_clearance", "rebuild_hole", "hole"]
 const LOCOMOTORS := ["air", "legs", "treads", "wheels"]
+const CLASSES := ["air", "infantry", "vehicle"]
+const SALVAGE := ["money", "weapon"]
+const SLOTS := ["barracks", "command_center", "defence", "factory", "power_plant", "supply_center"]
 const GOOD_ROW := {"class": "vehicle", "cost": 1, "ticks": 1, "speed": 1.0, "locomotor": "wheels", "max_hp": 1000, "armor": "tank", "weapon": ""}
 
 func cases() -> Array[Callable]:
-	return [test_unknown_key_is_named, test_dangling_reference_is_named, test_real_registry_is_clean]
+	return [test_unknown_key_is_named, test_dangling_reference_is_named, test_nested_and_enum_values_are_checked, test_faction_references_are_checked, test_real_registry_is_clean]
 
-static func lint(kinds: Dictionary) -> Array[String]:
+static func lint(kinds: Dictionary, factions: Dictionary) -> Array[String]:
 	var errors: Array[String] = []
 	var buildings: Dictionary = _ids_of(kinds, false)
 	var units: Dictionary = _ids_of(kinds, true)
@@ -20,6 +23,8 @@ static func lint(kinds: Dictionary) -> Array[String]:
 		for key: String in row:
 			if not KNOWN_KEYS.has(key): errors.append("%s: unknown key %s" % [id, key])
 		_check_refs(id, row, buildings, units, errors)
+		_check_nested(id, row, units, errors)
+	for faction: String in factions: _check_faction(faction, factions[faction], buildings, units, errors)
 	return errors
 
 static func _ids_of(kinds: Dictionary, units: bool) -> Dictionary:
@@ -39,6 +44,27 @@ static func _check_refs(id: String, row: Dictionary, buildings: Dictionary, unit
 	for key: String in ["produces", "spawns_on_complete"]:
 		for target: String in row.get(key, []): _expect(errors, id, key, target, units, false)
 
+static func _check_nested(id: String, row: Dictionary, units: Dictionary, errors: Array[String]) -> void:
+	_expect(errors, id, "class", row.get("class", "vehicle"), _set_of(CLASSES), false)
+	_expect(errors, id, "salvage", row.get("salvage", "money"), _set_of(SALVAGE), false)
+	_expect(errors, id, "slot", row.get("slot", "factory"), _set_of(SLOTS), false)
+	if row.has("hole"): _expect(errors, id, "hole.worker", row.hole.get("worker", ""), units, false)
+	for role: String in row.get("contains", {}).get("accepts", []): _expect(errors, id, "contains.accepts", role, _set_of(CLASSES), false)
+
+static func _check_faction(id: String, faction: Dictionary, buildings: Dictionary, units: Dictionary, errors: Array[String]) -> void:
+	_expect(errors, id, "start_building", faction.get("start_building", ""), buildings, false)
+	_expect(errors, id, "start_unit", faction.get("start_unit", ""), units, false)
+	for target: String in faction.get("build_order", []): _expect(errors, id, "build_order", target, buildings, false)
+	var units_for: Dictionary = faction.get("units_for", {})
+	for producer: String in units_for:
+		_expect(errors, id, "units_for", producer, buildings, false)
+		for target: String in units_for[producer]: _expect(errors, id, "units_for", target, units, false)
+
+static func _set_of(values: Array) -> Dictionary:
+	var ids: Dictionary = {}
+	for value: String in values: ids[value] = true
+	return ids
+
 static func _expect(errors: Array[String], id: String, key: String, value: String, table: Dictionary, empty_ok: bool) -> void:
 	if value.is_empty() and empty_ok: return
 	if not table.has(value): errors.append("%s: %s %s does not resolve" % [id, key, value])
@@ -50,7 +76,7 @@ static func _registry_kinds() -> Dictionary:
 
 func _lint_test_kind(row: Dictionary) -> Array[String]:
 	Registry.add_test_kind("x_lint", row)
-	var errors: Array[String] = lint(_registry_kinds())
+	var errors: Array[String] = lint(_registry_kinds(), Registry.Factions.FACTIONS)
 	Registry.clear_test_kinds()
 	return errors
 
@@ -77,11 +103,31 @@ func test_dangling_reference_is_named(runner) -> bool:
 	runner.check(_lint_test_kind(none).is_empty(), "DL2 an empty weapon and prerequisite mean none")
 	return true
 
+func test_nested_and_enum_values_are_checked(runner) -> bool:
+	for case: Array in [["slot", "factroy"], ["class", "vehcile"], ["salvage", "gold"], ["hole", {"worker": "no_such_kind"}], ["hole", {}], ["hole", {"worker": "usa_barracks"}], ["contains", {"accepts": ["infantyr"]}]]:
+		var bad: Dictionary = GOOD_ROW.duplicate(true)
+		bad[case[0]] = case[1]
+		var found: Array[String] = _lint_test_kind(bad)
+		runner.check(found.size() == 1 and found[0].contains("x_lint") and found[0].contains(String(case[0])), "DL4 a bad %s %s fails: %s" % [case[0], case[1], found])
+	var good: Dictionary = GOOD_ROW.duplicate(true)
+	good.hole = {"worker": "usa_builder"}
+	good.contains = {"accepts": ["infantry", "vehicle"]}
+	runner.check(_lint_test_kind(good).is_empty(), "DL4 a valid hole worker and container accepts pass")
+	return true
+
+func test_faction_references_are_checked(runner) -> bool:
+	for case: Array in [["start_building", "usa_factroy"], ["start_unit", "usa_factory"], ["build_order", ["usa_power_plant", "no_such_kind"]], ["build_order", ["usa_tank"]], ["units_for", {"no_such_kind": []}], ["units_for", {"usa_barracks": ["usa_barracks"]}]]:
+		var factions: Dictionary = Registry.Factions.FACTIONS.duplicate(true)
+		factions.usa[case[0]] = case[1]
+		var found: Array[String] = lint(_registry_kinds(), factions)
+		runner.check(found.size() == 1 and found[0].contains("usa") and found[0].contains(String(case[0])), "DL5 a bad faction %s %s fails: %s" % [case[0], case[1], found])
+	return true
+
 func test_real_registry_is_clean(runner) -> bool:
 	# A test kind leaked by an earlier case in the same shard would read as a real kind.
 	Registry.clear_test_kinds()
 	var kinds: Dictionary = _registry_kinds()
 	runner.check(kinds.size() >= 37, "DL3 the registry has its kinds (%d)" % kinds.size())
-	var errors: Array[String] = lint(kinds)
+	var errors: Array[String] = lint(kinds, Registry.Factions.FACTIONS)
 	runner.check(errors.is_empty(), "DL3 today's definitions lint clean: %s" % [errors])
 	return true
