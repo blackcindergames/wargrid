@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Which arrival mark when `H` or `Space` lands the camera?
+why: >-
+  Your rider (user, 2026-11-23): a short pulse where the glide lands, the Headquarters for `H`, the attack
+  spot for `Space`. Zero Hour snaps without a mark, and none of OpenRA, 0 A.D., Beyond All Reason, Zero-K or Warzone 2100 marks a camera jump (OpenRA pings the minimap). The pictures loop every 2.4 s; in the game it plays
+  once on arrival.
+look: >-
+  The Headquarters where `H` lands it; under each option, a `Space` attack spot in the alert amber.
+rec: A
+recWhy: >-
+  a ring growing out of the footprint points at the spot without covering the building, and works the
+  same on bare ground for `Space`; a flash of the outline reads like selection.
+neutral: None of these
+render:
+  page: docs/images/queue-round/pulse.html
+  w: 1280
+  h: 720
+  hash: target=hq
+options:
+  A:
+    name: Ring grows out of the footprint
+    render: {params: {pulse: ring}}
+    sees: >-
+      A light blue diamond leaves the footprint, grows to 1.7 times and fades in 0.6 s; amber at an
+      attack spot, so `Space` says trouble, not yours.
+    notes: Reads as "here", on buildings and bare ground alike.
+    extra:
+    - label: Still frame mid-pulse
+      render: {params: {pulse: ring, still: ''}}
+    - label: Attack spot (`Space`)
+      render: {params: {pulse: ring, target: spot}}
+  B:
+    name: Outline flashes twice
+    render: {params: {pulse: flash}}
+    sees: The footprint outline blinks white twice, about 0.5 s.
+    notes: Stays on the building's edge; close to the selection look.
+    extra:
+    - label: Attack spot (`Space`)
+      render: {params: {pulse: flash, target: spot}}
+  C:
+    name: No mark
+    render: {params: {pulse: none}}
+    sees: The glide alone.
+    notes: Zero Hour's way; nothing to tune.

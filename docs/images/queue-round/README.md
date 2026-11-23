@@ -1,0 +1,3 @@
+# Queue round pictures
+
+Source for the War Room rounds `queue-follow-up` and `p2-3b-defaults` (2026-11-23): the owner's draft v2 of the production panel, `factory.html`, with the round's variants as hash or query parameters (`count`, `fit`, `rally`, `idle`, `badge`, `num`, `glyph`, `owner`, `teach`, `nowx`, `nowright`, `nexthint`, `open`, `cancel`, `held`, `hq`), and `pulse.html` for the camera arrival mark (`pulse`, `target`, `still`). Both need the repository layout (`../hud-v5/source/glyphs3.js`, `game/fonts/`); serve them through War Room. The `.webp` files are 2x exports at 2560 x 1440; `match.webp` (the panel) and `../hud-v5/source/worlds/w-none.png` (the pulse, shown at 1.7 so the target sits where the glide lands it) are Wargrid screenshots.

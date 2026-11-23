@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: 'NEXT and the rally line collide: how does the panel make room?'
+why: >-
+  At 198 px the panel holds the header, health, NOW PRODUCING, NEXT and the rally line only if the rally
+  line sits on top of NEXT (v2 as drawn). The dock is 168 px and the command card 204 px; today's
+  producer panel is 152 px (user, 2026-11-23), so every option is taller than what ships now.
+look: 'The bottom of the factory panel, where NEXT and the rally line meet.'
+crop: {x: 160, y: 400, w: 1120, h: 320}
+rec: D
+recWhy: >-
+  the rally hint is tutorial text a player needs once; showing it only while the producer is idle frees
+  the row for NEXT at v2's height and keeps the 160 px health bar. The cost: a busy factory no longer
+  reminds you how to set a rally point (the Controls list still does).
+neutral: None of these
+options:
+  A:
+    name: As drawn, 198 px
+    render: {params: {fit: v2, rally: always}}
+    sees: The rally line printed over the NEXT row.
+    notes: Your draft; the overlap stays.
+  B:
+    name: Health on the name line, 198 px
+    render: {params: {fit: header, rally: always}}
+    sees: >-
+      Name left, a 96 px health bar and `2000 / 2000` right on the same line; NEXT and the rally line each
+      get their own line.
+    notes: Same height as v2, one row saved, a shorter health bar.
+  C:
+    name: Taller panel, 224 px
+    render: {params: {fit: tall, rally: always}}
+    sees: Everything as v2 with 26 px more height, so the rally line drops below NEXT.
+    notes: Nothing moves, but the panel covers 26 px more of the map, 20 px above the card.
+  D:
+    name: Rally line only while idle, 198 px
+    render: {params: {fit: v2, rally: idle}}
+    sees: >-
+      v2's layout with the 160 px health bar; the rally line is gone while something is queued and shows
+      under the empty panel when idle.
+    notes: No overlap and no new layout; the hint teaches when the panel has room.
+    extra:
+    - label: Idle, rally line shown
+      render: {params: {fit: v2, rally: idle, count: 0, idle: box}}

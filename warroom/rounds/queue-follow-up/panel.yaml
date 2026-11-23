@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Your draft v2 as the production panel, details in the next steps?
+why: >-
+  v2 answers the five conflicts raised against v1: `QUEUE n / 9` beside the queue, runs merged as
+  `Rotary Gun Tank ×3` without digits, `+N more` a read-only tooltip instead of a list that grows the
+  panel, one panel height from idle to full, and a cancel on NOW PRODUCING. It replaces P2.3b's row of
+  four queue tiles. The steps after this one settle what v2 leaves open.
+look: 'The factory panel bottom left, four queued. Under it: idle, full, `+N more`, cancel, Headquarters.'
+crop: {x: 160, y: 400, w: 1120, h: 320}
+rec: A
+recWhy: >-
+  it is your lead and it reads as one sentence: what is building, what comes next, how full. The open
+  points (overlap, idle space, numbers) are steps 2 to 5, so a yes here does not lock them.
+options:
+  A:
+    name: Draft v2 as drawn
+    render: {params: {fit: v2, rally: always}}
+    sees: >-
+      Header with glyph and name, health row, `NOW PRODUCING` with `QUEUE 4 / 9`, the tank in production
+      with bar and `46%`, `NEXT Medium Tank` and `+2 more`, the rally line at the bottom.
+    notes: Your draft, unchanged; the rally line overlaps NEXT, see step 2.
+    extra:
+    - label: Idle
+      render: {params: {count: 0, fit: v2, rally: always}}
+    - label: Nine queued (cells muted, queue full)
+      render: {params: {count: 9, fit: v2, rally: always}}
+    - label: '`+N more` under the pointer'
+      render: {params: {count: 9, fit: v2, rally: always, open: ''}}
+    - label: Pointer on NOW PRODUCING
+      render: {params: {fit: v2, rally: always, cancel: ''}}
+    - label: Headquarters, three Bulldozers
+      render: {params: {count: 3, fit: v2, rally: always, hq: ''}}

@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid · camera arrival pulse study</title>
+<!-- Loops every 2.4 s so a still look catches it; in the game it plays once, when the glide lands. -->
+<style>
+body{margin:0;background:#121c24;overflow:hidden}
+main{position:relative;width:1280px;height:720px;background:url(../hud-v5/source/worlds/w-none.png) no-repeat;background-size:2176px 1360px;transform-origin:top left}
+svg{position:absolute;inset:0;width:1280px;height:720px;overflow:visible}
+polygon{fill:none;stroke:var(--ring,#9cbcff);stroke-width:3;vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center}
+.ring polygon{animation:ring 2.4s cubic-bezier(.2,.7,.3,1) infinite}
+@keyframes ring{0%{transform:scale(1);opacity:.95}25%{transform:scale(1.7);opacity:0}100%{transform:scale(1.7);opacity:0}}
+.flash polygon{stroke:#e9eff2;animation:flash 2.4s linear infinite}
+@keyframes flash{0%,8%{opacity:1}12%,16%{opacity:.15}20%,28%{opacity:1}40%,100%{opacity:0}}
+.still polygon{opacity:var(--still,1);animation:none}
+</style>
+<main><svg></svg></main>
+<script>
+const params=new URLSearchParams(location.hash.length>1?location.hash.slice(1):location.search);
+const kind=params.get('pulse')??'ring', target=params.get('target')??'hq';
+// The backdrop is shifted so the target sits where the glide lands it: mid-window, above the 168 px dock.
+const landX=640, landY=276;
+// Footprint centre and half sizes in the backdrop at 1280 x 800, shown at 1.7 so the target can sit mid-window.
+const k=1.7, spots={hq:[408,198.5,93,50],spot:[896,365,26,13]};
+const [sx,sy,w0,h0]=spots[target], w=w0*k, h=h0*k, x=landX, y=landY;
+document.querySelector('main').style.backgroundPosition=(landX-sx*k)+'px '+(landY-sy*k)+'px';
+if(target==='spot')document.documentElement.style.setProperty('--ring','#f5b94a');
+const svg=document.querySelector('svg');
+
+if(kind!=='none'){
+ svg.classList.add(kind);
+ if(params.has('still'))svg.classList.add('still');
+ const pts=[[x-w,y],[x,y-h],[x+w,y],[x,y+h]].map(p=>p.join(',')).join(' ');
+ const echo=params.has('still')&&kind==='ring'?'<polygon style="transform:scale(1.35);opacity:.45" points="'+pts+'"/>':'';
+ // The Headquarters' box hides the ring behind it, as the ground layer would.
+ const hide=target==='hq'?'<mask id="m"><rect width="1280" height="720" fill="#fff"/><path fill="#000" d="M495,210 595,155 595,100 675,100 675,155 770,210 770,265 635,332 495,265Z"/></mask>':'';
+ svg.innerHTML=hide+'<g'+(hide?' mask="url(#m)"':'')+'><polygon points="'+pts+'"/>'+echo+'</g>';
+}
+function scale(){document.querySelector('main').style.transform='scale('+Math.min(innerWidth/1280,innerHeight/720)+')'}
+onresize=scale;scale();
+onhashchange=()=>location.reload();
+</script>

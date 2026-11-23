@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: wording
+question: The Controls list's right-click row, as shipped
+why: >-
+  P2.3b's pause-menu Controls list (`Right-click` row, `pause_menu.gd`). The queue follow-up adds a row
+  for cancelling the unit in production; edit this one here if its words are wrong.
+fields:
+- id: cancel
+  label: Right-click
+  text: "Cancel the last queued of that unit (on its button)"

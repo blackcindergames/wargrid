@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How do the unit glyphs look?
+why: >-
+  Unit glyphs ship with this package (user, 2026-11-23); the shapes are the approved third pass ("Glyph
+  plus word": bright top faces, one ground line, at most six shapes). This step picks only the colour and
+  tone. The panel's border and header glyph already carry the owner colour.
+look: The glyphs in NOW PRODUCING, NEXT and the two build cells.
+crop: {x: 160, y: 400, w: 1120, h: 320}
+rec: A
+recWhy: >-
+  light grey keeps the owner colour as a signal (bar, border) and the two tones keep the tank's top and
+  sides apart at 19 px; owner colour on every glyph is a lot of blue for the panel.
+neutral: None of these
+options:
+  A:
+    name: Light grey, two tones (v2)
+    render: {params: {glyph: grey}}
+    sees: Light grey glyphs, sides at 40 %.
+    notes: Your draft; colour stays for state.
+  B:
+    name: Owner colour, two tones
+    render: {params: {glyph: own}}
+    sees: Every unit glyph in a light owner blue, sides at 40 %.
+    notes: Ties the units to you; more colour in the dock.
+    extra:
+    - label: A red owner
+      render: {params: {glyph: own, owner: red}}
+  C:
+    name: Light grey, one flat tone
+    render: {params: {glyph: flat}}
+    sees: The same glyphs as one solid silhouette.
+    notes: Simplest; top and sides merge at small sizes.

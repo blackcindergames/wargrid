@@ -1,0 +1,137 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid · production panel study</title>
+<!-- Owner's draft v2 (2026-11-23) with the queue round's variants as hash or query params. -->
+<style>
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Regular.ttf)}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-SemiBold.ttf);font-weight:600}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Bold.ttf);font-weight:700}
+*{box-sizing:border-box}body{margin:0;background:#121c24;color:#e9eff2;font:600 13px Public,sans-serif;font-variant-numeric:tabular-nums;overflow:hidden}
+main{position:relative;width:1280px;height:720px;background:url(match.webp) center/cover;transform-origin:top left}
+section,aside{position:absolute;bottom:0;background:#121c24;border:1px solid #2e3f4b;border-left:4px solid var(--own,#628ffa)}
+section{left:176px;width:408px;padding:12px 16px}
+aside{right:0;width:432px;height:204px;display:grid;padding:7px;grid-template:repeat(3,60px)/repeat(4,100px);gap:4px}
+header,.row,.now,.strip,footer{display:flex;align-items:center;gap:8px}
+header{font-size:15px}small,.tag,kbd{font:700 11px Public;color:#96aab6;letter-spacing:1px}
+small,.end{margin-left:auto}.health{height:5px;width:160px;background:#5cc85a}
+header .health{width:96px;margin-left:auto}header .hp{font-size:12px;color:#96aab6}
+.row{margin:6px 0 10px;color:#96aab6}.strip{border-top:1px solid #2e3f4b;padding-top:8px}
+svg{width:26px;height:26px;fill:var(--glyph,#bacbd5);flex:none}header svg{width:23px;height:23px;fill:var(--own,#628ffa)}
+.now{background:#223241;padding:7px 8px;margin:5px 0}.now svg{width:32px;height:32px}
+.track{height:4px;background:#0c141a;margin-top:5px}.bar{height:100%;width:46%;background:var(--own,#628ffa)}
+.grow{flex:1}.tag{display:block}footer{color:#96aab6;font-size:12px;margin-top:8px}
+button{font:600 12px Public;color:#e9eff2;border:1px solid #344956;background:#223241;padding:4px 8px;cursor:pointer}
+.tile{position:relative;border:1px solid #2e3f4b;background:#0f1820;padding:4px 7px}
+.filled{background:#223241}.full .filled{background:#17232c;color:#96aab6}
+kbd,.count{position:absolute;right:4px;background:#0c141a;padding:1px 4px}kbd{top:4px}.count{bottom:3px}
+.tile svg{width:19px;height:19px;vertical-align:middle;margin-right:4px}.name{font-size:12px;line-height:14px;display:block;width:65px;margin-top:3px}
+.production{height:var(--panel-h,198px);display:flex;flex-direction:column}
+.production footer{margin-top:auto}
+.production .strip{min-height:23px}
+.production .now{position:relative;flex:none;width:100%;text-align:left;font-size:13px}
+.hint{display:none;position:absolute;left:calc(100% + 21px);bottom:0;z-index:1;padding:7px 10px;background:#0c141a;border:1px solid #526775;color:#e9eff2;font:600 12px/17px Public;white-space:nowrap}
+.hint .sub{display:block;color:#96aab6;font-weight:600}
+.cancel-mark{width:12px;visibility:hidden}
+.now:is(:hover,:focus-visible,.preview) .cancel-mark{visibility:visible}
+:is(.now,.overflow,.next):is(:hover,:focus-visible,.preview)>.hint{display:block}
+.next{position:relative}.next.preview{background:#223241}.next.preview .cancel-mark{visibility:visible}
+.overflow{position:relative;color:#a6b7c2;font-weight:600;cursor:help;padding:4px}
+.hint .tag{margin-bottom:4px}
+.held{color:#96aab6;cursor:default}.held svg{fill:#5d707c}.held .bar{background:#5d707c}
+.empty{flex:none;height:84px;margin:5px 0;border:1px dashed #344956;display:grid;place-items:center;color:#96aab6;font-size:12px;text-align:center;line-height:16px}
+.empty b{display:block;color:#bacbd5;font-size:13px}
+.idle-note{color:#96aab6}
+.card{position:absolute;right:226px;bottom:212px;width:238px;padding:9px 11px;background:#0c141a;border:1px solid #526775;font:600 12px/17px Public;color:#96aab6}
+.card b{display:block;color:#e9eff2;font-size:13px;margin-bottom:2px}.card .act{color:#e9eff2;margin-top:4px;display:block}
+.cursor{position:absolute;width:14px;height:21px;filter:drop-shadow(0 1px 1px #000)}
+.refund{position:absolute;left:96px;top:12px;width:61px;height:24px;display:grid;place-items:center;background:#121c24;font:bold 16px Public}
+</style>
+<main><section></section><aside></aside></main>
+<script src="../hud-v5/source/glyphs3.js"></script>
+<script>
+const params=new URLSearchParams(location.hash.length>1?location.hash.slice(1):location.search);
+const opt=(k,d)=>params.get(k)??d;
+const count=Number(opt('count',9)), expanded=params.has('open');
+const fit=opt('fit','v2'), idle=opt('idle','plain'), badgeAt=opt('badge','now'), num=opt('num','pct'), look=opt('glyph','grey'), teach=opt('teach','none'), hq=params.has('hq'), held=params.has('held'), nowX=opt('nowx','1')!=='0', nextHint=params.has('nexthint'), rally=opt('rally','always'), nowRight=params.has('nowright'), owner=opt('owner','blue');
+if(fit==='tall')document.documentElement.style.setProperty('--panel-h','224px');
+if(look==='own')document.documentElement.style.setProperty('--glyph',owner==='red'?'#ff8f80':'#7fa6ff');
+if(owner==='red')document.documentElement.style.setProperty('--own','#e5484d');
+const kinds=hq?[{id:'builder',name:'Bulldozer',cost:1000,secs:5}]:[{id:'light_vehicle',name:'Medium Tank',cost:800,secs:10},{id:'tank',name:'Rotary Gun Tank',cost:800,secs:10}];
+const glyph=id=>{let g=GLYPH3['china_'+id];if(look==='flat')g=g.replaceAll(' opacity=".4"','');return '<svg aria-hidden="true" viewBox="0 0 48 48">'+g+'</svg>'};
+const unit=i=>glyph(kinds[i].id);
+const entries=(hq?[0,0,0,0,0,0,0,0,0]:[1,0,1,1,1,0,0,0,1]).slice(0,count);
+const panel=document.querySelector('section'), card=document.querySelector('aside'), main=document.querySelector('main');
+panel.className='production';
+let refunded=0, percent=held?100:46;
+function runLength(start){let end=start+1;while(end<entries.length&&entries[end]===entries[start])end++;return end-start}
+function runName(start,size){return kinds[entries[start]].name+(size>1?' ×'+size:'')}
+function progressText(i){
+ const left=Math.ceil(kinds[entries[i]].secs*(100-percent)/100)+'s';
+ return {pct:percent+'%',none:'',secs:left,both:percent+'% · '+left}[num];
+}
+function header(){
+ const name=hq?'Headquarters':'Vehicle Factory', hp=hq?'5000 / 5000':'2000 / 2000';
+ const g=glyph(hq?'command_center':'factory');
+ if(fit==='header')return '<header>'+g+name+'<i class="health"></i><span class="hp">'+hp+'</span></header>';
+ return '<header>'+g+name+'</header><div class="row"><i class="health"></i>'+hp+'</div>';
+}
+function render(){
+ const total=entries.length, counted=held?total-1:total;
+ const badge='<small>QUEUE '+counted+' / 9</small>';
+ let content;
+ if(!total&&idle==='box'){
+  content='<div class="strip"><b class="tag">PRODUCTION</b>'+badge+'</div><div class="empty"><span><b>Nothing in production</b>Click a unit on the right to build it</span></div>';
+ }else{
+  content='<div class="strip">'+(total?'<b class="tag">NOW PRODUCING</b>':'<span class="idle-note">Nothing in production</span>')+(badgeAt==='now'||!total?badge:'')+'</div>';
+ }
+ if(total){
+  const k=kinds[entries[0]];
+  const preview=params.has('cancel')&&!refunded&&!held?' preview':'';
+  const tip=nowRight?'Cancel · refunds '+k.cost+'<span class="sub">Click or right-click</span>':teach==='tip'?'Cancel · refunds '+k.cost+'<span class="sub">Right-click a build button: cancel the last of that kind</span>':'Cancel · refunds '+k.cost;
+  content+='<button class="now'+preview+(held?' held':'')+'" aria-label="Cancel '+k.name+', refunds '+k.cost+'">'+unit(entries[0])+'<span class="grow">'+k.name+'<span style="display:block" class="track"><span class="bar" style="display:block;width:'+percent+'%"></span></span></span><b>'+(held?'Done':progressText(0))+'</b><b class="cancel-mark">'+(held||!nowX?'':'×')+'</b>'+(held||!nowX?'':'<span class="hint">'+tip+'</span>')+'</button>';
+ }
+ if(total>1){
+  const next=runLength(1), firstHidden=1+next;
+  content+='<div class="strip next'+(nextHint?' preview':'')+'"><b class="tag">NEXT</b>'+unit(entries[1])+runName(1,next)+(nextHint?'<span class="hint">Cancel one '+kinds[entries[1]].name+' · refunds '+kinds[entries[1]].cost+'</span>':'');
+  if(firstHidden<total){
+   const lines=[];
+   for(let i=firstHidden;i<total;){const size=runLength(i);lines.push(runName(i,size));i+=size}
+   content+='<span tabindex="0" aria-describedby="remaining" class="end overflow'+(expanded?' preview':'')+'">+'+(total-firstHidden)+' more<span id="remaining" class="hint" role="tooltip"><b class="tag">AFTER NEXT</b>'+lines.join('<br>')+'</span></span>';
+  }
+  if(nextHint)content+='<b class="cancel-mark" style="margin-left:8px">×</b>';
+  if(badgeAt==='next')content+=(firstHidden<total?'<small style="margin-left:8px">':'')+(firstHidden<total?'QUEUE '+total+' / 9</small>':badge);
+  content+='</div>';
+ }else if(total===1&&badgeAt==='next'){
+  content+='<div class="strip"><b class="tag">NEXT</b><span class="idle-note">—</span>'+badge+'</div>';
+ }
+ const footer=rally==='always'||(rally==='idle'&&!total)?'<footer>Right-click ground: rally point</footer>':'';
+ panel.innerHTML=header()+content+footer;
+ const active=panel.querySelector('.now');
+ if(active&&!held&&nowX)active.onclick=()=>cancel(0);
+ card.innerHTML='';
+ card.classList.toggle('full',total===9);
+ for(let i=0;i<12;i++){
+  const n=entries.filter(kind=>kind===i).length-(held&&entries[0]===i?1:0), has=i<kinds.length;
+  card.insertAdjacentHTML('beforeend','<div class="tile '+(has?'filled':'')+'">'+(has?unit(i)+kinds[i].cost+'<kbd>'+['Q','W'][i]+'</kbd><span class="name">'+kinds[i].name+'</span>'+(n?'<b class="count">×'+n+'</b>':''):'')+'</div>');
+  if(n)card.lastElementChild.oncontextmenu=event=>{event.preventDefault();cancel(entries.lastIndexOf(i))};
+ }
+ main.querySelector('.card')?.remove();main.querySelector('.cursor')?.remove();
+ if(teach==='card'&&!hq){
+  const n=entries.filter(kind=>kind===1).length;
+  main.insertAdjacentHTML('beforeend','<div class="card"><b>Rotary Gun Tank</b>Good against infantry at full spin · Weak against tanks'+(n?'<span class="act">Right-click: cancel the last ('+n+' queued)</span>':'')+'</div><svg class="cursor" style="right:262px;bottom:136px;fill:#fff;stroke:#000;stroke-width:1" viewBox="0 0 14 21"><path d="M1 1v16l4-4 3 7 3-1-3-7h5z"/></svg>');
+ }
+}
+function cancel(index){
+ entries.splice(index,1);
+ if(index===0)percent=0;
+ refunded+=800;
+ let credits=document.querySelector('.refund');
+ if(!credits){credits=document.createElement('span');credits.className='refund';main.append(credits)}
+ credits.textContent=50000+refunded;
+ render();
+}
+render();
+function scale(){main.style.transform='scale('+Math.min(innerWidth/1280,innerHeight/720)+')'}
+onresize=scale;scale();
+onhashchange=()=>location.reload();
+</script>

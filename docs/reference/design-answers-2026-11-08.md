@@ -1494,6 +1494,22 @@ War Room round `p2-3b-dock` (`warroom/rounds/p2-3b-dock/`), drawn as `p23b-*` st
 - **Cost you cannot afford (3-2, advisory):** `warn` plus a non-colour mark about money, not the warning triangle: a solid 15 px `warn` coin with `$` cut out in the cell's fill, 4 px after the cost (the owner found the 11 px outline coin's `$` too small to read). Cost numbers stay bare.
 - **War Room:** the Pick button names only the letter (`Pick B`), so its width never changes. The step page gets fixed zones (a fixed-height stage with the picture centred, so the Pick row never moves) with the War Room layout package.
 
+## Queue follow-up round (user, 2026-11-23)
+
+War Room round `queue-follow-up` (`warroom/rounds/queue-follow-up/`, pictures and source in [images/queue-round](../images/queue-round/README.md)) for P16, drawn from the owner's draft v2 of the production panel; a player-experience pass and one fix round before the owner saw it. All nine answered with the recommended option, no notes.
+
+- **Panel:** draft v2 confirmed: `NOW PRODUCING` (glyph, name, bar), `NEXT` with runs merged as `×N` and no position digits, `+N more` as a read-only `AFTER NEXT` list beside the panel (it also opens on a tap), `QUEUE n / 9` on the NOW PRODUCING line, one panel height (198 px) in every state. Replaces P2.3b's queue tiles.
+- **Fit:** the `Right-click ground: rally point` line shows only while the producer is idle (and stays in the Controls list), so NEXT has its row and the health bar keeps 160 px.
+- **Idle:** a dashed box over the NOW and NEXT rows: `Nothing in production`, under it `Click a unit on the right to build it`.
+- **Progress:** seconds left beside the bar, rounded up (`5s`), no `%`. Zero Hour shows no number (GeneralsGameCode `afc2a103f`, `ControlBarCommand.cpp:790-795`); OpenRA, Warzone 2100 and 0 A.D. show time left.
+- **Cancel:** per kind, right-click on the build cell cancels the last queued of that kind; the unit in production cancels with a left- or right-click on NOW PRODUCING (`×` and `Cancel · refunds 800` on hover). No click target on NEXT.
+- **Teaching:** the cell card adds `Right-click: cancel the last (N queued)` while that kind is queued; the Controls list keeps its row and gains one for NOW.
+- **Batch:** Shift-click or Shift+key queues five, Shift-right-click cancels five, capped by the queue of nine; no Ctrl modifier.
+- **Glyphs:** unit glyphs in light grey, two tones (sides at 40 %); owner colour stays for state.
+- **Arrival mark:** a ring leaves the footprint where `H` lands, grows to 1.7 times and fades in 0.6 s; amber at a `Space` attack spot.
+- **After the round (user, 2026-11-23, player-experience and director passes):** P16 also builds the production strip (one chip per producer right of POWER: unit glyph, progress bar, hollow when idle, click selects, double click jumps), reopening the Core/Full split for this one item; P17 runs before P16 and takes the camera riders (`H` again returns, arrival ring); a left-click on NOW still cancels, and the trace counts accidental cancels (a cancel, then the same kind queued within 2 s) so a match can reopen it.
+- **P2.3b defaults (advisory round `p2-3b-defaults`):** kept as shipped: the 0.15-0.45 s glide by distance, a finished entry held and muted under the pointer (carried to P16's NOW PRODUCING row), edge scroll up to 40 pt outside the window; the Controls right-click row's wording unchanged.
+
 ## P2.3b top strip round (user, 2026-11-22)
 
 War Room round `p2-3b-topstrip` (`warroom/rounds/p2-3b-topstrip/`), drawn as `ts-*` and `ts-card-*` states of the HUD v5 states page, for the P2.3b riders of 2026-11-22 (compact slabs instead of the full-width bar; a purchase you cannot afford forecasts below zero). Blocking, since the look was the question; player-experience pass before the owner's look. All three picks are the recommendations.

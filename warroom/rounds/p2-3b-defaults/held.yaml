@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Keep a finished entry held and muted under your pointer?
+why: >-
+  P2.3b: when the unit under your pointer finishes, its queue tile stays, muted and without cancel,
+  until the pointer leaves, so a click never lands on the next unit that slid into its place. The queue
+  follow-up carries the same rule to the NOW PRODUCING row, drawn here: `Done` over a full muted bar, no
+  `×`, the counts already without it.
+look: The NOW PRODUCING row, bottom left.
+crop: {x: 160, y: 400, w: 1120, h: 320}
+rec: A
+options:
+  A:
+    name: Held, muted, no cancel
+    render: {params: {held: ''}}
+    notes: The row waits for your pointer to leave before the next unit moves up.

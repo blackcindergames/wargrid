@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: text
+question: Keep the camera glide at 0.15 to 0.45 s by distance?
+why: >-
+  After your match the `H` snap read as disorienting; `H`, `Space` and the group double tap now glide,
+  0.15 s for a short hop up to 0.45 s across the map (2000 screen px or more), cubic ease-out, landing
+  above the dock line (user, 2026-11-23: "way better"). Zero Hour snaps. Try it in 0.15.0.
+rec: A
+options:
+  A:
+    name: As shipped
+    text: 0.15 s for short hops, rising to 0.45 s across the map
+    notes: A change note can give other bounds.

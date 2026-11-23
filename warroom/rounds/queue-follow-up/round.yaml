@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'Queue follow-up: production panel, cancel, glyphs, arrival pulse'
+intro: >-
+  Blocks the queue follow-up package; nothing of it is built yet. Every picture is your draft v2 of the
+  production panel (2026-11-23) on the match backdrop at 1280 x 720, with one thing changed per step.
+  From step 3 on the pictures show the rally line only while idle (step 2, D) so the v2 overlap does
+  not distract; your step 2 pick decides it. Already decided, not asked: waiting entries merge as `×N` with no
+  position digits, `QUEUE n / 9` on the NOW PRODUCING line (your draft), `+N more` is a read-only list beside the panel (it also opens on a tap, for touch and the Steam Deck), the panel keeps one height, no third
+  surface for fine queue editing, unit glyphs ship with this package (building glyphs wait for P2.6),
+  and `H` pressed again near the Headquarters returns the camera to where it was. The glyphs are China's
+  on a blue factory because only China's are drawn; each faction gets its own set. A neutral answer
+  records no winner: the step's build task waits for your note.
+steps: [panel, fit, idle, progress, cancel, teach, batch, glyphs, pulse]
+render:
+  page: docs/images/queue-round/factory.html
+  w: 1280
+  h: 720
+  hash: count=4&fit=v2&rally=idle
+controls:
+  fit: true

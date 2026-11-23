@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How do you cancel production?
+why: >-
+  Your idea (user, 2026-11-23): production is fast and players queue several identical vehicles, so cancel
+  by kind beats precise queue editing. P2.3b ships both: a click on a queue tile cancels one entry, a
+  right-click on a build cell cancels the newest of that kind. v2 has no tiles any more: hovering NOW
+  PRODUCING shows `×` and the refund; the waiting entries cancel per kind with a right-click on the cell.
+  Zero Hour cancels per queue icon. Right-click on a cell for the newest of that kind is what OpenRA,
+  Beyond All Reason and Zero-K do (OpenRA pauses an item already building first); 0 A.D. cancels the
+  clicked entry.
+look: >-
+  The factory panel with the pointer on the row each option makes clickable; the cells right are the
+  same in all.
+crop: {x: 160, y: 400, w: 1120, h: 320}
+rec: D
+recWhy: >-
+  D keeps B's cancel on the unit in production and makes right-click cancel everywhere, so one rule
+  covers the cells and NOW and step 6 teaches one gesture; B alone needs a left-click there. On B:
+  the unit in production is the one you most often regret (wrong kind, money needed elsewhere), and it is
+  the only one whose refund is not the newest; everything else is per kind, as you asked.
+neutral: None of these
+options:
+  A:
+    name: Per kind only
+    render: {params: {nowx: '0', cancel: ''}}
+    sees: NOW PRODUCING is not clickable, no `×`; only the right-click on a build cell cancels.
+    notes: One rule; the unit in production cancels only when it is the newest of its kind.
+  B:
+    name: Per kind, plus `×` on NOW (v2)
+    render: {params: {cancel: ''}}
+    sees: Pointer on NOW PRODUCING shows `×` and `Cancel · refunds 800`; waiting entries per kind.
+    notes: Your draft; one exception for the unit already building.
+  C:
+    name: v2 plus a click on NEXT
+    render: {params: {nexthint: ''}}
+    sees: >-
+      As B, and pointing at NEXT shows `Cancel one Medium Tank · refunds 800`; a click there removes one
+      of that run.
+    notes: A second click target; closer to precise editing again.
+  D:
+    name: B, and right-click on NOW too
+    render: {params: {cancel: '', nowright: ''}}
+    sees: 'As B; the hint reads `Cancel · refunds 800` over `Click or right-click`.'
+    notes: Right-click cancels everywhere; Zero Hour's left-click on NOW still works.

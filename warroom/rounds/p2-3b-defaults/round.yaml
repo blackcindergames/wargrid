@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'P2.3b defaults: glide, held row, Controls wording, edge margin'
+advisory: true
+intro: >-
+  Advisory: P2.3b shipped these defaults in 0.15.0; a yes keeps them, a change with a note goes into the
+  queue follow-up package (P16). Nothing waits on this round: an unanswered step ships as it is, and
+  step 2's rule carries into P16's NOW PRODUCING row. It is separate from the queue round only because
+  War Room marks a whole round advisory.
+steps: [glide, held, controls, margin]
+render:
+  page: docs/images/queue-round/factory.html
+  w: 1280
+  h: 720
+  hash: count=3&fit=v2&rally=idle

@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: text
+question: Should a modifier queue or cancel several at once?
+why: >-
+  Not in Zero Hour (one click, one unit). Beyond All Reason and Zero-K: Shift five, Ctrl twenty, on both
+  click and right-click (`a31aa1c194`, `luaui/Widgets/gui_buildmenu.lua:375`); OpenRA: Shift five, Ctrl
+  on right-click cancels all of that kind; 0 A.D.: Shift batches five. With Wargrid's queue of nine, Ctrl
+  twenty would mean "fill the queue". This is scope: yes adds it to this package.
+look: The rule each option adds to the cell card and the Controls list.
+rec: B
+recWhy: >-
+  Shift for five is the one modifier players bring from other RTS and it fits a queue of nine; Ctrl as
+  "fill" and "cancel all" adds two more rules for little gain at this queue size.
+neutral: Decide later
+view: side
+card:
+  title: Build cell card, Rotary Gun Tank
+  lines:
+  - 'Good against infantry at full spin · Weak against tanks'
+  - null
+  foot: Controls list gets the same line
+options:
+  A:
+    name: None (Zero Hour)
+    text: '(no line: one click queues one, one right-click cancels one)'
+    notes: One unit per click, as today.
+  B:
+    name: Shift for five
+    text: 'Shift-click or Shift+key: queue 5 · Shift-right-click: cancel 5'
+    notes: The common RTS modifier; capped by the queue of nine.
+  C:
+    name: Shift five, Ctrl all
+    text: 'Shift-click or Shift+key: 5 at once · Ctrl: fill the queue / cancel all of this kind'
+    notes: Beyond All Reason and OpenRA style; two modifiers to learn.

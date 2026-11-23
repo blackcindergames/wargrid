@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: The idle panel keeps its height; what fills the empty space?
+why: >-
+  You chose one height for every state, so an idle producer has a band where NOW PRODUCING and NEXT
+  would be. The P2.3b player-experience pass flagged it as looking empty, and on the Headquarters the
+  empty line and the rally line were two identical muted lines.
+look: The factory panel with nothing queued. Under each option, the Headquarters idle.
+crop: {x: 160, y: 400, w: 1120, h: 320}
+rec: B
+recWhy: >-
+  the dashed box sits where production will appear, so the panel says "nothing here yet, it goes here",
+  and it no longer reads like the rally line; the cost is one more line of words.
+neutral: None of these
+options:
+  A:
+    name: One muted line (v2)
+    render: {params: {count: 0}}
+    sees: '`Nothing in production` and `QUEUE 0 / 9` on one line, empty space below.'
+    notes: Quietest; the empty band stays.
+    extra:
+    - label: Headquarters idle
+      render: {params: {count: 0, hq: ''}}
+  B:
+    name: Empty box where production goes
+    render: {params: {count: 0, idle: box}}
+    sees: >-
+      `PRODUCTION` and `QUEUE 0 / 9`, then a dashed box the size of the NOW row: `Nothing in production`,
+      under it `Click a unit on the right to build it`, the box as tall as NOW and NEXT together.
+    notes: Fills the band with the shape busy production takes; teaches where to build.
+    extra:
+    - label: Headquarters idle
+      render: {params: {count: 0, idle: box, hq: ''}}

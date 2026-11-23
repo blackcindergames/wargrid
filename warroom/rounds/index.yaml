@@ -8,3 +8,7 @@
   title: 'P2.3b Build from the dock: queue, empty card, counter line'
 - id: p2-3b-topstrip
   title: 'P2.3b Top strip: compact slabs, credits below zero'
+- id: queue-follow-up
+  title: 'Queue follow-up: production panel, cancel, glyphs, arrival pulse'
+- id: p2-3b-defaults
+  title: 'P2.3b defaults: glide, held row, Controls wording, edge margin'

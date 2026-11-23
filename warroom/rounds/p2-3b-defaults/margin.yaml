@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: text
+question: Keep edge scroll going 40 pt past a window's edge?
+why: >-
+  P2.3b (user, 2026-11-23): in a window the map keeps panning while the pointer is within 40 pt outside
+  the window, so overshooting the edge does not stop the scroll; no pan from the window frame or past
+  stretch bars. Pointer confine was tried and reverted (macOS stutter). Not checked yet on Windows or
+  Linux.
+rec: A
+options:
+  A:
+    name: As shipped
+    text: Keeps panning up to 40 pt outside the window (desktop, windowed)
+    notes: A change note can give another margin.

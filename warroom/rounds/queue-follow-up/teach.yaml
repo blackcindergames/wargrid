@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Where does the game teach right-click to cancel?
+why: >-
+  Your visible check (2026-11-23): right-click to cancel on a build cell works but "probably needs some
+  explanation". The Controls list has it in every option (`Right-click` row). The cell card is the card
+  over a build cell while you point at it; its counter line is P2.3b's.
+look: >-
+  The card over the Rotary Gun Tank cell, or the tooltip right of NOW PRODUCING. Three Rotary Gun Tanks
+  are queued.
+crop: {x: 160, y: 400, w: 1120, h: 320}
+rec: B
+recWhy: >-
+  the card shows the hint exactly where the right-click happens and only while that kind is queued, so
+  it never teaches something you cannot do; the tooltip teaches it one step away from the cell.
+neutral: Controls list only
+options:
+  A:
+    name: Tooltip on NOW PRODUCING
+    render: {params: {teach: tip, cancel: ''}}
+    sees: 'Under `Cancel · refunds 800`: `Right-click a build button: cancel the last of that kind`.'
+    notes: Shown when you go to cancel; a step away from the cell itself.
+  B:
+    name: Line on the cell card
+    render: {params: {teach: card}}
+    sees: 'The card adds `Right-click: cancel the last (3 queued)` while that kind is queued.'
+    notes: Where the right-click happens; gone when nothing of that kind is queued.
+  C:
+    name: Both
+    render: {params: {teach: tip, cancel: ''}}
+    sees: The tooltip line as A (shown), and the card line as B (under this option).
+    notes: Two places to keep true.
+    extra:
+    - label: The card line in C
+      render: {params: {teach: card}}

@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: What number sits beside the production bar?
+why: >-
+  Zero Hour shows no number: the first queue icon gets an inverse clock wipe and the `%` text is
+  commented out (GeneralsGameCode `afc2a103f`, `Core/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarCommand.cpp:790-795`).
+  Other RTS: OpenRA prints time left on the cell by default (`b4d95a5671`, `ProductionPaletteWidget.cs:79`),
+  Warzone 2100 `m:ss` on the bar, 0 A.D. `m:ss` for the first entry; Zero-K and Beyond All Reason show a
+  bar or fill only. v2 shows `46%`; your earlier mock showed `~12s`. Seconds left is new data: low power slows production,
+  so the number would jump when power drops.
+look: The right end of the NOW PRODUCING row.
+crop: {x: 160, y: 400, w: 1120, h: 320}
+rec: C
+recWhy: >-
+  the bar already says how far along it is, so `%` repeats it; seconds answer the question the bar
+  cannot, "when is my tank out", and a jump when power drops tells you power matters.
+neutral: None of these
+options:
+  A:
+    name: Percent (v2)
+    render: {params: {num: pct}}
+    sees: '`46%`.'
+    notes: Your draft; the same thing the bar shows, as a number.
+  B:
+    name: Bar only (Zero Hour)
+    render: {params: {num: none}}
+    sees: No number; the bar alone.
+    notes: Quietest; you judge from the bar.
+  C:
+    name: Seconds left
+    render: {params: {num: secs}}
+    sees: '`5s` (a Rotary Gun Tank takes 10 s; 46 % done).'
+    notes: When the unit is out; jumps when low power slows production.
+  D:
+    name: Both
+    render: {params: {num: both}}
+    sees: '`46% · 5s`.'
+    notes: Everything, at the cost of a busier row.

@@ -50,7 +50,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**14 of 43 parts done**
+**14 of 44 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -69,6 +69,8 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | Notes that never block | Done |
 | ✅ | See your selection | Done |
 | ⏭ | Build from the dock | Next |
+| 📋 | Pan with the mouse | Planned |
+| 📋 | Know what your factory is making | Planned |
 | 📋 | Team up against bots | Planned |
 | 📋 | First new units | Planned |
 | 📋 | Know why an order failed | Planned |
@@ -87,7 +89,6 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 📋 | Three kinds of base | Planned |
 | 📋 | Smooth motion | Planned |
 | 💡 | Order controls | Later |
-| 💡 | Pan with the mouse | Later |
 | 💡 | Smoother big moves | Later |
 | 💡 | Crowds that sort themselves | Later |
 | 💡 | Fog of war | Later |
