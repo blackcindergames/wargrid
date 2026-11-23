@@ -9,6 +9,11 @@ const Wire = preload("res://scripts/net/wire.gd")
 const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const LAUNCHER: String = "res://scenes/launcher.tscn"
+const HudTests = preload("res://tests/test_hud.gd")
+const SkirmishTests = preload("res://tests/test_skirmish_scene.gd")
+const CameraTests = preload("res://tests/test_camera_keys.gd")
+const HudModel = preload("res://scripts/match/hud_model.gd")
+const ControlGroups = preload("res://scripts/match/control_groups.gd")
 
 class FakeTransport extends RefCounted:
 	var patient: bool = false
@@ -25,7 +30,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_quit_hidden_on_web, test_menu_layout]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_quit_hidden_on_web, test_menu_layout, test_controls_list_shows_every_row, test_controls_list_keys_work, test_controls_list_layout]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -271,5 +276,197 @@ func test_menu_layout(runner) -> bool:
 			runner.check(Rect2(Vector2.ZERO, Vector2(size)).encloses(rect), "E8 button %d inside %s" % [i, size])
 			for other in hud: runner.check(not rect.intersects(other), "E8 button %d clear of HUD text at %s" % [i, size])
 			for j in range(i + 1, buttons.size()): runner.check(not rect.intersects(buttons[j].get_global_rect()), "E8 buttons %d and %d apart at %s" % [i, j, size])
+		port.free()
+	return true
+
+const PROBES: Array[String] = ["grid", "build", "back", "attack_move", "stop", "unload", "recall", "save", "add", "pan", "home", "last_attack", "esc", "mute", "perf"]
+const MODIFIERS := {KEY_MASK_SHIFT: "Shift", KEY_MASK_CTRL: "Ctrl", KEY_MASK_META: "Cmd", KEY_MASK_ALT: "Alt"}
+
+static func _event(press: int) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.physical_keycode = press & KEY_CODE_MASK
+	event.keycode = press & KEY_CODE_MASK
+	event.pressed = true
+	event.shift_pressed = press & KEY_MASK_SHIFT != 0
+	event.ctrl_pressed = press & KEY_MASK_CTRL != 0
+	event.meta_pressed = press & KEY_MASK_META != 0
+	event.alt_pressed = press & KEY_MASK_ALT != 0
+	return event
+
+static func _rows() -> Array:
+	var rows: Array = []
+	for section: Array in PauseMenu.controls(): rows.append_array(section[1])
+	return rows
+
+func test_controls_list_shows_every_row(runner) -> bool:
+	var menu = PauseMenu.new(false)
+	var list: Control = menu.find_child("Controls", true, false)
+	runner.check(list != null, "CL1 the menu holds a Controls list")
+	if list == null:
+		menu.free()
+		return true
+	var expected: Array = []
+	for section: Array in PauseMenu.controls():
+		expected.append(section[0])
+		for row: Array in section[1]: expected.append_array([row[1], row[2]])
+	var shown: Array = list.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
+	runner.check(shown == expected, "CL1 the list shows every section title, key and line in order, got %s" % [shown])
+	for row: Array in _rows():
+		var presses: Array = row[3]
+		if row[0] == "pan" or presses.is_empty(): continue
+		var press: int = presses[0]
+		var names: Array = MODIFIERS.keys().filter(func(mask: int) -> bool: return press & mask != 0).map(func(mask: int) -> String: return MODIFIERS[mask])
+		var key: String = "Esc" if press == KEY_ESCAPE else HudModel.key_label(press & KEY_CODE_MASK)
+		runner.check(row[1].contains(key) and names.all(func(name: String) -> bool: return row[1].contains(name)), "CL1 '%s' names its first press %s %s" % [row[1], names, key])
+	menu.free()
+	return true
+
+func _press(main, press: int) -> void:
+	main.get_viewport().push_input(_event(press))
+
+func _sent_count(main, type: String) -> int:
+	return (main.driver.pump.live().snapshot().pending_commands + main.driver.queued()).filter(func(command: Dictionary) -> bool: return command.type == type).size()
+
+func _base_shot(main, target: int) -> void:
+	var tick: int = main.shown_state.tick + 1
+	var events: Array[Dictionary] = [{"type": "shot", "tick": tick, "attacker_id": 9, "target_id": target, "damage": 1, "splash": false}]
+	var results: Array[Dictionary] = []
+	main._sound.director.collect_step(tick, events, results)
+	main._refresh()
+
+# Each key row is pressed through the match's own input path; a key the list names but the input code does not bind fails here.
+func test_controls_list_keys_work(runner) -> bool:
+	var main = await SkirmishTests.new()._setup(runner)
+	var ids: Dictionary = HudTests.new()._slab_world(runner, main, true)
+	var camera: Camera2D = main.get_node("Camera2D")
+	var orders = main.orders
+	var probed: Array[String] = []
+	for row: Array in _rows():
+		var id: String = row[0]
+		var presses: Array = row[3]
+		var label: String = "CL2 %s (%s)" % [row[1], row[2]]
+		runner.check(id.is_empty() == presses.is_empty(), "%s: a row has presses exactly when it has a probe id" % label)
+		if id.is_empty(): continue
+		probed.append(id)
+		for press: int in presses:
+			orders.reset()
+			HudTests._select(main, [])
+			camera.position = CameraTests.AWAY
+			match id:
+				"grid":
+					runner.check(orders._card_key(_event(press)), "%s: %s is the card's key" % [label, HudModel.key_label(press)])
+				"build":
+					HudTests._select(main, [ids.builder])
+					_press(main, press)
+					runner.check(orders._sub_grid, "%s opens the build cells" % label)
+				"back":
+					HudTests._select(main, [ids.builder])
+					orders._sub_grid = true
+					main._refresh()
+					_press(main, press)
+					runner.check(not orders._sub_grid, "%s closes the build cells" % label)
+				"attack_move":
+					HudTests._select(main, ids.tanks)
+					_press(main, press)
+					runner.check(orders._attack_move_mode, "%s arms attack move" % label)
+				"stop":
+					HudTests._select(main, ids.tanks)
+					var stops: int = _sent_count(main, "stop")
+					_press(main, press)
+					runner.check(_sent_count(main, "stop") == stops + 1, "%s sends a stop" % label)
+				"unload":
+					HudTests._select(main, [], ids.hub)
+					var unloads: int = _sent_count(main, "unload")
+					_press(main, press)
+					runner.check(_sent_count(main, "unload") == unloads + 1, "%s sends an unload" % label)
+				"recall":
+					var slot: int = ControlGroups.KEYS.find(press & KEY_CODE_MASK)
+					var tanks: Array[int] = []
+					tanks.assign(ids.tanks)
+					orders.groups.save(slot, tanks)
+					HudTests._select(main, [ids.infantry])
+					_press(main, press)
+					runner.check(orders.selected_ids == tanks, "%s: %s selects group %d, got %s" % [label, HudModel.key_label(press & KEY_CODE_MASK), slot + 1, orders.selected_ids])
+					_press(main, press)
+					runner.check(camera.position != CameraTests.AWAY, "%s: a second press centres on the group" % label)
+				"save":
+					var slot: int = ControlGroups.KEYS.find(press & KEY_CODE_MASK)
+					HudTests._select(main, ids.tanks)
+					_press(main, press)
+					runner.check(orders.groups.ids(slot) == ids.tanks, "%s: %s saves group %d, got %s" % [label, _event(press).as_text(), slot + 1, orders.groups.ids(slot)])
+				"add":
+					var slot: int = ControlGroups.KEYS.find(press & KEY_CODE_MASK)
+					var infantry: Array[int] = [ids.infantry]
+					orders.groups.save(slot, infantry)
+					HudTests._select(main, ids.tanks)
+					_press(main, press)
+					runner.check(orders.groups.ids(slot).size() == 3, "%s: %s adds to group %d, got %s" % [label, _event(press).as_text(), slot + 1, orders.groups.ids(slot)])
+				"pan":
+					var actions: Array = ["ui_left", "ui_right", "ui_up", "ui_down"].filter(func(action: String) -> bool: return InputMap.event_is_action(_event(press), action))
+					runner.check(actions.size() == 1, "%s: %s is one pan action, got %s" % [label, _event(press).as_text(), actions])
+					if actions.size() != 1: continue
+					Input.action_press(actions[0])
+					main._process(0.1)
+					Input.action_release(actions[0])
+					runner.check(camera.position != CameraTests.AWAY, "%s: %s pans" % [label, actions[0]])
+				"home":
+					_press(main, press)
+					runner.check(camera.position != CameraTests.AWAY, "%s moves the camera" % label)
+				"last_attack":
+					_base_shot(main, ids.factory)
+					_press(main, press)
+					runner.check(camera.position != CameraTests.AWAY, "%s jumps to the hit factory" % label)
+				"esc":
+					HudTests._select(main, ids.tanks)
+					_press(main, press)
+					runner.check(orders.selected_ids.is_empty() and not main.menu_open(), "%s first backs out of the selection" % label)
+					_press(main, press)
+					runner.check(main.menu_open(), "%s then opens the menu" % label)
+					_press(main, press)
+				"mute":
+					var muted: bool = AudioServer.is_bus_mute(0)
+					_press(main, press)
+					runner.check(AudioServer.is_bus_mute(0) != muted, "%s toggles the mute" % label)
+					_press(main, press)
+					runner.check(AudioServer.is_bus_mute(0) == muted, "%s again restores it" % label)
+				"perf":
+					var shown: bool = main._perf.visible
+					_press(main, press)
+					runner.check(main._perf.visible != shown, "%s toggles the overlay" % label)
+					_press(main, press)
+	runner.check(probed == PROBES, "CL2 every key row has its probe and every probe its row, got %s" % [probed])
+	main.free()
+	return true
+
+func test_controls_list_layout(runner) -> bool:
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var view := Rect2(Vector2.ZERO, Vector2(size))
+		var port := BaseScene.sized_port(runner, pair[0], size)
+		var main = await _scene(runner, Skirmish, port)
+		_open_menu(main)
+		BaseScene.select_own_unit(main)
+		await runner.process_frame
+		await runner.process_frame
+		var menu: Control = main.get_node("HUD/PauseMenu")
+		var list: Control = menu.find_child("Controls", true, false)
+		runner.check(list != null and list.is_visible_in_tree(), "CL3 the Controls list shows with the menu at %s" % size)
+		if list == null:
+			port.free()
+			continue
+		var hud: Dictionary = BaseScene.hud_panels(main)
+		var others: Array = menu.find_children("*", "Button", true, false) + menu.find_child("Volume", true, false).find_children("*", "Control", true, false)
+		var settings: Array = others.filter(func(control: Control) -> bool: return control.is_visible_in_tree() and not list.is_ancestor_of(control))
+		var box: Rect2 = list.get_global_rect()
+		runner.check(view.encloses(box), "CL3 the list %s inside %s" % [box, size])
+		for path: String in hud: runner.check(not box.intersects(hud[path]), "CL3 the list clear of %s at %s" % [path, size])
+		for control: Control in settings: runner.check(not box.intersects(control.get_global_rect()), "CL3 the list clear of %s at %s" % [control.name, size])
+		for label: Label in list.find_children("*", "Label", true, false):
+			runner.check(box.encloses(label.get_global_rect()) and label.size.x >= label.get_minimum_size().x - 0.5, "CL3 '%s' whole inside the list at %s, rect %s" % [label.text, size, label.get_global_rect()])
+		menu.confirm_leave = true
+		_click(main, "Back to main menu")
+		runner.check(not list.is_visible_in_tree(), "CL3 the leave question hides the list at %s" % size)
+		_click(main, "Cancel")
+		runner.check(list.is_visible_in_tree(), "CL3 Cancel shows it again at %s" % size)
 		port.free()
 	return true
