@@ -261,7 +261,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouse:
 		_pointer = event.position
 		_pointer_in = get_viewport().get_visible_rect().has_point(event.position)
-	if event is InputEventMouse and not get_viewport().get_visible_rect().has_point(event.position): _off_picture = event
+	if event is InputEventMouse and not _pointer_in: _off_picture = event
 	elif event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event) # a STOP panel takes motion before `_unhandled_input`: the drag box keeps up and the hover clears
 	if not (event is InputEventKey and event.pressed and not event.echo): return
 	if event.physical_keycode == KEY_F3: return

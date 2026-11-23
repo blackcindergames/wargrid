@@ -604,7 +604,7 @@ func _show_card(view: Dictionary, cells: Array, selection: Dictionary, seat: int
 func _fill_cell(cell: Button, action: String, selection: Dictionary, blocked: Dictionary) -> void:
 	cell.set_meta("action", action)
 	cell.set_meta("blocked", blocked)
-	var item: bool = not action.is_empty() and not HudModel.COMMANDS.has(action)
+	var item: bool = _forecasts(action)
 	var armed: bool = action == selection.placement_kind or (action == "attack_move" and selection.attack_move)
 	_cell_look(cell, &"well" if action.is_empty() else (&"armed" if armed else (&"blocked" if not blocked.is_empty() else &"ready")))
 	cell.get_node("Chip").visible = not action.is_empty()
@@ -816,7 +816,7 @@ func _queue_row(entry_id: int, edge: Color) -> Button:
 	var button: Button = _button(_queue, str(entry_id), 0.0)
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.pressed.connect(entry_cancelled.emit.bind(entry_id))
-	_inset_looks(button, true)
+	for look: String in ["hover", "pressed", "hover_pressed"]: button.add_theme_stylebox_override(look, _inset)
 	button.mouse_entered.connect(_hover_queue_row.bind(button, true))
 	button.mouse_exited.connect(_hover_queue_row.bind(button, false))
 	var cancel: Label = _right_label(button, "Cancel", &"HudRow", -12.0)
@@ -837,11 +837,6 @@ func _queue_row(entry_id: int, edge: Color) -> Button:
 	bar.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	track.add_child(bar)
 	return button
-
-func _inset_looks(button: Button, on: bool) -> void:
-	for look: String in ["hover", "pressed", "hover_pressed"]:
-		if on: button.add_theme_stylebox_override(look, _inset)
-		else: button.remove_theme_stylebox_override(look)
 
 func _hover_queue_row(row: Button, hovered: bool) -> void:
 	_inset_track(row, hovered, 2.0)

@@ -228,11 +228,6 @@ func _world(cue: String, position: Vector2) -> Dictionary:
 func ui_request(cue: String) -> Dictionary:
 	return {"cue": cue, "sound": Cues.CUES[cue].sound, "pitch": Cues.CUES[cue].pitch, "position": null}
 
-func _team_of(state: Dictionary, player: int) -> Variant:
-	for row: Dictionary in state.get("players", []):
-		if row.id == player: return row.team
-	return null
-
 func _teams(state: Dictionary) -> Dictionary:
 	var teams: Dictionary = {}
 	for row: Dictionary in state.get("players", []): teams[row.id] = row.team
@@ -248,7 +243,7 @@ func _triggers(state: Dictionary, current: Dictionary, status: String) -> void:
 	var tick: int = state.get("tick", 0)
 	if status == "won":
 		announcer.clear()
-		announcer.request("victory" if state.match.winner == _team_of(state, _local_player) else "defeat", tick)
+		announcer.request("victory" if state.match.winner == _teams(state).get(_local_player) else "defeat", tick)
 		return
 	if _previous_status != "ongoing": return
 	if _low_power(state) and not _was_low_power: announcer.request("low_power", tick)

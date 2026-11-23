@@ -1,6 +1,5 @@
 extends RefCounted
 
-const COUNT: int = 9
 const KEYS: Array[Key] = [KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9]
 # Zero Hour's double tap window (ZH#5).
 const DOUBLE_TAP_MSEC: int = 667
@@ -15,7 +14,7 @@ func _init() -> void:
 
 func reset() -> void:
 	_members.clear()
-	for slot: int in COUNT:
+	for slot: int in KEYS.size():
 		var empty: Array[int] = []
 		_members.append(empty)
 	_tapped = -1
@@ -44,7 +43,7 @@ func keep(slot: int, units: Array[int]) -> void:
 
 # One group per unit (ZH#1).
 func _release(units: Array[int]) -> void:
-	for slot: int in COUNT:
+	for slot: int in KEYS.size():
 		_members[slot] = _members[slot].filter(func(id: int) -> bool: return not units.has(id))
 
 static func _sorted(units: Array) -> Array[int]:

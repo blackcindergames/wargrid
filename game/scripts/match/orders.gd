@@ -516,7 +516,7 @@ func _context_order(id: int) -> bool:
 	return false
 
 func _unload_selected() -> void:
-	if not takes_orders() or busy(): return
+	if busy(): return
 	_set_attack_move(false)
 	var id: int = HudModel.unload_target(_screen.shown_state, _screen._hud_selection(), _screen.local_player)
 	if id != -1: _screen._submit({"type":"unload","target_id":id})
