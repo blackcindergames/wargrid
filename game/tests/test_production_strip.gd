@@ -21,7 +21,7 @@ const DOZER: String = "china_builder"
 const TRUCK: String = "china_collector"
 
 func cases() -> Array[Callable]:
-	return [test_strip_order, test_strip_busy_only_kinds, test_strip_looks, test_strip_last_made_glyph, test_strip_fold, test_strip_tip_words, test_strip_click_selects, test_strip_double_click_glides, test_strip_holds_through_a_forecast, test_strip_blocks_the_map, test_strip_more_list, test_strip_layout, test_strip_chip_looks, test_strip_unchanged_refresh, test_strip_upright_bars, test_strip_upright_key_skips_typing, test_strip_reset_forgets_last_made, test_strip_tip_neighbour_rule, test_strip_click_ends_modes, test_strip_click_needs_orders_and_an_own_producer, test_strip_bar_stays_in_its_track, test_strip_queue_count, test_strip_hides_while_nothing_is_made, test_strip_hint_once, test_strip_hint_layout, test_strip_tip_names_the_runs, test_strip_hidden_under_the_pointer, test_strip_click_under_the_freeze_card, test_strip_card_steps_aside_for_a_notice]
+	return [test_strip_order, test_strip_busy_only_kinds, test_strip_looks, test_strip_last_made_glyph, test_strip_fold, test_strip_tip_words, test_strip_click_selects, test_strip_double_click_glides, test_strip_holds_through_a_forecast, test_strip_blocks_the_map, test_strip_more_list, test_strip_layout, test_strip_chip_looks, test_strip_unchanged_refresh, test_strip_upright_bars, test_strip_upright_key_skips_typing, test_strip_reset_forgets_last_made, test_strip_tip_neighbour_rule, test_strip_click_ends_modes, test_strip_click_needs_orders_and_an_own_producer, test_strip_bar_stays_in_its_track, test_strip_queue_count, test_strip_hides_while_nothing_is_made, test_strip_hint_once, test_strip_hint_layout, test_strip_tip_names_the_kinds, test_strip_count_matches_the_cell, test_strip_hidden_under_the_pointer, test_strip_click_under_the_freeze_card, test_strip_card_steps_aside_for_a_notice]
 
 static func _entry(kind: String, work: int = 0) -> Dictionary:
 	return {"id": 1, "kind": kind, "paid_cost": 800, "work": work}
@@ -91,7 +91,7 @@ func test_strip_tip_words(runner) -> bool:
 	var chips: Array = HudModel.strip_chips(_view([_building(1, "china_command_center", [_entry(DOZER, _ticks(DOZER) - 90000)]), _building(5, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM) - 120000), _entry(MEDIUM), _entry(ROTARY), _entry(MEDIUM)]),
 		_building(3, "china_barracks"), _building(7, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM))])]), 1, {})
 	var lines: Array = chips.map(HudModel.strip_tip)
-	runner.check(lines == ["Bulldozer · 3s · QUEUE 1 / 9", "Idle", "Medium Tank ×2 · 4s, then Rotary Gun Tank · +1 more · QUEUE 4 / 9", "Medium Tank · Exit blocked · QUEUE 1 / 9"], "PS6 chip cards: the current run, its seconds, the run after it, the entries past that and the queue, or Idle, got %s" % [lines])
+	runner.check(lines == ["Bulldozer · 3s · QUEUE 1 / 9", "Idle", "Medium Tank ×3 · 4s, Rotary Gun Tank · QUEUE 4 / 9", "Medium Tank · Exit blocked · QUEUE 1 / 9"], "PS6 chip cards: the head kind with its total and its seconds, the other kinds with their totals and the queue, or Idle, got %s" % [lines])
 	var hidden: Array = chips.map(HudModel.strip_hidden_line)
 	runner.check(hidden == ["Headquarters · Bulldozer 3s", "Barracks · idle", "Vehicle Factory · Medium Tank 4s", "Vehicle Factory · Medium Tank · Exit blocked"], "PS6 +N list lines, got %s" % [hidden])
 	runner.check(HudModel.STRIP_HINT == "Click: select it · Double-click: go there", "PS6 the hint line")
@@ -623,8 +623,8 @@ func test_strip_bar_stays_in_its_track(runner) -> bool:
 		_end(world)
 	return true
 
-# The owner's pick (user, 2026-11-23): the count is the current run (as NEXT's ×N), small (12 px, the HUD's floor) in its column, a 4 x 6 mark under it
-# while other kinds follow, bottom-aligned with the glyph; neither when idle, chips as wide as before.
+# The owner's pick (user, 2026-11-23, late): the count is the head kind's total in the queue (the build card cell's ×N), small (12 px, the HUD's floor)
+# in its column, no mark; none when idle, chips as wide as before.
 func test_strip_queue_count(runner) -> bool:
 	var was: bool = ProductionStrip.upright
 	var world: Array = await _world(runner)
@@ -634,15 +634,13 @@ func test_strip_queue_count(runner) -> bool:
 	for upright: bool in [false, true]:
 		_strip(main).set_upright(upright)
 		var mode: String = "upright" if upright else "stacked"
-		for row: Array in [[four_three, "4", true], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "7", false], [[MEDIUM, ROTARY, MEDIUM], "1", true], [[MEDIUM], "1", false], [[], "", false]]:
+		for row: Array in [[four_three, "4"], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "7"], [[MEDIUM, ROTARY, MEDIUM], "2"], [[MEDIUM], "1"], [[], ""]]:
 			_queues(main, {ids.hq: [DOZER], ids.factory: row[0]})
 			await _frames(runner)
 			var chip: Button = _chip_of(main, ids.factory)
 			var count: Label = chip.get_node_or_null("Count") if chip != null else null
-			var mark: Control = chip.get_node_or_null("Then") if chip != null else null
 			var shown: String = count.text if count != null and count.is_visible_in_tree() else ""
-			var marked: bool = mark != null and mark.is_visible_in_tree()
-			runner.check(shown == row[1] and marked == row[2], "PS22 %s: %s shows '%s'%s, got '%s' mark %s" % [mode, row[0], row[1], " and the mark" if row[2] else ", no mark", shown, marked])
+			runner.check(shown == row[1] and chip != null and chip.get_node_or_null("Then") == null, "PS22 %s: %s shows '%s' and no mark, got '%s'" % [mode, row[0], row[1], shown])
 			runner.check(chip != null and chip.size == (Vector2(42, 26) if upright else Vector2(48, 26)), "PS22 %s, %d queued: the chip keeps its width, got %s" % [mode, row[0].size(), chip.size if chip != null else Vector2.ZERO])
 			if count == null or not count.is_visible_in_tree(): continue
 			var box: Rect2 = count.get_global_rect()
@@ -651,12 +649,22 @@ func test_strip_queue_count(runner) -> bool:
 			runner.check(chip.get_global_rect().encloses(box) and not box.intersects(track) and not box.intersects(glyph), "PS22 %s: the count inside the chip, clear of the glyph and the bar, got %s glyph %s" % [mode, box, glyph])
 			if upright: runner.check(box.position.x < glyph.position.x and is_equal_approx(box.position.y, glyph.position.y), "PS22 upright: the count in its own column left of the glyph, top-aligned with it, got %s glyph %s" % [box, glyph])
 			runner.check(count.get_theme_font_size("font_size") == 12 and count.get_theme_color("font_color") == main.hud.get_theme_color("muted", &"Tokens"), "PS22 %s: 12 px muted" % mode)
-			if not marked: continue
-			var at: Rect2 = mark.get_global_rect()
-			var baseline: float = box.position.y + count.get_theme_font("font").get_ascent(12)
-			runner.check(at.size == Vector2(4, 6) and chip.get_global_rect().encloses(at) and at.position.x >= box.position.x and at.end.x <= box.end.x and at.position.y >= baseline and is_equal_approx(at.end.y, glyph.end.y) and not at.intersects(glyph) and not at.intersects(track),
-				"PS22 %s: a 4 x 6 mark in the count's column under its digits (baseline %.1f), its bottom on the glyph's, clear of glyph and bar, got %s count %s glyph %s" % [mode, baseline, at, box, glyph])
 	_strip(main).set_upright(was)
+	_end(world)
+	return true
+
+# The chip's number is the build card cell's ×N for the head kind, whatever the order (user, 2026-11-23, late).
+func test_strip_count_matches_the_cell(runner) -> bool:
+	var world: Array = await _world(runner)
+	var main = world[3]
+	var ids: Dictionary = world[4]
+	HudTests._select(main, [], ids.factory)
+	for queue: Array in [[MEDIUM, ROTARY, MEDIUM, ROTARY], [MEDIUM, MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, ROTARY], [MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], [ROTARY, MEDIUM, MEDIUM]]:
+		_queues(main, {ids.hq: [DOZER], ids.factory: queue})
+		await _frames(runner)
+		var cell: Button = HudTests._cells(main).filter(func(button: Button) -> bool: return button.is_visible_in_tree() and button.get_meta("action") == queue[0]).front()
+		var count: Label = _chip_of(main, ids.factory).get_node("Count")
+		runner.check(cell != null and cell.get_node("Count").text == "×" + count.text, "PS27 %s: the chip shows '%s', the head kind's cell '%s'" % [queue, count.text, cell.get_node("Count").text if cell != null else "(no cell)"])
 	_end(world)
 	return true
 
@@ -691,10 +699,11 @@ func test_strip_hides_while_nothing_is_made(runner) -> bool:
 	_end(world)
 	return true
 
-# The owner's pick (user, 2026-11-23): the chip card names the current run, then the next one, then how many follow, keeping QUEUE n / 9.
-func test_strip_tip_names_the_runs(runner) -> bool:
-	var rows: Array = [[[MEDIUM, MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, ROTARY], "Medium Tank ×4 · 6s, then Rotary Gun Tank ×3 · QUEUE 7 / 9"], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "Medium Tank ×7 · 6s · QUEUE 7 / 9"],
-		[[MEDIUM, ROTARY, MEDIUM], "Medium Tank · 6s, then Rotary Gun Tank · +1 more · QUEUE 3 / 9"]]
+# The owner's pick (user, 2026-11-23, late): the chip card names each kind with its total, two kinds at most, then how many more kinds, keeping QUEUE n / 9.
+func test_strip_tip_names_the_kinds(runner) -> bool:
+	var rows: Array = [[[MEDIUM, MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, ROTARY], "Medium Tank ×4 · 6s, Rotary Gun Tank ×3 · QUEUE 7 / 9"], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "Medium Tank ×7 · 6s · QUEUE 7 / 9"],
+		[[MEDIUM, ROTARY, MEDIUM, ROTARY, MEDIUM, ROTARY], "Medium Tank ×3 · 6s, Rotary Gun Tank ×3 · QUEUE 6 / 9"], [[MEDIUM, ROTARY, MEDIUM], "Medium Tank ×2 · 6s, Rotary Gun Tank · QUEUE 3 / 9"],
+		[[MEDIUM, ROTARY, MILITIA, MEDIUM], "Medium Tank ×2 · 6s, Rotary Gun Tank · +1 more · QUEUE 4 / 9"], [[MEDIUM, ROTARY, MILITIA, DOZER, TRUCK], "Medium Tank · 6s, Rotary Gun Tank · +3 more · QUEUE 5 / 9"]]
 	for row: Array in rows:
 		var entries: Array = []
 		for i in row[0].size(): entries.append({"id": i, "kind": row[0][i], "paid_cost": 800, "work": 126000 if i == 0 else 0})
@@ -707,7 +716,7 @@ func test_strip_tip_names_the_runs(runner) -> bool:
 	var trooper: String = "china_rocket_infantry"
 	var view: Dictionary = main.driver.current().view
 	var queue: Array = []
-	for i in 9: queue.append({"id": 950 + i, "kind": trooper if i < 4 or i == 7 else MILITIA, "paid_cost": 300, "work": Economy.unit(trooper).ticks * 1000 if i == 0 else 0})
+	for i in 9: queue.append({"id": 950 + i, "kind": trooper if i < 4 else (MILITIA if i < 7 else MEDIUM), "paid_cost": 300, "work": Economy.unit(trooper).ticks * 1000 if i == 0 else 0})
 	HudModel.building(view, ids.barracks).queue = queue
 	main._show(view)
 	var now: Array = [0]
@@ -720,7 +729,7 @@ func test_strip_tip_names_the_runs(runner) -> bool:
 	var line: String = text.text.get_slice("\n", 0)
 	var tip: Rect2 = _tip(main).get_global_rect()
 	print("PS26 widest chip card at 1280x720: %.0f px for '%s'" % [tip.size.x, line])
-	runner.check(line == "Anti-Tank Trooper ×4 · Exit blocked, then Militia ×3 · +2 more · QUEUE 9 / 9" and text.text.count("\n") == 1 and Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(tip), "PS26 the widest card, one line inside the view, got '%s' %s" % [line, tip])
+	runner.check(line == "Anti-Tank Trooper ×4 · Exit blocked, Militia ×3 · +1 more · QUEUE 9 / 9" and text.text.count("\n") == 1 and Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(tip), "PS26 the widest card, one line inside the view, got '%s' %s" % [line, tip])
 	_end(world)
 	return true
 
@@ -827,7 +836,7 @@ func test_strip_hint_once(runner) -> bool:
 	runner.check(not _hint_shown(main) and _hint_saved() and config.get_value("audio", "music", 0.0) == 0.3, "PS24 a chip click ends it and saves hints/strip_seen beside the other settings")
 	var fresh = ProductionStrip.new()
 	world[2].add_child(fresh)
-	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1, {}) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "runs": [{"kind": MEDIUM, "count": 1}], "left": "5s"}], -1, Color.WHITE)
+	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1, {}) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "kinds": [{"kind": MEDIUM, "count": 1}], "left": "5s"}], -1, Color.WHITE)
 	await _frames(runner)
 	runner.check(fresh.is_visible_in_tree() and not fresh.get_node("Hint").is_visible_in_tree(), "PS24 a fresh strip with the setting saved shows no hint")
 	_end(world)

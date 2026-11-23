@@ -16,8 +16,6 @@ const GLYPH: float = 18.0
 const UPRIGHT_CHIP: Vector2 = Vector2(42, 26)
 # Wide enough for one digit at 12 px, kept while the count hides, so a chip never changes width.
 const COUNT_WIDTH: float = 9.0
-# Under the count while other kinds follow the current run (user, 2026-11-23).
-const THEN_MARK: Vector2 = Vector2(4, 6)
 const UPRIGHT_BAR: Vector2 = Vector2(4, 20)
 const TIP_DELAY_MSEC: int = 250
 # The round's idle grey (strip.html `--idle`).
@@ -211,19 +209,10 @@ func _chip(index: int) -> Button:
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	count.visible = false
 	chip.add_child(count)
-	var mark := Control.new()
-	mark.name = "Then"
-	mark.mouse_filter = MOUSE_FILTER_IGNORE
-	mark.size = THEN_MARK
-	mark.visible = false
-	var muted: Color = get_theme_color("muted", &"Tokens")
-	mark.draw.connect(func() -> void: mark.draw_colored_polygon(PackedVector2Array([Vector2.ZERO, Vector2(THEN_MARK.x, THEN_MARK.y / 2.0), Vector2(0, THEN_MARK.y)]), muted))
-	chip.add_child(mark)
 	_shape(chip)
 	return chip
 
 # Stacked: glyph 1 from the top, the bar 2 under it, the count right of the glyph; upright: count, glyph and bar in columns (2 | 9 | 2 | 18 | 4 | 4 | 3), the count top-aligned with the glyph.
-# The mark sits centred under the count, its bottom on the glyph's.
 func _shape(chip: Button) -> void:
 	chip.custom_minimum_size = UPRIGHT_CHIP if upright else CHIP
 	var glyph: Control = chip.get_node("Glyph")
@@ -231,9 +220,7 @@ func _shape(chip: Button) -> void:
 	glyph.position = Vector2(13, 4) if upright else Vector2(15, 1)
 	track.position = Vector2(35, 3) if upright else Vector2(4, 21)
 	track.size = UPRIGHT_BAR if upright else BAR
-	var count: Vector2 = Vector2(2, 4) if upright else Vector2(38, 0)
-	(chip.get_node("Count") as Control).position = count
-	(chip.get_node("Then") as Control).position = Vector2(count.x + floorf((COUNT_WIDTH - THEN_MARK.x) / 2.0), glyph.position.y + GLYPH - THEN_MARK.y)
+	(chip.get_node("Count") as Control).position = Vector2(2, 4) if upright else Vector2(38, 0)
 
 func set_upright(on: bool) -> void:
 	upright = on
@@ -277,11 +264,10 @@ func _fill(chip: Button, record: Dictionary) -> void:
 	var tone: Color = _looks.warn if record.look in ["slowed", "blocked"] else _colour
 	if fill.color != tone: fill.color = tone
 	_progress(fill, record.fraction)
-	# The current run, as NEXT's ×N: a number beside a glyph counts that unit (user, 2026-11-23).
+	# The head kind's total, the cell's ×N: a number beside a glyph counts that unit (user, 2026-11-23).
 	var count: Label = chip.get_node("Count")
-	count.visible = not record.runs.is_empty()
-	if count.visible and count.text != str(record.runs[0].count): count.text = str(record.runs[0].count)
-	(chip.get_node("Then") as Control).visible = record.runs.size() > 1
+	count.visible = not record.kinds.is_empty()
+	if count.visible and count.text != str(record.kinds[0].count): count.text = str(record.kinds[0].count)
 	var look: StyleBox = _looks.selected if record.id == _selected else _looks.normal
 	for state: String in ["normal", "pressed"]: _style(chip, state, look)
 	for state: String in ["hover", "hover_pressed"]: _style(chip, state, _looks.selected if record.id == _selected else _looks.hover)
