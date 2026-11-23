@@ -1808,3 +1808,29 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-23,aa00b2cf,P2.3b merge,dev,tick_frame,ashfall,1,2.275,2.423,,tick-frame,2.57,log sha256:cd51e525a574
 2026-11-23,aa00b2cf,P2.3b merge,dev,frame_interval,horde,1,0.762,4.777,,P1,2.57,log sha256:cd51e525a574
 2026-11-23,aa00b2cf,P2.3b merge,dev,tick_frame,horde,1,5.192,5.571,,tick-frame,2.57,log sha256:cd51e525a574
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,movement_tick,open,1,0.791,0.874,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,movement_tick,dense,1,0.784,0.916,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,open,1,1.914,2.244,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,dense,1,1.856,2.229,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,contact,1,1.187,1.55,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,skirmish3v3,1,1.346,1.458,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,transports,1,1.137,1.228,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,defences,1,0.779,2.127,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,docks,1,0.584,0.601,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,hordes300,1,2.924,3.41,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,ramp,1,0.656,1.222,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,combat_tick,frc,1,0.889,1.083,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,lockstep_overhead,contact,1,0.016,0.07,,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,movement_open:profile,1,,,1.308,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,movement_dense:profile,1,,,1.3106,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,combat_contact:profile,1,,,0.3329,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5353,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,combat_open:profile,1,,,0.8996,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,skirmish_match:profile,1,,,0.2735,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,large_196:profile,1,,,1.7056,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,combat_dense:profile,1,,,0.7788,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,combat_hordes300:profile,1,,,1.9283,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,team_match:profile,1,,,1.1264,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,team_match_pump:profile,1,,,1.1348,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,team_tick,team_match:profile,1,3.247,,1.5794,P1,1.98,log sha256:fd47192658d3
+2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,step,team_match:profile,1,2.681,,1.4253,P1,1.98,log sha256:fd47192658d3

@@ -50,7 +50,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**14 of 42 parts done**
+**14 of 43 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -92,6 +92,7 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 💡 | Crowds that sort themselves | Later |
 | 💡 | Fog of war | Later |
 | 💡 | Ground batch A | Later |
+| 💡 | Fight over income points | Later |
 | 💡 | Wrecks | Later |
 | 💡 | Ground batch B | Later |
 | 💡 | Team up with a bot | Later |
@@ -109,11 +110,11 @@ Performance against the low-end budget (generated):
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
 | Drawing the screen | 🟢 OK | ████████░░ 82% | 🔺 17% worse (busy host) | 2026-11-23 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 7% worse (busy host) | 2026-11-23 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-23 |
-| Combat, normal fights, slowest moments | 🟢 OK | ██████░░░░ 65% | 🔺 11% worse | 2026-11-23 |
-| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔻 1% better | 2026-11-23 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔻 2% better | 2026-11-23 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 1% better | 2026-11-23 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 73% | ➖ same | 2026-11-23 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 10% better | 2026-11-23 |
+| Unit movement | 🟢 OK | ████░░░░░░ 43% | 🔻 2% better | 2026-11-23 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same | 2026-11-23 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 6% worse | 2026-11-23 |
 
 Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
@@ -125,14 +126,14 @@ These areas are over their limit and no known change brings them under it yet, s
 
 | Area | Latest on this Mac | Recent runs → | vs recent runs | As of |
 | --- | --- | --- | --- | --- |
-| Background upkeep, huge crowds (stress) | mean 1.94 ms | ▄▅▄▄▄▄▄▄ | ➖ same | 2026-11-23 |
-| Combat, huge battles (stress) | p95 3.00 ms | ▄▄▄▄▄▄▄▄ | ➖ same, +1% (noise ±41%) | 2026-11-23 |
-| Background upkeep, armies on the move (stress) | mean 1.31 ms | ▄▅▄▄▄▄▄▄ | 🔺 1% slower | 2026-11-23 |
-| Combat, big armies in the open (stress) | p95 1.92 ms | ▄▅▄▄▄▄▄▄ | ➖ same | 2026-11-23 |
-| Combat, big armies packed close (stress) | p95 1.87 ms | ▄▅▄▄▄▄▄▄ | ➖ same | 2026-11-23 |
-| 3v3 match, background upkeep (real 3v3) | mean 1.13 ms | ▄▄▅▄▄▄▄▄ | ➖ same | 2026-11-23 |
-| 3v3 match, simulation (real 3v3) | p95 2.68 ms | ▁▁▄▁▄▄▄▄ | ➖ same | 2026-11-23 |
-| 3v3 match, bots and simulation (real 3v3) | p95 3.25 ms | ▂▂▄▂▄▄▄▄ | ➖ same | 2026-11-23 |
+| Background upkeep, huge crowds (stress) | mean 1.93 ms | ▅▄▄▄▄▄▄▄ | ➖ same | 2026-11-23 |
+| Combat, huge battles (stress) | p95 2.92 ms | ▄▄▄▄▄▄▄▄ | ➖ same, -1% (noise ±41%) | 2026-11-23 |
+| Background upkeep, armies on the move (stress) | mean 1.31 ms | ▅▄▄▄▄▄▄▄ | ➖ same | 2026-11-23 |
+| Combat, big armies in the open (stress) | p95 1.91 ms | ▅▄▄▄▄▄▄▄ | ➖ same | 2026-11-23 |
+| Combat, big armies packed close (stress) | p95 1.86 ms | ▅▄▄▄▄▄▄▄ | ➖ same, -1% (noise ±41%) | 2026-11-23 |
+| 3v3 match, background upkeep (real 3v3) | mean 1.13 ms | ▄▅▄▄▄▄▄▄ | ➖ same | 2026-11-23 |
+| 3v3 match, simulation (real 3v3) | p95 2.68 ms | ▁▄▁▄▄▄▄▄ | ➖ same | 2026-11-23 |
+| 3v3 match, bots and simulation (real 3v3) | p95 3.25 ms | ▂▄▂▄▄▄▄▄ | ➖ same | 2026-11-23 |
 
 Details: [performance ledger](docs/reference/performance.md).
 <!-- perf-table:end -->

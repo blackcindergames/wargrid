@@ -20,7 +20,7 @@
    {"id": "pan_ok", "text": "I did not miss W A S D for panning, and the screen edge never scrolled when I did not want it"},
    {"id": "strip_clear", "text": "The top strip told me what I could not afford"}]},
  {"id": "p2.3a1-see-your-selection", "title": "See your selection",
-  "new": ["Credits (and power, if your side uses it) sit on the top edge. Point at a buy button or place a building and the numbers it changes show an arrow and what you would have after it.", "Select something and a panel at the bottom left shows it: one unit, a group by kind, a building, a building going up, a supply pile or an enemy.", "A refused order shows the game's reason on a line at the bottom of the screen, between the panel and the buttons (still in the game's own words; plainer words come next).", "The bottom-right buttons follow your selection: Build for one builder, Attack move and Stop for armed units, Unload for a loaded vehicle or Tunnel Hub. Keys are on the buttons; Unload moved from U to F. A factory's queue sits above its buttons; click a row to cancel it. E no longer produces: press the key shown on the button.", "Right-click acts on what is under the pointer: move, attack, collect from a pile, or enter a Scout Car or Tunnel Hub. Esc or a right-click cancels a placement or an attack move."],
+  "new": ["Credits (and power, if your side uses it) sit on the top edge. Point at a buy button or place a building and the numbers it changes show an arrow and what you would have after it.", "Select something and a panel at the bottom left shows it: one unit, a group by kind, a building, a building going up, a supply pile or an enemy.", "A refused order shows the game's reason on a line at the bottom of the screen, between the panel and the buttons (still in the game's own words; plainer words come next).", "The bottom-right buttons follow your selection: Build for one builder, Attack move and Stop for armed units, Unload for a loaded vehicle or Tunnel Hub. Keys are on the buttons; Unload moved from U to F. A factory's queue sits above its buttons; click a tile to cancel it. E no longer produces: press the key shown on the button.", "Right-click acts on what is under the pointer: move, attack, collect from a pile, or enter a Scout Car or Tunnel Hub. Esc or a right-click cancels a placement or an attack move."],
   "try": [
    {"id": "group", "text": "Select a mixed group, drop one kind with the panel's kind rows, then try to get it back"},
    {"id": "collectors", "text": "Select your collectors (trucks, helicopters or Laborers) and read what the panel says they are doing"},
@@ -29,7 +29,7 @@
    {"id": "buttons", "text": "Select two builders, or a builder and a tank, and look at the buttons; note anything you expected to find"},
    {"id": "unload", "text": "Put infantry in a Scout Car or Tunnel Hub, then unload with F or the Unload button", "trigger": "unload"},
    {"id": "resume", "text": "Pull the builder off a building going up, then get it finished. Note whether you knew how", "trigger": "resume_build"},
-   {"id": "queue", "text": "Queue six or more units at one factory, open the rest with Show more, then cancel one you picked", "trigger": "cancel_production"}],
+   {"id": "queue", "text": "Queue six or more units at one factory, then cancel one you picked", "trigger": "cancel_production"}],
   "questions": [
    {"id": "found_it", "text": "I could always tell what I had selected"},
    {"id": "hud_clicks", "text": "The HUD and the open checklist never took a click I meant for the battlefield"},
@@ -126,18 +126,5 @@
   "questions": [
    {"id": "readable", "text": "Units and buildings were easy to tell apart"},
    {"id": "health_bar", "text": "Health bars stayed readable during attacks"},
-   {"id": "look", "text": "The new look fits Wargrid"}]},
- {"id": "old-checks-2026-11", "title": "Old checks",
-  "new": ["Some earlier fixes were only checked by tests, never by eye.", "Tick what you saw; leave out what you could not try."],
-  "try": [
-   {"id": "target_box", "text": "Target an enemy building and look at its health bar"},
-   {"id": "bot_dock", "text": "Play a bot match on Dry Wells and watch the bot's first workers"},
-   {"id": "sleep", "text": "In an online match, put one computer to sleep for a minute, then wake it"},
-   {"id": "hidden_tab", "text": "In a browser match, hide the tab for 3, 8 and 15 seconds"},
-   {"id": "join_amber", "text": "Press Join and read the greyed button while it connects"}],
-  "questions": [
-   {"id": "health_visible", "text": "The target box never hid a building's health bar"},
-   {"id": "bot_dock_ok", "text": "The bot's workers left their base dock"},
-   {"id": "wake_clear", "text": "After sleep or a hidden tab the game told me clearly what happened"},
-   {"id": "amber_readable", "text": "The greyed Join button was readable"}]}
+   {"id": "look", "text": "The new look fits Wargrid"}]}
 ]
