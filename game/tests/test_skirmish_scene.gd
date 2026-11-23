@@ -61,7 +61,7 @@ func _arena(main) -> Dictionary:
 
 func test_skirmish_ready_and_tick(runner) -> bool:
 	var main = await _setup(runner)
-	for path in ["WorldView", "Camera2D", "HUD/ResultPanel", "HUD/Economy/Queue"]:
+	for path in ["WorldView", "Camera2D", "HUD/ResultPanel", BaseScene.QUEUE_ROW]:
 		runner.check(main.has_node(path), "K2 node " + path)
 	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot(), "K2 exact scenario")
 	BaseScene.tick(main)
@@ -766,7 +766,7 @@ func test_silent_keys_explain(runner) -> bool:
 
 func _hud_texts(main) -> Array[String]:
 	var texts: Array[String] = [BaseScene.hud_text(main), main.get_node("HUD/Economy/CancelBuild").text]
-	for button in main.get_node("HUD/Economy/Queue").get_children(): texts.append(button.text)
+	for tile: Control in BaseScene.queue_tiles(main): texts.append_array(BaseScene.shown_texts(tile))
 	return texts
 
 func test_hud_strings_use_display_names(runner) -> bool:
@@ -780,7 +780,7 @@ func test_hud_strings_use_display_names(runner) -> bool:
 	main.orders.press_cell("usa_rifle_infantry")
 	BaseScene.tick(main)
 	await runner.process_frame
-	runner.check(main.get_node("HUD/Economy/Queue").get_child_count() == 2, "N1 fixture: two queue entries")
+	runner.check(BaseScene.queue_tiles(main).size() == 2, "N1 fixture: two queue entries")
 	var shown: Array[String] = _hud_texts(main)
 	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1 and unit.kind == "usa_builder")[0].id
 	main.orders.selected_building_id = -1
@@ -811,7 +811,7 @@ func test_hud_font_size_is_shared(runner) -> bool:
 	main.orders.press_cell("usa_rifle_infantry")
 	BaseScene.tick(main)
 	await runner.process_frame
-	runner.check(main.get_node("HUD/Economy/Queue").get_child_count() == 1, "FS1 fixture: a queue entry, got %d" % main.get_node("HUD/Economy/Queue").get_child_count())
+	runner.check(BaseScene.queue_tiles(main).size() == 1, "FS1 fixture: a queue entry, got %d" % BaseScene.queue_tiles(main).size())
 	for control: Control in main.get_node("HUD").find_children("*", "Control", true, false):
 		if control is Label or control is BaseButton or control is LineEdit or control is TextEdit: runner.check(control.get_theme_font_size("font_size") >= 12, "FS1 %s is at least 12 px, got %d" % [control.name, control.get_theme_font_size("font_size")])
 	main.free()
@@ -2446,9 +2446,9 @@ func test_slab_buttons_take_no_focus(runner) -> bool:
 	runner.check(count.call("produce") == 1, "SF1 Space and Enter after a click on a produce button queue nothing more, got %d" % count.call("produce"))
 	BaseScene.tick(main)
 	await runner.process_frame
-	var queue: Control = main.get_node("HUD/Economy/Queue")
-	runner.check(queue.get_child_count() == 1, "SF1 fixture: one queue row, got %d" % queue.get_child_count())
-	_click_control(main, queue.get_child(0))
+	var tiles: Array = BaseScene.queue_tiles(main)
+	runner.check(tiles.size() == 1, "SF1 fixture: one queue row, got %d" % tiles.size())
+	if not tiles.is_empty(): _click_control(main, tiles[0])
 	runner.check(count.call("cancel_production") == 1, "SF1 fixture: a click on the queue row cancels it")
 	_accept_keys(runner, main, "a queue row")
 	runner.check(count.call("cancel_production") == 1, "SF1 Space and Enter after a click on a queue row cancel nothing more, got %d" % count.call("cancel_production"))

@@ -35,9 +35,9 @@ func shots() -> Array[Dictionary]:
 		_shot("slab-army", _slab_army, ""),
 		_shot("slab-builder", _slab_pick.bind("builder", 50000), "Build"),
 		_shot("slab-poor", _slab_build.bind(500), "1200"),
-		_shot("queue", _queue.bind(false), "QUEUE"),
-		_shot("queue-open", _queue.bind(true), "QUEUE"),
-		_shot("queue-rest", _queue.bind(false, false), "QUEUE", one),
+		_shot("queue", _queue.bind(false), "QUEUE 9 / 9"),
+		_shot("queue-empty", _queue.bind(true), "Nothing in production"),
+		_shot("queue-rest", _queue.bind(false, false), "QUEUE 9 / 9", one),
 		_shot("unload", _unload, ""),
 		_shot("offline", _offline, "OFFLINE · LOW POWER"),
 		_shot("sites", _panel.bind("", "paused", ""), "PAUSED · NO BUILDER"),
@@ -217,17 +217,19 @@ func _slab_army() -> void:
 	await _slab_pick("tanks", 50000)
 	check(HudTests._cell(_main, "attack_move") != null and HudTests._cell(_main, "build") == null, "the order cells alone, no Build")
 
-func _queue(open: bool, hovered: bool = true) -> void:
+# P2.3b T8: the nine-entry queue as tiles; `empty` the factory with nothing queued.
+func _queue(empty: bool, hovered: bool = true) -> void:
 	var ids: Dictionary = await _slab_world(50000)
 	HudTests._select(_main, [], ids.factory)
-	HudTests._nine(_main, ids.factory)
-	if open: _main.get_node("HUD/Economy/QueueMore").pressed.emit()
+	if not empty: HudTests._nine(_main, ids.factory)
 	await _settle()
-	if not hovered: return
-	var row: Button = _main.get_node("HUD/Economy/Queue/900")
-	HudTests._move(_port, row.get_global_rect().get_center())
+	if empty or not hovered: return
+	var tile: Control = BaseScene.queue_tile(_main, 900)
+	check(tile != null, "the first queue tile shows")
+	if tile == null: return
+	HudTests._move(_port, tile.get_global_rect().get_center())
 	await _settle()
-	check(row.is_hovered(), "the pointer is on the first queue row")
+	check((tile as Button).is_hovered(), "the pointer is on the first queue tile")
 
 func _unload() -> void:
 	var ids: Dictionary = await _slab_world(50000, true)

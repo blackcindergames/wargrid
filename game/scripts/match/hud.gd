@@ -12,7 +12,9 @@ const PAD_LEFT: float = 12.0
 const PAD_Y: float = 8.0
 const GAP: int = 4
 const ROW: float = 32.0
-const QUEUE_GAP: float = 12.0
+const TILE: Vector2 = Vector2(91, 60)
+const TILE_PAD: float = 4.0
+const FACTORY_PANEL: float = 152.0
 # hud-v5-layout "Command card": 100 x 60 cells, padding 4 8, line 1 20 high, the name 4 under it.
 const CELL: Vector2 = Vector2(100, 60)
 const CELL_PAD: Vector2 = Vector2(8, 4)
@@ -41,7 +43,7 @@ var rebuilds: int = 0
 var _economy: VBoxContainer
 var _card: GridContainer
 var _well: StyleBoxFlat
-var _queue: Control
+var _cell_queue: Array = []
 var _cancel_build: Button
 var _top_strip: HBoxContainer
 var _credits_slab: PanelContainer
@@ -63,11 +65,13 @@ var _alert_text: Label
 var _alerted_at: int = 0
 var _esc: Label
 var _resume: Label
-var _queue_header: HBoxContainer
+var _queue: HBoxContainer
 var _queue_more: Button
-var _queue_gap: Control
-var _queue_open: bool = false
+var _queue_empty: Label
+var _queue_shown: Array = []
 var _queue_for: int = -1
+var _count_style: StyleBoxFlat
+var _now_style: StyleBoxFlat
 var _inset: StyleBoxFlat
 var _edge: Color = Color.WHITE
 var _panel: PanelContainer
@@ -101,6 +105,7 @@ func _init() -> void:
 	_build_refusal_line()
 	_build_group_line()
 	_build_alert_line()
+	_build_looks()
 	_build_panel()
 	for surface: Control in [_top_strip, _menu, _panel]: block(surface)
 
@@ -362,7 +367,6 @@ func set_esc_chip(shown: bool) -> void:
 func setup(economy: VBoxContainer) -> void:
 	_economy = economy
 	if economy == null: return
-	_queue = economy.get_node("Queue")
 	_cancel_build = economy.get_node("CancelBuild")
 	_cancel_build.pressed.connect(cancel_build_pressed.emit)
 	_build_slab()
@@ -383,8 +387,6 @@ func reset() -> void:
 
 # hud-v5-layout "Command card": the VBox lays out rows, the Hud pads, fills and edges it.
 func _build_slab() -> void:
-	_inset = get_theme_stylebox("hover", &"HudButton").duplicate() as StyleBoxFlat
-	_inset.border_color = get_theme_color("muted", &"Tokens")
 	_economy.alignment = BoxContainer.ALIGNMENT_CENTER
 	_economy.add_theme_constant_override("separation", GAP)
 	_economy.draw.connect(_draw_slab)
@@ -393,19 +395,22 @@ func _build_slab() -> void:
 	_build_card()
 	_build_cell_card()
 	_square(_cancel_build)
-	_queue_header = _box(_economy, "QueueHeader", HBoxContainer.new(), 8) as HBoxContainer
-	_label(_queue_header, "Title", &"HudLabel", "QUEUE").size_flags_horizontal = SIZE_EXPAND_FILL
-	_label(_queue_header, "Waiting", &"HudHint")
-	(_queue as BoxContainer).add_theme_constant_override("separation", GAP)
-	_queue_gap = _spacer(_economy, "QueueGap", Vector2(0.0, QUEUE_GAP - 2 * GAP))
-	_queue_more = _button(_economy, "QueueMore", 0.0)
-	_queue_more.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
-	_queue_more.add_theme_color_override("font_hover_color", get_theme_color("muted", &"Tokens"))
-	_queue_more.draw.connect(_draw_chevron)
-	_queue_more.pressed.connect(_toggle_queue)
-	# The slab grows upward from the screen edge, so the queue and its toggle sit above the buttons and opening adds rows on top: nothing under the pointer moves (gate B, user 2026-11-20).
-	var rows: Array[Control] = [_queue_header, _queue, _queue_more, _queue_gap, _resume, _card, _cancel_build]
+	var rows: Array[Control] = [_resume, _card, _cancel_build]
 	for i in rows.size(): _economy.move_child(rows[i], i)
+
+# The hover inset of ready cells and tiles, the NOW tile's fill, the `×N` badge (hud-v5-layout "Item cell").
+func _build_looks() -> void:
+	_inset = get_theme_stylebox("hover", &"HudButton").duplicate() as StyleBoxFlat
+	_inset.border_color = get_theme_color("muted", &"Tokens")
+	_now_style = get_theme_stylebox("normal", &"HudButton").duplicate() as StyleBoxFlat
+	_now_style.bg_color = get_theme_color("panel2", &"Tokens")
+	_count_style = StyleBoxFlat.new()
+	_count_style.bg_color = get_theme_color("well", &"Tokens")
+	_count_style.content_margin_left = 4
+	_count_style.content_margin_right = 4
+	# The 13 px line box is 16 high; the badge draws 14 (the page's line height).
+	_count_style.expand_margin_top = -1
+	_count_style.expand_margin_bottom = -1
 
 # One cell per lattice position, named by its key; a cell keeps its position, only its words and look change.
 func _build_card() -> void:
@@ -429,6 +434,7 @@ func _build_card() -> void:
 		cell.custom_minimum_size.y = CELL.y
 		cell.set_meta("action", "")
 		cell.pressed.connect(_press_cell.bind(cell))
+		cell.gui_input.connect(_cell_input.bind(cell))
 		cell.mouse_entered.connect(_hover_cell.bind(cell, true))
 		cell.mouse_exited.connect(_hover_cell.bind(cell, false))
 		_cell_label(cell, "Cost", &"HudNumber", Vector2(CELL_PAD.x, CELL_PAD.y), Vector2(CELL.x - 2.0 * CELL_PAD.x - 22.0, CELL_LINE))
@@ -456,6 +462,7 @@ func _build_card() -> void:
 		hint.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 		hint.visible = false
 		cell.add_child(hint)
+		_badge(cell)
 		_cell_look(cell, &"well")
 
 func _build_cell_card() -> void:
@@ -479,6 +486,40 @@ func _card_line(parent: Control, line_name: String) -> Label:
 	label.custom_minimum_size.y = CELL_CARD_LINE
 	return label
 
+# The `×N` badge 4 from the bottom right (hud-v5-layout "Item cell").
+func _badge(button: Button) -> void:
+	var count: Label = _cell_label(button, "Count", &"HudNumber", Vector2.ZERO, Vector2.ZERO)
+	count.add_theme_stylebox_override("normal", _count_style)
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	count.set_anchors_preset(PRESET_BOTTOM_RIGHT)
+	count.grow_horizontal = GROW_DIRECTION_BEGIN
+	count.grow_vertical = GROW_DIRECTION_BEGIN
+	count.offset_left = -TILE_PAD
+	count.offset_right = -TILE_PAD
+	count.offset_top = -TILE_PAD + 1.0
+	count.offset_bottom = -TILE_PAD + 1.0
+	count.visible = false
+
+static func _show_count(count: Label, queued: int, least: int) -> void:
+	count.visible = queued >= least
+	if count.visible: count.text = "×%d" % queued
+
+# A 4 px `you` bar along the bottom edge, its right anchor the progress.
+func _bar(parent: Control, bar_name: String) -> ColorRect:
+	var bar := ColorRect.new()
+	bar.name = bar_name
+	bar.mouse_filter = MOUSE_FILTER_IGNORE
+	bar.anchor_top = 1.0
+	bar.anchor_bottom = 1.0
+	bar.offset_top = -4
+	bar.visible = false
+	parent.add_child(bar)
+	return bar
+
+static func _show_progress(bar: ColorRect, entry: Dictionary, colour: Color) -> void:
+	bar.color = colour
+	bar.set_anchor(SIDE_RIGHT, minf(1.0, float(entry.work) / (Definitions.unit(entry.kind).ticks * 1000)), true)
+
 static func _cell_label(cell: Button, label_name: String, variation: StringName, at: Vector2, minimum: Vector2) -> Label:
 	var label: Label = _label(cell, label_name, variation)
 	label.mouse_filter = MOUSE_FILTER_IGNORE
@@ -501,14 +542,6 @@ func _grid(grid_name: String, columns: int) -> GridContainer:
 	_economy.add_child(grid)
 	return grid
 
-static func _spacer(parent: Control, spacer_name: String, minimum: Vector2) -> Control:
-	var spacer := Control.new()
-	spacer.name = spacer_name
-	spacer.mouse_filter = MOUSE_FILTER_IGNORE
-	spacer.custom_minimum_size = minimum
-	parent.add_child(spacer)
-	return spacer
-
 # No slab button keeps the focus: Space or Enter would press it again and the arrows walk a focus ring.
 static func _square(button: Button) -> void:
 	button.focus_mode = FOCUS_NONE
@@ -522,16 +555,6 @@ func _button(parent: Control, button_name: String, width: float) -> Button:
 	button.custom_minimum_size.x = width
 	parent.add_child(button)
 	return button
-
-# A label pinned inside a button's right padding; the button keeps the click.
-static func _right_label(button: Button, label_name: String, variation: StringName, right: float) -> Label:
-	var label: Label = _label(button, label_name, variation)
-	label.set_anchors_and_offsets_preset(PRESET_RIGHT_WIDE)
-	label.grow_horizontal = GROW_DIRECTION_BEGIN
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	label.offset_left = right
-	label.offset_right = right
-	return label
 
 func _draw_slab() -> void:
 	var area: Vector2 = _economy.size
@@ -574,15 +597,11 @@ func _count_rebuild(selection: Dictionary) -> void:
 	rebuilds += 1
 
 func _economy_controls(view: Dictionary, building: Dictionary, selection: Dictionary, seat: int) -> void:
-	var edge: Color = View.owner_color(seat, selection.bright_owners)
+	_edge = View.owner_color(seat, selection.bright_owners)
 	_resume.visible = selection.resume_id != -1
 	_cancel_build.visible = not building.is_empty() and not building.completed
+	_cell_queue = building.get("queue", [])
 	_show_card(view, HudModel.card(view, selection, seat), selection, seat)
-	if edge != _edge:
-		_edge = edge
-		for row: Node in _queue.get_children(): (row.get_node("Track/Bar") as ColorRect).color = edge
-	_refresh_queue(building, edge)
-	_queue_gap.visible = _queue.visible and (_resume.visible or _card.visible or _cancel_build.visible)
 	_fit_slab()
 	_show_cell_card()
 
@@ -600,6 +619,7 @@ func _show_card(view: Dictionary, cells: Array, selection: Dictionary, seat: int
 		cell.visible = at >= top - top % 4
 		var action: String = actions.get(HudModel.GRID_KEYS[at], "")
 		_fill_cell(cell, action, selection, HudModel.blocked(view, selection, seat, action))
+		_show_queued(cell)
 	# A hidden cell or a well sends no exit, so its hover ends here.
 	if _hovered_cell != null and (not _hovered_cell.is_visible_in_tree() or str(_hovered_cell.get_meta("action")).is_empty()): _hovered_cell = null
 	_show_hint()
@@ -646,7 +666,7 @@ func _name_form(label: Label, item: bool) -> void:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_TOP if item else VERTICAL_ALIGNMENT_CENTER
 	label.reset_size()
 
-# Ready cells take the queue rows' hover inset; the armed look keeps its own hover; a well takes no pointer; a blocked cell still takes its click (click = key).
+# Ready cells take the tiles' hover inset; the armed look keeps its own hover; a well takes no pointer; a blocked cell still takes its click (click = key).
 func _cell_look(cell: Button, look: StringName) -> void:
 	if cell.get_meta("look", &"") == look: return
 	cell.set_meta("look", look)
@@ -668,6 +688,18 @@ func _press_cell(cell: Button) -> void:
 	# The sound player hears this press after the action has refilled the cell (Build opens the sub-grid in place).
 	cell.set_meta("pressed_blocked", cell.get_meta("blocked"))
 	if not action.is_empty(): cell_pressed.emit(action)
+
+# Progress shows only on the NOW tile, never twice (user, 2026-11-23).
+func _show_queued(cell: Button) -> void:
+	var action: String = cell.get_meta("action")
+	_show_count(cell.get_node("Count") as Label, _cell_queue.filter(func(entry: Dictionary) -> bool: return entry.kind == action).size(), 1)
+
+# OpenRA's right-click (user, 2026-11-21): cancels the newest entry of the cell's kind; none queued, nothing sent.
+func _cell_input(event: InputEvent, cell: Button) -> void:
+	var click := event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_RIGHT or not click.pressed: return
+	var id: int = HudModel.newest_of_kind(_cell_queue, cell.get_meta("action"))
+	if id != -1: entry_cancelled.emit(id)
 
 func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> void:
 	var numbers: Dictionary = HudModel.strip(view, view_player, _hovered_kind() if not _hovered_kind().is_empty() else selection.placement_kind)
@@ -791,90 +823,132 @@ static func _has_card(cell: Button) -> bool:
 func _restrip() -> void:
 	if not _strip_args.is_empty(): _show_strip.callv(_strip_args)
 
-func _refresh_queue(building: Dictionary, edge: Color) -> void:
-	var queue: Array = building.get("queue", [])
-	if building.get("id", -1) != _queue_for or queue.size() <= HudModel.QUEUE_SHOWN: _queue_open = false
-	_queue_for = building.get("id", -1)
-	var ids: Array = queue.map(func(entry: Dictionary) -> String: return str(entry.id))
-	for child in _queue.get_children():
-		if not ids.has(str(child.name)): child.free()
-	# The entry in production sits lowest, nearest the buttons; cancelling one moves only the newer rows above it.
-	for row in queue.size():
-		var i: int = queue.size() - 1 - row
-		var entry: Dictionary = queue[i]
-		var button: Button = _queue.get_node_or_null(str(entry.id))
-		if button == null: button = _queue_row(entry.id, edge)
-		_queue.move_child(button, row)
-		var parts: PackedStringArray = queue_parts(entry)
-		button.text = parts[0]
-		var percent: Label = button.get_node("Percent")
-		percent.text = parts[1]
-		percent.visible = i == 0 and not parts[1].is_empty()
-		var track: ColorRect = button.get_node("Track")
-		track.visible = i == 0
-		(track.get_node("Bar") as ColorRect).set_anchor(SIDE_RIGHT, minf(1.0, float(entry.work) / (Definitions.unit(entry.kind).ticks * 1000)), true)
-	_queue.visible = not queue.is_empty()
-	_queue_header.visible = not queue.is_empty()
-	var waiting: Label = _queue_header.get_node("Waiting")
-	waiting.text = "%d waiting" % (queue.size() - 1)
-	waiting.visible = queue.size() > 1
-	_show_queue_rows()
+# hud-v5-layout "Selection panel" (P2.3b, 3-3): one row of four 91 x 60 tiles under the identity, in every own producer's panel.
+func _build_queue(body: BoxContainer) -> void:
+	_queue = _box(body, "Queue", HBoxContainer.new(), GAP) as HBoxContainer
+	_queue.custom_minimum_size.y = TILE.y
+	# The row itself reports the pointer leaving it from a gap, which no tile does.
+	_queue.mouse_filter = MOUSE_FILTER_PASS
+	_queue.mouse_exited.connect(_release_queue, CONNECT_DEFERRED)
+	for i in HudModel.QUEUE_TILES: _tile("Tile%d" % (i + 1))
+	_queue_more = _queue_tile("More")
+	var plain: StyleBox = get_theme_stylebox("normal", &"HudButton")
+	for look: String in ["normal", "hover", "pressed", "hover_pressed"]: _queue_more.add_theme_stylebox_override(look, plain)
+	_queue_more.mouse_default_cursor_shape = CURSOR_ARROW
+	var more: Label = _cell_label(_queue_more, "Count", &"HudNumber", Vector2(0, 13), Vector2(TILE.x, 16))
+	more.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	more.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cell_label(_queue_more, "Label", &"HudHint", Vector2(0, 31), Vector2(TILE.x, 15)).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	(_queue_more.get_node("Label") as Label).text = "more"
+	_queue_empty = _label(_queue, "Empty", &"HudHint", "Nothing in production")
+	_queue_empty.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 
-# The whole row cancels, as Zero Hour's queue button does; the × is only its sign.
-func _queue_row(entry_id: int, edge: Color) -> Button:
-	var button: Button = _button(_queue, str(entry_id), 0.0)
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.pressed.connect(entry_cancelled.emit.bind(entry_id))
-	for look: String in ["hover", "pressed", "hover_pressed"]: button.add_theme_stylebox_override(look, _inset)
-	button.mouse_entered.connect(_hover_queue_row.bind(button, true))
-	button.mouse_exited.connect(_hover_queue_row.bind(button, false))
-	var cancel: Label = _right_label(button, "Cancel", &"HudRow", -12.0)
-	cancel.text = "\u00d7"
-	cancel.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
-	_right_label(button, "Percent", &"HudRow", -12.0 - cancel.get_combined_minimum_size().x - 16.0).add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
-	var track := ColorRect.new()
-	track.name = "Track"
+func _queue_tile(tile_name: String) -> Button:
+	var tile: Button = _button(_queue, tile_name, TILE.x)
+	tile.custom_minimum_size.y = TILE.y
+	tile.size_flags_vertical = SIZE_SHRINK_BEGIN
+	return tile
+
+# Name, the making cell's chip, NOW and the bar on the entry in production, `×N` on a run; no digits (3-3).
+func _tile(tile_name: String) -> void:
+	var tile: Button = _queue_tile(tile_name)
+	_cell_look(tile, &"ready")
+	tile.set_meta("ids", [])
+	tile.pressed.connect(_cancel_tile.bind(tile))
+	tile.mouse_entered.connect(_hover_tile.bind(tile, true))
+	tile.mouse_exited.connect(_hover_tile.bind(tile, false))
+	tile.mouse_exited.connect(_release_queue, CONNECT_DEFERRED)
+	_cell_label(tile, "Now", &"HudLabel", Vector2(TILE_PAD, TILE_PAD), Vector2(0, CELL_LINE)).text = "NOW"
+	var key: Label = _cell_label(tile, "Chip", &"HudKey", Vector2(0, TILE_PAD + 1.0), Vector2(18, 18))
+	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	key.anchor_left = 1.0
+	key.anchor_right = 1.0
+	key.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	key.offset_left = -TILE_PAD - 18.0
+	key.offset_right = -TILE_PAD
+	var name_label: Label = _cell_label(tile, "Name", &"HudRow", Vector2(TILE_PAD, TILE_PAD + CELL_LINE + 2.0), Vector2(TILE.x - 2.0 * TILE_PAD, COMMAND_LINE))
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	name_label.add_theme_font_size_override("font_size", ITEM_NAME_SIZE)
+	name_label.add_theme_constant_override("line_spacing", -1)
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_badge(tile)
+	var track: ColorRect = _bar(tile, "Track")
 	track.color = get_theme_color("well", &"Tokens")
-	track.mouse_filter = MOUSE_FILTER_IGNORE
-	track.set_anchors_and_offsets_preset(PRESET_BOTTOM_WIDE)
-	track.offset_top = -2
-	button.add_child(track)
-	var bar := ColorRect.new()
-	bar.name = "Bar"
-	bar.color = edge
-	bar.mouse_filter = MOUSE_FILTER_IGNORE
-	bar.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	track.add_child(bar)
-	return button
+	track.anchor_right = 1.0
+	_bar(track, "Bar").visible = true
 
-func _hover_queue_row(row: Button, hovered: bool) -> void:
-	_inset_track(row, hovered, 2.0)
-	(row.get_node("Cancel") as Label).add_theme_color_override("font_color", get_theme_color("text" if hovered else "muted", &"Tokens"))
+func _show_queue(queue: Array, building_id: int) -> void:
+	var held: bool = building_id == _queue_for and _queue_held()
+	_queue_for = building_id
+	_queue_shown = queue
+	if held: _keep_tiles(queue)
+	else: _fill_tiles(queue)
 
-func _show_queue_rows() -> void:
-	var count: int = _queue.get_child_count()
-	var rows: Dictionary = HudModel.queue_rows(count, _queue_open)
-	for i in count: (_queue.get_child(i) as Control).visible = count - 1 - i < rows.shown
-	_queue_more.visible = rows.more > 0
-	_queue_more.text = "Show fewer" if _queue_open else "Show %d more queued" % rows.more
+# As the kind rows' hold: the mouse position outlives a window leave, the hovered control does not.
+func _queue_held() -> bool:
+	return _queue.is_visible_in_tree() and get_viewport().gui_get_hovered_control() != null and _queue.get_global_rect().has_point(_queue.get_global_mouse_position())
 
-func _toggle_queue() -> void:
-	_queue_open = not _queue_open
-	_show_queue_rows()
-	_fit_slab()
+func _release_queue() -> void:
+	if _queue.is_visible_in_tree() and not _queue_held(): _fill_tiles(_queue_shown)
 
-# Public Sans has no chevron glyph, so it is drawn after the centred text.
-func _draw_chevron() -> void:
-	var font: Font = _queue_more.get_theme_font("font")
-	var font_size: int = _queue_more.get_theme_font_size("font_size")
-	var x: float = (_queue_more.size.x + font.get_string_size(_queue_more.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x) / 2.0 + 8.0
-	var y: float = _queue_more.size.y / 2.0
-	var tip: float = 3.0 if _queue_open else -3.0
-	_queue_more.draw_polyline([Vector2(x, y - tip), Vector2(x + 4.0, y + tip), Vector2(x + 8.0, y - tip)], get_theme_color("muted", &"Tokens"), 1.5, true)
+# Over four tiles: three, then `+N more` counting the hidden entries (DA:1475).
+func _fill_tiles(queue: Array) -> void:
+	var tiles: Array = HudModel.queue_tiles(queue)
+	var shown: int = tiles.size() if tiles.size() <= HudModel.QUEUE_TILES else HudModel.QUEUE_TILES - 1
+	for i in HudModel.QUEUE_TILES:
+		var tile: Button = _queue.get_child(i)
+		tile.visible = i < shown
+		if tile.visible: _fill_tile(tile, tiles[i], queue[0] if i == 0 else {})
+	_queue_more.visible = tiles.size() > shown
+	if _queue_more.visible: _fill_more(tiles.slice(shown))
+	_queue_empty.visible = queue.is_empty()
 
-static func queue_parts(entry: Dictionary) -> PackedStringArray:
-	var percent: String = "" if entry.work == 0 else "%d %%" % (entry.work * 100 / (Definitions.unit(entry.kind).ticks * 1000))
-	return PackedStringArray([Registry.kind(entry.kind).display_name, percent])
+func _fill_tile(tile: Button, run: Dictionary, producing: Dictionary) -> void:
+	tile.set_meta("ids", run.ids)
+	tile.set_meta("key", HudModel.key_label(HudModel.CELL_KEYS.get(HudModel.role(run.kind), KEY_NONE)))
+	var name_label: Label = tile.get_node("Name")
+	if name_label.text != Registry.kind(run.kind).display_name:
+		name_label.text = Registry.kind(run.kind).display_name
+		name_label.reset_size()
+	if not tile.is_hovered(): (tile.get_node("Chip") as Label).text = tile.get_meta("key")
+	tile.tooltip_text = "Cancel · refunds %d" % run.refund
+	_show_count(tile.get_node("Count") as Label, run.ids.size(), 2)
+	(tile.get_node("Now") as Control).visible = not producing.is_empty()
+	(tile.get_node("Track") as Control).visible = not producing.is_empty()
+	if not producing.is_empty(): _show_progress(tile.get_node("Track/Bar") as ColorRect, producing, _panel_style.border_color)
+	if producing.is_empty(): tile.remove_theme_stylebox_override("normal")
+	else: tile.add_theme_stylebox_override("normal", _now_style)
+
+func _fill_more(runs: Array) -> void:
+	var count: int = 0
+	var lines: PackedStringArray = []
+	for run: Dictionary in runs:
+		count += run.ids.size()
+		lines.append(Registry.kind(run.kind).display_name + (" ×%d" % run.ids.size() if run.ids.size() > 1 else ""))
+	(_queue_more.get_node("Count") as Label).text = "+%d" % count
+	_queue_more.tooltip_text = "\n".join(lines)
+
+# Held under the pointer: no tile moves; each keeps its entries still queued, or its last, whose cancel the simulation refuses.
+func _keep_tiles(queue: Array) -> void:
+	var queued: Array = queue.map(func(entry: Dictionary) -> int: return entry.id)
+	for i in HudModel.QUEUE_TILES:
+		var tile: Button = _queue.get_child(i)
+		var live: Array = Array(tile.get_meta("ids")).filter(func(id: int) -> bool: return queued.has(id))
+		if not tile.visible or live.is_empty(): continue
+		tile.set_meta("ids", live)
+		_show_count(tile.get_node("Count") as Label, live.size(), 2)
+
+# The newest stored entry of the run, so the older ones keep their order; never another entry.
+func _cancel_tile(tile: Button) -> void:
+	var ids: Array = tile.get_meta("ids")
+	if not ids.is_empty(): entry_cancelled.emit(ids.back())
+
+func _hover_tile(tile: Button, hovered: bool) -> void:
+	var mark: Label = tile.get_node("Chip")
+	mark.text = "×" if hovered else str(tile.get_meta("key", ""))
+	if hovered: mark.add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
+	else: mark.remove_theme_color_override("font_color")
+	_inset_track(tile, hovered, 4.0)
 
 # hud-v5-layout "Selection panel": x 0, 408 wide, bottom on H, height hugs; the 4 px owner edge is the style's left border.
 func _build_panel() -> void:
@@ -903,6 +977,7 @@ func _build_panel() -> void:
 	var pair: BoxContainer = _box(body, "KeyRow", HBoxContainer.new(), 0)
 	_label(pair, "Key", &"HudLabel").custom_minimum_size.x = 112
 	_label(pair, "Value", &"HudNumber")
+	_build_queue(body)
 	_label(body, "Footer", &"HudHint", HudModel.RALLY)
 	_build_rows(box)
 	_panel.visible = false
@@ -969,7 +1044,12 @@ func _show_selection(view: Dictionary, selection: Dictionary, seat: int, faction
 	if many: _show_rows(view, selection.ids, seat, selection.bright_owners)
 	else:
 		_counts = {}
-		_show_panel(HudModel.panel(view, selection, seat, faction, _labels), selection.bright_owners)
+		var row: Dictionary = HudModel.panel(view, selection, seat, faction, _labels)
+		_show_panel(row, selection.bright_owners)
+		_queue.visible = row.has("queue")
+		# Fixed, so a queue change never moves the panel's top (3-3); a rally footer's 15 px line box adds 1.
+		_panel.custom_minimum_size.y = FACTORY_PANEL if _queue.visible else 0.0
+		if _queue.visible: _show_queue(row.queue, selection.building_id)
 
 # The row set holds while the pointer is over the panel, so a row never moves under it.
 # The mouse position outlives a window leave; the hovered control does not.

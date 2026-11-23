@@ -152,8 +152,22 @@ static func cell_name(action: String, placement_kind: String) -> String:
 	if COMMANDS.has(action): return COMMANDS[action]
 	return Registry.kind(action).display_name
 
-const QUEUE_SHOWN: int = 5
-const QUEUE_COLLAPSED: int = 4
+const QUEUE_TILES: int = 4
+
+# The entry in production alone, then adjacent waiting entries of one kind together: {kind, ids, refund} (3-3, `DA:1475`).
+static func queue_tiles(queue: Array) -> Array:
+	var tiles: Array = []
+	for i: int in queue.size():
+		var entry: Dictionary = queue[i]
+		if i < 2 or tiles.back().kind != entry.kind: tiles.append({"kind": entry.kind, "ids": []})
+		tiles.back().ids.append(entry.id)
+		tiles.back().refund = entry.paid_cost
+	return tiles
+
+static func newest_of_kind(queue: Array, kind: String) -> int:
+	for i: int in range(queue.size() - 1, -1, -1):
+		if queue[i].kind == kind: return queue[i].id
+	return -1
 
 # A seam so the layout path runs headless; tests swap it and restore it on every path.
 static var layout_label: Callable = _platform_label
@@ -190,10 +204,6 @@ static func is_armed_unit(view: Dictionary, id: int, seat: int) -> bool:
 	var i: int = view.units.index_of(id)
 	return i != -1 and view.units.owner[i] == seat and not Registry.kind(view.units.kinds[view.units.kind[i]]).get("weapon", "").is_empty()
 
-static func queue_rows(count: int, open: bool) -> Dictionary:
-	var capped: bool = count > QUEUE_SHOWN
-	return {"shown": QUEUE_COLLAPSED if capped and not open else count, "more": count - QUEUE_COLLAPSED if capped else 0}
-
 const SITE := "UNDER CONSTRUCTION"
 const PAUSED := "PAUSED · NO BUILDER"
 const OFFLINE := "OFFLINE · LOW POWER"
@@ -220,6 +230,9 @@ static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: S
 		return row.merged({"right": PAUSED if paused else SITE, "paused": paused, "percent": object.work * 100 / (Definitions.building(object.kind).ticks * 1000)})
 	if Registry.kind(object.kind).get("powered", false) and short_of_power(view, object.owner): row.merge({"right": OFFLINE, "warn": true})
 	if not own: return row
+	if not Registry.kind(object.kind).get("produces", []).is_empty():
+		row.queue = object.queue
+		if not object.queue.is_empty(): row.right = "QUEUE %d / %d" % [object.queue.size(), QUEUE_LIMIT]
 	var power: int = Registry.kind(object.kind).get("power", 0)
 	if power > 0: row.merge({"key": "POWER", "value": "+%d" % power})
 	if Registry.can_rally(object.kind): row.footer = RALLY

@@ -198,8 +198,8 @@ func test_production_ui(runner) -> bool:
 	var queue: Array = Fixture.object(main.driver.pump.live(),depot).queue
 	if queue.size() == 2:
 		await runner.process_frame
-		var button: Button = main.get_node("HUD/Economy/Queue").get_node(str(queue[1].id))
-		var viewport_point: Vector2 = button.get_global_rect().get_center()
+		var button: Control = queue_tile(main, queue[1].id)
+		var viewport_point: Vector2 = button.get_global_rect().get_center() if button != null else Vector2.ZERO
 		var press := InputEventMouseButton.new()
 		press.position = runner.root.get_final_transform() * viewport_point
 		press.global_position = press.position
@@ -423,10 +423,39 @@ func test_resume_status(runner) -> bool:
 	main.free()
 	return true
 
+const QUEUE_ROW: String = "HUD/Hud/SelectionPanel/Box/Body/Queue"
+
+# The selected producer's shown queue tiles, left to right, `+N more` left out.
+static func queue_tiles(main) -> Array:
+	var row: Node = main.get_node_or_null(QUEUE_ROW)
+	if row == null: return []
+	return row.get_children().filter(func(tile: Node) -> bool: return str(tile.name).begins_with("Tile") and (tile as Control).is_visible_in_tree())
+
+static func queue_tile(main, id: int) -> Control:
+	for tile: Control in queue_tiles(main):
+		if Array(tile.get_meta("ids", [])).has(id): return tile
+	return null
+
+static func shown_texts(node: Node) -> Array:
+	return node.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree()).map(func(label: Label) -> String: return label.text)
+
+# P2.3b T8: tiles carry no digits (3-3); the started entry's tile says NOW.
 func test_queue_label(runner) -> bool:
-	var BaseMain = load("res://scripts/match/hud.gd")
-	runner.check(BaseMain.queue_parts({"id":10,"kind":"usa_tank","work":270000}) == PackedStringArray(["Battle Tank","90 %"]),"Bs5 a started entry's row shows its name and percent, no id or raw work")
-	runner.check(BaseMain.queue_parts({"id":12,"kind":"usa_tank","work":0}) == PackedStringArray(["Battle Tank",""]),"Bs5 an unstarted entry's row shows its name and no percent")
+	var main = await setup(runner)
+	var sim = Fixture.make_world()
+	var factory: int = Fixture.add_completed(sim,1,"usa_factory",Vector2i(12,12))
+	main.driver.adopt(sim)
+	main.orders.selected_building_id = factory
+	var view: Dictionary = main.driver.current().view
+	HudModel.building(view,factory).queue = [{"id":10,"kind":"usa_tank","paid_cost":900,"work":270000},{"id":12,"kind":"usa_tank","paid_cost":900,"work":0}]
+	main._show(view)
+	await runner.process_frame
+	var chip: String = HudModel.key_label(KEY_W)
+	var started: Control = queue_tile(main,10)
+	var waiting: Control = queue_tile(main,12)
+	runner.check(started != null and shown_texts(started) == ["NOW",chip,"Battle Tank"],"Bs5 a started entry's tile shows NOW, its cell's key and its name, no percent, id or raw work, got %s" % [shown_texts(started) if started != null else []])
+	runner.check(waiting != null and waiting != started and shown_texts(waiting) == [chip,"Battle Tank"],"Bs5 an unstarted entry's tile shows its key and name, no percent, got %s" % [shown_texts(waiting) if waiting != null else []])
+	main.free()
 	return true
 
 func test_one_snapshot_per_refresh(runner) -> bool:
