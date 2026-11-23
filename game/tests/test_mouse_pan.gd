@@ -234,7 +234,8 @@ func test_zoom_mid_grab_does_not_jump(runner) -> bool:
 	var main = scene[1]
 	var camera: Camera2D = main.get_node("Camera2D")
 	_drag(port, MOUSE_BUTTON_MIDDLE, AT + Vector2(40, 0), false)
-	main.change_zoom(1)
+	SkirmishTests._push_button(port, AT + Vector2(40, 0), MOUSE_BUTTON_WHEEL_UP, true)
+	runner.check(main.mouse_pan.grabbing(), "MP8 a wheel notch mid-grab keeps the grab")
 	var start: Vector2 = camera.position
 	SkirmishTests._push_move(port, AT + Vector2(80, 0))
 	runner.check((camera.position - start).is_equal_approx(Vector2(-40, 0) / camera.zoom.x), "MP8 after a zoom the grab moves by the new motion only, got %s at zoom %s" % [camera.position - start, camera.zoom.x])

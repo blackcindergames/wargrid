@@ -463,12 +463,11 @@ func _below() -> Vector2:
 func _landing(world: Vector2) -> Vector2:
 	return (Iso.world_to_plane(world) + _below()).clamp(_camera_bounds.position, _camera_bounds.end)
 
-# 0 A.D.'s jumpCamera (136720dada selection_panels_helpers.js:243-260): the key again on arrival, or mid-glide, goes back.
-# True when it goes home, false when it goes back.
 func glide_seconds_left() -> float:
 	return _glide_left
 
-
+# 0 A.D.'s jumpCamera (136720dada selection_panels_helpers.js:243-260): the key again on arrival, or mid-glide, goes back.
+# True when it goes home, false when it goes back.
 func jump_home(world: Vector2) -> bool:
 	var heading: Vector2 = _glide_to if _glide_left > 0.0 else _camera.position
 	if _jump_back != null and heading.distance_to(_landing(world)) * _camera.zoom.x <= JUMP_NEAR_PX:

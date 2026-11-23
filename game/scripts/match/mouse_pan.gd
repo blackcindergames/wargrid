@@ -34,20 +34,20 @@ func anchor_offset() -> Vector2:
 # Presses come only from the map (`_unhandled_input`); motion and releases come from `_input` too, so this stays idempotent.
 func take(event: InputEvent) -> bool:
 	var button := event as InputEventMouseButton
-	# Zero Hour starts no RMB scroll under a drag box (LookAtXlat.cpp:266); orders ignore these presses there.
-	if button != null and button.pressed and _screen.orders.is_selecting(): return false
-	# A left press ends a pan whose release the platform lost.
-	if button != null and button.pressed and button.button_index == MOUSE_BUTTON_LEFT and _anchoring: drop()
-	# A release lost off-window must not swallow the next click.
-	if button != null and button.pressed and button.button_index in [MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]: drop()
-	if button != null and button.pressed and button.button_index == MOUSE_BUTTON_RIGHT:
-		_press = button
-		_pointer = button.position
-		return true
-	if button != null and button.pressed and button.button_index == MOUSE_BUTTON_MIDDLE:
-		_grabbing = true
-		_grab_last = button.position
-		return true
+	if button != null and button.pressed:
+		# Zero Hour starts no RMB scroll under a drag box (LookAtXlat.cpp:266); orders ignore these presses there.
+		if _screen.orders.is_selecting(): return false
+		# A button press ends a pan or grab whose release the platform lost; the wheel keeps it.
+		if button.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]: drop()
+		if button.button_index == MOUSE_BUTTON_RIGHT:
+			_press = button
+			_pointer = button.position
+			return true
+		if button.button_index == MOUSE_BUTTON_MIDDLE:
+			_grabbing = true
+			_grab_last = button.position
+			return true
+		return false
 	if event is InputEventPanGesture:
 		_screen.grab_camera((event as InputEventPanGesture).delta * GESTURE_PX / _screen.get_node("Camera2D").zoom.x)
 		return true
