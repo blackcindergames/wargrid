@@ -397,7 +397,10 @@ func test_alert_text(runner) -> bool:
 	_step(director, 3, [_hit(3, 9, 8), _hit(3, 9, 7)])
 	director.update(_allied_state(3, _own_and_ally()))
 	runner.check(director.take_alert() == "Base under attack", "AL6 own and allied in one tick show the own words")
-	_hit_line(director, 4, 6)
+	_step(director, 4, [_hit(4, 9, 7), _hit(4, 9, 8)])
+	director.update(_allied_state(4, _own_and_ally()))
+	runner.check(director.take_alert() == "Base under attack", "AL6 own then allied in one tick still show the own words")
+	_hit_line(director, 5, 6)
 	runner.check(director.take_alert().is_empty(), "AL6 an enemy building alerts nothing")
 	return true
 
