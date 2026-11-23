@@ -65,18 +65,20 @@ h3.sec{margin:0 0 8px;font-size:18px}
 addEventListener('error', e => { err.textContent += `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})\n`; });
 addEventListener('unhandledrejection', e => { err.textContent += `${e.reason}\n`; });
 
-const {SIZES, STATES, FONT, BG, FLAT, OWNERS, HEALTH, CELL, CELL_PAD, contrast, mix, lifted, isCore, pinnedShown, hudScale, updateCard, placeCards, hud, shown} = HUDV5;
+const {SIZES, STATES, NEW_STATES, FONT, BG, FLAT, OWNERS, HEALTH, CELL, CELL_PAD, contrast, mix, lifted, isCore, pinnedShown, hudScale, updateCard, placeCards, hud, shown} = HUDV5;
 const SIZE_KEYS = Object.keys(SIZES);
 const SIZE_ALIAS = {1920: '1920x1080', 1280: '1280x800', 720: '1280x720'};
 const sizeKey = x => SIZES[x] ? x : SIZE_ALIAS[x] || '1920x1080';
 const sizeLabel = x => x.replace('x', ' x ');
 const STATE_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', ',', '.', '-'];
 const STATE_LABEL = {none: 'Nothing selected', one: 'One unit', many: '120 units', factory: 'Factory', plant: 'Power Plant', full: 'Queue full', builder: 'Bulldozer', build: 'Build menu',
-  place: 'Placement', blocked: 'Blocked placement', enemy: 'Enemy unit', pile: 'Supply pile', site: 'Construction'};
+  place: 'Placement', blocked: 'Blocked placement', enemy: 'Enemy unit', pile: 'Supply pile', site: 'Construction',
+  'hover-cell': 'Hovered cell, empty queue', 'hover-tile': 'Hovered queue tile', press: 'Blocked press', builders: 'Two builders',
+  'none-refuse': 'Nothing selected, Q pressed', 'two-cause': 'Two causes (FRC)'};
 const TIER_LABEL = {full: 'Full', core: 'Core (early package)'};
 const ONE_NAME_W = CELL.one.w - 2 * CELL_PAD - 18 - 4;
 const TWO_NAME_W = CELL.two.w - 2 * CELL_PAD;
-const WORLD = {full: 'factory'};
+const WORLD = {full: 'factory', 'hover-cell': 'factory', 'hover-tile': 'factory', press: 'build', builders: 'builder', 'none-refuse': 'none', 'two-cause': 'build'};
 const STAND_IN = {plant: 'factory'};
 function noWorld(img) {
   img.remove();
@@ -168,12 +170,13 @@ function audit(hudEl) {
   all.filter(el => !(el instanceof SVGElement) || el.tagName === 'svg').forEach(el => out.push(...themeProblems(el)));
   const solid = [...hudEl.querySelectorAll('[data-cov],.ccard,.refuse')].filter(shown);
   solid.forEach((a, i) => solid.slice(i + 1).forEach(b => { if (hit(R(a), R(b))) out.push(`overlap: ${label(a)} / ${label(b)}`); }));
-  const keys = [...hudEl.querySelectorAll('.k')].filter(shown).map(k => k.textContent);
+  // A queue tile repeats the key of the cell that made it (P2.3b round).
+  const keys = [...hudEl.querySelectorAll('.k')].filter(k => shown(k) && !k.closest('.qt')).map(k => k.textContent);
   keys.filter((k, i) => keys.indexOf(k) !== i).forEach(k => out.push(`key twice: ${k}`));
   all.forEach(el => {
     const cs = getComputedStyle(el), paint = [cs.color, cs.backgroundColor, cs.boxShadow, cs.fill, cs.stroke].join(' ');
     const ownText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-    if (paint.includes(CYAN) && !el.closest('.on')) out.push(`cyan off a selected control: ${label(el)}`);
+    if (paint.includes(CYAN) && !el.closest('.on,.hinted')) out.push(`cyan off a selected control: ${label(el)}`);
     if (paint.includes(AMBER) && !el.closest('.amb,.sq,.arrow,.mini')) out.push(`amber outside its rules: ${label(el)}`);
     if (ownText && REDS.includes(cs.color)) out.push(`red text: ${label(el)}`);
     if (ownText && parseFloat(cs.fontSize) < 12) out.push(`text under 12 px: ${label(el)}`);
@@ -380,7 +383,8 @@ function renderFinal() {
     <h3 class="sec">Decided 2026-11-16</h3><ul class="notes">${DECIDED.map(n => `<li>${n}</li>`).join('')}</ul>
     <h3 class="sec">Agent calls</h3><ul class="notes">${AGENT_CALLS.map(n => `<li>${n}</li>`).join('')}</ul>
     <h3 class="sec">Where the page departs from the spec</h3><ul class="notes">${DEVIATIONS.map(n => `<li>${n}</li>`).join('')}</ul>` +
-    STATES.map(group).join('');
+    STATES.map(group).join('') +
+    `<h3 class="sec">P2.3b states (Core only)</h3>${NEW_STATES.map(st => `<div class="state"><h3>${STATE_LABEL[st]}</h3><div class="pairs">${fig(st, 'core')}</div></div>`).join('')}`;
   fit();
   placeCards(app);
   fontsReady().then(() => { const t = document.getElementById('namefit'); if (t) t.tBodies[0].innerHTML = t.tBodies[0].rows[0].outerHTML + nameFitRows(); });

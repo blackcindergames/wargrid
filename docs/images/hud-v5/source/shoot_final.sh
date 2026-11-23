@@ -1,5 +1,5 @@
 #!/bin/sh
-# HUD v5 pictures: the 1280x800 layout drawn at 2x, thirteen states x full and core, as 2560x1600 lossless WebP in docs/images/hud-v5/.
+# HUD v5 pictures: the 1280x800 layout drawn at 2x, thirteen states x full and core plus six P2.3b states in core, as 2560x1600 lossless WebP in docs/images/hud-v5/.
 # Usage: sh shoot_final.sh [picks, e.g. cell:A,side:B]  (default: source/picks.json, else all A; needs python3 server.py running)
 set -eu
 src=$(cd "$(dirname "$0")" && pwd)
@@ -32,4 +32,8 @@ for tier in full core; do
   for state in none one many factory plant full builder build place blocked enemy pile site; do
     shoot "$tier" "$state"
   done
+done
+# P2.3b states (plan T0), Core only.
+for state in hover-cell hover-tile press builders none-refuse two-cause; do
+  shoot core "$state"
 done
