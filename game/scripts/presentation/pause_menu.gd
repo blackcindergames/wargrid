@@ -114,7 +114,8 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 			_key_row("attack_move", HudModel.ORDER_KEYS.attack_move, "Attack move: armed units fight their way to the spot you click"),
 			_key_row("stop", HudModel.ORDER_KEYS.stop, "Stop"),
 			_key_row("unload", HudModel.ORDER_KEYS.unload, "Unload"),
-			["", "Click or right-click", "Cancel the unit in production (on NOW PRODUCING)", []]]],
+			["", "Click or right-click", "Cancel the unit in production (on NOW PRODUCING)", []],
+			["", "Production chip", "Click: select its building · Double-click: go there", []]]],
 		["Groups", [
 			["recall", _span(digits, 0), "Select a group, twice to centre on it", digits],
 			_save_row(digits, web, mac),
@@ -189,7 +190,8 @@ func _controls_list() -> PanelContainer:
 		var grid := GridContainer.new()
 		grid.columns = 2
 		grid.add_theme_constant_override("h_separation", 8)
-		grid.add_theme_constant_override("v_separation", 3)
+		# 2, not 3: the strip row (P16) fits above the command card at 1280x720.
+		grid.add_theme_constant_override("v_separation", 2)
 		columns.add_child(grid)
 		for section: Array in part:
 			grid.add_child(_label(section[0], &"HudLabel"))

@@ -7,6 +7,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const UnitGlyphs = preload("res://scripts/presentation/unit_glyphs.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
+const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
 # Chip C: an 18 px glyph stacked over a 40 x 4 bar.
 const CHIP: Vector2 = Vector2(48, 26)
 const BAR: Vector2 = Vector2(40, 4)
@@ -17,6 +18,13 @@ const UPRIGHT_BAR: Vector2 = Vector2(4, 20)
 const TIP_DELAY_MSEC: int = 250
 # The round's idle grey (strip.html `--idle`).
 const IDLE: Color = Color("#7b8d99")
+# The owner's one-time hint (user, 2026-11-23), remembered in the settings file once gone.
+const HINT := "Click a chip to select its building · Double-click to go there"
+const HINT_MSEC: int = 10000
+const HINT_SECTION := "hints"
+const HINT_KEY := "strip_seen"
+const HINT_UNREAD: int = -2
+const HINT_GONE: int = -1
 
 # Off by default; F7 (`orders._debug_key`) flips it for the session, so the owner can compare both in one match.
 static var upright: bool = false
@@ -36,6 +44,9 @@ var _hover_since: int = -1
 var _tip_open: bool = false
 var _pressed_id: int = -1
 var _pressed_at: int = 0
+var _hint: PanelContainer
+# HINT_UNREAD until the strip first shows, then the msec the hint appeared, or HINT_GONE.
+var _hint_at: int = HINT_UNREAD
 
 func _init() -> void:
 	name = "ProductionStrip"
@@ -61,6 +72,7 @@ func _init() -> void:
 	add_child(_row)
 	_build_looks()
 	_build_more()
+	_build_hint()
 	_build_tip()
 
 func _build_looks() -> void:
@@ -71,9 +83,12 @@ func _build_looks() -> void:
 		style.set_border_width_all(look[3])
 		_looks[look[0]] = style
 	_looks.warn = get_theme_color("warn", &"Tokens")
+	# Hard edges, as the fill's: an anti-aliased track edge blurs a pixel past the fill's.
 	_looks.track = StyleBoxFlat.new()
+	_looks.track.anti_aliasing = false
 	_looks.track.bg_color = get_theme_color("well", &"Tokens")
 	_looks.hollow = StyleBoxFlat.new()
+	_looks.hollow.anti_aliasing = false
 	_looks.hollow.draw_center = false
 	_looks.hollow.border_color = IDLE
 	_looks.hollow.set_border_width_all(1)
@@ -107,6 +122,25 @@ func _button(button_name: String) -> Button:
 	button.visible = false
 	_row.add_child(button)
 	return button
+
+# Top-level and mouse-transparent, built before the chip card so the card draws over it.
+func _build_hint() -> void:
+	_hint = PanelContainer.new()
+	_hint.name = "Hint"
+	_hint.theme_type_variation = &"HudSlab"
+	_hint.top_level = true
+	_hint.mouse_filter = MOUSE_FILTER_IGNORE
+	_hint.visible = false
+	var style := get_theme_stylebox("panel", &"HudSlab").duplicate() as StyleBoxFlat
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
+	_hint.add_theme_stylebox_override("panel", style)
+	add_child(_hint)
+	var text := Label.new()
+	text.name = "Text"
+	text.theme_type_variation = &"HudHint"
+	text.text = HINT
+	_hint.add_child(text)
 
 # Top-level, so the slab neither sizes nor sorts it.
 func _build_tip() -> void:
@@ -149,12 +183,20 @@ func _chip(index: int) -> Button:
 	var fill := ColorRect.new()
 	fill.name = "Fill"
 	fill.mouse_filter = MOUSE_FILTER_IGNORE
-	fill.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	track.add_child(fill)
+	var count := Label.new()
+	count.name = "Count"
+	count.theme_type_variation = &"HudNumber"
+	# The HUD's smallest size (FS1); the owner asked for about 11.
+	count.add_theme_font_size_override("font_size", 12)
+	count.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	count.mouse_filter = MOUSE_FILTER_IGNORE
+	count.visible = false
+	chip.add_child(count)
 	_shape(chip)
 	return chip
 
-# Stacked: glyph 1 from the top, the bar 2 under it; upright: glyph and bar side by side, 4 apart.
+# Stacked: glyph 1 from the top, the bar 2 under it, the count right of the glyph; upright: glyph and bar side by side, 4 apart, the count over the glyph's empty top-left corner.
 func _shape(chip: Button) -> void:
 	chip.custom_minimum_size = UPRIGHT_CHIP if upright else CHIP
 	var glyph: Control = chip.get_node("Glyph")
@@ -162,9 +204,7 @@ func _shape(chip: Button) -> void:
 	glyph.position = Vector2(4, 4) if upright else Vector2(15, 1)
 	track.position = Vector2(26, 3) if upright else Vector2(4, 21)
 	track.size = UPRIGHT_BAR if upright else BAR
-	var fill: Control = track.get_node("Fill")
-	fill.set_anchor(SIDE_TOP, 0.0, true)
-	fill.set_anchor(SIDE_RIGHT, 1.0, true)
+	(chip.get_node("Count") as Control).position = Vector2(2, 0) if upright else Vector2(38, 0)
 
 func set_upright(on: bool) -> void:
 	upright = on
@@ -181,7 +221,9 @@ func show_chips(chips: Array, selected: int, colour: Color) -> void:
 	_colour = colour
 	var split: Array = HudModel.strip_split(chips)
 	_folded = split[0]
-	visible = not chips.is_empty()
+	# The owner's rule (user, 2026-11-23): nothing in production, no strip.
+	visible = chips.any(_busy)
+	_follow_hint()
 	_more.visible = not _folded.is_empty()
 	var count: String = "+%d" % _folded.size()
 	if _more.visible and _more.text != count: _more.text = count
@@ -203,12 +245,24 @@ func _fill(chip: Button, record: Dictionary) -> void:
 	var fill: ColorRect = chip.get_node("Track/Fill")
 	var tone: Color = _looks.warn if record.look in ["slowed", "blocked"] else _colour
 	if fill.color != tone: fill.color = tone
-	var side: Side = SIDE_TOP if upright else SIDE_RIGHT
-	var at: float = 1.0 - record.fraction if upright else record.fraction
-	if fill.get_anchor(side) != at: fill.set_anchor(side, at, true)
+	_progress(fill, record.fraction)
+	var count: Label = chip.get_node("Count")
+	count.visible = record.queue > 0
+	if count.visible and count.text != str(record.queue): count.text = str(record.queue)
 	var look: StyleBox = _looks.selected if record.id == _selected else _looks.normal
 	for state: String in ["normal", "pressed"]: _style(chip, state, look)
 	for state: String in ["hover", "hover_pressed"]: _style(chip, state, _looks.selected if record.id == _selected else _looks.hover)
+
+static func _busy(record: Dictionary) -> bool:
+	return record.look != "idle"
+
+# Whole pixels from the track's bottom (upright) or left edge: a fractional edge rendered a pixel off the track's.
+func _progress(fill: Control, fraction: float) -> void:
+	var bar: Vector2 = UPRIGHT_BAR if upright else BAR
+	var length: float = roundf(fraction * (bar.y if upright else bar.x))
+	var rect := Rect2(0, bar.y - length, bar.x, length) if upright else Rect2(0, 0, length, bar.y)
+	if fill.position != rect.position: fill.position = rect.position
+	if fill.size != rect.size: fill.size = rect.size
 
 # Each override write re-themes the control, so only a change may touch it.
 static func _style(control: Control, state: String, style: StyleBox) -> void:
@@ -222,6 +276,37 @@ func _hover(control: Control, entered: bool) -> void:
 
 func _process(_delta: float) -> void:
 	if _hovered != null and not _tip.visible: _show_tip()
+	if _hint_at < 0: return
+	if now_msec.call() - _hint_at >= HINT_MSEC: _end_hint()
+	else: _place_hint()
+
+# Read once, on the strip's first appearance; the strip hiding ends it.
+func _follow_hint() -> void:
+	if visible and _hint_at == HINT_UNREAD:
+		var config := ConfigFile.new()
+		_hint_at = HINT_GONE if config.load(AudioSettings.path) == OK and config.get_value(HINT_SECTION, HINT_KEY, false) == true else now_msec.call()
+		_hint.visible = _hint_at >= 0
+	elif not visible and _hint_at >= 0: _end_hint()
+
+func _end_hint() -> void:
+	_hint_at = HINT_GONE
+	_hint.visible = false
+	var config := ConfigFile.new()
+	config.load(AudioSettings.path)
+	config.set_value(HINT_SECTION, HINT_KEY, true)
+	config.save(AudioSettings.path)
+
+# 8 under the strip, right-aligned with it, stepping left of a playtest helper.
+func _place_hint() -> void:
+	_hint.reset_size()
+	var strip: Rect2 = get_global_rect()
+	var at: Vector2 = _clear_of_helpers(Rect2(Vector2(strip.end.x - _hint.size.x, strip.end.y + 8.0), _hint.size)).position
+	if _hint.global_position != at: _hint.global_position = at
+
+func _clear_of_helpers(at: Rect2) -> Rect2:
+	for helper: Control in helpers:
+		if helper.is_visible_in_tree() and at.intersects(helper.get_global_rect()): at.position.x = maxf(8.0, helper.get_global_rect().position.x - 8.0 - at.size.x)
+	return at
 
 # The decided tooltip rules: after 250 ms, at once on a neighbour while one is open, gone on a click or leaving.
 func _show_tip() -> void:
@@ -245,10 +330,7 @@ func _show_tip() -> void:
 # 8 under the strip, from the chip's left, inside the screen and 8 left of a playtest helper it would cover.
 func _place_tip() -> void:
 	var chip: Rect2 = _hovered.get_global_rect()
-	var at := Rect2(Vector2(clampf(chip.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _tip.size.x), get_global_rect().end.y + 8.0), _tip.size)
-	for helper: Control in helpers:
-		if helper.is_visible_in_tree() and at.intersects(helper.get_global_rect()): at.position.x = maxf(8.0, helper.get_global_rect().position.x - 8.0 - at.size.x)
-	_tip.global_position = at.position
+	_tip.global_position = _clear_of_helpers(Rect2(Vector2(clampf(chip.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _tip.size.x), get_global_rect().end.y + 8.0), _tip.size)).position
 
 # Two presses on one chip within the control groups' double tap also glide there.
 func _press(chip: Button) -> void:
@@ -260,6 +342,7 @@ func _press(chip: Button) -> void:
 	var jump: bool = id == _pressed_id and now - _pressed_at <= ControlGroups.DOUBLE_TAP_MSEC
 	_pressed_id = -1 if jump else id
 	_pressed_at = now
+	if _hint_at >= 0: _end_hint()
 	producer_pressed.emit(id, jump)
 
 func reset() -> void:

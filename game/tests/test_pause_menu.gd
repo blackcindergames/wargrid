@@ -309,7 +309,7 @@ static func _shown_texts(list: Control) -> Array:
 	return list.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
 
 # Written apart from controls(), so dropping a gesture or a qualifier from the table fails here.
-const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "Set the rally point"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Click or right-click", "Cancel the unit in production"], ["Left-click", "right-click cancels"], ["Wheel", "Zoom"], ["Screen edge", "Pan"]]
+const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "Set the rally point"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Click or right-click", "Cancel the unit in production"], ["Left-click", "right-click cancels"], ["Wheel", "Zoom"], ["Screen edge", "Pan"], ["Production chip", "Click: select its building"]]
 const REQUIRED_WORDS := {"attack_move": "armed units", "last_attack": "your or an ally's base"}
 
 func test_controls_list_shows_every_row(runner) -> bool:
@@ -531,7 +531,7 @@ func test_controls_list_layout(runner) -> bool:
 		var settings: Array = others.filter(func(control: Control) -> bool: return control.is_visible_in_tree() and not list.is_ancestor_of(control))
 		var box: Rect2 = list.get_global_rect()
 		runner.check(view.encloses(box), "CL3 the list %s inside %s" % [box, size])
-		for path: String in hud: runner.check(not box.intersects(hud[path]), "CL3 the list clear of %s at %s" % [path, size])
+		for path: String in hud: runner.check(not box.intersects(hud[path]), "CL3 the list clear of %s at %s, list %s panel %s" % [path, size, box, hud[path]])
 		for control: Control in settings: runner.check(not box.intersects(control.get_global_rect()), "CL3 the list clear of %s at %s" % [control.name, size])
 		for label: Label in list.find_children("*", "Label", true, false):
 			runner.check(box.encloses(label.get_global_rect()) and label.size.x >= label.get_minimum_size().x - 0.5, "CL3 '%s' whole inside the list at %s, rect %s" % [label.text, size, label.get_global_rect()])
