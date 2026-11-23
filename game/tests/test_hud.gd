@@ -30,7 +30,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_cell_cost_clear_of_chip, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -369,7 +369,7 @@ static func _form(hud: Node) -> Array:
 	var shown: Callable = func(part: String) -> bool: return _part(hud, "TopStrip", part).is_visible_in_tree()
 	var text: Callable = func(part: String) -> String: return (_part(hud, "TopStrip", part) as Label).text if shown.call(part) else ""
 	var slabs: Array[Control] = _slabs(hud)
-	return [text.call("Credits"), text.call("CreditsAfter"), shown.call("Coin"), text.call("Power"), text.call("PowerAfter"), shown.call("LowPower"), _border(slabs[0]) == _token("sel"), _border(slabs[1]) == _token("sel")]
+	return [text.call("Credits"), text.call("CreditsAfter"), hud.find_child("Coin", true, false) != null, text.call("Power"), text.call("PowerAfter"), shown.call("LowPower"), _border(slabs[0]) == _token("sel"), _border(slabs[1]) == _token("sel")]
 
 # Top strip round (user, 2026-11-22): today's number, a drawn arrow and the forecast; the sel frame on each slab whose number changes; no PREVIEW.
 # LOW POWER preview (3-5): the words only when the purchase flips power low; already low, the numbers alone turn warn.
@@ -379,7 +379,6 @@ func test_forecast_forms(runner) -> bool:
 	var credits: Label = _part(hud, "TopStrip", "Credits")
 	var after: Label = _part(hud, "TopStrip", "CreditsAfter")
 	var arrow: Control = _part(hud, "TopStrip", "CreditsArrow")
-	var coin: Control = _part(hud, "TopStrip", "Coin")
 	var power: Label = _part(hud, "TopStrip", "Power")
 	var power_after: Label = _part(hud, "TopStrip", "PowerAfter")
 	var low: Label = _part(hud, "TopStrip", "LowPower")
@@ -402,8 +401,8 @@ func test_forecast_forms(runner) -> bool:
 	await _show(runner, hud, _strip_view(4800, 12, 10), "china_light_vehicle")
 	runner.check(_form(hud) == ["4800", "4000", false, "12 / 10", "", false, true, false] and _colour(power) == _token("warn"), "TS2 already low, a unit changes no power: 12 / 10 in warn, no LOW POWER words while it forecasts, got %s" % [_form(hud)])
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
-	runner.check(_form(hud) == ["500", MINUS + "700", true, "8 / 10", "11 / 10", true, true, true], "TS2 short: 500 → −700 (U+2212) with the coin, power still forecasts, got %s" % [_form(hud)])
-	runner.check(_colour(credits) == _token("text") and _colour(after) == _token("warn") and coin.get_global_rect().size == Vector2(15, 15) and is_equal_approx(_gap(after, coin), 4.0), "TS2 short: the forecast in warn, the 15 px coin 4 px after it, got %s gap %.1f" % [coin.get_global_rect(), _gap(after, coin)])
+	runner.check(_form(hud) == ["500", MINUS + "700", false, "8 / 10", "11 / 10", true, true, true], "TS2 short: 500 → −700 (U+2212) with no coin (user, 2026-11-23), power still forecasts, got %s" % [_form(hud)])
+	runner.check(_colour(credits) == _token("text") and _colour(after) == _token("warn"), "TS2 short: the forecast in warn")
 	await _show(runner, hud, _strip_view(4800, 8, 10), "china_defence")
 	runner.check(_form(hud)[1] == "3600" and not _form(hud)[2] and _colour(after) == _token("text"), "TS2 affordable again: the forecast in text, no coin, got %s" % [_form(hud)])
 	_no_arrow_glyph_or_label(runner, hud, "shortfall")
@@ -636,7 +635,7 @@ func test_strip_holds_while_on_the_card(runner) -> bool:
 	await _frames(runner)
 	var rest: Array = _strip_now(main)
 	var held: Array = []
-	for row: Array in [["china_power_plant", "500", false], ["china_defence", "300", false], ["china_factory", MINUS + "500", true], ["china_barracks", "1000", false]]:
+	for row: Array in [["china_power_plant", "500", false], ["china_defence", "300", false], ["china_factory", MINUS + "500", false], ["china_barracks", "1000", false]]:
 		var cell: Button = _cell(main, row[0])
 		_move(port, cell.get_global_rect().get_center())
 		await _frames(runner)
@@ -709,7 +708,7 @@ func test_strip_patches_values(runner) -> bool:
 	await _show(runner, hud, _strip_view(500, 8, 10), "china_defence")
 	var credits: Label = _part(hud, "TopStrip", "Credits")
 	var after: Label = _part(hud, "TopStrip", "CreditsAfter")
-	for row: Array in [[500, MINUS + "700", "warn", true], [1000, MINUS + "200", "warn", true], [1500, "300", "text", false]]:
+	for row: Array in [[500, MINUS + "700", "warn", false], [1000, MINUS + "200", "warn", false], [1500, "300", "text", false]]:
 		await _show(runner, hud, _strip_view(row[0], 8, 10), "china_defence")
 		runner.check(credits.text == str(row[0]) and after.text == row[1] and _colour(after) == _token(row[2]) and _form(hud)[2] == row[3], "TS5 %d credits patch the forecasting strip to %s in %s, coin %s, got %s" % [row[0], row[1], row[2], row[3], _form(hud)])
 	runner.check(_part(hud, "TopStrip", "Credits") == credits and _part(hud, "TopStrip", "CreditsAfter") == after, "TS5 patching values keeps the same labels")
@@ -1162,7 +1161,7 @@ func test_online_notice_top_centre(runner) -> bool:
 		main.hud.update_hud(_strip_view(500, strip[0], 10), _armed("china_defence", false, main.driver.notice()), 1, 1)
 		await _frames(runner)
 		_notice_clear(runner, main, strip[1], chips)
-	runner.check(_form(main.hud) == ["500", MINUS + "700", true, "8 / 10", "11 / 10", true, true, true], "CH4 fixture: the forecast's longest form, short with the coin and low power, got %s" % [_form(main.hud)])
+	runner.check(_form(main.hud) == ["500", MINUS + "700", false, "8 / 10", "11 / 10", true, true, true], "CH4 fixture: the forecast's longest form, short and low power, got %s" % [_form(main.hud)])
 	main.free()
 	await _ended_notice(runner, online, 1, func(lockstep, _transport) -> void: lockstep.receive('{"type":"left","seat":2,"after_tick":3}'), "Opponent left before the start (a different map or version, or their game tab was hidden)")
 	await _ended_notice(runner, online, 2, func(_lockstep, transport) -> void: transport.frames.append(OnlineTests.Wire.encode(OnlineTests.Wire.tick_message(1, 4, [], {"tick": 0, "value": "0000000000000000"}))), "Desync", 0)
@@ -1958,7 +1957,14 @@ func test_unit_glyphs(runner) -> bool:
 	for kinds: Array in [["usa_rifle_infantry", "frc_rifle_infantry", MILITIA], ["usa_rocket_infantry", "frc_rocket_infantry", "china_rocket_infantry"], ["usa_builder", DOZER], ["china_collector"]]:
 		var first: Texture2D = UnitGlyphs.texture(kinds[0])
 		runner.check(first != null and first.get_width() > 0 and kinds.all(func(kind: String) -> bool: return UnitGlyphs.texture(kind) == first), "UG1 %s share one glyph" % [kinds])
-	runner.check(["usa_light_vehicle", "usa_collector", "frc_builder", "china_factory"].all(func(kind: String) -> bool: return UnitGlyphs.texture(kind) == null), "UG1 the Scout Car, the Supply Helicopter, the Laborer and buildings have none")
+	var own: Array = ["usa_light_vehicle", "frc_light_vehicle", "usa_collector", "frc_builder"].map(UnitGlyphs.texture)
+	var shared: Array = [tank, UnitGlyphs.texture(ROTARY), UnitGlyphs.texture(MILITIA), UnitGlyphs.texture("china_rocket_infantry"), UnitGlyphs.texture(DOZER), UnitGlyphs.texture("china_collector")]
+	runner.check(own.all(func(texture: Texture2D) -> bool: return texture != null and own.count(texture) == 1 and not shared.has(texture)), "UG1 the Scout Car, Armed Pickup, Supply Helicopter and Laborer each have a glyph of their own (user, 2026-11-23)")
+	var units: Array = []
+	for faction: String in ["usa", "china", "frc"]:
+		for producer: String in ["_command_center", "_supply_center", "_barracks", "_factory"]: units.append_array(Registry.kind(faction + producer).produces)
+	runner.check(not units.is_empty() and units.all(func(kind: String) -> bool: return UnitGlyphs.texture(kind) != null), "UG1 every produced unit has a glyph, got none for %s" % [units.filter(func(kind: String) -> bool: return UnitGlyphs.texture(kind) == null)])
+	runner.check(UnitGlyphs.texture("china_factory") == null, "UG1 buildings have none (P2.6)")
 	var scene: Array = await _port_scene(runner)
 	var main = scene[3]
 	var ids: Dictionary = _queue_world(main)
@@ -1977,13 +1983,45 @@ func test_unit_glyphs(runner) -> bool:
 	_select(main, [], ids.usa)
 	_queue_kinds(main, ids.usa, ["usa_light_vehicle", "usa_light_vehicle"])
 	await _frames(runner)
-	runner.check(not _production(main, "Now/Glyph").is_visible_in_tree() and not _production(main, "Next/Glyph").is_visible_in_tree() and is_equal_approx(now.get_node("Name").get_global_rect().position.x, now.get_global_rect().position.x + 8.0), "UG3 a Scout Car shows its name only, at NOW's left")
+	runner.check(_production(main, "Now/Glyph").texture == UnitGlyphs.texture("usa_light_vehicle") and _production(main, "Next/Glyph").is_visible_in_tree() and now.get_node("Name").get_global_rect().position.x >= _production(main, "Now/Glyph").get_global_rect().end.x, "UG3 a Scout Car shows its own glyph on NOW and NEXT")
 	var scout: Button = _cell(main, "usa_light_vehicle")
-	runner.check(scout != null and not scout.get_node("Glyph").is_visible_in_tree() and is_equal_approx(scout.get_node("Cost").position.x, 8.0), "UG3 the Scout Car cell keeps its cost at the left")
+	runner.check(scout != null and scout.get_node("Glyph").is_visible_in_tree(), "UG3 the Scout Car cell shows its glyph")
 	_select(main, [1])
 	await _frames(runner)
 	runner.check(_cells(main).all(func(cell: Control) -> bool: return not cell.get_node("Glyph").is_visible_in_tree()), "UG3 command cells carry no glyph")
 	_end_port(scene)
+	return true
+
+# The P16 match (user, 2026-11-23): no coin anywhere; every unit cell's glyph and cost end before its key chip, at every HUD size, credits short.
+func test_cell_cost_clear_of_chip(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await overlays._scene(runner, Skirmish, port)
+		var sim = Fixture.make_world(100)
+		var producers: Array = []
+		var at := Vector2i(1, 1)
+		for faction: String in ["usa", "china", "frc"]:
+			for kind: String in ["_command_center", "_supply_center", "_barracks", "_factory"]:
+				producers.append(Fixture.add_completed(sim, 1, faction + kind, at))
+				at = Vector2i(at.x + 5, at.y) if at.x < 25 else Vector2i(1, at.y + 5)
+		main.driver.adopt(sim)
+		runner.check(main.hud.find_child("Coin", true, false) == null, "CK1 no coin in the HUD at %s" % size)
+		for producer: int in producers:
+			_select(main, [], producer)
+			await _frames(runner)
+			for cell: Button in _cells(main):
+				if not cell.is_visible_in_tree() or not (cell.get_node("Cost") as Control).visible: continue
+				var label: String = "%s at %s" % [cell.get_meta("action"), size]
+				var chip: Rect2 = (cell.get_node("Chip") as Control).get_global_rect()
+				var cost: Label = cell.get_node("Cost")
+				var glyph: Control = cell.get_node("Glyph")
+				var words_end: float = cost.get_global_rect().position.x + _text_width(cost)
+				runner.check(glyph.is_visible_in_tree() and not glyph.get_global_rect().intersects(chip) and words_end <= chip.position.x - 4.0 and cost.get_global_rect().end.x <= chip.position.x, "CK1 %s: glyph and cost end before the key chip, got cost to %.1f, chip %s" % [label, words_end, chip])
+		port.free()
+	overlays._end(saved)
 	return true
 
 # P16 T2: a right-click takes the newest of its kind not already sent for cancel; Shift takes up to five, the one in production last.
@@ -2726,8 +2764,8 @@ static func _set_credits(main, credits: int) -> void:
 static func _text_width(label: Label) -> float:
 	return label.get_theme_font("font").get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.get_theme_font_size("font_size")).x
 
-# One blocked cell read whole: its reason, the quiet look with a muted name, the cost's tone and the coin 4 after the bare cost.
-static func _blocked_look(runner, cell: Button, reason: String, cost_token: String, coin: bool, label: String) -> void:
+# One blocked cell read whole: its reason, the quiet look with a muted name, the cost's tone; no coin (user, 2026-11-23).
+static func _blocked_look(runner, cell: Button, reason: String, cost_token: String, _short: bool, label: String) -> void:
 	var found: String = cell.get_meta("blocked", {}).get("reason", "")
 	runner.check(found == reason, "BC1 %s: reason '%s', got '%s'" % [label, reason, found])
 	var fill: StyleBoxFlat = cell.get_theme_stylebox("normal") as StyleBoxFlat
@@ -2735,12 +2773,7 @@ static func _blocked_look(runner, cell: Button, reason: String, cost_token: Stri
 	runner.check(fill != null and (fill.bg_color == _token("quiet")) == blocked and (_colour(cell.get_node("Name")) == _token("muted")) == blocked, "BC1 %s: quiet fill and muted name only when blocked (%s), got %s" % [label, blocked, fill.bg_color if fill != null else null])
 	var cost: Label = cell.get_node("Cost")
 	if cost.visible: runner.check(_colour(cost) == _token(cost_token), "BC1 %s: the cost in %s, got %s" % [label, cost_token, _colour(cost)])
-	var mark: Control = cell.get_node("Coin")
-	runner.check(mark.is_visible_in_tree() == coin, "BC1 %s: the coin shown %s" % [label, coin])
-	if not coin: return
-	var at: Rect2 = mark.get_global_rect()
-	var after: float = cost.get_global_rect().position.x + _text_width(cost) + 4.0
-	runner.check(at.size == Vector2(15, 15) and absf(at.position.x - after) <= 0.5 and absf(at.get_center().y - (cell.get_global_rect().position.y + 14.0)) <= 0.5, "BC1 %s: the 15 px coin 4 after the bare cost on line 1 (x %.1f), got %s" % [label, after, at])
+	runner.check(cell.find_child("Coin", true, false) == null, "BC1 %s: no coin" % label)
 
 # Reasons in the simulation's order (prerequisite, queue, credits), the producer's prerequisite, the two-cause look, two builders.
 func test_blocked_cells(runner) -> bool:

@@ -39,9 +39,6 @@ const COMMAND_LINE: float = 28.0
 const ITEM_NAME_SIZE: int = 12
 # The page's empty-well fill, a literal there too (hud-v5-layout "Colour tokens").
 const WELL: Color = Color("#0f1820")
-# The cells' 15 px coin, its `$` in 1 px rects (cost step, user 2026-11-21).
-const DOLLAR: Array[Rect2] = [Rect2(7, 2, 1, 1), Rect2(5, 3, 5, 2), Rect2(4, 5, 2, 1), Rect2(7, 5, 1, 1), Rect2(5, 6, 5, 2), Rect2(7, 8, 1, 1), Rect2(9, 8, 2, 1), Rect2(5, 9, 5, 2), Rect2(7, 11, 1, 1)]
-const COIN: float = 15.0
 # hud-v5-layout "Cell card"; the delay is the decided tooltip rule (user, 2026-11-15).
 const CELL_CARD_WIDTH: float = 248.0
 const CELL_CARD_LINE: float = 20.0
@@ -182,7 +179,7 @@ static func _label(parent: Control, label_name: String, variation: StringName, t
 	parent.add_child(label)
 	return label
 
-# Label to value 8 (hud-v5-layout "Top strip"); a forecast follows today's number after the arrow, the coin 4 after a short one.
+# Label to value 8 (hud-v5-layout "Top strip"); a forecast follows today's number after the arrow, in warn below zero.
 func _groups() -> void:
 	var credits: BoxContainer = _box(_credits_slab, "Row", HBoxContainer.new(), 8)
 	var swatch := ColorRect.new()
@@ -196,7 +193,6 @@ func _groups() -> void:
 	_arrow(credits, "CreditsArrow")
 	var forecast: BoxContainer = _box(credits, "Forecast", HBoxContainer.new(), 4)
 	_label(forecast, "CreditsAfter", &"HudCredits")
-	coin(forecast, "Coin")
 	var power: BoxContainer = _box(_power_slab, "Row", HBoxContainer.new(), 8)
 	_label(power, "PowerLabel", &"HudLabel", "POWER")
 	_label(power, "Power", &"HudNumber")
@@ -216,21 +212,6 @@ func _arrow(parent: Control, arrow_name: String) -> void:
 		arrow.draw_line(Vector2(0, 4), Vector2(10.5, 4), tone, 1.5, true)
 		arrow.draw_polyline(PackedVector2Array([Vector2(7, 0.5), Vector2(10.5, 4), Vector2(7, 7.5)]), tone, 1.5, true))
 	parent.add_child(arrow)
-
-# One mark for "short of credits" on the strip and the cells.
-func coin(parent: Control, coin_name: String) -> Control:
-	var mark := Control.new()
-	mark.name = coin_name
-	mark.custom_minimum_size = Vector2(COIN, COIN)
-	mark.size_flags_vertical = SIZE_SHRINK_CENTER
-	mark.mouse_filter = MOUSE_FILTER_IGNORE
-	var warn: Color = get_theme_color("warn", &"Tokens")
-	var cut: Color = get_theme_color("quiet", &"Tokens")
-	mark.draw.connect(func() -> void:
-		mark.draw_circle(Vector2(7.5, 7.5), 7.5, warn, true, -1.0, true)
-		for rect: Rect2 in DOLLAR: mark.draw_rect(rect, cut))
-	parent.add_child(mark)
-	return mark
 
 # A one-line slab: no vertical padding, a fixed height that centres its line.
 func _flat(slab: PanelContainer, height: float) -> void:
@@ -254,10 +235,14 @@ func _build_strip() -> void:
 
 # Measured in the tree: out of it a box has no theme separation and a label keeps a stale size.
 func _ready() -> void:
-	# Tabular digits: zeros measure every five-digit balance and four-digit shortfall; every part still shows.
-	var widest: Dictionary = {"Credits": "00000", "CreditsAfter": "\u22120000", "Power": "00 / 00", "PowerAfter": "00 / 00"}
+	# Tabular digits: zeros measure every five-digit balance and four-digit shortfall, the wider of the two forecasts; every part still shows.
+	var widest: Dictionary = {"Credits": "00000", "Power": "00 / 00", "PowerAfter": "00 / 00"}
 	for part: String in widest: (_top_strip.find_child(part, true, false) as Label).text = widest[part]
-	_held = Vector2(_credits_slab.get_combined_minimum_size().x, _power_slab.get_combined_minimum_size().x)
+	var after: Label = _top_strip.find_child("CreditsAfter", true, false)
+	for form: String in ["\u22120000", "00000"]:
+		after.text = form
+		_held = Vector2(maxf(_held.x, _credits_slab.get_combined_minimum_size().x), _power_slab.get_combined_minimum_size().x)
+	after.text = ""
 	for part: String in widest: (_top_strip.find_child(part, true, false) as Label).text = ""
 
 func _strip_slab(slab_name: String) -> PanelContainer:
@@ -485,10 +470,6 @@ func _build_card() -> void:
 		# Item names keep the page's 14 px line pitch, so two lines end inside the cell.
 		name_label.add_theme_constant_override("line_spacing", -1)
 		_cell_label(cell, "More", &"HudRow", Vector2(CELL_PAD.x, NAME_TOP), Vector2(0, COMMAND_LINE)).add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
-		var mark: Control = coin(cell, "Coin")
-		mark.size = mark.custom_minimum_size
-		mark.position.y = CELL_PAD.y + (CELL_LINE - COIN) / 2.0
-		mark.visible = false
 		var hint := Panel.new()
 		hint.name = "Hint"
 		hint.mouse_filter = MOUSE_FILTER_IGNORE
@@ -668,7 +649,7 @@ func _show_card(view: Dictionary, cells: Array, selection: Dictionary, seat: int
 	if _hovered_cell != null and (not _hovered_cell.is_visible_in_tree() or str(_hovered_cell.get_meta("action")).is_empty()): _hovered_cell = null
 	_show_hint()
 
-# Blocked (hud-v5-layout "Looks"): quiet fill, muted name and cost; credits the sole blocker turn the cost warn with the coin 4 after it (3-2).
+# Blocked (hud-v5-layout "Looks"): quiet fill, muted name and cost; credits the sole blocker turn the cost warn (3-2; no coin since the P16 match).
 func _fill_cell(cell: Button, action: String, selection: Dictionary, blocked: Dictionary) -> void:
 	cell.set_meta("action", action)
 	cell.set_meta("blocked", blocked)
@@ -688,9 +669,6 @@ func _fill_cell(cell: Button, action: String, selection: Dictionary, blocked: Di
 	if item:
 		cost.text = str(Registry.kind(action).cost)
 		_paint(cost, &"warn" if short else (&"muted" if not blocked.is_empty() else &""))
-	var mark: Control = cell.get_node("Coin")
-	mark.visible = item and short
-	if mark.visible: mark.position.x = cost.position.x + _text_width(cost, cost.text) + 4.0
 	var name_label: Label = cell.get_node("Name")
 	_name_form(name_label, item)
 	_paint(name_label, &"muted" if not blocked.is_empty() and not armed else &"")
@@ -781,7 +759,6 @@ func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> v
 	var after: int = numbers.get("after_credits", numbers.credits)
 	var credits: bool = _forecast(_credits_slab, "Credits", [str(numbers.credits), "\u2212%d" % -after if after < 0 else str(after)], [false, after < 0])
 	_credits_slab.find_child("Forecast", true, false).visible = credits
-	_credits_slab.find_child("Coin", true, false).visible = after < 0
 	var used: Array[int] = [numbers.used, numbers.get("after_used", numbers.used)]
 	var available: Array[int] = [numbers.available, numbers.get("after_available", numbers.available)]
 	var low: Array[bool] = [used[0] > available[0], used[1] > available[1]]

@@ -19,3 +19,9 @@ Branch `p16-know-what-your-factory-is-making`. Package row: [packages](../packag
 - One glyph per body role (`Shapes.role`) shared by the factions, drawn from the round's `glyphs3.js`; the Rotary Gun Tank gets a multi-barrel cluster; a kind without a glyph shows its name only.
 - The accidental-cancel count is kept by `orders.gd`, which sees produces from keys and clicks; it and a NEXT-click count go into the playtest session file's match entry.
 - [HUD v5 layout](hud-v5-layout.md) top strip: low power also slows production (50-80 %, `economy_definitions.gd` `work_rate`), not only defences.
+
+## Owner match (2026-11-23)
+
+- Slice match on build `0.16.0-dev+0db215ec`, one offline match of about 4 min (end tick 7412): 52 produce and 2 cancel commands, `accidental_cancels` 0, `next_clicks` 0; the playtest card was not filled in (its ticks are not evidence), the owner reported in chat. The owner read a selected factory at a glance and called the rest "perfect" (user, 2026-11-23); in a second match Shift-click worked fine (user, 2026-11-23).
+- From the match (user, 2026-11-23): remove the red `$` coin everywhere (it overlapped the key chip once the glyph sat before the cost; supersedes the coin in the [P2.3b top strip round](design-answers-2026-11-08.md#p23b-top-strip-round-user-2026-11-22) B and the cells); the Scout Car had no glyph, so the four name-only kinds get glyphs. Unrelated, recorded elsewhere: income per minute and working collectors ([packages](../packages.md) "see your economy" rider), USA defence against infantry (STATUS F47).
+- Coverage questionnaire after the matches (user, 2026-11-23): seen and working: right-click cell cancel, cancel on NOW, Shift-right-click, the cancel flash, low power, `+N more`, the idle box, the rally line in NEXT, the cell card's cancel line, the NEXT hint, HQ producing, Militia `×N` per order with `2 per order`. Not seen in a window: `Exit blocked` (headless tests only).
