@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'P16 strip marker: what shows that other kinds follow in a queue'
+intro: >-
+  This round blocks only the production strip's marker in P16; the rest of the strip is built.
+  Decided, not asked (user, 2026-11-23): a chip's number is the total of the kind in production in that
+  producer's queue, so it always equals that kind's ×N on its build cell; the 4 x 6 "then" triangle goes.
+  Every option gets the chip's hover card naming each kind with its total, in Claude's proposed wording,
+  built in this package (`Medium Tank ×4 · 6s, Rotary Gun Tank ×3 · QUEUE 7 / 9`); the round asks only what
+  the chip itself shows.
+  The pictures draw the shipped upright chip (42 x 26: count, 18 px unit glyph, 4 x 20 bar) at 1280 x 720
+  over a China base: Headquarters (one Bulldozer), Barracks (2 Militia, then an Anti-Tank Trooper), the
+  selected Vehicle Factory (its panel is not drawn) and an idle one. N flips the factory's queue: split
+  (4 Medium Tanks, then 3 Rotary Gun Tanks), alt (the two alternating, 6 in all), single (7 Medium Tanks). Today every producer makes two
+  kinds at most, so a marker means "the other kind follows"; later units would add kinds. Credits are 50000.
+  A neutral answer ships A (no marker), which is what the strip does once the chip counts the kind's total.
+steps: [marker]
+render:
+  page: docs/images/strip-marker-round/marker.html
+  w: 1280
+  h: 720
+  hash: state={state}
+controls:
+  fit: true
