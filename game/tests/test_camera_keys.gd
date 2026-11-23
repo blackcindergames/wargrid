@@ -14,9 +14,11 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
 const LINE: String = "HUD/Hud/AlertLine"
 const AWAY := Vector2(-200, 100)
+# Half the 168 px dock below the dock line (hud-v5-layout.md), in HUD px.
+const ABOVE: float = 84.0
 
 func cases() -> Array[Callable]:
-	return [test_h_glides_to_the_headquarters, test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
+	return [test_h_glides_to_the_headquarters, test_h_lands_above_the_dock, test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
 
 func _world(runner) -> Array:
 	var main = await SkirmishTests.new()._setup(runner)
@@ -34,7 +36,8 @@ func _key(main, code: Key, ctrl: bool = false, settle: bool = true) -> void:
 	if settle: main.glide_camera(1.0)
 
 static func _plane(main, world: Vector2) -> Vector2:
-	return Iso.world_to_plane(world).clamp(main._camera_bounds.position, main._camera_bounds.end)
+	var below: Vector2 = Vector2(0.0, ABOVE) / main.get_node("Camera2D").zoom.x
+	return (Iso.world_to_plane(world) + below).clamp(main._camera_bounds.position, main._camera_bounds.end)
 
 func _hit(main, target: int, id: int = 9, ahead: int = 1) -> void:
 	var tick: int = main.shown_state.tick + ahead
@@ -51,14 +54,32 @@ func test_h_glides_to_the_headquarters(runner) -> bool:
 	BaseScene.publish(main)
 	var camera: Camera2D = main.get_node("Camera2D")
 	var expected: Vector2 = _plane(main, Vector2(5.5, 5.5))
-	var span: float = AWAY.distance_to(expected)
 	_key(main, KEY_H, false, false)
 	runner.check(camera.position == AWAY, "CK10 H does not land on the same frame, got %s" % camera.position)
+	main.glide_camera(1.0)
+	runner.check(camera.position.is_equal_approx(expected), "CK10 the glide ends on the Headquarters, wanted %s, got %s" % [expected, camera.position])
+	camera.position = expected + Vector2(40, 0)
+	_key(main, KEY_H, false, false)
+	main.glide_camera(0.075)
+	var eased: float = 1.0 - camera.position.distance_to(expected) / 40.0
+	runner.check(eased > 0.6 and eased < 1.0, "CK10 a 40 px hop has eased out past half the way at 0.075 s, got %.2f" % eased)
+	main.glide_camera(0.085)
+	runner.check(camera.position.is_equal_approx(expected), "CK10 a 40 px hop is done by 0.16 s, wanted %s, got %s" % [expected, camera.position])
+	var bounds: Rect2 = main._camera_bounds
+	var west := Vector2(bounds.position.x, bounds.get_center().y)
+	var east := Vector2(bounds.end.x, bounds.get_center().y)
+	camera.position = west
+	main.centre_camera(Iso.plane_to_world(east - Vector2(0.0, ABOVE)))
+	main.glide_camera(0.3)
+	runner.check(not camera.position.is_equal_approx(east), "CK10 a %d px jump across the map is still gliding at 0.3 s, got %s" % [int(bounds.size.x), camera.position])
+	main.centre_camera(Iso.plane_to_world(east - Vector2(0.0, ABOVE)))
+	main.glide_camera(0.17)
+	runner.check(camera.position.is_equal_approx(east), "CK10 a retarget near the end takes the short time from where the camera is, done by 0.17 s, got %s" % camera.position)
+	camera.position = west
+	main.centre_camera(Iso.plane_to_world(east - Vector2(0.0, ABOVE)))
+	main.glide_camera(0.3)
 	main.glide_camera(0.15)
-	var half: float = AWAY.distance_to(camera.position) / span
-	runner.check(half > 0.6 and half < 1.0, "CK10 halfway through the glide the camera has eased out past half the way, got %.2f" % half)
-	main.glide_camera(0.15)
-	runner.check(camera.position.is_equal_approx(expected), "CK10 after 0.3 s the camera is on the Headquarters, wanted %s, got %s" % [expected, camera.position])
+	runner.check(camera.position.is_equal_approx(east), "CK10 the jump across the map is done by 0.45 s, wanted %s, got %s" % [east, camera.position])
 	camera.position = AWAY
 	_key(main, KEY_H, false, false)
 	main.glide_camera(0.1)
@@ -72,7 +93,7 @@ func test_h_glides_to_the_headquarters(runner) -> bool:
 	_key(main, KEY_H, false, false)
 	main.glide_camera(0.1)
 	_key(main, KEY_SPACE, false, false)
-	main.glide_camera(0.3)
+	main.glide_camera(1.0)
 	runner.check(camera.position.is_equal_approx(factory_at), "CK10 Space mid-glide retargets to the hit, wanted %s, got %s" % [factory_at, camera.position])
 	camera.position = AWAY
 	_key(main, KEY_H, false, false)
@@ -83,12 +104,34 @@ func test_h_glides_to_the_headquarters(runner) -> bool:
 	main.centre_camera(Iso.plane_to_world(Vector2(100000, 100000)))
 	main.glide_camera(0.15)
 	var mid: Vector2 = camera.position
-	main.glide_camera(0.15)
+	main.glide_camera(1.0)
 	runner.check(mid.y < main._camera_bounds.end.y and is_equal_approx(camera.position.y, main._camera_bounds.end.y), "CK10 the glide heads for the clamped target, mid-way %s, and stops on the bound, got %s" % [mid, camera.position])
+	main.centre_camera(Iso.plane_to_world(Vector2(0.0, main._camera_bounds.end.y - 10.0)))
+	main.glide_camera(1.0)
+	runner.check(is_equal_approx(camera.position.y, main._camera_bounds.end.y), "CK10 a target near the bottom bound stays clamped after the dock shift, got %s" % camera.position)
 	camera.position = expected + Vector2(2, 0)
 	_key(main, KEY_H, false, false)
 	runner.check(camera.position.is_equal_approx(expected), "CK10 a target a few px away is reached at once, got %s" % camera.position)
 	main.free()
+	return true
+
+func test_h_lands_above_the_dock(runner) -> bool:
+	for pair: Array in [BaseScene.HUD_SIZES[0], BaseScene.HUD_SIZES[1]]:
+		var size: Vector2i = pair[1]
+		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
+		var main = await OverlayTests.new()._scene(runner, Scene, port)
+		HudTests._blocked_world(main, 1000)
+		Fixture.add_completed(main.driver.pump.live(), 1, "usa_command_center", Vector2i(4, 4))
+		BaseScene.publish(main)
+		var camera: Camera2D = main.get_node("Camera2D")
+		var height: float = main.get_viewport().get_visible_rect().size.y
+		for zoom: int in ([0, 1] if size.y == 720 else [0]):
+			main.change_zoom(zoom)
+			camera.position = AWAY
+			_key(main, KEY_H)
+			var on_screen: float = (Iso.world_to_plane(Vector2(5.5, 5.5)) - camera.get_screen_center_position()).y * camera.zoom.y + height / 2.0
+			runner.check(height == size.y and is_equal_approx(on_screen, (height - 168.0) / 2.0), "CK11 H lands the Headquarters in the middle of the map above the dock line at %s zoom %.1f: wanted y %.1f, got %.1f" % [size, camera.zoom.x, (height - 168.0) / 2.0, on_screen])
+		port.free()
 	return true
 
 func test_h_centres_on_the_headquarters(runner) -> bool:

@@ -30,8 +30,12 @@ const EDGE_BAND: float = 3.0
 const EDGE_STEP_MAX: float = 0.05
 const OUTSIDE_MARGIN: float = 40.0
 # Zero Hour snaps (View::lookAt); the owner found the snap disorienting (user, 2026-11-23).
-const GLIDE_SECONDS: float = 0.3
+const GLIDE_MIN_SECONDS: float = 0.15
+const GLIDE_MAX_SECONDS: float = 0.45
+const GLIDE_FAR_PX: float = 2000.0
 const GLIDE_SNAP_PX: float = 4.0
+# The fixed dock band below the dock line (hud-v5-layout.md), so the shown panel never moves a target.
+const DOCK_HEIGHT: float = 168.0
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
 static var map_path: String = Skirmish.MAP_PATH
 static var starts: Array[int] = []
@@ -50,6 +54,7 @@ var _camera_bounds: Rect2
 var _glide_from: Vector2
 var _glide_to: Vector2
 var _glide_left: float = 0.0
+var _glide_seconds: float = GLIDE_MAX_SECONDS
 @onready var _view: Node2D = $WorldView
 @onready var _camera: Camera2D = $Camera2D
 var _perf: Label
@@ -412,11 +417,15 @@ static func _edge_sign(at: float, low: float, high: float) -> float:
 	if at < low + EDGE_BAND: return -1.0
 	return 1.0 if at >= high - EDGE_BAND else 0.0
 
+# The target lands mid-way between the top and the dock line; HUD px are canvas px under the stretch, so only the zoom converts.
 func centre_camera(world: Vector2) -> void:
-	_glide_to = Iso.world_to_plane(world).clamp(_camera_bounds.position, _camera_bounds.end)
+	var below := Vector2(0.0, DOCK_HEIGHT / 2.0) / _camera.zoom.x
+	_glide_to = (Iso.world_to_plane(world) + below).clamp(_camera_bounds.position, _camera_bounds.end)
 	_glide_from = _camera.position
-	_glide_left = GLIDE_SECONDS
-	if _glide_from.distance_to(_glide_to) <= GLIDE_SNAP_PX: glide_camera(GLIDE_SECONDS)
+	var screen_px: float = _glide_from.distance_to(_glide_to) * _camera.zoom.x
+	_glide_seconds = lerpf(GLIDE_MIN_SECONDS, GLIDE_MAX_SECONDS, minf(screen_px / GLIDE_FAR_PX, 1.0))
+	_glide_left = _glide_seconds
+	if screen_px <= GLIDE_SNAP_PX: glide_camera(_glide_seconds)
 
 # A drag box ends the glide, as it holds a pan.
 func glide_camera(delta: float) -> void:
@@ -425,7 +434,7 @@ func glide_camera(delta: float) -> void:
 		_glide_left = 0.0
 		return
 	_glide_left = maxf(_glide_left - delta, 0.0)
-	var t: float = 1.0 - _glide_left / GLIDE_SECONDS
+	var t: float = 1.0 - _glide_left / _glide_seconds
 	_move_camera(_glide_from.lerp(_glide_to, 1.0 - pow(1.0 - t, 3.0)))
 
 func _move_camera(plane: Vector2) -> void:

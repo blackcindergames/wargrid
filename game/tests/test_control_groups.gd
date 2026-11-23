@@ -10,6 +10,7 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const Skirmish = preload("res://scenes/skirmish.tscn")
 const LINE: String = "HUD/Hud/GroupLine"
+const CameraTests = preload("res://tests/test_camera_keys.gd")
 
 func cases() -> Array[Callable]:
 	return [test_save_and_select, test_double_tap_centres_on_the_centroid, test_shift_adds, test_one_group_per_unit, test_dead_and_contained_drop, test_building_and_nothing, test_no_build_alias, test_placement_ignores_digits, test_recall_disarms_and_closes, test_save_line, test_save_line_layout, test_reset_and_rematch, test_pan_guard_and_preview]
@@ -83,7 +84,7 @@ func test_double_tap_centres_on_the_centroid(runner) -> bool:
 	HudTests._select(main, ids.tanks)
 	_key(main, 1, true)
 	camera.position = Vector2(-200, 100)
-	var centre: Vector2 = Iso.world_to_plane(Vector2(9.0, 6.5)).clamp(main._camera_bounds.position, main._camera_bounds.end)
+	var centre: Vector2 = (Iso.world_to_plane(Vector2(9.0, 6.5)) + Vector2(0.0, CameraTests.ABOVE)).clamp(main._camera_bounds.position, main._camera_bounds.end)
 	_key(main, 1)
 	runner.check(camera.position == Vector2(-200, 100), "CG2 one tap selects and does not move the camera, got %s" % camera.position)
 	now[0] = 667
@@ -189,7 +190,7 @@ func test_dead_and_contained_drop(runner) -> bool:
 	var rows: RefCounted = main.shown_state.units
 	var x: float = (rows.x[rows.index_of(live[0])] + rows.x[rows.index_of(live[1])]) / 2.0
 	var y: float = (rows.y[rows.index_of(live[0])] + rows.y[rows.index_of(live[1])]) / 2.0
-	var centre: Vector2 = Iso.world_to_plane(Vector2(x, y)).clamp(main._camera_bounds.position, main._camera_bounds.end)
+	var centre: Vector2 = (Iso.world_to_plane(Vector2(x, y)) + Vector2(0.0, CameraTests.ABOVE)).clamp(main._camera_bounds.position, main._camera_bounds.end)
 	runner.check(camera.position.is_equal_approx(centre), "CG5 the centroid takes the live members only, wanted %s, got %s" % [centre, camera.position])
 	sim.remove_object(live[0])
 	sim.remove_object(live[1])
@@ -411,7 +412,7 @@ func test_pan_guard_and_preview(runner) -> bool:
 	main.centre_camera(Iso.plane_to_world(Vector2(-300, 100)))
 	main.glide_camera(1.0)
 	var again := Vector2i(Iso.plane_to_world(main.get_node("WorldView").get_local_mouse_position()).floor())
-	runner.check(camera.position.is_equal_approx(Vector2(-300, 100)) and main.orders._preview_origin == again and again != expected, "CG13 centre_camera centres, and the ghost follows, got %s origin %s" % [camera.position, main.orders._preview_origin])
+	runner.check(camera.position.is_equal_approx(Vector2(-300, 100 + CameraTests.ABOVE)) and main.orders._preview_origin == again and again != expected, "CG13 centre_camera centres above the dock, and the ghost follows, got %s origin %s" % [camera.position, main.orders._preview_origin])
 	main.centre_camera(Iso.plane_to_world(Vector2(100000, 100000)))
 	main.glide_camera(1.0)
 	runner.check(is_equal_approx(camera.position.y, main._camera_bounds.end.y) and camera.position.x <= main._camera_bounds.end.x, "CG13 centre_camera clamps like a pan, got %s" % camera.position)
