@@ -13,7 +13,7 @@ const Skirmish = preload("res://scenes/skirmish.tscn")
 const STRIP: String = "HUD/Hud/ProductionStrip"
 const ProductionStrip = preload("res://scripts/match/production_strip.gd")
 const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
-const HINT: String = "Click a chip to select its building · Double-click to go there"
+const HINT: String = "Your busy buildings: click one to select it, double-click to go there"
 const MEDIUM: String = "china_light_vehicle"
 const ROTARY: String = "china_tank"
 const MILITIA: String = "china_rifle_infantry"
@@ -21,7 +21,7 @@ const DOZER: String = "china_builder"
 const TRUCK: String = "china_collector"
 
 func cases() -> Array[Callable]:
-	return [test_strip_order, test_strip_busy_only_kinds, test_strip_looks, test_strip_last_made_glyph, test_strip_fold, test_strip_tip_words, test_strip_click_selects, test_strip_double_click_glides, test_strip_holds_through_a_forecast, test_strip_blocks_the_map, test_strip_more_list, test_strip_layout, test_strip_chip_looks, test_strip_unchanged_refresh, test_strip_upright_bars, test_strip_upright_key_skips_typing, test_strip_reset_forgets_last_made, test_strip_tip_neighbour_rule, test_strip_click_ends_modes, test_strip_click_needs_orders_and_an_own_producer, test_strip_bar_stays_in_its_track, test_strip_queue_count, test_strip_hides_while_nothing_is_made, test_strip_hint_once, test_strip_hint_layout]
+	return [test_strip_order, test_strip_busy_only_kinds, test_strip_looks, test_strip_last_made_glyph, test_strip_fold, test_strip_tip_words, test_strip_click_selects, test_strip_double_click_glides, test_strip_holds_through_a_forecast, test_strip_blocks_the_map, test_strip_more_list, test_strip_layout, test_strip_chip_looks, test_strip_unchanged_refresh, test_strip_upright_bars, test_strip_upright_key_skips_typing, test_strip_reset_forgets_last_made, test_strip_tip_neighbour_rule, test_strip_click_ends_modes, test_strip_click_needs_orders_and_an_own_producer, test_strip_bar_stays_in_its_track, test_strip_queue_count, test_strip_hides_while_nothing_is_made, test_strip_hint_once, test_strip_hint_layout, test_strip_tip_names_the_runs, test_strip_hidden_under_the_pointer, test_strip_click_under_the_freeze_card, test_strip_card_steps_aside_for_a_notice]
 
 static func _entry(kind: String, work: int = 0) -> Dictionary:
 	return {"id": 1, "kind": kind, "paid_cost": 800, "work": work}
@@ -91,10 +91,10 @@ func test_strip_tip_words(runner) -> bool:
 	var chips: Array = HudModel.strip_chips(_view([_building(1, "china_command_center", [_entry(DOZER, _ticks(DOZER) - 90000)]), _building(5, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM) - 120000), _entry(MEDIUM), _entry(ROTARY), _entry(MEDIUM)]),
 		_building(3, "china_barracks"), _building(7, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM))])]), 1, {})
 	var lines: Array = chips.map(HudModel.strip_tip)
-	runner.check(lines == ["Bulldozer · 3s · QUEUE 1 / 9", "Idle", "Medium Tank · 4s · QUEUE 4 / 9", "Medium Tank · Exit blocked · QUEUE 1 / 9"], "PS6 chip cards: unit, seconds left and queue, or Idle, got %s" % [lines])
+	runner.check(lines == ["Bulldozer · 3s · QUEUE 1 / 9", "Idle", "Medium Tank ×2 · 4s, then Rotary Gun Tank · +1 more · QUEUE 4 / 9", "Medium Tank · Exit blocked · QUEUE 1 / 9"], "PS6 chip cards: the current run, its seconds, the run after it, the entries past that and the queue, or Idle, got %s" % [lines])
 	var hidden: Array = chips.map(HudModel.strip_hidden_line)
 	runner.check(hidden == ["Headquarters · Bulldozer 3s", "Barracks · idle", "Vehicle Factory · Medium Tank 4s", "Vehicle Factory · Medium Tank · Exit blocked"], "PS6 +N list lines, got %s" % [hidden])
-	runner.check(HudModel.STRIP_HINT == "Click: select · Double-click: go there", "PS6 the hint line")
+	runner.check(HudModel.STRIP_HINT == "Click: select it · Double-click: go there", "PS6 the hint line")
 	return true
 
 # Every China producer (HudTests._queue_world plus the HQ, which makes a Bulldozer), more Barracks and factories when `extra`, nothing selected.
@@ -244,7 +244,7 @@ func test_strip_holds_through_a_forecast(runner) -> bool:
 	var slabs: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
 	var view: Dictionary = main.driver.current().view
 	HudModel.player(view, 1).merge({"power_demand": 14, "power_supply": 10}, true)
-	main.hud.update_hud(view, HudTests._armed("china_power_plant"), 1, 1)
+	main.hud.update_hud(view, HudTests._placement("china_power_plant"), 1, 1)
 	await _frames(runner)
 	var held: Rect2 = main.get_node("HUD/Hud/TopStrip").get_global_rect()
 	runner.check(held.size.x > slabs.size.x, "PS9 fixture: the slabs grow to their held forecast, %s to %s" % [slabs, held])
@@ -296,7 +296,7 @@ func test_strip_more_list(runner) -> bool:
 	await _frames(runner)
 	var tip: Control = _tip(main)
 	var text: String = "\n".join(tip.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree()).map(func(label: Label) -> String: return label.text))
-	runner.check(tip.is_visible_in_tree() and text == "NOT ON THE STRIP\nHeadquarters · Bulldozer 1s\nSupply Depot · Supply Truck 6s\nBarracks · idle", "PS11 the list names the hidden producers in order, got '%s'" % text)
+	runner.check(tip.is_visible_in_tree() and text == "ALSO PRODUCING\nHeadquarters · Bulldozer 1s\nSupply Depot · Supply Truck 6s\nBarracks · idle", "PS11 the list names the hidden producers in order, got '%s'" % text)
 	runner.check(main.hud.blocks(_centre(more)), "PS11 `+3` blocks the map")
 	_end(world)
 	return true
@@ -320,7 +320,7 @@ func test_strip_layout(runner) -> bool:
 			for faction: Array in [["usa", 14, 10], ["frc", 0, 0]]:
 				var view: Dictionary = main.driver.current().view
 				HudModel.player(view, 1).merge({"faction": faction[0], "power_demand": faction[1], "power_supply": faction[2]}, true)
-				main.hud.update_hud(view, HudTests._armed(faction[0] + "_barracks"), 1, 1)
+				main.hud.update_hud(view, HudTests._placement(faction[0] + "_barracks"), 1, 1)
 				await _frames(runner)
 				var at: String = "%s at %s%s" % [faction[0], size, " upright" if upright else ""]
 				var strip: Control = _strip(main)
@@ -416,6 +416,24 @@ func test_strip_unchanged_refresh(runner) -> bool:
 	var fill: Control = _chip_of(main, ids.factory).get_node("Track/Fill")
 	runner.check(fill.size == Vector2(4, 17), "PS14 fixture: the factory's bar moves to 84 %%, got %s" % fill.size)
 	runner.check(layout.call() == before and churn[0] == 0, "PS14 production advancing moves only the bars, got %d signals" % churn[0])
+	var chip: Button = _chip_of(main, ids.factory)
+	var clock: Array = [0]
+	strip.now_msec = func() -> int: return clock[0]
+	chip.mouse_entered.emit()
+	clock[0] = 1000
+	strip._process(0.0)
+	await _frames(runner)
+	runner.check(strip.get_node("Tip").visible, "PS14 fixture: the factory's card is open")
+	var open: Array = layout.call()
+	churn[0] = 0
+	var record: Dictionary = chip.get_meta("chip")
+	# 84.3 %: the same 17 px bar and the same 2s.
+	var ticked: Dictionary = advanced.duplicate(true)
+	HudModel.building(ticked, ids.factory).queue[0].work = 253000
+	main._reshow()
+	main._show(ticked)
+	await _frames(runner)
+	runner.check(layout.call() == open and churn[0] == 0 and is_same(chip.get_meta("chip"), record), "PS14 with the card open, a refresh and a tick drawing the same bar and seconds fill nothing and lay nothing out, got %d signals" % churn[0])
 	main.free()
 	return true
 
@@ -551,15 +569,18 @@ func test_strip_click_needs_orders_and_an_own_producer(runner) -> bool:
 	var site: int = Fixture.add_completed(live, 1, "china_barracks", Vector2i(20, 12))
 	BaseScene.publish(main)
 	HudModel.building(main.driver.current().view, site).completed = false
-	main._show(main.driver.current().view)
+	_queues(main, {ids.hq: [DOZER]})
 	main.orders.selected_ids.assign([1])
 	main.orders.selected_building_id = -1
 	main._reshow()
 	var dialog: Control = main.get_node("HUD/Playtest/MarkerDialog")
 	dialog.visible = true
-	main.hud.producer_pressed.emit(ids.factory, true)
+	await _frames(runner)
+	HudTests._click_in(world[2], _centre(_chip_of(main, ids.factory)))
+	await _frames(runner)
 	dialog.visible = false
 	runner.check(main.orders.selected_ids == [1] and main.orders.selected_building_id == -1 and main.glide_seconds_left() == 0.0, "PS20 with the note holding the match a chip click changes nothing, got %s %d" % [main.orders.selected_ids, main.orders.selected_building_id])
+	runner.check(_hint_shown(main) and not _hint_saved(), "PS20 and the click under the note leaves the one-time hint")
 	for other: Array in [["an enemy factory", enemy], ["an own site", site]]:
 		main.hud.producer_pressed.emit(other[1], false)
 		runner.check(main.orders.selected_ids == [1] and main.orders.selected_building_id == -1, "PS20 %s is never selected, got %s %d" % [other[0], main.orders.selected_ids, main.orders.selected_building_id])
@@ -602,29 +623,39 @@ func test_strip_bar_stays_in_its_track(runner) -> bool:
 		_end(world)
 	return true
 
-# The owner's look (user, 2026-11-23): the queue length (QUEUE n / 9's n) small (12 px, the HUD's floor) in the chip's corner, none when idle, clear of the bar, chips as wide as before.
+# The owner's pick (user, 2026-11-23): the count is the current run (as NEXT's ×N), small (12 px, the HUD's floor) in its column, a 4 x 6 mark under it
+# while other kinds follow, bottom-aligned with the glyph; neither when idle, chips as wide as before.
 func test_strip_queue_count(runner) -> bool:
 	var was: bool = ProductionStrip.upright
 	var world: Array = await _world(runner)
 	var main = world[3]
 	var ids: Dictionary = world[4]
+	var four_three: Array = [MEDIUM, MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, ROTARY]
 	for upright: bool in [false, true]:
 		_strip(main).set_upright(upright)
 		var mode: String = "upright" if upright else "stacked"
-		for row: Array in [[[MEDIUM, ROTARY, MEDIUM], "3"], [[MEDIUM], "1"], [[], ""]]:
+		for row: Array in [[four_three, "4", true], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "7", false], [[MEDIUM, ROTARY, MEDIUM], "1", true], [[MEDIUM], "1", false], [[], "", false]]:
 			_queues(main, {ids.hq: [DOZER], ids.factory: row[0]})
 			await _frames(runner)
 			var chip: Button = _chip_of(main, ids.factory)
 			var count: Label = chip.get_node_or_null("Count") if chip != null else null
+			var mark: Control = chip.get_node_or_null("Then") if chip != null else null
 			var shown: String = count.text if count != null and count.is_visible_in_tree() else ""
-			runner.check(shown == row[1], "PS22 %s: %d queued shows '%s', got '%s'" % [mode, row[0].size(), row[1], shown])
+			var marked: bool = mark != null and mark.is_visible_in_tree()
+			runner.check(shown == row[1] and marked == row[2], "PS22 %s: %s shows '%s'%s, got '%s' mark %s" % [mode, row[0], row[1], " and the mark" if row[2] else ", no mark", shown, marked])
 			runner.check(chip != null and chip.size == (Vector2(42, 26) if upright else Vector2(48, 26)), "PS22 %s, %d queued: the chip keeps its width, got %s" % [mode, row[0].size(), chip.size if chip != null else Vector2.ZERO])
 			if count == null or not count.is_visible_in_tree(): continue
 			var box: Rect2 = count.get_global_rect()
 			var glyph: Rect2 = (chip.get_node("Glyph") as Control).get_global_rect()
-			runner.check(chip.get_global_rect().encloses(box) and not box.intersects((chip.get_node("Track") as Control).get_global_rect()) and not box.intersects(glyph), "PS22 %s: the count inside the chip, clear of the glyph and the bar, got %s glyph %s" % [mode, box, glyph])
+			var track: Rect2 = (chip.get_node("Track") as Control).get_global_rect()
+			runner.check(chip.get_global_rect().encloses(box) and not box.intersects(track) and not box.intersects(glyph), "PS22 %s: the count inside the chip, clear of the glyph and the bar, got %s glyph %s" % [mode, box, glyph])
 			if upright: runner.check(box.position.x < glyph.position.x and is_equal_approx(box.position.y, glyph.position.y), "PS22 upright: the count in its own column left of the glyph, top-aligned with it, got %s glyph %s" % [box, glyph])
 			runner.check(count.get_theme_font_size("font_size") == 12 and count.get_theme_color("font_color") == main.hud.get_theme_color("muted", &"Tokens"), "PS22 %s: 12 px muted" % mode)
+			if not marked: continue
+			var at: Rect2 = mark.get_global_rect()
+			var baseline: float = box.position.y + count.get_theme_font("font").get_ascent(12)
+			runner.check(at.size == Vector2(4, 6) and chip.get_global_rect().encloses(at) and at.position.x >= box.position.x and at.end.x <= box.end.x and at.position.y >= baseline and is_equal_approx(at.end.y, glyph.end.y) and not at.intersects(glyph) and not at.intersects(track),
+				"PS22 %s: a 4 x 6 mark in the count's column under its digits (baseline %.1f), its bottom on the glyph's, clear of glyph and bar, got %s count %s glyph %s" % [mode, baseline, at, box, glyph])
 	_strip(main).set_upright(was)
 	_end(world)
 	return true
@@ -660,6 +691,114 @@ func test_strip_hides_while_nothing_is_made(runner) -> bool:
 	_end(world)
 	return true
 
+# The owner's pick (user, 2026-11-23): the chip card names the current run, then the next one, then how many follow, keeping QUEUE n / 9.
+func test_strip_tip_names_the_runs(runner) -> bool:
+	var rows: Array = [[[MEDIUM, MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, ROTARY], "Medium Tank ×4 · 6s, then Rotary Gun Tank ×3 · QUEUE 7 / 9"], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "Medium Tank ×7 · 6s · QUEUE 7 / 9"],
+		[[MEDIUM, ROTARY, MEDIUM], "Medium Tank · 6s, then Rotary Gun Tank · +1 more · QUEUE 3 / 9"]]
+	for row: Array in rows:
+		var entries: Array = []
+		for i in row[0].size(): entries.append({"id": i, "kind": row[0][i], "paid_cost": 800, "work": 126000 if i == 0 else 0})
+		var got: String = HudModel.strip_tip(HudModel.strip_chips(_view([_building(5, "china_factory", entries)]), 1, {})[0])
+		runner.check(got == row[1], "PS26 %s reads '%s', got '%s'" % [row[0], row[1], got])
+	# The widest card a Barracks can show stays one line inside the smallest view.
+	var world: Array = await _world(runner)
+	var main = world[3]
+	var ids: Dictionary = world[4]
+	var trooper: String = "china_rocket_infantry"
+	var view: Dictionary = main.driver.current().view
+	var queue: Array = []
+	for i in 9: queue.append({"id": 950 + i, "kind": trooper if i < 4 or i == 7 else MILITIA, "paid_cost": 300, "work": Economy.unit(trooper).ticks * 1000 if i == 0 else 0})
+	HudModel.building(view, ids.barracks).queue = queue
+	main._show(view)
+	var now: Array = [0]
+	_clock(main, now)
+	await _frames(runner)
+	HudTests._move(world[2], _centre(_chip_of(main, ids.barracks)))
+	now[0] = 1000
+	await _frames(runner)
+	var text: Label = _tip(main).get_node("Lines/Text")
+	var line: String = text.text.get_slice("\n", 0)
+	var tip: Rect2 = _tip(main).get_global_rect()
+	print("PS26 widest chip card at 1280x720: %.0f px for '%s'" % [tip.size.x, line])
+	runner.check(line == "Anti-Tank Trooper ×4 · Exit blocked, then Militia ×3 · +2 more · QUEUE 9 / 9" and text.text.count("\n") == 1 and Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(tip), "PS26 the widest card, one line inside the view, got '%s' %s" % [line, tip])
+	_end(world)
+	return true
+
+# Gemini review: the whole strip hidden under the pointer gets its exits from the engine (a hidden control drops the hover), so the card never
+# pops up away from the pointer later and the next hover waits its 250 ms again.
+func test_strip_hidden_under_the_pointer(runner) -> bool:
+	var world: Array = await _world(runner)
+	var port: SubViewport = world[2]
+	var main = world[3]
+	var ids: Dictionary = world[4]
+	var now: Array = [0]
+	_clock(main, now)
+	_queues(main, {ids.hq: [DOZER], ids.factory: [MEDIUM]})
+	await _frames(runner)
+	HudTests._move(port, _centre(_chip_of(main, ids.factory)))
+	now[0] = 300
+	await _frames(runner)
+	runner.check(_tip(main).visible, "PS27 fixture: the factory's card is open")
+	_queues(main, {ids.hq: [], ids.factory: []})
+	await _frames(runner)
+	runner.check(not _strip(main).is_visible_in_tree() and not _tip(main).visible, "PS27 fixture: nothing in production, strip and card gone")
+	HudTests._move(port, Vector2(640, 400))
+	await _frames(runner)
+	_queues(main, {ids.factory: [MEDIUM]})
+	now[0] = 2000
+	await _frames(runner)
+	runner.check(_strip(main).is_visible_in_tree() and not _tip(main).visible, "PS27 the strip back with the pointer on the map: no card")
+	HudTests._move(port, _centre(_chip_of(main, ids.factory)))
+	await _frames(runner)
+	runner.check(not _tip(main).visible, "PS27 the next hover waits again")
+	now[0] = 2250
+	await _frames(runner)
+	runner.check(_tip(main).visible, "PS27 and opens after 250 ms")
+	_end(world)
+	return true
+
+# Gemini review: under the freeze card (or a result, or the menu) a chip click ends no hint and arms no double click.
+func test_strip_click_under_the_freeze_card(runner) -> bool:
+	var world: Array = await _world(runner)
+	var port: SubViewport = world[2]
+	var main = world[3]
+	var ids: Dictionary = world[4]
+	var now: Array = [0]
+	_clock(main, now)
+	var chip: Button = _chip_of(main, ids.factory)
+	main.driver._failure = "test freeze"
+	HudTests._click_in(port, _centre(chip))
+	await _frames(runner)
+	main.driver._failure = ""
+	runner.check(_hint_shown(main) and not _hint_saved(), "PS28 a click under the freeze card leaves the hint")
+	now[0] = 100
+	HudTests._click_in(port, _centre(chip))
+	await _frames(runner)
+	runner.check(main.orders.selected_building_id == ids.factory and main.glide_seconds_left() == 0.0, "PS28 the first click after it is a single click, got %d glide %.2f" % [main.orders.selected_building_id, main.glide_seconds_left()])
+	_end(world)
+	return true
+
+# Opus review: the chip card steps aside for an online notice, as the hint does, and comes back once it goes.
+func test_strip_card_steps_aside_for_a_notice(runner) -> bool:
+	var world: Array = await _world(runner)
+	var port: SubViewport = world[2]
+	var main = world[3]
+	var ids: Dictionary = world[4]
+	var now: Array = [0]
+	_clock(main, now)
+	HudTests._move(port, _centre(_chip_of(main, ids.factory)))
+	now[0] = 300
+	await _frames(runner)
+	runner.check(_tip(main).visible, "PS29 fixture: the card is open")
+	main.hud.update_hud(main.shown_state, HudTests._placement("", false, "Waiting for the other player"), 1, 1)
+	await _frames(runner)
+	runner.check(main.get_node("HUD/Hud/Notice").is_visible_in_tree() and not _tip(main).visible, "PS29 a notice up: the card hides")
+	main._reshow()
+	await _frames(runner)
+	runner.check(_tip(main).visible, "PS29 the notice gone, the card is back under the pointer")
+	_end(world)
+	return true
+
 static func _hint(main) -> Control:
 	return main.get_node_or_null(STRIP + "/Hint")
 
@@ -688,7 +827,7 @@ func test_strip_hint_once(runner) -> bool:
 	runner.check(not _hint_shown(main) and _hint_saved() and config.get_value("audio", "music", 0.0) == 0.3, "PS24 a chip click ends it and saves hints/strip_seen beside the other settings")
 	var fresh = ProductionStrip.new()
 	world[2].add_child(fresh)
-	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1, {}) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "left": "5s"}], -1, Color.WHITE)
+	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1, {}) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "runs": [{"kind": MEDIUM, "count": 1}], "left": "5s"}], -1, Color.WHITE)
 	await _frames(runner)
 	runner.check(fresh.is_visible_in_tree() and not fresh.get_node("Hint").is_visible_in_tree(), "PS24 a fresh strip with the setting saved shows no hint")
 	_end(world)
@@ -696,6 +835,8 @@ func test_strip_hint_once(runner) -> bool:
 	main = world[3]
 	ids = world[4]
 	var strip: Control = _strip(main)
+	# The frames would add their own deltas to the hand-driven ones.
+	strip.set_process(false)
 	runner.check(_hint_shown(main), "PS24 fixture: a new machine shows the hint again")
 	strip._process(6.0)
 	_queues(main, {ids.hq: []})
@@ -712,14 +853,18 @@ func test_strip_hint_once(runner) -> bool:
 	world = await _world(runner)
 	main = world[3]
 	strip = _strip(main)
+	strip.set_process(false)
 	main._pause.open()
 	strip._process(20.0)
 	main._pause.close()
 	main._focused = false
 	strip._process(20.0)
 	main._focused = true
+	main.driver._failure = "test freeze"
+	strip._process(20.0)
+	main.driver._failure = ""
 	strip._process(9.0)
-	runner.check(_hint_shown(main), "PS24 time under the open menu or in an unfocused window is not counted")
+	runner.check(_hint_shown(main), "PS24 time under the open menu, in an unfocused window or under the freeze card is not counted")
 	strip._process(1.5)
 	runner.check(not _hint_shown(main), "PS24 and 10 s of uncovered time end it")
 	_end(world)
@@ -744,13 +889,16 @@ func test_strip_hint_layout(runner) -> bool:
 			runner.check(not hint.intersects(main.get_node(other).get_global_rect()), "PS25 %s: clear of %s, got %s" % [at, other, hint])
 		# An online notice takes the top centre; the hint steps aside (hidden, its time paused) while one shows.
 		var notice: String = "Waiting for the other player. " + "The relay holds the match until both seats answer again. ".repeat(3)
-		main.hud.update_hud(main.shown_state, HudTests._armed("", false, notice), 1, 1)
+		main.hud.update_hud(main.shown_state, HudTests._placement("", false, notice), 1, 1)
 		await _frames(runner)
 		var shown: Rect2 = main.get_node("HUD/Hud/Notice").get_global_rect()
 		runner.check(main.get_node("HUD/Hud/Notice").is_visible_in_tree() and not (_hint(main).is_visible_in_tree() and _hint(main).get_global_rect().intersects(shown)), "PS25 %s: the hint never meets a long notice %s" % [at, shown])
+		_strip(main).set_process(false)
+		_strip(main)._process(20.0)
+		_strip(main).set_process(true)
 		main._reshow()
 		await _frames(runner)
-		runner.check(_hint_shown(main), "PS25 %s: the hint is back once the notice goes" % at)
+		runner.check(_hint_shown(main) and not _hint_saved(), "PS25 %s: the hint is back once the notice goes, the 20 s under it not counted" % at)
 		runner.check(not main.hud.blocks(hint.get_center()), "PS25 %s: the hint blocks nothing" % at)
 		HudTests._move(port, hint.get_center())
 		await _frames(runner)

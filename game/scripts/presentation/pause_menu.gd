@@ -115,7 +115,7 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 			_key_row("stop", HudModel.ORDER_KEYS.stop, "Stop"),
 			_key_row("unload", HudModel.ORDER_KEYS.unload, "Unload"),
 			["", "Click or right-click", "Cancel the unit in production (on NOW PRODUCING)", []],
-			["", "Production chip", "Click: select its building · Double-click: go there", []]]],
+			["", "Top-right production icons", "Click: select its building · Double-click: go there", []]]],
 		["Groups", [
 			["recall", _span(digits, 0), "Select a group, twice to centre on it", digits],
 			_save_row(digits, web, mac),

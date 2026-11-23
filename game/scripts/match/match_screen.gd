@@ -114,7 +114,7 @@ func _ready() -> void:
 	hud.cancel_build_pressed.connect(orders._cancel_build)
 	hud.row_clicked.connect(_select_kind)
 	hud.producer_pressed.connect(orders.select_producer)
-	hud.hint_covered = func() -> bool: return menu_open() or not _focused
+	hud.hint_covered = func() -> bool: return menu_open() or not _focused or input_over()
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()
@@ -632,13 +632,15 @@ func _show_hint(payload: Dictionary) -> void:
 	var point: Variant = orders._hint_point(payload)
 	if point != null: _view.add_hint(point, shown_state.tick)
 
-func _submit(payload: Dictionary) -> void:
+# A batch passes `reshow` false and repaints once after it.
+func _submit(payload: Dictionary, reshow: bool = true) -> Dictionary:
 	orders.gestures += 1
 	_show_hint(payload)
-	driver.submit(payload)
+	var sent: Dictionary = driver.submit(payload)
 	_unanswered += 1
-	_reshow()
+	if reshow: _reshow()
 	_sound.order(payload)
+	return sent
 
 # The result and freeze cards already say why nothing is taken, as with the notice.
 func refuse(text: String, sound: String = "error") -> void:

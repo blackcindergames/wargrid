@@ -16,12 +16,14 @@ const GLYPH: float = 18.0
 const UPRIGHT_CHIP: Vector2 = Vector2(42, 26)
 # Wide enough for one digit at 12 px, kept while the count hides, so a chip never changes width.
 const COUNT_WIDTH: float = 9.0
+# Under the count while other kinds follow the current run (user, 2026-11-23).
+const THEN_MARK: Vector2 = Vector2(4, 6)
 const UPRIGHT_BAR: Vector2 = Vector2(4, 20)
 const TIP_DELAY_MSEC: int = 250
 # The round's idle grey (strip.html `--idle`).
 const IDLE: Color = Color("#7b8d99")
 # The owner's one-time hint (user, 2026-11-23), remembered in the settings file once gone.
-const HINT := "Click a chip to select its building · Double-click to go there"
+const HINT := "Your busy buildings: click one to select it, double-click to go there"
 const HINT_MSEC: int = 10000
 const HINT_SECTION := "hints"
 const HINT_KEY := "strip_seen"
@@ -37,6 +39,9 @@ var _row: HBoxContainer
 var _more: Button
 var _tip: PanelContainer
 var _chips: Array = []
+# The records as given, so a bar-length switch redraws from the true progress.
+var _source: Array = []
+var _tip_words: Array = []
 var _folded: Array = []
 var _selected: int = -1
 var _colour: Color
@@ -51,8 +56,10 @@ var covered: Callable = func() -> bool: return false
 # An online notice takes the top centre, so the hint steps aside, its time paused.
 var notice_up: bool = false:
 	set(up):
+		if up == notice_up: return
 		notice_up = up
 		_show_hint()
+		_show_tip()
 var _hint: PanelContainer
 # HINT_UNREAD until the strip first shows, then the msec of visible time left, or HINT_GONE.
 var _hint_left: float = HINT_UNREAD
@@ -165,7 +172,7 @@ func _build_tip() -> void:
 	lines.mouse_filter = MOUSE_FILTER_IGNORE
 	lines.add_theme_constant_override("separation", 4)
 	_tip.add_child(lines)
-	for part: Array in [["Tag", &"HudLabel", "NOT ON THE STRIP"], ["Name", &"HudRow", ""], ["Text", &"HudHint", ""]]:
+	for part: Array in [["Tag", &"HudLabel", "ALSO PRODUCING"], ["Name", &"HudRow", ""], ["Text", &"HudHint", ""]]:
 		var label := Label.new()
 		label.name = part[0]
 		label.theme_type_variation = part[1]
@@ -204,10 +211,19 @@ func _chip(index: int) -> Button:
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	count.visible = false
 	chip.add_child(count)
+	var mark := Control.new()
+	mark.name = "Then"
+	mark.mouse_filter = MOUSE_FILTER_IGNORE
+	mark.size = THEN_MARK
+	mark.visible = false
+	var muted: Color = get_theme_color("muted", &"Tokens")
+	mark.draw.connect(func() -> void: mark.draw_colored_polygon(PackedVector2Array([Vector2.ZERO, Vector2(THEN_MARK.x, THEN_MARK.y / 2.0), Vector2(0, THEN_MARK.y)]), muted))
+	chip.add_child(mark)
 	_shape(chip)
 	return chip
 
 # Stacked: glyph 1 from the top, the bar 2 under it, the count right of the glyph; upright: count, glyph and bar in columns (2 | 9 | 2 | 18 | 4 | 4 | 3), the count top-aligned with the glyph.
+# The mark sits centred under the count, its bottom on the glyph's.
 func _shape(chip: Button) -> void:
 	chip.custom_minimum_size = UPRIGHT_CHIP if upright else CHIP
 	var glyph: Control = chip.get_node("Glyph")
@@ -215,25 +231,29 @@ func _shape(chip: Button) -> void:
 	glyph.position = Vector2(13, 4) if upright else Vector2(15, 1)
 	track.position = Vector2(35, 3) if upright else Vector2(4, 21)
 	track.size = UPRIGHT_BAR if upright else BAR
-	(chip.get_node("Count") as Control).position = Vector2(2, 4) if upright else Vector2(38, 0)
+	var count: Vector2 = Vector2(2, 4) if upright else Vector2(38, 0)
+	(chip.get_node("Count") as Control).position = count
+	(chip.get_node("Then") as Control).position = Vector2(count.x + floorf((COUNT_WIDTH - THEN_MARK.x) / 2.0), glyph.position.y + GLYPH - THEN_MARK.y)
 
 func set_upright(on: bool) -> void:
 	upright = on
 	for i: int in range(1, _row.get_child_count()): _shape(_row.get_child(i))
-	var chips: Array = _chips
 	_chips = []
-	show_chips(chips, _selected, _colour)
+	show_chips(_source, _selected, _colour)
 
-# F38: an unchanged view returns here; a changed one touches only what differs.
+# F38: an unchanged view returns here, progress compared in drawn pixels; a changed one touches only what differs.
 func show_chips(chips: Array, selected: int, colour: Color) -> void:
-	if chips == _chips and selected == _selected and colour == _colour: return
-	_chips = chips
+	var length: float = UPRIGHT_BAR.y if upright else BAR.x
+	var drawn: Array = chips.map(func(chip: Dictionary) -> Dictionary: return chip.merged({"fraction": roundf(chip.fraction * length) / length}, true))
+	_source = chips
+	if drawn == _chips and selected == _selected and colour == _colour: return
+	_chips = drawn
 	_selected = selected
 	_colour = colour
-	var split: Array = HudModel.strip_split(chips)
+	var split: Array = HudModel.strip_split(drawn)
 	_folded = split[0]
 	# The owner's rule (user, 2026-11-23): nothing in production, no strip.
-	visible = chips.any(_busy)
+	visible = drawn.any(_busy)
 	_follow_hint()
 	_more.visible = not _folded.is_empty()
 	var count: String = "+%d" % _folded.size()
@@ -257,9 +277,11 @@ func _fill(chip: Button, record: Dictionary) -> void:
 	var tone: Color = _looks.warn if record.look in ["slowed", "blocked"] else _colour
 	if fill.color != tone: fill.color = tone
 	_progress(fill, record.fraction)
+	# The current run, as NEXT's ×N: a number beside a glyph counts that unit (user, 2026-11-23).
 	var count: Label = chip.get_node("Count")
-	count.visible = record.queue > 0
-	if count.visible and count.text != str(record.queue): count.text = str(record.queue)
+	count.visible = not record.runs.is_empty()
+	if count.visible and count.text != str(record.runs[0].count): count.text = str(record.runs[0].count)
+	(chip.get_node("Then") as Control).visible = record.runs.size() > 1
 	var look: StyleBox = _looks.selected if record.id == _selected else _looks.normal
 	for state: String in ["normal", "pressed"]: _style(chip, state, look)
 	for state: String in ["hover", "hover_pressed"]: _style(chip, state, _looks.selected if record.id == _selected else _looks.hover)
@@ -301,8 +323,11 @@ func _follow_hint() -> void:
 	_show_hint()
 
 func _show_hint() -> void:
+	var was: bool = _hint.visible
 	_hint.visible = visible and _hint_left >= 0.0 and not notice_up
-	if _hint.visible: _place_hint()
+	if not _hint.visible: return
+	if not was: _hint.reset_size()
+	_place_hint()
 
 func _end_hint() -> void:
 	_hint_left = HINT_GONE
@@ -318,7 +343,6 @@ static func save_hint_seen() -> void:
 
 # 8 under the strip, right-aligned with it, stepping left of a playtest helper.
 func _place_hint() -> void:
-	_hint.reset_size()
 	var strip: Rect2 = get_global_rect()
 	var at: Vector2 = _clear_of_helpers(Rect2(Vector2(strip.end.x - _hint.size.x, strip.end.y + 8.0), _hint.size)).position
 	if _hint.global_position != at: _hint.global_position = at
@@ -330,30 +354,35 @@ func _clear_of_helpers(at: Rect2) -> Rect2:
 
 # The decided tooltip rules: after 250 ms, at once on a neighbour while one is open, gone on a click or leaving.
 func _show_tip() -> void:
-	var shown: bool = _hovered != null and _hovered.is_visible_in_tree() and _hover_since >= 0 and (_tip_open or now_msec.call() - _hover_since >= TIP_DELAY_MSEC)
+	# Steps aside for an online notice, as the hint does.
+	var shown: bool = _hovered != null and _hovered.is_visible_in_tree() and _hover_since >= 0 and not notice_up and (_tip_open or now_msec.call() - _hover_since >= TIP_DELAY_MSEC)
 	_tip.visible = shown
 	if not shown: return
 	_tip_open = true
 	var folded: bool = _hovered == _more
-	var lines: Node = _tip.get_node("Lines")
-	lines.get_node("Tag").visible = folded
-	lines.get_node("Name").visible = not folded
-	var text: Label = lines.get_node("Text")
-	if folded: text.text = "\n".join(_folded.map(HudModel.strip_hidden_line))
-	else:
-		var record: Dictionary = _hovered.get_meta("chip")
-		(lines.get_node("Name") as Label).text = Registry.kind(record.kind).display_name
-		text.text = HudModel.strip_tip(record) + "\n" + HudModel.STRIP_HINT
-	_tip.reset_size()
+	var record: Dictionary = {} if folded else _hovered.get_meta("chip")
+	var words: Array = [folded, "" if folded else Registry.kind(record.kind).display_name, "\n".join(_folded.map(HudModel.strip_hidden_line)) if folded else HudModel.strip_tip(record) + "\n" + HudModel.STRIP_HINT]
+	# Each resize lays the card out again, so only new words may.
+	if words != _tip_words:
+		_tip_words = words
+		var lines: Node = _tip.get_node("Lines")
+		lines.get_node("Tag").visible = folded
+		lines.get_node("Name").visible = not folded
+		(lines.get_node("Name") as Label).text = words[1]
+		(lines.get_node("Text") as Label).text = words[2]
+		_tip.reset_size()
 	_place_tip()
 
 # 8 under the strip, from the chip's left, inside the screen and 8 left of a playtest helper it would cover.
 func _place_tip() -> void:
 	var chip: Rect2 = _hovered.get_global_rect()
-	_tip.global_position = _clear_of_helpers(Rect2(Vector2(clampf(chip.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _tip.size.x), get_global_rect().end.y + 8.0), _tip.size)).position
+	var at: Vector2 = _clear_of_helpers(Rect2(Vector2(clampf(chip.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _tip.size.x), get_global_rect().end.y + 8.0), _tip.size)).position
+	if _tip.global_position != at: _tip.global_position = at
 
 # Two presses on one chip within the control groups' double tap also glide there.
 func _press(chip: Button) -> void:
+	# Under a menu, a result or the freeze card the click ends nothing and arms no double click.
+	if covered.call(): return
 	_hover_since = -1
 	_tip_open = false
 	_show_tip()

@@ -40,6 +40,8 @@ var _build_refused: bool = false
 var gestures: int = 0
 var accidental_cancels: int = 0
 var _last_cancel: Dictionary = {}
+# Produce orders sent and not yet answered, so a second Shift-click in the same view sends only what is left.
+var _producing: Array[Dictionary] = []
 var _awaiting_from: Array = []
 var _answer: Dictionary = {}
 var _start_pending: bool = true
@@ -96,6 +98,7 @@ func escape_pending() -> bool:
 func reset() -> void:
 	accidental_cancels = 0
 	_last_cancel = {}
+	_producing.clear()
 	selected_ids.clear()
 	selected_building_id = -1
 	inspected_id = -1
@@ -225,7 +228,7 @@ func _recall_group(slot: int) -> void:
 # The production strip: a click ends a placement and selects the producer where it stands (`prune` and `_drop_stale_attack_move` then end the sub-grid and attack move); a double click also glides there.
 func select_producer(id: int, jump: bool) -> void:
 	var found: Dictionary = HudModel.building(_screen.shown_state, id)
-	if not takes_orders() or found.get("owner", -1) != _screen.local_player or not found.get("completed", false): return
+	if not takes_orders() or found.get("owner", -1) != _screen.local_player or not found.get("completed", true): return
 	if not _placement_kind.is_empty(): _clear_placement()
 	gestures += 1
 	selected_ids.clear()
@@ -341,6 +344,7 @@ func _placement_input(event: InputEvent) -> void:
 			if _screen.driver.closes_placement_on_click(): _clear_placement()
 
 func answered(answer: Dictionary) -> void:
+	if answer.command.get("type") == "produce": _answer_produce(answer.command)
 	if _awaiting_build.is_empty() or answer.command.get("type") != "build": return
 	var kind: String = _awaiting_build
 	_awaiting_build = ""
@@ -477,8 +481,20 @@ func _press(kind: String, shift: bool) -> void:
 		_enter_placement(kind)
 		return
 	_count_accident(kind)
-	var count: int = HudModel.batch(_screen.shown_state, selected_building_id, kind, _screen.local_player) if shift else 1
-	for i: int in count: _screen._submit({"type":"produce","building_id":selected_building_id,"unit_kind":kind})
+	# The drained view, which the answers that free `_producing` match.
+	var count: int = HudModel.batch(_screen.driver.current().view, selected_building_id, kind, _screen.local_player, _producing) if shift else 1
+	for i: int in count:
+		var order: Dictionary = {"type":"produce","building_id":selected_building_id,"unit_kind":kind}
+		_producing.append(order)
+		_screen._submit(order, false)
+	_screen._reshow()
+
+# Every submit gets one answer, taken or refused, so each answer frees one.
+func _answer_produce(command: Dictionary) -> void:
+	for i: int in _producing.size():
+		if _producing[i].building_id == command.get("building_id") and _producing[i].unit_kind == command.get("unit_kind"):
+			_producing.remove_at(i)
+			return
 
 # A cancel, then the same kind queued at the same producer within two seconds: an accident for the playtest record (queue follow-up round).
 func _count_accident(kind: String) -> void:
@@ -580,11 +596,13 @@ func _set_rally(plane: Vector2) -> bool:
 	_screen._submit({"type":"set_rally","building_id":building.id,"target":[cell.x,cell.y]})
 	return true
 
+# Online, a full outbox refuses at once: nothing is pending then, nothing flashes and no accident can follow.
 func _cancel_entry(id: int) -> void:
 	if not takes_orders(): return
-	for entry: Dictionary in HudModel.building(_screen.shown_state, selected_building_id).get("queue", []):
+	var queue: Array = HudModel.building(_screen.shown_state, selected_building_id).get("queue", [])
+	if not _screen._submit({"type":"cancel_production","building_id":selected_building_id,"production_id":id}).ok: return
+	for entry: Dictionary in queue:
 		if entry.id == id: _last_cancel = {"building": selected_building_id, "kind": entry.kind, "tick": _screen.shown_state.tick}
-	_screen._submit({"type":"cancel_production","building_id":selected_building_id,"production_id":id})
 	_screen.hud.pending_cancels[id] = true
 
 func _cancel_build() -> void:

@@ -98,7 +98,7 @@ var _queue_for: int = -1
 var _work_rate: int = 1000
 var _now_entry: Dictionary = {}
 var _cancelled_id: int = -1
-# Entries sent for cancel (`orders._cancel_entry`), freed again by a refusal: right-clicks skip them; ids never repeat (queue follow-up round).
+# Entries sent for cancel, marked by the input layer, freed again by a refusal: right-clicks skip them; ids never repeat (queue follow-up round).
 var pending_cancels: Dictionary = {}
 # Clicks on NEXT, which has no click target: the round's evidence that a player expects one.
 var next_clicks: int = 0
@@ -251,6 +251,8 @@ func _build_strip() -> void:
 
 # Measured in the tree: out of it a box has no theme separation and a label keeps a stale size.
 func _ready() -> void:
+	# A first selection would otherwise rasterise its glyphs mid-match, a hitch on a low-end or web machine.
+	UnitGlyphs.warm()
 	# Tabular digits: zeros measure every five-digit balance and four-digit shortfall, the wider of the two forecasts; every part still shows.
 	var widest: Dictionary = {"Credits": "00000", "Power": "00 / 00", "PowerAfter": "00 / 00"}
 	for part: String in widest: (_top_strip.find_child(part, true, false) as Label).text = widest[part]
@@ -517,9 +519,10 @@ func _build_cell_card() -> void:
 	_card_line(lines, "Reason").add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 	var counter: Label = _card_line(lines, "Counter")
 	counter.add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
-	# A broken counter line keeps the card's 20 px line pitch.
-	counter.add_theme_constant_override("line_spacing", roundi(CELL_CARD_LINE - counter.get_theme_font("font").get_height(13)))
-	_card_line(lines, "Cancel").add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
+	var cancel: Label = _card_line(lines, "Cancel")
+	cancel.add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
+	# A broken line keeps the card's 20 px line pitch.
+	for label: Label in [counter, cancel]: label.add_theme_constant_override("line_spacing", roundi(CELL_CARD_LINE - counter.get_theme_font("font").get_height(13)))
 	_cell_card.visible = false
 
 # The card's regular 13 px lines (the picture's body text).
@@ -874,29 +877,28 @@ func _show_cell_card() -> void:
 	(_cell_card.find_child("Name", true, false) as Label).text = (_hovered_cell.get_node("Name") as Label).text
 	var numbers: Label = _cell_card.find_child("Numbers", true, false)
 	numbers.visible = not HudModel.COMMANDS.has(action)
-	if numbers.visible: numbers.text = "%d · %d s" % [Registry.kind(action).cost, ceili(Registry.kind(action).ticks / float(Engine.physics_ticks_per_second))] + _per_order(action)
+	if numbers.visible: numbers.text = "%d · %ds" % [Registry.kind(action).cost, ceili(Registry.kind(action).ticks / float(Engine.physics_ticks_per_second))] + _per_order(action)
 	var line: Label = _cell_card.find_child("Reason", true, false)
 	line.visible = not reason.is_empty()
 	line.text = reason
-	var counter: Label = _cell_card.find_child("Counter", true, false)
-	var words: String = HudModel.COUNTER_LINES.get(action, "")
 	var room: float = CELL_CARD_WIDTH - _cell_card.get_theme_stylebox("panel").get_minimum_size().x
-	# The card refreshes every view; only new words or a new width measure again.
-	if counter.get_meta("fit", []) != [words, room]:
-		counter.set_meta("fit", [words, room])
-		# Too wide for the card, the line breaks between its claims, never inside one.
-		counter.text = words if _text_width(counter, words) <= room else words.replace(" · ", "\n")
-		counter.custom_minimum_size.y = CELL_CARD_LINE * (counter.text.count("\n") + 1)
-	counter.visible = not words.is_empty()
-	var cancel: Label = _cell_card.find_child("Cancel", true, false)
-	cancel.text = _cancel_line(action)
-	cancel.visible = not cancel.text.is_empty()
+	# Too wide for the card, a line breaks between its claims, never inside one.
+	_fit_line(_cell_card.find_child("Counter", true, false), HudModel.COUNTER_LINES.get(action, ""), room, " · ", "\n")
+	_fit_line(_cell_card.find_child("Cancel", true, false), _cancel_line(action), room, ": ", ":\n")
 	_cell_card.reset_size()
 	var cell: Rect2 = _hovered_cell.get_global_rect()
 	var at := Rect2(Vector2(clampf(cell.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _cell_card.size.x), slab_top() - 8.0 - _cell_card.size.y), _cell_card.size)
 	for helper: Control in helpers:
 		if helper.is_visible_in_tree() and at.intersects(helper.get_global_rect()): at.position.x = maxf(8.0, helper.get_global_rect().position.x - 8.0 - at.size.x)
 	_cell_card.position = at.position
+
+# The card refreshes every view; only new words or a new width measure again.
+func _fit_line(label: Label, words: String, room: float, gap: String, joint: String) -> void:
+	label.visible = not words.is_empty()
+	if label.get_meta("fit", []) == [words, room]: return
+	label.set_meta("fit", [words, room])
+	label.text = words if _text_width(label, words) <= room else words.replace(gap, joint)
+	label.custom_minimum_size.y = CELL_CARD_LINE * (label.text.count("\n") + 1)
 
 # Militia-type kinds give more than one unit per order, which the queue counts.
 static func _per_order(action: String) -> String:
@@ -1063,7 +1065,10 @@ func _show_after() -> void:
 	if not _more.is_visible_in_tree(): _after_pinned = false
 	_after_next.visible = _more.is_visible_in_tree() and (_after_hover or _after_pinned)
 	if not _after_next.visible: return
-	_after_next.reset_size()
+	var words: String = (_after_next.get_node("Lines/List") as Label).text
+	if _after_next.get_meta("sized", "") != words:
+		_after_next.set_meta("sized", words)
+		_after_next.reset_size()
 	_after_next.position = Vector2(_panel.get_global_rect().end.x + 8.0, get_viewport_rect().size.y - AFTER_FLOOR - _after_next.size.y)
 
 func _show_queue(queue: Array, building_id: int, work_rate: int) -> void:
@@ -1078,8 +1083,9 @@ func _show_queue(queue: Array, building_id: int, work_rate: int) -> void:
 func _now_hovered() -> bool:
 	return _now.is_visible_in_tree() and get_viewport().gui_get_hovered_control() == _now
 
+# The whole panel, as `_release_hold`: the rally line comes back when NEXT empties with the hold.
 func _release_now() -> void:
-	if _production.is_visible_in_tree() and not _now_hovered(): _fill_production(_queue_shown, false)
+	if _production.is_visible_in_tree() and not _now_hovered() and not _last.is_empty(): _show_selection.callv(_last)
 
 # Held (P2.3b's rule carried to NOW): the entry gone from under the pointer stays on NOW, muted, the live queue behind it.
 func _fill_production(queue: Array, held: bool) -> void:
@@ -1114,10 +1120,12 @@ func _fill_now(held: bool) -> void:
 	var slowed: bool = not held and (_work_rate < 1000 or time.text == HudModel.EXIT_BLOCKED)
 	_paint(time, &"warn" if slowed else (&"muted" if held else &""))
 	_show_progress(_now.get_node("Track/Bar"), fraction, get_theme_color("muted", &"Tokens") if held else _panel_style.border_color)
-	var cancel: String = "Cancel · refunds %d" % _now_entry.paid_cost
-	_now.tooltip_text = "" if held else (HudModel.LOW_POWER_HINT + "\n" + cancel if _work_rate < 1000 else cancel)
+	var why: Array[String] = []
+	if time.text == HudModel.EXIT_BLOCKED: why.append(HudModel.EXIT_BLOCKED_HINT)
+	if _work_rate < 1000: why.append(HudModel.low_power_hint(_work_rate, _last[3]))
+	_now.tooltip_text = "" if held else "\n".join(why + ["Cancel · refunds %d" % _now_entry.paid_cost])
 	_now.disabled = held
-	if held: _show_mark(false)
+	_show_mark(not held and _now_hovered())
 	_now.mouse_default_cursor_shape = CURSOR_ARROW if held else CURSOR_POINTING_HAND
 
 # The first run waiting, `+N more` counting the entries after it; their runs make the AFTER NEXT list.

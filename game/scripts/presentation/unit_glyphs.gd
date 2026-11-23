@@ -43,6 +43,10 @@ static func texture(kind: String) -> Texture2D:
 	if not _cache.has(glyph): _cache[glyph] = _raster(PATHS[glyph])
 	return _cache[glyph]
 
+static func warm() -> void:
+	for glyph: StringName in PATHS:
+		if not _cache.has(glyph): _cache[glyph] = _raster(PATHS[glyph])
+
 static func _raster(paths: Array) -> Texture2D:
 	var svg: String = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="%s"><path opacity=".4" d="%s"/><path d="%s"/></svg>' % [COLOUR, paths[0], paths[1]]
 	var image := Image.new()
