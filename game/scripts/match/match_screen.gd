@@ -26,6 +26,8 @@ const SimPump = preload("res://scripts/match/sim_pump.gd")
 const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
+const EDGE_BAND: float = 3.0
+const EDGE_STEP_MAX: float = 0.05
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
 static var map_path: String = Skirmish.MAP_PATH
 static var starts: Array[int] = []
@@ -62,6 +64,9 @@ var _unanswered: int = 0
 var _stale: int = 0
 # Window events are sorted here in `_input`; tests that call `_unhandled_input` directly feed map logic points past the view.
 var _off_picture: InputEvent = null
+var _pointer: Vector2 = Vector2.ZERO
+var _pointer_in: bool = false
+var _focused: bool = true
 
 func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: String = Skirmish.default_faction()) -> void:
 	driver = OnlineDriver.new(transport, lockstep, faction, seat)
@@ -238,12 +243,20 @@ func close_match(file_sitting: bool) -> void:
 	else: _playtest.keep_match()
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST and not _playtest.web: close_match(true) # web files at the next launcher open instead
+	match what:
+		NOTIFICATION_WM_CLOSE_REQUEST:
+			if not _playtest.web: close_match(true) # web files at the next launcher open instead
+		NOTIFICATION_WM_MOUSE_EXIT: _pointer_in = false
+		NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_FOCUS_OUT: _focused = false
+		NOTIFICATION_WM_WINDOW_FOCUS_IN, NOTIFICATION_APPLICATION_FOCUS_IN: _focused = true
 
 func _change_scene(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouse:
+		_pointer = event.position
+		_pointer_in = true
 	if event is InputEventMouse and not get_viewport().get_visible_rect().has_point(event.position): _off_picture = event
 	elif event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event) # a STOP panel takes motion before `_unhandled_input`: the drag box keeps up and the hover clears
 	if not (event is InputEventKey and event.pressed and not event.echo): return
@@ -327,6 +340,7 @@ func _process(delta: float) -> void:
 	var presented_at: int = Time.get_ticks_usec()
 	if _present_if_due() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - presented_at
 	if not _typing(): pan_camera(Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down"), delta)
+	edge_scroll(delta)
 	_view.advance_frame()
 	if not _auto_pending: return
 	_auto_sample((_auto_tick_usec + _view.draw_usec) / 1000.0)
@@ -355,6 +369,19 @@ func pan_camera(direction: Vector2, delta: float) -> void:
 	if orders.is_selecting():
 		return
 	_move_camera(_camera.position + direction.normalized() * 400.0 * delta / _camera.zoom.x)
+
+func edge_scroll(delta: float) -> void:
+	pan_camera(edge_direction(), minf(delta, EDGE_STEP_MAX))
+
+# A pointer in a stretch-cap bar counts as past the picture's edge; HUD panels are no exception (3-26).
+func edge_direction() -> Vector2:
+	if not (_focused and _pointer_in) or _typing() or menu_open() or shown_over(): return Vector2.ZERO
+	var view: Rect2 = get_viewport().get_visible_rect()
+	return Vector2(_edge_sign(_pointer.x, view.position.x, view.end.x), _edge_sign(_pointer.y, view.position.y, view.end.y))
+
+static func _edge_sign(at: float, low: float, high: float) -> float:
+	if at < low + EDGE_BAND: return -1.0
+	return 1.0 if at >= high - EDGE_BAND else 0.0
 
 func centre_camera(world: Vector2) -> void:
 	_move_camera(Iso.world_to_plane(world))
