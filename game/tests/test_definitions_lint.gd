@@ -60,6 +60,8 @@ static func _check_accepts(id: String, contains: Dictionary, errors: Array[Strin
 static func _check_faction(id: String, faction: Dictionary, kinds: Dictionary, buildings: Dictionary, units: Dictionary, errors: Array[String]) -> void:
 	_expect(errors, id, "start_building", faction.get("start_building", ""), buildings, false)
 	_expect(errors, id, "start_unit", faction.get("start_unit", ""), units, false)
+	var start: String = faction.get("start_building", "")
+	if buildings.has(start) and not SLOTS.has(kinds[start].get("slot", "")): errors.append("%s: start_building %s has no valid slot" % [id, start])
 	if not faction.get("build_order") is Array: errors.append("%s: build_order is missing" % id)
 	for target: String in faction.get("build_order", []):
 		_expect(errors, id, "build_order", target, buildings, false)
@@ -148,6 +150,10 @@ func _check_faction_shape(runner) -> void:
 	kinds.usa_factory.erase("slot")
 	var slotless: Array[String] = lint(kinds, Registry.Factions.FACTIONS)
 	runner.check(slotless.size() == 1 and slotless[0].contains("usa_factory") and slotless[0].contains("slot"), "DL5 a build_order building without a slot fails: %s" % [slotless])
+	var no_start_slot: Dictionary = _registry_kinds().duplicate(true)
+	no_start_slot.usa_command_center.erase("slot")
+	var start_found: Array[String] = lint(no_start_slot, Registry.Factions.FACTIONS)
+	runner.check(start_found.size() == 1 and start_found[0].contains("usa_command_center") and start_found[0].contains("slot"), "DL5 a start building without a slot fails: %s" % [start_found])
 	var wrong: Dictionary = Registry.Factions.FACTIONS.duplicate(true)
 	wrong.usa.units_for.usa_barracks = ["usa_tank"]
 	var found_wrong: Array[String] = lint(_registry_kinds(), wrong)
@@ -158,6 +164,7 @@ func test_real_registry_is_clean(runner) -> bool:
 	Registry.clear_test_kinds()
 	var kinds: Dictionary = _registry_kinds()
 	runner.check(kinds.size() >= 37, "DL3 the registry has its kinds (%d)" % kinds.size())
+	runner.check(Registry.Factions.FACTIONS.size() >= 3, "DL3 the registry has its factions (%d)" % Registry.Factions.FACTIONS.size())
 	var errors: Array[String] = lint(kinds, Registry.Factions.FACTIONS)
 	runner.check(errors.is_empty(), "DL3 today's definitions lint clean: %s" % [errors])
 	return true
