@@ -1440,7 +1440,7 @@ func test_armed_button_look(runner) -> bool:
 	var ground: Vector2 = Iso.world_to_plane(Vector2(12.5, 20.5))
 	_select(main, ids.tanks)
 	var arms: Array = [["the A key", func() -> void: helper.key(main, KEY_A)], ["the cell", func() -> void: _cell(main, "attack_move").pressed.emit()]]
-	var disarms: Array = [["Esc", func() -> void: helper.key(main, KEY_ESCAPE)], ["a right-click", func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true)]]
+	var disarms: Array = [["Esc", func() -> void: helper.key(main, KEY_ESCAPE)], ["a right-click", func() -> void: helper.right_click(main, ground)]]
 	for arm: Array in arms:
 		for disarm: Array in disarms:
 			(arm[1] as Callable).call()
@@ -1574,7 +1574,7 @@ func _crosshair(runner) -> void:
 			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, true)
 			helper.pointer(main, ground, MOUSE_BUTTON_LEFT, false)],
 		["Esc", ids.tanks, func() -> void: helper.key(main, KEY_ESCAPE)],
-		["a right-click", ids.tanks, func() -> void: helper.pointer(main, ground, MOUSE_BUTTON_RIGHT, true)],
+		["a right-click", ids.tanks, func() -> void: helper.right_click(main, ground)],
 		["S", ids.tanks, func() -> void: helper.key(main, KEY_S)],
 		["F", [ids.car], func() -> void: helper.key(main, KEY_F)],
 		["the Stop cell", ids.tanks, func() -> void: _cell(main, "stop").pressed.emit()],
@@ -1690,13 +1690,13 @@ static func _sim_queue(main, building: int) -> Array:
 static func _own_credits(main) -> int:
 	return HudModel.player(main.driver.pump.live().view_state(), 1).credits
 
-static func _right_click_in(port: Viewport, at: Vector2) -> void:
+static func _right_click_in(port: Viewport, at: Vector2, travel: Vector2 = Vector2.ZERO) -> void:
 	for pressed: bool in [true, false]:
 		var event := InputEventMouseButton.new()
 		event.button_index = MOUSE_BUTTON_RIGHT
 		event.pressed = pressed
-		event.position = at
-		event.global_position = at
+		event.position = at if pressed else at + travel
+		event.global_position = event.position
 		port.push_input(event, true)
 
 static func _has_digit(text: String) -> bool:
@@ -2001,6 +2001,16 @@ func test_right_click_cell_cancels_newest_of_kind(runner) -> bool:
 		_end_port(scene)
 		return true
 	var produced: int = _queued(main, "produce").size()
+	_right_click_in(port, _centre(_cell(main, MEDIUM)), Vector2(12, 0))
+	runner.check(_queued(main, "cancel_production").is_empty(), "QT8 a right-drag of 12 px on the cell cancels nothing, got %s" % [_queued(main, "cancel_production")])
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_RIGHT
+		event.pressed = pressed
+		event.position = Vector2(300, 300) if pressed else _centre(_cell(main, MEDIUM))
+		event.global_position = event.position
+		port.push_input(event, true)
+	runner.check(_queued(main, "cancel_production").is_empty(), "QT8 a map pan released on the cell cancels nothing, got %s" % [_queued(main, "cancel_production")])
 	_right_click_in(port, _centre(_cell(main, MEDIUM)))
 	runner.check(_queued(main, "cancel_production").map(func(command: Dictionary) -> int: return command.production_id) == [queue[4]], "QT8 a right-click on the Medium Tank cell cancels its newest entry %d, got %s" % [queue[4], _queued(main, "cancel_production")])
 	_right_click_in(port, _centre(_cell(main, ROTARY)))

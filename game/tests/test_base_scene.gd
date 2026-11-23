@@ -107,6 +107,11 @@ func pointer(main, plane: Vector2, button: MouseButton, pressed: bool) -> void:
 	event.pressed = pressed
 	main._unhandled_input(event)
 
+# Right-button actions fire on release (P17).
+func right_click(main, plane: Vector2) -> void:
+	pointer(main, plane, MOUSE_BUTTON_RIGHT, true)
+	pointer(main, plane, MOUSE_BUTTON_RIGHT, false)
+
 func hover(main, plane: Vector2) -> void:
 	var event := InputEventMouseMotion.new()
 	event.position = main.get_node("WorldView").get_global_transform_with_canvas() * plane
@@ -175,7 +180,7 @@ func test_placement_input(runner) -> bool:
 	runner.check(not main.orders.is_selecting() and main.orders._placement_kind.is_empty(),"Bs2 a card key during a drag presses nothing")
 	build_key(main,"usa_supply_center")
 	runner.check(main.orders._placement_kind == "usa_supply_center","Bs2 the key after the selection arms the building")
-	pointer(main,Iso.world_to_plane(Vector2(10,10)),MOUSE_BUTTON_RIGHT,true)
+	right_click(main, Iso.world_to_plane(Vector2(10,10)))
 	runner.check(main.orders._placement_kind.is_empty() and main.orders.selected_ids == [1] and main.driver.pump.live().snapshot() == queued and main.driver.queued().is_empty(),"Bs2 right cancel preserves state")
 	main.free()
 	return true
@@ -244,14 +249,14 @@ func test_context_orders(runner) -> bool:
 	var air: int = main.driver.pump.live().spawn(1,Vector2(2.5,2.5),"usa_collector")
 	main.orders.selected_ids.assign([air])
 	publish(main)
-	pointer(main,Iso.world_to_plane(Vector2(25.5,5.5)),MOUSE_BUTTON_RIGHT,true)
+	right_click(main, Iso.world_to_plane(Vector2(25.5,5.5)))
 	var pending: Array = main.driver.queued()
 	runner.check(pending.size() == 1 and pending[0].type == "gather" and pending[0].source_id == source,"Bs4 collector context gather")
 	main.orders.selected_ids.assign([1,air])
 	var before: Dictionary = main.driver.pump.live().snapshot()
-	pointer(main,Iso.world_to_plane(Vector2(25.5,5.5)),MOUSE_BUTTON_RIGHT,true)
+	right_click(main, Iso.world_to_plane(Vector2(25.5,5.5)))
 	runner.check(main.driver.pump.live().snapshot() == before and main.driver.queued().size() == 1 and not main.hud.refusal.is_empty(),"Bs4 mixed context rejected")
-	pointer(main,Iso.world_to_plane(Vector2(6.5,10.5)),MOUSE_BUTTON_RIGHT,true)
+	right_click(main, Iso.world_to_plane(Vector2(6.5,10.5)))
 	runner.check(main.driver.queued().size() == 2 and main.driver.queued().back().type == "move","Bs4 mixed ordinary ground move")
 	main.driver.adopt(Fixture.make_world())
 	Fixture.send(main.driver.pump.live(),{"type":"build","builder_id":1,"building_kind":"usa_power_plant","origin":[8,4]})
@@ -260,12 +265,12 @@ func test_context_orders(runner) -> bool:
 	main.driver.pump.live().step()
 	main.orders.selected_ids.assign([1])
 	publish(main)
-	pointer(main,Iso.world_to_plane(Vector2(8.5,4.5)),MOUSE_BUTTON_RIGHT,true)
+	right_click(main, Iso.world_to_plane(Vector2(8.5,4.5)))
 	var resumed: Array = main.driver.queued()
 	runner.check(resumed.size() == 1 and resumed[0].type == "resume_build" and resumed[0].builder_id == 1 and resumed[0].building_id == 2,"Bs4 builder context resumes foundation")
 	pointer(main,Iso.world_to_plane(Vector2(4.5,4.5)) + Vector2(0,-8),MOUSE_BUTTON_LEFT,true)
 	var selecting: Dictionary = main.driver.pump.live().snapshot()
-	pointer(main,Iso.world_to_plane(Vector2(8.5,4.5)),MOUSE_BUTTON_RIGHT,true)
+	right_click(main, Iso.world_to_plane(Vector2(8.5,4.5)))
 	runner.check(main.orders.is_selecting() and main.driver.pump.live().snapshot() == selecting and main.driver.queued().size() == 1,"Bs4 context suppressed during active selection")
 	key(main,KEY_ESCAPE)
 	main.free()

@@ -1834,3 +1834,37 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,plumbing,team_match_pump:profile,1,,,1.1348,P1,1.98,log sha256:fd47192658d3
 2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,team_tick,team_match:profile,1,3.247,,1.5794,P1,1.98,log sha256:fd47192658d3
 2026-11-23,8e0e0712+dirty,main after-merge dd245321 bump,dev,step,team_match:profile,1,2.681,,1.4253,P1,1.98,log sha256:fd47192658d3
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,movement_tick,open,1,0.807,0.898,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,movement_tick,dense,1,0.782,0.921,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,open,1,1.91,2.257,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,dense,1,1.859,2.163,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,contact,1,1.191,1.57,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,skirmish3v3,1,1.35,1.458,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,transports,1,1.136,1.217,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,defences,1,0.782,2.156,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,docks,1,0.585,0.607,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,hordes300,1,2.941,3.403,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,ramp,1,0.658,1.207,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,combat_tick,frc,1,0.891,1.091,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,lockstep_overhead,contact,1,0.016,0.067,,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,movement_open:profile,1,,,1.3095,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,movement_dense:profile,1,,,1.3106,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,combat_contact:profile,1,,,0.3323,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,combat_skirmish3v3:profile,1,,,0.5327,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,combat_open:profile,1,,,0.8986,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,skirmish_match:profile,1,,,0.2731,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,large_196:profile,1,,,1.6961,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,combat_dense:profile,1,,,0.7788,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,combat_hordes300:profile,1,,,1.9248,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,team_match:profile,1,,,1.1251,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,plumbing,team_match_pump:profile,1,,,1.127,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,team_tick,team_match:profile,1,3.232,,1.5778,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,step,team_match:profile,1,2.669,,1.4242,P1,2.56,log sha256:fa32380c02ff
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,frame_interval,open,2,1.599,3.285,,P1,2.72,log sha256:8bac8e0f58b0
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,tick_frame,open,2,2.097,2.222,,tick-frame,2.72,log sha256:8bac8e0f58b0
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,frame_interval,dense,2,0.709,3.585,,P1,2.72,log sha256:8bac8e0f58b0
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,tick_frame,dense,2,2.446,2.568,,tick-frame,2.72,log sha256:8bac8e0f58b0
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,frame_interval,ashfall,2,2.974,3.981,,P1,2.72,log sha256:8bac8e0f58b0
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,tick_frame,ashfall,2,2.203,2.339,,tick-frame,2.72,log sha256:8bac8e0f58b0
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,frame_interval,horde,2,2.73,4.702,,P1,2.72,log sha256:8bac8e0f58b0
+2026-11-23,1594b9c8+dirty,P17 pan with the mouse,dev,tick_frame,horde,2,5.016,5.363,,tick-frame,2.72,log sha256:8bac8e0f58b0
