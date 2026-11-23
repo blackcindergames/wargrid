@@ -27,17 +27,21 @@ static func player(view: Dictionary, id: int) -> Dictionary:
 		if found.id == id: return found
 	return view.players[0]
 
-static func menu_kinds(view: Dictionary, chosen: Dictionary, ids: Array[int], faction: String) -> Array:
-	if not chosen.is_empty(): return Registry.kind(chosen.kind).produces if chosen.completed else []
-	var kind: String = Registry.faction(faction).get("start_unit", "")
-	if ids.size() == 1:
-		var i: int = view.units.index_of(ids[0])
-		var unit_kind: String = view.units.kinds[view.units.kind[i]] if i != -1 else ""
-		if Registry.is_builder(unit_kind): kind = unit_kind
-	return Registry.kind(kind).get("builds", [])
+# H: the faction's start building, lowest id; else the costliest own one, lowest id. Holes and sites do not count.
+static func home_position(view: Dictionary, seat: int) -> Variant:
+	var start: String = Registry.faction(player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)).get("start_building", "")
+	var best: Dictionary = {}
+	for found: Dictionary in view.buildings:
+		if found.owner == seat and found.get("completed", true) and not found.has("rebuild") and (best.is_empty() or _home_before(found, best, start)): best = found
+	if best.is_empty(): return null
+	return Vector2(best.origin[0], best.origin[1]) + Vector2(Registry.kind(best.kind).get("footprint", Vector2i.ONE)) / 2.0
 
-static func menu_label(index: int, kind: String) -> String:
-	return menu_name(index, kind) + " $%d" % Registry.kind(kind).cost
+static func _home_before(a: Dictionary, b: Dictionary, start: String) -> bool:
+	if (a.kind == start) != (b.kind == start): return a.kind == start
+	var cost_a: int = Registry.kind(a.kind).get("cost", 0)
+	var cost_b: int = Registry.kind(b.kind).get("cost", 0)
+	if a.kind != start and cost_a != cost_b: return cost_a > cost_b
+	return a.id < b.id
 
 const LOW_POWER := "LOW POWER · DEFENCES OFF"
 
@@ -58,13 +62,112 @@ static func uses_power(faction: String) -> bool:
 
 # Physical keycodes: orders read their keys here and the buttons print them, so a label never names an unused key.
 const ORDER_KEYS := {"attack_move": KEY_A, "stop": KEY_S, "unload": KEY_F}
+const BUILD_KEY: Key = KEY_Q
+const BACK_KEY: Key = KEY_V
+# The card owns every unmodified key of its Q W E R / A S D F / Z X C V position grid.
+const GRID_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E, KEY_R, KEY_A, KEY_S, KEY_D, KEY_F, KEY_Z, KEY_X, KEY_C, KEY_V]
+# One cell per role in every faction (user, 2026-11-15); a building names its role in `slot`, a unit after its faction prefix.
+const CELL_KEYS := {"power_plant": KEY_Q, "supply_center": KEY_W, "barracks": KEY_E, "factory": KEY_R, "defence": KEY_A, "builder": KEY_Q, "collector": KEY_Q, "rifle_infantry": KEY_Q, "rocket_infantry": KEY_W, "light_vehicle": KEY_Q, "tank": KEY_W}
+
+static func role(kind: String) -> String:
+	return Registry.kind(kind).get("slot", kind.substr(kind.find("_") + 1))
+
+static func kind_cells(kinds: Array) -> Array:
+	return kinds.map(func(kind: String) -> Array: return [CELL_KEYS.get(role(kind), KEY_NONE), kind])
+
+# The cells the card shows, as [key, action]: a kind to build or produce, else "build", "back" or an ORDER_KEYS name. Orders press only these.
+static func card(view: Dictionary, selection: Dictionary, seat: int) -> Array:
+	var cells: Array = []
+	var chosen: Dictionary = building(view, selection.building_id)
+	var builders: Array = _builder_kinds(view, selection.ids, seat)
+	if not chosen.is_empty():
+		if chosen.owner == seat and chosen.completed: cells = kind_cells(Registry.kind(chosen.kind).produces)
+	elif selection.get("sub_grid", false) and builders.size() == 1:
+		cells = kind_cells(Registry.kind(builders[0]).builds) + [[BACK_KEY, "back"]]
+	elif not builders.is_empty():
+		cells = [[BUILD_KEY, "build"]]
+	elif _has_own_unit(view, selection.ids, seat):
+		if has_armed_unit(view, selection.ids, seat): cells.append([ORDER_KEYS.attack_move, "attack_move"])
+		cells.append([ORDER_KEYS.stop, "stop"])
+	if unload_target(view, selection, seat) != -1: cells.append([ORDER_KEYS.unload, "unload"])
+	return cells
+
+static func _has_own_unit(view: Dictionary, ids: Array[int], seat: int) -> bool:
+	for id: int in ids:
+		var i: int = view.units.index_of(id)
+		if i != -1 and view.units.owner[i] == seat: return true
+	return false
+
+# The selected units' kinds when every one is an own builder, else none.
+static func _builder_kinds(view: Dictionary, ids: Array[int], seat: int) -> Array:
+	var kinds: Array = []
+	for id: int in ids:
+		var i: int = view.units.index_of(id)
+		if i == -1 or view.units.owner[i] != seat or not Registry.is_builder(view.units.kinds[view.units.kind[i]]): return []
+		kinds.append(view.units.kinds[view.units.kind[i]])
+	return kinds
+
+const SELECT_ONE_BUILDER := "Select one builder"
+const QUEUE_LIMIT: int = 9
+
+# Why a shown cell cannot be pressed, in the simulation's order (prerequisite, queue, credits); a unit cell takes its producer's prerequisite.
+static func blocked(view: Dictionary, selection: Dictionary, seat: int, action: String) -> Dictionary:
+	if action == "build": return {"cause": "builders", "reason": SELECT_ONE_BUILDER, "sound": ""} if _builder_kinds(view, selection.ids, seat).size() > 1 else {}
+	if action.is_empty() or COMMANDS.has(action): return {}
+	var producer: Dictionary = building(view, selection.building_id)
+	var needs: String = Registry.kind(producer.kind if not producer.is_empty() else action).get("prerequisite", "")
+	if not needs.is_empty() and not _owns_completed(view, seat, needs): return {"cause": "prerequisite", "reason": "Needs %s" % Registry.kind(needs).display_name, "sound": "error", "missing": needs}
+	if producer.get("queue", []).size() >= QUEUE_LIMIT: return {"cause": "queue", "reason": "Queue full", "sound": "error"}
+	var short: int = Registry.kind(action).cost - player(view, seat).credits
+	if short > 0: return {"cause": "credits", "reason": "%d credits short" % short, "sound": "disabled"}
+	return {}
+
+static func _owns_completed(view: Dictionary, seat: int, kind: String) -> bool:
+	return view.buildings.any(func(found: Dictionary) -> bool: return found.owner == seat and found.kind == kind and found.completed)
+
+# The refusal for Build with nothing selected names the faction's own builder (user, 2026-11-21).
+static func select_builder(view: Dictionary, seat: int) -> String:
+	var faction: String = player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)
+	return "Select a %s" % Registry.kind(Registry.faction(faction).get("start_unit", "")).display_name
+
+# Intended counters, [strong against, weak against], from each unit's Zero Hour role: Ranger, Red Guard and Rebel hunt infantry and fall to tanks; rocket infantry hunt vehicles and fall to infantry; Humvee, Technical and Gattling Tank hunt infantry and fall to tanks; Crusader, Battlemaster and Scorpion hunt light vehicles.
+const COUNTER_INTENDED := {
+	"usa_rifle_infantry": [["infantry"], ["tanks"]], "china_rifle_infantry": [["infantry"], ["tanks"]], "frc_rifle_infantry": [["infantry"], ["tanks"]],
+	"usa_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]], "china_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]], "frc_rocket_infantry": [["tanks", "light vehicles"], ["infantry"]],
+	"usa_light_vehicle": [["infantry"], ["tanks"]], "frc_light_vehicle": [["infantry"], ["tanks"]], "china_tank": [["infantry"], ["tanks"]],
+	"usa_tank": [["light vehicles"], []], "china_light_vehicle": [["light vehicles"], []], "frc_tank": [["light vehicles"], []]}
+# The cell card's counter line: the COUNTER_INTENDED claims its damage numbers hold (test_hud.gd CL1 derives every one).
+const COUNTER_LINES := {
+	"usa_rocket_infantry": "Beats tanks · Weak against infantry", "china_rocket_infantry": "Beats tanks · Weak against infantry", "frc_rocket_infantry": "Beats tanks · Weak against infantry",
+	"usa_light_vehicle": "Weak against tanks", "frc_light_vehicle": "Weak against tanks", "china_tank": "Good against infantry at full spin · Weak against tanks",
+	"usa_tank": "Beats light vehicles", "china_light_vehicle": "Beats light vehicles", "frc_tank": "Beats light vehicles"}
+
 const SLAB_WIDTH: float = 432.0
 const SLAB_CONTENT: float = SLAB_WIDTH - 20.0
-const MENU_PADDING: float = 24.0
-const MENU_GAP: float = 4.0
+const COMMANDS := {"build": "Build", "back": "Back", "attack_move": "Attack Move", "stop": "Stop", "unload": "Unload"}
 
-const QUEUE_SHOWN: int = 5
-const QUEUE_COLLAPSED: int = 4
+# Back cancels while a building is armed (hud-v5-layout "Cards per state").
+static func cell_name(action: String, placement_kind: String) -> String:
+	if action == "back" and not placement_kind.is_empty(): return "Cancel"
+	if COMMANDS.has(action): return COMMANDS[action]
+	return Registry.kind(action).display_name
+
+const QUEUE_TILES: int = 4
+
+# The entry in production alone, then adjacent waiting entries of one kind together: {kind, ids, refund} (3-3, `DA:1475`).
+static func queue_tiles(queue: Array) -> Array:
+	var tiles: Array = []
+	for i: int in queue.size():
+		var entry: Dictionary = queue[i]
+		if i < 2 or tiles.back().kind != entry.kind: tiles.append({"kind": entry.kind, "ids": []})
+		tiles.back().ids.append(entry.id)
+		tiles.back().refund = entry.paid_cost
+	return tiles
+
+static func newest_of_kind(queue: Array, kind: String) -> int:
+	for i: int in range(queue.size() - 1, -1, -1):
+		if queue[i].kind == kind: return queue[i].id
+	return -1
 
 # A seam so the layout path runs headless; tests swap it and restore it on every path.
 static var layout_label: Callable = _platform_label
@@ -77,26 +180,6 @@ static func _platform_label(physical: Key) -> Key:
 static func key_label(physical: Key) -> String:
 	return OS.get_keycode_string(layout_label.call(physical))
 
-static func menu_name(index: int, kind: String) -> String:
-	var quantity: int = Registry.kind(kind).get("quantity", 1)
-	return "%d: %s%s" % [index + 1, Registry.kind(kind).display_name, " x%d" % quantity if quantity > 1 else ""]
-
-# Each faction's builds, and what each of those and the start building produce.
-static func _every_menu() -> Array:
-	var menus: Array = []
-	for faction: String in Registry.Factions.FACTIONS:
-		menus.append(Registry.kind(Registry.faction(faction).get("start_unit", "")).get("builds", []))
-		for kind: String in _faction_kinds(faction): menus.append(Registry.kind(kind).get("produces", []))
-	return menus
-
-static func menu_columns(font: Font, size: int) -> int:
-	var widest: float = 0.0
-	for kinds: Array in _every_menu():
-		for i in kinds.size(): widest = maxf(widest, font.get_string_size(menu_label(i, kinds[i]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x)
-	for columns: int in [4, 3, 2]:
-		if columns * (widest + MENU_PADDING) + (columns - 1) * MENU_GAP <= SLAB_CONTENT: return columns
-	return 1
-
 static func is_container(view: Dictionary, id: int, seat: int) -> bool:
 	var host: Dictionary = building(view, id)
 	if host.is_empty():
@@ -105,32 +188,21 @@ static func is_container(view: Dictionary, id: int, seat: int) -> bool:
 		host = {"owner": view.units.owner[i], "kind": view.units.kinds[view.units.kind[i]]}
 	return host.owner == seat and host.get("completed", true) and not Registry.kind(host.kind).get("contains", {}).is_empty()
 
-# The view has no container id, so a vehicle counts as loaded while any own unit rides anything.
 static func unload_target(view: Dictionary, selection: Dictionary, seat: int) -> int:
 	var id: int = selection.building_id if selection.building_id != -1 else (selection.ids[0] if selection.ids.size() == 1 else -1)
 	if not is_container(view, id, seat): return -1
 	if not building(view, id).is_empty(): return id if not player(view, seat).get("tunnel", []).is_empty() else -1
 	var units: RefCounted = view.units
 	for i: int in units.size():
-		if units.owner[i] == seat and (units.flags[i] & ViewRows.CONTAINED) != 0: return id
+		if units.owner[i] == seat and units.container[i] == id: return id
 	return -1
 
 static func has_armed_unit(view: Dictionary, ids: Array[int], seat: int) -> bool:
-	for id: int in ids:
-		var i: int = view.units.index_of(id)
-		if i != -1 and view.units.owner[i] == seat and not Registry.kind(view.units.kinds[view.units.kind[i]]).get("weapon", "").is_empty(): return true
-	return false
+	return ids.any(func(id: int) -> bool: return is_armed_unit(view, id, seat))
 
-# Every build button shown with a selection is one placement accepts (orders' `_builder()` rule).
-static func shows_build_menu(view: Dictionary, selection: Dictionary, seat: int) -> bool:
-	if selection.building_id != -1 or selection.ids.is_empty(): return true
-	if selection.ids.size() != 1: return false
-	var i: int = view.units.index_of(selection.ids[0])
-	return i != -1 and view.units.owner[i] == seat and Registry.is_builder(view.units.kinds[view.units.kind[i]])
-
-static func queue_rows(count: int, open: bool) -> Dictionary:
-	var capped: bool = count > QUEUE_SHOWN
-	return {"shown": QUEUE_COLLAPSED if capped and not open else count, "more": count - QUEUE_COLLAPSED if capped else 0}
+static func is_armed_unit(view: Dictionary, id: int, seat: int) -> bool:
+	var i: int = view.units.index_of(id)
+	return i != -1 and view.units.owner[i] == seat and not Registry.kind(view.units.kinds[view.units.kind[i]]).get("weapon", "").is_empty()
 
 const SITE := "UNDER CONSTRUCTION"
 const PAUSED := "PAUSED · NO BUILDER"
@@ -158,6 +230,9 @@ static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: S
 		return row.merged({"right": PAUSED if paused else SITE, "paused": paused, "percent": object.work * 100 / (Definitions.building(object.kind).ticks * 1000)})
 	if Registry.kind(object.kind).get("powered", false) and short_of_power(view, object.owner): row.merge({"right": OFFLINE, "warn": true})
 	if not own: return row
+	if not Registry.kind(object.kind).get("produces", []).is_empty():
+		row.queue = object.queue
+		if not object.queue.is_empty(): row.right = "QUEUE %d / %d" % [object.queue.size(), QUEUE_LIMIT]
 	var power: int = Registry.kind(object.kind).get("power", 0)
 	if power > 0: row.merge({"key": "POWER", "value": "+%d" % power})
 	if Registry.can_rally(object.kind): row.footer = RALLY

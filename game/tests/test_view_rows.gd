@@ -9,6 +9,7 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const CombatWorkload = preload("res://scripts/debug/combat_workload.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
+const Fixture = preload("res://tests/economy_fixture.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const TeamMatch = preload("res://scripts/debug/team_match.gd")
 
@@ -202,7 +203,7 @@ static func expected_row(unit: Dictionary) -> Dictionary:
 	return {"id": unit.id, "owner": unit.owner, "hp": unit.hp, "max_hp": unit.max_hp, "x": unit.position[0], "y": unit.position[1],
 		"heading_x": heading[0], "heading_y": heading[1],
 		"target": -1 if combat == null or combat.target_id == null else combat.target_id,
-		"queue": collection.target_id if waiting and collection.target_id != null else -1,
+		"queue": collection.target_id if waiting and collection.target_id != null else -1, "container": unit.get("container_id", -1),
 		"order_x": unit.order.target[0] if unit.order != null else 0.0, "order_y": unit.order.target[1] if unit.order != null else 0.0,
 		"status": 255 if status == -1 else status, "tier": combat.get("tier", 0) if combat != null else 0, "flags": flag_of(unit)}
 
@@ -272,7 +273,7 @@ func held_copy(view: Dictionary) -> Dictionary:
 		if key == "units": continue
 		copy[key] = view[key].duplicate(true) if view[key] is Array or view[key] is Dictionary else view[key]
 	var rows = view.units
-	for column in ["id", "owner", "kind", "hp", "max_hp", "target", "queue", "x", "y", "heading_x", "heading_y", "order_x", "order_y", "status", "tier", "mode", "phase", "flags", "kinds", "modes", "phases"]:
+	for column in ["id", "owner", "kind", "hp", "max_hp", "target", "queue", "container", "x", "y", "heading_x", "heading_y", "order_x", "order_y", "status", "tier", "mode", "phase", "flags", "kinds", "modes", "phases"]:
 		copy["units." + column] = rows.get(column).duplicate()
 	return copy
 
@@ -294,4 +295,16 @@ func test_view_state_is_read_only(runner) -> bool:
 		if tick == 180: runner.check(held_copy(held) == kept, "VR4 a held view state is unchanged after 30 steps")
 		if tick % 30 == 29: runner.check(StateHash.digest(a.snapshot()) == StateHash.digest(b.snapshot()), "VR4 digests equal at tick " + str(a.tick()))
 	runner.check(StateHash.digest(a.snapshot()) == StateHash.digest(b.snapshot()), "VR4 digests equal at the end")
+	return held_container_survives_boarding(runner)
+
+func held_container_survives_boarding(runner) -> bool:
+	var sim = Fixture.make_world()
+	var car: int = sim.spawn(1, Vector2(12.5, 4.5), "usa_light_vehicle")
+	var rider: int = sim.spawn(1, Vector2(14.5, 5.5), "usa_rifle_infantry")
+	var held: Dictionary = sim.view_state()
+	var kept: Dictionary = held_copy(held)
+	Fixture.load_unit(runner, sim, rider, car)
+	var later: Dictionary = sim.view_state()
+	runner.check(later.units.container[later.units.index_of(rider)] == car, "VR4 the later view sees the rider inside the car")
+	runner.check(held_copy(held) == kept and held.units.container[held.units.index_of(rider)] == -1, "VR4 a held view keeps its container column after a rider boards")
 	return true

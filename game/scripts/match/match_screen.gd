@@ -26,6 +26,17 @@ const SimPump = preload("res://scripts/match/sim_pump.gd")
 const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
+const EDGE_BAND: float = 3.0
+const EDGE_STEP_MAX: float = 0.05
+# shortcut: on Windows screen_get_max_scale() is 1, so this is 40 physical px (thin on a 200 % display), scale by the window's DPI if Windows players miss it.
+const OUTSIDE_MARGIN: float = 40.0
+# Zero Hour snaps (View::lookAt); the owner found the snap disorienting (user, 2026-11-23).
+const GLIDE_MIN_SECONDS: float = 0.15
+const GLIDE_MAX_SECONDS: float = 0.45
+const GLIDE_FAR_PX: float = 2000.0
+const GLIDE_SNAP_PX: float = 4.0
+# The fixed dock band below the dock line (hud-v5-layout.md), so the shown panel never moves a target.
+const DOCK_HEIGHT: float = 168.0
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
 static var map_path: String = Skirmish.MAP_PATH
 static var starts: Array[int] = []
@@ -41,6 +52,11 @@ var _last_result_sequence: int = -1
 var shown_state: Dictionary = {}
 var _shown_note: String = ""
 var _camera_bounds: Rect2
+var _glide_from: Vector2
+var _glide_to: Vector2
+var _glide_world: Vector2
+var _glide_left: float = 0.0
+var _glide_seconds: float = GLIDE_MAX_SECONDS
 @onready var _view: Node2D = $WorldView
 @onready var _camera: Camera2D = $Camera2D
 var _perf: Label
@@ -48,6 +64,7 @@ var _clock := PresentationClock.new()
 var _pause: Control
 var _result_panel: Control
 var change_scene: Callable = _change_scene
+var outside_probe: Callable = _outside_probe
 var quit: Callable
 @onready var _selection_box: ReferenceRect = $HUD/SelectionBox
 var _sound: SoundPlayer = null
@@ -62,6 +79,9 @@ var _unanswered: int = 0
 var _stale: int = 0
 # Window events are sorted here in `_input`; tests that call `_unhandled_input` directly feed map logic points past the view.
 var _off_picture: InputEvent = null
+var _pointer: Vector2 = Vector2.ZERO
+var _pointer_in: bool = false
+var _focused: bool = true
 
 func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: String = Skirmish.default_faction()) -> void:
 	driver = OnlineDriver.new(transport, lockstep, faction, seat)
@@ -70,6 +90,9 @@ func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: Stri
 
 func _ready() -> void:
 	view_player = local_player
+	# The launcher may have seen the focus-out during the scene load; headless has no window focus to read.
+	_focused = DisplayServer.get_name() == "headless" or DisplayServer.window_is_focused()
+	get_viewport().size_changed.connect(func() -> void: _pointer_in = false) # the cached pointer is in the old picture's coordinates
 	if driver == null: driver = OfflineDriver.new(local_player)
 	_result_panel = ResultPanel.new()
 	_result_panel.play_again_pressed.connect(_play_again)
@@ -83,12 +106,9 @@ func _ready() -> void:
 	var menu_chip: Control = hud.get_node("MenuChip")
 	menu_chip.reparent($HUD, false)
 	$HUD.move_child(menu_chip, _result_panel.get_index() + 1)
-	hud.menu_chosen.connect(orders._menu_choose.bind(false))
+	hud.cell_pressed.connect(orders.press_cell)
 	hud.entry_cancelled.connect(orders._cancel_entry)
 	hud.cancel_build_pressed.connect(orders._cancel_build)
-	hud.attack_move_pressed.connect(orders.arm_attack_move)
-	hud.stop_pressed.connect(orders.stop_selected)
-	hud.unload_pressed.connect(orders._unload_selected)
 	hud.row_clicked.connect(_select_kind)
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
@@ -146,9 +166,11 @@ func _add_playtest() -> void:
 	$HUD.add_child(_playtest)
 	$HUD.move_child(_playtest, _pause.get_index())
 	_pause.opened.connect(_playtest.observe_menu)
+	_pause.opened.connect(hud.read_keys)
 	_pause.playtest_changed.connect(_playtest.set_active)
 	_playtest.set_active(PlaytestSettings.enabled())
 	for surface: Control in _playtest.surfaces(): hud.block(surface)
+	hud.helpers = _playtest.surfaces()
 	_playtest.stack_changed.connect(_place_perf)
 	$HUD/Economy.item_rect_changed.connect(_place_floor)
 	$HUD/Economy.visibility_changed.connect(_place_floor)
@@ -169,6 +191,7 @@ func _reset_camera() -> void:
 		_camera_bounds = _camera_bounds.expand(Iso.world_to_plane(corner))
 	var start: Vector2i = driver.first_note.starts.get(view_player, Vector2i(-1, -1))
 	var focus := Vector2(start) + Vector2(0.5, 0.5) if start.x >= 0 else Vector2(size[0], size[1]) / 2.0
+	_glide_left = 0.0
 	_camera.position = Iso.world_to_plane(focus)
 
 func _create_world() -> void:
@@ -210,7 +233,7 @@ func _take_answers() -> void:
 		_unanswered = maxi(_unanswered - 1, 0)
 		if _stale > 0: _stale -= 1
 		elif answer.ok: fresh = true
-	if not refused.is_empty(): refuse(refused.error)
+	if not refused.is_empty(): refuse(refused.error, SoundPlayer.SoundDirector.refusal_sound(refused.error))
 	elif fresh: hud.clear_refusal()
 	for answer: Dictionary in answers:
 		if answer.ok: _playtest.observe_command(answer.command)
@@ -240,13 +263,21 @@ func close_match(file_sitting: bool) -> void:
 	else: _playtest.keep_match()
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST and not _playtest.web: close_match(true) # web files at the next launcher open instead
+	match what:
+		NOTIFICATION_WM_CLOSE_REQUEST:
+			if not _playtest.web: close_match(true) # web files at the next launcher open instead
+		NOTIFICATION_WM_MOUSE_EXIT: _pointer_in = false
+		NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_FOCUS_OUT: _focused = false
+		NOTIFICATION_WM_WINDOW_FOCUS_IN, NOTIFICATION_APPLICATION_FOCUS_IN: _focused = true
 
 func _change_scene(path: String) -> void:
 	get_tree().change_scene_to_file(path)
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouse and not get_viewport().get_visible_rect().has_point(event.position): _off_picture = event
+	if event is InputEventMouse:
+		_pointer = event.position
+		_pointer_in = get_viewport().get_visible_rect().has_point(event.position)
+	if event is InputEventMouse and not _pointer_in: _off_picture = event
 	elif event is InputEventMouseMotion and hud.blocks(event.position): orders.handle(event) # a STOP panel takes motion before `_unhandled_input`: the drag box keeps up and the hover clears
 	if not (event is InputEventKey and event.pressed and not event.echo): return
 	if event.physical_keycode == KEY_F3: return
@@ -256,7 +287,8 @@ func _input(event: InputEvent) -> void:
 		else: return
 	elif not _pause.visible:
 		if _result_panel.takes_enter(event) and not _typing() and not _playtest.holds_match(): _play_again()
-		else: return
+		# Space is ui_accept: hammered in a base fight it must not press the card's focused Back to menu.
+		elif not (_result_panel.visible and not _typing() and event.physical_keycode == KEY_SPACE): return
 	elif event.is_action_pressed("ui_accept"): return
 	get_viewport().set_input_as_handled()
 
@@ -279,7 +311,7 @@ func _show_esc_chip() -> void:
 
 # The pause menu and the note form open without a new view, so this runs every frame too.
 func _drop_stale_attack_move() -> void:
-	if orders._attack_move_mode and (not orders.takes_orders() or _pause.visible or orders.selected_ids.is_empty()): orders._set_attack_move(false)
+	if orders._attack_move_mode and (not orders.takes_orders() or _pause.visible or not HudModel.has_armed_unit(shown_state, orders.selected_ids, local_player)): orders._set_attack_move(false)
 
 func _typing() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
@@ -328,7 +360,10 @@ func _process(delta: float) -> void:
 	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
 	var presented_at: int = Time.get_ticks_usec()
 	if _present_if_due() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - presented_at
-	if not _typing(): pan_camera(Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down"), delta)
+	var arrows: Vector2 = Vector2.ZERO if _typing() or menu_open() or input_over() else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	if arrows != Vector2.ZERO: pan_camera(arrows, delta)
+	else: edge_scroll(delta)
+	glide_camera(delta)
 	_view.advance_frame()
 	if not _auto_pending: return
 	_auto_sample((_auto_tick_usec + _view.draw_usec) / 1000.0)
@@ -354,10 +389,67 @@ func _auto_sample(frame_ms: float) -> void:
 	_view.set_quality(quality)
 
 func pan_camera(direction: Vector2, delta: float) -> void:
-	if orders.busy():
+	if orders.is_selecting() or direction == Vector2.ZERO:
 		return
-	_camera.position += direction.normalized() * 400.0 * delta / _camera.zoom.x
-	_camera.position = _camera.position.clamp(_camera_bounds.position, _camera_bounds.end)
+	_glide_left = 0.0
+	_move_camera(_camera.position + direction.normalized() * 400.0 * delta / _camera.zoom.x)
+
+func edge_scroll(delta: float) -> void:
+	pan_camera(edge_direction(), minf(delta, EDGE_STEP_MAX))
+
+# A pointer in a stretch-cap bar is off the picture and never pans; HUD panels are no exception (3-26).
+func edge_direction() -> Vector2:
+	if not _focused or _typing() or menu_open() or input_over(): return Vector2.ZERO
+	if not _pointer_in: return Vector2.ZERO if _playtest.web else outside_probe.call()
+	var view: Rect2 = get_viewport().get_visible_rect()
+	return Vector2(_edge_sign(_pointer.x, view.position.x, view.end.x), _edge_sign(_pointer.y, view.position.y, view.end.y))
+
+# A windowed pointer slides out past the band; just outside the window keeps panning (user, 2026-11-23).
+# Godot 4.7.2 on macOS and Windows gives these in one screen space: content rect, frame with title bar, pointer.
+func _outside_probe() -> Vector2:
+	if DisplayServer.get_name() == "headless": return Vector2.ZERO
+	var window := Rect2(DisplayServer.window_get_position(), DisplayServer.window_get_size())
+	var frame := Rect2(DisplayServer.window_get_position_with_decorations(), DisplayServer.window_get_size_with_decorations())
+	return outside_direction(DisplayServer.mouse_get_position(), window, frame, get_viewport().get_visible_rect().size, OUTSIDE_MARGIN * DisplayServer.screen_get_max_scale())
+
+# The frame is the player's to drag and close; past a stretch-cap bar (more than one picture px wide) that axis holds, as the bar does (3-26).
+static func outside_direction(pointer: Vector2, window: Rect2, frame: Rect2, picture: Vector2, margin: float) -> Vector2:
+	if window.has_point(pointer) or frame.has_point(pointer) or not window.grow(margin).has_point(pointer): return Vector2.ZERO
+	var bars: Vector2 = window.size / minf(window.size.x / picture.x, window.size.y / picture.y) - picture
+	var beyond: Vector2 = (pointer - pointer.clamp(window.position, window.end - Vector2.ONE)).sign()
+	return Vector2(0.0 if bars.x > 1.0 else beyond.x, 0.0 if bars.y > 1.0 else beyond.y)
+
+static func _edge_sign(at: float, low: float, high: float) -> float:
+	if at < low + EDGE_BAND: return -1.0
+	return 1.0 if at >= high - EDGE_BAND else 0.0
+
+# The target lands mid-way between the top and the dock line; HUD px are canvas px under the stretch, so only the zoom converts.
+func centre_camera(world: Vector2) -> void:
+	_glide_world = world
+	var below := Vector2(0.0, DOCK_HEIGHT / 2.0) / _camera.zoom.x
+	_glide_to = (Iso.world_to_plane(world) + below).clamp(_camera_bounds.position, _camera_bounds.end)
+	_glide_from = _camera.position
+	var screen_px: float = _glide_from.distance_to(_glide_to) * _camera.zoom.x
+	_glide_seconds = lerpf(GLIDE_MIN_SECONDS, GLIDE_MAX_SECONDS, minf(screen_px / GLIDE_FAR_PX, 1.0))
+	_glide_left = _glide_seconds
+	if screen_px <= GLIDE_SNAP_PX: glide_camera(_glide_seconds)
+
+# A drag box ends the glide, as it holds a pan.
+func glide_camera(delta: float) -> void:
+	if _glide_left <= 0.0: return
+	if orders.is_selecting():
+		_glide_left = 0.0
+		return
+	_glide_left = maxf(_glide_left - delta, 0.0)
+	var t: float = 1.0 - _glide_left / _glide_seconds
+	_move_camera(_glide_from.lerp(_glide_to, 1.0 - pow(1.0 - t, 3.0)))
+
+func _move_camera(plane: Vector2) -> void:
+	var before: Vector2 = _camera.position
+	_camera.position = plane.clamp(_camera_bounds.position, _camera_bounds.end)
+	if _camera.position == before: return
+	_camera.force_update_scroll()
+	orders.camera_moved()
 
 func change_zoom(direction: int) -> void:
 	if orders.busy():
@@ -366,6 +458,8 @@ func change_zoom(direction: int) -> void:
 	index = clampi(index + signi(direction), 0, ZOOMS.size() - 1)
 	_camera.zoom = Vector2.ONE * ZOOMS[index]
 	_view.set_zoom(ZOOMS[index])
+	# The dock offset is in screen px, so a glide under way retargets for the new zoom.
+	if _glide_left > 0.0: centre_camera(_glide_world)
 
 func _unhandled_input(event: InputEvent) -> void:
 	# A field passes on shortcuts it does not use (Cmd+S, Ctrl+1); orders ignore modifiers, so they would fire.
@@ -387,6 +481,10 @@ func _note() -> String:
 func shown_over() -> bool:
 	return shown_state.get("match") != null and shown_state.match.status in ["won", "draw"]
 
+# A result, an ended online room or the freeze card: nothing on the map takes input.
+func input_over() -> bool:
+	return shown_over() or driver.over() or frozen()
+
 func _reshow() -> void:
 	_show(shown_state, false)
 
@@ -394,16 +492,18 @@ func _reshow() -> void:
 func _show(state: Dictionary, fresh: bool = true) -> void:
 	shown_state = state
 	# An armed placement (and its strip preview) and a drag box must never show over a result or freeze card or an ended online match.
-	if shown_over() or driver.over() or frozen():
+	if input_over():
 		if not orders._placement_kind.is_empty(): orders._clear_placement()
 		hud.end_hover()
 		orders._selecting = false
 		_selection_box.hide()
-	_shown_note = _note()
+	# A repaint leaves the note unshown, so a refusal's sound gets its fresh refresh next frame even while lockstep waits.
+	if fresh: _shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()
 	orders.prune(state)
+	orders.select_start(state)
 	_drop_stale_attack_move()
 	orders.show_preview(driver.preview_answer())
 	Profiler.end(&"refresh.selection", zone)
@@ -414,11 +514,13 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	_take_results(state)
 	hud.update_hud(state, _hud_selection(), view_player, local_player)
 	_place_floor()
-	orders.menu = hud.menu_kinds
 	_view.set_inspected(orders.inspected_id)
 	if frozen(): _show_freeze()
 	else: _show_result(state)
-	if fresh: _sound.update(state)
+	if fresh:
+		_sound.update(state)
+		var alert: String = _sound.director.take_alert()
+		if not alert.is_empty(): hud.alert(alert)
 	Profiler.end(&"refresh.hud", zone)
 	if fresh: stepped_results.clear()
 
@@ -426,7 +528,7 @@ func _take_results(state: Dictionary) -> void:
 	for result: Dictionary in stepped_results + state.command_results:
 		if result.player == local_player and (result.tick > _last_result_tick or (result.tick == _last_result_tick and result.sequence > _last_result_sequence)):
 			# The sound director already beeps for a due-time failure.
-			if not result.ok: refuse(result.error, false)
+			if not result.ok: refuse(result.error, "")
 			_last_result_tick = result.tick
 			_last_result_sequence = result.sequence
 
@@ -440,7 +542,7 @@ func _select_kind(kind: String, shift: bool) -> void:
 	_reshow()
 
 func _hud_selection() -> Dictionary:
-	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": shown_over() or driver.over() or frozen(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "sub_grid": orders._sub_grid, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": input_over(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
 
 func _result(state: Dictionary) -> String:
 	var result: String = _result_text(state.match)
@@ -488,13 +590,15 @@ func _submit(payload: Dictionary) -> void:
 	_sound.order(payload)
 
 # The result and freeze cards already say why nothing is taken, as with the notice.
-func refuse(raw_error: String, sound: bool = true) -> void:
+func refuse(text: String, sound: String = "error") -> void:
 	if shown_over() or frozen(): return
 	_stale = _unanswered
-	if sound:
+	if not sound.is_empty():
 		_ensure_sound()
-		_sound.rejected(raw_error)
-	hud.refuse(raw_error)
+		_sound.rejected(sound)
+	hud.refuse(text)
+	# A repeat keeps the note's words, so its sound would wait for the peer without a fresh refresh.
+	_shown_note = ""
 
 func _ensure_sound() -> void:
 	if _sound != null: return

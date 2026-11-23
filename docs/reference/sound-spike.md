@@ -135,6 +135,7 @@ sfx/infantry_death lufs -32.0 peak -20.1 dBFS
 sfx/click lufs -34.3 peak -22.6 dBFS
 sfx/error lufs -34.3 peak -24.6 dBFS
 voice/base_under_attack lufs -24.0 peak -7.0 dBFS
+voice/allied_base_under_attack lufs -24.0 peak -8.7 dBFS
 voice/building_lost lufs -24.0 peak -10.2 dBFS
 voice/unit_ready lufs -24.0 peak -8.6 dBFS
 voice/construction_complete lufs -24.0 peak -7.2 dBFS
@@ -145,6 +146,8 @@ voice/defeat lufs -24.0 peak -9.5 dBFS
 music LUFS/true-peak dBFS: stay_the_course -30.0/-18.2, conflict -30.1/-15.7, enemy_spotted -30.1/-16.8, mammoth -30.0/-18.0, hitman -30.0/-15.2
 music size bytes: stay_the_course 2458259, conflict 2508577, enemy_spotted 1978908, mammoth 1625202, hitman 2327193
 ```
+
+`voice/allied_base_under_attack` joined in P2.3b (2026-11-23): "Allied base under attack." through the same Piper settings and `synth.py`; a full `synth.py` run left the other 30 files byte-identical to the committed ones (`cmp`). Nobody has heard it yet (owner's rendered batch).
 
 ## Import and size (Task 3)
 

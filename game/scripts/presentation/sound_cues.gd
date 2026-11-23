@@ -15,6 +15,8 @@ const CUES := {
 	"placement": {"sound": "click", "limit": 2, "pitch": 0.8, "jitter": 0.0, "gain_db": 0.0, "ui": true},
 	"click": {"sound": "click", "limit": 2, "pitch": 1.0, "jitter": 0.0, "gain_db": 0.0, "ui": true},
 	"error": {"sound": "error", "limit": 2, "pitch": 1.0, "jitter": 0.0, "gain_db": 0.0, "ui": true},
+	# Zero Hour's disabled click (HotKey.cpp:174-190); the click sped up, so it reads shorter.
+	"disabled": {"sound": "click", "limit": 2, "pitch": 1.5, "jitter": 0.0, "gain_db": 0.0, "ui": true},
 }
 
 # No catch-all: a new weapon needs a row (spec section 2).

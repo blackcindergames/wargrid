@@ -264,9 +264,9 @@ func test_placement_and_errors(runner) -> bool:
 	runner.check(_cues(director.update(_state([], [mine, enemy]))) == ["error"], "SD17 own failed result gives error")
 	_feed(director, 3, [], [{"tick": 3, "player": 2, "sequence": 1, "ok": false, "error": "No units left"}])
 	runner.check(director.update(_state([], [mine, enemy])).is_empty(), "SD17 player 2 failure is silent")
-	director.rejected("No units left")
+	director.rejected("error")
 	runner.check(_cues(director.update(_state([], [mine, enemy]))) == ["error"], "SD17 rejected gives error")
-	director.rejected("Insufficient credits")
+	director.rejected("funds")
 	_feed(director, 4, [], [{"tick": 4, "player": 1, "sequence": 2, "ok": false, "error": "Insufficient credits"}])
 	runner.check(director.update(_state([], [mine, enemy])).is_empty(), "SD17 funds error gives no error cue")
 	return true

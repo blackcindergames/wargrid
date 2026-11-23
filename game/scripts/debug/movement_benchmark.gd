@@ -462,7 +462,13 @@ func _begin_hud() -> void:
 	if _hud != null: return
 	_hud = Hud.new()
 	$HUD.add_child(_hud)
-	_hud.setup(null)
+	var economy := VBoxContainer.new()
+	economy.name = "Economy"
+	var cancel := Button.new()
+	cancel.name = "CancelBuild"
+	economy.add_child(cancel)
+	$HUD.add_child(economy)
+	_hud.setup(economy)
 
 func _hud_tick() -> void:
 	var started: int = Time.get_ticks_usec()

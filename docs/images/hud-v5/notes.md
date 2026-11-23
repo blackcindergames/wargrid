@@ -20,6 +20,17 @@ Drawn under the [mock-up rules](../../art-direction/ART_DIRECTION.md#12-interfac
 | Supply pile | [full-pile](full-pile.webp) | [core-pile](core-pile.webp) |
 | Construction site | [full-site](full-site.webp) | [core-site](core-site.webp) |
 
+P2.3b states, Core only (plan T0, 2026-11-23; see "P2.3b redraw" below):
+
+| State | Core |
+|---|---|
+| Ready cell hovered, factory with nothing in production | [core-hover-cell](core-hover-cell.webp) |
+| Queue tile hovered | [core-hover-tile](core-hover-tile.webp) |
+| A credit-blocked cell pressed | [core-press](core-press.webp) |
+| Two builders selected | [core-builders](core-builders.webp) |
+| Nothing selected, `Q` pressed | [core-none-refuse](core-none-refuse.webp) |
+| FRC build menu: a cell blocked by prerequisite and credits | [core-two-cause](core-two-cause.webp) |
+
 Core is words only and holds what the game can feed today; Full adds glyphs, the minimap, the group row, the production strip, the alert feed and the pinned factory, each with its later package (as in v4).
 
 HUD coverage of the screen at 1280x800, summed from [layout.json](layout.json) (opaque slabs; the cell card and the refusal line are not counted):
@@ -27,7 +38,7 @@ HUD coverage of the screen at 1280x800, summed from [layout.json](layout.json) (
 | | Nothing | One unit | 120 units | Factory | Power Plant | Full queue | Builder | Build menu | Placing | Refused | Enemy | Pile | Site |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Full | 6.8 % | 15.5 % | 21.7 % | 21.5 % | 11.2 % | 21.6 % | 18.2 % | 18.1 % | 18.7 % | 18.4 % | 8.6 % | 9.5 % | 9.6 % |
-| Core | 1.5 % | 9.8 % | 13.1 % | 15.1 % | 4.9 % | 15.2 % | 12.5 % | 12.4 % | 13.1 % | 12.7 % | 3.9 % | 4.9 % | 4.9 % |
+| Core | 1.5 % | 9.9 % | 14.4 % | 17.4 % | 4.9 % | 17.4 % | 12.6 % | 13.8 % | 13.8 % | 13.8 % | 4.0 % | 4.9 % | 4.9 % |
 
 Files beside the pictures:
 
@@ -110,3 +121,13 @@ Not settled (found while drawing):
 - **Unload on an empty container.** Settled as plan question 9 (b) (gate A, user 2026-11-19): a Tunnel Hub shows `Unload (F)` exactly, from the local player's tunnel list; a Scout Car or Armed Pickup only while some own unit row has `CONTAINED`, so a dead button remains only in the rare mixed case; no new view field ([unload picture](p2-3a1-unload.webp)).
 - **Resume over an ended match.** One Esc from the freeze card (and from the Victory/Defeat card today) the pause menu's first item reads `Resume` (`game/scripts/presentation/pause_menu.gd:47`) and only returns to the card. No change in P2.3a1; the P2.3a2 Esc-menu redraw should label it `Back to card` or hide it once the match has ended or frozen.
 - **Enemy site bars.** On an enemy (red) site the owner-coloured progress bar sits right above a health bar of the same size; below about a third of health both are red, told apart only by `38 %` against `cur / max`. No change in P2.3a1; the P2.3a3 health-bar rule should look at the site panel too.
+
+## P2.3b redraw (2026-11-23)
+
+The [P2.3b plan](../../superpowers/plans/2026-11-21-p2-3b-build-from-the-dock.md)'s T0 redrew the Core pictures from the owner's picks of the P2.3b War Room round (the `p23b-*` and `ts-card-*` states of [source/p2-3a1-states.html](source/p2-3a1-states.html); [design answers](../../reference/design-answers-2026-11-08.md#p23b-war-room-round-user-2026-11-21)) and, where the picks leave it open, from what the built HUD shows (`game/scripts/match/hud.gd`, `hud_model.gd` as of T7, T9, T13). The Full pictures are unchanged: the P2.3b look is drawn in the Core tier only (`source/hud.js`, `isCore`).
+
+- Redrawn: `core-factory`, `core-full`, `core-build`, `core-place`, `core-blocked`; touched up: `core-builder` (no Stop, 3-14), `core-one`, `core-many` (the kind-row rule line), `core-none`; new: the six pictures in the table above.
+- What Core now draws: the two-slab top strip with plain digits, the forecast arrow and the `sel` frame on a slab whose number changes, held at its widest forecast while the pointer is on the card or a building is armed, the `$` coin below zero (top strip round, user 2026-11-22); the Menu chip's `Esc` only when Esc opens the menu, faded rather than removed; wells with a 1 px `line` outline and the Back/Cancel chip `V` (3-14); a cost blocked by credits alone in `warn` with the solid 15 px `$` coin 4 after it, a missing prerequisite or a full queue muting it, two causes taking the prerequisite look (3-2); the hover inset on a ready cell, the 1 px `sel` frame on the hovered cell's missing prerequisite (3-10); the cell card with `cost · time`, the `warn` reason, then the counter line (`hud_model.gd` `COUNTER_LINES`, broken between claims when too wide), no forecast (3-4); the 4 px `you` bar on the producing cell (3-11); the factory panel fixed at 152 with up to four 91 x 60 queue tiles (`NOW`, merged runs `×N`, `+N more`) or a muted `Nothing in production` (3-3); two builders block `Build ›` with `Select one builder` (3-7); the refusal line grounded 8 above the screen bottom between panel and card, as built (gate B, user 2026-11-20).
+- Not built yet: the queue tiles (T8 parked), the cells' `×N` queued counts, the producing cell's bar and the defence range ring (deferred). The tile pictures (`core-factory`, `core-full`, `core-hover-tile`) draw the owner's picked design, `core-factory` and `core-full` also the `×N` badges and the producing bar, and `core-place` the range ring; the game still shows the queue rows above the cells.
+- Drawn on the nearest existing backdrop: `core-builders` shows one selected Bulldozer in the world (backdrop `w-builder`), `core-two-cause` an FRC card over the China build-menu world (`w-build`). `Cannot build here` stays a proposal; the game prints the simulation's words.
+- Not re-shot: `core-plant`, `core-enemy`, `core-pile`, `core-site` are outside T0's list and keep the old one-piece strip with thousands separators; re-running `shoot_final.sh` redraws them with the new strip (their only change).

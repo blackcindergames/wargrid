@@ -142,6 +142,13 @@ func _warm_and_freeze() -> void:
 	Registry.freeze_caches()
 	Skirmish.freeze_map()
 
+# A shot's building target may be gone by the next displayed view; its row travels with the shot.
+static func _attach_targets(events: Array[Dictionary], buildings: Array) -> void:
+	var rows: Dictionary = {}
+	for building: Dictionary in buildings: rows[building.id] = building
+	for event: Dictionary in events:
+		if event.type == "shot" and rows.has(event.target_id): event.target_building = rows[event.target_id]
+
 static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job, slot: Slot) -> Note:
 	var note := Note.new()
 	for payload: Dictionary in job.commands:
@@ -170,6 +177,7 @@ static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job
 	if slot != null:
 		slot.tick = sim.tick()
 		slot.view = sim.view_state()
+		_attach_targets(note.events, slot.view.buildings)
 	note.over = sim.match_over()
 	note.survivors = sim.survivors()
 	note.tick = sim.tick()
