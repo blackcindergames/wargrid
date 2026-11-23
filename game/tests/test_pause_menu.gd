@@ -30,7 +30,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_quit_hidden_on_web, test_menu_layout, test_controls_list_shows_every_row, test_controls_list_keys_work, test_controls_list_layout]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_quit_hidden_on_web, test_menu_layout, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_controls_list_layout]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -343,10 +343,32 @@ func test_controls_list_shows_every_row(runner) -> bool:
 	_open_menu(main)
 	var expected: Array = _expected_texts()
 	shown = _shown_texts(list_in_match)
+	var chip: String = (main.hud._card.get_child(0).get_node("Chip") as Label).text
 	HudModel.layout_label = HudModel._platform_label
+	runner.check(chip == "A", "CL1 opening the menu re-reads the card's chips too, got '%s'" % chip)
 	runner.check(main.menu_open() and shown == expected and expected.has("A"), "CL1 opening the menu re-reads the layout's labels, got %s, want %s" % [shown, expected])
 	main.free()
 	return true
+
+func test_controls_list_digits_and_platform_words(runner) -> bool:
+	HudModel.layout_label = func(physical: Key) -> Key: return {KEY_1: KEY_AMPERSAND, KEY_9: KEY_SEMICOLON}.get(physical, physical)
+	var recall: Array = []
+	for section: Array in PauseMenu.controls(false, true): recall.append_array(section[1].filter(func(row: Array) -> bool: return row[0] == "recall"))
+	HudModel.layout_label = HudModel._platform_label
+	runner.check(recall.size() == 1 and recall[0][1] == "1-9", "CL1 the group digits keep their number on a layout that moves them, got %s" % [recall])
+	for platform: Array in [[false, false, false], [false, true, true], [true, false, false], [true, true, true]]:
+		var save: Array = _save_row(PauseMenu.controls(platform[0], platform[1]))
+		var text: String = "%s %s" % [save[1], save[2]]
+		runner.check(text.contains("Cmd") == platform[2], "CL1 web %s mac %s: Cmd named only on a Mac, got '%s'" % [platform[0], platform[1], text])
+		runner.check(save[3].has(KEY_1 | KEY_MASK_META) and save[3].has(KEY_1 | KEY_MASK_CTRL) and save[3].has(KEY_1 | KEY_MASK_SHIFT | KEY_MASK_CTRL), "CL1 web %s mac %s: every save binding is still pressed by CL2" % [platform[0], platform[1]])
+	runner.check(_save_row(PauseMenu.controls(true, false))[1].begins_with("Shift+Ctrl+") and _save_row(PauseMenu.controls(false, false))[1].begins_with("Ctrl+"), "CL1 a browser leads with Shift+Ctrl, a desktop with Ctrl")
+	return true
+
+static func _save_row(sections: Array) -> Array:
+	for section: Array in sections:
+		for row: Array in section[1]:
+			if row[0] == "save": return row
+	return []
 
 func _press(main, press: int) -> void:
 	main.get_viewport().push_input(_event(press))

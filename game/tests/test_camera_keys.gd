@@ -11,11 +11,12 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Scene = preload("res://scenes/skirmish.tscn")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 const LINE: String = "HUD/Hud/AlertLine"
 const AWAY := Vector2(-200, 100)
 
 func cases() -> Array[Callable]:
-	return [test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
+	return [test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
 
 func _world(runner) -> Array:
 	var main = await SkirmishTests.new()._setup(runner)
@@ -100,6 +101,21 @@ func test_space_without_an_event(runner) -> bool:
 	main.free()
 	return true
 
+func test_open_menu_holds_h_and_space(runner) -> bool:
+	var world: Array = await _world(runner)
+	var main = world[0]
+	var camera: Camera2D = main.get_node("Camera2D")
+	_hit(main, world[1].factory, world[1].enemy, 2)
+	main._pause.open()
+	_key(main, KEY_SPACE)
+	_key(main, KEY_H)
+	runner.check(camera.position == AWAY, "CK3 H and Space do nothing behind the open menu, got %s" % camera.position)
+	main._pause.close()
+	_key(main, KEY_SPACE)
+	runner.check(camera.position != AWAY, "CK3 closing the menu frees Space, got %s" % camera.position)
+	main.free()
+	return true
+
 func test_space_jumps_to_the_last_hit(runner) -> bool:
 	var world: Array = await _world(runner)
 	var main = world[0]
@@ -132,6 +148,26 @@ func test_space_prefers_own_and_survives_the_target(runner) -> bool:
 	BaseScene.publish(main)
 	_key(main, KEY_SPACE)
 	runner.check(camera.position.is_equal_approx(factory_at), "CK5 the target died: Space still goes to the stored position, got %s" % camera.position)
+	main.free()
+	return await _space_after_a_kill_in_the_shot_step(runner)
+
+# The hit reaches the director only after its building left both views, so only the row the pump attached to the shot can place it.
+func _space_after_a_kill_in_the_shot_step(runner) -> bool:
+	var world: Array = await _world(runner)
+	var main = world[0]
+	var ids: Dictionary = world[1]
+	var camera: Camera2D = main.get_node("Camera2D")
+	var tick: int = main.shown_state.tick + 1
+	var events: Array[Dictionary] = [{"type": "shot", "tick": tick, "attacker_id": ids.enemy, "target_id": ids.factory, "damage": 1, "splash": false}]
+	SimPump._attach_targets(events, main.shown_state.buildings)
+	main.driver.pump.live().remove_object(ids.factory)
+	BaseScene.publish(main)
+	var results: Array[Dictionary] = []
+	main._sound.director.collect_step(tick, events, results)
+	main._refresh()
+	_key(main, KEY_SPACE)
+	var factory_at: Vector2 = _plane(main, Vector2(15.5, 15.5))
+	runner.check(events[0].has("target_building") and camera.position.is_equal_approx(factory_at), "CK5 a building gone from both views is still placed by the row its shot carried, got %s, want %s" % [camera.position, factory_at])
 	main.free()
 	return true
 
@@ -213,5 +249,11 @@ func test_alert_line_layout(runner) -> bool:
 		runner.check(rect.position.is_equal_approx(Vector2(8, 48)) and rect.size.y == 28.0, "CK9 the line sits at (8, 48), 28 high%s, got %s" % [at, rect])
 		for path: String in panels:
 			if path != LINE: runner.check(not rect.intersects(panels[path]), "CK9 the line clears %s%s" % [path, at])
+		main.hud.alert("Allied base under attack")
+		await HudTests._frames(runner)
+		var longer: Rect2 = HudTests._rect(main, LINE)
+		runner.check(longer.position.is_equal_approx(Vector2(8, 48)) and longer.size.y == 28.0 and longer.size.x > rect.size.x, "CK9 the allied text keeps the line's place and height and widens it%s, got %s then %s" % [at, rect, longer])
+		for path: String in panels:
+			if path != LINE: runner.check(not longer.intersects(panels[path]), "CK9 the allied line clears %s%s" % [path, at])
 		port.free()
 	return true

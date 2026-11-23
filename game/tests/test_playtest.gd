@@ -96,6 +96,10 @@ func test_trigger_matching(runner) -> bool:
 	runner.check(FocusCards.matches_command("gather", {"type": "gather"}), "PT3 plain trigger matches the command type")
 	runner.check(not FocusCards.matches_command("gather", {"type": "attack"}), "PT3 plain trigger ignores another type")
 	runner.check(not FocusCards.matches_command("esc_menu", {"type": "gather"}) and not FocusCards.matches_command("esc_menu", {"type": "esc_menu"}), "PT3 esc_menu matches no command")
+	var mouse_step: Dictionary = {}
+	for item: Dictionary in FocusCards.load_cards()[0].try:
+		if item.id == "mouse": mouse_step = item
+	runner.check(not mouse_step.is_empty() and not mouse_step.has("trigger"), "PT3 the mouse-only step is the observer's, so no first building (keyed or clicked) ticks it")
 	return true
 
 func _write_switch(value: Variant) -> void:

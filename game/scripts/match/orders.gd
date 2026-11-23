@@ -160,7 +160,7 @@ func _group_key(event: InputEvent) -> bool:
 func _camera_key(event: InputEvent) -> bool:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo or not key.physical_keycode in [KEY_H, KEY_SPACE]: return false
-	if key.ctrl_pressed or key.meta_pressed or key.alt_pressed or is_selecting(): return true
+	if key.ctrl_pressed or key.meta_pressed or key.alt_pressed or is_selecting() or _screen.menu_open(): return true
 	var target: Variant = HudModel.home_position(_screen.shown_state, _screen.local_player) if key.physical_keycode == KEY_H else _screen._sound.director.last_attack()
 	if target != null: _screen.centre_camera(target)
 	return true
@@ -455,9 +455,10 @@ func _enter_placement(kind: String) -> void:
 	_update_preview(_screen._view.get_local_mouse_position())
 	_screen._reshow()
 
-# The camera moved under a standing pointer, so the ghost goes where the pointer now is.
+# The camera moved under a standing pointer, so the ghost goes where the pointer now is; over a panel it stays, as it does for motion.
 func camera_moved() -> void:
-	if not _placement_kind.is_empty(): _update_preview(_screen._view.get_local_mouse_position())
+	if _placement_kind.is_empty() or _screen.hud.blocks(_screen.get_viewport().get_mouse_position()): return
+	_update_preview(_screen._view.get_local_mouse_position())
 
 func _clear_placement() -> void:
 	_placement_kind = ""

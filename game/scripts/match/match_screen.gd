@@ -75,6 +75,8 @@ func setup(transport: RefCounted, lockstep: RefCounted, seat: int, faction: Stri
 
 func _ready() -> void:
 	view_player = local_player
+	# The launcher may have seen the focus-out during the scene load; headless has no window focus to read.
+	_focused = DisplayServer.get_name() == "headless" or DisplayServer.window_is_focused()
 	get_viewport().size_changed.connect(func() -> void: _pointer_in = false) # the cached pointer is in the old picture's coordinates
 	if driver == null: driver = OfflineDriver.new(local_player)
 	_result_panel = ResultPanel.new()
@@ -149,6 +151,7 @@ func _add_playtest() -> void:
 	$HUD.add_child(_playtest)
 	$HUD.move_child(_playtest, _pause.get_index())
 	_pause.opened.connect(_playtest.observe_menu)
+	_pause.opened.connect(hud.read_keys)
 	_pause.playtest_changed.connect(_playtest.set_active)
 	_playtest.set_active(PlaytestSettings.enabled())
 	for surface: Control in _playtest.surfaces(): hud.block(surface)
@@ -268,7 +271,8 @@ func _input(event: InputEvent) -> void:
 		else: return
 	elif not _pause.visible:
 		if _result_panel.takes_enter(event) and not _typing() and not _playtest.holds_match(): _play_again()
-		else: return
+		# Space is ui_accept: hammered in a base fight it must not press the card's focused Back to menu.
+		elif not (_result_panel.visible and not _typing() and event.physical_keycode == KEY_SPACE): return
 	elif event.is_action_pressed("ui_accept"): return
 	get_viewport().set_input_as_handled()
 
@@ -377,7 +381,7 @@ func edge_scroll(delta: float) -> void:
 
 # A pointer in a stretch-cap bar is off the picture and never pans; HUD panels are no exception (3-26).
 func edge_direction() -> Vector2:
-	if not (_focused and _pointer_in) or _typing() or menu_open() or shown_over(): return Vector2.ZERO
+	if not (_focused and _pointer_in) or _typing() or menu_open() or input_over(): return Vector2.ZERO
 	var view: Rect2 = get_viewport().get_visible_rect()
 	return Vector2(_edge_sign(_pointer.x, view.position.x, view.end.x), _edge_sign(_pointer.y, view.position.y, view.end.y))
 
@@ -423,6 +427,10 @@ func _note() -> String:
 func shown_over() -> bool:
 	return shown_state.get("match") != null and shown_state.match.status in ["won", "draw"]
 
+# A result, an ended online room or the freeze card: nothing on the map takes input.
+func input_over() -> bool:
+	return shown_over() or driver.over() or frozen()
+
 func _reshow() -> void:
 	_show(shown_state, false)
 
@@ -430,7 +438,7 @@ func _reshow() -> void:
 func _show(state: Dictionary, fresh: bool = true) -> void:
 	shown_state = state
 	# An armed placement (and its strip preview) and a drag box must never show over a result or freeze card or an ended online match.
-	if shown_over() or driver.over() or frozen():
+	if input_over():
 		if not orders._placement_kind.is_empty(): orders._clear_placement()
 		hud.end_hover()
 		orders._selecting = false
@@ -480,7 +488,7 @@ func _select_kind(kind: String, shift: bool) -> void:
 	_reshow()
 
 func _hud_selection() -> Dictionary:
-	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "sub_grid": orders._sub_grid, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": shown_over() or driver.over() or frozen(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
+	return {"ids": orders.selected_ids, "building_id": orders.selected_building_id, "inspected_id": orders.inspected_id, "placement_kind": orders._placement_kind, "sub_grid": orders._sub_grid, "resume_id": _view.resume_candidate(), "notice": "" if shown_over() or frozen() else driver.notice(), "bright_owners": _view.bright_owners(), "over": input_over(), "esc_opens_menu": esc_opens_menu(), "attack_move": orders._attack_move_mode}
 
 func _result(state: Dictionary) -> String:
 	var result: String = _result_text(state.match)

@@ -366,7 +366,7 @@ func setup(economy: VBoxContainer) -> void:
 	_cancel_build = economy.get_node("CancelBuild")
 	_cancel_build.pressed.connect(cancel_build_pressed.emit)
 	_build_slab()
-	_read_keys()
+	read_keys()
 	block(economy)
 
 func reset() -> void:
@@ -377,7 +377,7 @@ func reset() -> void:
 	_last = []
 	_last_ids = []
 	_counts = {}
-	if _economy != null: _read_keys()
+	if _economy != null: read_keys()
 
 # hud-v5-layout "Command card": the VBox lays out rows, the Hud pads, fills and edges it.
 func _build_slab() -> void:
@@ -485,8 +485,8 @@ static func _cell_label(cell: Button, label_name: String, variation: StringName,
 	label.size = minimum
 	return label
 
-# Chips name the cell's position in the player's layout; a reset re-reads them.
-func _read_keys() -> void:
+# Chips name the cell's position in the player's layout; a reset and the menu opening re-read them.
+func read_keys() -> void:
 	for cell: Node in _card.get_children(): (cell.get_node("Chip") as Label).text = HudModel.key_label(HudModel.GRID_KEYS[cell.get_index()])
 
 func _grid(grid_name: String, columns: int) -> GridContainer:

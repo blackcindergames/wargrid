@@ -85,7 +85,7 @@ func _init(web: bool = OS.has_feature("web")) -> void:
 	_button(_confirm_box, "Cancel", _show_main)
 
 # Sections of [probe, keys, words, presses]; a press is a physical key with its modifier mask, read from the constants the input code reads, and test_pause_menu CL2 sends each one through the match.
-static func controls() -> Array:
+static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_feature("macos") or OS.has_feature("web_macos")) -> Array:
 	var digits: Array = ControlGroups.KEYS
 	var grid: Array = HudModel.GRID_KEYS
 	var cards := PackedStringArray()
@@ -115,7 +115,7 @@ static func controls() -> Array:
 			_key_row("unload", HudModel.ORDER_KEYS.unload, "Unload")]],
 		["Groups", [
 			["recall", _span(digits, 0), "Select a group, twice to centre on it", digits],
-			["save", _span(digits, KEY_MASK_CTRL), "Save a group, also %s or %s" % [_span(digits, KEY_MASK_META), _span(digits, KEY_MASK_SHIFT | KEY_MASK_CTRL)], _masked(digits, [KEY_MASK_CTRL, KEY_MASK_META, KEY_MASK_SHIFT | KEY_MASK_CTRL])],
+			_save_row(digits, web, mac),
 			["add", _span(digits, KEY_MASK_SHIFT), "Add the selection to a group", _masked(digits, [KEY_MASK_SHIFT])]]],
 		["Other", [
 			["esc", "Esc", "Back out one step, then this menu", [(InputMap.action_get_events("deselect")[0] as InputEventKey).keycode]],
@@ -125,9 +125,18 @@ static func controls() -> Array:
 static func _key_row(probe: String, key: Key, words: String) -> Array:
 	return [probe, HudModel.key_label(key), words, [key]]
 
+# A browser keeps Ctrl+1-9 for its tabs and Cmd is the Windows key off macOS, so the list leads with what works where it runs; every binding still works.
+static func _save_row(digits: Array, web: bool, mac: bool) -> Array:
+	var named: Array = [KEY_MASK_SHIFT | KEY_MASK_CTRL, KEY_MASK_CTRL] if web else [KEY_MASK_CTRL, KEY_MASK_SHIFT | KEY_MASK_CTRL]
+	if mac: named.append(KEY_MASK_META)
+	var also: Array = named.slice(1).map(func(mask: int) -> String: return _span(digits, mask))
+	var words: String = "Save a group" + (", also " + " or ".join(also) if not also.is_empty() else "")
+	return ["save", _span(digits, named[0]), words, _masked(digits, named.slice(0, 2) + [KEY_MASK_META])]
+
 static func _span(keys: Array, mask: int) -> String:
 	var mods: String = "".join([[KEY_MASK_SHIFT, "Shift+"], [KEY_MASK_CTRL, "Ctrl+"], [KEY_MASK_META, "Cmd+"]].filter(func(pair: Array) -> bool: return mask & pair[0] != 0).map(func(pair: Array) -> String: return pair[1]))
-	return "%s%s-%s" % [mods, HudModel.key_label(keys[0]), HudModel.key_label(keys[-1])]
+	# Digits name their position, not the symbol a layout like AZERTY puts there.
+	return "%s%s-%s" % [mods, OS.get_keycode_string(keys[0]), OS.get_keycode_string(keys[-1])]
 
 static func _masked(keys: Array, masks: Array) -> Array:
 	var presses: Array = []
