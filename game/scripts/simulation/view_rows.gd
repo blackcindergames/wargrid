@@ -103,7 +103,7 @@ func _fill_all(units: Array) -> void:
 		c_hy[i] = heading[1]
 		var found: int = STATUSES.find(unit.get("status", ""))
 		c_status[i] = NONE if found == -1 else found
-		if unit.has("container_id"): bits = CONTAINED
+		if c_container[i] != -1: bits = CONTAINED
 		if unit.has("hole_id"): bits |= HOLE
 		if order != null:
 			var goal: Array = order.target

@@ -1801,8 +1801,7 @@ func test_unload_needs_its_own_rider(runner) -> bool:
 	runner.check(target.call([loaded] as Array[int]) == loaded, "UR1 the loaded Scout Car has Unload")
 	runner.check(target.call([empty, loaded] as Array[int]) == -1, "UR1 two Scout Cars selected together have no Unload")
 	Fixture.load_unit(runner, sim, sim.spawn(1, Vector2(17.5, 4.5), "frc_rifle_infantry"), hub)
-	view = sim.view_state()
-	runner.check(target.call([empty] as Array[int]) == -1, "UR1 a loaded hub does not load the empty Scout Car")
+	runner.check(HudModel.unload_target(sim.view_state(), {"ids": [empty] as Array[int], "building_id": -1}, 1) == -1, "UR1 a loaded hub does not load the empty Scout Car")
 	return true
 
 static func _cells(main) -> Array:

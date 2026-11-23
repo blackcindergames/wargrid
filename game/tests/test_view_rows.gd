@@ -9,6 +9,7 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const CombatWorkload = preload("res://scripts/debug/combat_workload.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
+const Fixture = preload("res://tests/economy_fixture.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const TeamMatch = preload("res://scripts/debug/team_match.gd")
 
@@ -294,4 +295,16 @@ func test_view_state_is_read_only(runner) -> bool:
 		if tick == 180: runner.check(held_copy(held) == kept, "VR4 a held view state is unchanged after 30 steps")
 		if tick % 30 == 29: runner.check(StateHash.digest(a.snapshot()) == StateHash.digest(b.snapshot()), "VR4 digests equal at tick " + str(a.tick()))
 	runner.check(StateHash.digest(a.snapshot()) == StateHash.digest(b.snapshot()), "VR4 digests equal at the end")
+	return held_container_survives_boarding(runner)
+
+func held_container_survives_boarding(runner) -> bool:
+	var sim = Fixture.make_world()
+	var car: int = sim.spawn(1, Vector2(12.5, 4.5), "usa_light_vehicle")
+	var rider: int = sim.spawn(1, Vector2(14.5, 5.5), "usa_rifle_infantry")
+	var held: Dictionary = sim.view_state()
+	var kept: Dictionary = held_copy(held)
+	Fixture.load_unit(runner, sim, rider, car)
+	var later: Dictionary = sim.view_state()
+	runner.check(later.units.container[later.units.index_of(rider)] == car, "VR4 the later view sees the rider inside the car")
+	runner.check(held_copy(held) == kept and held.units.container[held.units.index_of(rider)] == -1, "VR4 a held view keeps its container column after a rider boards")
 	return true
