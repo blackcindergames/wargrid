@@ -16,8 +16,8 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 124% | 🔺 1% worse | 2026-11-23 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | ➖ same | 2026-11-23 |
-| Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔻 1% better | 2026-11-22 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 71% | 🔻 4% better | 2026-11-22 |
+| Drawing the screen | 🟢 OK | ███████░░░ 70% | 🔻 3% better | 2026-11-23 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 70% | 🔻 2% better | 2026-11-23 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 2% better | 2026-11-23 |
 | Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 1% worse | 2026-11-23 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔺 2% worse | 2026-11-23 |
@@ -34,8 +34,8 @@ Details:
 - combat stress p95: 163% of budget, exceeded (P2.3b gate fixes, 2026-11-23), unchanged vs P2.3b (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 143% of budget, exceeded (P2.3b gate fixes, 2026-11-23), 1% slower than P2.3b (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 213% of budget, exceeded (P2.3b gate fixes, 2026-11-23), 1% slower than P2.3b (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 73% of budget (P7 part 1 enemy bots, 2026-11-22), 1% faster than tooling-night merge (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 71% of budget (P7 part 1 enemy bots, 2026-11-22), 4% faster than tooling-night merge (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 70% of budget (P2.3b, 2026-11-23), 3% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 70% of budget (P2.3b, 2026-11-23), 2% faster than P7 part 1 enemy bots (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (P2.3b gate fixes, 2026-11-23), unchanged vs P2.3b (worst vs worst); run-to-run spread not measured
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
