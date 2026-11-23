@@ -233,6 +233,7 @@ func test_h_in_placement_reruns_the_preview(runner) -> bool:
 	main.orders.camera_moved()
 	var before: Vector2i = main.orders._preview_origin
 	BaseScene.new().key(main, KEY_H)
+	main.glide_camera(1.0)
 	var under := Vector2i(SkirmishTests._world_at(main, Vector2(640.0, 360.0)).floor())
 	runner.check(main.orders._preview_origin == under and under != before, "ES8 H in placement re-runs the preview under the pointer, wanted %s (was %s), got %s" % [under, before, main.orders._preview_origin])
 	runner.check(main.orders._placement_kind == "china_power_plant", "ES8 placement stays armed after H")

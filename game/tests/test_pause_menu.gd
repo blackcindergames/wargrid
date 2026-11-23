@@ -456,6 +456,7 @@ func test_controls_list_keys_work(runner) -> bool:
 					_press(main, press)
 					runner.check(orders.selected_ids == tanks, "%s: %s selects group %d, got %s" % [label, HudModel.key_label(press & KEY_CODE_MASK), slot + 1, orders.selected_ids])
 					_press(main, press)
+					main._process(main.GLIDE_SECONDS)
 					runner.check(camera.position != CameraTests.AWAY, "%s: a second press centres on the group" % label)
 				"save":
 					var slot: int = ControlGroups.KEYS.find(press & KEY_CODE_MASK)
@@ -479,10 +480,12 @@ func test_controls_list_keys_work(runner) -> bool:
 					runner.check(camera.position != CameraTests.AWAY, "%s: %s pans" % [label, actions[0]])
 				"home":
 					_press(main, press)
+					main._process(main.GLIDE_SECONDS)
 					runner.check(camera.position != CameraTests.AWAY, "%s moves the camera" % label)
 				"last_attack":
 					_base_shot(main, ids.factory)
 					_press(main, press)
+					main._process(main.GLIDE_SECONDS)
 					runner.check(camera.position != CameraTests.AWAY, "%s jumps to the hit factory" % label)
 				"esc":
 					HudTests._select(main, ids.tanks)

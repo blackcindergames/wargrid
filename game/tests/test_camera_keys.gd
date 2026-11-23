@@ -16,7 +16,7 @@ const LINE: String = "HUD/Hud/AlertLine"
 const AWAY := Vector2(-200, 100)
 
 func cases() -> Array[Callable]:
-	return [test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
+	return [test_h_glides_to_the_headquarters, test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
 
 func _world(runner) -> Array:
 	var main = await SkirmishTests.new()._setup(runner)
@@ -24,13 +24,14 @@ func _world(runner) -> Array:
 	main.get_node("Camera2D").position = AWAY
 	return [main, ids]
 
-func _key(main, code: Key, ctrl: bool = false) -> void:
+func _key(main, code: Key, ctrl: bool = false, settle: bool = true) -> void:
 	var event := InputEventKey.new()
 	event.physical_keycode = code
 	event.keycode = code
 	event.pressed = true
 	event.ctrl_pressed = ctrl
 	main._unhandled_input(event)
+	if settle: main.glide_camera(1.0)
 
 static func _plane(main, world: Vector2) -> Vector2:
 	return Iso.world_to_plane(world).clamp(main._camera_bounds.position, main._camera_bounds.end)
@@ -41,6 +42,54 @@ func _hit(main, target: int, id: int = 9, ahead: int = 1) -> void:
 	var results: Array[Dictionary] = []
 	main._sound.director.collect_step(tick, events, results)
 	main._refresh()
+
+func test_h_glides_to_the_headquarters(runner) -> bool:
+	var world: Array = await _world(runner)
+	var main = world[0]
+	var ids: Dictionary = world[1]
+	Fixture.add_completed(main.driver.pump.live(), 1, "usa_command_center", Vector2i(4, 4))
+	BaseScene.publish(main)
+	var camera: Camera2D = main.get_node("Camera2D")
+	var expected: Vector2 = _plane(main, Vector2(5.5, 5.5))
+	var span: float = AWAY.distance_to(expected)
+	_key(main, KEY_H, false, false)
+	runner.check(camera.position == AWAY, "CK10 H does not land on the same frame, got %s" % camera.position)
+	main.glide_camera(0.15)
+	var half: float = AWAY.distance_to(camera.position) / span
+	runner.check(half > 0.6 and half < 1.0, "CK10 halfway through the glide the camera has eased out past half the way, got %.2f" % half)
+	main.glide_camera(0.15)
+	runner.check(camera.position.is_equal_approx(expected), "CK10 after 0.3 s the camera is on the Headquarters, wanted %s, got %s" % [expected, camera.position])
+	camera.position = AWAY
+	_key(main, KEY_H, false, false)
+	main.glide_camera(0.1)
+	main.pan_camera(Vector2.RIGHT, 0.016)
+	var panned: Vector2 = camera.position
+	main.glide_camera(1.0)
+	runner.check(panned != AWAY and camera.position == panned, "CK10 a manual pan cancels the glide, got %s after the pan at %s" % [camera.position, panned])
+	_hit(main, ids.factory, ids.enemy)
+	var factory_at: Vector2 = _plane(main, Vector2(15.5, 15.5))
+	camera.position = AWAY
+	_key(main, KEY_H, false, false)
+	main.glide_camera(0.1)
+	_key(main, KEY_SPACE, false, false)
+	main.glide_camera(0.3)
+	runner.check(camera.position.is_equal_approx(factory_at), "CK10 Space mid-glide retargets to the hit, wanted %s, got %s" % [factory_at, camera.position])
+	camera.position = AWAY
+	_key(main, KEY_H, false, false)
+	main.orders._selecting = true
+	main.glide_camera(1.0)
+	main.orders._selecting = false
+	runner.check(camera.position == AWAY, "CK10 a drag box ends the glide, got %s" % camera.position)
+	main.centre_camera(Iso.plane_to_world(Vector2(100000, 100000)))
+	main.glide_camera(0.15)
+	var mid: Vector2 = camera.position
+	main.glide_camera(0.15)
+	runner.check(mid.y < main._camera_bounds.end.y and is_equal_approx(camera.position.y, main._camera_bounds.end.y), "CK10 the glide heads for the clamped target, mid-way %s, and stops on the bound, got %s" % [mid, camera.position])
+	camera.position = expected + Vector2(2, 0)
+	_key(main, KEY_H, false, false)
+	runner.check(camera.position.is_equal_approx(expected), "CK10 a target a few px away is reached at once, got %s" % camera.position)
+	main.free()
+	return true
 
 func test_h_centres_on_the_headquarters(runner) -> bool:
 	var world: Array = await _world(runner)
@@ -186,6 +235,7 @@ func test_space_after_a_click_presses_nothing(runner) -> bool:
 	scene._click_control(main, main.get_node("HUD/Economy/Card/Q"))
 	var produced: int = main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == "produce").size()
 	scene._push_key(main, KEY_SPACE)
+	main.glide_camera(1.0)
 	var again: int = main.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == "produce").size()
 	var focus: Control = main.get_viewport().gui_get_focus_owner()
 	runner.check(produced == 1 and again == 1 and focus == null, "CK6 a clicked cell never keeps the focus, so Space presses nothing (HD#36): %d then %d, focus %s" % [produced, again, focus])

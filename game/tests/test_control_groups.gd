@@ -29,6 +29,7 @@ func _key(main, slot: int, ctrl: bool = false, meta: bool = false, shift: bool =
 	event.shift_pressed = shift
 	event.alt_pressed = alt
 	main._unhandled_input(event)
+	main.glide_camera(1.0)
 
 static func _members(main, slot: int) -> Array:
 	return Array(main.orders.groups.ids(slot - 1))
@@ -408,9 +409,11 @@ func test_pan_guard_and_preview(runner) -> bool:
 	runner.check(camera.position == Vector2(400, 256) and camera.zoom == zoom, "CG13 the camera pans during placement, the zoom stays, got %s zoom %s" % [camera.position, camera.zoom])
 	runner.check(main.orders._preview_origin == expected and expected != before, "CG13 the ghost follows the pointer after the pan, wanted %s (was %s), got %s" % [expected, before, main.orders._preview_origin])
 	main.centre_camera(Iso.plane_to_world(Vector2(-300, 100)))
+	main.glide_camera(1.0)
 	var again := Vector2i(Iso.plane_to_world(main.get_node("WorldView").get_local_mouse_position()).floor())
 	runner.check(camera.position.is_equal_approx(Vector2(-300, 100)) and main.orders._preview_origin == again and again != expected, "CG13 centre_camera centres, and the ghost follows, got %s origin %s" % [camera.position, main.orders._preview_origin])
 	main.centre_camera(Iso.plane_to_world(Vector2(100000, 100000)))
+	main.glide_camera(1.0)
 	runner.check(is_equal_approx(camera.position.y, main._camera_bounds.end.y) and camera.position.x <= main._camera_bounds.end.x, "CG13 centre_camera clamps like a pan, got %s" % camera.position)
 	main.free()
 	return true

@@ -28,6 +28,9 @@ const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 const EDGE_BAND: float = 3.0
 const EDGE_STEP_MAX: float = 0.05
+# Zero Hour snaps (View::lookAt); the owner found the snap disorienting (user, 2026-11-23).
+const GLIDE_SECONDS: float = 0.3
+const GLIDE_SNAP_PX: float = 4.0
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
 static var map_path: String = Skirmish.MAP_PATH
 static var starts: Array[int] = []
@@ -43,6 +46,9 @@ var _last_result_sequence: int = -1
 var shown_state: Dictionary = {}
 var _shown_note: String = ""
 var _camera_bounds: Rect2
+var _glide_from: Vector2
+var _glide_to: Vector2
+var _glide_left: float = 0.0
 @onready var _view: Node2D = $WorldView
 @onready var _camera: Camera2D = $Camera2D
 var _perf: Label
@@ -176,6 +182,7 @@ func _reset_camera() -> void:
 		_camera_bounds = _camera_bounds.expand(Iso.world_to_plane(corner))
 	var start: Vector2i = driver.first_note.starts.get(view_player, Vector2i(-1, -1))
 	var focus := Vector2(start) + Vector2(0.5, 0.5) if start.x >= 0 else Vector2(size[0], size[1]) / 2.0
+	_glide_left = 0.0
 	_camera.position = Iso.world_to_plane(focus)
 
 func _create_world() -> void:
@@ -347,6 +354,7 @@ func _process(delta: float) -> void:
 	var arrows: Vector2 = Vector2.ZERO if _typing() or menu_open() or input_over() else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	if arrows != Vector2.ZERO: pan_camera(arrows, delta)
 	else: edge_scroll(delta)
+	glide_camera(delta)
 	_view.advance_frame()
 	if not _auto_pending: return
 	_auto_sample((_auto_tick_usec + _view.draw_usec) / 1000.0)
@@ -372,8 +380,9 @@ func _auto_sample(frame_ms: float) -> void:
 	_view.set_quality(quality)
 
 func pan_camera(direction: Vector2, delta: float) -> void:
-	if orders.is_selecting():
+	if orders.is_selecting() or direction == Vector2.ZERO:
 		return
+	_glide_left = 0.0
 	_move_camera(_camera.position + direction.normalized() * 400.0 * delta / _camera.zoom.x)
 
 func edge_scroll(delta: float) -> void:
@@ -390,7 +399,20 @@ static func _edge_sign(at: float, low: float, high: float) -> float:
 	return 1.0 if at >= high - EDGE_BAND else 0.0
 
 func centre_camera(world: Vector2) -> void:
-	_move_camera(Iso.world_to_plane(world))
+	_glide_to = Iso.world_to_plane(world).clamp(_camera_bounds.position, _camera_bounds.end)
+	_glide_from = _camera.position
+	_glide_left = GLIDE_SECONDS
+	if _glide_from.distance_to(_glide_to) <= GLIDE_SNAP_PX: glide_camera(GLIDE_SECONDS)
+
+# A drag box ends the glide, as it holds a pan.
+func glide_camera(delta: float) -> void:
+	if _glide_left <= 0.0: return
+	if orders.is_selecting():
+		_glide_left = 0.0
+		return
+	_glide_left = maxf(_glide_left - delta, 0.0)
+	var t: float = 1.0 - _glide_left / GLIDE_SECONDS
+	_move_camera(_glide_from.lerp(_glide_to, 1.0 - pow(1.0 - t, 3.0)))
 
 func _move_camera(plane: Vector2) -> void:
 	var before: Vector2 = _camera.position
