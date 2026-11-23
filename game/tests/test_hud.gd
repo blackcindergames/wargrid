@@ -1827,7 +1827,7 @@ func test_card_by_selection(runner) -> bool:
 		["a loaded Scout Car", [ids.car], -1, -1, ["A Attack Move", "S Stop", "", "F Unload", "", "", "", ""]],
 		["a loaded Tunnel Hub", [], ids.hub, -1, ["", "", "", "F Unload", "", "", "", ""]],
 		["the China factory", [], ids.factory, -1, ["800 Q Medium Tank", "800 W Rotary Gun Tank", "", ""] + EIGHT_WELLS],
-		["the China barracks", [], barracks, -1, ["300 Q Militia ×2", "300 W Anti-Tank Trooper", "", ""] + EIGHT_WELLS],
+		["the China barracks", [], barracks, -1, ["300 Q Militia", "300 W Anti-Tank Trooper", "", ""] + EIGHT_WELLS],
 		["nothing", [], -1, -1, []], ["an own Power Plant", [], ids.plant, -1, []], ["an inspected enemy", [], -1, ids.enemy, []], ["a pile", [], -1, ids.pile, []]]
 	for case: Array in states:
 		_select(main, case[1], case[2], case[3])

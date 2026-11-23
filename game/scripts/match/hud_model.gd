@@ -150,8 +150,7 @@ const COMMANDS := {"build": "Build", "back": "Back", "attack_move": "Attack Move
 static func cell_name(action: String, placement_kind: String) -> String:
 	if action == "back" and not placement_kind.is_empty(): return "Cancel"
 	if COMMANDS.has(action): return COMMANDS[action]
-	var quantity: int = Registry.kind(action).get("quantity", 1)
-	return Registry.kind(action).display_name + (" ×%d" % quantity if quantity > 1 else "")
+	return Registry.kind(action).display_name
 
 const QUEUE_SHOWN: int = 5
 const QUEUE_COLLAPSED: int = 4

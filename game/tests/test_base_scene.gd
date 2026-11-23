@@ -673,7 +673,7 @@ func test_build_menu_quantity_label(runner) -> bool:
 	main.orders.selected_building_id = barracks
 	publish(main)
 	await runner.process_frame
-	runner.check(_menu_texts(main) == ["Q 300 Militia \u00d72","W 300 Anti-Tank Trooper"],"M6 the Militia cell reads ×2, got " + str(_menu_texts(main)))
+	runner.check(_menu_texts(main) == ["Q 300 Militia","W 300 Anti-Tank Trooper"],"M6 the Militia cell shows no squad size (user, 2026-11-23), got " + str(_menu_texts(main)))
 	slab_clear(runner,main,"M6")
 	main.free()
 	return true
