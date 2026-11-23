@@ -2209,8 +2209,8 @@ func test_ph_preview_on_last_job_of_catch_up(runner) -> bool:
 	main._physics_process(1.0 / 30.0)
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	var previews: int = notes.filter(func(note: SimPump.Note) -> bool: return not note.preview.is_empty()).size()
-	runner.check(notes.size() == 2 and previews == 1, "PH a two-tick step call asks for the preview once, got %d notes and %d previews at tick %d" % [notes.size(), previews, tick])
-	runner.check(not notes[-1].preview.is_empty(), "PH on its last job")
+	runner.check(notes.size() == 2 and previews == 2, "PH a two-tick step call asks for the preview on both jobs, got %d notes and %d previews at tick %d" % [notes.size(), previews, tick])
+	runner.check(not notes[-1].preview.is_empty(), "PH including its last job")
 	main.free()
 	return true
 
