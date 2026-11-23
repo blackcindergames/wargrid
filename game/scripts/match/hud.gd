@@ -131,6 +131,11 @@ var helpers: Array[Control] = []:
 	set(surfaces):
 		helpers = surfaces
 		_producers.helpers = surfaces
+# The screen's answer to "is the match covered" (menu open, window unfocused); the strip's hint waits meanwhile.
+var hint_covered: Callable:
+	set(covered):
+		hint_covered = covered
+		_producers.covered = covered
 
 func _init() -> void:
 	name = "Hud"
@@ -630,6 +635,7 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	var building: Dictionary = HudModel.building(view, selection.building_id)
 	set_esc_chip(selection.esc_opens_menu)
 	_show_notice(selection.notice)
+	_producers.notice_up = _notice.visible
 	_show_selection(view, selection, seat, HudModel.player(view, view_player).get("faction", Registry.Factions.DEFAULT_FACTION))
 	if _economy != null: _economy_controls(view, building, selection, seat)
 	_strip_args = [view, selection, view_player]

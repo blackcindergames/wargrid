@@ -23,8 +23,8 @@ const HINT := "Click a chip to select its building · Double-click to go there"
 const HINT_MSEC: int = 10000
 const HINT_SECTION := "hints"
 const HINT_KEY := "strip_seen"
-const HINT_UNREAD: int = -2
-const HINT_GONE: int = -1
+const HINT_UNREAD: float = -2.0
+const HINT_GONE: float = -1.0
 
 # Off by default; F7 (`orders._debug_key`) flips it for the session, so the owner can compare both in one match.
 static var upright: bool = false
@@ -44,9 +44,16 @@ var _hover_since: int = -1
 var _tip_open: bool = false
 var _pressed_id: int = -1
 var _pressed_at: int = 0
+# The match screen's menu or an unfocused window: the hint's time stands still.
+var covered: Callable = func() -> bool: return false
+# An online notice takes the top centre, so the hint steps aside, its time paused.
+var notice_up: bool = false:
+	set(up):
+		notice_up = up
+		_show_hint()
 var _hint: PanelContainer
-# HINT_UNREAD until the strip first shows, then the msec the hint appeared, or HINT_GONE.
-var _hint_at: int = HINT_UNREAD
+# HINT_UNREAD until the strip first shows, then the msec of visible time left, or HINT_GONE.
+var _hint_left: float = HINT_UNREAD
 
 func _init() -> void:
 	name = "ProductionStrip"
@@ -274,23 +281,32 @@ func _hover(control: Control, entered: bool) -> void:
 	if entered: _hover_since = now_msec.call()
 	_show_tip()
 
-func _process(_delta: float) -> void:
+# The hint counts only frames it is seen in: shown, uncovered.
+func _process(delta: float) -> void:
 	if _hovered != null and not _tip.visible: _show_tip()
-	if _hint_at < 0: return
-	if now_msec.call() - _hint_at >= HINT_MSEC: _end_hint()
+	if not _hint.visible: return
+	if not covered.call(): _hint_left -= delta * 1000.0
+	if _hint_left <= 0.0: _end_hint()
 	else: _place_hint()
 
-# Read once, on the strip's first appearance; the strip hiding ends it.
+# The setting is read once, on the strip's first appearance; a hidden strip hides the hint, which waits.
 func _follow_hint() -> void:
-	if visible and _hint_at == HINT_UNREAD:
+	if visible and _hint_left == HINT_UNREAD:
 		var config := ConfigFile.new()
-		_hint_at = HINT_GONE if config.load(AudioSettings.path) == OK and config.get_value(HINT_SECTION, HINT_KEY, false) == true else now_msec.call()
-		_hint.visible = _hint_at >= 0
-	elif not visible and _hint_at >= 0: _end_hint()
+		_hint_left = HINT_GONE if config.load(AudioSettings.path) == OK and config.get_value(HINT_SECTION, HINT_KEY, false) == true else float(HINT_MSEC)
+	_show_hint()
+
+func _show_hint() -> void:
+	_hint.visible = visible and _hint_left >= 0.0 and not notice_up
+	if _hint.visible: _place_hint()
 
 func _end_hint() -> void:
-	_hint_at = HINT_GONE
+	_hint_left = HINT_GONE
 	_hint.visible = false
+	save_hint_seen()
+
+# Also for the capture tools, so their pictures show no hint.
+static func save_hint_seen() -> void:
 	var config := ConfigFile.new()
 	config.load(AudioSettings.path)
 	config.set_value(HINT_SECTION, HINT_KEY, true)
@@ -342,7 +358,7 @@ func _press(chip: Button) -> void:
 	var jump: bool = id == _pressed_id and now - _pressed_at <= ControlGroups.DOUBLE_TAP_MSEC
 	_pressed_id = -1 if jump else id
 	_pressed_at = now
-	if _hint_at >= 0: _end_hint()
+	if _hint_left >= 0.0: _end_hint()
 	producer_pressed.emit(id, jump)
 
 func reset() -> void:

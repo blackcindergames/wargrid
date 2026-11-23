@@ -2,6 +2,7 @@ extends SceneTree
 
 const LabCapture = preload("res://scripts/lab/lab_capture.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
+const ProductionStrip = preload("res://scripts/match/production_strip.gd")
 const Skirmish = preload("res://scenes/skirmish.tscn")
 const BaseScene = preload("res://tests/test_base_scene.gd")
 const HudTests = preload("res://tests/test_hud.gd")
@@ -112,6 +113,7 @@ func _run(directory: String) -> void:
 			var stem: String = "%s-%dx%d" % [shot.stem, window.x, window.y]
 			# Scratch settings and a fresh session per shot: the owner's files stay untouched, and a ticked item never leaks into the next picture.
 			_saved = _overlays._begin(true, HudTests._longest_card().id)
+			ProductionStrip.save_hint_seen()
 			_begun = true
 			_port = BaseScene.sized_port(self, window, pair[1])
 			_port.render_target_update_mode = SubViewport.UPDATE_ALWAYS

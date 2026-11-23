@@ -114,6 +114,7 @@ func _ready() -> void:
 	hud.cancel_build_pressed.connect(orders._cancel_build)
 	hud.row_clicked.connect(_select_kind)
 	hud.producer_pressed.connect(orders.select_producer)
+	hud.hint_covered = func() -> bool: return menu_open() or not _focused
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()

@@ -583,7 +583,8 @@ func test_strip_bar_stays_in_its_track(runner) -> bool:
 				var held: bool = outer.encloses(inner) and (is_equal_approx(inner.end.y, outer.end.y) and is_equal_approx(inner.size.y, length) and is_equal_approx(inner.size.x, outer.size.x) if upright else is_equal_approx(inner.position.x, outer.position.x) and is_equal_approx(inner.size.x, length) and is_equal_approx(inner.size.y, outer.size.y))
 				if not held: bad.append([snappedf(fraction, 0.001), outer, inner])
 			var edge: StyleBoxFlat = _chip_of(main, ids.factory).get_node("Track").get_theme_stylebox("panel") as StyleBoxFlat
-			runner.check(edge != null and not edge.anti_aliasing, "PS21 %s: the track draws hard edges like its fill" % ("upright" if upright else "stacked"))
+			var hollow: StyleBoxFlat = _chip_of(main, ids.barracks).get_node("Track").get_theme_stylebox("panel") as StyleBoxFlat
+			runner.check(edge != null and not edge.anti_aliasing and hollow != null and hollow != edge and not hollow.anti_aliasing, "PS21 %s: the busy and the idle (hollow) tracks draw hard edges like the fill" % ("upright" if upright else "stacked"))
 			runner.check(bad.is_empty(), "PS21 %s at %s: the fill stays in its track at its length, got %d off: %s" % ["upright" if upright else "stacked", pair[0], bad.size(), bad.slice(0, 4)])
 		_strip(main).set_upright(false)
 		_end(world)
@@ -654,15 +655,21 @@ static func _hint_saved() -> bool:
 	var config := ConfigFile.new()
 	return config.load(AudioSettings.path) == OK and config.get_value("hints", "strip_seen", false) == true
 
-# The owner's one-time hint (user, 2026-11-23): on the strip's first appearance, gone for good on a chip click, the strip hiding or after 10 s.
+# The owner's one-time hint (user, 2026-11-23): shown on the strip's first appearance, gone for good on a chip click or after 10 s of
+# visible time; a strip hide, the menu or an unfocused window pause it (coordinator's call, owner-reversible).
 func test_strip_hint_once(runner) -> bool:
 	var world: Array = await _world(runner)
 	var main = world[3]
 	var ids: Dictionary = world[4]
 	runner.check(_hint_shown(main) and not _hint_saved(), "PS24 the strip's first appearance shows the hint")
+	var config := ConfigFile.new()
+	config.set_value("audio", "music", 0.3)
+	config.save(AudioSettings.path)
 	HudTests._click_in(world[2], _centre(_chip_of(main, ids.factory)))
 	await _frames(runner)
-	runner.check(not _hint_shown(main) and _hint_saved(), "PS24 a chip click ends it and saves hints/strip_seen")
+	config = ConfigFile.new()
+	config.load(AudioSettings.path)
+	runner.check(not _hint_shown(main) and _hint_saved() and config.get_value("audio", "music", 0.0) == 0.3, "PS24 a chip click ends it and saves hints/strip_seen beside the other settings")
 	var fresh = ProductionStrip.new()
 	world[2].add_child(fresh)
 	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1, {}) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "left": "5s"}], -1, Color.WHITE)
@@ -672,23 +679,33 @@ func test_strip_hint_once(runner) -> bool:
 	world = await _world(runner)
 	main = world[3]
 	ids = world[4]
+	var strip: Control = _strip(main)
 	runner.check(_hint_shown(main), "PS24 fixture: a new machine shows the hint again")
+	strip._process(6.0)
 	_queues(main, {ids.hq: []})
 	await _frames(runner)
+	runner.check(not _hint_shown(main) and not _hint_saved(), "PS24 the strip hiding hides the hint without ending it")
+	strip._process(20.0)
 	_queues(main, {ids.hq: [DOZER]})
 	await _frames(runner)
-	runner.check(_strip(main).is_visible_in_tree() and not _hint_shown(main) and _hint_saved(), "PS24 the strip hiding ends it for good")
+	strip._process(3.0)
+	runner.check(_hint_shown(main), "PS24 back with the strip, hidden time not counted: 9 s visible, still shown")
+	strip._process(1.5)
+	runner.check(not _hint_shown(main) and _hint_saved(), "PS24 after 10 s of visible time it goes for good")
 	_end(world)
 	world = await _world(runner)
 	main = world[3]
-	var now: Array = [Time.get_ticks_msec()]
-	_clock(main, now)
-	now[0] += 9000
-	await _frames(runner)
-	runner.check(_hint_shown(main), "PS24 at 9 s the hint still shows")
-	now[0] += 1500
-	await _frames(runner)
-	runner.check(not _hint_shown(main) and _hint_saved(), "PS24 after 10 s it goes for good")
+	strip = _strip(main)
+	main._pause.open()
+	strip._process(20.0)
+	main._pause.close()
+	main._focused = false
+	strip._process(20.0)
+	main._focused = true
+	strip._process(9.0)
+	runner.check(_hint_shown(main), "PS24 time under the open menu or in an unfocused window is not counted")
+	strip._process(1.5)
+	runner.check(not _hint_shown(main), "PS24 and 10 s of uncovered time end it")
 	_end(world)
 	return true
 
@@ -709,6 +726,15 @@ func test_strip_hint_layout(runner) -> bool:
 		runner.check(Rect2(Vector2.ZERO, Vector2(size)).encloses(hint) and hint.position.y >= strip.end.y and hint.end.x <= strip.end.x, "PS25 %s: under the strip, not right of it, inside the view, got %s strip %s" % [at, hint, strip])
 		for other: String in ["HUD/Playtest/Chip", "HUD/MenuChip", "HUD/Hud/TopStrip", STRIP]:
 			runner.check(not hint.intersects(main.get_node(other).get_global_rect()), "PS25 %s: clear of %s, got %s" % [at, other, hint])
+		# An online notice takes the top centre; the hint steps aside (hidden, its time paused) while one shows.
+		var notice: String = "Waiting for the other player. " + "The relay holds the match until both seats answer again. ".repeat(3)
+		main.hud.update_hud(main.shown_state, HudTests._armed("", false, notice), 1, 1)
+		await _frames(runner)
+		var shown: Rect2 = main.get_node("HUD/Hud/Notice").get_global_rect()
+		runner.check(main.get_node("HUD/Hud/Notice").is_visible_in_tree() and not (_hint(main).is_visible_in_tree() and _hint(main).get_global_rect().intersects(shown)), "PS25 %s: the hint never meets a long notice %s" % [at, shown])
+		main._reshow()
+		await _frames(runner)
+		runner.check(_hint_shown(main), "PS25 %s: the hint is back once the notice goes" % at)
 		runner.check(not main.hud.blocks(hint.get_center()), "PS25 %s: the hint blocks nothing" % at)
 		HudTests._move(port, hint.get_center())
 		await _frames(runner)
