@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Wargrid · production panel study</title>
-<!-- Owner's draft v2 (2026-11-23) with the queue round's variants as hash or query params. -->
+<!-- Owner's draft v2 (2026-11-23) with the queue round's variants as hash or query params; boxh, nextpoint, nextrow, fx and fxa serve the P16 strip round. -->
 <style>
 @font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Regular.ttf)}
 @font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-SemiBold.ttf);font-weight:600}
@@ -38,8 +38,9 @@ kbd,.count{position:absolute;right:4px;background:#0c141a;padding:1px 4px}kbd{to
 .overflow{position:relative;color:#a6b7c2;font-weight:600;cursor:help;padding:4px}
 .hint .tag{margin-bottom:4px}
 .held{color:#96aab6;cursor:default}.held svg{fill:#5d707c}.held .bar{background:#5d707c}
-.empty{flex:none;height:84px;margin:5px 0;border:1px dashed #344956;display:grid;place-items:center;color:#96aab6;font-size:12px;text-align:center;line-height:16px}
+.empty{flex:none;height:var(--box-h,84px);margin:5px 0;border:1px dashed #344956;display:grid;place-items:center;color:#96aab6;font-size:12px;text-align:center;line-height:16px}
 .empty b{display:block;color:#bacbd5;font-size:13px}
+.tile.flash{background:color-mix(in srgb,#26384a calc(var(--fxa,1)*100%),#223241);box-shadow:inset 0 0 0 2px color-mix(in srgb,#60e5ed calc(var(--fxa,1)*100%),transparent)}.refund.flash{color:color-mix(in srgb,#60e5ed calc(var(--fxa,1)*100%),#e9eff2)}
 .idle-note{color:#96aab6}
 .card{position:absolute;right:226px;bottom:212px;width:238px;padding:9px 11px;background:#0c141a;border:1px solid #526775;font:600 12px/17px Public;color:#96aab6}
 .card b{display:block;color:#e9eff2;font-size:13px;margin-bottom:2px}.card .act{color:#e9eff2;margin-top:4px;display:block}
@@ -53,6 +54,10 @@ const params=new URLSearchParams(location.hash.length>1?location.hash.slice(1):l
 const opt=(k,d)=>params.get(k)??d;
 const count=Number(opt('count',9)), expanded=params.has('open');
 const fit=opt('fit','v2'), idle=opt('idle','plain'), badgeAt=opt('badge','now'), num=opt('num','pct'), look=opt('glyph','grey'), teach=opt('teach','none'), hq=params.has('hq'), held=params.has('held'), nowX=opt('nowx','1')!=='0', nextHint=params.has('nexthint'), rally=opt('rally','always'), nowRight=params.has('nowright'), owner=opt('owner','blue');
+// Strip round (P16): box height, a click on NEXT, the empty NEXT row, cancel feedback (fxa: the flash's strength, 0 to 1).
+const nextPoint=opt('nextpoint',''), nextRow=opt('nextrow',''), fx=opt('fx','');
+document.documentElement.style.setProperty('--fxa',opt('fxa','1'));
+if(params.has('boxh'))document.documentElement.style.setProperty('--box-h',params.get('boxh')+'px');
 if(fit==='tall')document.documentElement.style.setProperty('--panel-h','224px');
 if(look==='own')document.documentElement.style.setProperty('--glyph',owner==='red'?'#ff8f80':'#7fa6ff');
 if(owner==='red')document.documentElement.style.setProperty('--own','#e5484d');
@@ -92,7 +97,7 @@ function render(){
  }
  if(total>1){
   const next=runLength(1), firstHidden=1+next;
-  content+='<div class="strip next'+(nextHint?' preview':'')+'"><b class="tag">NEXT</b>'+unit(entries[1])+runName(1,next)+(nextHint?'<span class="hint">Cancel one '+kinds[entries[1]].name+' · refunds '+kinds[entries[1]].cost+'</span>':'');
+  content+='<div class="strip next'+(nextHint||nextPoint==='hint'||nextPoint==='right'?' preview':'')+'"><b class="tag">NEXT</b>'+unit(entries[1])+runName(1,next)+(nextHint?'<span class="hint">Cancel one '+kinds[entries[1]].name+' · refunds '+kinds[entries[1]].cost+'</span>':'')+(nextPoint==='hint'?'<span class="hint">To cancel a '+kinds[entries[1]].name+': right-click its cell</span>':nextPoint==='right'?'<span class="hint">Right-click: cancel one '+kinds[entries[1]].name+' · refunds '+kinds[entries[1]].cost+'</span>':'');
   if(firstHidden<total){
    const lines=[];
    for(let i=firstHidden;i<total;){const size=runLength(i);lines.push(runName(i,size));i+=size}
@@ -103,8 +108,11 @@ function render(){
   content+='</div>';
  }else if(total===1&&badgeAt==='next'){
   content+='<div class="strip"><b class="tag">NEXT</b><span class="idle-note">—</span>'+badge+'</div>';
+ }else if(total===1&&nextRow==='dash'){
+  content+='<div class="strip"><b class="tag">NEXT</b><span class="idle-note">—</span></div>';
  }
- const footer=rally==='always'||(rally==='idle'&&!total)?'<footer>Right-click ground: rally point</footer>':'';
+ // nextrow=rally: the idle footer itself, so the line sits exactly where it sits while idle.
+ const footer=rally==='always'||(rally==='idle'&&!total)||(total===1&&nextRow==='rally')?'<footer>Right-click ground: rally point</footer>':'';
  panel.innerHTML=header()+content+footer;
  const active=panel.querySelector('.now');
  if(active&&!held&&nowX)active.onclick=()=>cancel(0);
@@ -131,6 +139,17 @@ function cancel(index){
  render();
 }
 render();
+if(nextPoint==='card'){
+ const k=entries[1], n=entries.filter(e=>e===k).length;
+ main.insertAdjacentHTML('beforeend','<div class="card" style="right:'+(226+(1-k)*104)+'px"><b>'+kinds[k].name+'</b>'+['Beats light vehicles','Good against infantry at full spin · Weak against tanks'][k]+'<span class="act">Right-click: cancel the last ('+n+' queued)</span></div>');
+}
+if(nextPoint)main.insertAdjacentHTML('beforeend','<svg class="cursor" style="left:420px;top:'+(panel.offsetTop+panel.querySelector('.next').offsetTop+6)+'px;fill:#fff;stroke:#000;stroke-width:1" viewBox="0 0 14 21"><path d="M1 1v16l4-4 3 7 3-1-3-7h5z"/></svg>');
+// fx: the pointer on W, before (fx=before) or after a right-click cancelled the newest Rotary Gun Tank.
+if(fx){
+ if(fx!=='before')cancel(entries.lastIndexOf(1));
+ if(fx==='flash'){card.children[1].classList.add('flash');main.querySelector('.refund').classList.add('flash')}
+ main.insertAdjacentHTML('beforeend','<svg class="cursor" style="left:1004px;top:538px;fill:#fff;stroke:#000;stroke-width:1" viewBox="0 0 14 21"><path d="M1 1v16l4-4 3 7 3-1-3-7h5z"/></svg>');
+}
 function scale(){main.style.transform='scale('+Math.min(innerWidth/1280,innerHeight/720)+')'}
 onresize=scale;scale();
 onhashchange=()=>location.reload();

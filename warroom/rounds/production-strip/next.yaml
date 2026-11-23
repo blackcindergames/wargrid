@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: What should a click on NEXT do?
+why: >-
+  The queue round settled cancel by kind (right-click the build cell) with no click target on NEXT. The
+  player-experience pass flagged that a player who clicks NEXT expecting something gets nothing, one of
+  P16's refuting observations. Zero Hour players will try it: there a click on any queue icon cancels that
+  entry (GeneralsGameCode `afc2a103f`,
+  `Core/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarCommandProcessing.cpp:457-494`). B and C
+  only say where cancelling happens; D cancels.
+look: The pointer on NEXT (Medium Tank) and the Medium Tank cell (Q) at the right.
+crop: {x: 160, y: 400, w: 1120, h: 320}
+render:
+  page: docs/images/queue-round/factory.html
+  hash: count=4&fit=v2&rally=idle&num=secs&idle=box&boxh=68
+rec: B
+recWhy: >-
+  the left click a Zero Hour player makes out of habit gets an answer, and the answer is the cell's own card
+  with the one cancel rule, so nothing new is learned and nothing is cancelled by surprise. C answers only
+  those who wait for the hover. D is the most direct, but it is a second cancel target, which the queue round
+  turned down as a step back toward precise queue editing, and the left click stays dead.
+neutral: None of these
+options:
+  A:
+    name: No target (queue round answer)
+    render: {params: {nextpoint: none}}
+    sees: The pointer on NEXT; the row does not light up and a click does nothing.
+    notes: As decided in the queue round.
+  B:
+    name: A click opens the cell's card
+    render: {params: {nextpoint: card}}
+    sees: >-
+      After a click on NEXT, the Medium Tank cell's card opens above the cell: `Medium Tank`, `Beats light
+      vehicles`, `Right-click: cancel the last (1 queued)`. It closes when the pointer moves on.
+    notes: Points to the cell with its own card; cancels nothing.
+  C:
+    name: Hover hint only
+    render: {params: {nextpoint: hint}}
+    sees: 'The row lights up with `To cancel a Medium Tank: right-click its cell`; a click does nothing.'
+    notes: Teaches on hover; the click stays dead.
+  D:
+    name: Right-click on NEXT cancels one of that kind
+    render: {params: {nextpoint: right}}
+    sees: >-
+      The row lights up with `Right-click: cancel one Medium Tank · refunds 800`; a right-click there does
+      what a right-click on the cell does (the newest of that kind).
+    notes: The cell's rule on the row too; closest to Zero Hour's icon cancel.

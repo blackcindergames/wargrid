@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: What does one producer's chip look like?
+why: >-
+  The Full set drew the chip as glyph and bar side by side, 24 high (HUD v5 layout, Full set additions).
+  That was before the top strip became compact slabs (top strip round, user 2026-11-22: the strip takes
+  the space its information needs). Widths per chip: A 82 px, B 108 px, C 48 px. Five chips make a strip
+  of about 434, 564 and 264 px. The glyph is 18 px in all three, the grey two-tone unit glyph you picked in
+  the queue round. Zero Hour has no strip to copy.
+look: The chips at the top right; N for the other states (eleven producers shows the widths best).
+crop: {x: 0, y: 0, w: 1280, h: 240}
+controls:
+  state: [mixed, idle, many, more, low, hover, card, frc]
+rec: C
+recWhy: >-
+  the strip answers "is it busy, and with what"; the count is one click away in the panel. Stacked, the bar
+  sits under the glyph like the health bar under a unit in the world. Eight chips need 420 px instead of
+  about 690, so the top edge of the map stays free. Risk: an 18 px glyph in a 48 px chip is small; if it
+  reads poorly at 1x on the Steam Deck, A is the fallback.
+neutral: None of these
+options:
+  A:
+    name: Glyph and bar side by side (Full set)
+    render: {params: {chip: row}}
+    sees: Each chip 82 x 24 inside the strip slab, the glyph left, the 40 x 4 bar right of it.
+    notes: As the HUD v5 Full set drew it.
+  B:
+    name: Glyph, bar and queue count
+    render: {params: {chip: count}}
+    sees: As A, plus the queue length after the bar (`×4`), muted; an idle chip keeps the space empty.
+    notes: Tells how much is queued without a click; 108 px per chip.
+  C:
+    name: Glyph over bar, stacked
+    render: {params: {chip: stack}}
+    sees: Each chip 48 x 26, 2 px inside the slab's edge, the glyph on top and the 40 x 4 bar under it.
+    notes: Narrowest; reads like a unit with its bar under it.
