@@ -28,6 +28,12 @@ Branch `p17-pan-with-the-mouse`. Package row: [packages](../packages.md#day-lane
 
 Opus whole-branch review, Gemini 4 Neon high through `agy`, and the player-experience pass. Fixed test-first: a map pan released over a queue cell cancelled a unit (the cell now needs the press too); a release far from the press with no motion between replayed the order; middle-drag fought edge scroll; the open menu or a result left a pan and its cursor running (now dropped each frame); `H`'s back spot could trap `H` near home and survived a restart; disarming attack move mid-pan replaced the move cursor; a left press ends a pan whose release was lost; the ring now starts when the glide lands (the picked picture); MP7 split so the drag-box rule is pinned (reverting `MousePan.take`'s guard turns both halves red). Owner decisions from the review round (user, 2026-11-23): edge scroll outside the window pans only on the window's own screen; any pan or other jump forgets `H`'s back spot; the arrival ring is a ground mark under buildings. Owner check after the fixes (Mac mini, windowed): ring under the HQ, `H` back and the pan forgetting it, edge scroll past all four edges: "works perfect" (user, 2026-11-23). Not taken: the pinch factor still carries between gestures (accepted). Open: the Esc menu's Controls list has no room for the new rows at 720 px; the owner wants the menu itself researched and redesigned as separate work (only the `H` line changed here).
 
+## Gate checks (2026-11-23)
+
+- Branch CI run 45196160488 green on Linux and Windows (10 jobs); `sh tools/compare_local_traces.sh 45196160488` on macOS: combat 1200, team 100 and netplay 325 replays matched.
+- Headless benchmark (`PERF_LABEL="P17 pan with the mouse"`, load 2.56; macOS screen-capture services were active, no other app): all budgets as on `main` (combat open p95 1.910 ms against `main`'s 1.914; the combat stress rows over budget are report-only and over on `main` too).
+- Rendered benchmark, unprofiled, recorded with `perf_record.py`: 4 layouts passed, draw calls at most 23 (ceiling 60), tick p95 2.1-5.0 ms.
+
 ## Decided for you
 
 8 px distance-only threshold; anchor speed 4 x distance; the order fires at the press position; no pan from HUD presses; `H`'s 24 screen px "already home" range and the double tap mid-glide returning; the 2 x 2 cell start diamond for the `Space` ring; trackpad scroll at 33 px per gesture unit and a 1.25 pinch step.
