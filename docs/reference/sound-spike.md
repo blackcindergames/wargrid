@@ -147,7 +147,7 @@ music LUFS/true-peak dBFS: stay_the_course -30.0/-18.2, conflict -30.1/-15.7, en
 music size bytes: stay_the_course 2458259, conflict 2508577, enemy_spotted 1978908, mammoth 1625202, hitman 2327193
 ```
 
-`voice/allied_base_under_attack` joined in P2.3b (2026-11-23): "Allied base under attack." through the same Piper settings and `synth.py`; a full `synth.py` run left the other 29 files byte-identical to the committed ones (`cmp`). Nobody has heard it yet (owner's rendered batch).
+`voice/allied_base_under_attack` joined in P2.3b (2026-11-23): "Allied base under attack." through the same Piper settings and `synth.py`; a full `synth.py` run left the other 30 files byte-identical to the committed ones (`cmp`). Nobody has heard it yet (owner's rendered batch).
 
 ## Import and size (Task 3)
 

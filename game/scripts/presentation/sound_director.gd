@@ -28,6 +28,7 @@ var _tick: int = 0
 var _own_hit: Dictionary = {}
 var _allied_hit: Dictionary = {}
 var _alert: String = ""
+var _alert_tick: int = -1
 var announcer := Announcer.new()
 
 func _init(local_player: int, rng: RandomNumberGenerator = null) -> void:
@@ -109,6 +110,7 @@ func reset() -> void:
 	_own_hit = {}
 	_allied_hit = {}
 	_alert = ""
+	_alert_tick = -1
 	_tick = 0
 	announcer.clear()
 	_funds_rejected = false
@@ -122,10 +124,12 @@ func reset() -> void:
 
 func _records(state: Dictionary) -> Dictionary:
 	var records: Dictionary = {}
-	for building: Dictionary in state.get("buildings", []):
-		var footprint: Vector2i = Registry.kind(building.kind).get("footprint", Vector2i.ONE)
-		records[building.id] = {"kind": building.kind, "owner": building.owner, "position": Vector2(building.origin[0], building.origin[1]) + Vector2(footprint) / 2.0, "tier": 0, "building": true, "completed": building.get("completed", true), "hole": building.has("rebuild"), "site": building.has("hole_id"), "queue": building.get("queue", [])}
+	for building: Dictionary in state.get("buildings", []): records[building.id] = _building_record(building)
 	return records
+
+static func _building_record(building: Dictionary) -> Dictionary:
+	var footprint: Vector2i = Registry.kind(building.kind).get("footprint", Vector2i.ONE)
+	return {"kind": building.kind, "owner": building.owner, "position": Vector2(building.origin[0], building.origin[1]) + Vector2(footprint) / 2.0, "tier": 0, "building": true, "completed": building.get("completed", true), "hole": building.has("rebuild"), "site": building.has("hole_id"), "queue": building.get("queue", [])}
 
 func _lookup(id: int, current: Dictionary) -> Dictionary:
 	if current.has(id): return current[id]
@@ -150,27 +154,29 @@ func _consume(step: Dictionary, current: Dictionary, teams: Dictionary, requests
 		else: requests.append(ui_request("error"))
 
 # Any building that is not a rebuild hole, defences included (not `counts_for_victory`); an ally is on the local team.
-func _base_hit(id: int, current: Dictionary, teams: Dictionary, allied: bool) -> bool:
-	var record: Dictionary = _lookup(id, current)
+func _base_hit(record: Dictionary, teams: Dictionary, allied: bool) -> bool:
 	if record.is_empty() or not record.building or record.hole: return false
 	if not allied: return record.owner == _local_player
 	return record.owner != _local_player and teams.has(record.owner) and teams.get(record.owner) == teams.get(_local_player)
 
 func _own_base(id: int, current: Dictionary) -> bool:
-	return _base_hit(id, current, {}, false)
+	return _base_hit(_lookup(id, current), {}, false)
 
+# The pump copies the target's row onto the shot: a site can be placed, hit and gone between two displayed views.
 func _base_attack(event: Dictionary, current: Dictionary, teams: Dictionary) -> void:
-	var own: bool = _base_hit(event.target_id, current, teams, false)
-	if not own and not _base_hit(event.target_id, current, teams, true): return
-	var hit := {"tick": event.tick, "position": _lookup(event.target_id, current).position}
+	var target: Dictionary = _building_record(event.target_building) if event.has("target_building") else _lookup(event.target_id, current)
+	var own: bool = _base_hit(target, teams, false)
+	if not own and not _base_hit(target, teams, true): return
+	var hit := {"tick": event.tick, "position": target.position}
 	if own:
 		announcer.request("base_under_attack", event.tick)
 		_own_hit = hit
-		_alert = "Base under attack"
 	else:
 		announcer.request("allied_base_under_attack", event.tick)
 		_allied_hit = hit
-		if _alert.is_empty(): _alert = "Allied base under attack"
+	if event.tick > _alert_tick or (own and event.tick == _alert_tick):
+		_alert = "Base under attack" if own else "Allied base under attack"
+		_alert_tick = event.tick
 
 # Where Space jumps: the own base while its voice is still fresh, else the newest hit, any age; null before the first.
 func last_attack() -> Variant:
@@ -181,6 +187,7 @@ func last_attack() -> Variant:
 func take_alert() -> String:
 	var text: String = _alert
 	_alert = ""
+	_alert_tick = -1
 	return text
 
 func _shot(event: Dictionary, current: Dictionary, teams: Dictionary, requests: Array[Dictionary]) -> void:

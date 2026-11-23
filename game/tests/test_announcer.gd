@@ -10,7 +10,7 @@ const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const SkirmishScene = preload("res://scenes/skirmish.tscn")
 
 func cases() -> Array[Callable]:
-	return [test_second_base_attack_within_30s_is_silent, test_building_lost_cooldown_30s, test_low_power_cooldown_120s, test_insufficient_funds_cooldown_30s, test_line_expires_after_5s, test_one_line_at_a_time_by_priority, test_waiting_line_not_queued_twice, test_triggers_from_snapshots, test_unit_ready_not_fired_by_spawns, test_rubble_is_not_base, test_unit_attack_is_not_base_attack, test_frc_never_low_power, test_announcer_follows_local_seat, test_match_end_lines, test_online_start_says_nothing, test_restart_starts_silent, test_restart_resets_tick_guard, test_match_end_drops_queued_lines, test_funds_line_from_results_and_rejections, test_submit_without_funds_announces, test_blocked_presses_click_each_voice_once, test_allied_base_hit_has_its_own_line, test_allied_line_cooldown, test_defences_count_holes_do_not, test_own_and_allied_hit_in_one_tick, test_last_attack_for_space, test_alert_text]
+	return [test_second_base_attack_within_30s_is_silent, test_building_lost_cooldown_30s, test_low_power_cooldown_120s, test_insufficient_funds_cooldown_30s, test_line_expires_after_5s, test_one_line_at_a_time_by_priority, test_waiting_line_not_queued_twice, test_triggers_from_snapshots, test_unit_ready_not_fired_by_spawns, test_rubble_is_not_base, test_unit_attack_is_not_base_attack, test_frc_never_low_power, test_announcer_follows_local_seat, test_match_end_lines, test_online_start_says_nothing, test_restart_starts_silent, test_restart_resets_tick_guard, test_match_end_drops_queued_lines, test_funds_line_from_results_and_rejections, test_submit_without_funds_announces, test_blocked_presses_click_each_voice_once, test_allied_base_hit_has_its_own_line, test_allied_line_cooldown, test_defences_count_holes_do_not, test_own_and_allied_hit_in_one_tick, test_last_attack_for_space, test_alert_text, test_alert_text_follows_the_newest_tick, test_hit_on_a_site_gone_from_both_views]
 
 func _starts(announcer, line: String, tick: int) -> bool:
 	announcer.request(line, tick)
@@ -332,8 +332,8 @@ func test_allied_base_hit_has_its_own_line(runner) -> bool:
 	var director = _director(_allied_state(1, _own_and_ally()))
 	runner.check(_hit_line(director, 2, 8) == ["allied_base_under_attack"], "AL1 a shot at an ally's building gives the allied line")
 	runner.check(_hit_line(director, 3, 7) == ["base_under_attack"], "AL1 a shot at an own building keeps the old line")
-	runner.check(_hit_line(director, 4, 6).is_empty(), "AL1 a shot at an enemy building says nothing")
-	runner.check(_hit_line(director, 5, 10).is_empty(), "AL1 a shot at an own unit says nothing")
+	runner.check(_hit_line(_director(_allied_state(1, _own_and_ally())), 4, 6).is_empty(), "AL1 a shot at an enemy building says nothing, on a fresh director")
+	runner.check(_hit_line(_director(_allied_state(1, _own_and_ally())), 5, 10).is_empty(), "AL1 a shot at an own unit says nothing, on a fresh director")
 	for line: String in Announcer.PRIORITY: runner.check(load(Announcer.path(line)) is AudioStream, "AL1 %s has its wav" % line)
 	runner.check(Announcer.PRIORITY.allied_base_under_attack == 6 and Announcer.COOLDOWN_TICKS.allied_base_under_attack == 900, "AL1 priority 6, cooldown 900 (Eva.ini)")
 	return true
@@ -399,4 +399,47 @@ func test_alert_text(runner) -> bool:
 	runner.check(director.take_alert() == "Base under attack", "AL6 own and allied in one tick show the own words")
 	_hit_line(director, 4, 6)
 	runner.check(director.take_alert().is_empty(), "AL6 an enemy building alerts nothing")
+	return true
+
+func test_alert_text_follows_the_newest_tick(runner) -> bool:
+	var together = _director(_allied_state(1, _own_and_ally()))
+	_step(together, 2, [_hit(2, 9, 7)])
+	_step(together, 3, [_hit(3, 9, 8)])
+	together.update(_allied_state(3, _own_and_ally()))
+	runner.check(together.take_alert() == "Allied base under attack", "AL7 own at 2, allied at 3, one refresh: the newer allied words")
+	var apart = _director(_allied_state(1, _own_and_ally()))
+	runner.check(_hit_line(apart, 2, 7) == ["base_under_attack"] and apart.take_alert() == "Base under attack", "AL7 own at 2 alone: own words")
+	_hit_line(apart, 3, 8)
+	runner.check(apart.take_alert() == "Allied base under attack", "AL7 allied at 3 in the next refresh: allied words")
+	var reversed = _director(_allied_state(1, _own_and_ally()))
+	_step(reversed, 2, [_hit(2, 9, 8)])
+	_step(reversed, 3, [_hit(3, 9, 7)])
+	reversed.update(_allied_state(3, _own_and_ally()))
+	runner.check(reversed.take_alert() == "Base under attack", "AL7 allied at 2, own at 3, one refresh: the newer own words")
+	return true
+
+# The pump copies the target's row onto the shot, so a site gone from both displayed views still counts.
+func test_hit_on_a_site_gone_from_both_views(runner) -> bool:
+	var site := _building(12, "usa_barracks", 1, {"origin": [10.0, 10.0], "completed": false, "hole_id": 4})
+	var director = _director(_allied_state(1, []))
+	var shot := _hit(2, 9, 12)
+	shot.target_building = site
+	_step(director, 2, [shot])
+	director.update(_allied_state(3, []))
+	runner.check(_lines(director, 3) == ["base_under_attack"] and director.take_alert() == "Base under attack", "AL8 an own site hit and gone: voice and alert")
+	runner.check(director.last_attack() == Vector2(11.0, 11.0), "AL8 Space goes to the site's centre, got %s" % [director.last_attack()])
+	var ally := _building(13, "usa_barracks", 3, {"origin": [20.0, 20.0], "completed": false, "hole_id": 5})
+	var other = _director(_allied_state(1, []))
+	var allied_shot := _hit(2, 9, 13)
+	allied_shot.target_building = ally
+	_step(other, 2, [allied_shot])
+	other.update(_allied_state(3, []))
+	runner.check(_lines(other, 3) == ["allied_base_under_attack"] and other.last_attack() == Vector2(21.0, 21.0), "AL8 an allied site hit and gone: allied line and centre")
+	var hole := _building(14, "frc_hole_1", 1, {"rebuild": {}})
+	var hole_shot := _hit(2, 9, 14)
+	hole_shot.target_building = hole
+	var quiet = _director(_allied_state(1, []))
+	_step(quiet, 2, [hole_shot])
+	quiet.update(_allied_state(3, []))
+	runner.check(_lines(quiet, 3).is_empty() and quiet.take_alert().is_empty() and quiet.last_attack() == null, "AL8 a rebuild hole, gone, says nothing")
 	return true

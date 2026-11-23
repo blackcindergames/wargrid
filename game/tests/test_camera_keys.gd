@@ -34,8 +34,8 @@ func _key(main, code: Key, ctrl: bool = false) -> void:
 static func _plane(main, world: Vector2) -> Vector2:
 	return Iso.world_to_plane(world).clamp(main._camera_bounds.position, main._camera_bounds.end)
 
-func _hit(main, target: int, id: int = 9) -> void:
-	var tick: int = main.shown_state.tick + 1
+func _hit(main, target: int, id: int = 9, ahead: int = 1) -> void:
+	var tick: int = main.shown_state.tick + ahead
 	var events: Array[Dictionary] = [{"type": "shot", "tick": tick, "attacker_id": id, "target_id": target, "damage": 1, "splash": false}]
 	var results: Array[Dictionary] = []
 	main._sound.director.collect_step(tick, events, results)
@@ -64,18 +64,18 @@ func test_h_centres_on_the_headquarters(runner) -> bool:
 func test_h_without_one(runner) -> bool:
 	var world: Array = await _world(runner)
 	var main = world[0]
+	var sim = main.driver.pump.live()
+	for found: Dictionary in main.shown_state.buildings: sim.remove_object(found.id)
+	Fixture.add_completed(sim, 1, "usa_barracks", Vector2i(4, 4))
+	Fixture.add_completed(sim, 1, "usa_power_plant", Vector2i(20, 6))
+	BaseScene.publish(main)
 	var camera: Camera2D = main.get_node("Camera2D")
-	var costliest: Dictionary = {}
-	for found: Dictionary in main.shown_state.buildings:
-		if found.owner == 1 and (costliest.is_empty() or Registry.kind(found.kind).cost > Registry.kind(costliest.kind).cost): costliest = found
-	var footprint: Vector2i = Registry.kind(costliest.kind).get("footprint", Vector2i.ONE)
-	var centre: Vector2 = _plane(main, Vector2(costliest.origin[0], costliest.origin[1]) + Vector2(footprint) / 2.0)
+	var centre: Vector2 = _plane(main, Vector2(21.0, 7.0))
 	_key(main, KEY_H)
-	runner.check(camera.position.is_equal_approx(centre) and centre != AWAY, "CK2 without a Headquarters H centres on the costliest own building %s, wanted %s, got %s" % [costliest.kind, centre, camera.position])
+	runner.check(camera.position.is_equal_approx(centre) and centre != AWAY, "CK2 without a Headquarters H centres on the costliest own building, the later 800 Power Plant over the 600 Barracks, wanted %s, got %s" % [centre, camera.position])
 	var empty = await _world(runner)
 	var bare = empty[0]
-	var sim = bare.driver.pump.live()
-	for found: Dictionary in bare.shown_state.buildings: sim.remove_object(found.id)
+	for found: Dictionary in bare.shown_state.buildings: bare.driver.pump.live().remove_object(found.id)
 	BaseScene.publish(bare)
 	_key(bare, KEY_H)
 	runner.check(bare.shown_state.buildings.is_empty() and bare.get_node("Camera2D").position == AWAY, "CK2 with no building H does nothing, got %s" % bare.get_node("Camera2D").position)
@@ -92,7 +92,9 @@ func test_space_without_an_event(runner) -> bool:
 	_hit(main, world[1].tanks[0])
 	_key(main, KEY_SPACE)
 	runner.check(camera.position == AWAY, "CK3 a shot at a unit is no base attack, got %s" % camera.position)
-	_hit(main, world[1].factory, world[1].enemy)
+	_hit(main, world[1].factory, world[1].enemy, 2)
+	var stored: Variant = main._sound.director.last_attack()
+	runner.check(stored is Vector2 and stored.is_equal_approx(Vector2(15.5, 15.5)), "CK3 fixture: the factory hit is the stored destination, got %s" % [stored])
 	_key(main, KEY_SPACE, true)
 	runner.check(camera.position == AWAY, "CK3 Ctrl+Space does nothing, got %s" % camera.position)
 	main.free()
