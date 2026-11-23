@@ -149,7 +149,6 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	orders._set_attack_move(false)
 	driver.detach()
-	if Input.mouse_mode == Input.MOUSE_MODE_CONFINED: Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	ViewCaps.release(get_tree().root)
 
 func _add_playtest() -> void:
@@ -347,7 +346,6 @@ func _present_if_due() -> bool:
 
 func _process(delta: float) -> void:
 	_show_esc_chip()
-	_update_pointer_confine()
 	_drop_stale_attack_move()
 	var drained_at: int = Time.get_ticks_usec()
 	if _drain_notes() and _auto_pending: _auto_tick_usec += Time.get_ticks_usec() - drained_at
@@ -395,15 +393,6 @@ func edge_direction() -> Vector2:
 	if not (_focused and _pointer_in) or _typing() or menu_open() or input_over(): return Vector2.ZERO
 	var view: Rect2 = get_viewport().get_visible_rect()
 	return Vector2(_edge_sign(_pointer.x, view.position.x, view.end.x), _edge_sign(_pointer.y, view.position.y, view.end.y))
-
-# Zero Hour's rule: a windowed match keeps the pointer in the window so edge scroll never slides off it (user, 2026-11-23).
-# Fullscreen too: there it only stops a slide onto a second monitor. Web cannot confine.
-func pointer_mode() -> Input.MouseMode:
-	if _playtest.web or _leaving or not _focused or _typing() or menu_open() or input_over(): return Input.MOUSE_MODE_VISIBLE
-	return Input.MOUSE_MODE_CONFINED
-
-func _update_pointer_confine() -> void:
-	if Input.mouse_mode != pointer_mode() and DisplayServer.get_name() != "headless": Input.mouse_mode = pointer_mode()
 
 static func _edge_sign(at: float, low: float, high: float) -> float:
 	if at < low + EDGE_BAND: return -1.0
