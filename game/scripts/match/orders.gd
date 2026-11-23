@@ -10,6 +10,8 @@ const SoundDirector = preload("res://scripts/presentation/sound_director.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
 const BUILDER_LOST: String = "Builder lost"
 const GROUPS_UNITS_ONLY: String = "Groups hold units only"
+# A Space spot has no footprint; the ring starts from a 2 x 2 cell diamond around it.
+const SPOT_CELLS := Vector2(2, 2)
 
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
@@ -157,13 +159,22 @@ func _group_key(event: InputEvent) -> bool:
 	else: _recall_group(slot)
 	return true
 
-# H centres on the Headquarters and Space on the last base attack; the camera moves in placement and the sub-grid too, never during a drag.
+# H centres on the Headquarters (again: back) and Space on the last base attack; the camera moves in placement and the sub-grid too, never during a drag.
 func _camera_key(event: InputEvent) -> bool:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo or not key.physical_keycode in [KEY_H, KEY_SPACE]: return false
 	if key.ctrl_pressed or key.meta_pressed or key.alt_pressed or is_selecting() or _screen.menu_open(): return true
-	var target: Variant = HudModel.home_position(_screen.shown_state, _screen.local_player) if key.physical_keycode == KEY_H else _screen._sound.director.last_attack()
-	if target != null: _screen.centre_camera(target)
+	if key.physical_keycode == KEY_H:
+		var home: Dictionary = HudModel.home_building(_screen.shown_state, _screen.local_player)
+		if home.is_empty(): return true
+		var origin := Vector2(home.origin[0], home.origin[1])
+		var size := Vector2(Registry.kind(home.kind).get("footprint", Vector2i.ONE))
+		if _screen.jump_home(origin + size / 2.0): _screen._view.show_arrival(origin, size, _screen._view.ARRIVAL_HOME)
+		return true
+	var attack: Variant = _screen._sound.director.last_attack()
+	if attack == null: return true
+	_screen.centre_camera(attack)
+	_screen._view.show_arrival(attack - SPOT_CELLS / 2.0, SPOT_CELLS, _screen._view.ARRIVAL_ATTACK)
 	return true
 
 # Units only; a building or an inspected enemy leaves the group be, nothing selected empties it.

@@ -28,13 +28,12 @@ static func player(view: Dictionary, id: int) -> Dictionary:
 	return view.players[0]
 
 # H: the faction's start building, lowest id; else the costliest own one, lowest id. Holes and sites do not count.
-static func home_position(view: Dictionary, seat: int) -> Variant:
+static func home_building(view: Dictionary, seat: int) -> Dictionary:
 	var start: String = Registry.faction(player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)).get("start_building", "")
 	var best: Dictionary = {}
 	for found: Dictionary in view.buildings:
 		if found.owner == seat and found.get("completed", true) and not found.has("rebuild") and (best.is_empty() or _home_before(found, best, start)): best = found
-	if best.is_empty(): return null
-	return Vector2(best.origin[0], best.origin[1]) + Vector2(Registry.kind(best.kind).get("footprint", Vector2i.ONE)) / 2.0
+	return best
 
 static func _home_before(a: Dictionary, b: Dictionary, start: String) -> bool:
 	if (a.kind == start) != (b.kind == start): return a.kind == start

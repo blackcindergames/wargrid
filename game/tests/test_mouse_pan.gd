@@ -6,16 +6,21 @@ const SkirmishTests = preload("res://tests/test_skirmish_scene.gd")
 const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
 const EdgeTests = preload("res://tests/test_edge_scroll.gd")
 const Orders = preload("res://scripts/match/orders.gd")
+const MousePan = preload("res://scripts/match/mouse_pan.gd")
 const AT := Vector2(640, 300)
 
 func cases() -> Array[Callable]:
-	return [test_still_right_click_orders_on_release, test_right_drag_sends_nothing_and_keeps_selection, test_right_drag_keeps_placement, test_right_drag_keeps_attack_move, test_right_drag_pans_faster_further_out, test_middle_drag_grabs_the_map, test_drag_box_holds_right_and_middle, test_zoom_mid_grab_does_not_jump, test_lost_release_frees_the_next_click, test_open_menu_holds_order_and_grab]
+	return [test_still_right_click_orders_on_release, test_right_drag_sends_nothing_and_keeps_selection, test_right_drag_keeps_placement, test_right_drag_keeps_attack_move, test_right_drag_pans_faster_further_out, test_middle_drag_grabs_the_map, test_drag_box_holds_right_and_middle, test_zoom_mid_grab_does_not_jump, test_lost_release_frees_the_next_click, test_open_menu_holds_order_and_grab, test_trackpad_scroll_pans_and_pinch_zooms]
 
 func _drag(port: SubViewport, button: MouseButton, to: Vector2, release: bool = true) -> void:
 	SkirmishTests._push_move(port, AT)
 	SkirmishTests._push_button(port, AT, button, true)
 	SkirmishTests._push_move(port, to)
 	if release: SkirmishTests._push_button(port, to, button, false)
+
+static func _gesture(port: SubViewport, event: InputEventGesture) -> void:
+	event.position = AT * Vector2(port.size) / Vector2(port.size_2d_override)
+	port.push_input(event)
 
 func test_still_right_click_orders_on_release(runner) -> bool:
 	var overlays = OverlayTests.new()
@@ -206,6 +211,32 @@ func test_open_menu_holds_order_and_grab(runner) -> bool:
 	runner.check(camera.position == start, "MP10 a middle grab holds behind the open menu, got %s" % (camera.position - start))
 	main._pause.close()
 	SkirmishTests._push_button(port, AT + Vector2(60, 30), MOUSE_BUTTON_MIDDLE, false)
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_trackpad_scroll_pans_and_pinch_zooms(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await EdgeTests.new()._scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	var camera: Camera2D = main.get_node("Camera2D")
+	var start: Vector2 = camera.position
+	var pan := InputEventPanGesture.new()
+	pan.delta = Vector2(1.0, -2.0)
+	_gesture(port, pan)
+	runner.check((camera.position - start).is_equal_approx(Vector2(1.0, -2.0) * MousePan.GESTURE_PX / camera.zoom.x), "MP11 a two-finger scroll moves the camera by its delta, got %s" % (camera.position - start))
+	var zoom: float = camera.zoom.x
+	for factor: float in [1.1, 1.1]:
+		var pinch := InputEventMagnifyGesture.new()
+		pinch.factor = factor
+		_gesture(port, pinch)
+	runner.check(camera.zoom.x == zoom, "MP11 a pinch below 1.25x keeps the zoom, got %s" % camera.zoom.x)
+	var more := InputEventMagnifyGesture.new()
+	more.factor = 1.1
+	_gesture(port, more)
+	runner.check(camera.zoom.x > zoom, "MP11 a pinch past 1.25x steps the zoom in, got %s from %s" % [camera.zoom.x, zoom])
 	port.free()
 	overlays._end(saved)
 	return true

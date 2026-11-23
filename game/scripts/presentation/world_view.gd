@@ -40,6 +40,7 @@ var _visual_tick: int = -1
 var _waiting: Dictionary = {}
 var _canvas: CanvasItem
 var draw_usec: int = 0
+var _arrival: Dictionary = {}
 var drawn_selection_lines: int = -1
 var _items: Array[Dictionary] = []
 var time_draws: bool = false
@@ -62,6 +63,12 @@ const HINT_TICKS: int = 40
 const MUZZLE_LIFT: float = 20.0
 const HEALTH_BAR := Vector2(24, 3)
 const SELECT_COLOR := Color("8cff87")
+# Arrival ring, picked in the queue follow-up round (user, 2026-11-23); the dark under-stroke is art direction §11's.
+const ARRIVAL_HOME := Color("9cbcff")
+const ARRIVAL_ATTACK := Color("f5b94a")
+const ARRIVAL_UNDER := Color("0b1016")
+const ARRIVAL_USEC: int = 600000
+const ARRIVAL_GROWTH: float = 1.7
 const GRID_COLOR := Color(0, 0, 0, 0.18)
 const CHEVRON_WIDTH: float = 5.0
 
@@ -281,6 +288,7 @@ func blend(alpha: float) -> void:
 
 # Called once per rendered frame. The frame that carried a tick already drew alpha 0.
 func advance_frame(now_usec: int = -1) -> void:
+	if not _arrival.is_empty(): queue_redraw()
 	if _fresh:
 		_fresh = false
 		return
@@ -429,6 +437,7 @@ func _draw() -> void:
 	_draw_inspected()
 	_draw_resume_outline()
 	_draw_rally()
+	_draw_arrival()
 	_draw_hints()
 	_draw_cues()
 	_draw_labels()
@@ -556,6 +565,33 @@ func _draw_hints() -> void:
 		var age: float = float(_state.tick - hint.tick) / HINT_TICKS
 		var center: Vector2 = Iso.world_to_plane(hint.point)
 		draw_arc(center, 14.0 * age + 4.0, 0.0, TAU, 16, Color(SELECT_COLOR, hint_alpha(age)), 2.0)
+
+func show_arrival(origin: Vector2, size: Vector2, color: Color) -> void:
+	_arrival = {"polygon": _cell_polygon(origin, size), "centre": Iso.world_to_plane(origin + size / 2.0), "color": color, "started": Time.get_ticks_usec()}
+	queue_redraw()
+
+func arrival_started_usec() -> int:
+	return _arrival.get("started", -1)
+
+# The ring's look at `now_usec`, empty once it has faded; eases out as the round's picture does.
+func arrival_ring(now_usec: int) -> Dictionary:
+	if _arrival.is_empty(): return {}
+	var t: float = float(now_usec - _arrival.started) / ARRIVAL_USEC
+	if t >= 1.0 or t < 0.0: return {}
+	var grown: float = lerpf(1.0, ARRIVAL_GROWTH, 1.0 - pow(1.0 - t, 3.0))
+	var polygon := PackedVector2Array()
+	for point: Vector2 in _arrival.polygon: polygon.append(_arrival.centre + (point - _arrival.centre) * grown)
+	return {"polygon": polygon, "color": _arrival.color, "alpha": 0.95 * (1.0 - t)}
+
+func _draw_arrival() -> void:
+	var ring: Dictionary = arrival_ring(Time.get_ticks_usec())
+	if ring.is_empty():
+		_arrival = {}
+		return
+	var closed: PackedVector2Array = ring.polygon
+	closed.append(closed[0])
+	draw_polyline(closed, Color(ARRIVAL_UNDER, ring.alpha), 5.0)
+	draw_polyline(closed, Color(ring.color, ring.alpha), 3.0)
 
 func rally_marker() -> Array:
 	for building: Dictionary in _state.get("buildings", []):

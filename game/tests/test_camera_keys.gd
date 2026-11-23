@@ -8,6 +8,7 @@ const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
+const View = preload("res://scripts/presentation/world_view.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Scene = preload("res://scenes/skirmish.tscn")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
@@ -18,7 +19,7 @@ const AWAY := Vector2(-200, 100)
 const ABOVE: float = 84.0
 
 func cases() -> Array[Callable]:
-	return [test_h_glides_to_the_headquarters, test_h_lands_above_the_dock, test_zoom_mid_glide_keeps_the_landing,test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
+	return [test_h_glides_to_the_headquarters, test_h_again_returns_to_where_you_were, test_arrival_ring, test_h_lands_above_the_dock, test_zoom_mid_glide_keeps_the_landing,test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
 
 func _world(runner) -> Array:
 	var main = await SkirmishTests.new()._setup(runner)
@@ -110,6 +111,7 @@ func test_h_glides_to_the_headquarters(runner) -> bool:
 	main.glide_camera(1.0)
 	runner.check(is_equal_approx(camera.position.y, main._camera_bounds.end.y), "CK10 a target near the bottom bound stays clamped after the dock shift, got %s" % camera.position)
 	camera.position = expected + Vector2(2, 0)
+	main._jump_back = null # a first H: a second one this near goes back (CK14)
 	_key(main, KEY_H, false, false)
 	runner.check(camera.position.is_equal_approx(expected), "CK10 a target a few px away is reached at once, got %s" % camera.position)
 	main.free()
@@ -148,6 +150,63 @@ func test_zoom_mid_glide_keeps_the_landing(runner) -> bool:
 	var expected: Vector2 = _plane(main, Vector2(5.5, 5.5))
 	runner.check(expected != before and camera.position.is_equal_approx(expected), "CK12 a zoom mid-glide lands above the dock at the new zoom, wanted %s, got %s" % [expected, camera.position])
 	main.free()
+	return true
+
+# 0 A.D.'s jumpCamera: the same key again on arrival goes back.
+func test_h_again_returns_to_where_you_were(runner) -> bool:
+	var world: Array = await _world(runner)
+	var main = world[0]
+	Fixture.add_completed(main.driver.pump.live(), 1, "usa_command_center", Vector2i(4, 4))
+	BaseScene.publish(main)
+	var camera: Camera2D = main.get_node("Camera2D")
+	var home: Vector2 = _plane(main, Vector2(5.5, 5.5))
+	_key(main, KEY_H)
+	_key(main, KEY_H)
+	runner.check(camera.position.is_equal_approx(AWAY), "CK14 H again at the Headquarters returns to where the camera was, wanted %s, got %s" % [AWAY, camera.position])
+	_key(main, KEY_H)
+	runner.check(camera.position.is_equal_approx(home), "CK14 a third H goes home again, got %s" % camera.position)
+	camera.position = home + Vector2(30, 0) / camera.zoom.x
+	_key(main, KEY_H)
+	runner.check(camera.position.is_equal_approx(home), "CK14 H panned 30 px off the Headquarters centres on it, not back, got %s" % camera.position)
+	camera.position = AWAY
+	_key(main, KEY_H, false, false)
+	_key(main, KEY_H)
+	runner.check(camera.position.is_equal_approx(AWAY), "CK14 a double tap during the glide returns, got %s" % camera.position)
+	main.free()
+	return true
+
+# Picked in the queue follow-up round (user, 2026-11-23): leaves the footprint, grows to 1.7x, fades in 0.6 s; amber at a Space spot; none on H's return.
+func test_arrival_ring(runner) -> bool:
+	var world: Array = await _world(runner)
+	var main = world[0]
+	var ids: Dictionary = world[1]
+	var view = main.get_node("WorldView")
+	Fixture.add_completed(main.driver.pump.live(), 1, "usa_command_center", Vector2i(4, 4))
+	BaseScene.publish(main)
+	runner.check(view.arrival_ring(0).is_empty(), "CK15 no ring before a jump")
+	_key(main, KEY_H)
+	var start: int = view.arrival_started_usec()
+	var first: Dictionary = view.arrival_ring(start)
+	var footprint: PackedVector2Array = view._cell_polygon(Vector2(4, 4), Vector2(3, 3))
+	runner.check(not first.is_empty() and first.color == View.ARRIVAL_HOME and _same_polygon(first.polygon, footprint) and first.alpha > 0.9, "CK15 H starts a ring on the Headquarters footprint, got %s" % [first])
+	var late: Dictionary = view.arrival_ring(start + 590000)
+	var centre: Vector2 = Iso.world_to_plane(Vector2(5.5, 5.5))
+	var grown: float = late.polygon[0].distance_to(centre) / footprint[0].distance_to(centre)
+	runner.check(late.alpha < 0.1 and grown > 1.69 and grown <= 1.7, "CK15 near 0.6 s it has grown to about 1.7x (%.3f) and faded, got %s" % [grown, late])
+	runner.check(view.arrival_ring(start + 600000).is_empty(), "CK15 gone after 0.6 s")
+	_key(main, KEY_H)
+	runner.check(view.arrival_started_usec() == start, "CK15 H's return starts no ring")
+	_hit(main, ids.factory, ids.enemy)
+	_key(main, KEY_SPACE)
+	var attack: Dictionary = view.arrival_ring(view.arrival_started_usec())
+	runner.check(not attack.is_empty() and attack.color == View.ARRIVAL_ATTACK, "CK15 Space starts an amber ring, got %s" % [attack])
+	main.free()
+	return true
+
+static func _same_polygon(a: PackedVector2Array, b: PackedVector2Array) -> bool:
+	if a.size() != b.size(): return false
+	for i in a.size():
+		if not a[i].is_equal_approx(b[i]): return false
 	return true
 
 func test_h_centres_on_the_headquarters(runner) -> bool:

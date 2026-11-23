@@ -36,6 +36,8 @@ const GLIDE_FAR_PX: float = 2000.0
 const GLIDE_SNAP_PX: float = 4.0
 # The fixed dock band below the dock line (hud-v5-layout.md), so the shown panel never moves a target.
 const DOCK_HEIGHT: float = 168.0
+# Screen px: a camera panned further off the Headquarters than this recentres on it instead of going back.
+const JUMP_NEAR_PX: float = 24.0
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
 static var map_path: String = Skirmish.MAP_PATH
 static var starts: Array[int] = []
@@ -55,6 +57,7 @@ var _camera_bounds: Rect2
 var _glide_from: Vector2
 var _glide_to: Vector2
 var _glide_world: Vector2
+var _jump_back: Variant = null
 var _glide_left: float = 0.0
 var _glide_seconds: float = GLIDE_MAX_SECONDS
 @onready var _view: Node2D = $WorldView
@@ -439,13 +442,29 @@ static func _edge_sign(at: float, low: float, high: float) -> float:
 # The target lands mid-way between the top and the dock line; HUD px are canvas px under the stretch, so only the zoom converts.
 func centre_camera(world: Vector2) -> void:
 	_glide_world = world
-	var below := Vector2(0.0, DOCK_HEIGHT / 2.0) / _camera.zoom.x
-	_glide_to = (Iso.world_to_plane(world) + below).clamp(_camera_bounds.position, _camera_bounds.end)
+	_glide_to = _landing(world)
 	_glide_from = _camera.position
 	var screen_px: float = _glide_from.distance_to(_glide_to) * _camera.zoom.x
 	_glide_seconds = lerpf(GLIDE_MIN_SECONDS, GLIDE_MAX_SECONDS, minf(screen_px / GLIDE_FAR_PX, 1.0))
 	_glide_left = _glide_seconds
 	if screen_px <= GLIDE_SNAP_PX: glide_camera(_glide_seconds)
+
+func _below() -> Vector2:
+	return Vector2(0.0, DOCK_HEIGHT / 2.0) / _camera.zoom.x
+
+func _landing(world: Vector2) -> Vector2:
+	return (Iso.world_to_plane(world) + _below()).clamp(_camera_bounds.position, _camera_bounds.end)
+
+# 0 A.D.'s jumpCamera (136720dada selection_panels_helpers.js:243-260): the key again on arrival, or mid-glide, goes back.
+# True when it goes home, false when it goes back.
+func jump_home(world: Vector2) -> bool:
+	var heading: Vector2 = _glide_to if _glide_left > 0.0 else _camera.position
+	if _jump_back != null and heading.distance_to(_landing(world)) * _camera.zoom.x <= JUMP_NEAR_PX:
+		centre_camera(_jump_back)
+		return false
+	_jump_back = Iso.plane_to_world(heading - _below())
+	centre_camera(world)
+	return true
 
 # A drag box ends the glide, as it holds a pan.
 func glide_camera(delta: float) -> void:
