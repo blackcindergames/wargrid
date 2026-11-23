@@ -28,6 +28,7 @@ const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 const EDGE_BAND: float = 3.0
 const EDGE_STEP_MAX: float = 0.05
+# shortcut: on Windows screen_get_max_scale() is 1, so this is 40 physical px (thin on a 200 % display), scale by the window's DPI if Windows players miss it.
 const OUTSIDE_MARGIN: float = 40.0
 # Zero Hour snaps (View::lookAt); the owner found the snap disorienting (user, 2026-11-23).
 const GLIDE_MIN_SECONDS: float = 0.15
@@ -53,6 +54,7 @@ var _shown_note: String = ""
 var _camera_bounds: Rect2
 var _glide_from: Vector2
 var _glide_to: Vector2
+var _glide_world: Vector2
 var _glide_left: float = 0.0
 var _glide_seconds: float = GLIDE_MAX_SECONDS
 @onready var _view: Node2D = $WorldView
@@ -403,15 +405,19 @@ func edge_direction() -> Vector2:
 	return Vector2(_edge_sign(_pointer.x, view.position.x, view.end.x), _edge_sign(_pointer.y, view.position.y, view.end.y))
 
 # A windowed pointer slides out past the band; just outside the window keeps panning (user, 2026-11-23).
-# Godot 4.7.2 on macOS gives all three in one space: content rect, no title bar, scaled by the max screen scale.
+# Godot 4.7.2 on macOS and Windows gives these in one screen space: content rect, frame with title bar, pointer.
 func _outside_probe() -> Vector2:
 	if DisplayServer.get_name() == "headless": return Vector2.ZERO
 	var window := Rect2(DisplayServer.window_get_position(), DisplayServer.window_get_size())
-	return outside_direction(DisplayServer.mouse_get_position(), window, OUTSIDE_MARGIN * DisplayServer.screen_get_max_scale())
+	var frame := Rect2(DisplayServer.window_get_position_with_decorations(), DisplayServer.window_get_size_with_decorations())
+	return outside_direction(DisplayServer.mouse_get_position(), window, frame, get_viewport().get_visible_rect().size, OUTSIDE_MARGIN * DisplayServer.screen_get_max_scale())
 
-static func outside_direction(pointer: Vector2, window: Rect2, margin: float) -> Vector2:
-	if window.has_point(pointer) or not window.grow(margin).has_point(pointer): return Vector2.ZERO
-	return (pointer - pointer.clamp(window.position, window.end - Vector2.ONE)).sign()
+# The frame is the player's to drag and close; past a stretch-cap bar (more than one picture px wide) that axis holds, as the bar does (3-26).
+static func outside_direction(pointer: Vector2, window: Rect2, frame: Rect2, picture: Vector2, margin: float) -> Vector2:
+	if window.has_point(pointer) or frame.has_point(pointer) or not window.grow(margin).has_point(pointer): return Vector2.ZERO
+	var bars: Vector2 = window.size / minf(window.size.x / picture.x, window.size.y / picture.y) - picture
+	var beyond: Vector2 = (pointer - pointer.clamp(window.position, window.end - Vector2.ONE)).sign()
+	return Vector2(0.0 if bars.x > 1.0 else beyond.x, 0.0 if bars.y > 1.0 else beyond.y)
 
 static func _edge_sign(at: float, low: float, high: float) -> float:
 	if at < low + EDGE_BAND: return -1.0
@@ -419,6 +425,7 @@ static func _edge_sign(at: float, low: float, high: float) -> float:
 
 # The target lands mid-way between the top and the dock line; HUD px are canvas px under the stretch, so only the zoom converts.
 func centre_camera(world: Vector2) -> void:
+	_glide_world = world
 	var below := Vector2(0.0, DOCK_HEIGHT / 2.0) / _camera.zoom.x
 	_glide_to = (Iso.world_to_plane(world) + below).clamp(_camera_bounds.position, _camera_bounds.end)
 	_glide_from = _camera.position
@@ -451,6 +458,8 @@ func change_zoom(direction: int) -> void:
 	index = clampi(index + signi(direction), 0, ZOOMS.size() - 1)
 	_camera.zoom = Vector2.ONE * ZOOMS[index]
 	_view.set_zoom(ZOOMS[index])
+	# The dock offset is in screen px, so a glide under way retargets for the new zoom.
+	if _glide_left > 0.0: centre_camera(_glide_world)
 
 func _unhandled_input(event: InputEvent) -> void:
 	# A field passes on shortcuts it does not use (Cmd+S, Ctrl+1); orders ignore modifiers, so they would fire.

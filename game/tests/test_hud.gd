@@ -3719,6 +3719,13 @@ func test_unchanged_refresh_keeps_layout(runner) -> bool:
 	runner.check(_tiles(main).size() == 3 and _more(main).is_visible_in_tree(), "UL1 fixture: nine queued show three tiles and +N more")
 	runner.check(layout.call() == before, "UL1 two unchanged refreshes keep the tile nodes, order, anchors and rects")
 	runner.check(churn[0] == 0, "UL1 two unchanged refreshes resize and re-sort nothing, got %d signals" % churn[0])
+	var advanced: Dictionary = main.driver.current().view.duplicate(true)
+	HudModel.building(advanced, ids.factory).queue[0].work = 252000
+	main._show(advanced)
+	await _frames(runner)
+	var bar: ColorRect = (_tiles(main)[0] as Node).get_node("Track/Bar")
+	runner.check(is_equal_approx(bar.anchor_right, 0.84), "UL1 fixture: the advanced state moves the NOW bar to 84 %%, got %.2f" % bar.anchor_right)
+	runner.check(layout.call() == before and churn[0] == 0, "UL1 a refresh with production advanced keeps the tile nodes, order and rects and resizes nothing, got %d signals" % churn[0])
 	main.free()
 	return true
 

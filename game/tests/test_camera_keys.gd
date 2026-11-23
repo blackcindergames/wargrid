@@ -18,7 +18,7 @@ const AWAY := Vector2(-200, 100)
 const ABOVE: float = 84.0
 
 func cases() -> Array[Callable]:
-	return [test_h_glides_to_the_headquarters, test_h_lands_above_the_dock, test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
+	return [test_h_glides_to_the_headquarters, test_h_lands_above_the_dock, test_zoom_mid_glide_keeps_the_landing,test_h_centres_on_the_headquarters, test_h_without_one, test_space_without_an_event, test_open_menu_holds_h_and_space, test_space_jumps_to_the_last_hit, test_space_prefers_own_and_survives_the_target, test_space_after_a_click_presses_nothing, test_keys_in_placement_and_sub_grid, test_alert_line_text_and_timer, test_alert_line_layout]
 
 func _world(runner) -> Array:
 	var main = await SkirmishTests.new()._setup(runner)
@@ -116,7 +116,7 @@ func test_h_glides_to_the_headquarters(runner) -> bool:
 	return true
 
 func test_h_lands_above_the_dock(runner) -> bool:
-	for pair: Array in [BaseScene.HUD_SIZES[0], BaseScene.HUD_SIZES[1]]:
+	for pair: Array in BaseScene.HUD_SIZES:
 		var size: Vector2i = pair[1]
 		var port: SubViewport = BaseScene.sized_port(runner, pair[0], size)
 		var main = await OverlayTests.new()._scene(runner, Scene, port)
@@ -132,6 +132,22 @@ func test_h_lands_above_the_dock(runner) -> bool:
 			var on_screen: float = (Iso.world_to_plane(Vector2(5.5, 5.5)) - camera.get_screen_center_position()).y * camera.zoom.y + height / 2.0
 			runner.check(height == size.y and is_equal_approx(on_screen, (height - 168.0) / 2.0), "CK11 H lands the Headquarters in the middle of the map above the dock line at %s zoom %.1f: wanted y %.1f, got %.1f" % [size, camera.zoom.x, (height - 168.0) / 2.0, on_screen])
 		port.free()
+	return true
+
+func test_zoom_mid_glide_keeps_the_landing(runner) -> bool:
+	var world: Array = await _world(runner)
+	var main = world[0]
+	Fixture.add_completed(main.driver.pump.live(), 1, "usa_command_center", Vector2i(4, 4))
+	BaseScene.publish(main)
+	var camera: Camera2D = main.get_node("Camera2D")
+	var before: Vector2 = _plane(main, Vector2(5.5, 5.5))
+	_key(main, KEY_H, false, false)
+	main.glide_camera(0.1)
+	main.change_zoom(1)
+	main.glide_camera(1.0)
+	var expected: Vector2 = _plane(main, Vector2(5.5, 5.5))
+	runner.check(expected != before and camera.position.is_equal_approx(expected), "CK12 a zoom mid-glide lands above the dock at the new zoom, wanted %s, got %s" % [expected, camera.position])
+	main.free()
 	return true
 
 func test_h_centres_on_the_headquarters(runner) -> bool:

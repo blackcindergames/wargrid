@@ -383,6 +383,13 @@ func test_reset_and_rematch(runner) -> bool:
 	_key(main, 4, true)
 	main._restart()
 	runner.check(_members(main, 4).is_empty() and not main.get_node(LINE).visible, "CG12 a rematch clears the groups and the line, got %s" % [_members(main, 4)])
+	var camera: Camera2D = main.get_node("Camera2D")
+	main.centre_camera(Iso.plane_to_world(main._camera_bounds.end))
+	main.glide_camera(0.1)
+	main._restart()
+	var start: Vector2 = camera.position
+	main.glide_camera(0.1)
+	runner.check(start != main._camera_bounds.end and camera.position == start, "CG12 a rematch mid-glide stays on the start, got %s after %s" % [camera.position, start])
 	main.free()
 	return true
 
