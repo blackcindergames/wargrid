@@ -12,8 +12,10 @@ const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
 const CHIP: Vector2 = Vector2(48, 26)
 const BAR: Vector2 = Vector2(40, 4)
 const GLYPH: float = 18.0
-# The owner's experiment from the same pick: the glyph beside a 4 x 20 bar.
-const UPRIGHT_CHIP: Vector2 = Vector2(34, 26)
+# The owner's pick after trying both (user, 2026-11-23): count column, glyph and a 4 x 20 bar side by side.
+const UPRIGHT_CHIP: Vector2 = Vector2(42, 26)
+# Wide enough for one digit at 12 px, kept while the count hides, so a chip never changes width.
+const COUNT_WIDTH: float = 9.0
 const UPRIGHT_BAR: Vector2 = Vector2(4, 20)
 const TIP_DELAY_MSEC: int = 250
 # The round's idle grey (strip.html `--idle`).
@@ -26,8 +28,8 @@ const HINT_KEY := "strip_seen"
 const HINT_UNREAD: float = -2.0
 const HINT_GONE: float = -1.0
 
-# Off by default; F7 (`orders._debug_key`) flips it for the session, so the owner can compare both in one match.
-static var upright: bool = false
+# Upright by default (user, 2026-11-23); F7 (`orders._debug_key`) flips to the stacked chip for the session.
+static var upright: bool = true
 
 var now_msec: Callable = Time.get_ticks_msec
 var helpers: Array[Control] = []
@@ -198,20 +200,22 @@ func _chip(index: int) -> Button:
 	count.add_theme_font_size_override("font_size", 12)
 	count.add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
 	count.mouse_filter = MOUSE_FILTER_IGNORE
+	count.custom_minimum_size.x = COUNT_WIDTH
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	count.visible = false
 	chip.add_child(count)
 	_shape(chip)
 	return chip
 
-# Stacked: glyph 1 from the top, the bar 2 under it, the count right of the glyph; upright: glyph and bar side by side, 4 apart, the count over the glyph's empty top-left corner.
+# Stacked: glyph 1 from the top, the bar 2 under it, the count right of the glyph; upright: count, glyph and bar in columns (2 | 9 | 2 | 18 | 4 | 4 | 3), the count top-aligned with the glyph.
 func _shape(chip: Button) -> void:
 	chip.custom_minimum_size = UPRIGHT_CHIP if upright else CHIP
 	var glyph: Control = chip.get_node("Glyph")
 	var track: Control = chip.get_node("Track")
-	glyph.position = Vector2(4, 4) if upright else Vector2(15, 1)
-	track.position = Vector2(26, 3) if upright else Vector2(4, 21)
+	glyph.position = Vector2(13, 4) if upright else Vector2(15, 1)
+	track.position = Vector2(35, 3) if upright else Vector2(4, 21)
 	track.size = UPRIGHT_BAR if upright else BAR
-	(chip.get_node("Count") as Control).position = Vector2(2, 0) if upright else Vector2(38, 0)
+	(chip.get_node("Count") as Control).position = Vector2(2, 4) if upright else Vector2(38, 0)
 
 func set_upright(on: bool) -> void:
 	upright = on

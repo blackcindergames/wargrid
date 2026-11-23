@@ -303,6 +303,8 @@ func test_strip_more_list(runner) -> bool:
 
 # HUD headless layout at every HUD size, stacked and upright, with the most chips (eight and `+N`) and the widest held forecast; FRC has no power slab.
 func test_strip_layout(runner) -> bool:
+	# The default stays whatever the game ships, so a later case still sees it.
+	var was: bool = ProductionStrip.upright
 	for pair: Array in BaseScene.HUD_SIZES:
 		var size: Vector2i = pair[1]
 		var view_rect := Rect2(Vector2.ZERO, Vector2(size))
@@ -334,7 +336,7 @@ func test_strip_layout(runner) -> bool:
 				for other: Array in [["the held slabs", main.get_node("HUD/Hud/TopStrip").get_global_rect()], ["Menu", menu], ["the Playtest chip", main.get_node("HUD/Playtest/Chip").get_global_rect()]]:
 					runner.check(not rect.intersects(other[1]), "PS12 %s: clear of %s %s, got %s" % [at, other[0], other[1], rect])
 				var chips: Array = _chips(main)
-				runner.check(chips.size() == 8 and _more(main).is_visible_in_tree() and chips.all(func(chip: Control) -> bool: return chip.size == (Vector2(34, 26) if upright else Vector2(48, 26)) and rect.grow(-1.0).encloses(chip.get_global_rect())), "PS12 %s: eight 48 or 34 x 26 chips and `+N` inside the slab" % at)
+				runner.check(chips.size() == 8 and _more(main).is_visible_in_tree() and chips.all(func(chip: Control) -> bool: return chip.size == (Vector2(42, 26) if upright else Vector2(48, 26)) and rect.grow(-1.0).encloses(chip.get_global_rect())), "PS12 %s: eight 48 or 42 x 26 chips and `+N` inside the slab" % at)
 				# The chip beside Menu: its card would sit under the Playtest chip.
 				HudTests._move(port, _centre(chips.back()))
 				now[0] += 1000
@@ -343,7 +345,7 @@ func test_strip_layout(runner) -> bool:
 				runner.check(_tip(main).is_visible_in_tree() and view_rect.encloses(tip) and not tip.intersects(main.get_node("HUD/Playtest/Chip").get_global_rect()) and tip.position.y >= rect.end.y, "PS12 %s: the chip card under the strip, inside the view, clear of the Playtest chip, got %s" % [at, tip])
 				HudTests._move(port, Vector2(size.x / 2.0, 300.0))
 				await _frames(runner)
-		_strip(main).set_upright(false)
+		_strip(main).set_upright(was)
 		_end(world)
 	return true
 
@@ -367,19 +369,19 @@ func test_strip_chip_looks(runner) -> bool:
 	var plain: StyleBoxFlat = barracks.get_theme_stylebox("normal") as StyleBoxFlat
 	runner.check(plain != null and plain.bg_color == token.call("btn") and plain.border_width_left == 0, "PS13 an unselected chip: btn fill, no frame")
 	var fill: ColorRect = factory.get_node("Track/Fill")
-	runner.check(fill.color == main.hud.panel_edge() and fill.size == Vector2(17, 4), "PS13 busy: the owner colour, 17 of 40 px at 42 %%, got %s %s" % [fill.color, fill.size])
+	runner.check(fill.color == main.hud.panel_edge() and fill.size == Vector2(4, 8), "PS13 busy: the owner colour, 8 of 20 px at 42 %%, got %s %s" % [fill.color, fill.size])
 	var hollow: StyleBoxFlat = barracks.get_node("Track").get_theme_stylebox("panel") as StyleBoxFlat
-	runner.check(hollow != null and not hollow.draw_center and hollow.border_width_left == 1 and is_zero_approx((barracks.get_node("Track/Fill") as Control).size.x), "PS13 idle: a 1 px outline track, empty")
+	runner.check(hollow != null and not hollow.draw_center and hollow.border_width_left == 1 and is_zero_approx((barracks.get_node("Track/Fill") as Control).size.y), "PS13 idle: a 1 px outline track, empty")
 	runner.check(barracks.get_node("Glyph").self_modulate != Color.WHITE and factory.get_node("Glyph").self_modulate == Color.WHITE, "PS13 idle glyph darker than busy")
 	_queues(main, {ids.factory: [MEDIUM]}, 600)
 	await _frames(runner)
-	runner.check(fill.color == token.call("warn") and fill.size == Vector2(17, 4), "PS13 slowed: warn at 42 %%, got %s" % [fill.color])
+	runner.check(fill.color == token.call("warn") and fill.size == Vector2(4, 8), "PS13 slowed: warn at 42 %%, got %s" % [fill.color])
 	var view: Dictionary = main.driver.current().view
 	HudModel.building(view, ids.factory).queue[0].work = Economy.unit(MEDIUM).ticks * 1000
 	HudModel.player(view, 1).work_rate = 1000
 	main._show(view)
 	await _frames(runner)
-	runner.check(fill.color == token.call("warn") and fill.size == Vector2(40, 4), "PS13 exit blocked: a full warn bar, got %s %s" % [fill.color, fill.size])
+	runner.check(fill.color == token.call("warn") and fill.size == Vector2(4, 20), "PS13 exit blocked: a full warn bar, got %s %s" % [fill.color, fill.size])
 	_end(world)
 	return true
 
@@ -412,13 +414,14 @@ func test_strip_unchanged_refresh(runner) -> bool:
 	main._show(advanced)
 	await _frames(runner)
 	var fill: Control = _chip_of(main, ids.factory).get_node("Track/Fill")
-	runner.check(fill.size == Vector2(34, 4), "PS14 fixture: the factory's bar moves to 84 %%, got %s" % fill.size)
+	runner.check(fill.size == Vector2(4, 17), "PS14 fixture: the factory's bar moves to 84 %%, got %s" % fill.size)
 	runner.check(layout.call() == before and churn[0] == 0, "PS14 production advancing moves only the bars, got %d signals" % churn[0])
 	main.free()
 	return true
 
-# The owner's experiment (chip C note): F7 draws each chip as the glyph beside a 4 x 20 bar, 34 wide; F7 again restores 48.
+# Upright by default (user, 2026-11-23): count | glyph | 4 x 20 bar, 42 wide; F7 flips to the stacked 48 px chip and back.
 func test_strip_upright_bars(runner) -> bool:
+	var was: bool = ProductionStrip.upright
 	var world: Array = await _world(runner)
 	var main = world[3]
 	var ids: Dictionary = world[4]
@@ -430,23 +433,31 @@ func test_strip_upright_bars(runner) -> bool:
 		event.keycode = KEY_F7
 		event.pressed = true
 		world[2].push_input(event, true)
-	key.call()
-	await _frames(runner)
-	var chip: Button = _chip_of(main, ids.factory)
-	runner.check(chip != null and chip.size == Vector2(34, 26) and (chip.get_node("Track") as Control).size == Vector2(4, 20), "PS15 F7: 34 x 26 chips with a 4 x 20 bar, got %s" % [chip.size if chip != null else Vector2.ZERO])
-	if chip != null:
-		var fill: Control = chip.get_node("Track/Fill")
-		runner.check(fill.position == Vector2(0, 12) and fill.size == Vector2(4, 8), "PS15 the upright bar fills 8 of 20 px from the bottom, got %s %s" % [fill.position, fill.size])
-		runner.check(chip.get_node("Glyph").get_global_rect().end.x <= (chip.get_node("Track") as Control).get_global_rect().position.x, "PS15 the glyph beside the bar")
-	key.call()
-	await _frames(runner)
-	chip = _chip_of(main, ids.factory)
-	runner.check(chip != null and chip.size == Vector2(48, 26) and (chip.get_node("Track") as Control).size == Vector2(40, 4), "PS15 F7 again restores the stacked chip, got %s" % [chip.size if chip != null else Vector2.ZERO])
+	for step: String in ["default", "F7", "F7 again"]:
+		if step != "default":
+			key.call()
+			await _frames(runner)
+		var upright: bool = step != "F7"
+		var chip: Button = _chip_of(main, ids.factory)
+		if chip == null:
+			runner.check(false, "PS15 %s: the factory has a chip" % step)
+			continue
+		var track: Control = chip.get_node("Track")
+		var fill: Control = track.get_node("Fill")
+		if upright:
+			runner.check(chip.size == Vector2(42, 26) and track.size == Vector2(4, 20) and fill.position == Vector2(0, 12) and fill.size == Vector2(4, 8), "PS15 %s: 42 x 26, a 4 x 20 bar filled 8 px from the bottom, got %s %s %s" % [step, chip.size, fill.position, fill.size])
+			var count: Rect2 = (chip.get_node("Count") as Control).get_global_rect()
+			var glyph: Rect2 = (chip.get_node("Glyph") as Control).get_global_rect()
+			runner.check(count.end.x <= glyph.position.x and glyph.end.x <= track.get_global_rect().position.x, "PS15 %s: count, glyph and bar side by side, got %s %s %s" % [step, count, glyph, track.get_global_rect()])
+		else:
+			runner.check(chip.size == Vector2(48, 26) and track.size == Vector2(40, 4) and fill.position == Vector2.ZERO and fill.size == Vector2(17, 4), "PS15 %s: the stacked 48 x 26 chip, a 40 x 4 bar filled 17 px, got %s %s %s" % [step, chip.size, fill.position, fill.size])
+	_strip(main).set_upright(was)
 	_end(world)
 	return true
 
 # F7 goes through `orders` like F3, so a focused playtest field keeps the key.
 func test_strip_upright_key_skips_typing(runner) -> bool:
+	var was: bool = ProductionStrip.upright
 	var world: Array = await _world(runner)
 	var main = world[3]
 	var ids: Dictionary = world[4]
@@ -462,8 +473,8 @@ func test_strip_upright_key_skips_typing(runner) -> bool:
 	world[2].push_input(event, true)
 	await _frames(runner)
 	var chip: Button = _chip_of(main, ids.factory)
-	runner.check(chip != null and chip.size == Vector2(48, 26), "PS16 F7 while typing in the note leaves the chips stacked, got %s" % [chip.size if chip != null else Vector2.ZERO])
-	_strip(main).set_upright(false)
+	runner.check(chip != null and chip.size == Vector2(42, 26), "PS16 F7 while typing in the note leaves the chips upright, got %s" % [chip.size if chip != null else Vector2.ZERO])
+	_strip(main).set_upright(was)
 	_end(world)
 	return true
 
@@ -557,6 +568,7 @@ func test_strip_click_needs_orders_and_an_own_producer(runner) -> bool:
 
 # The fill stays inside its track: upright it keeps the track's bottom and grows up, stacked it keeps the left edge, round(fraction x length) long.
 func test_strip_bar_stays_in_its_track(runner) -> bool:
+	var was: bool = ProductionStrip.upright
 	for pair: Array in [BaseScene.HUD_SIZES[0], BaseScene.HUD_SIZES[2]]:
 		var port: SubViewport = BaseScene.sized_port(runner, pair[0], pair[1])
 		var world: Array = await _world(runner, port)
@@ -586,12 +598,13 @@ func test_strip_bar_stays_in_its_track(runner) -> bool:
 			var hollow: StyleBoxFlat = _chip_of(main, ids.barracks).get_node("Track").get_theme_stylebox("panel") as StyleBoxFlat
 			runner.check(edge != null and not edge.anti_aliasing and hollow != null and hollow != edge and not hollow.anti_aliasing, "PS21 %s: the busy and the idle (hollow) tracks draw hard edges like the fill" % ("upright" if upright else "stacked"))
 			runner.check(bad.is_empty(), "PS21 %s at %s: the fill stays in its track at its length, got %d off: %s" % ["upright" if upright else "stacked", pair[0], bad.size(), bad.slice(0, 4)])
-		_strip(main).set_upright(false)
+		_strip(main).set_upright(was)
 		_end(world)
 	return true
 
 # The owner's look (user, 2026-11-23): the queue length (QUEUE n / 9's n) small (12 px, the HUD's floor) in the chip's corner, none when idle, clear of the bar, chips as wide as before.
 func test_strip_queue_count(runner) -> bool:
+	var was: bool = ProductionStrip.upright
 	var world: Array = await _world(runner)
 	var main = world[3]
 	var ids: Dictionary = world[4]
@@ -605,11 +618,14 @@ func test_strip_queue_count(runner) -> bool:
 			var count: Label = chip.get_node_or_null("Count") if chip != null else null
 			var shown: String = count.text if count != null and count.is_visible_in_tree() else ""
 			runner.check(shown == row[1], "PS22 %s: %d queued shows '%s', got '%s'" % [mode, row[0].size(), row[1], shown])
+			runner.check(chip != null and chip.size == (Vector2(42, 26) if upright else Vector2(48, 26)), "PS22 %s, %d queued: the chip keeps its width, got %s" % [mode, row[0].size(), chip.size if chip != null else Vector2.ZERO])
 			if count == null or not count.is_visible_in_tree(): continue
 			var box: Rect2 = count.get_global_rect()
-			runner.check(chip.size == (Vector2(34, 26) if upright else Vector2(48, 26)) and chip.get_global_rect().encloses(box) and not box.intersects((chip.get_node("Track") as Control).get_global_rect()), "PS22 %s: the count inside the chip, clear of the bar, chip width kept, got %s in %s" % [mode, box, chip.get_global_rect()])
+			var glyph: Rect2 = (chip.get_node("Glyph") as Control).get_global_rect()
+			runner.check(chip.get_global_rect().encloses(box) and not box.intersects((chip.get_node("Track") as Control).get_global_rect()) and not box.intersects(glyph), "PS22 %s: the count inside the chip, clear of the glyph and the bar, got %s glyph %s" % [mode, box, glyph])
+			if upright: runner.check(box.position.x < glyph.position.x and is_equal_approx(box.position.y, glyph.position.y), "PS22 upright: the count in its own column left of the glyph, top-aligned with it, got %s glyph %s" % [box, glyph])
 			runner.check(count.get_theme_font_size("font_size") == 12 and count.get_theme_color("font_color") == main.hud.get_theme_color("muted", &"Tokens"), "PS22 %s: 12 px muted" % mode)
-	_strip(main).set_upright(false)
+	_strip(main).set_upright(was)
 	_end(world)
 	return true
 
