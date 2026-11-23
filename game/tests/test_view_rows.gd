@@ -202,7 +202,7 @@ static func expected_row(unit: Dictionary) -> Dictionary:
 	return {"id": unit.id, "owner": unit.owner, "hp": unit.hp, "max_hp": unit.max_hp, "x": unit.position[0], "y": unit.position[1],
 		"heading_x": heading[0], "heading_y": heading[1],
 		"target": -1 if combat == null or combat.target_id == null else combat.target_id,
-		"queue": collection.target_id if waiting and collection.target_id != null else -1,
+		"queue": collection.target_id if waiting and collection.target_id != null else -1, "container": unit.get("container_id", -1),
 		"order_x": unit.order.target[0] if unit.order != null else 0.0, "order_y": unit.order.target[1] if unit.order != null else 0.0,
 		"status": 255 if status == -1 else status, "tier": combat.get("tier", 0) if combat != null else 0, "flags": flag_of(unit)}
 
@@ -272,7 +272,7 @@ func held_copy(view: Dictionary) -> Dictionary:
 		if key == "units": continue
 		copy[key] = view[key].duplicate(true) if view[key] is Array or view[key] is Dictionary else view[key]
 	var rows = view.units
-	for column in ["id", "owner", "kind", "hp", "max_hp", "target", "queue", "x", "y", "heading_x", "heading_y", "order_x", "order_y", "status", "tier", "mode", "phase", "flags", "kinds", "modes", "phases"]:
+	for column in ["id", "owner", "kind", "hp", "max_hp", "target", "queue", "container", "x", "y", "heading_x", "heading_y", "order_x", "order_y", "status", "tier", "mode", "phase", "flags", "kinds", "modes", "phases"]:
 		copy["units." + column] = rows.get(column).duplicate()
 	return copy
 

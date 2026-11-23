@@ -174,14 +174,13 @@ static func is_container(view: Dictionary, id: int, seat: int) -> bool:
 		host = {"owner": view.units.owner[i], "kind": view.units.kinds[view.units.kind[i]]}
 	return host.owner == seat and host.get("completed", true) and not Registry.kind(host.kind).get("contains", {}).is_empty()
 
-# The view has no container id, so a vehicle counts as loaded while any own unit rides anything.
 static func unload_target(view: Dictionary, selection: Dictionary, seat: int) -> int:
 	var id: int = selection.building_id if selection.building_id != -1 else (selection.ids[0] if selection.ids.size() == 1 else -1)
 	if not is_container(view, id, seat): return -1
 	if not building(view, id).is_empty(): return id if not player(view, seat).get("tunnel", []).is_empty() else -1
 	var units: RefCounted = view.units
 	for i: int in units.size():
-		if units.owner[i] == seat and (units.flags[i] & ViewRows.CONTAINED) != 0: return id
+		if units.owner[i] == seat and units.container[i] == id: return id
 	return -1
 
 static func has_armed_unit(view: Dictionary, ids: Array[int], seat: int) -> bool:

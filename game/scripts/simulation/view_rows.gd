@@ -18,6 +18,7 @@ var hp := PackedInt32Array()
 var max_hp := PackedInt32Array()
 var target := PackedInt32Array()
 var queue := PackedInt32Array()
+var container := PackedInt32Array()
 var x := PackedFloat64Array()
 var y := PackedFloat64Array()
 var heading_x := PackedFloat64Array()
@@ -49,7 +50,7 @@ static func from_units(units: Array) -> RefCounted:
 	return rows
 
 func _resize(n: int) -> void:
-	for column: PackedInt32Array in [id, owner, kind, hp, max_hp, target, queue]: column.resize(n)
+	for column: PackedInt32Array in [id, owner, kind, hp, max_hp, target, queue, container]: column.resize(n)
 	for column: PackedFloat64Array in [x, y, heading_x, heading_y, order_x, order_y]: column.resize(n)
 	for column: PackedByteArray in [status, tier, mode, phase, flags]: column.resize(n)
 
@@ -61,6 +62,7 @@ func _fill_all(units: Array) -> void:
 	var c_max: PackedInt32Array = max_hp
 	var c_target: PackedInt32Array = target
 	var c_queue: PackedInt32Array = queue
+	var c_container: PackedInt32Array = container
 	var c_x: PackedFloat64Array = x
 	var c_y: PackedFloat64Array = y
 	var c_hx: PackedFloat64Array = heading_x
@@ -93,6 +95,7 @@ func _fill_all(units: Array) -> void:
 			kinds.append(label)
 		c_kind[i] = slot
 		c_hp[i] = unit.get("hp", 0)
+		c_container[i] = unit.get("container_id", -1)
 		c_max[i] = unit.get("max_hp", 0)
 		c_x[i] = position[0]
 		c_y[i] = position[1]
