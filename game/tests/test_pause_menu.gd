@@ -279,7 +279,7 @@ func test_menu_layout(runner) -> bool:
 		port.free()
 	return true
 
-const PROBES: Array[String] = ["grid", "build", "back", "attack_move", "stop", "unload", "recall", "save", "add", "pan", "home", "last_attack", "esc", "mute", "perf"]
+const PROBES: Array[String] = ["pan", "home", "last_attack", "grid", "build", "back", "attack_move", "stop", "unload", "recall", "save", "add", "esc", "mute", "perf"]
 const MODIFIERS := {KEY_MASK_SHIFT: "Shift", KEY_MASK_CTRL: "Ctrl", KEY_MASK_META: "Cmd", KEY_MASK_ALT: "Alt"}
 
 static func _event(press: int) -> InputEventKey:
@@ -298,6 +298,20 @@ static func _rows() -> Array:
 	for section: Array in PauseMenu.controls(): rows.append_array(section[1])
 	return rows
 
+static func _expected_texts() -> Array:
+	var expected: Array = []
+	for section: Array in PauseMenu.controls():
+		expected.append(section[0])
+		for row: Array in section[1]: expected.append_array([row[1], row[2]])
+	return expected
+
+static func _shown_texts(list: Control) -> Array:
+	return list.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
+
+# Written apart from controls(), so dropping a gesture or a qualifier from the table fails here.
+const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "with a rally point"], ["Left-click", "right-click cancels"], ["Wheel", "Zoom"], ["Screen edge", "Pan"]]
+const REQUIRED_WORDS := {"attack_move": "armed units", "last_attack": "own or allied base"}
+
 func test_controls_list_shows_every_row(runner) -> bool:
 	var menu = PauseMenu.new(false)
 	var list: Control = menu.find_child("Controls", true, false)
@@ -305,12 +319,15 @@ func test_controls_list_shows_every_row(runner) -> bool:
 	if list == null:
 		menu.free()
 		return true
-	var expected: Array = []
-	for section: Array in PauseMenu.controls():
-		expected.append(section[0])
-		for row: Array in section[1]: expected.append_array([row[1], row[2]])
-	var shown: Array = list.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
-	runner.check(shown == expected, "CL1 the list shows every section title, key and line in order, got %s" % [shown])
+	var shown: Array = _shown_texts(list)
+	runner.check(shown == _expected_texts(), "CL1 the list shows every section title, key and line in order, got %s" % [shown])
+	var mouse: Array = _rows().filter(func(row: Array) -> bool: return row[3].is_empty())
+	for pair: Array in REQUIRED_MOUSE:
+		runner.check(mouse.filter(func(row: Array) -> bool: return row[1] == pair[0] and row[2].contains(pair[1])).size() == 1, "CL1 one pointer row %s says '%s', got %s" % [pair[0], pair[1], mouse.map(func(row: Array) -> String: return "%s: %s" % [row[1], row[2]])])
+	runner.check(mouse.size() == REQUIRED_MOUSE.size(), "CL1 the pointer rows are the required ones, got %d" % mouse.size())
+	for probe: String in REQUIRED_WORDS:
+		var rows: Array = _rows().filter(func(row: Array) -> bool: return row[0] == probe)
+		runner.check(rows.size() == 1 and rows[0][2].contains(REQUIRED_WORDS[probe]), "CL1 the %s row says '%s', got %s" % [probe, REQUIRED_WORDS[probe], rows])
 	for row: Array in _rows():
 		var presses: Array = row[3]
 		if row[0] == "pan" or presses.is_empty(): continue
@@ -319,6 +336,16 @@ func test_controls_list_shows_every_row(runner) -> bool:
 		var key: String = "Esc" if press == KEY_ESCAPE else HudModel.key_label(press & KEY_CODE_MASK)
 		runner.check(row[1].contains(key) and names.all(func(name: String) -> bool: return row[1].contains(name)), "CL1 '%s' names its first press %s %s" % [row[1], names, key])
 	menu.free()
+	var main = await _scene(runner, Skirmish)
+	var list_in_match: Control = main.get_node("HUD/PauseMenu").find_child("Controls", true, false)
+	# AZERTY after the menu was built, as a layout switch before a rematch.
+	HudModel.layout_label = func(physical: Key) -> Key: return {KEY_Q: KEY_A, KEY_A: KEY_Q, KEY_W: KEY_Z, KEY_Z: KEY_W}.get(physical, physical)
+	_open_menu(main)
+	var expected: Array = _expected_texts()
+	shown = _shown_texts(list_in_match)
+	HudModel.layout_label = HudModel._platform_label
+	runner.check(main.menu_open() and shown == expected and expected.has("A"), "CL1 opening the menu re-reads the layout's labels, got %s, want %s" % [shown, expected])
+	main.free()
 	return true
 
 func _press(main, press: int) -> void:
@@ -340,7 +367,9 @@ func test_controls_list_keys_work(runner) -> bool:
 	var ids: Dictionary = HudTests.new()._slab_world(runner, main, true)
 	var camera: Camera2D = main.get_node("Camera2D")
 	var orders = main.orders
+	HudTests._prerequisites(main)
 	var probed: Array[String] = []
+	var placed: Array[String] = []
 	for row: Array in _rows():
 		var id: String = row[0]
 		var presses: Array = row[3]
@@ -354,7 +383,24 @@ func test_controls_list_keys_work(runner) -> bool:
 			camera.position = CameraTests.AWAY
 			match id:
 				"grid":
-					runner.check(orders._card_key(_event(press)), "%s: %s is the card's key" % [label, HudModel.key_label(press)])
+					var name: String = OS.get_keycode_string(press)
+					var action: String = ""
+					for builder: int in [ids.builder, ids.frc_builder, ids.usa_builder]:
+						HudTests._select(main, [builder])
+						orders._sub_grid = true
+						main._refresh()
+						var cell: Button = main.get_node("HUD/Economy/Card/" + name)
+						action = str(cell.get_meta("action")) if cell.is_visible_in_tree() else ""
+						if not action.is_empty() and not HudModel.COMMANDS.has(action): break
+					if HudModel.COMMANDS.has(action):
+						runner.check(PROBES.has(action), "%s: %s's command %s has its own probe" % [label, name, action])
+						continue
+					_press(main, press)
+					if action.is_empty():
+						runner.check(orders._placement_kind.is_empty() and orders._sub_grid, "%s: %s on a well arms nothing, got '%s'" % [label, name, orders._placement_kind])
+					else:
+						runner.check(orders._placement_kind == action, "%s: %s places the shown %s, got '%s'" % [label, name, action, orders._placement_kind])
+						placed.append(name)
 				"build":
 					HudTests._select(main, [ids.builder])
 					_press(main, press)
@@ -435,6 +481,7 @@ func test_controls_list_keys_work(runner) -> bool:
 					runner.check(main._perf.visible != shown, "%s toggles the overlay" % label)
 					_press(main, press)
 	runner.check(probed == PROBES, "CL2 every key row has its probe and every probe its row, got %s" % [probed])
+	runner.check(placed == ["Q", "W", "E", "R", "A"], "CL2 the grid keys place every builder's buildings, got %s" % [placed])
 	main.free()
 	return true
 

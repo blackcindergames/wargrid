@@ -98,24 +98,25 @@ static func controls() -> Array:
 			["", "Double-click", "Select that kind on screen", []],
 			["", "Alt+double-click", "Select that kind on the map", []],
 			["", "Right-click", "Move, attack, gather or enter", []],
-			["", "Right-click", "From a building: its rally point", []],
+			["", "Right-click", "From a building with a rally point: set it", []],
+			["", "Left-click", "Placing a building: place it, right-click cancels", []],
 			["", "Wheel", "Zoom", []]]],
+		["Camera", [
+			["pan", "Arrows", "Pan", [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]],
+			["", "Screen edge", "Pan with the pointer", []],
+			_key_row("home", KEY_H, "Centre on your Headquarters"),
+			_key_row("last_attack", KEY_SPACE, "Jump to an own or allied base under attack")]],
 		["Commands", [
 			["grid", " · ".join(cards), "The card cell with that key", grid],
 			_key_row("build", HudModel.BUILD_KEY, "Build, with one builder selected"),
 			_key_row("back", HudModel.BACK_KEY, "Back from the build cells"),
-			_key_row("attack_move", HudModel.ORDER_KEYS.attack_move, "Attack move, then click the ground"),
+			_key_row("attack_move", HudModel.ORDER_KEYS.attack_move, "Unit card: attack move with armed units, then click the ground"),
 			_key_row("stop", HudModel.ORDER_KEYS.stop, "Stop"),
 			_key_row("unload", HudModel.ORDER_KEYS.unload, "Unload")]],
 		["Groups", [
 			["recall", _span(digits, 0), "Select a group, twice to centre on it", digits],
 			["save", _span(digits, KEY_MASK_CTRL), "Save a group, also %s or %s" % [_span(digits, KEY_MASK_META), _span(digits, KEY_MASK_SHIFT | KEY_MASK_CTRL)], _masked(digits, [KEY_MASK_CTRL, KEY_MASK_META, KEY_MASK_SHIFT | KEY_MASK_CTRL])],
 			["add", _span(digits, KEY_MASK_SHIFT), "Add the selection to a group", _masked(digits, [KEY_MASK_SHIFT])]]],
-		["Camera", [
-			["pan", "Arrows", "Pan", [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]],
-			["", "Screen edge", "Pan with the pointer", []],
-			_key_row("home", KEY_H, "Centre on your Headquarters"),
-			_key_row("last_attack", KEY_SPACE, "Jump to the last attack on a base")]],
 		["Other", [
 			["esc", "Esc", "Back out one step, then this menu", [(InputMap.action_get_events("deselect")[0] as InputEventKey).keycode]],
 			_key_row("mute", KEY_M, "Mute"),
@@ -142,6 +143,7 @@ func open() -> void:
 	_show_smooth(GraphicsSettings.load_smooth())
 	_show_destinations(GraphicsSettings.load_destinations())
 	_show_playtest(PlaytestSettings.enabled())
+	_show_controls()
 	visible = true
 	_show_main()
 	opened.emit()
@@ -189,6 +191,15 @@ func _controls_list() -> PanelContainer:
 				words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 				grid.add_child(words)
 	return panel
+
+# The layout can change between matches, as the card's chips re-read it on a reset.
+func _show_controls() -> void:
+	var texts: Array = []
+	for section: Array in controls():
+		texts.append(section[0])
+		for row: Array in section[1]: texts.append_array([row[1], row[2]])
+	var labels: Array[Node] = _main_row.get_node("Controls").find_children("*", "Label", true, false)
+	for at: int in labels.size(): (labels[at] as Label).text = texts[at]
 
 func _label(text: String, variation: StringName) -> Label:
 	var label := Label.new()
