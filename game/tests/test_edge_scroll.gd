@@ -10,7 +10,7 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const Skirmish = preload("res://scenes/skirmish.tscn")
 
 func cases() -> Array[Callable]:
-	return [test_process_pans_and_arrows_take_precedence, test_resize_drops_the_cached_pointer, test_band_pans_at_every_edge_over_a_panel, test_band_is_three_pixels_of_the_picture, test_picture_rect_at_3440, test_no_focus_no_pan, test_pointer_exit_stops_the_pan, test_drag_box_holds_the_camera, test_placement_pans_with_the_ghost_under_the_pointer, test_placement_ghost_stays_when_the_pointer_is_over_a_panel, test_h_in_placement_reruns_the_preview, test_step_is_capped, test_menu_and_result_hold_the_camera]
+	return [test_process_pans_and_arrows_take_precedence, test_resize_drops_the_cached_pointer, test_band_pans_at_every_edge_over_a_panel, test_band_is_three_pixels_of_the_picture, test_picture_rect_at_3440, test_no_focus_no_pan, test_pointer_exit_stops_the_pan, test_drag_box_holds_the_camera, test_placement_pans_with_the_ghost_under_the_pointer, test_placement_ghost_stays_when_the_pointer_is_over_a_panel, test_h_in_placement_reruns_the_preview, test_step_is_capped, test_menu_and_result_hold_the_camera, test_outside_direction, test_just_outside_the_window_pans]
 
 # A port with a builder and buildings, the camera mid-map, and the pointer entered but not yet moved.
 func _scene(runner, overlays, size: Array) -> Array:
@@ -324,6 +324,40 @@ func test_resize_drops_the_cached_pointer(runner) -> bool:
 	runner.check(_step(main) == Vector2.ZERO, "ES12 a resize with a still pointer does not keep panning on the old coordinate")
 	SkirmishTests._push_move(port, Vector2(1279.0, 300))
 	runner.check(_step(main).x > 0.0, "ES12 the next motion resumes it")
+	port.free()
+	overlays._end(saved)
+	return true
+
+func test_outside_direction(runner) -> bool:
+	var MatchScreen = load("res://scripts/match/match_screen.gd")
+	var window := Rect2(100, 50, 1280, 720)
+	for row: Array in [[Vector2(90, 300), Vector2(-1, 0), "just left"], [Vector2(1385, 300), Vector2(1, 0), "just right"], [Vector2(500, 40), Vector2(0, -1), "just above"], [Vector2(500, 780), Vector2(0, 1), "just below"], [Vector2(1380, 770), Vector2(1, 1), "the bottom right corner"], [Vector2(90, 40), Vector2(-1, -1), "the top left corner"], [Vector2(59, 300), Vector2.ZERO, "beyond the margin"], [Vector2(90, 9), Vector2.ZERO, "a corner beyond the margin on one axis"], [Vector2(700, 400), Vector2.ZERO, "inside away from the band"], [Vector2(101, 300), Vector2.ZERO, "inside in the band (the band rule's)"]]:
+		runner.check(MatchScreen.outside_direction(row[0], window, 40.0) == row[1], "ES14 a pointer %s of the window" % row[2])
+	return true
+
+func test_just_outside_the_window_pans(runner) -> bool:
+	var overlays = OverlayTests.new()
+	var saved: String = overlays._begin()
+	var scene: Array = await _scene(runner, overlays, BaseScene.HUD_SIZES[0])
+	var port: SubViewport = scene[0]
+	var main = scene[1]
+	runner.check(_step(main) == Vector2.ZERO, "ES15 headless reads no pointer outside the window")
+	main.outside_probe = func() -> Vector2: return Vector2(-1, -1)
+	SkirmishTests._push_move(port, Vector2(1279.0, 300))
+	main.notification(Node.NOTIFICATION_WM_MOUSE_EXIT)
+	var moved: Vector2 = _step(main)
+	runner.check(moved.x < 0.0 and moved.y < 0.0, "ES15 a pointer just outside the corner pans diagonally")
+	main.notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	runner.check(_step(main) == Vector2.ZERO, "ES15 an unfocused window does not pan from outside")
+	main.notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_IN)
+	main._pause.open()
+	runner.check(_step(main) == Vector2.ZERO, "ES15 the open menu holds the camera from outside")
+	main._pause.close()
+	main._playtest.web = true
+	runner.check(_step(main) == Vector2.ZERO, "ES15 the web build never pans from outside")
+	main._playtest.web = false
+	SkirmishTests._push_move(port, Vector2(640.0, 300))
+	runner.check(_step(main) == Vector2.ZERO, "ES15 back inside away from the band the outside rule is off")
 	port.free()
 	overlays._end(saved)
 	return true

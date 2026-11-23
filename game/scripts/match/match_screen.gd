@@ -28,6 +28,7 @@ const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 const EDGE_BAND: float = 3.0
 const EDGE_STEP_MAX: float = 0.05
+const OUTSIDE_MARGIN: float = 40.0
 # Zero Hour snaps (View::lookAt); the owner found the snap disorienting (user, 2026-11-23).
 const GLIDE_SECONDS: float = 0.3
 const GLIDE_SNAP_PX: float = 4.0
@@ -56,6 +57,7 @@ var _clock := PresentationClock.new()
 var _pause: Control
 var _result_panel: Control
 var change_scene: Callable = _change_scene
+var outside_probe: Callable = _outside_probe
 var quit: Callable
 @onready var _selection_box: ReferenceRect = $HUD/SelectionBox
 var _sound: SoundPlayer = null
@@ -390,9 +392,21 @@ func edge_scroll(delta: float) -> void:
 
 # A pointer in a stretch-cap bar is off the picture and never pans; HUD panels are no exception (3-26).
 func edge_direction() -> Vector2:
-	if not (_focused and _pointer_in) or _typing() or menu_open() or input_over(): return Vector2.ZERO
+	if not _focused or _typing() or menu_open() or input_over(): return Vector2.ZERO
+	if not _pointer_in: return Vector2.ZERO if _playtest.web else outside_probe.call()
 	var view: Rect2 = get_viewport().get_visible_rect()
 	return Vector2(_edge_sign(_pointer.x, view.position.x, view.end.x), _edge_sign(_pointer.y, view.position.y, view.end.y))
+
+# A windowed pointer slides out past the band; just outside the window keeps panning (user, 2026-11-23).
+# Godot 4.7.2 on macOS gives all three in one space: content rect, no title bar, scaled by the max screen scale.
+func _outside_probe() -> Vector2:
+	if DisplayServer.get_name() == "headless": return Vector2.ZERO
+	var window := Rect2(DisplayServer.window_get_position(), DisplayServer.window_get_size())
+	return outside_direction(DisplayServer.mouse_get_position(), window, OUTSIDE_MARGIN * DisplayServer.screen_get_max_scale())
+
+static func outside_direction(pointer: Vector2, window: Rect2, margin: float) -> Vector2:
+	if window.has_point(pointer) or not window.grow(margin).has_point(pointer): return Vector2.ZERO
+	return (pointer - pointer.clamp(window.position, window.end - Vector2.ONE)).sign()
 
 static func _edge_sign(at: float, low: float, high: float) -> float:
 	if at < low + EDGE_BAND: return -1.0
