@@ -45,7 +45,7 @@ static func sized_port(runner, window: Vector2i, logical: Vector2i) -> SubViewpo
 	return port
 
 func cases() -> Array[Callable]:
-	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_red_answer_elsewhere_does_not_block,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_f23_placement_closes_when_builder_dies,test_f23_builder_dies_in_the_click_step,test_f33_red_ghost_refused_after_a_two_step_frame,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
+	return [test_base_ready,test_placement_input,test_production_ui,test_context_orders,test_execution_feedback,test_sb2_preview_cost,test_sb2_ghost_colour_after_step,test_sb2_red_ghost_click_refused_locally,test_sb2_red_answer_elsewhere_does_not_block,test_sb2_restart_drops_pending_preview,test_sb2_reenter_placement_ignores_old_answer,test_sb2_preview_waits_for_unpause,test_resume_status,test_queue_label,test_one_snapshot_per_refresh,test_ticks_take_no_snapshot,test_refresh_waits_for_next_frame,test_rejection_survives_two_steps,test_sb1_repaint_keeps_step_pending,test_sb2_placement_waits_for_build_answer,test_f23_placement_closes_when_builder_dies,test_f23_builder_dies_in_the_click_step,test_f23_builder_lost_after_an_earlier_refusal,test_ghost_funds_refusal_clicks_each_time,test_f33_red_ghost_refused_after_a_two_step_frame,test_build_menu_from_capabilities,test_build_menu_wraps_eleven,test_build_menu_quantity_label]
 
 func _m3_world() -> Simulation:
 	var sim: Simulation = Fixture.make_world()
@@ -543,6 +543,50 @@ func test_f23_builder_dies_in_the_click_step(runner) -> bool:
 	runner.check(main.hud.refusal == "Builder lost","F23 the refusal after a refused build of a dead builder reads Builder lost, got '%s'" % main.hud.refusal)
 	var errors: int = main._sound.last_requests().filter(func(request: Dictionary) -> bool: return request.cue == "error").size()
 	runner.check(errors == 1,"F23 one error cue for the refused build and the lost builder, got %d" % errors)
+	main.free()
+	return true
+
+static func _errors(main) -> int:
+	return main._sound.last_requests().filter(func(request: Dictionary) -> bool: return request.cue == "error").size()
+
+func test_f23_builder_lost_after_an_earlier_refusal(runner) -> bool:
+	var main = await _placing(runner)
+	var red: Vector2 = Iso.world_to_plane(Vector2(4.25,4.25))
+	hover(main,red)
+	pointer(main,red,MOUSE_BUTTON_LEFT,false)
+	runner.check(main.driver.queued().size() == 1,"F23 fixture: the click on a not yet answered red spot is sent, held %d" % main.driver.queued().size())
+	tick(main)
+	runner.check(not main.hud.refusal.is_empty() and main.orders._placement_kind == "usa_power_plant" and _errors(main) == 1,"F23 fixture: the sim refuses it with one beep and placement stays, got '%s' '%s'" % [main.hud.refusal, main.orders._placement_kind])
+	tick(main)
+	main.driver.pump.live().remove_object(1)
+	tick(main)
+	runner.check(main.hud.refusal == "Builder lost" and _errors(main) == 1,"F23 a builder lost ticks after an earlier refusal still beeps once, got '%s' and %d" % [main.hud.refusal, _errors(main)])
+	main.orders._awaiting_build = "usa_power_plant"
+	main.orders.answered({"command":{"type":"build"},"ok":false,"error":"Insufficient credits"})
+	main.orders.reset()
+	runner.check(not main.orders._build_refused,"F23 reset() forgets a refusal's beep, so a rematch's first Builder lost is heard")
+	main.free()
+	return true
+
+func test_ghost_funds_refusal_clicks_each_time(runner) -> bool:
+	var main = await setup(runner)
+	main.driver.adopt(Fixture.make_world(800))
+	main.orders.selected_ids.assign([1])
+	main._refresh()
+	build_key(main,"usa_power_plant")
+	Fixture.send(main.driver.pump.live(),{"type":"build","builder_id":1,"building_kind":"usa_power_plant","origin":[12,4],"tick":0})
+	var spot: Vector2 = Iso.world_to_plane(Vector2(8.25,4.25))
+	hover(main,spot)
+	tick(main)
+	tick(main)
+	var answer: Dictionary = main.driver.preview_answer()
+	runner.check(main.orders._placement_kind == "usa_power_plant" and answer.get("error","") == "Insufficient credits" and answer.get("tick",-1) == main.shown_state.tick,"F33b fixture: the ghost is known short of credits, got '%s' %s" % [main.orders._placement_kind, answer])
+	var clicks: Array = []
+	for i in 2:
+		pointer(main,spot,MOUSE_BUTTON_LEFT,false)
+		publish(main)
+		clicks.append(main._sound.last_requests().filter(func(request: Dictionary) -> bool: return request.cue == "disabled").size())
+	runner.check(main.driver.queued().is_empty() and clicks == [1,1],"F33b each click on a ghost known short of credits clicks disabled, like a credit-blocked cell, got %s" % [clicks])
 	main.free()
 	return true
 

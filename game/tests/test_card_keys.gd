@@ -286,6 +286,7 @@ func test_attack_move_with_no_armed_unit(runner) -> bool:
 	runner.check(main.orders._attack_move_mode, "AM2 attack move arms")
 	sim.remove_object(ids.tanks[0])
 	BaseScene.tick(main)
+	runner.check(not main.orders._attack_move_mode, "AM2 the mode disarms when its last armed unit dies, before any click")
 	_click_ground(main, Vector2(12.5, 12.5))
 	runner.check(_types(main).is_empty() and not main.orders._attack_move_mode, "AM2 with no armed unit nothing is sent and it disarms, got %s" % [_types(main)])
 	main.free()

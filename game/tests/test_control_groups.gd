@@ -105,6 +105,20 @@ func test_double_tap_centres_on_the_centroid(runner) -> bool:
 	now[0] = 3100
 	_key(main, 1)
 	runner.check(camera.position == Vector2(-200, 100), "CG2 taps on different groups never pair, got %s" % camera.position)
+	now[0] = 4000
+	_key(main, 1)
+	HudTests._select(main, [ids.collectors[0]])
+	_key(main, 1, true)
+	now[0] = 4100
+	_key(main, 1)
+	runner.check(camera.position == Vector2(-200, 100), "CG2 a save over the group ends its pending tap, got %s" % camera.position)
+	camera.position = Vector2(-200, 100)
+	now[0] = 6000
+	_key(main, 1)
+	_key(main, 5)
+	now[0] = 6100
+	_key(main, 1)
+	runner.check(camera.position == Vector2(-200, 100), "CG2 an empty group's key between two taps breaks the pair, got %s" % camera.position)
 	main.free()
 	return true
 
@@ -262,6 +276,28 @@ func test_recall_disarms_and_closes(runner) -> bool:
 	main._reshow()
 	_key(main, 1)
 	runner.check(not main.orders._sub_grid and main.orders.selected_ids == ids.tanks, "CG9 a recall closes the build sub-grid, got sub-grid %s" % main.orders._sub_grid)
+	HudTests._select(main, [ids.usa_builder])
+	_key(main, 3, true)
+	main.orders._sub_grid = true
+	main._reshow()
+	_key(main, 3)
+	runner.check(not main.orders._sub_grid and main.orders.selected_ids == [ids.usa_builder], "CG9 recalling the builder's own group closes its sub-grid, got sub-grid %s" % main.orders._sub_grid)
+	var sim = main.driver.pump.live()
+	var doomed: int = sim.spawn(1, Vector2(11.5, 8.5), "china_tank")
+	BaseScene.publish(main)
+	HudTests._select(main, [doomed])
+	_key(main, 2, true)
+	sim.remove_object(doomed)
+	BaseScene.publish(main)
+	HudTests._select(main, [ids.infantry])
+	main.orders.arm_attack_move()
+	_key(main, 2)
+	runner.check(not main.orders._attack_move_mode and main.orders.selected_ids == [ids.infantry], "CG9 recalling an all-dead group disarms attack move and keeps the selection, got armed %s %s" % [main.orders._attack_move_mode, main.orders.selected_ids])
+	HudTests._select(main, [ids.usa_builder])
+	main.orders._sub_grid = true
+	main._reshow()
+	_key(main, 2)
+	runner.check(not main.orders._sub_grid and main.orders.selected_ids == [ids.usa_builder] and main.driver.queued().is_empty(), "CG9 recalling an all-dead group closes the sub-grid and sends nothing, got sub-grid %s %s" % [main.orders._sub_grid, main.driver.queued()])
 	main.free()
 	return true
 
@@ -289,6 +325,13 @@ func test_save_line(runner) -> bool:
 	HudTests._select(main, ids.tanks)
 	_key(main, 7, false, false, true)
 	runner.check(_line(main).text == "Group 7 · 3 units", "CG10 Shift+7 counts the whole group, got '%s'" % _line(main).text)
+	HudTests._select(main, ids.tanks)
+	_key(main, 3, true)
+	main.driver.pump.live().remove_object(ids.tanks[1])
+	BaseScene.publish(main)
+	HudTests._select(main, [ids.infantry])
+	_key(main, 3, false, false, true)
+	runner.check(_line(main).text == "Group 3 · 2 units", "CG10 Shift+3 counts only the live members, got '%s'" % _line(main).text)
 	main.hud.reset()
 	runner.check(not main.get_node(LINE).visible, "CG10 a reset hides the line")
 	main.free()
@@ -313,6 +356,7 @@ func test_save_line_layout(runner) -> bool:
 		for path: String in panels:
 			if path != LINE: runner.check(not line.intersects(panels[path]), "CG11 the line clears %s%s" % [path, at])
 		runner.check(line.size.y == 28.0, "CG11 the line is 28 high like the refusal line%s, got %s" % [at, line.size.y])
+		runner.check(size.y - line.end.y <= 48.0, "CG11 the line sits at the bottom, its lower edge within 48 of the view's%s, got %s" % [at, line])
 		port.free()
 	return true
 
@@ -322,7 +366,9 @@ func test_reset_and_rematch(runner) -> bool:
 	var ids: Dictionary = world[1]
 	HudTests._select(main, ids.tanks)
 	_key(main, 1, true)
+	HudTests._select(main, [ids.infantry])
 	_key(main, 9, true)
+	runner.check(_members(main, 1) == ids.tanks and _members(main, 9) == [ids.infantry], "CG12 fixture: two groups of distinct units, got %s and %s" % [_members(main, 1), _members(main, 9)])
 	main.orders.reset()
 	runner.check(_members(main, 1).is_empty() and _members(main, 9).is_empty(), "CG12 reset() clears every group, got %s and %s" % [_members(main, 1), _members(main, 9)])
 	HudTests._select(main, ids.tanks)

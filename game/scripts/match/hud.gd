@@ -753,7 +753,7 @@ func _show_cell_card() -> void:
 	var cell: Rect2 = _hovered_cell.get_global_rect()
 	var at := Rect2(Vector2(clampf(cell.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _cell_card.size.x), slab_top() - 8.0 - _cell_card.size.y), _cell_card.size)
 	for helper: Control in helpers:
-		if helper.is_visible_in_tree() and at.intersects(helper.get_global_rect()): at.position.x = helper.get_global_rect().position.x - 8.0 - at.size.x
+		if helper.is_visible_in_tree() and at.intersects(helper.get_global_rect()): at.position.x = maxf(8.0, helper.get_global_rect().position.x - 8.0 - at.size.x)
 	_cell_card.position = at.position
 
 # Item cells always; a command only while blocked, to name why.

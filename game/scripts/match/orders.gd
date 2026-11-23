@@ -8,6 +8,7 @@ const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const SoundDirector = preload("res://scripts/presentation/sound_director.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
+const BUILDER_LOST: String = "Builder lost"
 
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
@@ -28,7 +29,7 @@ var _preview_origin: Vector2i
 var _preview_key: Array = []
 var _attack_move_mode: bool = false
 var _awaiting_build: String = ""
-# Its refusal already beeped; the Builder lost line of the same frame stays quiet.
+# Its refusal already beeped; a Builder lost in the next view stays quiet, any later one beeps.
 var _build_refused: bool = false
 # Any submit, re-arm or Esc after the build click bumps this, so a late refusal reopens placement only over an untouched selection.
 var gestures: int = 0
@@ -92,6 +93,7 @@ func reset() -> void:
 	_sub_grid = false
 	_set_attack_move(false)
 	_awaiting_build = ""
+	_build_refused = false
 	_answer = {}
 	_selecting = false
 	_dragged = false
@@ -116,10 +118,11 @@ func prune(state: Dictionary) -> void:
 	selected_ids.assign(selected_ids.filter(func(id: int) -> bool: return state.units.index_of(id) != -1))
 	if HudModel.inspected(state, inspected_id).is_empty(): inspected_id = -1
 	if _sub_grid and _builder() == -1: _sub_grid = false
+	var refused: bool = _build_refused
+	_build_refused = false
 	if not _placement_kind.is_empty() and _builder() == -1:
-		var sound: String = "" if _build_refused else "error"
 		_clear_placement()
-		_screen.refuse("Builder lost", sound)
+		_screen.refuse(BUILDER_LOST, "" if refused else "error")
 
 func view_selection() -> Array[int]:
 	var ids: Array[int] = []
@@ -166,20 +169,26 @@ func _add_to_group(slot: int) -> void:
 	_report_group(slot)
 
 func _report_group(slot: int) -> void:
-	var count: int = groups.ids(slot).size()
+	var count: int = groups.ids(slot).filter(_live).size()
 	if count > 0: _screen.hud.group_saved(slot + 1, count)
 
+func _live(id: int) -> bool:
+	return not _unit(id).is_empty() and not _unit(id).inside
+
+# An all-dead group keeps the selection but still ends the modes, so the next click never fires a mode armed before the key.
 func _recall_group(slot: int) -> void:
 	var live: Array[int] = []
-	live.assign(groups.ids(slot).filter(func(id: int) -> bool: return not _unit(id).is_empty() and not _unit(id).inside))
+	live.assign(groups.ids(slot).filter(_live))
 	groups.keep(slot, live)
-	if live.is_empty(): return
-	selected_ids.assign(live)
-	selected_building_id = -1
-	inspected_id = -1
+	gestures += 1
 	_sub_grid = false
 	_set_attack_move(false)
-	if groups.double_tap(slot): _screen.centre_camera(_centroid(live))
+	var centre: bool = groups.double_tap(slot)
+	if not live.is_empty():
+		selected_ids.assign(live)
+		selected_building_id = -1
+		inspected_id = -1
+		if centre: _screen.centre_camera(_centroid(live))
 	_screen._reshow()
 
 func _centroid(units: Array[int]) -> Vector2:
@@ -274,7 +283,7 @@ func _placement_input(event: InputEvent) -> void:
 			_update_preview(_screen._view.make_canvas_position_local(event.position))
 			# As Zero Hour: a spot this view already knows is refused is never sent, so no order voice plays.
 			if _known_refused():
-				_screen.refuse(_answer.error, SoundDirector.refusal_sound(_answer.error))
+				_screen.refuse(_answer.error, "disabled" if _answer.error == SoundDirector.FUNDS_ERROR else "error")
 				return
 			_screen._submit({"type":"build","builder_id":_builder(),"building_kind":_placement_kind,"origin":[_preview_origin.x,_preview_origin.y]})
 			_awaiting_build = _placement_kind
@@ -285,11 +294,13 @@ func answered(answer: Dictionary) -> void:
 	if _awaiting_build.is_empty() or answer.command.get("type") != "build": return
 	var kind: String = _awaiting_build
 	_awaiting_build = ""
-	_build_refused = not answer.ok
 	var online: bool = _screen.driver.closes_placement_on_click()
 	if answer.ok and not online: _clear_placement()
+	elif not answer.ok and online and not _awaiting_from.is_empty() and _unit(_awaiting_from[0]).is_empty(): _screen.refuse(BUILDER_LOST, "")
 	# A gesture begun since the click keeps its release; reopening would turn it into a build.
 	elif not answer.ok and online and not busy() and [_builder(), gestures] == _awaiting_from: _enter_placement(kind)
+	# Set after the reopen, whose own repaint would otherwise spend it before the view that shows the builder gone.
+	_build_refused = not answer.ok
 
 func _building_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("deselect"):

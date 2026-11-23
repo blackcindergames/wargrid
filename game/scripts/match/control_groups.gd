@@ -28,13 +28,16 @@ func ids(slot: int) -> Array[int]:
 func save(slot: int, units: Array[int]) -> void:
 	_release(units)
 	_members[slot] = _sorted(units)
+	_tapped = -1
 
 func add(slot: int, units: Array[int]) -> void:
 	_release(units)
 	_members[slot] = _sorted(_members[slot] + units)
+	_tapped = -1
 
 func clear(slot: int) -> void:
 	_members[slot] = []
+	_tapped = -1
 
 func keep(slot: int, units: Array[int]) -> void:
 	_members[slot] = units.duplicate()
@@ -51,7 +54,7 @@ static func _sorted(units: Array) -> Array[int]:
 	result.sort()
 	return result
 
-# True on the second tap of one group within the window; a double tap starts the next pair afresh.
+# True on the second tap of one group within the window; a double tap or a group edit starts the next pair afresh.
 func double_tap(slot: int) -> bool:
 	var now: int = now_msec.call()
 	var again: bool = slot == _tapped and now - _tapped_at <= DOUBLE_TAP_MSEC

@@ -277,7 +277,7 @@ func _show_esc_chip() -> void:
 
 # The pause menu and the note form open without a new view, so this runs every frame too.
 func _drop_stale_attack_move() -> void:
-	if orders._attack_move_mode and (not orders.takes_orders() or _pause.visible or orders.selected_ids.is_empty()): orders._set_attack_move(false)
+	if orders._attack_move_mode and (not orders.takes_orders() or _pause.visible or not HudModel.has_armed_unit(shown_state, orders.selected_ids, local_player)): orders._set_attack_move(false)
 
 func _typing() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
