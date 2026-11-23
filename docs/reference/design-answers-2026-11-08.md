@@ -1510,6 +1510,21 @@ War Room round `queue-follow-up` (`warroom/rounds/queue-follow-up/`, pictures an
 - **After the round (user, 2026-11-23, player-experience and director passes):** P16 also builds the production strip (one chip per producer right of POWER: unit glyph, progress bar, hollow when idle, click selects, double click jumps), reopening the Core/Full split for this one item; P17 runs before P16 and takes the camera riders (`H` again returns, arrival ring); a left-click on NOW still cancels, and the trace counts accidental cancels (a cancel, then the same kind queued within 2 s) so a match can reopen it.
 - **P2.3b defaults (advisory round `p2-3b-defaults`):** kept as shipped: the 0.15-0.45 s glide by distance, a finished entry held and muted under the pointer (carried to P16's NOW PRODUCING row), edge scroll up to 40 pt outside the window; the Controls right-click row's wording unchanged.
 
+## Production strip round (user, 2026-11-23)
+
+War Room round `production-strip` (`warroom/rounds/production-strip/`, pictures in `docs/images/strip-round/`) for P16's strip, blocking; a player-experience pass and one fix round before the owner saw it. Zero Hour has no production strip (GeneralsGameCode `afc2a103f`, `ControlBar.cpp:1218-1221`). Eight picks are the recommendation; NEXT is not.
+
+- **Chip (C):** glyph stacked over its bar, 48 px wide. Owner note: try a vertical progress bar, which may save space; an experiment for after the match.
+- **Group (A):** its own slab beside credits and power.
+- **Idle (C):** a hollow bar (1 px outline track).
+- **Order (B):** by kind (Headquarters, Supply Depot, Barracks, Vehicle Factory), then by age.
+- **Overflow (B):** eight chips, then `+N` at the left end; the front of the order folds first, so factories stay beside Menu.
+- **Anchor (C):** at the right end, 8 px left of Menu, so nothing right of power jumps (top strip round D); this moves the director round's "right after POWER".
+- **NEXT (C):** a hover hint only (`To cancel a Medium Tank: right-click its cell`); a click on NEXT does nothing.
+- **Rally (B):** the rally line in the empty NEXT row, on the idle footer's line.
+- **Cancel (B):** the cell and the credits flash for 0.3 s.
+- **Defaults stated in the round, kept:** the cancel sound is today's click only; Headquarters and Supply Depot chips show only while producing; an idle military producer keeps its last-made unit's glyph; slowed bars in `warn`, a full `warn` bar when the exit is blocked; the idle box stays dashed.
+
 ## P2.3b top strip round (user, 2026-11-22)
 
 War Room round `p2-3b-topstrip` (`warroom/rounds/p2-3b-topstrip/`), drawn as `ts-*` and `ts-card-*` states of the HUD v5 states page, for the P2.3b riders of 2026-11-22 (compact slabs instead of the full-width bar; a purchase you cannot afford forecasts below zero). Blocking, since the look was the question; player-experience pass before the owner's look. All three picks are the recommendations.

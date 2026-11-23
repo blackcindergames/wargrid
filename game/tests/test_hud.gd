@@ -30,7 +30,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -87,7 +87,7 @@ func test_side_effects_live_in_the_screen(runner) -> bool:
 	main.orders.selected_ids.assign([1])
 	main._refresh()
 	var chosen: Array[String] = []
-	main.hud.cell_pressed.connect(func(action: String) -> void: chosen.append(action))
+	main.hud.cell_pressed.connect(func(action: String, _shift: bool) -> void: chosen.append(action))
 	_cell(main, "build").pressed.emit()
 	_cell(main, "usa_power_plant").pressed.emit()
 	runner.check(chosen == ["build", "usa_power_plant"] and main.orders._placement_kind == "usa_power_plant", "HN2 Build, then the Power Plant cell emit cell_pressed and arm placement, got %s '%s'" % [chosen, main.orders._placement_kind])
@@ -1795,7 +1795,7 @@ func test_now_producing_reads(runner) -> bool:
 		var idle: bool = state[2].is_empty()
 		var box: Control = _production(main, "Idle")
 		runner.check(box != null and box.is_visible_in_tree() == idle and (not idle or _visible_texts(box) == ["Nothing in production", "Click a unit on the right to build it"]), "NP1 %s: the dashed idle box exactly when idle, got %s" % [state[0], _visible_texts(box) if box != null else []])
-		runner.check(_shown_text(panel, "Box/Body/Footer") == (HudModel.RALLY if idle else ""), "NP1 %s: the rally line only while idle, got '%s'" % [state[0], _shown_text(panel, "Box/Body/Footer")])
+		runner.check(_shown_text(panel, "Box/Body/Footer") == (HudModel.RALLY if state[2].size() <= 1 else ""), "NP1 %s: the rally line only while NEXT is empty (strip round), got '%s'" % [state[0], _shown_text(panel, "Box/Body/Footer")])
 		runner.check(_visible_texts(panel).all(func(text: String) -> bool: return not text.contains("%")), "NP1 %s: no percent anywhere, got %s" % [state[0], _visible_texts(panel)])
 		if next != null and next.is_visible_in_tree():
 			var digits: Array = _visible_texts(next).filter(func(text: String) -> bool: return _has_digit(text.get_slice(" ×", 0)))
@@ -1986,6 +1986,306 @@ func test_unit_glyphs(runner) -> bool:
 	_end_port(scene)
 	return true
 
+# P16 T2: a right-click takes the newest of its kind not already sent for cancel; Shift takes up to five, the one in production last.
+func test_newest_of_kind_skips_pending(runner) -> bool:
+	var queue: Array = [{"id": 1, "kind": MEDIUM}, {"id": 2, "kind": ROTARY}, {"id": 3, "kind": MEDIUM}, {"id": 4, "kind": MEDIUM}]
+	var picks: Array = [[MEDIUM, {}, 1, [4], "the newest"], [MEDIUM, {4: true}, 1, [3], "the newest not yet sent"], [MEDIUM, {}, 5, [4, 3, 1], "five ask, three of the kind, the one in production last"],
+		[MEDIUM, {4: true, 3: true}, 5, [1], "only the one in production left"], [MEDIUM, {4: true, 3: true, 1: true}, 1, [], "all sent: nothing"], [ROTARY, {}, 1, [2], "another kind"], [MILITIA, {}, 1, [], "none of the kind"]]
+	for pick: Array in picks:
+		var got: Array = HudModel.newest_of_kind(queue, pick[0], pick[1], pick[2])
+		runner.check(got == pick[3], "PC1 %s: %s, got %s" % [pick[4], pick[3], got])
+	return true
+
+# P16 T2: Shift queues min(5, room in 9, what the published credits buy).
+func test_shift_batch_size(runner) -> bool:
+	var entry: Dictionary = {"id": 1, "kind": MEDIUM, "paid_cost": 800, "work": 0}
+	var sizes: Array = [[0, 50000, 5, "room and credits for more"], [6, 50000, 3, "room for 3"], [0, 1700, 2, "credits for 2"], [9, 50000, 0, "full"], [0, 700, 0, "credits for none"]]
+	for size: Array in sizes:
+		var queue: Array = []
+		for i in size[0]: queue.append(entry)
+		var view: Dictionary = {"players": [{"id": 1, "credits": size[1]}], "buildings": [{"id": 5, "queue": queue}]}
+		var got: int = HudModel.batch(view, 5, MEDIUM, 1)
+		runner.check(got == size[2], "SB1 %s: %d, got %d" % [size[3], size[2], got])
+	return true
+
+static func _shift_click_in(port: Viewport, at: Vector2, button: MouseButton) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.button_index = button
+		event.pressed = pressed
+		event.shift_pressed = true
+		event.position = at
+		event.global_position = at
+		port.push_input(event, true)
+
+static func _shift_key(main, code: Key) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.keycode = code
+	event.shift_pressed = true
+	event.pressed = true
+	main._unhandled_input(event)
+
+static func _sent_kinds(main, before: int) -> Array:
+	return _queued(main, "produce").slice(before).map(func(command: Dictionary) -> String: return command.unit_kind)
+
+# P16 T2 (queue follow-up round): Shift-click or Shift+key on a unit cell sends min(5, room, credits) produce commands in one frame; a plain click stays one.
+func test_shift_queues_five(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	var five: Array = [MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM]
+	_shift_click_in(port, _centre(_cell(main, MEDIUM)), MOUSE_BUTTON_LEFT)
+	runner.check(_sent_kinds(main, 0) == five and _queued(main, "produce").all(func(command: Dictionary) -> bool: return command.building_id == ids.factory), "SB2 Shift-click on the Medium Tank cell sends five, got %s" % [_sent_kinds(main, 0)])
+	BaseScene.tick(main)
+	await _frames(runner)
+	_produce(main, [MEDIUM])
+	await _frames(runner)
+	runner.check(_sim_queue(main, ids.factory).size() == 6, "SB2 fixture: six queued, got %d" % _sim_queue(main, ids.factory).size())
+	_shift_key(main, HudModel.CELL_KEYS[HudModel.role(ROTARY)])
+	runner.check(_sent_kinds(main, 0) == [ROTARY, ROTARY, ROTARY], "SB2 Shift+key with room for 3 sends 3, got %s" % [_sent_kinds(main, 0)])
+	BaseScene.tick(main)
+	await _frames(runner)
+	_shift_click_in(port, _centre(_cell(main, MEDIUM)), MOUSE_BUTTON_LEFT)
+	runner.check(_sim_queue(main, ids.factory).size() == 9 and _queued(main, "produce").is_empty() and _line_text(main) == "Queue full", "SB2 Shift-click on a full queue sends none and says Queue full, got %s '%s'" % [_sent_kinds(main, 0), _line_text(main)])
+	ids = _queue_world(main, 1700)
+	await _frames(runner)
+	_shift_click_in(port, _centre(_cell(main, MEDIUM)), MOUSE_BUTTON_LEFT)
+	runner.check(_sent_kinds(main, 0) == [MEDIUM, MEDIUM], "SB2 credits for two send two, got %s" % [_sent_kinds(main, 0)])
+	_click_in(port, _centre(_cell(main, MEDIUM)))
+	runner.check(_sent_kinds(main, 2) == [MEDIUM], "SB2 a plain click after a Shift-click sends one, got %s" % [_sent_kinds(main, 2)])
+	_end_port(scene)
+	return true
+
+# P16 T2: the HUD skips entries it already sent for cancel until they leave the view or the cancel is refused, so fast right-clicks cancel
+# different entries; Shift-right-click cancels the five newest of the kind, the one in production included.
+func test_pending_cancels_pick_distinct(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	_produce(main, [MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM])
+	await _frames(runner)
+	var queue: Array = _sim_queue(main, ids.factory)
+	runner.check(queue.size() == 7, "PC2 fixture: seven queued, got %s" % [queue])
+	if queue.size() != 7:
+		_end_port(scene)
+		return true
+	var credits: int = _own_credits(main)
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	var sent: Array = _queued(main, "cancel_production").map(func(command: Dictionary) -> int: return command.production_id)
+	runner.check(sent == [queue[6], queue[5]], "PC2 two fast right-clicks cancel two different entries, got %s" % [sent])
+	BaseScene.tick(main)
+	await _frames(runner)
+	runner.check(_sim_queue(main, ids.factory) == queue.slice(0, 5) and _own_credits(main) == credits + 1600 and _line_text(main) == "", "PC2 both taken, 1600 back, no refusal, got %s '%s'" % [_sim_queue(main, ids.factory), _line_text(main)])
+	_shift_click_in(port, _centre(_cell(main, MEDIUM)), MOUSE_BUTTON_RIGHT)
+	sent = _queued(main, "cancel_production").map(func(command: Dictionary) -> int: return command.production_id)
+	runner.check(sent == [queue[4], queue[3], queue[2], queue[1], queue[0]], "PC3 Shift-right-click cancels the five newest, the one in production last, got %s" % [sent])
+	BaseScene.tick(main)
+	await _frames(runner)
+	runner.check(_sim_queue(main, ids.factory).is_empty() and _line_text(main) == "", "PC3 all five taken, no refusal")
+	_produce(main, [MEDIUM])
+	await _frames(runner)
+	var left: int = _sim_queue(main, ids.factory)[0]
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	runner.check(_queued(main, "cancel_production").size() == 1, "PC4 a second right-click with every entry already sent sends nothing")
+	main.hud.cancel_answered({"command": {"type": "cancel_production", "building_id": ids.factory, "production_id": left}, "ok": false, "error": "Too many orders at once; wait a moment"})
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	runner.check(_queued(main, "cancel_production").map(func(command: Dictionary) -> int: return command.production_id) == [left, left], "PC4 a refused cancel frees its entry for the next right-click")
+	_end_port(scene)
+	return true
+
+# P16 T2: NOW cancels on a right-click too (on release, within the slop), shows `×` while hovered and names the refund.
+func test_now_cancels_on_either_click(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	_queue_kinds(main, ids.factory, [MEDIUM, ROTARY])
+	await _frames(runner)
+	var now: Button = _now(main)
+	var mark: Label = now.get_node_or_null("Mark")
+	runner.check(mark != null and not mark.is_visible_in_tree(), "NC1 no × off NOW")
+	_move(port, _centre(now))
+	await _frames(runner)
+	runner.check(mark != null and mark.is_visible_in_tree() and mark.text == "×" and now.tooltip_text == "Cancel · refunds 800", "NC1 hovered: × and Cancel · refunds 800, got '%s'" % now.tooltip_text)
+	_right_click_in(port, _centre(now), Vector2(12, 0))
+	runner.check(_queued(main, "cancel_production").is_empty(), "NC2 a right-drag of 12 px cancels nothing")
+	_right_click_in(port, _centre(now))
+	var sent: Array = _queued(main, "cancel_production")
+	runner.check(sent.size() == 1 and sent[0].production_id == 900 and sent[0].building_id == ids.factory, "NC2 a right-click on NOW cancels the unit in production, got %s" % [sent])
+	runner.check(_queued(main, "set_rally").is_empty(), "NC2 a right-click on NOW sets no rally point")
+	_move(port, Vector2(900, 200))
+	await _frames(runner)
+	runner.check(not mark.is_visible_in_tree(), "NC1 the × goes with the pointer")
+	_end_port(scene)
+	return true
+
+# P16 T2: a cancel that loses the race to the unit finishing is refused, so the held NOW reads Done; `""` waits for the cancel's own acceptance.
+func test_held_now_after_a_lost_cancel(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	_produce(main, [MEDIUM, ROTARY])
+	await _frames(runner)
+	var now: Button = _now(main)
+	_move(port, _centre(now))
+	await _frames(runner)
+	_click_in(port, _centre(now))
+	runner.check(_queued(main, "cancel_production").size() == 1, "NH4 fixture: the click sent a cancel")
+	var sim = main.driver.pump.live()
+	var first: int = _sim_queue(main, ids.factory)[0]
+	for step in 2000:
+		if not _sim_queue(main, ids.factory).has(first): break
+		sim.step()
+	BaseScene.tick(main)
+	await _frames(runner)
+	runner.check(main.hud.refusal == "Missing production entry", "NH4 fixture: the cancel lost the race, got '%s'" % main.hud.refusal)
+	runner.check(now.disabled and _shown_text(now, "Name") == "Medium Tank" and _shown_text(now, "Time") == "Done", "NH4 the held NOW reads Done, got '%s'" % _shown_text(now, "Time"))
+	_end_port(scene)
+	return true
+
+# Hovers `kind`'s cell until its card shows; returns the card.
+func _card_of(runner, main, kind: String) -> Control:
+	var cell: Button = _cell(main, kind)
+	main.hud.now_msec = func() -> int: return 0
+	cell.mouse_entered.emit()
+	main.hud.now_msec = func() -> int: return 1000
+	main.hud._process(0.0)
+	await _frames(runner)
+	var card: Control = main.get_node("HUD/Hud/CellCard")
+	cell.mouse_exited.emit()
+	return card
+
+static func _card_text(card: Control, line: String) -> String:
+	var label: Label = card.find_child(line, true, false)
+	return label.text if label != null and label.visible else ""
+
+# P16 T2 (queue follow-up round): the cell card teaches the right-click while that kind is queued, and Militia's card says `2 per order`.
+func test_cell_card_teaches_cancel(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	var queued: Array = [[[MEDIUM, ROTARY, MEDIUM], MEDIUM, "Right-click: cancel the last (2 queued)"], [[MEDIUM, ROTARY, MEDIUM], ROTARY, "Right-click: cancel the last (1 queued)"],
+		[[MEDIUM, ROTARY], MEDIUM, "Right-click: cancel the one in production"], [[], MEDIUM, ""]]
+	for case: Array in queued:
+		_queue_kinds(main, ids.factory, case[0])
+		var card: Control = await _card_of(runner, main, case[1])
+		var line: Label = card.find_child("Cancel", true, false)
+		runner.check(_card_text(card, "Cancel") == case[2] and (case[2].is_empty() or _colour(line) == _token("text")), "CC6 %s with %s queued: '%s', got '%s'" % [case[1], case[0], case[2], _card_text(card, "Cancel")])
+	_select(main, [], ids.barracks)
+	var militia: Control = await _card_of(runner, main, MILITIA)
+	runner.check(_card_text(militia, "Numbers") == "300 · 10 s · 2 per order", "CC7 Militia's card says 2 per order, got '%s'" % _card_text(militia, "Numbers"))
+	_end_port(scene)
+	return true
+
+# T2 review: the playtest note holds the match, so a right-click then sends nothing, marks nothing and flashes nothing.
+func test_cancel_while_the_note_is_open(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	_queue_kinds(main, ids.factory, [MEDIUM, MEDIUM])
+	await _frames(runner)
+	var overlay = main.get_node("HUD/Playtest")
+	scene[0]._camera(main)
+	overlay.open_marker()
+	await _frames(runner)
+	runner.check(overlay.holds_match(), "PC5 fixture: the note dialog holds the match")
+	var cell: Control = _cell(main, MEDIUM)
+	_right_click_in(port, _centre(cell))
+	runner.check(_queued(main, "cancel_production").is_empty() and main.hud.pending_cancels.is_empty() and cell.modulate == Color.WHITE, "PC5 under the note: nothing sent, nothing pending, no flash, got %s %s" % [_queued(main, "cancel_production"), main.hud.pending_cancels])
+	overlay.cancel_marker()
+	await _frames(runner)
+	_right_click_in(port, _centre(cell))
+	runner.check(_queued(main, "cancel_production").map(func(command: Dictionary) -> int: return command.production_id) == [901], "PC5 the note closed, a right-click cancels the newest, got %s" % [_queued(main, "cancel_production")])
+	_end_port(scene)
+	return true
+
+# P16 T2 (strip round): NEXT has a hover hint naming the way to cancel, and no click target.
+func test_next_hover_hint(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	_queue_kinds(main, ids.factory, [ROTARY, MEDIUM])
+	await _frames(runner)
+	var next: Control = _production(main, "Next")
+	runner.check(next.tooltip_text == "To cancel a Medium Tank: right-click its cell", "NX1 the hint names NEXT's kind, got '%s'" % next.tooltip_text)
+	_click_in(port, _centre(_production(main, "Next/Name")))
+	_right_click_in(port, _centre(_production(main, "Next/Name")))
+	runner.check(main.driver.queued().is_empty(), "NX1 a click on NEXT sends nothing, got %s" % [main.driver.queued()])
+	_select(main, [], ids.barracks)
+	_queue_kinds(main, ids.barracks, [MILITIA, "china_rocket_infantry"])
+	await _frames(runner)
+	runner.check(next.tooltip_text == "To cancel an Anti-Tank Trooper: right-click its cell", "NX1 an before a vowel, got '%s'" % next.tooltip_text)
+	_end_port(scene)
+	return true
+
+# P16 T2 (strip round): a cancel flashes its kind's cell and the credits slab for 0.3 s; no new sound.
+func test_cancel_flashes(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	_queue_kinds(main, ids.factory, [MEDIUM, ROTARY])
+	await _frames(runner)
+	var cell: Control = _cell(main, ROTARY)
+	var credits: Control = main.get_node("HUD/Hud/TopStrip/CreditsGroup")
+	runner.check(cell.modulate == Color.WHITE and credits.modulate == Color.WHITE, "CF1 fixture: nothing flashes before a cancel")
+	_right_click_in(port, _centre(cell))
+	runner.check(cell.modulate != Color.WHITE and credits.modulate != Color.WHITE and _cell(main, MEDIUM).modulate == Color.WHITE, "CF1 a cancel flashes its cell and the credits, not another cell")
+	await runner.create_timer(0.45).timeout
+	runner.check(cell.modulate == Color.WHITE and credits.modulate == Color.WHITE, "CF1 the flash is gone after 0.3 s, got %s %s" % [cell.modulate, credits.modulate])
+	_move(port, _centre(_now(main)))
+	await _frames(runner)
+	_click_in(port, _centre(_now(main)))
+	runner.check(_cell(main, MEDIUM).modulate != Color.WHITE, "CF1 a cancel on NOW flashes the cell of its kind")
+	_end_port(scene)
+	return true
+
+# P16 T2: an accidental cancel (a cancel, then the same kind queued at the same producer within 2 s) and clicks on NEXT go to the match record.
+func test_accidental_cancels_and_next_clicks(runner) -> bool:
+	var scene: Array = await _port_scene(runner)
+	var port: SubViewport = scene[2]
+	var main = scene[3]
+	var ids: Dictionary = _queue_world(main)
+	_produce(main, [MEDIUM, MEDIUM, MEDIUM])
+	await _frames(runner)
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	for i in 30: BaseScene.tick(main)
+	_produce(main, [MEDIUM])
+	runner.check(main.orders.accidental_cancels == 1, "AC1 a cancel, then the same kind within 2 s counts, got %d" % main.orders.accidental_cancels)
+	await _frames(runner)
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	for i in 61: BaseScene.tick(main)
+	_produce(main, [MEDIUM])
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	_produce(main, [ROTARY])
+	runner.check(main.orders.accidental_cancels == 1, "AC1 later than 2 s, or another kind, does not count, got %d" % main.orders.accidental_cancels)
+	ids.second = Fixture.add_completed(main.driver.pump.live(), 1, "china_factory", Vector2i(26, 26))
+	BaseScene.publish(main)
+	await _frames(runner)
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	_select(main, [], ids.second)
+	_produce(main, [MEDIUM])
+	runner.check(main.orders.accidental_cancels == 1, "AC1 the same kind at another producer does not count, got %d" % main.orders.accidental_cancels)
+	_select(main, [], ids.factory)
+	_queue_kinds(main, ids.factory, [MEDIUM, ROTARY, MEDIUM, ROTARY])
+	await _frames(runner)
+	_click_in(port, _centre(_production(main, "Next/Name")))
+	_right_click_in(port, _centre(_production(main, "Next/Glyph")))
+	_click_in(port, _centre(_more(main)))
+	runner.check(main.hud.next_clicks == 2, "AC2 a click on NEXT counts, one on +N more does not, got %d" % main.hud.next_clicks)
+	var record: Dictionary = main.playtest_match()
+	runner.check(record.get("accidental_cancels") == 1 and record.get("next_clicks") == 2, "AC3 the match record carries both counts, got %s %s" % [record.get("accidental_cancels"), record.get("next_clicks")])
+	_end_port(scene)
+	return true
+
 # No cell carries a progress bar, only NOW; every cell counts its kind's queued entries.
 func test_cells_count_without_a_bar(runner) -> bool:
 	var scene: Array = await _port_scene(runner)
@@ -2071,7 +2371,7 @@ func test_right_click_cell_cancels_newest_of_kind(runner) -> bool:
 	_end_port(scene)
 	return true
 
-# Same-tick: a click on NOW and a right-click on its cell, or two clicks on NOW, in one frame: one refund, then Missing production entry.
+# Same-tick: a click on NOW and a right-click on its cell, or two clicks on NOW, in one frame: the entry already sent is skipped, one cancel, one refund, no refusal (P16 T2).
 func test_queue_cancels_in_one_frame(runner) -> bool:
 	var scene: Array = await _port_scene(runner)
 	var port: SubViewport = scene[2]
@@ -2092,10 +2392,10 @@ func test_queue_cancels_in_one_frame(runner) -> bool:
 		_click_in(port, _centre(_now(main)))
 		case[1].call()
 		var sent: Array = _queued(main, "cancel_production").slice(before)
-		runner.check(sent.size() == 2 and sent.all(func(command: Dictionary) -> bool: return command.production_id == producing), "QT10 %s: both sent for entry %d, got %s" % [case[0], producing, sent])
+		runner.check(sent.size() == 1 and sent[0].production_id == producing, "QT10 %s: one sent for entry %d, got %s" % [case[0], producing, sent])
 		BaseScene.tick(main)
 		await _frames(runner)
-		runner.check(_own_credits(main) == credits + 800 and main.hud.refusal == "Missing production entry", "QT10 %s: one refund, then Missing production entry, got %d '%s'" % [case[0], _own_credits(main) - credits, main.hud.refusal])
+		runner.check(_own_credits(main) == credits + 800 and _line_text(main) == "", "QT10 %s: one refund, no refusal, got %d '%s'" % [case[0], _own_credits(main) - credits, _line_text(main)])
 		_move(port, Vector2(900, 200))
 		await _frames(runner)
 	_end_port(scene)
@@ -2114,6 +2414,7 @@ func test_production_panel_layout(runner) -> bool:
 		var ids: Dictionary = _queue_world(main)
 		_add_hq(main, ids)
 		var refusal := Rect2((408.0 + size.x - 432.0) / 2.0 - 208.0, size.y - 36.0, 416.0, 28.0)
+		var rally_tops: Array = []
 		for state: Array in _production_states(ids):
 			await _show_state(runner, port, main, state)
 			var at: String = "%s at %s" % [state[0], size]
@@ -2128,7 +2429,8 @@ func test_production_panel_layout(runner) -> bool:
 			for part: Control in production.find_children("*", "Control", true, false):
 				if part.is_visible_in_tree() and (part is TextureRect or part.name == "Track"): runner.check(panel.grow_individual(-16.0, -12.0, -16.0, -12.0).grow(0.5).encloses(part.get_global_rect()), "PL1 %s: %s inside the panel content" % [at, part.name])
 			var footer: Control = _panel_part(main, "Footer")
-			runner.check(footer.is_visible_in_tree() == state[2].is_empty(), "PL1 %s: the rally line exactly while idle" % at)
+			runner.check(footer.is_visible_in_tree() == (state[2].size() <= 1), "PL1 %s: the rally line exactly while NEXT is empty" % at)
+			if footer.is_visible_in_tree(): rally_tops.append(footer.get_global_rect().position.y)
 			_panel_contained(runner, main, panel, at)
 			if state[0] == "9/9":
 				_move(port, _centre(_more(main)))
@@ -2139,6 +2441,7 @@ func test_production_panel_layout(runner) -> bool:
 				for other: Array in [["the slab", _rect(main, "HUD/Economy")], ["the strip", _rect(main, "HUD/Hud/TopStrip")], ["the refusal line", refusal]]: runner.check(not list.intersects(other[1]), "PL2 %s: AFTER NEXT clear of %s" % [at, other[0]])
 			_move(port, Vector2(size.x / 2.0, 200.0))
 			await _frames(runner)
+		runner.check(rally_tops.size() == 2 and is_equal_approx(rally_tops[0], rally_tops[1]), "PL3 the one-entry rally line sits on the idle footer's line at %s, got %s" % [size, rally_tops])
 		port.free()
 	overlays._end(saved)
 	return true
@@ -3746,7 +4049,7 @@ func test_unchanged_refresh_keeps_layout(runner) -> bool:
 	var ids: Dictionary = _queue_world(main)
 	_queue_kinds(main, ids.factory, [MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, MEDIUM, ROTARY, MEDIUM, ROTARY])
 	await _frames(runner)
-	var watched: Array = ["HUD/Hud/SelectionPanel", PRODUCTION_PATH, PRODUCTION_PATH + "/Now", PRODUCTION_PATH + "/Next", "HUD/Hud/TopStrip", "HUD/Economy", "HUD/Economy/Card"].map(func(path: String) -> Control: return main.get_node(path))
+	var watched: Array = ["HUD/Hud/SelectionPanel", "HUD/Hud/SelectionPanel/Box/Body", "HUD/Hud/SelectionPanel/Box/Body/Footer", PRODUCTION_PATH, PRODUCTION_PATH + "/Now", PRODUCTION_PATH + "/Next", "HUD/Hud/TopStrip", "HUD/Economy", "HUD/Economy/Card"].map(func(path: String) -> Control: return main.get_node(path))
 	# Every production part but the bar, whose right anchor is the progress.
 	var layout: Callable = func() -> Array:
 		var parts: Array = main.get_node(PRODUCTION_PATH).find_children("*", "Control", true, false).filter(func(part: Control) -> bool: return part.name != "Bar")

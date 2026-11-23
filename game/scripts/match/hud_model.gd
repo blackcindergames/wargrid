@@ -159,6 +159,11 @@ static func runs(queue: Array) -> Array:
 		merged.back().count += 1
 	return merged
 
+# Strip round: NEXT's hover hint; NEXT itself takes no click.
+static func cancel_hint(kind: String) -> String:
+	var name: String = Registry.kind(kind).display_name
+	return "To cancel %s %s: right-click its cell" % ["an" if name.left(1).to_lower() in ["a", "e", "i", "o", "u"] else "a", name]
+
 static func run_name(run: Dictionary) -> String:
 	return Registry.kind(run.kind).display_name + (" ×%d" % run.count if run.count > 1 else "")
 
@@ -172,10 +177,22 @@ static func time_left(entry: Dictionary, work_rate: int) -> String:
 	if remaining <= 0: return EXIT_BLOCKED
 	return "%ds" % ceili(float(remaining) / (work_rate * Engine.physics_ticks_per_second))
 
-static func newest_of_kind(queue: Array, kind: String) -> int:
+# The newest `count` ids of `kind`, newest first, past those already sent for cancel; the one in production comes last.
+static func newest_of_kind(queue: Array, kind: String, skip: Dictionary = {}, count: int = 1) -> Array:
+	var ids: Array = []
 	for i: int in range(queue.size() - 1, -1, -1):
-		if queue[i].kind == kind: return queue[i].id
-	return -1
+		if ids.size() == count: break
+		if queue[i].kind == kind and not skip.has(queue[i].id): ids.append(queue[i].id)
+	return ids
+
+const BATCH: int = 5
+
+# Shift queues up to five: as many as the queue's room and the published credits allow (queue follow-up round).
+static func batch(view: Dictionary, building_id: int, kind: String, seat: int) -> int:
+	var room: int = QUEUE_LIMIT - building(view, building_id).get("queue", []).size()
+	@warning_ignore("integer_division")
+	var affordable: int = player(view, seat).credits / Registry.kind(kind).cost
+	return clampi(mini(room, affordable), 0, BATCH)
 
 # A seam so the layout path runs headless; tests swap it and restore it on every path.
 static var layout_label: Callable = _platform_label
@@ -243,8 +260,7 @@ static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: S
 		row.work_rate = player(view, seat).get("work_rate", 1000)
 	var power: int = Registry.kind(object.kind).get("power", 0)
 	if power > 0: row.merge({"key": "POWER", "value": "+%d" % power})
-	# Only while idle, so NEXT keeps its row in the 198 px panel (queue follow-up round).
-	if Registry.can_rally(object.kind) and object.queue.is_empty(): row.footer = RALLY
+	if Registry.can_rally(object.kind): row.footer = RALLY
 	return row
 
 # combat.gd's `_short_of_power`, read from the view's player rows.

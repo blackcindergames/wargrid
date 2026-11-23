@@ -108,12 +108,13 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 			_key_row("home", KEY_H, "Centre on your Headquarters, again to go back"),
 			_key_row("last_attack", KEY_SPACE, "Jump to your or an ally's base under attack")]],
 		["Commands", [
-			["grid", " · ".join(cards), "The button in that spot of the bottom-right card", grid],
+			["grid", " · ".join(cards), "The button in that spot of the card; Shift: five", grid],
 			_key_row("build", HudModel.BUILD_KEY, "Build, with one builder selected"),
 			_key_row("back", HudModel.BACK_KEY, "Back to the builder's buttons"),
 			_key_row("attack_move", HudModel.ORDER_KEYS.attack_move, "Attack move: armed units fight their way to the spot you click"),
 			_key_row("stop", HudModel.ORDER_KEYS.stop, "Stop"),
-			_key_row("unload", HudModel.ORDER_KEYS.unload, "Unload")]],
+			_key_row("unload", HudModel.ORDER_KEYS.unload, "Unload"),
+			["", "Click or right-click", "Cancel the unit in production (on NOW PRODUCING)", []]]],
 		["Groups", [
 			["recall", _span(digits, 0), "Select a group, twice to centre on it", digits],
 			_save_row(digits, web, mac),

@@ -1975,7 +1975,7 @@ func test_freeze_card_keeps_the_focus(runner) -> bool:
 	runner.check((menu.get_child(0) as Button).focus_mode == Control.FOCUS_NONE, "FN5 a cell takes no focus, so Enter cannot press it behind the card")
 	var gestures: int = main.orders.gestures
 	(menu.get_child(0) as Button).pressed.emit()
-	main.hud.cell_pressed.emit("usa_power_plant")
+	main.hud.cell_pressed.emit("usa_power_plant", false)
 	# The freeze card's own hook would clear an armed ghost at once, so the arm count is what shows it.
 	runner.check(main.orders.gestures == gestures and not main.orders._sub_grid, "FN5 Build and a build cell pressed behind the card open and arm nothing")
 	main.orders._cancel_entry(1)

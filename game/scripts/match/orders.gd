@@ -12,6 +12,8 @@ const BUILDER_LOST: String = "Builder lost"
 const GROUPS_UNITS_ONLY: String = "Groups hold units only"
 # A Space spot has no footprint; the ring starts from a 2 x 2 cell diamond around it.
 const SPOT_CELLS := Vector2(2, 2)
+# Two seconds of ticks (queue follow-up round's accidental-cancel window).
+const ACCIDENT_TICKS: int = 60
 
 var selected_ids: Array[int] = []
 var selected_building_id: int = -1
@@ -36,6 +38,8 @@ var _awaiting_build: String = ""
 var _build_refused: bool = false
 # Any submit, re-arm or Esc after the build click bumps this, so a late refusal reopens placement only over an untouched selection.
 var gestures: int = 0
+var accidental_cancels: int = 0
+var _last_cancel: Dictionary = {}
 var _awaiting_from: Array = []
 var _answer: Dictionary = {}
 var _start_pending: bool = true
@@ -90,6 +94,8 @@ func escape_pending() -> bool:
 	return _attack_move_mode or inspected_id != -1 or _selecting or not selected_ids.is_empty() or not _placement_kind.is_empty() or selected_building_id != -1
 
 func reset() -> void:
+	accidental_cancels = 0
+	_last_cancel = {}
 	selected_ids.clear()
 	selected_building_id = -1
 	inspected_id = -1
@@ -146,7 +152,7 @@ func _card_key(event: InputEvent) -> bool:
 	for cell: Array in HudModel.card(_screen.shown_state, _screen._hud_selection(), _screen.local_player):
 		if cell[0] == key.physical_keycode: action = cell[1]
 	if action.is_empty(): _no_cell(key.physical_keycode)
-	else: press_cell(action)
+	else: press_cell(action, key.shift_pressed)
 	return true
 
 # 1-9 recall, Shift adds, Ctrl or Cmd saves (Shift+Ctrl is the save for browsers that keep Ctrl+N, 3-18); Alt does nothing (3-17), nor does any of it during a drag or a placement.
@@ -225,7 +231,7 @@ func _centroid(units: Array[int]) -> Vector2:
 	return sum / units.size()
 
 # A key or a click on a shown cell; the Hud's cells carry the actions of `HudModel.card`.
-func press_cell(action: String) -> void:
+func press_cell(action: String, shift: bool = false) -> void:
 	if not takes_orders(): return
 	var blocked: Dictionary = HudModel.blocked(_screen.shown_state, _screen._hud_selection(), _screen.local_player, action)
 	if not blocked.is_empty():
@@ -239,7 +245,7 @@ func press_cell(action: String) -> void:
 		"attack_move": arm_attack_move()
 		"stop": stop_selected()
 		"unload": _unload_selected()
-		_: _press(action)
+		_: _press(action, shift)
 
 func _no_cell(code: Key) -> void:
 	if code != HudModel.BUILD_KEY or not selected_ids.is_empty() or selected_building_id != -1 or inspected_id != -1: return
@@ -447,9 +453,20 @@ func _hint_point(payload: Dictionary) -> Variant:
 	if building.is_empty(): return null
 	return Vector2(building.origin[0],building.origin[1]) + Vector2(Definitions.building(building.kind).footprint) / 2.0
 
-func _press(kind: String) -> void:
-	if selected_building_id != -1: _screen._submit({"type":"produce","building_id":selected_building_id,"unit_kind":kind})
-	else: _enter_placement(kind)
+# Shift queues a batch as separate produce commands, which one frame sends in one tick message.
+func _press(kind: String, shift: bool) -> void:
+	if selected_building_id == -1:
+		_enter_placement(kind)
+		return
+	_count_accident(kind)
+	var count: int = HudModel.batch(_screen.shown_state, selected_building_id, kind, _screen.local_player) if shift else 1
+	for i: int in count: _screen._submit({"type":"produce","building_id":selected_building_id,"unit_kind":kind})
+
+# A cancel, then the same kind queued at the same producer within two seconds: an accident for the playtest record (queue follow-up round).
+func _count_accident(kind: String) -> void:
+	if _last_cancel.get("building", -1) != selected_building_id or _last_cancel.get("kind", "") != kind: return
+	if _screen.shown_state.tick - _last_cancel.tick <= ACCIDENT_TICKS: accidental_cancels += 1
+	_last_cancel = {}
 
 func _builder() -> int:
 	if selected_ids.size() != 1: return -1
@@ -547,7 +564,10 @@ func _set_rally(plane: Vector2) -> bool:
 
 func _cancel_entry(id: int) -> void:
 	if not takes_orders(): return
+	for entry: Dictionary in HudModel.building(_screen.shown_state, selected_building_id).get("queue", []):
+		if entry.id == id: _last_cancel = {"building": selected_building_id, "kind": entry.kind, "tick": _screen.shown_state.tick}
 	_screen._submit({"type":"cancel_production","building_id":selected_building_id,"production_id":id})
+	_screen.hud.pending_cancels[id] = true
 
 func _cancel_build() -> void:
 	if not takes_orders(): return

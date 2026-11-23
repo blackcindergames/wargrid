@@ -17,5 +17,5 @@ Branch `p16-know-what-your-factory-is-making`. Package row: [packages](../packag
 - Seconds left = ceil(remaining work / `work_rate` / 30), from the published view.
 - `Exit blocked` when the head entry's work is complete and it is still queued.
 - One glyph per body role (`Shapes.role`) shared by the factions, drawn from the round's `glyphs3.js`; the Rotary Gun Tank gets a multi-barrel cluster; a kind without a glyph shows its name only.
-- The accidental-cancel count is kept by the HUD, which knows the kind when it cancels.
+- The accidental-cancel count is kept by `orders.gd`, which sees produces from keys and clicks; it and a NEXT-click count go into the playtest session file's match entry.
 - [HUD v5 layout](hud-v5-layout.md) top strip: low power also slows production (50-80 %, `economy_definitions.gd` `work_rate`), not only defences.

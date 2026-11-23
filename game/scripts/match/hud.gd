@@ -1,6 +1,6 @@
 extends Control
 
-signal cell_pressed(action: String)
+signal cell_pressed(action: String, shift: bool)
 signal entry_cancelled(entry_id: int)
 signal cancel_build_pressed()
 signal menu_pressed()
@@ -22,6 +22,10 @@ const NEXT_GLYPH: float = 26.0
 const CELL_GLYPH: float = 19.0
 # Wide enough for `Exit blocked`, so the bar never moves between states.
 const TIME_WIDTH: float = 84.0
+const FLASH: Color = Color(1.6, 1.6, 1.6)
+const FLASH_SECONDS: float = 0.3
+# NOW's hover `×` at its right end, 4 after the time.
+const MARK_WIDTH: float = 12.0
 # Shrunk from the draft's 84 so the idle rally line fits under it.
 const IDLE_BOX: float = 72.0
 # The AFTER NEXT list ends 8 above the refusal line's top (H - 36).
@@ -59,7 +63,8 @@ var _card: GridContainer
 var _well: StyleBoxFlat
 var _cell_queue: Array = []
 var _cell_press: Vector2
-var _cell_pressed: Button = null
+var _cell_pressed: Control = null
+var _shift_click: bool = false
 var _cancel_build: Button
 var _top_strip: HBoxContainer
 var _credits_slab: PanelContainer
@@ -94,6 +99,10 @@ var _queue_for: int = -1
 var _work_rate: int = 1000
 var _now_entry: Dictionary = {}
 var _cancelled_id: int = -1
+# Entries sent for cancel (`orders._cancel_entry`), freed again by a refusal: right-clicks skip them; ids never repeat (queue follow-up round).
+var pending_cancels: Dictionary = {}
+# Clicks on NEXT, which has no click target: the round's evidence that a player expects one.
+var next_clicks: int = 0
 var _count_style: StyleBoxFlat
 var _inset: StyleBoxFlat
 var _edge: Color = Color.WHITE
@@ -131,7 +140,6 @@ func _init() -> void:
 	_build_looks()
 	_build_panel()
 	for surface: Control in [_top_strip, _menu, _panel]: block(surface)
-	entry_cancelled.connect(func(id: int) -> void: _cancelled_id = id)
 
 # The spec's HUD blocks: a click, drag release or wheel on a panel never reaches the map.
 func block(surface: Control) -> void:
@@ -405,6 +413,9 @@ func reset() -> void:
 	_last = []
 	_last_ids = []
 	_counts = {}
+	pending_cancels = {}
+	next_clicks = 0
+	_cancelled_id = -1
 	if _economy != null:
 		end_hover()
 		read_keys()
@@ -500,6 +511,7 @@ func _build_cell_card() -> void:
 	counter.add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
 	# A broken counter line keeps the card's 20 px line pitch.
 	counter.add_theme_constant_override("line_spacing", roundi(CELL_CARD_LINE - counter.get_theme_font("font").get_height(13)))
+	_card_line(lines, "Cancel").add_theme_color_override("font_color", get_theme_color("text", &"Tokens"))
 	_cell_card.visible = false
 
 # The card's regular 13 px lines (the picture's body text).
@@ -725,26 +737,42 @@ func _press_cell(cell: Button) -> void:
 	var action: String = cell.get_meta("action")
 	# The sound player hears this press after the action has refilled the cell (Build opens the sub-grid in place).
 	cell.set_meta("pressed_blocked", cell.get_meta("blocked"))
-	if not action.is_empty(): cell_pressed.emit(action)
+	var shift: bool = _shift_click
+	_shift_click = false
+	if not action.is_empty(): cell_pressed.emit(action, shift)
 
 # Progress shows only on NOW, never twice (user, 2026-11-23).
 func _show_queued(cell: Button) -> void:
 	var action: String = cell.get_meta("action")
 	_show_count(cell.get_node("Count") as Label, _cell_queue.filter(func(entry: Dictionary) -> bool: return entry.kind == action).size(), 1)
 
-# OpenRA's right-click (user, 2026-11-21), on release as every right-click (P17): cancels the newest entry of the cell's kind; none queued, nothing sent.
+# OpenRA's right-click (user, 2026-11-21): cancels the newest entry of the cell's kind not already sent, Shift the five newest; none, nothing sent.
+# A left button's Shift reaches `_press_cell`, which the release fires after this handler.
 func _cell_input(event: InputEvent, cell: Button) -> void:
 	var click := event as InputEventMouseButton
-	if click == null or click.button_index != MOUSE_BUTTON_RIGHT: return
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT: _shift_click = click.shift_pressed
+	if not _right_click(event, cell): return
+	var ids: Array = HudModel.newest_of_kind(_cell_queue, cell.get_meta("action"), pending_cancels, HudModel.BATCH if click.shift_pressed else 1)
+	for id: int in ids: entry_cancelled.emit(id)
+	if ids.any(func(id: int) -> bool: return pending_cancels.has(id)): _flash(cell.get_meta("action"))
+
+# On release, within the slop and on the control pressed, as every right-click (P17).
+func _right_click(event: InputEvent, control: Control) -> bool:
+	var click := event as InputEventMouseButton
+	if click == null or click.button_index != MOUSE_BUTTON_RIGHT: return false
 	if click.pressed:
 		_cell_press = click.position
-		_cell_pressed = cell
-		return
-	var pressed_here: bool = _cell_pressed == cell
+		_cell_pressed = control
+		return false
+	var pressed_here: bool = _cell_pressed == control
 	_cell_pressed = null
-	if not pressed_here or click.position.distance_to(_cell_press) > MousePan.SLOP: return
-	var id: int = HudModel.newest_of_kind(_cell_queue, cell.get_meta("action"))
-	if id != -1: entry_cancelled.emit(id)
+	return pressed_here and click.position.distance_to(_cell_press) <= MousePan.SLOP
+
+# A refused cancel frees its entry; an accepted one for NOW's entry lets a held NOW read blank instead of `Done`.
+func cancel_answered(answer: Dictionary) -> void:
+	if answer.command.get("type") != "cancel_production": return
+	if not answer.ok: pending_cancels.erase(answer.command.production_id)
+	elif answer.command.production_id == _now_entry.get("id", -1): _cancelled_id = answer.command.production_id
 
 func _show_strip(view: Dictionary, selection: Dictionary, view_player: int) -> void:
 	var numbers: Dictionary = HudModel.strip(view, view_player, _hovered_kind() if not _hovered_kind().is_empty() else selection.placement_kind)
@@ -840,7 +868,7 @@ func _show_cell_card() -> void:
 	(_cell_card.find_child("Name", true, false) as Label).text = (_hovered_cell.get_node("Name") as Label).text
 	var numbers: Label = _cell_card.find_child("Numbers", true, false)
 	numbers.visible = not HudModel.COMMANDS.has(action)
-	if numbers.visible: numbers.text = "%d · %d s" % [Registry.kind(action).cost, ceili(Registry.kind(action).ticks / float(Engine.physics_ticks_per_second))]
+	if numbers.visible: numbers.text = "%d · %d s" % [Registry.kind(action).cost, ceili(Registry.kind(action).ticks / float(Engine.physics_ticks_per_second))] + _per_order(action)
 	var line: Label = _cell_card.find_child("Reason", true, false)
 	line.visible = not reason.is_empty()
 	line.text = reason
@@ -854,12 +882,27 @@ func _show_cell_card() -> void:
 		counter.text = words if _text_width(counter, words) <= room else words.replace(" · ", "\n")
 		counter.custom_minimum_size.y = CELL_CARD_LINE * (counter.text.count("\n") + 1)
 	counter.visible = not words.is_empty()
+	var cancel: Label = _cell_card.find_child("Cancel", true, false)
+	cancel.text = _cancel_line(action)
+	cancel.visible = not cancel.text.is_empty()
 	_cell_card.reset_size()
 	var cell: Rect2 = _hovered_cell.get_global_rect()
 	var at := Rect2(Vector2(clampf(cell.position.x, 8.0, get_viewport_rect().size.x - 8.0 - _cell_card.size.x), slab_top() - 8.0 - _cell_card.size.y), _cell_card.size)
 	for helper: Control in helpers:
 		if helper.is_visible_in_tree() and at.intersects(helper.get_global_rect()): at.position.x = maxf(8.0, helper.get_global_rect().position.x - 8.0 - at.size.x)
 	_cell_card.position = at.position
+
+# Militia-type kinds give more than one unit per order, which the queue counts.
+static func _per_order(action: String) -> String:
+	var quantity: int = Registry.kind(action).get("quantity", 1)
+	return " · %d per order" % quantity if quantity > 1 else ""
+
+# Teaches the right-click while the kind is queued (queue follow-up round).
+func _cancel_line(action: String) -> String:
+	var queued: Array = _cell_queue.filter(func(entry: Dictionary) -> bool: return entry.kind == action)
+	if queued.is_empty(): return ""
+	if queued.size() == 1 and _cell_queue[0].kind == action: return "Right-click: cancel the one in production"
+	return "Right-click: cancel the last (%d queued)" % queued.size()
 
 # Item cells always; a command only while blocked, to name why.
 static func _has_card(cell: Button) -> bool:
@@ -872,6 +915,7 @@ func _restrip() -> void:
 # or the dashed idle box; replaces P2.3b's tiles in every own producer's panel.
 func _build_production(body: BoxContainer) -> void:
 	_production = _box(body, "Production", VBoxContainer.new(), 6) as VBoxContainer
+	_production.size_flags_vertical = SIZE_EXPAND_FILL
 	_rule("Rule")
 	var strip: BoxContainer = _box(_production, "Strip", HBoxContainer.new(), 8)
 	_label(strip, "Tag", &"HudLabel")
@@ -907,6 +951,9 @@ func _build_now() -> void:
 	_now.custom_minimum_size.y = NOW_ROW
 	_cell_look(_now, &"ready")
 	_now.pressed.connect(_cancel_now)
+	_now.gui_input.connect(_now_input)
+	_now.mouse_entered.connect(_show_mark.bind(true))
+	_now.mouse_exited.connect(_show_mark.bind(false))
 	_now.mouse_exited.connect(_release_now, CONNECT_DEFERRED)
 	_glyph(_now, "Glyph", NOW_GLYPH).position = Vector2(NOW_PAD, (NOW_ROW - NOW_GLYPH) / 2.0)
 	var name_label: Label = _label(_now, "Name", &"HudRow")
@@ -928,20 +975,29 @@ func _build_now() -> void:
 	time.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	time.set_anchors_preset(PRESET_RIGHT_WIDE)
 	time.grow_horizontal = GROW_DIRECTION_BEGIN
-	time.offset_left = -NOW_PAD - TIME_WIDTH
-	time.offset_right = -NOW_PAD
+	time.offset_left = -NOW_PAD - MARK_WIDTH - 4.0 - TIME_WIDTH
+	time.offset_right = -NOW_PAD - MARK_WIDTH - 4.0
+	var mark: Label = _label(_now, "Mark", &"HudNumber", "×")
+	mark.mouse_filter = MOUSE_FILTER_IGNORE
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mark.set_anchors_preset(PRESET_RIGHT_WIDE)
+	mark.offset_left = -NOW_PAD - MARK_WIDTH
+	mark.offset_right = -NOW_PAD
+	mark.visible = false
 
 # From after the glyph to 8 before the time column; `_fill_now` moves the left edge when a kind has no glyph.
 static func _span(part: Control, top: float, bottom: float) -> void:
 	part.anchor_right = 1.0
 	part.offset_left = 2.0 * NOW_PAD + NOW_GLYPH
-	part.offset_right = -2.0 * NOW_PAD - TIME_WIDTH
+	part.offset_right = -2.0 * NOW_PAD - TIME_WIDTH - MARK_WIDTH - 4.0
 	part.offset_top = top
 	part.offset_bottom = bottom
 
 # No click target but `+N more`, which opens the read-only AFTER NEXT list on hover and on a click (a tap).
 func _build_next() -> void:
 	_next = _box(_production, "Next", HBoxContainer.new(), 8) as HBoxContainer
+	_next.mouse_filter = MOUSE_FILTER_PASS
+	_next.gui_input.connect(_next_input)
 	_label(_next, "Tag", &"HudLabel", "NEXT")
 	_glyph(_next, "Glyph", NEXT_GLYPH).size_flags_vertical = SIZE_SHRINK_CENTER
 	_label(_next, "Name", &"HudRow").size_flags_horizontal = SIZE_EXPAND_FILL
@@ -965,7 +1021,28 @@ func _build_next() -> void:
 	block(_after_next)
 
 func _cancel_now() -> void:
-	if not _now_entry.is_empty(): entry_cancelled.emit(_now_entry.id)
+	if _now_entry.is_empty() or pending_cancels.has(_now_entry.id): return
+	entry_cancelled.emit(_now_entry.id)
+	if pending_cancels.has(_now_entry.id): _flash(_now_entry.kind)
+
+# Strip round: the kind's cell and the credits slab brighten and fade back in 0.3 s; the click stays the only sound.
+func _flash(kind: String) -> void:
+	var targets: Array[Control] = [_credits_slab]
+	if _card != null: targets.append_array(_card.get_children().filter(func(cell: Control) -> bool: return cell.visible and cell.get_meta("action") == kind))
+	for target: Control in targets:
+		target.modulate = FLASH
+		create_tween().tween_property(target, "modulate", Color.WHITE, FLASH_SECONDS)
+
+func _now_input(event: InputEvent) -> void:
+	if _right_click(event, _now) and not _now.disabled: _cancel_now()
+
+func _show_mark(hovered: bool) -> void:
+	(_now.get_node("Mark") as Control).visible = hovered and not _now.disabled
+
+# `+N more` takes its own clicks, so only the row's words and glyph count.
+func _next_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.pressed and click.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]: next_clicks += 1
 
 func _pin_more() -> void:
 	_after_pinned = not _after_pinned
@@ -1034,6 +1111,7 @@ func _fill_now(held: bool) -> void:
 	var cancel: String = "Cancel · refunds %d" % _now_entry.paid_cost
 	_now.tooltip_text = "" if held else (HudModel.LOW_POWER_HINT + "\n" + cancel if _work_rate < 1000 else cancel)
 	_now.disabled = held
+	if held: _show_mark(false)
 	_now.mouse_default_cursor_shape = CURSOR_ARROW if held else CURSOR_POINTING_HAND
 
 # The first run waiting, `+N more` counting the entries after it; their runs make the AFTER NEXT list.
@@ -1044,6 +1122,7 @@ func _fill_next(runs: Array) -> void:
 	if _next.visible:
 		_set_glyph(_next.get_node("Glyph"), runs[0].kind)
 		(_next.get_node("Name") as Label).text = HudModel.run_name(runs[0])
+		_next.tooltip_text = HudModel.cancel_hint(runs[0].kind)
 		var after: Array = runs.slice(1)
 		_more.text = "+%d more" % after.reduce(func(sum: int, run: Dictionary) -> int: return sum + run.count, 0)
 		(_after_next.get_node("Lines/List") as Label).text = "\n".join(after.map(HudModel.run_name))
@@ -1071,6 +1150,8 @@ func _build_panel() -> void:
 	_label(top, "Name", &"HudTitle").size_flags_horizontal = SIZE_EXPAND_FILL
 	_label(top, "RightLabel", &"HudLabel")
 	var body: BoxContainer = _box(box, "Body", VBoxContainer.new(), 8)
+	# The producer panel's spare height goes above the footer, so the rally line keeps one line at the bottom.
+	body.size_flags_vertical = SIZE_EXPAND_FILL
 	_bar_row(body, "ProgressRow", "Progress", "Percent")
 	_bar_row(body, "HealthRow", "HealthBar", "Health")
 	var pair: BoxContainer = _box(body, "KeyRow", HBoxContainer.new(), 0)
@@ -1153,6 +1234,8 @@ func _show_selection(view: Dictionary, selection: Dictionary, seat: int, faction
 		# Fixed, so a queue change never moves the panel's top (queue follow-up round).
 		_panel.custom_minimum_size.y = PRODUCER_PANEL if _production.visible else 0.0
 		if _production.visible: _show_queue(row.queue, selection.building_id, row.work_rate)
+		# Strip round: the rally line takes the empty NEXT row, idle or with one entry.
+		_panel.get_node("Box/Body/Footer").visible = row.has("footer") and not (_production.visible and _next.visible)
 	if not _production.visible: _show_after()
 
 # The row set holds while the pointer is over the panel, so a row never moves under it.
@@ -1276,7 +1359,6 @@ func _show_panel(row: Dictionary, bright: bool) -> void:
 	body.get_node("KeyRow").visible = row.has("key")
 	body.get_node("KeyRow/Key").text = row.get("key", "")
 	body.get_node("KeyRow/Value").text = row.get("value", "")
-	body.get_node("Footer").visible = row.has("footer")
 
 func _fill_bar(row: Node, shown: bool, fraction: float, colour: Color, number: String) -> void:
 	row.visible = shown
