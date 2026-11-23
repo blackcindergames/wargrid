@@ -426,7 +426,10 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	_view.set_inspected(orders.inspected_id)
 	if frozen(): _show_freeze()
 	else: _show_result(state)
-	if fresh: _sound.update(state)
+	if fresh:
+		_sound.update(state)
+		var alert: String = _sound.director.take_alert()
+		if not alert.is_empty(): hud.alert(alert)
 	Profiler.end(&"refresh.hud", zone)
 	if fresh: stepped_results.clear()
 

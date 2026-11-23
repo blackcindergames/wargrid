@@ -52,7 +52,7 @@ func handle(event: InputEvent) -> void:
 	_hover(event, on_hud)
 	# A press that began on the map ends over a panel: only a drag goes on there, never a click, an order or the ghost.
 	if on_hud and not _selecting: return
-	if _card_key(event) or _group_key(event): return
+	if _card_key(event) or _group_key(event) or _camera_key(event): return
 	if _placement_kind.is_empty() and (_combat_input(event) or _sub_grid_escape(event)): return
 	if not _placement_kind.is_empty():
 		_placement_input(event)
@@ -154,6 +154,15 @@ func _group_key(event: InputEvent) -> bool:
 	if key.ctrl_pressed or key.meta_pressed: _save_group(slot)
 	elif key.shift_pressed: _add_to_group(slot)
 	else: _recall_group(slot)
+	return true
+
+# H centres on the Headquarters and Space on the last base attack; the camera moves in placement and the sub-grid too, never during a drag.
+func _camera_key(event: InputEvent) -> bool:
+	var key := event as InputEventKey
+	if key == null or not key.pressed or key.echo or not key.physical_keycode in [KEY_H, KEY_SPACE]: return false
+	if key.ctrl_pressed or key.meta_pressed or key.alt_pressed or is_selecting(): return true
+	var target: Variant = HudModel.home_position(_screen.shown_state, _screen.local_player) if key.physical_keycode == KEY_H else _screen._sound.director.last_attack()
+	if target != null: _screen.centre_camera(target)
 	return true
 
 # Units only; a building or an inspected enemy leaves the group be, nothing selected empties it.

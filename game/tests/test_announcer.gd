@@ -10,7 +10,7 @@ const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const SkirmishScene = preload("res://scenes/skirmish.tscn")
 
 func cases() -> Array[Callable]:
-	return [test_second_base_attack_within_30s_is_silent, test_building_lost_cooldown_30s, test_low_power_cooldown_120s, test_insufficient_funds_cooldown_30s, test_line_expires_after_5s, test_one_line_at_a_time_by_priority, test_waiting_line_not_queued_twice, test_triggers_from_snapshots, test_unit_ready_not_fired_by_spawns, test_rubble_is_not_base, test_unit_attack_is_not_base_attack, test_frc_never_low_power, test_announcer_follows_local_seat, test_match_end_lines, test_online_start_says_nothing, test_restart_starts_silent, test_restart_resets_tick_guard, test_match_end_drops_queued_lines, test_funds_line_from_results_and_rejections, test_submit_without_funds_announces, test_blocked_presses_click_each_voice_once]
+	return [test_second_base_attack_within_30s_is_silent, test_building_lost_cooldown_30s, test_low_power_cooldown_120s, test_insufficient_funds_cooldown_30s, test_line_expires_after_5s, test_one_line_at_a_time_by_priority, test_waiting_line_not_queued_twice, test_triggers_from_snapshots, test_unit_ready_not_fired_by_spawns, test_rubble_is_not_base, test_unit_attack_is_not_base_attack, test_frc_never_low_power, test_announcer_follows_local_seat, test_match_end_lines, test_online_start_says_nothing, test_restart_starts_silent, test_restart_resets_tick_guard, test_match_end_drops_queued_lines, test_funds_line_from_results_and_rejections, test_submit_without_funds_announces, test_blocked_presses_click_each_voice_once, test_allied_base_hit_has_its_own_line, test_allied_line_cooldown, test_defences_count_holes_do_not, test_own_and_allied_hit_in_one_tick, test_last_attack_for_space, test_alert_text]
 
 func _starts(announcer, line: String, tick: int) -> bool:
 	announcer.request(line, tick)
@@ -313,4 +313,90 @@ func test_submit_without_funds_announces(runner) -> bool:
 	skirmish._refresh()
 	runner.check(_voice_line(skirmish) == "insufficient_funds" and not _cues(skirmish).has("error"), "AN20 funds rejection says the line, voice %s cues %s" % [_voice_line(skirmish), _cues(skirmish)])
 	skirmish.free()
+	return true
+
+const ALLY_PLAYERS := [{"id": 1, "team": 1, "power_supply": 0, "power_demand": 0}, {"id": 2, "team": 2, "power_supply": 0, "power_demand": 0}, {"id": 3, "team": 1, "power_supply": 0, "power_demand": 0}]
+
+func _allied_state(tick: int, buildings: Array) -> Dictionary:
+	return _state(tick, [_unit(9, "usa_tank", 2), _unit(10, "usa_tank", 1)], buildings, {"players": ALLY_PLAYERS})
+
+func _own_and_ally() -> Array:
+	return [_building(7, "usa_barracks", 1, {"origin": [10.0, 10.0]}), _building(8, "usa_barracks", 3, {"origin": [20.0, 20.0]}), _building(6, "usa_barracks", 2, {"origin": [30.0, 30.0]})]
+
+func _hit_line(director, tick: int, target: int, buildings: Array = []) -> Array:
+	_step(director, tick, [_hit(tick, 9, target)])
+	director.update(_allied_state(tick, buildings if not buildings.is_empty() else _own_and_ally()))
+	return _lines(director, tick)
+
+func test_allied_base_hit_has_its_own_line(runner) -> bool:
+	var director = _director(_allied_state(1, _own_and_ally()))
+	runner.check(_hit_line(director, 2, 8) == ["allied_base_under_attack"], "AL1 a shot at an ally's building gives the allied line")
+	runner.check(_hit_line(director, 3, 7) == ["base_under_attack"], "AL1 a shot at an own building keeps the old line")
+	runner.check(_hit_line(director, 4, 6).is_empty(), "AL1 a shot at an enemy building says nothing")
+	runner.check(_hit_line(director, 5, 10).is_empty(), "AL1 a shot at an own unit says nothing")
+	for line: String in Announcer.PRIORITY: runner.check(load(Announcer.path(line)) is AudioStream, "AL1 %s has its wav" % line)
+	runner.check(Announcer.PRIORITY.allied_base_under_attack == 6 and Announcer.COOLDOWN_TICKS.allied_base_under_attack == 900, "AL1 priority 6, cooldown 900 (Eva.ini)")
+	return true
+
+func test_allied_line_cooldown(runner) -> bool:
+	var director = _director(_allied_state(1, _own_and_ally()))
+	runner.check(_hit_line(director, 100, 8) == ["allied_base_under_attack"], "AL2 first allied hit is heard")
+	runner.check(_hit_line(director, 999, 8).is_empty(), "AL2 an allied hit 899 ticks later is silent")
+	runner.check(_hit_line(director, 1000, 8) == ["allied_base_under_attack"], "AL2 an allied hit 900 ticks later is heard")
+	runner.check(_hit_line(director, 1001, 7) == ["base_under_attack"], "AL2 the own line has its own cooldown")
+	return true
+
+func test_defences_count_holes_do_not(runner) -> bool:
+	var own_defence := _building(5, "frc_defence", 1)
+	var ally_defence := _building(4, "frc_defence", 3)
+	var ally_hole := _building(3, "frc_hole_1", 3, {"rebuild": {}})
+	var buildings := [own_defence, ally_defence, ally_hole]
+	var director = _director(_allied_state(1, buildings))
+	runner.check(_hit_line(director, 2, 5, buildings) == ["base_under_attack"], "AL3 an own defence is a base (not counts_for_victory)")
+	runner.check(_hit_line(director, 3, 4, buildings) == ["allied_base_under_attack"], "AL3 an allied defence is a base")
+	var before: Variant = director.last_attack()
+	director.take_alert()
+	_step(director, 4, [_hit(4, 9, 3)])
+	director.update(_allied_state(4, buildings))
+	runner.check(_lines(director, 4).is_empty() and director.take_alert().is_empty() and director.last_attack() == before, "AL3 an allied rebuild hole says nothing and Space ignores it")
+	return true
+
+func test_own_and_allied_hit_in_one_tick(runner) -> bool:
+	var director = _director(_allied_state(1, _own_and_ally()))
+	_step(director, 2, [_hit(2, 9, 8), _hit(2, 9, 7)])
+	director.update(_allied_state(2, _own_and_ally()))
+	runner.check(_lines(director, 2) == ["base_under_attack", "allied_base_under_attack"], "AL4 own (7) is heard before allied (6)")
+	return true
+
+func test_last_attack_for_space(runner) -> bool:
+	var director = _director(_allied_state(1, _own_and_ally()))
+	runner.check(director.last_attack() == null, "AL5 nothing before the first event")
+	_hit_line(director, 10, 8)
+	runner.check(director.last_attack() == Vector2(21.0, 21.0), "AL5 an allied hit is the target when no own hit is known, got %s" % [director.last_attack()])
+	_hit_line(director, 20, 7)
+	_hit_line(director, 30, 8)
+	runner.check(director.last_attack() == Vector2(11.0, 11.0), "AL5 an own hit younger than the voice cooldown beats a newer allied one, got %s" % [director.last_attack()])
+	director.update(_allied_state(920, _own_and_ally()))
+	runner.check(director.last_attack() == Vector2(21.0, 21.0), "AL5 once the own hit is 900 ticks old the newest wins, got %s" % [director.last_attack()])
+	director.update(_allied_state(100000, []))
+	runner.check(director.last_attack() == Vector2(21.0, 21.0), "AL5 any age, and the target may be dead, got %s" % [director.last_attack()])
+	_hit_line(director, 100001, 7, [])
+	runner.check(director.last_attack() == Vector2(11.0, 11.0), "AL5 a later own hit wins again, got %s" % [director.last_attack()])
+	_step(director, 100002, [_hit(100002, 9, 8), _hit(100002, 9, 7)])
+	director.update(_allied_state(100002, _own_and_ally()))
+	runner.check(director.last_attack() == Vector2(11.0, 11.0), "AL5 both hit in one tick: own")
+	director.reset()
+	runner.check(director.last_attack() == null, "AL5 reset forgets the attack")
+	return true
+
+func test_alert_text(runner) -> bool:
+	var director = _director(_allied_state(1, _own_and_ally()))
+	runner.check(director.take_alert().is_empty(), "AL6 no alert before a hit")
+	_hit_line(director, 2, 8)
+	runner.check(director.take_alert() == "Allied base under attack" and director.take_alert().is_empty(), "AL6 an allied hit alerts once")
+	_step(director, 3, [_hit(3, 9, 8), _hit(3, 9, 7)])
+	director.update(_allied_state(3, _own_and_ally()))
+	runner.check(director.take_alert() == "Base under attack", "AL6 own and allied in one tick show the own words")
+	_hit_line(director, 4, 6)
+	runner.check(director.take_alert().is_empty(), "AL6 an enemy building alerts nothing")
 	return true

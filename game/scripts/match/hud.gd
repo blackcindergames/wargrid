@@ -58,6 +58,9 @@ var _refused_at: int = 0
 var _group_line: PanelContainer
 var _group_text: Label
 var _grouped_at: int = 0
+var _alert_line: PanelContainer
+var _alert_text: Label
+var _alerted_at: int = 0
 var _esc: Label
 var _resume: Label
 var _queue_header: HBoxContainer
@@ -97,6 +100,7 @@ func _init() -> void:
 	_build_notice()
 	_build_refusal_line()
 	_build_group_line()
+	_build_alert_line()
 	_build_panel()
 	for surface: Control in [_top_strip, _menu, _panel]: block(surface)
 
@@ -315,6 +319,19 @@ func _build_group_line() -> void:
 	_group_text = _label(_group_line, "Text", &"HudRow")
 	_group_line.visible = false
 
+# 3-24: top left under the strip, so the notice at the top centre never meets it.
+func _build_alert_line() -> void:
+	_alert_line = _slab("AlertLine", Vector2(8, 48))
+	_flat(_alert_line, 28)
+	_alert_text = _label(_alert_line, "Text", &"HudRow")
+	_alert_text.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
+	_alert_line.visible = false
+
+func alert(text: String) -> void:
+	_alerted_at = now_msec.call()
+	_alert_text.text = text
+	_alert_line.visible = true
+
 func group_saved(slot: int, count: int) -> void:
 	_grouped_at = now_msec.call()
 	_group_text.text = "Group %d · %d unit%s" % [slot, count, "" if count == 1 else "s"]
@@ -334,6 +351,7 @@ func clear_refusal() -> void:
 func _process(_delta: float) -> void:
 	if _refusal_line.visible and now_msec.call() - _refused_at >= 3000: _refusal_line.visible = false
 	if _group_line.visible and now_msec.call() - _grouped_at >= 2000: _group_line.visible = false
+	if _alert_line.visible and now_msec.call() - _alerted_at >= 4000: _alert_line.visible = false
 	# Only the 250 ms wait needs the frame; hover and refresh lay out an open card.
 	if _hovered_cell != null and not _cell_card.visible: _show_cell_card()
 
@@ -354,6 +372,7 @@ func setup(economy: VBoxContainer) -> void:
 func reset() -> void:
 	clear_refusal()
 	_group_line.visible = false
+	_alert_line.visible = false
 	_labels = {}
 	_last = []
 	_last_ids = []

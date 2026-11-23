@@ -12,7 +12,7 @@ const COMPONENTS: Array = [
 const LICENSES: Dictionary = {"Expat": "EXPAT-LICENCE-TEXT", "Zlib": "ZLIB-LICENCE-TEXT"}
 
 func cases() -> Array[Callable]:
-	return [test_every_music_row, test_new_row_appears, test_macleod_block, test_voice_line, test_unit_voice_rows, test_maps_notice, test_godot_license, test_wargrid_line, test_third_party_components, test_third_party_engine_data, test_macleod_ignores_earlier_fence, test_crlf_credits, test_public_sans_notice, test_exports_ship_the_font_licence]
+	return [test_every_music_row, test_new_row_appears, test_macleod_block, test_voice_line, test_allied_voice_row, test_unit_voice_rows, test_maps_notice, test_godot_license, test_wargrid_line, test_third_party_components, test_third_party_engine_data, test_macleod_ignores_earlier_fence, test_crlf_credits, test_public_sans_notice, test_exports_ship_the_font_licence]
 
 func _credits() -> String:
 	return FileAccess.get_file_as_string(CREDITS_PATH).replace("\r\n", "\n")
@@ -62,6 +62,13 @@ func test_voice_line(runner) -> bool:
 	var panel := _panel(_credits())
 	runner.check("Piper en_US-kristin-medium (public-domain LibriVox recordings)" in panel and "huggingface.co/rhasspy/piper-voices" in panel, "CR4 voice line")
 	runner.check("unit order lines: Piper en_US-bryce-medium (public domain), https://huggingface.co/rhasspy/piper-voices/blob/e7229f7d33a10e145e109b886d661984201ac3c4/en/en_US/bryce/medium/MODEL_CARD" in panel, "CR4 unit voice line")
+	return true
+
+func test_allied_voice_row(runner) -> bool:
+	var row := ""
+	for l in _credits().split("\n"):
+		if l.begins_with("| `voice/allied_base_under_attack.wav` |"): row = l
+	runner.check("kristin/medium/MODEL_CARD" in row and "tools/audio/synth.py" in row, "CR-A the allied line has a credits row naming the kristin model card, got '%s'" % row)
 	return true
 
 func test_unit_voice_rows(runner) -> bool:

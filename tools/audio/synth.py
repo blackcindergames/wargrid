@@ -30,6 +30,7 @@ VOICE_LUFS = -24.0
 PEAK_LIMIT = 10 ** (-1 / 20)
 LINES = [
     "base_under_attack",
+    "allied_base_under_attack",
     "building_lost",
     "unit_ready",
     "construction_complete",
