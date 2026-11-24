@@ -29,11 +29,11 @@ class Net extends RefCounted:
 	var max_delay: int = 0
 	var rng := RandomNumberGenerator.new()
 
-	func add(seat: int, _controller_seat_two: String, clock: Callable = Time.get_ticks_usec, seats: Array[int] = [1, 2], sim: RefCounted = null) -> Client:
+	func add(seat: int, _controller_seat_two: String, clock: Callable = Time.get_ticks_usec, seats: Array[int] = [1, 2], sim: RefCounted = null, allowed: Dictionary = {}) -> Client:
 		var c := Client.new()
 		c.seat = seat
 		c.sim = sim if sim != null else Skirmish.create(true, "human")
-		c.ls = Lockstep.new(seat, seats, 4, 30, clock)
+		c.ls = Lockstep.new(seat, seats, 4, 30, clock, allowed)
 		c.seat_sim = SeatSim.new(c.sim, c.ls)
 		clients.append(c)
 		return c
@@ -80,7 +80,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_leave_during_setup_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_leave_during_setup_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal, test_for_start_allowed_from_settings, test_host_frame_carries_bot_commands, test_guest_command_for_bot_ends_bad_stamp, test_host_leave_frame_with_bot_orders, test_guest_leave_tick_bot_order_applies, test_submit_refuses_player_not_allowed, test_bot_sequences_rise, test_bot_submit_times_erased, test_bot_refusal_never_reaches_host_answers, test_bot_commands_not_in_latency, test_defeated_host_leave_ends_while_bots_live, test_two_seat_bots_guest_leave_no_opponent_left, test_seat_sim_submits_as_command_player]
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)
@@ -287,6 +287,7 @@ func test_protocol_errors(runner) -> bool:
 		"skipped tick": [_tick_frame(2, 5)],
 		"already stepped tick": [_tick_frame(2, 4), _tick_frame(2, 3)],
 		"command player mismatch": [_tick_frame(2, 4, [{"type": "stop", "tick": 4, "player": 1, "sequence": 0, "entity_ids": [1]}])],
+		"command without player": [_tick_frame(2, 4, [{"type": "stop", "tick": 4, "sequence": 0, "entity_ids": [1]}])],
 		"command tick mismatch": [_tick_frame(2, 4, [{"type": "stop", "tick": 9, "player": 2, "sequence": 0, "entity_ids": [1]}])],
 		"own seat": [_tick_frame(1, 4)],
 		"runaway queue": range(4, 4 + Lockstep.MAX_QUEUED_TICKS).map(func(tick: int) -> String: return _tick_frame(2, tick)),
@@ -918,4 +919,158 @@ func test_pal_match_end_at_a_is_normal(runner) -> bool:
 	net.run()
 	runner.check(a.sim.match_over() and a.sim.snapshot().match.status == "won" and a.sim.tick() == 21, "PAL the leaver's defeat at A ends the match at 21 (tick %d)" % a.sim.tick())
 	runner.check(not a.ls.advance(a.sim) and a.ls.status() == "running" and not a.ls.opponent_left(), "PAL the match ended normally: the leave decision is never reached (status %s)" % a.ls.status())
+	return true
+
+const QUAD_ALLOWED := {1: [1, 3, 4], 2: [2]}
+
+func _quad_net(targets: Array, defeated: int = 0) -> Net:
+	var net := Net.new()
+	var seats: Array[int] = [1, 2]
+	for seat in seats:
+		var sim: RefCounted = SeatFixture.sim(SeatFixture.QUAD_TEAMS)
+		if defeated != 0: SeatFixture.defeat(sim, defeated)
+		var client := net.add(seat, "human", Time.get_ticks_usec, seats, sim, QUAD_ALLOWED)
+		client.target = targets[seat - 1]
+	net.connect_all()
+	return net
+
+func _bot_order(c, player: int) -> Dictionary:
+	return _make("stop", _own(c.sim.snapshot(), player))
+
+func _applied(client: Client, player: int, tick: int) -> Array:
+	return client.ls.command_log().filter(func(m: Dictionary) -> bool: return m.player == player and m.tick == tick)
+
+func test_for_start_allowed_from_settings(runner) -> bool:
+	var bots := '"settings":{"bots":[{"player":3,"faction":"china"},{"player":4,"faction":"frc"}]}'
+	for seat in [1, 2]:
+		var ls = Lockstep.for_start(seat, Wire.decode('{"type":"start","seats":[1,2],"delay":4,"seed":1,%s}' % bots).message)
+		runner.check(ls.allowed(1) == [1, 3, 4] and ls.allowed(2) == [2] and ls.bots() == [3, 4], "L21 seat %d: the host holds the bots, the guest only itself (%s, %s, %s)" % [seat, ls.allowed(1), ls.allowed(2), ls.bots()])
+	var hostile = Lockstep.for_start(1, Wire.decode('{"type":"start","seats":[1,2],"delay":4,"seed":1,"settings":{"bots":[{"player":2,"faction":"usa"},{"player":3,"faction":"frc"}]}}').message)
+	runner.check(hostile.allowed(1) == [1, 3] and hostile.allowed(2) == [2], "L21 a bots list naming a relay seat's player grants nothing (%s, %s)" % [hostile.allowed(1), hostile.allowed(2)])
+	var plain = Lockstep.for_start(1, Wire.decode('{"type":"start","seats":[1,2],"delay":4,"seed":1,"settings":{}}').message)
+	runner.check(plain.allowed(1) == [1] and plain.allowed(2) == [2] and plain.bots().is_empty(), "L21 no bots: each seat itself")
+	return true
+
+func test_host_frame_carries_bot_commands(runner) -> bool:
+	var net := _quad_net([40, 40])
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick != 10: return
+		for player: int in [1, 3, 4]: c.ls.submit(_bot_order(c, player), player)
+	net.run()
+	for c: Client in net.clients:
+		var ok: Array = []
+		for tick_results: Array in c.results: ok.append_array(tick_results.filter(func(r: Dictionary) -> bool: return r.tick == 15 and r.ok))
+		var players: Array = ok.map(func(r: Dictionary) -> int: return r.player)
+		runner.check(c.ls.status() == "running" and c.sim.tick() == 40 and players == [1, 3, 4], "L21 seat %d applies the host's own and both bot orders in one tick (status %s %s, players %s)" % [c.seat, c.ls.status(), c.ls.end_reason(), players])
+	runner.check(net.clients[0].ls.hash_rows() == net.clients[1].ls.hash_rows(), "L21 equal hashes with bot orders")
+	return true
+
+func test_guest_command_for_bot_ends_bad_stamp(runner) -> bool:
+	var sim: RefCounted = SeatFixture.sim(SeatFixture.QUAD_TEAMS)
+	var seats: Array[int] = [1, 2]
+	var ls = Lockstep.new(1, seats, 4, 30, Time.get_ticks_usec, QUAD_ALLOWED)
+	ls.start(sim.snapshot())
+	ls.receive(_tick_frame(2, 4, [{"type": "stop", "entity_ids": [1], "tick": 4, "player": 3, "sequence": 0}]))
+	runner.check(ls.status() == "ended_protocol" and ls.end_reason() == "bad command stamp", "L21 a guest frame stamped for a bot ends the match (%s %s)" % [ls.status(), ls.end_reason()])
+	return true
+
+func test_host_leave_frame_with_bot_orders(runner) -> bool:
+	var net := _quad_net([16, 40])
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick == 15: c.ls.submit(_bot_order(c, 3), 3)
+	_send_left(net, 1, 20, [1])
+	net.run()
+	var guest: Client = net.clients[1]
+	runner.check(_applied(guest, 3, 20).size() == 1, "L21 the guest applies the player-3 order in the host's last frame")
+	runner.check(guest.ls.status() == "ended_left" and guest.ls.left_seat() == 1 and guest.sim.tick() == 21, "L21 then ends at after_tick + 1 (status %s, seat %d, tick %d)" % [guest.ls.status(), guest.ls.left_seat(), guest.sim.tick()])
+	return true
+
+func test_guest_leave_tick_bot_order_applies(runner) -> bool:
+	var net := _quad_net([40, 16], 2)
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick == 15: c.ls.submit(_bot_order(c, 3), 3)
+	_send_left(net, 2, 20, [0])
+	net.run()
+	var host: Client = net.clients[0]
+	runner.check(_applied(host, 3, 20).size() == 1, "L21 the bot order at the defeated guest's after_tick applies")
+	runner.check(host.ls.status() == "running" and host.sim.tick() == 40 and host.ls.left_seat() == 2, "L21 the host plays on (status %s %s, tick %d)" % [host.ls.status(), host.ls.end_reason(), host.sim.tick()])
+	return true
+
+func test_submit_refuses_player_not_allowed(runner) -> bool:
+	var seats: Array[int] = [1, 2]
+	var host = Lockstep.new(1, seats, 4, 30, Time.get_ticks_usec, QUAD_ALLOWED)
+	var guest = Lockstep.new(2, seats, 4, 30, Time.get_ticks_usec, QUAD_ALLOWED)
+	runner.check(host.submit(_move(), 3) and host.submit(_move(), 1) and host.submit(_move()) and host._queue.size() == 3, "L21 the host may submit for itself and its bots")
+	runner.check(not host.submit(_move(), 2) and not host.submit(_move(), 5) and host._queue.size() == 3, "L21 the host never submits for the guest or a stranger")
+	runner.check(not guest.submit(_move(), 3) and not guest.submit(_move(), 1) and guest._queue.is_empty() and guest.submit(_move(), 2), "L21 the guest submits only for itself")
+	return true
+
+func test_bot_sequences_rise(runner) -> bool:
+	var net := _quad_net([40, 40])
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick != 10: return
+		for player: int in [1, 3, 1, 4]: c.ls.submit(_bot_order(c, player), player)
+	net.run()
+	for c: Client in net.clients:
+		var due: Array = c.ls.command_log().filter(func(m: Dictionary) -> bool: return m.tick == 15)
+		var sequences: Array = due.map(func(m: Dictionary) -> int: return m.sequence)
+		sequences.sort()
+		var accepted: int = 0
+		for tick_results: Array in c.results: accepted += tick_results.filter(func(r: Dictionary) -> bool: return r.ok).size()
+		runner.check(sequences == [0, 1, 2, 3] and accepted == 4, "L21 seat %d: one rising sequence over all of the host's players, every order accepted (%s, %s)" % [c.seat, sequences, c.ls.end_reason()])
+	return true
+
+func test_bot_submit_times_erased(runner) -> bool:
+	var net := _quad_net([40, 40])
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick == 10:
+			for player: int in [1, 3, 4]: c.ls.submit(_bot_order(c, player), player)
+	net.run()
+	runner.check(net.clients[0].ls._submit_times.is_empty(), "L21 no submit time is left behind by a bot order (%d)" % net.clients[0].ls._submit_times.size())
+	return true
+
+func test_bot_refusal_never_reaches_host_answers(runner) -> bool:
+	var net := _quad_net([40, 40])
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick == 10: c.ls.submit({"type": "cancel_build", "building_id": 99999}, 3)
+	net.run()
+	var host: Client = net.clients[0]
+	runner.check(_applied(host, 3, 15).size() == 1 and host.ls.rejections().is_empty(), "L21 a refused bot order is not a host rejection (%d)" % host.ls.rejections().size())
+	runner.check(host.ls.bot_rejections().size() == 1 and host.ls.bot_rejections()[0].player == 3, "L21 it lands in bot_rejections (%d)" % host.ls.bot_rejections().size())
+	return true
+
+func test_bot_commands_not_in_latency(runner) -> bool:
+	var net := _quad_net([40, 40])
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick == 10:
+			for player: int in [1, 3, 4]: c.ls.submit(_bot_order(c, player), player)
+	net.run()
+	runner.check(net.clients[0].ls.latency_samples().size() == 1, "L21 only the host's own order is a latency sample (%d)" % net.clients[0].ls.latency_samples().size())
+	return true
+
+func test_defeated_host_leave_ends_while_bots_live(runner) -> bool:
+	var net := _quad_net([16, 40], 1)
+	_send_left(net, 1, 20, [1])
+	net.run()
+	var guest: Client = net.clients[1]
+	runner.check(guest.ls.status() == "ended_left" and guest.ls.left_seat() == 1 and guest.sim.tick() == 21, "L21 a defeated host's leave ends the match while its bots live (status %s, seat %d, tick %d)" % [guest.ls.status(), guest.ls.left_seat(), guest.sim.tick()])
+	return true
+
+func test_two_seat_bots_guest_leave_no_opponent_left(runner) -> bool:
+	var net := _quad_net([40, 16])
+	_send_left(net, 2, 20, [0])
+	net.run()
+	var host: Client = net.clients[0]
+	runner.check(host.ls.status() == "ended_left" and host.ls.left_seat() == 2 and not host.ls.opponent_left(), "L21 the other seat is a teammate, not an opponent (status %s, seat %d)" % [host.ls.status(), host.ls.left_seat()])
+	return true
+
+func test_seat_sim_submits_as_command_player(runner) -> bool:
+	var net := _quad_net([40, 40])
+	var host: Client = net.clients[0]
+	var guest: Client = net.clients[1]
+	var order: Dictionary = _bot_order(host, 3)
+	order.player = 3
+	runner.check(host.seat_sim.issue_command(order).ok and host.ls._queue.size() == 1 and host.ls._queue[0].player == 3, "L21 the host's SeatSim queues the order for player 3")
+	runner.check(not guest.seat_sim.issue_command(order).ok and guest.ls._queue.is_empty(), "L21 the guest's SeatSim refuses it")
+	for c: Client in net.clients: c.ls.send = Callable()
 	return true

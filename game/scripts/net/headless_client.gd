@@ -287,8 +287,14 @@ func _exit() -> void:
 	_closing_since = 0
 	var tick: int = _sim.tick() if _sim != null else 0
 	print("NETCLIENT TIME ", _now_ms())
-	print("NETCLIENT END ", _status, " TICK ", tick, " REASON ", _reason)
+	print("NETCLIENT END ", _status, " TICK ", tick, " WINNER ", _winner(), " REASON ", _reason)
 	get_tree().quit(0)
+
+func _winner() -> String:
+	if _sim == null: return "-"
+	var state: Variant = _sim.snapshot().get("match")
+	if state is not Dictionary or state.winner == null: return "-"
+	return str(state.winner)
 
 func _write_logs() -> void:
 	if _args.has("hash-log"): _write_lines(_args["hash-log"], _lockstep.hash_rows())

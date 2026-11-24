@@ -159,6 +159,7 @@ expect_end() { # NAME STATUS
   case "$line" in "NETCLIENT END $2 TICK "*) ;; *) fail "$1: expected END $2, got '$line'" ;; esac
 }
 end_tick() { end_line "$1" | awk '{print $5}'; }
+end_winner() { end_line "$1" | awk '{print $7}'; }
 same_hashes() { ${PYTHON:-python3} "$repo_root/tools/compare_replays.py" --interval 30 --rows 0 "$@" >/dev/null || fail "hash logs differ: $*"; }
 
 oracle() {
@@ -184,6 +185,7 @@ case $scenario in
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
     [ "$(end_tick s1)" = 9746 ] || fail "terminal tick $(end_tick s1), pinned 9746"
+    [ "$(end_winner s1)" = 1 ] && [ "$(end_winner s2)" = 1 ] || fail "winners $(end_winner s1) / $(end_winner s2), pinned 1"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     [ -n "$remote" ] || ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     [ "$scenario" = match ] || proxies_accepted
@@ -202,6 +204,7 @@ case $scenario in
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
     [ "$(end_tick s1)" = 9746 ] || fail "second match terminal tick $(end_tick s1), pinned 9746"
+    [ "$(end_winner s1)" = 1 ] && [ "$(end_winner s2)" = 1 ] || fail "second match winners $(end_winner s1) / $(end_winner s2), pinned 1"
     for name in s1 s2; do
       [ "$(grep -c '^NETCLIENT MAP' "$out/$name.log")" = 2 ] || fail "$name: expected two MAP lines"
       [ "$(grep -c '^NETCLIENT OVER TICK 9746$' "$out/$name.log")" = 1 ] || fail "$name: expected one OVER TICK 9746"

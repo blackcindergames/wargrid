@@ -17,6 +17,14 @@ static func map_hash(path: String) -> String:
 static func for_map(id: String) -> Dictionary:
 	return {"map": id, "map_hash": map_hash(map_path(id))}
 
+static func bot_players(settings: Dictionary) -> Array[int]:
+	var players: Array[int] = []
+	var rows: Variant = settings.get("bots", [])
+	if rows is not Array: return players
+	for row: Variant in rows:
+		if row is Dictionary and typeof(row.get("player")) in [TYPE_INT, TYPE_FLOAT]: players.append(int(row.player))
+	return players
+
 static func refusal(settings: Dictionary) -> String:
 	var id: Variant = settings.get("map")
 	if not id is String or not _valid_id(id) or not FileAccess.file_exists(map_path(id)): return NOT_IN_BUILD
