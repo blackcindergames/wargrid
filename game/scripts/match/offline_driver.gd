@@ -185,6 +185,12 @@ func play_again() -> void:
 func teammate() -> int:
 	return 0
 
+func can_ping() -> bool:
+	return false
+
+func take_pings() -> Array[Dictionary]:
+	return []
+
 func bot_players() -> Array[int]:
 	return BOTS
 

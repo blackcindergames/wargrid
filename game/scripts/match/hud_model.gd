@@ -63,6 +63,7 @@ static func uses_power(faction: String) -> bool:
 const ORDER_KEYS := {"attack_move": KEY_A, "stop": KEY_S, "unload": KEY_F}
 const BUILD_KEY: Key = KEY_Q
 const BACK_KEY: Key = KEY_V
+const PING_KEY: Key = KEY_G
 # The card owns every unmodified key of its Q W E R / A S D F / Z X C V position grid.
 const GRID_KEYS: Array[Key] = [KEY_Q, KEY_W, KEY_E, KEY_R, KEY_A, KEY_S, KEY_D, KEY_F, KEY_Z, KEY_X, KEY_C, KEY_V]
 # One cell per role in every faction (user, 2026-11-15); a building names its role in `slot`, a unit after its faction prefix.

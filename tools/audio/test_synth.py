@@ -20,6 +20,7 @@ OFFSETS = {
     "infantry_death": -2.0,
     "click": -4.3,
     "error": -4.3,
+    "ping": 2.0,
 }
 SECONDS = {
     "rifle_burst": 0.7,
@@ -32,6 +33,7 @@ SECONDS = {
     "infantry_death": 0.3,
     "click": 0.05,
     "error": 0.3,
+    "ping": 0.21,
 }
 
 

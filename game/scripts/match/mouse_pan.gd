@@ -91,4 +91,4 @@ func drop() -> void:
 
 func _set_anchoring(on: bool) -> void:
 	_anchoring = on
-	Orders.set_cursor.call(Input.CURSOR_MOVE if on else (Input.CURSOR_CROSS if _screen.orders._attack_move_mode else Input.CURSOR_ARROW))
+	Orders.set_cursor.call(Input.CURSOR_MOVE if on else (Input.CURSOR_CROSS if _screen.orders._attack_move_mode or _screen.orders.ping_armed else Input.CURSOR_ARROW))

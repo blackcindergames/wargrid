@@ -369,7 +369,7 @@ func test_mouse_rows_in_button_order(runner) -> bool:
 		runner.check(mouse[0] == "Mouse" and rows == want, "CL4 mac=%s: the Mouse rows in button order, got %s" % [mac, rows])
 	return true
 
-const PROBES: Array[String] = ["pan", "home", "last_attack", "grid", "build", "back", "attack_move", "stop", "unload", "recall", "save", "add", "esc", "mute", "perf"]
+const PROBES: Array[String] = ["pan", "home", "last_attack", "grid", "build", "back", "attack_move", "stop", "unload", "ping", "recall", "save", "add", "esc", "mute", "perf"]
 const MODIFIERS := {KEY_MASK_SHIFT: "Shift", KEY_MASK_CTRL: "Ctrl", KEY_MASK_META: "Cmd", KEY_MASK_ALT: "Alt"}
 
 static func _event(press: int) -> InputEventKey:
@@ -538,6 +538,12 @@ func test_controls_list_keys_work(runner) -> bool:
 					var unloads: int = _sent_count(main, "unload")
 					_press(main, press)
 					runner.check(_sent_count(main, "unload") == unloads + 1, "%s sends an unload" % label)
+				"ping":
+					# Only a match with a human teammate takes the key (Q7), so it is pressed in a 2v2 from the guest's seat.
+					var team: Dictionary = await HudTests.new()._ping_match(runner)
+					_press(team.main, press)
+					runner.check(team.main.orders.get("ping_armed") == true, "%s arms the ping with a human teammate" % label)
+					HudTests.new()._end_ping_match(team)
 				"recall":
 					var slot: int = ControlGroups.KEYS.find(press & KEY_CODE_MASK)
 					var tanks: Array[int] = []

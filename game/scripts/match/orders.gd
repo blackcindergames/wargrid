@@ -33,6 +33,7 @@ var _sub_grid: bool = false
 var _preview_origin: Vector2i
 var _preview_key: Array = []
 var _attack_move_mode: bool = false
+var ping_armed: bool = false
 var _awaiting_build: String = ""
 # Its refusal already beeped; a Builder lost in the next view stays quiet, any later one beeps.
 var _build_refused: bool = false
@@ -61,7 +62,7 @@ func handle(event: InputEvent) -> void:
 	_hover(event, on_hud)
 	# A press that began on the map ends over a panel: only a drag goes on there, never a click, an order or the ghost.
 	if on_hud and not _selecting: return
-	if _card_key(event) or _group_key(event) or _camera_key(event): return
+	if _card_key(event) or _group_key(event) or _camera_key(event) or _ping_key(event) or _ping_input(event): return
 	if _placement_kind.is_empty() and (_combat_input(event) or _sub_grid_escape(event)): return
 	if not _placement_kind.is_empty():
 		_placement_input(event)
@@ -77,10 +78,11 @@ func _set_attack_move(on: bool) -> void:
 	if on: gestures += 1
 	_attack_move_mode = on
 	# The pan's move cursor stays; its release restores the right one.
-	if not _screen.mouse_pan.anchoring(): set_cursor.call(Input.CURSOR_CROSS if on else Input.CURSOR_ARROW)
+	if not _screen.mouse_pan.anchoring(): set_cursor.call(Input.CURSOR_CROSS if on or ping_armed else Input.CURSOR_ARROW)
 
 func arm_attack_move() -> void:
 	if not takes_orders() or busy() or selected_ids.is_empty(): return
+	_set_ping(false)
 	_set_attack_move(true)
 	_screen._reshow()
 
@@ -93,7 +95,7 @@ func busy() -> bool:
 	return _selecting or not _placement_kind.is_empty()
 
 func escape_pending() -> bool:
-	return _attack_move_mode or inspected_id != -1 or _selecting or not selected_ids.is_empty() or not _placement_kind.is_empty() or selected_building_id != -1
+	return _attack_move_mode or ping_armed or inspected_id != -1 or _selecting or not selected_ids.is_empty() or not _placement_kind.is_empty() or selected_building_id != -1
 
 func reset() -> void:
 	accidental_cancels = 0
@@ -105,6 +107,7 @@ func reset() -> void:
 	_placement_kind = ""
 	_sub_grid = false
 	_set_attack_move(false)
+	_set_ping(false)
 	_awaiting_build = ""
 	_build_refused = false
 	_answer = {}
@@ -308,6 +311,43 @@ func _combat_input(event: InputEvent) -> bool:
 			return true
 	return false
 
+# The Ping chip and G toggle it (Q6); never during a drag or a placement, and only with a human teammate (Q7).
+func arm_ping() -> void:
+	if not takes_orders() or busy() or not _screen.can_ping(): return
+	_set_ping(not ping_armed)
+	_screen._reshow()
+
+# Disarming an unarmed ping leaves the cursor alone, so attack-move and placement keep theirs.
+func _set_ping(on: bool) -> void:
+	if not on and not ping_armed: return
+	if on: _set_attack_move(false)
+	ping_armed = on
+	if not _screen.mouse_pan.anchoring(): set_cursor.call(Input.CURSOR_CROSS if on or _attack_move_mode else Input.CURSOR_ARROW)
+
+func _ping_key(event: InputEvent) -> bool:
+	var key := event as InputEventKey
+	if key == null or not key.pressed or key.echo or key.physical_keycode != HudModel.PING_KEY: return false
+	if not (key.ctrl_pressed or key.meta_pressed or key.alt_pressed): arm_ping()
+	return true
+
+# Armed, the next left click pings where it lands; Esc or a right-click disarms.
+func _ping_input(event: InputEvent) -> bool:
+	if not ping_armed: return false
+	var click := event as InputEventMouseButton
+	if event.is_action_pressed("deselect") or (click != null and click.button_index == MOUSE_BUTTON_RIGHT and click.pressed):
+		_set_ping(false)
+		_screen._reshow()
+		return true
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT: return false
+	if not click.pressed:
+		_set_ping(false)
+		_ping_at(_screen._view.make_canvas_position_local(click.position))
+	return true
+
+func _ping_at(plane: Vector2) -> void:
+	var target: Vector2 = Iso.plane_to_world(plane)
+	_screen._submit({"type": "ping", "target": [target.x, target.y]})
+
 func _hover(event: InputEvent, on_hud: bool) -> void:
 	if event is InputEventMouseMotion:
 		var hovered: int = -1 if on_hud else _screen._view.resolve_pick(_screen._view.make_canvas_position_local(event.position)).id
@@ -422,6 +462,10 @@ func _finish_selection(point: Vector2, on_hud: bool) -> void:
 	else:
 		pick = _screen._view.resolve_pick(plane)
 	var own: bool = _owner(pick) == _screen.local_player
+	# Alt+click pings at once (7-23), never on an own unit, so Alt+double-click keeps its whole-map select.
+	if not _dragged and _alt and not _double and _screen.can_ping() and not (own and pick.tier == "unit"):
+		_ping_at(plane)
+		return
 	selected_building_id = pick.id if pick.tier == "building" and own else -1
 	inspected_id = pick.id if pick.tier != "ground" and not own else -1
 	if selected_building_id != -1 or inspected_id != -1: selected_ids.clear()
@@ -509,6 +553,7 @@ func _builder() -> int:
 func _enter_placement(kind: String) -> void:
 	gestures += 1
 	_set_attack_move(false)
+	_set_ping(false)
 	if _builder() == -1:
 		_screen.refuse(HudModel.SELECT_ONE_BUILDER, "")
 		_screen._reshow()

@@ -15,6 +15,7 @@ SFX = {
     "error",
     "explosion",
     "infantry_death",
+    "ping",
     "rifle_burst",
     "vehicle_death",
 }

@@ -8,7 +8,7 @@ const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const ScriptedHuman = preload("res://scripts/simulation/scripted_human.gd")
 const SeatFixture = preload("res://tests/seat_fixture.gd")
-const COMMAND_TYPES: Array[String] = ["move", "stop", "build", "resume_build", "cancel_build", "produce", "cancel_production", "set_rally", "gather", "attack", "attack_move", "defence_attack"]
+const COMMAND_TYPES: Array[String] = ["move", "stop", "build", "resume_build", "cancel_build", "produce", "cancel_production", "set_rally", "gather", "attack", "attack_move", "defence_attack", "ping"]
 
 class Client extends RefCounted:
 	var seat: int
@@ -209,6 +209,7 @@ func _make(type: String, o: Dictionary) -> Dictionary:
 		"set_rally": return {"type": type, "building_id": o.producer, "target": [18.5, 14.5]}
 		"gather": return {"type": type, "entity_ids": [o.builder], "source_id": o.source}
 		"attack": return {"type": type, "entity_ids": o.ids, "target_id": o.enemy}
+		"ping": return {"type": type, "target": [22.5, 14.5]}
 	return {"type": "attack_move", "entity_ids": o.ids, "target": [24.5, 14.5]}
 
 func test_cross_seat_same_tick(runner) -> bool:
@@ -216,21 +217,24 @@ func test_cross_seat_same_tick(runner) -> bool:
 	var net := _pair(runner, 3)
 	_scripts(net)
 	for c in net.clients:
-		c.target = start_tick + 121 + 20
+		c.target = start_tick + 132 + 20
 		c.hook = func(client, tick: int) -> void:
 			var index: int = tick - start_tick
-			if index < 0 or index >= 121: return
+			if index < 0 or index >= 132: return
 			@warning_ignore("integer_division")
 			var type: String = COMMAND_TYPES[index / 11] if client.seat == 1 else COMMAND_TYPES[index % 11]
+			# Its own row after the 11 x 11 matrix: seat 1 pings beside each of seat 2's commands.
+			if index >= 121 and client.seat == 1: type = "ping"
 			client.ls.submit(_make(type, _own(client.sim.snapshot(), client.seat)))
 	net.connect_all()
 	net.run()
 	var a: Client = net.clients[0]
 	var b: Client = net.clients[1]
-	runner.check(a.sim.tick() == b.sim.tick() and a.sim.tick() >= start_tick + 141, "L4 both clients ran through every pair")
+	runner.check(a.sim.tick() == b.sim.tick() and a.sim.tick() >= start_tick + 152, "L4 both clients ran through every pair")
 	runner.check(a.ls.hash_rows() == b.ls.hash_rows(), "L4 hash rows equal across all 121 same-tick pairs")
 	runner.check(a.results == b.results, "L4 command results equal on both clients every tick")
 	runner.check(a.ls.command_log() == b.ls.command_log(), "L4 applied commands equal")
+	runner.check(a.ls.command_log().filter(func(command: Dictionary) -> bool: return command.type == "ping").size() == 11, "L4 the ping row sent one ping beside each command")
 	runner.check(_own(a.sim.snapshot(), 1).buildings >= 3, "L4 world was built up enough for building commands")
 	var accepted: int = 0
 	for tick_results in a.results:

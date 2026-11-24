@@ -37,6 +37,7 @@ var _credit: int = 0
 var _rejections_seen: int = 0
 var _log_seen: int = 0
 var _answers: Array[Dictionary] = []
+var _pings: Array[Dictionary] = []
 var _preview_request: Dictionary = {}
 var _preview_answer: Dictionary = {}
 var _seat: int
@@ -92,6 +93,7 @@ func adopt(value: Simulation) -> void:
 	_taken = []
 	_start_tick = -1
 	_answers = []
+	_pings = []
 	_preview_request = {}
 	_preview_answer = {}
 
@@ -152,6 +154,7 @@ func drain() -> Array[SimPump.Note]:
 		if not note.preview.is_empty(): _preview_answer = note.preview
 		_finish_job(note)
 	if not notes.is_empty(): _last = notes[-1]
+	_pings.append_array(_new_pings(notes))
 	if _start_tick < 0 and teammate() != 0 and current().view.players.all(func(player: Dictionary) -> bool: return player.has("faction")): _start_tick = current().tick
 	_answers.append_array(_new_answers())
 	_settle()
@@ -223,6 +226,29 @@ func _new_answers() -> Array[Dictionary]:
 	# Injected rejections (tests, a refused faction choice) have no logged command of ours.
 	for sequence: Variant in errors: answers.append({"command": {}, "ok": false, "error": errors[sequence]})
 	return answers
+
+# Accepted team pings: the result rows say which were applied, the command log holds their targets (plan T2-8); read before _new_answers moves the cursor.
+func _new_pings(notes: Array[SimPump.Note]) -> Array[Dictionary]:
+	var applied: Dictionary = {}
+	for note: SimPump.Note in notes:
+		for result: Dictionary in note.results:
+			if result.ok: applied[[result.player, result.sequence]] = true
+	var pings: Array[Dictionary] = []
+	var played: Array = _lockstep.command_log()
+	for i in range(_log_seen, played.size()):
+		var command: Dictionary = played[i]
+		if command.type == "ping" and (command.player == _seat or command.player == teammate()) and applied.has([command.player, command.sequence]):
+			pings.append({"player": command.player, "target": Vector2(command.target[0], command.target[1]), "tick": command.tick})
+	return pings
+
+# Not teammate() itself: the leave lines and result rows still name a teammate who left.
+func can_ping() -> bool:
+	return teammate() != 0 and _lockstep.left_seat() != teammate()
+
+func take_pings() -> Array[Dictionary]:
+	var pings: Array[Dictionary] = _pings
+	_pings = []
+	return pings
 
 func submit(payload: Dictionary) -> Dictionary:
 	if _lockstep.submit(payload): return {"ok": true, "error": ""}

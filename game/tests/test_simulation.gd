@@ -5,9 +5,10 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 const SeatFixture = preload("res://tests/seat_fixture.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
+const DefenceTests = preload("res://tests/test_defences.gd")
 
 func cases() -> Array[Callable]:
-	return [test_spawn, test_tick_zero, test_future_tick, test_same_tick_replacement, test_atomic_rejection, test_sequences, test_malformed_commands, test_command_copy, test_snapshot_copy, test_canonical_pending_order, test_repeatability, test_group_move, test_check_command_matches_issue_command]
+	return [test_spawn, test_tick_zero, test_future_tick, test_same_tick_replacement, test_atomic_rejection, test_sequences, test_malformed_commands, test_command_copy, test_snapshot_copy, test_canonical_pending_order, test_repeatability, test_group_move, test_check_command_matches_issue_command, test_ping_command_validates_target, test_ping_changes_only_result_and_sequences, test_ping_same_tick_with_every_command, test_ping_target_removed_same_tick]
 
 func equal(runner, actual: Variant, expected: Variant, label: String) -> void:
 	runner.check(actual == expected, "%s expected %s, actual %s" % [label, expected, actual])
@@ -288,4 +289,92 @@ func test_check_command_matches_issue_command(runner) -> bool:
 	var over: RefCounted = _check_world("ended")
 	equal(runner, over.check_command(move.merged({"player": 1, "tick": over.tick(), "entity_ids": [over.snapshot().entities[0].id]})), "Match ended", "CC1 after the end")
 	equal(runner, _check_world("rich").check_command({"player": 1}), _check_world("rich").issue_command({"player": 1}).error, "CC1 a malformed order gets the same answer")
+	return true
+
+func _ping(target: Variant, extra: Dictionary = {}) -> Dictionary:
+	return {"tick": 0, "player": 1, "sequence": 0, "type": "ping", "target": target}.merged(extra, true)
+
+func test_ping_command_validates_target(runner) -> bool:
+	var refused := [["missing target", {"tick": 0, "player": 1, "sequence": 0, "type": "ping"}, "Missing field: target"], ["not an array", _ping("x"), "Expected two target coordinates"], ["one coordinate", _ping([1.5]), "Expected two target coordinates"], ["text coordinate", _ping(["a", 1.5]), "Target coordinates must be numbers"], ["infinite", _ping([INF, 1.5]), "Target coordinates must be finite"], ["west of the map", _ping([-0.5, 2.5]), "Target outside map"], ["east of the map", _ping([16.5, 2.5]), "Target outside map"], ["group_speed", _ping([3.5, 4.5], {"group_speed": true}), "Invalid group_speed"]]
+	for row: Array in refused:
+		var sim = Simulation.new([Vector2i(3, 3)] as Array[Vector2i])
+		equal(runner, sim.check_command(row[1]), row[2], "PG1 %s: check_command" % row[0])
+		rejected(runner, sim, row[1], "PG1 " + row[0])
+	for row: Array in [["open ground", [5.5, 6.0]], ["a blocked cell, as on a building", [3.5, 3.5]], ["integer coordinates", [2, 2]]]:
+		var sim = Simulation.new([Vector2i(3, 3)] as Array[Vector2i])
+		equal(runner, sim.check_command(_ping(row[1])), "", "PG1 %s: check_command accepts" % row[0])
+		accepted(runner, sim, _ping(row[1]), "PG1 " + row[0])
+		sim.step()
+		equal(runner, sim.snapshot().command_results, [{"tick": 0, "player": 1, "sequence": 0, "ok": true, "error": ""}], "PG1 %s: one accepted result" % row[0])
+	return true
+
+static func _without_ping_traces(state: Dictionary) -> Dictionary:
+	var rest: Dictionary = state.duplicate(true)
+	rest.erase("command_results")
+	rest.erase("last_sequences")
+	return rest
+
+func test_ping_changes_only_result_and_sequences(runner) -> bool:
+	var plain = SeatFixture.sim()
+	var pinged = SeatFixture.sim()
+	accepted(runner, pinged, _ping([40.5, 40.5], {"player": 2}), "PG2 ping")
+	for i in 3:
+		plain.step()
+		pinged.step()
+		if i == 0: equal(runner, pinged.snapshot().command_results, [{"tick": 0, "player": 2, "sequence": 0, "ok": true, "error": ""}], "PG2 the ping's result row")
+	var with_ping: Dictionary = pinged.snapshot()
+	var without: Dictionary = plain.snapshot()
+	equal(runner, with_ping.keys(), without.keys(), "PG2 no new snapshot key")
+	runner.check(_without_ping_traces(with_ping) == _without_ping_traces(without), "PG2 the ping changes nothing but its result and the sequences")
+	equal(runner, with_ping.last_sequences, [{"player": 2, "sequence": 0}], "PG2 the pinger's sequence")
+	return true
+
+# The AGENTS same-tick rule: a ping next to every other command, before and after it, leaves that command's outcome alone.
+func test_ping_same_tick_with_every_command(runner) -> bool:
+	var defences = DefenceTests.new()
+	var count: int = defences._other_commands(defences._same_tick_world()).size()
+	for index in range(count):
+		var alone: Dictionary = defences._same_tick_world()
+		var other: Dictionary = defences._other_commands(alone)[index]
+		var base: Dictionary = Fixture.send(alone.sim, other)
+		alone.sim.step()
+		var base_rows: Array = alone.sim.snapshot().command_results.map(func(row: Dictionary) -> Array: return [row.ok, row.error])
+		for ping_first: bool in [true, false]:
+			var label: String = "%s %s the ping" % [other.type, "after" if ping_first else "before"]
+			var ids: Dictionary = defences._same_tick_world()
+			var sim = ids.sim
+			var ping: Dictionary = {}
+			if ping_first: ping = Fixture.send(sim, {"type": "ping", "target": [12.5, 12.5]})
+			var companion: Dictionary = Fixture.send(sim, defences._other_commands(ids)[index])
+			if not ping_first: ping = Fixture.send(sim, {"type": "ping", "target": [12.5, 12.5]})
+			runner.check(ping.ok and companion.ok == base.ok, "PG3 %s: ping accepted, companion as alone, got %s %s" % [label, ping, companion])
+			var ping_sequence: int = 0 if ping_first else 1
+			sim.step()
+			var state: Dictionary = sim.snapshot()
+			var ping_rows: Array = state.command_results.filter(func(row: Dictionary) -> bool: return row.sequence == ping_sequence and row.player == 1)
+			var rows: Array = state.command_results.filter(func(row: Dictionary) -> bool: return row.sequence != ping_sequence).map(func(row: Dictionary) -> Array: return [row.ok, row.error])
+			runner.check(ping_rows.size() == 1 and ping_rows.back().ok,"PG3 %s: the ping's row is accepted, got %s" % [label, ping_rows])
+			equal(runner, rows, base_rows, "PG3 %s: the companion's results" % label)
+			runner.check(_without_ping_traces(state) == _without_ping_traces(alone.sim.snapshot()), "PG3 %s: the world matches the companion alone" % label)
+	return true
+
+# Same-tick table: a ping at a building removed that tick, in the pinger's defeat tick, and two pings in one tick are all accepted.
+func test_ping_target_removed_same_tick(runner) -> bool:
+	var sim = SeatFixture.sim()
+	var building: Dictionary = sim.snapshot().buildings.filter(func(found: Dictionary) -> bool: return found.owner == 3)[0]
+	var centre: Array = [float(building.origin[0]) + 0.5, float(building.origin[1]) + 0.5]
+	accepted(runner, sim, _ping(centre), "PG4 ping at a building")
+	sim.remove_object(building.id)
+	sim.step()
+	equal(runner, sim.snapshot().command_results, [{"tick": 0, "player": 1, "sequence": 0, "ok": true, "error": ""}], "PG4 a ping at a building removed that tick is accepted")
+	var defeated = SeatFixture.sim()
+	accepted(runner, defeated, _ping([40.5, 40.5]), "PG4 ping in the defeat tick")
+	SeatFixture.defeat(defeated, 1)
+	defeated.step()
+	equal(runner, defeated.snapshot().command_results, [{"tick": 0, "player": 1, "sequence": 0, "ok": true, "error": ""}], "PG4 a ping in the pinger's defeat tick is applied as any command")
+	var twice = SeatFixture.sim()
+	accepted(runner, twice, _ping([40.5, 40.5]), "PG4 first ping")
+	accepted(runner, twice, _ping([50.5, 50.5], {"sequence": 1}), "PG4 second ping")
+	twice.step()
+	equal(runner, twice.snapshot().command_results.map(func(row: Dictionary) -> Array: return [row.sequence, row.ok]), [[0, true], [1, true]], "PG4 two pings in a tick both apply, in sequence order")
 	return true

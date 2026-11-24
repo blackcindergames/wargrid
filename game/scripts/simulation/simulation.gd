@@ -237,6 +237,7 @@ func _payload_fields(type: String) -> Array:
 		"enter": return ["entity_ids","target_id"]
 		"unload": return ["target_id"]
 		"defence_attack": return ["building_id","target_id"]
+		"ping": return ["target"]
 	return []
 
 func _validate(command: Dictionary, due: bool = false) -> String:
@@ -276,7 +277,7 @@ func _validate(command: Dictionary, due: bool = false) -> String:
 		var usable: Array = _commandable(live)
 		if usable.is_empty(): return "Unit cannot be commanded" if live.any(func(id: int) -> bool: return _entities[id].has("hole_id")) else "Unit is inside a transport"
 		live = usable
-	if command.type == "move": return _validate_target(command,due)
+	if command.type in ["move","ping"]: return _validate_target(command,due)
 	if command.type in ["stop","choose_faction"]: return ""
 	if command.type == "enter": return Containers.enter_error(self,command,live)
 	if command.type == "unload": return Containers.unload_error(self,command)

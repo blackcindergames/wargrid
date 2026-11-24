@@ -100,6 +100,7 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 			_key_row("attack_move", HudModel.ORDER_KEYS.attack_move, "Attack move: armed units fight their way to the spot you click"),
 			_key_row("stop", HudModel.ORDER_KEYS.stop, "Stop"),
 			_key_row("unload", HudModel.ORDER_KEYS.unload, "Unload"),
+			_key_row("ping", HudModel.PING_KEY, "Ping for your teammate, then click the spot; Alt+click pings at once"),
 			["", "Click or right-click", "Cancel the unit in production (on NOW PRODUCING)", []],
 			["", "Top-right production icons", "Click: select its building · Double-click: go there", []]]],
 		["Groups", [
