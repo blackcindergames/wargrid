@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: wording
+question: The draft lines, as the slice will ship them
+why: >-
+  The plan marks these as drafts for this mock-up, and the player-experience pass reworded some. The
+  defeated host's leave and quit questions are decided (Q10) and not asked. Edit a field to change its
+  words; an untouched field ships as written.
+fields:
+- id: mode-label
+  label: Label over the mode row (was Opponent)
+  text: "Mode"
+- id: team-subtitle
+  label: Play page subtitle on the team path
+  text: "Team up with a friend against two bots."
+- id: hidden-map
+  label: Muted line when the remembered map is hidden
+  text: "Dry Wells has 2 start positions; team matches need 4."
+- id: version
+  label: Version line (every platform; the version is yours)
+  text: "Your friend’s game is a different version from yours (v0.17.0). Whoever is behind updates or reloads, then the host creates a new match."
+- id: guest-out
+  label: Notice while a defeated guest watches
+  text: "You are out. Your teammate plays on: watch, or leave from the menu (Esc)."
+- id: guest-leave
+  label: 2v2 guest, Leave match question (Quit alike)
+  text: "Leave the match? The match ends for your friend too."
+- id: guest-leave-defeated
+  label: 2v2 guest after defeat, Leave match question (Quit alike)
+  text: "Leave the match? Your friend plays on against the bots."
+- id: ping-armed
+  label: Line while Ping is armed
+  text: "Click the ground or a building to ping · Esc cancels"

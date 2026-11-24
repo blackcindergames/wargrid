@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: gallery
+question: Start line, defeat, the leave questions and the grouped end panel
+why: >-
+  T2-6 builds these. The start line is the top-centre notice for 150 ticks once every player has a
+  faction, with an owner-colour square before each name; the stall line replaces "Waiting for player 2"
+  in a 2v2. A defeated guest watches while the teammate plays on. The Leave match questions tell each
+  seat what leaving does (Quit asks alike). The end panel groups the rows only with a human teammate,
+  "Your team" (you first, then `(teammate)`) and "Enemy bots" (`(bot)`), each with its owner colour;
+  offline and 1v1 tables keep today's shape. After a leave the heading is "Match ended", no winner, and
+  Back to menu is the one button.
+items:
+- id: match-start
+  label: Start line
+  caption: You and P1 USA vs 2 bots (China, FRC), the first five seconds.
+  render: {state: match, params: {state: start}}
+- id: match-stall
+  label: Stall line
+  caption: Your teammate's frames stopped arriving.
+  render: {state: match, params: {state: stall}}
+- id: match-out
+  label: You are out
+  caption: The guest lost every victory building; the teammate plays on against both bots.
+  render: {state: match, params: {state: out}}
+- id: leave-host
+  label: Leave, host
+  caption: The host runs the bots, so leaving ends the match for the friend (Q10).
+  render: {state: confirm, params: {who: host}}
+- id: leave-guest
+  label: Leave, guest
+  caption: The guest while still playing.
+  render: {state: confirm, params: {who: guest}}
+- id: leave-guest-out
+  label: Leave, guest out
+  caption: The defeated guest; the host plays on.
+  render: {state: confirm, params: {who: out}}
+- id: end-victory
+  label: Victory
+  caption: Both bots lost; four rows in two groups, Play again and Back to menu.
+  render: {state: end, params: {end: victory}}
+- id: end-victory-neon
+  label: Victory, Neon
+  caption: The same panel with Neon colours on.
+  img: docs/images/p7/end-victory-neon.webp
+- id: end-defeat
+  label: Defeat
+  caption: Both of you lost every victory building.
+  render: {state: end, params: {end: defeat}}
+- id: end-left
+  label: Teammate left
+  caption: The host's panel after the guest leaves; Match ended, P2 China left the match.
+  render: {state: end, params: {end: left}}
+- id: end-host
+  label: Host left
+  caption: The guest's panel after the host leaves (7-21).
+  render: {state: end, params: {end: host}}
+verdict:
+  key: ending-verdict
+  pass: Build as drawn
+  changes: Needs changes

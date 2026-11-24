@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: gallery
+question: Play page, waiting view and version line as drawn
+why: >-
+  T2-7 builds these. The mode row replaces the Bot and Friend toggles under a new label, Mode, since
+  "Opponent" does not fit a mode where your friend is on your side; the third toggle hugs its text (195 px)
+  and the other two share the rest of the 544 px column. The team path shows the friend's open slot and
+  two enemy bot pickers, each the remembered pick, else the default; maps with fewer than four starts are
+  hidden, and a muted line under the map info says why. The team path's subtitle names the mode. The
+  waiting view groups the seats as the end panel does, each row with its owner colour on the left edge.
+  The version line replaces the raw "build mismatch"; the relay refuses only the joiner, so the host
+  never learns of it (P8) and the line tells the guest how the pair starts again.
+items:
+- id: play-bot
+  label: vs Bot
+  caption: The mode row on the bot path; everything below it as today.
+  render: {state: play, params: {mode: bot}}
+- id: play-friend
+  label: vs Friend
+  caption: The friend path, 1v1 as today.
+  render: {state: play, params: {mode: friend}}
+- id: play-team
+  label: With a friend vs 2 bots
+  caption: Open slot for your friend, then Enemy bots with two faction pickers; Create match.
+  render: {state: play, params: {mode: team}}
+- id: play-team-hidden
+  label: Hidden map
+  caption: The remembered map (Dry Wells, 2 starts) is hidden; the muted line says why.
+  render: {state: play, params: {mode: team, hidden: '1'}}
+- id: play-team-connecting
+  label: Connecting
+  caption: After Create match, every control locked until the relay answers; Cancel stops it.
+  render: {state: play, params: {mode: team, busy: '1'}}
+- id: waiting-team
+  label: Waiting view
+  caption: Your team (you, the open slot), Enemy bots (both bot slots with (bot)).
+  render: {state: waiting}
+- id: join-version
+  label: Version line
+  caption: The guest's Join page after the relay refuses a different build; one line on every platform.
+  render: {state: join}
+verdict:
+  key: launcher-verdict
+  pass: Build as drawn
+  changes: Needs changes
