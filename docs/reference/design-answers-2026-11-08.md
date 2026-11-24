@@ -1735,3 +1735,19 @@ War Room round `esc-menu` (`warroom/rounds/esc-menu/`, pictures in `docs/images/
 - **Settings (A):** switches in one column under GRAPHICS, SOUND and GAME; Quality as a Low/High toggle.
 - **Page (A):** a page replaces the menu, `‹ Back` and its title top left, `Esc: back` top right.
 - **Defaults stated in the round, kept:** "Back to main menu" becomes "Leave match" and keeps its confirm box online (a bot match leaves at once); Quit in an online match asks first, in its own words ("Quit the game? Your opponent wins and the room closes.", buttons Quit and Cancel); Esc on a page returns to the menu, on the menu resumes; Mouse rows in button order with P17's `Right-drag`, `Middle-drag` and, on macOS, `Two-finger swipe` and `Pinch` rows; no rebinding.
+
+## SB5 planning answers (user, 2026-11-24)
+
+The owner questions from the SB5 planning run (research dossier, private) for the [SB5a plan](../superpowers/plans/2026-11-22-sim-boundary-sb5a.md) and the [SB5b plan](../superpowers/plans/2026-11-25-sim-boundary-sb5b.md).
+
+- **Plans on `main` (Q5):** both plans landed on `main` before the SB5a night (`5a0aba1c`), so the run branch contains its plan.
+- **Deck window (Q6):** starting the SB5a night approves Task 13's visible window on the Steam Deck over SSH (Deck windowed runs approved 2026-11-20); the Mac stays headless.
+- **Night settings (Q7):** the night's proposed settings are adopted (the SB5a worktree and its tool allows in, the stale P16 worktree out).
+- **After a P7 part 2 merge (Q8):** the SB5a night runs every task with local checks only; push, CI, benchmark and gate reviews stay with the owner.
+- **SB5b Task 5 (Q1):** the browser benchmark and the release-build fault probe move to SB6, as the design's package cut has it.
+- **SB5b approvals (Q3):** the test-app deploy, the branch push and the rendered benchmark window are asked once, together, for one named commit after local checks pass.
+- **Listen check (Q4):** a ten-minute offline match with music and combat plus a rematch on the threaded test app, repeated in a chat app's browser where the link check passed.
+- **Chat-app link check (Q2):** Discord only, and report-only, not a blocker before production goes threaded (links from chat apps are not a high priority); softens the SB5b gate of the [critique review](#sim-boundary-critique-review-user-2026-11-18).
+- **SB6 arms (Q11):** the physics-cap arm is dropped; SB6 compares the worker against inline.
+- **Input after an online end (Q12):** blocking input after an online match ends, as Zero Hour does, rides on P2.3a2 with its end wording.
+- **SB6 go-rule limits (Q9, Q10):** set at the SB6 plan, with SB5a's measurements in hand.
