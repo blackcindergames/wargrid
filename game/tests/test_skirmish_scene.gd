@@ -61,7 +61,7 @@ func _arena(main) -> Dictionary:
 
 func test_skirmish_ready_and_tick(runner) -> bool:
 	var main = await _setup(runner)
-	for path in ["WorldView", "Camera2D", "HUD/ResultPanel", BaseScene.QUEUE_ROW]:
+	for path in ["WorldView", "Camera2D", "HUD/ResultPanel", BaseScene.PRODUCTION]:
 		runner.check(main.has_node(path), "K2 node " + path)
 	runner.check(main.driver.pump.live().snapshot() == Skirmish.create().snapshot(), "K2 exact scenario")
 	BaseScene.tick(main)
@@ -759,7 +759,8 @@ func test_silent_keys_explain(runner) -> bool:
 
 func _hud_texts(main) -> Array[String]:
 	var texts: Array[String] = [BaseScene.hud_text(main), main.get_node("HUD/Economy/CancelBuild").text]
-	for tile: Control in BaseScene.queue_tiles(main): texts.append_array(BaseScene.shown_texts(tile))
+	var production: Node = main.get_node_or_null(BaseScene.PRODUCTION)
+	if production != null: texts.append_array(BaseScene.shown_texts(production))
 	return texts
 
 func test_hud_strings_use_display_names(runner) -> bool:
@@ -773,7 +774,7 @@ func test_hud_strings_use_display_names(runner) -> bool:
 	main.orders.press_cell("usa_rifle_infantry")
 	BaseScene.tick(main)
 	await runner.process_frame
-	runner.check(BaseScene.queue_tiles(main).size() == 2, "N1 fixture: two queue entries")
+	runner.check(BaseScene.now_row(main) != null, "N1 fixture: the queue shows")
 	var shown: Array[String] = _hud_texts(main)
 	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1 and unit.kind == "usa_builder")[0].id
 	main.orders.selected_building_id = -1
@@ -804,7 +805,7 @@ func test_hud_font_size_is_shared(runner) -> bool:
 	main.orders.press_cell("usa_rifle_infantry")
 	BaseScene.tick(main)
 	await runner.process_frame
-	runner.check(BaseScene.queue_tiles(main).size() == 1, "FS1 fixture: a queue entry, got %d" % BaseScene.queue_tiles(main).size())
+	runner.check(BaseScene.now_row(main) != null, "FS1 fixture: a queue entry shows")
 	for control: Control in main.get_node("HUD").find_children("*", "Control", true, false):
 		if control is Label or control is BaseButton or control is LineEdit or control is TextEdit: runner.check(control.get_theme_font_size("font_size") >= 12, "FS1 %s is at least 12 px, got %d" % [control.name, control.get_theme_font_size("font_size")])
 	main.free()
@@ -1974,7 +1975,7 @@ func test_freeze_card_keeps_the_focus(runner) -> bool:
 	runner.check((menu.get_child(0) as Button).focus_mode == Control.FOCUS_NONE, "FN5 a cell takes no focus, so Enter cannot press it behind the card")
 	var gestures: int = main.orders.gestures
 	(menu.get_child(0) as Button).pressed.emit()
-	main.hud.cell_pressed.emit("usa_power_plant")
+	main.hud.cell_pressed.emit("usa_power_plant", false)
 	# The freeze card's own hook would clear an armed ghost at once, so the arm count is what shows it.
 	runner.check(main.orders.gestures == gestures and not main.orders._sub_grid, "FN5 Build and a build cell pressed behind the card open and arm nothing")
 	main.orders._cancel_entry(1)
@@ -2439,12 +2440,12 @@ func test_slab_buttons_take_no_focus(runner) -> bool:
 	runner.check(count.call("produce") == 1, "SF1 Space and Enter after a click on a produce button queue nothing more, got %d" % count.call("produce"))
 	BaseScene.tick(main)
 	await runner.process_frame
-	var tiles: Array = BaseScene.queue_tiles(main)
-	runner.check(tiles.size() == 1, "SF1 fixture: one queue row, got %d" % tiles.size())
-	if not tiles.is_empty(): _click_control(main, tiles[0])
-	runner.check(count.call("cancel_production") == 1, "SF1 fixture: a click on the queue row cancels it")
-	_accept_keys(runner, main, "a queue row")
-	runner.check(count.call("cancel_production") == 1, "SF1 Space and Enter after a click on a queue row cancel nothing more, got %d" % count.call("cancel_production"))
+	var now: Control = BaseScene.now_row(main)
+	runner.check(now != null, "SF1 fixture: NOW shows")
+	if now != null: _click_control(main, now)
+	runner.check(count.call("cancel_production") == 1, "SF1 fixture: a click on NOW cancels it")
+	_accept_keys(runner, main, "NOW")
+	runner.check(count.call("cancel_production") == 1, "SF1 Space and Enter after a click on NOW cancel nothing more, got %d" % count.call("cancel_production"))
 	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1 and unit.kind == "usa_builder")[0].id
 	main.orders.selected_building_id = -1
 	main.orders.selected_ids.assign([builder])

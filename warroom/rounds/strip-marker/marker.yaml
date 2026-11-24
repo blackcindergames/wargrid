@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: What shows that other kinds follow in a producer's queue?
+why: >-
+  The bug you saw: a Vehicle Factory alternating Armed Pickup and Light Tank, three each, showed `1` on its
+  chip while the cells showed ×3. The number now counts the kind's total; this step asks whether the chip
+  also says that another kind follows. Survey of the engines in the projects folder (2026-11-23): Zero-K's
+  factory bar, BAR's build bar and OpenRA's build palette put each kind's total beside its icon (Zero-K
+  `54ef574db`, `LuaUI/Widgets/gui_chili_facbar.lua:135-141`); Zero-K's queue strip shows every queued kind
+  once with its total (same file, `:221-239`); Warzone 2100 and OpenRA's observer icons show the head only;
+  0 A.D. and Zero Hour show one button per queue entry. Zero Hour's control bar draws at most nine queue
+  buttons, without a count or a marker (GeneralsGameCode `afc2a103f`,
+  `Core/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarCommand.cpp:598-612`,
+  `Core/GameEngine/Include/GameClient/ControlBar.h:421`). No surveyed game adds a "more kinds follow" mark;
+  B, D and E are Wargrid's own. A strip of 8 chips is 372 px wide at 42 px a chip.
+  The pictures are one moment; the chip changes as units finish. In the alternating queue the glyph flips
+  with each unit and the number reads 3, 3, 2, 2, 1, 1, in every option. In the 4 + 3 queue A shows the
+  Medium Tank with `4` for four builds, then the Rotary Gun Tank with `3`; at that moment C narrows from 57
+  to 42 px and D's `+` and E's pip go. The step opens at true 100 %; each option's extra is the strip at
+  1x, enlarged 2x pixel for pixel. The game draws glyphs from textures, so at 8 or 12 px they may be softer
+  than these pictures.
+look: The Barracks chip (not selected, two kinds) and the selected Vehicle Factory; judge the 1x extra.
+crop: {x: 760, y: 0, w: 520, h: 140}
+controls:
+  fit: ['100', 'fit']
+  state: [split, alt, single]
+rec: A
+recWhy: >-
+  the chip keeps one fact, the kind in production and how many, which now always matches the cell's ×N;
+  the hover card and, when the factory is selected, the panel's NEXT row say what follows. A marker would
+  only remind you of your own orders; missing it costs nothing, since the units still arrive. No surveyed
+  game adds a "more follows" mark; Zero-K shows the kinds themselves, which is C. At 1x B's 8 px glyph and
+  E's pip are hard to read, and E is a new sign to learn. D's `4+` can read as "4 or more", so the number
+  would no longer plainly match the cell's ×4. C tells the most, but a chip widens when a second kind
+  joins, which the strip has avoided so far. Risk: in a 4 + 3 queue a player who neither hovers nor selects
+  the factory sees `4` Medium Tanks until the fourth is out, and only then the Rotary Gun Tanks; if the chip
+  should say it earlier, C is the fallback.
+neutral: None of these
+options:
+  A:
+    name: No marker; the hover card lists each kind
+    render: {params: {marker: none}}
+    sees: >-
+      The chip shows the kind in production and its total only: `4`, `3` or `7` on the factory, `2` on the
+      Barracks. The second extra is the pointer on the factory chip after 250 ms: `Vehicle Factory`,
+      `Medium Tank ×4 · 6s, Rotary Gun Tank ×3 · QUEUE 7 / 9`, `Click: select it · Double-click: go there`.
+      The card's wording is open; change it in your note.
+    notes: 42 px chip, 8 chips 372 px. Like every surveyed game, no marker.
+    extra:
+    - label: At 1x, enlarged 2x
+      img: docs/images/strip-marker-round/marker-a-1x.webp
+    - label: Pointer on the factory chip
+      render: {params: {marker: none, card: '1'}}
+  B:
+    name: The next kind's tiny glyph under the count
+    render: {params: {marker: glyph}}
+    sees: >-
+      An 8 px glyph of the next kind under the count: a Rotary Gun Tank on the factory, an Anti-Tank Trooper
+      on the Barracks. Nothing with one kind. Under the count the chip stays 42 px; at the chip's right edge
+      it would need about 10 px more.
+    notes: 42 px chip, 8 chips 372 px. The 8 px glyph is hard to tell apart at 1x.
+    extra:
+    - label: At 1x, enlarged 2x
+      img: docs/images/strip-marker-round/marker-b-1x.webp
+  C:
+    name: Every kind once, with its total (Zero-K)
+    render: {params: {marker: kinds}}
+    sees: >-
+      After the 18 px glyph, each further kind as a 12 px glyph with its total in 10 px digits under it: `4`
+      Medium Tank, then Rotary Gun Tank `3`. With one kind the chip is as in A.
+    notes: 42 px for one kind, 57 for two; 8 chips 372 to 492 px. Widens as a kind joins.
+    extra:
+    - label: At 1x, enlarged 2x
+      img: docs/images/strip-marker-round/marker-c-1x.webp
+  D:
+    name: A `+` after the count
+    render: {params: {marker: plus}}
+    sees: '`4+` or `3+` while another kind follows, `7` alone; the count column is kept wide on every chip.'
+    notes: 48 px chip, 8 chips 420 px. Can read as "4 or more".
+    extra:
+    - label: At 1x, enlarged 2x
+      img: docs/images/strip-marker-round/marker-d-1x.webp
+  E:
+    name: One pip per further kind
+    render: {params: {marker: pips}}
+    sees: >-
+      A 3 x 3 muted pip under the count for each further kind; one today, since a producer makes two kinds at
+      most. Nothing with one kind.
+    notes: 42 px chip, 8 chips 372 px. A new sign to learn.
+    extra:
+    - label: At 1x, enlarged 2x
+      img: docs/images/strip-marker-round/marker-e-1x.webp

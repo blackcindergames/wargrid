@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: What does "hollow" look like on an idle chip?
+why: >-
+  Hollow when idle is decided; this step picks how. Only a Barracks or Vehicle Factory can show idle:
+  Headquarters and Supply Depots leave the strip while they rest (Claude's default, see "This round"). An
+  idle chip shows the last unit it made, in a darker grey; one that made none shows its first unit. In the
+  mixed state the second Barracks is idle (last made an Anti-Tank Trooper); N to "idle" shows a base where
+  all three military producers rest.
+look: The idle chip next to the busy ones; N to "idle" for a resting base.
+crop: {x: 0, y: 0, w: 1280, h: 240}
+controls:
+  state: [mixed, idle, many, more, low, hover, card, frc]
+rec: C
+recWhy: >-
+  the chip keeps its shape and only the bar changes, so a factory going idle reads as "the bar emptied", the
+  same idea as the panel's dashed empty box. A drops the bar and with it the one thing that says "nothing
+  here". B's hollow chip fights the selected chip's frame, since both are outlines.
+neutral: None of these
+options:
+  A:
+    name: Darker glyph, no bar
+    render: {params: {idle: muted}}
+    sees: The idle chip keeps its fill and shows only the darker glyph; the bar's place stays empty.
+    notes: Quietest; idle reads only through the glyph's tone.
+  B:
+    name: Hollow chip
+    render: {params: {idle: hollow}}
+    sees: An idle chip loses its fill and gets a 1 px outline, with the darker glyph and no bar.
+    notes: Idle chips look empty as a whole.
+  C:
+    name: Hollow bar
+    render: {params: {idle: bar}}
+    sees: The idle chip keeps its fill and darker glyph; its bar is a 1 px outline with nothing in it.
+    notes: Only the bar changes between busy and idle.

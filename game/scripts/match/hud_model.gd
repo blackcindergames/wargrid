@@ -151,22 +151,128 @@ static func cell_name(action: String, placement_kind: String) -> String:
 	if COMMANDS.has(action): return COMMANDS[action]
 	return Registry.kind(action).display_name
 
-const QUEUE_TILES: int = 4
+# Consecutive entries of one kind as one run {kind, count}; a count is orders, so Militia's pairs count once (queue follow-up round).
+static func runs(queue: Array) -> Array:
+	var merged: Array = []
+	for entry: Dictionary in queue:
+		if merged.is_empty() or merged.back().kind != entry.kind: merged.append({"kind": entry.kind, "count": 0})
+		merged.back().count += 1
+	return merged
 
-# The entry in production alone, then adjacent waiting entries of one kind together: {kind, ids, refund} (3-3, `DA:1475`).
-static func queue_tiles(queue: Array) -> Array:
-	var tiles: Array = []
-	for i: int in queue.size():
-		var entry: Dictionary = queue[i]
-		if i < 2 or tiles.back().kind != entry.kind: tiles.append({"kind": entry.kind, "ids": []})
-		tiles.back().ids.append(entry.id)
-		tiles.back().refund = entry.paid_cost
-	return tiles
+# Every kind in the queue once, in order of first appearance, with all its entries as {kind, count}: the build card cell's ×N (user, 2026-11-23, late).
+static func kind_totals(queue: Array) -> Array:
+	var totals: Array = []
+	for entry: Dictionary in queue:
+		var found: Array = totals.filter(func(total: Dictionary) -> bool: return total.kind == entry.kind)
+		if found.is_empty(): totals.append({"kind": entry.kind, "count": 1})
+		else: found[0].count += 1
+	return totals
 
-static func newest_of_kind(queue: Array, kind: String) -> int:
+# Strip round: NEXT's hover hint; NEXT itself takes no click.
+static func cancel_hint(kind: String) -> String:
+	var name: String = Registry.kind(kind).display_name
+	return "To cancel %s %s: right-click its button" % ["an" if name.left(1).to_lower() in ["a", "e", "i", "o", "u"] else "a", name]
+
+static func run_name(run: Dictionary) -> String:
+	return Registry.kind(run.kind).display_name + (" ×%d" % run.count if run.count > 1 else "")
+
+const EXIT_BLOCKED := "Exit blocked"
+const EXIT_BLOCKED_HINT := "Exit blocked: move units or buildings away from its sides"
+const LOW_POWER_HINT := "Low power"
+
+# NOW's hover under low power: the published rate as a share, and the cure where the faction has power at all.
+static func low_power_hint(work_rate: int, faction: String) -> String:
+	@warning_ignore("integer_division")
+	return "%s: production at %d %%%s" % [LOW_POWER_HINT, work_rate / 10, " · build power" if uses_power(faction) else ""]
+
+# Seconds left rounded up, from `production.gd` `step`: work in milli-units, `work_rate` added per tick.
+# A finished entry still queued found no free exit (`step`'s `continue`).
+static func time_left(entry: Dictionary, work_rate: int) -> String:
+	var remaining: int = Definitions.unit(entry.kind).ticks * 1000 - entry.work
+	if remaining <= 0: return EXIT_BLOCKED
+	return "%ds" % ceili(float(remaining) / (work_rate * Engine.physics_ticks_per_second))
+
+# The newest `count` ids of `kind`, newest first, past those already sent for cancel; the one in production comes last.
+static func newest_of_kind(queue: Array, kind: String, skip: Dictionary = {}, count: int = 1) -> Array:
+	var ids: Array = []
 	for i: int in range(queue.size() - 1, -1, -1):
-		if queue[i].kind == kind: return queue[i].id
-	return -1
+		if ids.size() == count: break
+		if queue[i].kind == kind and not skip.has(queue[i].id): ids.append(queue[i].id)
+	return ids
+
+# Production strip round (user, 2026-11-23): by kind, then by age; Headquarters and Supply Depot kinds only while they produce; eight chips, then `+N`.
+const STRIP_ORDER: Array[String] = ["command_center", "supply_center", "barracks", "factory", "airfield"]
+const STRIP_BUSY_ONLY: Array[String] = ["command_center", "supply_center"]
+const STRIP_CHIPS: int = 8
+const STRIP_HINT := "Click: select it · Double-click: go there"
+# A shared empty default, so a skipped building allocates nothing.
+const NONE: Array = []
+
+# One chip per finished own producer: {id, kind, unit, look, fraction, queue, kinds, left, slow}; `last` keeps each producer's newest unit in production for its idle glyph.
+static func strip_chips(view: Dictionary, seat: int, last: Dictionary) -> Array:
+	var rate: int = player(view, seat).get("work_rate", 1000)
+	var slow: String = low_power_hint(rate, player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)) if rate < 1000 else ""
+	var chips: Array = []
+	for found: Dictionary in view.buildings:
+		# Every refresh walks every building, so the cheap tests come first.
+		if found.owner != seat or not found.get("completed", true) or Registry.kind(found.kind).get("produces", NONE).is_empty(): continue
+		var queue: Array = found.get("queue", NONE)
+		if queue.is_empty() and role(found.kind) in STRIP_BUSY_ONLY: continue
+		if not queue.is_empty(): last[found.id] = queue[0].kind
+		chips.append(_strip_chip(found, queue, last.get(found.id, ""), rate, slow))
+	chips.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.rank < b.rank or (a.rank == b.rank and a.id < b.id))
+	return chips
+
+# Idle shows a hollow bar; slowed (low power) and blocked (work done, no free exit) draw in warn.
+static func _strip_chip(found: Dictionary, queue: Array, idle_unit: String, rate: int, slow: String) -> Dictionary:
+	var rank: int = STRIP_ORDER.find(role(found.kind))
+	var chip: Dictionary = {"id": found.id, "kind": found.kind, "rank": rank if rank != -1 else STRIP_ORDER.size(), "unit": idle_unit, "look": "idle", "fraction": 0.0, "queue": 0, "kinds": NONE, "left": "", "slow": slow}
+	if queue.is_empty():
+		if idle_unit.is_empty(): chip.unit = _first_cell(Registry.kind(found.kind).produces)
+		return chip
+	var head: Dictionary = queue[0]
+	chip.merge({"unit": head.kind, "queue": queue.size(), "kinds": kind_totals(queue), "left": time_left(head, rate), "fraction": minf(1.0, head.work / (Definitions.unit(head.kind).ticks * 1000.0))}, true)
+	chip.look = "blocked" if chip.left == EXIT_BLOCKED else ("slowed" if rate < 1000 else "busy")
+	return chip
+
+# The unit on the card's first cell (Q).
+static func _first_cell(kinds: Array) -> String:
+	var cells: Array = kind_cells(kinds)
+	cells.sort_custom(func(a: Array, b: Array) -> bool: return GRID_KEYS.find(a[0]) < GRID_KEYS.find(b[0]))
+	return cells[0][1]
+
+# [the folded front of the order, the chips that stay].
+static func strip_split(chips: Array) -> Array:
+	var folded: int = maxi(0, chips.size() - STRIP_CHIPS)
+	return [chips.slice(0, folded), chips.slice(folded)]
+
+# The chip's count is the head kind's total, so line 1 names the first two kinds with theirs and how many units follow (as NEXT counts them); line 2 is the head unit's time or, in NOW's hover words, why it waits.
+static func strip_tip(chip: Dictionary) -> String:
+	if chip.look == "idle": return "Idle"
+	var named: Array = chip.kinds.slice(0, 2)
+	var parts: Array = named.map(run_name)
+	var rest: int = chip.queue - named.reduce(func(sum: int, run: Dictionary) -> int: return sum + run.count, 0)
+	if rest > 0: parts.append("+%d more" % rest)
+	var lines: Array = [", ".join(parts) + " · QUEUE %d / %d" % [chip.queue, QUEUE_LIMIT]]
+	lines.append(EXIT_BLOCKED_HINT if chip.look == "blocked" else "%s ready in %s" % [Registry.kind(chip.unit).display_name, chip.left])
+	if not chip.slow.is_empty(): lines.append(chip.slow)
+	return "\n".join(lines)
+
+static func strip_hidden_line(chip: Dictionary) -> String:
+	var name: String = Registry.kind(chip.kind).display_name
+	if chip.look == "idle": return name + " · idle"
+	return "%s · %s · %s" % [name, run_name(chip.kinds[0]), chip.left if chip.look == "blocked" else "ready in " + chip.left]
+
+const BATCH: int = 5
+
+# Shift queues up to five: as many as the queue's room and the published credits allow (queue follow-up round), less the `sent` produce orders not yet in the view.
+static func batch(view: Dictionary, building_id: int, kind: String, seat: int, sent: Array = NONE) -> int:
+	var here: int = sent.filter(func(order: Dictionary) -> bool: return order.building_id == building_id).size()
+	var spent: int = sent.reduce(func(sum: int, order: Dictionary) -> int: return sum + Registry.kind(order.unit_kind).cost, 0)
+	var room: int = QUEUE_LIMIT - building(view, building_id).get("queue", []).size() - here
+	@warning_ignore("integer_division")
+	var affordable: int = (player(view, seat).credits - spent) / Registry.kind(kind).cost
+	return clampi(mini(room, affordable), 0, BATCH)
 
 # A seam so the layout path runs headless; tests swap it and restore it on every path.
 static var layout_label: Callable = _platform_label
@@ -231,7 +337,7 @@ static func panel(view: Dictionary, selection: Dictionary, seat: int, faction: S
 	if not own: return row
 	if not Registry.kind(object.kind).get("produces", []).is_empty():
 		row.queue = object.queue
-		if not object.queue.is_empty(): row.right = "QUEUE %d / %d" % [object.queue.size(), QUEUE_LIMIT]
+		row.work_rate = player(view, seat).get("work_rate", 1000)
 	var power: int = Registry.kind(object.kind).get("power", 0)
 	if power > 0: row.merge({"key": "POWER", "value": "+%d" % power})
 	if Registry.can_rally(object.kind): row.footer = RALLY

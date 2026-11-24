@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'P16 production strip: chips right of POWER, and the panel''s open items'
+intro: >-
+  This round blocks the production strip's build in P16. The panel slice is built beside it.
+  Decided, not asked (user, 2026-11-23): one chip per finished producer of yours on the top strip. A chip
+  shows the unit in production and a 40 x 4 progress bar, hollow when idle. A click selects that producer
+  without moving the camera; a double click also jumps there. The strip redraws only when something on it
+  changes.
+  Claude's defaults, not asked: Headquarters and Supply Depot chips show only while they produce. An idle
+  Barracks or Vehicle Factory keeps its chip with the last unit it made (its first unit if it made none).
+  A slowed bar turns `warn` at low power; a full `warn` bar means the exit is blocked. The cancel sound is
+  today's UI click only (`game/audio/sfx/click.wav`), no coin, so it never blurs with a later
+  money-deposit cue; you judge it in your match. The idle box stays dashed, as you picked in the queue
+  round.
+  Steps 1 to 6 draw the strip at 1280 x 720 over a China base. N flips the state: mixed (five chips, the
+  Vehicle Factory selected), idle, eleven producers, the `+N` list open, low power, the pointer on a chip,
+  the pointer on the build card (both slabs held at their widest forecast, as built in P2.3b), and FRC
+  (no power slab). Steps 7 to 9 are open items from the panel's player-experience pass, drawn on the queue
+  round's panel with your picks applied. Credits are 50000 in every picture.
+  Each step changes one thing and draws the others as Claude recommends them. One exception: step 2 C
+  also decides step 6.
+  Zero Hour has no such strip. Its control bar shows only the selected building's queue; its one producer
+  shortcut is the idle worker button (GeneralsGameCode `afc2a103f`,
+  `Core/GameEngine/Source/GameClient/GUI/ControlBar/ControlBar.cpp:1218-1221`).
+  A neutral answer on steps 1 to 6 records no winner, and the strip build waits for your note. On steps 7
+  to 9 a neutral answer ships option A.
+steps: [chip, group, idle, order, overflow, anchor, next, rally, cancel]
+render:
+  page: docs/images/strip-round/strip.html
+  w: 1280
+  h: 720
+  hash: state={state}
+controls:
+  fit: true

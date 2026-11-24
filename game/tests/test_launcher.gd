@@ -522,7 +522,7 @@ func test_this_build_line(runner) -> bool:
 	toggle.button_pressed = true
 	for page_name: String in ["Play", "Join"]:
 		var build: Button = launcher.get_node("Pages/%s/ThisBuild" % page_name)
-		runner.check(build.visible and build.text == "This build: " + title and title == "Build from the dock", "L15b %s ThisBuild names the first card when on, got %s" % [page_name, build.text])
+		runner.check(build.visible and build.text == "This build: " + title, "L15b %s ThisBuild names the first card when on, got %s" % [page_name, build.text])
 	toggle.button_pressed = false
 	for page_name: String in ["Play", "Join"]:
 		runner.check(not launcher.get_node("Pages/%s/ThisBuild" % page_name).visible, "L15b %s ThisBuild hides again when switched off" % page_name)

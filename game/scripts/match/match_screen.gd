@@ -113,6 +113,8 @@ func _ready() -> void:
 	hud.entry_cancelled.connect(orders._cancel_entry)
 	hud.cancel_build_pressed.connect(orders._cancel_build)
 	hud.row_clicked.connect(_select_kind)
+	hud.producer_pressed.connect(orders.select_producer)
+	hud.hint_covered = func() -> bool: return menu_open() or not _focused or input_over()
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()
@@ -222,7 +224,7 @@ func _map_id() -> String:
 
 func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
 	var record: Dictionary = driver.record()
-	var played: Dictionary = _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines})
+	var played: Dictionary = _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines, "accidental_cancels": orders.accidental_cancels, "next_clicks": hud.next_clicks})
 	if record.has("tick_hashes"): played.tick_hashes = record.tick_hashes
 	return played
 
@@ -243,6 +245,7 @@ func _take_answers() -> void:
 	for answer: Dictionary in answers:
 		if answer.ok: _playtest.observe_command(answer.command)
 		orders.answered(answer)
+		hud.cancel_answered(answer)
 
 func menu_open() -> bool:
 	return _pause.visible or _playtest.holds_match()
@@ -629,13 +632,15 @@ func _show_hint(payload: Dictionary) -> void:
 	var point: Variant = orders._hint_point(payload)
 	if point != null: _view.add_hint(point, shown_state.tick)
 
-func _submit(payload: Dictionary) -> void:
+# A batch passes `reshow` false and repaints once after it.
+func _submit(payload: Dictionary, reshow: bool = true) -> Dictionary:
 	orders.gestures += 1
 	_show_hint(payload)
-	driver.submit(payload)
+	var sent: Dictionary = driver.submit(payload)
 	_unanswered += 1
-	_reshow()
+	if reshow: _reshow()
 	_sound.order(payload)
+	return sent
 
 # The result and freeze cards already say why nothing is taken, as with the notice.
 func refuse(text: String, sound: String = "error") -> void:

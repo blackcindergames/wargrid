@@ -141,14 +141,12 @@ const sep = '<i class="sep"></i>';
 
 // P2.3b top strip round, as built (user, 2026-11-22): two slabs that hug, held at their widest forecast while the pointer is on the card or a building is armed; ported from p2-3a1-states.html topStrip('card').
 const ARROW = '<svg width="12" height="8" viewBox="0 0 12 8" style="display:block;flex:none"><path d="M0 4h10.5M7 .5 10.5 4 7 7.5" fill="none" style="stroke:var(--muted)" stroke-width="1.5"/></svg>';
-const DOLLAR15 = 'M7 2h1v1H7ZM5 3h5v2H5ZM4 5h2v1H4ZM7 5h1v1H7ZM5 6h5v2H5ZM7 8h1v1H7ZM9 8h2v1H9ZM5 9h5v2H5ZM7 11h1v1H7Z';
-const COIN = `<svg width="15" height="15" viewBox="0 0 15 15" style="display:block;flex:none"><circle cx="7.5" cy="7.5" r="7.5" style="fill:var(--warn)"/><path d="${DOLLAR15}" style="fill:var(--quiet)"/></svg>`;
 const LOW_POWER = 'Low power · defences off';
 const signed = n => n < 0 ? `−${-n}` : String(n);
 const isLow = p => p[0] > p[1];
 function creditsStat(t) {
   const next = t.after != null && t.after !== t.credits, short = t.after < 0;
-  const after = next ? `${ARROW}<span class="neg"><b class="${short ? 'warn' : ''}">${signed(t.after)}</b>${short ? COIN : ''}</span>` : '';
+  const after = next ? `${ARROW}<span class="neg"><b class="${short ? 'warn' : ''}">${signed(t.after)}</b></span>` : '';
   return `<span class="stat cr"><i class="sw" style="background:var(--you)"></i><span class="lab">Credits</span><b>${t.credits}</b>${after}</span>`;
 }
 function powerStat(now, after) {
@@ -299,10 +297,10 @@ function commandCell(o, v, k, c) {
     : `<span class="b cell one cmd" data-tg>${g}${name}${chip}</span>`;
 }
 const lacks = (d, pre) => !!pre && (d.early || (d.owns && !d.owns.includes(pre)));
-// Core as built (T7): credits the sole blocker turn the cost warn with the solid $ coin 4 after it (3-2); a missing prerequisite or a full queue mutes it.
+// Core as built (P16): credits the sole blocker turn the cost warn, no coin (user, 2026-11-23); a missing prerequisite or a full queue mutes it.
 function coreCost(cost, reason) {
   const short = reason === 'credits';
-  return `<span class="cost num${short ? ' warn' : ''}" style="display:flex;align-items:center;gap:4px">${num(cost)}${short ? COIN : ''}</span>`;
+  return `<span class="cost num${short ? ' warn' : ''}" style="display:flex;align-items:center;gap:4px">${num(cost)}</span>`;
 }
 // Hover marks as built: a ready cell takes the hover inset; a blocked cell's missing prerequisite on the card takes a 1 px sel frame (3-10).
 function coreMarks(v, item, reason) {

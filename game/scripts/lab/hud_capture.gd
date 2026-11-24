@@ -2,6 +2,7 @@ extends SceneTree
 
 const LabCapture = preload("res://scripts/lab/lab_capture.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
+const ProductionStrip = preload("res://scripts/match/production_strip.gd")
 const Skirmish = preload("res://scenes/skirmish.tscn")
 const BaseScene = preload("res://tests/test_base_scene.gd")
 const HudTests = preload("res://tests/test_hud.gd")
@@ -112,6 +113,7 @@ func _run(directory: String) -> void:
 			var stem: String = "%s-%dx%d" % [shot.stem, window.x, window.y]
 			# Scratch settings and a fresh session per shot: the owner's files stay untouched, and a ticked item never leaks into the next picture.
 			_saved = _overlays._begin(true, HudTests._longest_card().id)
+			ProductionStrip.save_hint_seen()
 			_begun = true
 			_port = BaseScene.sized_port(self, window, pair[1])
 			_port.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -217,19 +219,19 @@ func _slab_army() -> void:
 	await _slab_pick("tanks", 50000)
 	check(HudTests._cell(_main, "attack_move") != null and HudTests._cell(_main, "build") == null, "the order cells alone, no Build")
 
-# P2.3b T8: the nine-entry queue as tiles; `empty` the factory with nothing queued.
+# P16 T1: the nine-entry queue on the production panel, the pointer on NOW; `empty` the factory with nothing queued.
 func _queue(empty: bool, hovered: bool = true) -> void:
 	var ids: Dictionary = await _slab_world(50000)
 	HudTests._select(_main, [], ids.factory)
 	if not empty: HudTests._nine(_main, ids.factory)
 	await _settle()
 	if empty or not hovered: return
-	var tile: Control = BaseScene.queue_tile(_main, 900)
-	check(tile != null, "the first queue tile shows")
-	if tile == null: return
-	HudTests._move(_port, tile.get_global_rect().get_center())
+	var now: Control = BaseScene.now_row(_main)
+	check(now != null, "NOW shows")
+	if now == null: return
+	HudTests._move(_port, now.get_global_rect().get_center())
 	await _settle()
-	check((tile as Button).is_hovered(), "the pointer is on the first queue tile")
+	check((now as Button).is_hovered(), "the pointer is on NOW")
 
 func _unload() -> void:
 	var ids: Dictionary = await _slab_world(50000, true)

@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: With one unit queued, what fills the empty NEXT row?
+why: >-
+  The queue round put `Right-click ground: rally point` under the panel only while the producer is idle, so
+  the NEXT row keeps its place. With one entry the NEXT row is empty. The player-experience pass suggested
+  the rally line there: right after the first order is when a rally point matters. Zero Hour has no rally
+  text: setting the rally point is a card button, and the flag shows in the world while the building is
+  selected (GeneralsGameCode `afc2a103f`,
+  `Core/GameEngine/Source/GameClient/GUI/ControlBar/ControlBarCommand.cpp:485-496`).
+look: The row under NOW PRODUCING, with one Rotary Gun Tank in production; B's extra shows the idle panel.
+crop: {x: 160, y: 400, w: 1120, h: 320}
+render:
+  page: docs/images/queue-round/factory.html
+  hash: count=1&fit=v2&rally=idle&num=secs&idle=box&boxh=68
+rec: B
+recWhy: >-
+  the same muted words, at exactly the height they have while idle, shown at the moment they are useful and
+  gone as soon as a second unit queues. C spends the row on a dash that says nothing.
+neutral: None of these
+options:
+  A:
+    name: Empty row (queue round answer)
+    render: {params: {nextrow: ''}}
+    sees: NOW PRODUCING, then empty space to the panel's bottom.
+    notes: As decided; the rally line shows only while idle.
+  B:
+    name: Rally line where it sits while idle
+    render: {params: {nextrow: rally}}
+    sees: '`Right-click ground: rally point` in muted text, on the same line as the idle footer.'
+    notes: Fills the space with the hint that matters after a first order; never moves.
+    extra:
+    - label: The same factory idle
+      render: {params: {count: 0}}
+  C:
+    name: '`NEXT —`'
+    render: {params: {nextrow: dash}}
+    sees: The `NEXT` label with a muted dash.
+    notes: Keeps the row's label so the panel always has the same rows.

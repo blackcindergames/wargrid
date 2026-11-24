@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: In what order do the chips sit?
+why: >-
+  The base was built Headquarters, Supply Depot, Barracks, Vehicle Factory, a second Barracks, a second
+  Vehicle Factory; the Supply Depot rests, so it has no chip. The strip ends at Menu and grows to the left
+  (step 6 C), so a chip moves when something is added on its right. Zero Hour has no strip to copy.
+look: The order of the five chips; N to "eleven producers" shows it with more buildings.
+crop: {x: 0, y: 0, w: 1280, h: 240}
+controls:
+  state: [mixed, idle, many, more, low, hover, card, frc]
+rec: B
+recWhy: >-
+  by kind, the order of the build card (Headquarters, Supply Depot, Barracks, Vehicle Factory) keeps every
+  Barracks together, and the Vehicle Factories sit at the right end, beside Menu, where nothing pushes them.
+  A new building or a Headquarters or Supply Depot chip appearing moves only the chips of earlier kinds. In
+  build order (A) each new building lands at the right end and shifts every chip left. C reorders whenever
+  production starts or stops, many times a minute.
+neutral: None of these
+options:
+  A:
+    name: In the order they were built
+    render: {params: {order: built}}
+    sees: Headquarters, Barracks, Vehicle Factory, Barracks, Vehicle Factory.
+    notes: A new building goes last and pushes every chip left.
+  B:
+    name: By kind, then by age
+    render: {params: {order: kind}}
+    sees: Headquarters, both Barracks, both Vehicle Factories.
+    notes: Same kinds together; the factories hold their place.
+  C:
+    name: Busy first, idle last
+    render: {params: {order: busy}}
+    sees: The four busy producers first, then the idle Barracks.
+    notes: Idle ones collect at the end; chips move whenever production starts or stops.

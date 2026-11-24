@@ -7,6 +7,7 @@ const BaseScene = preload("res://tests/test_base_scene.gd")
 const HudTests = preload("res://tests/test_hud.gd")
 const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
+const ProductionStrip = preload("res://scripts/match/production_strip.gd")
 
 const MAP := "res://data/maps/dry_wells.json"
 const FACTIONS := {1: "usa", 2: "china"}
@@ -85,6 +86,7 @@ func _fight(sim: RefCounted) -> Variant:
 func _stage(sim: RefCounted, clash: Vector2) -> int:
 	# Scratch settings with the playtest helper off: the owner's files stay untouched and the README shows no helper chip.
 	_saved = _overlays._begin(false)
+	ProductionStrip.save_hint_seen()
 	_begun = true
 	_port = BaseScene.sized_port(self, PIXELS, WINDOW)
 	_port.render_target_update_mode = SubViewport.UPDATE_ALWAYS

@@ -1,0 +1,115 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid · strip marker study</title>
+<!-- P16 strip-marker round: `marker` and `state` as hash or query params; the shipped upright chip (production_strip.gd _shape). -->
+<style>
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Regular.ttf)}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-SemiBold.ttf);font-weight:600}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Bold.ttf);font-weight:700}
+:root{--bg:#121c24;--btn:#223241;--panel2:#26384a;--line:#2e3f4b;--well:#0c141a;--text:#eef3f5;--muted:#93a5b0;--sel:#60e5ed;--you:#628ffa;--glyph:#bacbd5;--idle:#7b8d99}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:var(--text);font:600 13px Public,sans-serif;font-variant-numeric:tabular-nums;overflow:hidden}
+main{position:relative;width:1280px;height:720px;background:url(../hud-v5/source/worlds/w-factory.png) center/cover;transform-origin:top left;overflow:hidden}
+.slab{display:flex;align-items:center;gap:8px;height:32px;padding:0 7px;background:var(--bg);border:1px solid var(--line);white-space:nowrap}
+.ts{position:absolute;left:8px;top:8px;display:flex;gap:8px}
+.lab{font:700 12px/14px Public;letter-spacing:.1em;color:var(--muted)}
+.num{font-weight:700}.cr{font-size:16px}
+.sw{width:8px;height:8px;background:var(--you);flex:none}
+.menu{position:absolute;right:8px;top:8px;width:88px;background:var(--btn);padding:0 8px;justify-content:space-between}
+kbd{font:700 12px/18px Public;color:var(--muted);background:var(--well);padding:0 4px;height:18px}
+.playtest{position:absolute;right:8px;top:48px}
+.strip{position:absolute;top:8px;right:104px;gap:4px;padding:0 3px}
+.chip{position:relative;height:26px;background:var(--btn);flex:none}
+.chip.sel{background:var(--panel2);box-shadow:inset 0 0 0 1px var(--sel)}
+.chip>*{position:absolute}
+.g{width:18px;height:18px;left:13px;top:4px;fill:var(--glyph)}
+.chip.idle .g{fill:var(--idle)}
+.cnt{top:4px;font:700 12px Public;color:var(--muted);text-align:center;white-space:nowrap}
+.pb{top:3px;width:4px;height:20px;background:var(--well)}
+.pb i{position:absolute;left:0;bottom:0;width:4px;background:var(--you)}
+.chip.idle .pb{background:none;box-shadow:inset 0 0 0 1px var(--idle)}
+.small2{fill:var(--glyph)}
+.pip{width:3px;height:3px;background:var(--muted)}
+.tip{position:absolute;padding:7px;background:var(--bg);border:1px solid var(--line);white-space:nowrap;z-index:2}
+.tip b{display:block;font:600 13px Public;color:var(--text);margin-bottom:4px}
+.tip span{display:block;font:400 12px/16px Public;color:var(--muted)}
+.cursor{position:absolute;width:14px;height:21px;fill:#fff;stroke:#000;stroke-width:1;filter:drop-shadow(0 1px 1px #000);z-index:3}
+</style>
+<main></main>
+<script src="../hud-v5/source/glyphs3.js"></script>
+<script>
+const params=new URLSearchParams(location.hash.length>1?location.hash.slice(1):location.search);
+const opt=(k,d)=>params.get(k)??d;
+const marker=opt('marker','none'), state=opt('state','split'), card=opt('card','0')==='1';
+const UNIT={builder:['Bulldozer',150],rifle_infantry:['Militia',300],rocket_infantry:['Anti-Tank Trooper',150],light_vehicle:['Medium Tank',300],tank:['Rotary Gun Tank',300]};
+const QUEUES={split:['light_vehicle','light_vehicle','light_vehicle','light_vehicle','tank','tank','tank'],
+ alt:['light_vehicle','tank','light_vehicle','tank','light_vehicle','tank'],
+ single:Array(7).fill('light_vehicle')};
+// Strip order: Headquarters, Barracks, then the Vehicle Factories by age; the selected one carries the state's queue.
+const PRODUCERS=[
+ {name:'Headquarters',queue:['builder'],done:.5},
+ {name:'Barracks',queue:['rifle_infantry','rifle_infantry','rocket_infantry'],done:.3},
+ {name:'Vehicle Factory',queue:QUEUES[state]||QUEUES.split,done:.4,sel:true},
+ {name:'Vehicle Factory',queue:[],last:'tank'}];
+// Per-kind totals in order of first appearance; the head kind's total is the chip's number.
+function kinds(queue){
+ const out=[];
+ for(const u of queue){const k=out.find(x=>x.unit===u);if(k)k.n++;else out.push({unit:u,n:1})}
+ return out;
+}
+const svg=(id,cls,x,y,s)=>'<svg class="'+cls+'" style="left:'+x+'px;top:'+y+'px;width:'+s+'px;height:'+s+'px" aria-hidden="true" viewBox="0 0 48 48">'+GLYPH3['china_'+id]+'</svg>';
+const at=(x,y)=>'left:'+x+'px;top:'+y+'px';
+// Columns 2 | count | 2 | 18 glyph | extra | 4 | 4 bar | 3, as production_strip.gd draws the upright chip.
+function chip(p){
+ const k=kinds(p.queue), busy=k.length>0, more=k.slice(1);
+ let countW=9, extra='', extraW=0;
+ if(marker==='plus')countW=15;
+ if(marker==='kinds')more.forEach((m,i)=>{
+  const x=34+i*15;
+  extra+=svg(m.unit,'small2',x,2,12)+'<b class="cnt" style="'+at(x,14)+';width:12px;font-size:10px">'+m.n+'</b>';
+  extraW+=15;
+ });
+ const glyphX=2+countW+2, barX=glyphX+18+extraW+4, w=barX+4+3;
+ let html='<span class="chip'+(busy?'':' idle')+(p.sel?' sel':'')+'" style="width:'+w+'px">';
+ if(busy)html+='<b class="cnt" style="'+at(2,4)+';width:'+countW+'px">'+k[0].n+(marker==='plus'&&more.length?'+':'')+'</b>';
+ if(marker==='glyph'&&more.length)html+=svg(more[0].unit,'small2',2,16,8);
+ if(marker==='pips')more.slice(0,2).forEach((m,i,a)=>{html+='<i class="pip" style="'+at(a.length===1?5:3+i*5,19)+'"></i>'});
+ html+='<svg class="g" style="left:'+glyphX+'px" aria-hidden="true" viewBox="0 0 48 48">'+GLYPH3['china_'+(busy?k[0].unit:p.last)]+'</svg>'+extra;
+ html+='<span class="pb" style="left:'+barX+'px">'+(busy?'<i style="height:'+Math.round(p.done*20)+'px"></i>':'')+'</span>';
+ return html+'</span>';
+}
+function tipWords(p){
+ const k=kinds(p.queue), secs=Math.ceil(UNIT[k[0].unit][1]/30*(1-p.done));
+ const runs=k.slice(0,2).map((x,i)=>UNIT[x.unit][0]+' ×'+x.n+(i===0?' · '+secs+'s':''));
+ return runs.join(', ')+(k.length>2?' · +'+(k.length-2)+' more':'')+' · QUEUE '+p.queue.length+' / 9';
+}
+const CURSOR='<svg class="cursor" style="left:XXpx;top:YYpx" viewBox="0 0 14 21"><path d="M1 1v16l4-4 3 7 3-1-3-7h5z"/></svg>';
+const scaleK=()=>Math.min(innerWidth/1280,innerHeight/720);
+const box=el=>{const r=el.getBoundingClientRect(),k=scaleK(),m=main.getBoundingClientRect();return {x:(r.left-m.left)/k,y:(r.top-m.top)/k,w:r.width/k,h:r.height/k}};
+const main=document.querySelector('main');
+// 8 under the strip from the chip's left, inside the screen and 8 left of the Playtest chip it would cover.
+function tip(target,html){
+ const b=box(target), s=box(main.querySelector('.strip'));
+ main.insertAdjacentHTML('beforeend','<div class="tip">'+html+'</div>'+CURSOR.replace('XX',b.x+b.w/2).replace('YY',b.y+b.h/2));
+ const t=main.querySelector('.tip'), play=box(main.querySelector('.playtest')), w=box(t).w, top=s.y+s.h+8;
+ const right=top+box(t).h>play.y?play.x-8:1272;
+ t.style.left=Math.max(8,Math.min(b.x,right-w))+'px';t.style.top=top+'px';
+}
+function render(){
+ main.innerHTML='<div class="ts"><div class="slab"><i class="sw"></i><span class="lab">CREDITS</span><b class="num cr">50000</b></div>'+
+  '<div class="slab"><span class="lab">POWER</span><b class="num">8 / 10</b></div></div>'+
+  '<div class="slab menu"><span>Menu</span><kbd>Esc</kbd></div><div class="slab playtest"><span class="lab">PLAYTEST</span><b class="num">0 / 10</b></div>'+
+  '<div class="slab strip">'+PRODUCERS.map(chip).join('')+'</div>';
+ if(card){
+  const p=PRODUCERS.find(x=>x.sel);
+  tip(main.querySelector('.chip.sel'),'<b>'+p.name+'</b><span>'+tipWords(p)+'</span><span>Click: select it · Double-click: go there</span>');
+ }
+}
+function scale(){main.style.transform='scale('+scaleK()+')'}
+scale();
+render();
+// Again once Public Sans is in, so the tip is measured in it.
+Promise.all(['400','600','700'].map(w=>document.fonts.load(w+' 13px Public'))).then(render);
+onresize=()=>{scale();render()};
+onhashchange=()=>location.reload();
+</script>

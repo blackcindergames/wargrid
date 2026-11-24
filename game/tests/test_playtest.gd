@@ -9,7 +9,7 @@ const Launcher = preload("res://scenes/launcher.tscn")
 const SessionForm = preload("res://scripts/playtest/session_form.gd")
 const FocusCardView = preload("res://scripts/playtest/focus_card_view.gd")
 const HEADER := {"mode": "offline", "map": "dry_wells", "seed": 1, "factions": ["frc", "china"], "seat": 0, "build": "0.11.0-dev+abc"}
-const SHIPPED := ["p2.3b-slice", "p2.3a1-see-your-selection", "p12-notes", "p2.2-slice-2", "p2.2-quick-rematch", "p2.1-new-launcher", "p2-you-clicked", "p1-frc-economy", "p1-frc-tunnels-online", "p1-look-and-m6-fixes"]
+const SHIPPED := ["p16-factory", "p2.3b-slice", "p2.3a1-see-your-selection", "p12-notes", "p2.2-slice-2", "p2.2-quick-rematch", "p2.1-new-launcher", "p2-you-clicked", "p1-frc-economy", "p1-frc-tunnels-online", "p1-look-and-m6-fixes"]
 var scratch: String = "user://test-playtest-settings-%d.cfg" % OS.get_process_id()
 var commit_scratch: String = "user://test-playtest-commit-%d.txt" % OS.get_process_id()
 var sessions: String = "user://test-playtests-%d" % OS.get_process_id()
@@ -97,8 +97,10 @@ func test_trigger_matching(runner) -> bool:
 	runner.check(not FocusCards.matches_command("gather", {"type": "attack"}), "PT3 plain trigger ignores another type")
 	runner.check(not FocusCards.matches_command("esc_menu", {"type": "gather"}) and not FocusCards.matches_command("esc_menu", {"type": "esc_menu"}), "PT3 esc_menu matches no command")
 	var mouse_step: Dictionary = {}
-	for item: Dictionary in FocusCards.load_cards()[0].try:
-		if item.id == "mouse": mouse_step = item
+	for card: Dictionary in FocusCards.load_cards():
+		if card.id != "p2.3b-slice": continue
+		for item: Dictionary in card.try:
+			if item.id == "mouse": mouse_step = item
 	runner.check(not mouse_step.is_empty() and not mouse_step.has("trigger"), "PT3 the mouse-only step is the observer's, so no first building (keyed or clicked) ticks it")
 	return true
 

@@ -12,3 +12,7 @@
   title: 'Queue follow-up: production panel, cancel, glyphs, arrival pulse'
 - id: p2-3b-defaults
   title: 'P2.3b defaults: glide, held row, Controls wording, edge margin'
+- id: production-strip
+  title: 'P16 production strip: chips right of POWER, and the panel''s open items'
+- id: strip-marker
+  title: 'P16 strip marker: what shows that other kinds follow in a queue'

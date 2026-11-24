@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How does the strip sit next to credits and power?
+why: >-
+  The Full set drew one long bar with a 1 x 16 separator before the chips. P2.3b replaced the bar with two
+  slabs 8 apart that hug their content (top strip round, user 2026-11-22). FRC has no power slab, so
+  anything that lives inside POWER needs a second home for FRC (N to "frc"). C also decides step 6: chips
+  inside POWER go wherever POWER goes, which is step 6 A.
+look: The top strip; A and B sit at the right end (step 6 C), C sits inside POWER.
+crop: {x: 0, y: 0, w: 1280, h: 240}
+controls:
+  state: [mixed, idle, many, more, low, hover, card, frc]
+rec: A
+recWhy: >-
+  a third slab follows the rule the two slabs set (one slab per kind of information, each hugging its
+  content), works the same for FRC, and the chips read as one group. B makes five small slabs that look like
+  buttons of different kinds. C ties the chips to power, which FRC hides and which grows by about 300 px
+  while you use the build card.
+neutral: None of these
+options:
+  A:
+    name: Its own slab
+    render: {params: {group: slab}}
+    sees: One slab like credits and power, the chips 4 apart inside it, 4 from its edge.
+    notes: Same frame as credits and power; one group.
+  B:
+    name: Loose chips
+    render: {params: {group: loose}}
+    sees: Each chip is its own small slab, 32 high, 4 apart, no frame around them.
+    notes: No container; each chip carries its own border.
+  C:
+    name: Inside POWER after a separator (Full set)
+    render: {params: {group: power}}
+    sees: The chips continue inside the power slab after a 1 x 16 line, right after `8 / 10`.
+    notes: As the Full set drew it; moves with power; also answers step 6 (A).

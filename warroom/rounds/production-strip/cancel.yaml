@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Should a cancel flash?
+why: >-
+  A right-click on a cell (or a click on NOW) cancels and refunds. P16 counts accidental cancels (a cancel,
+  then the same kind queued within 2 s), so a cancel you did not mean must be noticed. The sound is
+  Claude's default and not asked here: today's UI click only (see "This round"). This step asks only about
+  the look. Each option is a 3 s clip: the pointer rests on Rotary Gun Tank (W), a right-click cancels the
+  newest one, the count drops from `×3` to `×2` and the credits rise from 50000 to 50800. Zero Hour plays
+  its button click on the press (GeneralsGameCode `afc2a103f`,
+  `Core/GameEngine/Source/GameClient/GUI/Gadget/GadgetPushButton.cpp:160-170`) and its money-deposit sound on
+  the refund (`GeneralsMD/Code/GameEngine/Source/GameLogic/Object/Update/ProductionUpdate.cpp:1102`,
+  `GeneralsMD/Code/GameEngine/Source/Common/RTS/Money.cpp:87-90`), and flashes nothing.
+look: Play the clip (Space); watch the W cell and the credits at the top left.
+rec: B
+recWhy: >-
+  a 0.3 s flash on the cell and the credits says which kind went and where the money landed, for the one
+  glance you give it; the click alone says only that something happened. The flash reuses the cyan of
+  selection for a moment, a small cost.
+neutral: None of these
+options:
+  A:
+    name: No flash
+    video: docs/images/strip-round/cancel-a.webm
+    sees: The count and the credits change; nothing else moves.
+    notes: Only the numbers change (plus the click).
+  B:
+    name: Flash
+    video: docs/images/strip-round/cancel-b.webm
+    sees: The W cell and the credits number flash cyan and fade within 0.3 s.
+    notes: Shows which kind went and where the money landed.

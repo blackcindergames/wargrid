@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Where does the strip sit when POWER grows?
+why: >-
+  Two of your decisions conflict here. The director round (2026-11-23) placed the strip right after POWER.
+  The top strip round (D, 2026-11-22) said nothing right of power jumps. But POWER does grow. While the
+  pointer is on the build card, both slabs hold their widest forecast, including `LOW POWER · DEFENCES OFF`
+  (as built in P2.3b). Measured in these pictures, a strip right after POWER moves about 400 px each time
+  the pointer enters the build card, and back when it leaves. Low power at rest moves it about 220 px. A
+  keeps the place and breaks the rule. C keeps the rule and gives up the place. B keeps both and pays with
+  about 400 px of empty map between POWER and the strip. Each option's picture is at rest; its extras are
+  the pointer on the build card and low power.
+look: Flip between the picture and its first extra (pointer on the build card) to see what moves.
+render: {state: mixed}
+rec: C
+recWhy: >-
+  of the two decisions, "nothing jumps" protects the strip's use: you click chips, and a target that moves
+  each time you visit the build card is easy to miss. C does not meet "right after POWER"; it is on the same
+  row, at the far end beside Menu. FRC gets the same place. Costs: a new producer pushes the row one chip
+  left, and the Team chip (Full set) will take the spot beside Menu, moving the strip once when it lands.
+  If the place matters more to you, B keeps both at the price of the gap.
+neutral: None of these
+options:
+  A:
+    name: Right after POWER, follows it
+    render: {params: {anchor: follow}}
+    sees: The strip 8 right of the power slab; on the build card it jumps about 400 px right, then back.
+    notes: Keeps the place (director round); breaks "nothing jumps".
+    extra:
+    - label: Pointer on the build card
+      render: {state: card, params: {anchor: follow}}
+    - label: Low power at rest
+      render: {state: low, params: {anchor: follow}}
+  B:
+    name: Fixed after the widest forecast
+    render: {params: {anchor: fixed}}
+    sees: The strip starts where the held slabs end, so it never moves, with about 400 px of map before it.
+    notes: Keeps both decisions; an empty gap at rest.
+    extra:
+    - label: Pointer on the build card
+      render: {state: card, params: {anchor: fixed}}
+    - label: Low power at rest
+      render: {state: low, params: {anchor: fixed}}
+  C:
+    name: At the right end, beside Menu
+    render: {params: {anchor: right}}
+    sees: The strip ends 8 left of Menu and grows to the left; credits and power never touch it.
+    notes: Keeps "nothing jumps"; gives up "right after POWER".
+    extra:
+    - label: Pointer on the build card
+      render: {state: card, params: {anchor: right}}
+    - label: Low power at rest
+      render: {state: low, params: {anchor: right}}
