@@ -50,7 +50,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**16 of 46 parts done**
+**18 of 46 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -68,11 +68,11 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | Quick rematch | Done |
 | ✅ | Notes that never block | Done |
 | ✅ | See your selection | Done |
-| ⏭ | Build from the dock | Next |
+| ✅ | Build from the dock | Done |
 | ✅ | Pan with the mouse | Done |
 | ✅ | Know what your factory is making | Done |
-| 📋 | A short Esc menu | Planned |
-| 📋 | Team up against bots | Planned |
+| ✅ | A short Esc menu | Done |
+| ⏭ | Team up against bots | Next |
 | 📋 | First new units | Planned |
 | 📋 | Hear the whole battlefield | Planned |
 | 📋 | Know why an order failed | Planned |
