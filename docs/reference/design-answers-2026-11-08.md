@@ -1647,7 +1647,22 @@ Changes during the build, in order; evidence in [P7 part 1 verification](p7-veri
 
 ### P7 part 2
 
-Plan not written; part 2 waits for part 1 and night 8.
+Plan written 2026-11-24 ([plan](../superpowers/plans/2026-11-24-p7-2-team-online.md)) on `main` `7b69cb7a`, after night 8, part 1 and P2.3b merged; the design as fixed in the plan is the approved design and the plan is approved for the run once its readiness findings are applied (user, 2026-11-24).
+
+- **Names (Q1):** `<name>` is the result-row name with a short faction tag (`P2 USA`; tags USA, China, FRC); start line "You and P1 USA vs 2 bots (China, FRC)" (decided for the owner, 2026-11-24).
+- **1v1 leave line (Q2):** 7-20's line also replaces 1v1's "Your opponent left", under F27's Victory heading (decided for the owner, 2026-11-24).
+- **Colours by viewer (Q3):** by viewer and by colour, not by slot, since the Neon set swaps slots 5 and 7 (user, 2026-11-24).
+- **Colour values (Q4):** base you `#628ffa`, teammate `#0e92a7`, bots `#d6120c` and `#ec8600`; Neon you `#2f7bff`, teammate `#00d8e8`, bots `#ff2f45` and `#ff7a00`; the ΔE76 test covers both sets, normal and deuteranopia (user, 2026-11-24).
+- **Where (Q5):** only in matches with a human teammate; offline and 1v1 keep today's colours (user, 2026-11-24).
+- **Ping key (Q6):** `G`, checked in browsers at the gate (decided for the owner, 2026-11-24).
+- **Ping button (Q7):** shown only with a human teammate (decided for the owner, 2026-11-24).
+- **2v2 records (Q8):** replayable; the header gains `teams` and `bots` (decided for the owner, 2026-11-24).
+- **Rendered 2v2 row (Q9):** a scripted four-bot 2v2 on Ashfall, a gate task (decided for the owner, 2026-11-24).
+- **Defeated host's leave (Q10):** "You run the bots. Leaving ends the match for your friend.", with truthful 2v2 guest leave and quit questions (decided for the owner, 2026-11-24).
+- **Host-left heading (Q11):** "Match ended", with 7-21's line under it (decided for the owner, 2026-11-24).
+- **Refused send (Q12):** its own status `ended_send` with the relay-lost line; P8 words the reason (decided for the owner, 2026-11-24).
+- **Mock-up review (Q13):** the player-experience reviewer on a static mock-up, plus an advisory War Room round that never blocks (user, 2026-11-24).
+- **Approvals (Q14):** one local commit per green task on `p7-2-team-online`; one push of that branch at the gate, after the owner's match; never `main`, no merge, no deploy (user, 2026-11-24).
 
 - **Play page (7-16):** one row `vs Bot · vs Friend · With a friend vs 2 bots`, no A/B (user, 2026-11-21); replaces the Play page A/B of [Online teams refinement](#online-teams-refinement-user-2026-11-16) and of the [online teams design](../superpowers/specs/2026-11-16-online-teams-design.md).
 - **Version mismatch (7-17):** a static mock-up checked by the player-experience reviewer, no A/B (user, 2026-11-21); replaces the version-message A/B of the online teams design.
