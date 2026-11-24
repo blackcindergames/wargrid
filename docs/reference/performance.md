@@ -15,9 +15,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 144% | 🔻 1% better | 2026-11-24 |
 | **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 124% | 🔻 2% better | 2026-11-24 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 2% worse | 2026-11-23 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 1% worse | 2026-11-24 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔻 1% better | 2026-11-24 |
-| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔻 9% better | 2026-11-23 |
+| Drawing the screen | 🟢 OK | ███████░░░ 73% | 🔺 1% worse | 2026-11-24 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 2% better | 2026-11-24 |
 | Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔻 1% better | 2026-11-24 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔻 2% better | 2026-11-24 |
@@ -34,8 +34,8 @@ Details:
 - combat stress p95: 161% of budget, exceeded (P16 finish, 2026-11-24), 2% faster than P16 Know what your factory is making (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 144% of budget, exceeded (P16 finish, 2026-11-24), 1% faster than P16 Know what your factory is making (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 212% of budget, exceeded (P16 finish, 2026-11-24), unchanged vs P16 Know what your factory is making (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 72% of budget (P16 Know what your factory is making, 2026-11-23), 9% faster than P17 pan with the mouse (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 74% of budget (P16 Know what your factory is making, 2026-11-23), 2% slower than P17 pan with the mouse (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 73% of budget (P16 finish, 2026-11-24), 1% slower than P16 Know what your factory is making (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 74% of budget (P16 finish, 2026-11-24), 1% slower than P16 Know what your factory is making (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (P16 finish, 2026-11-24), 4% faster than P16 Know what your factory is making (worst vs worst); run-to-run spread not measured
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
