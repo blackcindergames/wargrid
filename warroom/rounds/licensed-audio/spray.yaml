@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Toxin spray (Toxin Truck, Hazmat, Ambulance): which sound?"
+why: "Made here, since the packs have no spray. One 2 s piece; in game it repeats while the unit sprays."
+neutral: "None of them"
+options:
+  A:
+    name: "Synth hiss"
+    audio: game/audio/licensed/preview/spray-a.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Pressurised hiss with a liquid gurgle; no pack sound"
+  B:
+    name: "Hiss + Magnet Pump"
+    audio: game/audio/licensed/preview/spray-b.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Synth hiss over the Sci-Fi III Magnet Pump loop"
+  C:
+    name: "Hiss + Gravity Generator"
+    audio: game/audio/licensed/preview/spray-c.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Synth hiss over the Sci-Fi III Gravity Generator loop"

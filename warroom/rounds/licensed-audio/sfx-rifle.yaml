@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Ranger rifle burst (`rifle_burst`): which sound?"
+why: "Today is option A. Keep it if nothing beats it."
+neutral: "Can't tell them apart"
+options:
+  A:
+    name: "Today"
+    audio: game/audio/licensed/preview/sfx-rifle-today.mp3
+    level: "the shipped sound"
+    notes: "Today's generated sound, for comparison."
+  B:
+    name: "Laser Rifle Shot Automatic C"
+    audio: game/audio/licensed/preview/sfx-rifle-laser-rifle-shot-automatic-c.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  C:
+    name: "Pulse Shot Automatic C"
+    audio: game/audio/licensed/preview/sfx-rifle-pulse-shot-automatic-c.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  D:
+    name: "Electromagnetic Rifle Shot Automatic C"
+    audio: game/audio/licensed/preview/sfx-rifle-electromagnetic-rifle-shot-automatic-c.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  E:
+    name: "Electro Rifle Shot Automatic C"
+    audio: game/audio/licensed/preview/sfx-rifle-electro-rifle-shot-automatic-c.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  F:
+    name: "Laser Pistol Shot Automatic C"
+    audio: game/audio/licensed/preview/sfx-rifle-laser-pistol-shot-automatic-c.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  G:
+    name: "Plasma Turret Short Burst 001"
+    audio: game/audio/licensed/preview/sfx-rifle-plasma-turret-short-burst-001.mp3
+    level: "Gunshots"
+    notes: "Level-matched to Today."
+  H:
+    name: "Particle Caster Semi-Automatic 001"
+    audio: game/audio/licensed/preview/sfx-rifle-particle-caster-semi-automatic-001.mp3
+    level: "Gunshots"
+    notes: "Level-matched to Today."

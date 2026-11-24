@@ -88,7 +88,9 @@ static func plan(requests: Array[Dictionary], playing: Array[String], listener: 
 	for request: Dictionary in requests:
 		var slot: int = -1
 		var heard: bool = request.position == null or Iso.world_to_plane(request.position).distance_to(listener) <= max_distance
-		if heard and slots.count(request.cue) < Cues.CUES[request.cue].limit: slot = slots.find("")
+		var key: String = Cues.limit_key(request.cue)
+		var busy: int = slots.filter(func(cue: String) -> bool: return cue != "" and Cues.limit_key(cue) == key).size()
+		if heard and busy < Cues.CUES[request.cue].limit: slot = slots.find("")
 		if slot != -1: slots[slot] = request.cue
 		result.append(slot)
 	return result
@@ -105,7 +107,7 @@ func _fill(requests: Array[Dictionary], slots: Array[int], players: Array, cues:
 		var player: Node = players[slots[i]]
 		player.stream = _stream(request.sound)
 		player.pitch_scale = request.pitch
-		player.volume_db = Cues.CUES[request.cue].gain_db
+		player.volume_db = Cues.gain_db(request.cue)
 		if request.position != null: player.position = Iso.world_to_plane(request.position)
 		cues[slots[i]] = request.cue
 		player.play()

@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Tank cannon (`cannon`): which sound?"
+why: "Today is option A. Keep it if nothing beats it."
+neutral: "Can't tell them apart"
+options:
+  A:
+    name: "Today"
+    audio: game/audio/licensed/preview/sfx-cannon-today.mp3
+    level: "the shipped sound"
+    notes: "Today's generated sound, for comparison."
+  B:
+    name: "Particle Gun A"
+    audio: game/audio/licensed/preview/sfx-cannon-particle-gun-a.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  C:
+    name: "Plasmagun A"
+    audio: game/audio/licensed/preview/sfx-cannon-plasmagun-a.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  D:
+    name: "Proton Heavy Gun A"
+    audio: game/audio/licensed/preview/sfx-cannon-proton-heavy-gun-a.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  E:
+    name: "Orbital Gun A"
+    audio: game/audio/licensed/preview/sfx-cannon-orbital-gun-a.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  F:
+    name: "Plasma Turret Single 001"
+    audio: game/audio/licensed/preview/sfx-cannon-plasma-turret-single-001.mp3
+    level: "Gunshots"
+    notes: "Level-matched to Today."
+  G:
+    name: "Particle Caster Single 001"
+    audio: game/audio/licensed/preview/sfx-cannon-particle-caster-single-001.mp3
+    level: "Gunshots"
+    notes: "Level-matched to Today."
+  H:
+    name: "Electrocutter Single 001"
+    audio: game/audio/licensed/preview/sfx-cannon-electrocutter-single-001.mp3
+    level: "Gunshots"
+    notes: "Level-matched to Today."

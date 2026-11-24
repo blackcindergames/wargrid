@@ -16,3 +16,5 @@
   title: 'P16 production strip: chips right of POWER, and the panel''s open items'
 - id: strip-marker
   title: 'P16 strip marker: what shows that other kinds follow in a queue'
+- id: licensed-audio
+  title: 'Licensed audio: first pass through the packs'

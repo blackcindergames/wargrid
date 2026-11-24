@@ -5,6 +5,7 @@ from pathlib import Path
 
 AUDIO = Path(__file__).resolve().parents[1] / "game" / "audio"
 CREDITS = AUDIO / "CREDITS.md"
+LICENSED = AUDIO / "licensed"  # gitignored pack files, built by tools/audio/licensed.py
 SFX = {
     "building_large",
     "building_small",
@@ -46,7 +47,11 @@ def audio_files() -> list[Path]:
     return sorted(
         p
         for p in AUDIO.rglob("*")
-        if p.is_file() and p.suffix != ".import" and not p.name.startswith(".") and p != CREDITS
+        if p.is_file()
+        and p.suffix != ".import"
+        and not p.name.startswith(".")
+        and p != CREDITS
+        and LICENSED not in p.parents
     )
 
 

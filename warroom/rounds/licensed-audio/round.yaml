@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'Licensed audio: first pass through the packs'
+intro: >-
+  A first narrowing of the 8.3 GB of packs, so you never listen to all of it. Music: one version per track
+  (the full mix; the 30 s, 60 s, intensity and stem variants are dropped for now), 24 tracks in five steps, each a 25 s
+  clip from the track's loudest part, every clip at -16 LUFS so loudness never decides. Pick the best per step and
+  name other keepers or a menu candidate in the note. Sound effects: one take per family (the A/B/C takes sound alike),
+  matched to the slot by name and length, at -18 LUFS, with today's sound as option A. Left out: ambiences, vehicle
+  and machinery loops, droid voices and spaceships (no slot uses them yet), EliteGameMusic (parked). These are previews
+  only; the files never leave this machine.
+steps: [music-assault, music-industrial-1, music-industrial-2, music-pinkbloom-1, music-pinkbloom-2, sfx-rifle, sfx-carbine, sfx-cannon, sfx-impact, sfx-launch, flame, spray]

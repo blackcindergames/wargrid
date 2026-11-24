@@ -88,6 +88,8 @@ Not ordered yet (placed 2026-11-20, user, [director's newcomer proposals](refere
 
 Not ordered yet (placed 2026-11-20, user): unit voices: new recorded voice lines the current set lacks, starting with the workers' "can't build" line ([F24](STATUS.md#findings-list)).
 
+Not ordered yet (placed 2026-11-24, user, inbox): licensed audio: the owner bought music and sound-effect packs (Assault Modern Warfare, Pink Bloom, EliteGameMusic on Fab, Industrial Music Vol. 1, Sci-Fi and Sci-Fi III; 8.3 GB of WAV in `~/music_sounds`, outside the repository) licensed for use in Wargrid. Their licences forbid offering the raw files for download outside a compiled game (Assault §3; Fab: no standalone redistribution), and this repository is public, so the files never enter it the way the CC-BY tracks in `game/audio/` do: first step is a private asset source that local and CI builds fetch, with `game/audio/CREDITS.md` kept for attribution-licensed files only. Licences read 2026-11-24: Pink Bloom is CC BY 4.0 and may enter the repository like the other CC-BY tracks; EliteGameMusic is parked, because the Fab Standard License forbids combining its content with GPL code. Then a War Room listening round picks tracks for the new menu track and faction-themed music items above, and sound-effect swaps. Name proposed by the agent.
+
 Matching with friends beyond P2.2 (user, 2026-11-13): a permanent friend link and other modern, easy ways to meet a friend are re-explored with the M9 lobby; quick match for strangers comes after M9. No integration with any chat or storefront service (Discord, Steam): the link and code work through any channel.
 
 ## How a package runs

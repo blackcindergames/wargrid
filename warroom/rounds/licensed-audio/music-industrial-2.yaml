@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Industrial, 2 of 2: which track is best for a match?"
+why: "Pick the strongest. Write any other keepers, or a menu-track candidate, in the note."
+neutral: "None fit Wargrid"
+options:
+  A:
+    name: "Matts Fridge"
+    audio: game/audio/licensed/preview/industrial-matts-fridge-main.mp3
+    level: "25 s from 0:38, track 1:28"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  B:
+    name: "Mineshaft"
+    audio: game/audio/licensed/preview/industrial-mineshaft-main.mp3
+    level: "25 s from 0:12, track 1:30"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  C:
+    name: "Nightlife"
+    audio: game/audio/licensed/preview/industrial-nightlife-main.mp3
+    level: "25 s from 0:43, track 1:30"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  D:
+    name: "Shadowrun"
+    audio: game/audio/licensed/preview/industrial-shadowrun-main.mp3
+    level: "25 s from 0:59, track 1:52"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  E:
+    name: "Tech Savvy"
+    audio: game/audio/licensed/preview/industrial-tech-savvy-main.mp3
+    level: "25 s from 0:57, track 1:25"
+    notes: "Loudest 25 s of the track, level-matched to the others."
