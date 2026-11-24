@@ -14,7 +14,7 @@ from process import encode
 
 LIGHT, HEAVY = "Sound Effects/Sci-Fi/Weapon/Light/", "Sound Effects/Sci-Fi/Weapon/Heavy/"
 GUNSHOTS = "Sound Effects/Sci-Fi III/Weapon/Gunshots/"
-GUN, CANNON, LAUNCH, IMPACT = -29.6, -25.8, -33.0, -30.8  # LUFS of the free sounds they replace
+GUN, CANNON, LAUNCH, IMPACT, VEHICLE_DEATH = -29.6, -25.8, -33.0, -30.8, -23.8  # LUFS of the free sounds they replace
 # stem: (pack file, LUFS, longest seconds, pitch); stems match `licensed` in sound_cues.gd.
 SFX = {
     "usa_rifle": (LIGHT + "Laser Pistol Shot Automatic C.wav", GUN, 1.4, 1.0),
@@ -32,6 +32,7 @@ SFX = {
     "frc_launch": (HEAVY + "Missile Launch C.wav", LAUNCH, 2.0, 1.0),
     "usa_battery": (HEAVY + "Missile Launch C.wav", LAUNCH, 1.2, 1.3),
     "impact": (HEAVY + "Rocket Explosion A.wav", IMPACT, 2.5, 1.0),
+    "vehicle_death": (HEAVY + "Rocket Explosion C.wav", VEHICLE_DEATH, 3.0, 1.0),
 }
 MUSIC_DIR = "Music/Assault - Modern Warfare Music Pack/Tracks/MUS_"
 INDUSTRIAL = "Music/Industrial Music Pack Vol. 1/"

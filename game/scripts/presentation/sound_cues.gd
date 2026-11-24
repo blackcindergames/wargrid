@@ -24,7 +24,7 @@ const CUES := {
 	"usa_battery": {"shares": "launch", "sound": "explosion", "limit": 4, "pitch": 1.5, "jitter": 0.0, "gain_db": -6.0, "ui": false, "licensed": "usa_battery"},
 	"impact": {"sound": "explosion", "limit": 4, "pitch": 1.0, "jitter": 0.0, "gain_db": 0.0, "ui": false, "licensed": "impact"},
 	"infantry_death": {"sound": "infantry_death", "limit": 3, "pitch": 1.0, "jitter": 0.0, "gain_db": 0.0, "ui": false},
-	"vehicle_death": {"sound": "vehicle_death", "limit": 4, "pitch": 1.0, "jitter": 0.05, "gain_db": 0.0, "ui": false},
+	"vehicle_death": {"sound": "vehicle_death", "limit": 4, "pitch": 1.0, "jitter": 0.05, "gain_db": 0.0, "ui": false, "licensed": "vehicle_death"},
 	"building": {"sound": "building_small", "limit": 2, "pitch": 1.0, "jitter": 0.0, "gain_db": 0.0, "ui": false},
 	"placement": {"sound": "click", "limit": 2, "pitch": 0.8, "jitter": 0.0, "gain_db": 0.0, "ui": true},
 	"click": {"sound": "click", "limit": 2, "pitch": 1.0, "jitter": 0.0, "gain_db": 0.0, "ui": true},

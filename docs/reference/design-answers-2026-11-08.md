@@ -1524,6 +1524,7 @@ War Room round `production-strip` (`warroom/rounds/production-strip/`, pictures 
 - **Rally (B):** the rally line in the empty NEXT row, on the idle footer's line.
 - **Cancel (B):** the cell and the credits flash for 0.3 s.
 - **Defaults stated in the round, kept:** the cancel sound is today's click only; Headquarters and Supply Depot chips show only while producing; an idle military producer keeps its last-made unit's glyph; slowed bars in `warn`, a full `warn` bar when the exit is blocked; the idle box stays dashed.
+- **Idle chips hidden (user, 2026-11-24, after a match):** an idle producer shows no chip, also beside a busy one (seen with a first Barracks next to a working factory: "I'm not sure that's very useful"); supersedes Idle (C) and the "hollow only beside a busy one" refinement. Rides on P18.
 - **Chip number (user, 2026-11-23, late, after the match):** the head kind's total in the queue, equal to that kind's cell `×N` on the build card. No "more kinds follow" marker (the 4 x 6 triangle is dropped; `strip-marker` round A, user, 2026-11-24); the hover card names the first two kinds with their totals and `+N more` units, then the head unit's time or why it waits (two-line card, user, 2026-11-24). Survey: [P16 verification](p16-verification.md).
 
 ## P2.3b top strip round (user, 2026-11-22)
