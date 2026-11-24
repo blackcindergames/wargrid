@@ -1682,6 +1682,11 @@ Plan written 2026-11-24 ([plan](../superpowers/plans/2026-11-24-p7-2-team-online
 - **Start countdown (7-29):** none; it stays P11 (user, 2026-11-21).
 - **Quit panel (7-30):** heading "Match ended", no winner, after a teammate quits (user, 2026-11-21).
 - **Own colour and start position:** choosing your own colour and start position goes into P11's lobby (user, 2026-11-24).
+- **Ping tone (finish run):** the tone goes through the announcer's queue, priority 5 and a 150-tick cooldown, so a burst of pings sounds once and a base alarm outranks it (decided for the owner, 2026-11-24).
+- **Armed click on a unit (finish run):** with the ping armed, a click on a unit pings that spot; only Alt+click skips an own unit, so Alt+double-click keeps its whole-map select (decided for the owner, 2026-11-24).
+- **Defeated guest pings (finish run):** a defeated guest who watches may keep pinging (decided for the owner, 2026-11-24).
+- **Ping chip once the teammate left (finish run):** the Ping chip and `G` are hidden from then on (decided for the owner, 2026-11-24).
+- **Audio asset list (finish run):** `tools/test_audio_assets.py` lists `sfx/ping.wav`, since that test pins each folder's contents (decided for the owner, 2026-11-24).
 
 ### P15
 
