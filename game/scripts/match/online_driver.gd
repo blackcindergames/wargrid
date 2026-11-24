@@ -131,6 +131,8 @@ func step() -> void:
 func _tick_job(commands: Array[Dictionary]) -> SimPump.Job:
 	var job := SimPump.Job.new()
 	job.commands = commands
+	job.bots.assign(_lockstep.allowed(_seat).filter(func(player: int) -> bool: return player != _seat))
+	job.plan_bots = true
 	job.preview = _preview_request
 	job.want_digest = _lockstep.wants_snapshot(_next_tick + 1)
 	return job
@@ -157,6 +159,7 @@ func _finish_job(note: SimPump.Note) -> void:
 		_lockstep.set_protocol_error("note at tick %d for taken tick %d" % [note.tick, tick])
 		return
 	_lockstep.record(tick, note.issued)
+	for command: Dictionary in note.bot_commands: _lockstep.submit(command, command.player)
 	_lockstep.finish_tick(note.tick, note.snapshot if not note.digest.is_empty() else null, note.digest)
 
 func _settle() -> void:

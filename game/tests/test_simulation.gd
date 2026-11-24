@@ -2,9 +2,12 @@
 extends RefCounted
 
 const Simulation = preload("res://scripts/simulation/simulation.gd")
+const Fixture = preload("res://tests/economy_fixture.gd")
+const SeatFixture = preload("res://tests/seat_fixture.gd")
+const StateHash = preload("res://scripts/simulation/state_hash.gd")
 
 func cases() -> Array[Callable]:
-	return [test_spawn, test_tick_zero, test_future_tick, test_same_tick_replacement, test_atomic_rejection, test_sequences, test_malformed_commands, test_command_copy, test_snapshot_copy, test_canonical_pending_order, test_repeatability, test_group_move]
+	return [test_spawn, test_tick_zero, test_future_tick, test_same_tick_replacement, test_atomic_rejection, test_sequences, test_malformed_commands, test_command_copy, test_snapshot_copy, test_canonical_pending_order, test_repeatability, test_group_move, test_check_command_matches_issue_command]
 
 func equal(runner, actual: Variant, expected: Variant, label: String) -> void:
 	runner.check(actual == expected, "%s expected %s, actual %s" % [label, expected, actual])
@@ -253,3 +256,36 @@ func check_first_motion(runner, unit: Dictionary, label: String) -> void:
 	var point := Vector2(unit.position[0], unit.position[1])
 	runner.check(point == Vector2(1, 2), label + " waits out the start delay")
 	equal(runner, unit.get("status"), "moving", label + " status")
+
+func _check_world(kind: String):
+	var sim: RefCounted = Fixture.make_world(0 if kind == "poor" else 10000)
+	match kind:
+		"poor": Fixture.add_completed(sim, 1, "usa_barracks", Vector2i(10, 10))
+		"blocked": Fixture.add_completed(sim, 1, "usa_power_plant", Vector2i(10, 10))
+		"setup":
+			sim.add_player(2, 0)
+			sim.begin_setup([1, 2] as Array[int])
+		"ended":
+			sim = SeatFixture.sim([1, 2] as Array[int])
+			SeatFixture.defeat(sim, 2)
+			sim.step()
+	return sim
+
+func test_check_command_matches_issue_command(runner) -> bool:
+	var move := {"tick": 0, "player": 1, "sequence": 0, "type": "move", "entity_ids": [1], "target": [5.5, 5.5]}
+	var produce := {"tick": 0, "player": 1, "sequence": 0, "type": "produce", "building_id": 2, "unit_kind": "usa_rifle_infantry"}
+	var build := {"tick": 0, "player": 1, "sequence": 0, "type": "build", "builder_id": 1, "building_kind": "usa_power_plant", "origin": [10, 10]}
+	var rows := [["valid move", "rich", move, false], ["unaffordable produce", "poor", produce, true], ["valid build", "rich", build, false], ["blocked build", "blocked", build, true], ["setup-time order", "setup", move, true]]
+	for row: Array in rows:
+		var checked: RefCounted = _check_world(row[1])
+		var issued: RefCounted = _check_world(row[1])
+		var before: String = checked.tick_hash()
+		var digest: String = StateHash.digest(checked.snapshot())
+		var error: String = checked.check_command(row[2])
+		equal(runner, error, issued.issue_command(row[2]).error, "CC1 %s: the same answer" % row[0])
+		runner.check(error.is_empty() != row[3], "CC1 %s: %s, got '%s'" % [row[0], "refused" if row[3] else "accepted", error])
+		runner.check(checked.tick_hash() == before and StateHash.digest(checked.snapshot()) == digest, "CC1 %s: the check leaves the hash and the digest alone" % row[0])
+	var over: RefCounted = _check_world("ended")
+	equal(runner, over.check_command(move.merged({"player": 1, "tick": over.tick(), "entity_ids": [over.snapshot().entities[0].id]})), "Match ended", "CC1 after the end")
+	equal(runner, _check_world("rich").check_command({"player": 1}), _check_world("rich").issue_command({"player": 1}).error, "CC1 a malformed order gets the same answer")
+	return true

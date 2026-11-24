@@ -203,9 +203,11 @@ func survivors() -> Array[int]:
 		if _survives(player): found.append(player)
 	return found
 
+func check_command(command: Dictionary) -> String:
+	return "Match ended" if match_over() else _validate(command)
+
 func issue_command(command: Dictionary) -> Dictionary:
-	if match_over(): return {"ok":false,"error":"Match ended"}
-	var error: String = _validate(command)
+	var error: String = check_command(command)
 	if not error.is_empty():
 		return {"ok":false,"error":error}
 	var normalized := {"tick":command.tick,"player":command.player,"sequence":command.sequence,"type":command.type}

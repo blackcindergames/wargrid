@@ -73,7 +73,7 @@ You and a friend (two online clients) play one team against two bots the host's 
 | Full frame | the human order goes, the bot order is dropped and recovered next decision | `test_bot_refused_submit_recovers_next_decision` (T2-4) |
 | Bot order the sim would refuse (dead unit, blocked slot) | refused at issue time, nothing planned; a bot without victory buildings still orders its surviving units | `test_planner_drops_invalid_bot_order` (T2-4) |
 | Bot order during setup | planned nothing | `test_setup_plans_no_bot_orders` (T2-4) |
-| Input delay ≥ 30 ticks, so a bot decides again before its order applies | no double wave in memory; test-only, the relay fixes the delay at 4 (`relay/room.go:21`, P3-10) | `test_bot_refused_submit_recovers_next_decision` with delay 30 (T2-4) |
+| Input delay ≥ 30 ticks, so a bot decides again before its order applies | no double wave in memory; not tested, because the relay fixes the delay at 4 (`relay/room.go:21`, P3-10) | none (T2-4) |
 | Guest frame stamped player 3 | `ended_protocol` "bad command stamp" | `test_guest_command_for_bot_ends_bad_stamp` (T2-1) |
 | Defeated host leaves, bots alive | ends, 7-21's line | `test_defeated_host_leave_ends_while_bots_live` (T2-1), `team-defeated-host-leaves` (T2-5) |
 | Leave in the leaver's defeat tick | defeated: play on (N8 rule) | `test_pal_removed_in_step_a_plays_on` stays |

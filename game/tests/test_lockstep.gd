@@ -80,7 +80,37 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_leave_during_setup_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal, test_for_start_allowed_from_settings, test_host_frame_carries_bot_commands, test_guest_command_for_bot_ends_bad_stamp, test_host_leave_frame_with_bot_orders, test_guest_leave_tick_bot_order_applies, test_submit_refuses_player_not_allowed, test_bot_sequences_rise, test_bot_submit_times_erased, test_bot_refusal_never_reaches_host_answers, test_bot_commands_not_in_latency, test_defeated_host_leave_ends_while_bots_live, test_two_seat_bots_guest_leave_no_opponent_left, test_seat_sim_submits_as_command_player]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_leave_during_setup_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal, test_for_start_allowed_from_settings, test_host_frame_carries_bot_commands, test_guest_command_for_bot_ends_bad_stamp, test_host_leave_frame_with_bot_orders, test_guest_leave_tick_bot_order_applies, test_submit_refuses_player_not_allowed, test_bot_sequences_rise, test_bot_submit_times_erased, test_bot_refusal_never_reaches_host_answers, test_bot_commands_not_in_latency, test_defeated_host_leave_ends_while_bots_live, test_two_seat_bots_guest_leave_no_opponent_left, test_seat_sim_submits_as_command_player, test_seat_sim_validates_at_issue_time, test_seat_sim_full_frame_refusal_recovers]
+
+func test_seat_sim_validates_at_issue_time(runner) -> bool:
+	var net := _quad_net([40, 40])
+	var host: Client = net.clients[0]
+	var guest: Client = net.clients[1]
+	var refused: Dictionary = host.seat_sim.issue_command({"type": "cancel_build", "building_id": 99999, "player": 3})
+	runner.check(not refused.ok and refused.error == "Missing owned foundation" and host.ls._queue.is_empty(), "L22 an order the sim would refuse returns the sim's error and queues nothing (%s, %d queued)" % [refused, host.ls._queue.size()])
+	var order: Dictionary = _bot_order(host, 3)
+	order.player = 3
+	var stranger: Dictionary = guest.seat_sim.issue_command(order)
+	runner.check(not stranger.ok and stranger.error != "too many orders" and guest.ls._queue.is_empty(), "L22 an order for another seat's player has its own wording, got '%s'" % stranger.error)
+	var bare: Dictionary = host.seat_sim.issue_command(_bot_order(host, 1))
+	runner.check(bare.ok and host.ls._queue.size() == 1 and host.ls._queue[0].player == 1, "L22 an unstamped order without a player is the seat's own and accepted, got %s" % [bare])
+	for c: Client in net.clients: c.ls.send = Callable()
+	return true
+
+func test_seat_sim_full_frame_refusal_recovers(runner) -> bool:
+	var net := _quad_net([90, 90])
+	var host: Client = net.clients[0]
+	host.ls._queue_bytes = Wire.MAX_FRAME_BYTES
+	var full: Dictionary = host.seat_sim.issue_command({"type": "cancel_build", "building_id": 99999, "player": 3})
+	runner.check(full.error == "Missing owned foundation", "L22 an invalid order gets the sim's error, not the full-frame one, got '%s'" % full.error)
+	host.ls._queue_bytes = 0
+	net.clients[0].hook = func(c, tick: int) -> void:
+		if tick == 33: c.ls._queue_bytes = Wire.MAX_FRAME_BYTES
+		if tick == 33 or tick == 63: Skirmish.issue_opponents(c.seat_sim, [3])
+	net.run()
+	var ticks: Array = host.ls.command_log().filter(func(m: Dictionary) -> bool: return m.player == 3).map(func(m: Dictionary) -> int: return m.tick)
+	runner.check(not ticks.is_empty() and ticks.min() > 38, "L22 the order refused by a full frame is dropped, and the bot's next decision sends it (ticks %s)" % [ticks])
+	return true
 
 func _scripts(net: Net) -> void:
 	net.clients[0].behavior = func(c) -> void: ScriptedHuman.issue(c.seat_sim)

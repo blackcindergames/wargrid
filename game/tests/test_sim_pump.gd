@@ -78,7 +78,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -1055,4 +1055,146 @@ func test_shot_carries_its_building_target(runner) -> bool:
 			if event.type == "shot" and event.target_id == barracks: target = event.get("target_building", {})
 		if not target.is_empty(): break
 	runner.check(not target.is_empty() and target.id == barracks and target.owner == 1 and target.kind == "usa_barracks" and target.origin.size() == 2, "PH shot at a building carries its row, got %s" % [target])
+	return true
+
+func _planning(bots: Array = [2]):
+	var job = _job([], bots)
+	job.plan_bots = true
+	return job
+
+func test_plan_bots_leaves_sim_untouched(runner) -> bool:
+	var planned = _pump()
+	var quiet = _pump()
+	var commands: int = 0
+	for i in 100:
+		planned.post(_planning())
+		quiet.post(_job())
+		commands += planned.drain()[0].bot_commands.size()
+		quiet.drain()
+	runner.check(commands > 0, "PB1 the bot planned orders (%d)" % commands)
+	runner.check(planned.live().last_sequence(2) == -1 and planned.live().snapshot().pending_commands.is_empty(), "PB1 none reached the sim, last sequence %d" % planned.live().last_sequence(2))
+	runner.check(planned.live().tick_hash() == quiet.live().tick_hash() and StateHash.digest(planned.live().snapshot()) == StateHash.digest(quiet.live().snapshot()), "PB1 planning leaves the hash and the digest of a sim without the bot")
+	return true
+
+func test_planned_bot_commands_not_in_pump_record(runner) -> bool:
+	var pump = _pump()
+	var own: int = _own_unit(pump.live())
+	var job = _planning()
+	job.commands.assign([_move(own)])
+	pump.post(job)
+	var planned: int = pump.drain()[0].bot_commands.size()
+	for i in 99:
+		pump.post(_planning())
+		planned += pump.drain()[0].bot_commands.size()
+	var recorded: Array = pump.record().commands
+	runner.check(planned > 0 and recorded.size() == 1 and recorded[0].player == 1, "PB1 the record holds the human order only, planned %d recorded %s" % [planned, recorded])
+	return true
+
+func test_planner_drops_invalid_bot_order(runner) -> bool:
+	var sim = _sim()
+	var recorder = SimPump.PlanRecorder.new(sim)
+	var mine: int = _own_unit(sim, "", 2)
+	var good: Dictionary = recorder.issue_command({"type": "move", "player": 2, "tick": 0, "sequence": 0, "entity_ids": [mine], "target": [10.5, 10.5]})
+	var dead: Dictionary = recorder.issue_command({"type": "move", "player": 2, "tick": 0, "sequence": 1, "entity_ids": [99999], "target": [10.5, 10.5]})
+	runner.check(good.ok and not dead.ok and dead.error == "Missing entity or wrong owner", "PB1 the planner answers as the sim would, got %s %s" % [good, dead])
+	runner.check(recorder.commands().size() == 1 and sim.last_sequence(2) == -1 and sim.snapshot().pending_commands.is_empty(), "PB1 only the valid order is kept and the sim is untouched")
+	return true
+
+func _quad_sim():
+	var starts: Array[int] = MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2))
+	return Skirmish.create(true, "human", {3: "china", 4: "frc"}, MatchSettings.map_path("broken_crown"), starts, 4, MatchSettings.teams(2, 2))
+
+func test_setup_plans_no_bot_orders(runner) -> bool:
+	var pump = SimPump.new(_quad_sim())
+	pump.start()
+	var planned: int = 0
+	for i in 70:
+		pump.post(_planning([3, 4]))
+		planned += pump.drain()[0].bot_commands.size()
+	runner.check(pump.live().snapshot().match.status == "setup" and pump.live().tick() == 70, "PB2 fixture: the humans have not chosen, status %s" % pump.live().snapshot().match.status)
+	runner.check(planned == 0 and pump.live().last_sequence(3) == -1 and pump.live().last_sequence(4) == -1, "PB2 setup plans no order for players 3 and 4, planned %d" % planned)
+	var pair: Dictionary = _quad_drivers()
+	_trio_until(pair.drivers, 20, true)
+	var early: Array = pair.drivers[0]._lockstep.command_log().filter(func(m: Dictionary) -> bool: return m.player > 2)
+	runner.check(early.is_empty() and pair.drivers[0].current().view.match.status == "ongoing", "PB2 no frame holds a bot order while the match is in setup, got %s" % [early])
+	_unpair(pair)
+	return true
+
+func _quad_drivers(delay: int = 4) -> Dictionary:
+	var a := PairTransport.new()
+	var b := PairTransport.new()
+	a.peer = b
+	b.peer = a
+	var allowed := {1: [1, 3, 4]}
+	var seats: Array[int] = [1, 2]
+	var one = OnlineDriver.new(a, Lockstep.new(1, seats, delay, 30, Time.get_ticks_usec, allowed), "usa", 1)
+	var two = OnlineDriver.new(b, Lockstep.new(2, seats, delay, 30, Time.get_ticks_usec, allowed), "china", 2)
+	var starts: Array[int] = MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2))
+	for driver in [one, two]:
+		driver.create(MatchSettings.map_path("broken_crown"), starts, {3: "china", 4: "frc"}, 7)
+		driver.start()
+	return {"drivers": [one, two], "transports": [a, b]}
+
+func _player_ticks(driver, player: int) -> Array:
+	return driver._lockstep.command_log().filter(func(m: Dictionary) -> bool: return m.player == player).map(func(m: Dictionary) -> int: return m.tick)
+
+func test_host_submits_bot_commands_after_human(runner) -> bool:
+	var pair: Dictionary = _quad_drivers()
+	var drivers: Array = pair.drivers
+	runner.check(_trio_until(drivers, 33, true), "PB3 fixture: both seats stand at tick 33")
+	var one = drivers[0]
+	one.submit(_move(_own_unit(one.pump.live())))
+	_single(one)
+	_trio_frames(drivers, 150)
+	var played: Array = one._lockstep.command_log().filter(func(m: Dictionary) -> bool: return m.type != "choose_faction")
+	var players: Array = played.filter(func(m: Dictionary) -> bool: return m.tick == played[0].tick).map(func(m: Dictionary) -> int: return m.player)
+	runner.check(players.size() >= 2 and players[0] == 1 and players.slice(1).all(func(player: int) -> bool: return player == 3), "PB3 the frame holds the human order first, then the bot's, got %s" % [players])
+	runner.check(not _player_ticks(one, 4).is_empty() and not _player_ticks(drivers[1], 4).is_empty(), "PB3 both bots order and both seats applied them")
+	var rows: PackedStringArray = one._lockstep.hash_rows()
+	var other: PackedStringArray = drivers[1]._lockstep.hash_rows()
+	var common: int = mini(rows.size(), other.size())
+	runner.check(common >= 4 and rows.slice(0, common) == other.slice(0, common) and not _ended_any(drivers), "PB3 equal digests on %d rows, ended %s" % [common, one._lockstep.status()])
+	_unpair(pair)
+	return true
+
+func test_bot_refusal_not_in_driver_answers(runner) -> bool:
+	var pair: Dictionary = _quad_drivers()
+	var drivers: Array = pair.drivers
+	_trio_until(drivers, 33, true)
+	_single(drivers[0])
+	_single(drivers[1])
+	for driver in drivers: SeatFixture.defeat(driver.pump.live(), 3)
+	_trio_frames(drivers, 30)
+	var one = drivers[0]
+	runner.check(not _player_ticks(one, 3).is_empty() and one._lockstep.bot_rejections().size() > 0, "PB4 fixture: the bot's order was applied and refused, rejections %d" % one._lockstep.bot_rejections().size())
+	runner.check(one.take_answers().is_empty() and one._lockstep.rejections().is_empty(), "PB4 the host's answers hold nothing of it")
+	runner.check(not _ended_any(drivers) and one._lockstep.hash_rows().slice(0, 2) == drivers[1]._lockstep.hash_rows().slice(0, 2), "PB4 neither seat ended, status %s" % one._lockstep.status())
+	_unpair(pair)
+	return true
+
+func test_guest_runs_no_bot(runner) -> bool:
+	var pair: Dictionary = _quad_drivers()
+	var one = pair.drivers[0]
+	var two = pair.drivers[1]
+	var host_job = one._tick_job([] as Array[Dictionary])
+	var guest_job = two._tick_job([] as Array[Dictionary])
+	runner.check(host_job.plan_bots and host_job.bots == [3, 4], "PB5 the host plans its two bots, got %s" % [host_job.bots])
+	runner.check(guest_job.bots.is_empty(), "PB5 the guest runs no bot, got %s" % [guest_job.bots])
+	var plain = _pair_drivers()
+	runner.check(plain.drivers[0]._tick_job([] as Array[Dictionary]).bots.is_empty(), "PB5 a 1v1 host runs no bot")
+	_unpair(plain)
+	_unpair(pair)
+	return true
+
+func test_bot_refused_submit_recovers_next_decision(runner) -> bool:
+	var pair: Dictionary = _quad_drivers()
+	var drivers: Array = pair.drivers
+	_trio_until(drivers, 33, true)
+	var one = drivers[0]
+	one._lockstep._queue_bytes = Wire.MAX_FRAME_BYTES
+	_single(one)
+	_trio_frames(drivers, 90)
+	var ticks: Array = _player_ticks(one, 3)
+	runner.check(not ticks.is_empty() and ticks.min() > 38 and not _ended_any(drivers), "PB6 the order a full frame dropped is sent at the bot's next decision (ticks %s)" % [ticks])
+	_unpair(pair)
 	return true

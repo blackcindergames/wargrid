@@ -70,9 +70,15 @@ func start(state: Dictionary, digest: String = "") -> void:
 	_last_sent = _delay - 1
 	finish_tick(0, state, digest)
 
+func owner_of(player: int) -> int:
+	return player if player != 0 else _seat
+
+func may_submit(player: int) -> bool:
+	return _allowed[_seat].has(owner_of(player))
+
 func submit(payload: Dictionary, player: int = 0) -> bool:
-	var owner: int = player if player != 0 else _seat
-	if not _allowed[_seat].has(owner): return false
+	var owner: int = owner_of(player)
+	if not may_submit(owner): return false
 	var command: Dictionary = payload.duplicate(true)
 	command.tick = _last_sent + 1
 	command.player = owner
