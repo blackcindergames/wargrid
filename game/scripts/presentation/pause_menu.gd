@@ -27,7 +27,7 @@ var _question: Label
 var _confirm_button: Button
 var _on_confirm: Callable
 var _quality: HBoxContainer
-# [switch, the stored value's reader].
+# Each switch with its stored value's reader, so `open()` can show what another screen saved.
 var _switches: Array = []
 
 func _init(web: bool = OS.has_feature("web")) -> void:
@@ -74,7 +74,7 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 	return [
 		["Mouse", [
 			["", "Left-click", "Select a unit or a building", []],
-			["", "Drag", "Select the units in a box", []],
+			["", "Left-drag", "Select the units in a box", []],
 			["", "Shift+click", "Add or remove a unit", []],
 			["", "Double-click", "Select that kind on screen", []],
 			["", "Alt+double-click", "Select that kind on the map", []],
@@ -104,7 +104,7 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 			_save_row(digits, web, mac),
 			["add", _span(digits, KEY_MASK_SHIFT), "Add the selection to a group", _masked(digits, [KEY_MASK_SHIFT])]]],
 		["Other", [
-			["esc", "Esc", "Back out one step, then this menu", [(InputMap.action_get_events("deselect")[0] as InputEventKey).keycode]],
+			["esc", "Esc", "Back out one step, then the menu", [(InputMap.action_get_events("deselect")[0] as InputEventKey).keycode]],
 			_key_row("mute", KEY_M, "Mute"),
 			_key_row("perf", KEY_F3, "Performance numbers")]]]
 
@@ -211,8 +211,11 @@ func _settings_body() -> VBoxContainer:
 		_row(body, each[1], _switch(each[0], each[2], each[3], each[4]))
 	_section(body, "SOUND")
 	var sliders := VolumeSliders.new()
+	sliders.add_theme_constant_override("h_separation", 24)
 	for child: Node in sliders.get_children():
-		if child is Label: child.theme_type_variation = &"HudSmallLabel"
+		if child is Label:
+			child.theme_type_variation = &"HudSmallLabel"
+			(child as Label).vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		elif child is CheckButton: child.theme_type_variation = &"HudSmallCheck"
 	body.add_child(sliders)
 	_section(body, "GAME")
@@ -220,17 +223,20 @@ func _settings_body() -> VBoxContainer:
 	return body
 
 func _section(body: VBoxContainer, title: String) -> void:
-	if body.get_child_count() > 0:
-		var gap := Control.new()
-		gap.custom_minimum_size.y = 4
-		body.add_child(gap)
+	if body.get_child_count() > 0: body.add_child(_gap(4.0))
 	body.add_child(_label(title, &"HudLabel"))
+
+func _gap(height: float) -> Control:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = height
+	return gap
 
 func _row(body: VBoxContainer, words: String, control: Control) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 24)
 	var label: Label = _label(words, &"HudSmallLabel")
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(label)
 	control.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(control)
@@ -240,6 +246,9 @@ func _switch(switch_name: String, stored: Callable, save: Callable, changed: Cal
 	var toggle := CheckButton.new()
 	toggle.name = switch_name
 	toggle.theme_type_variation = &"HudSmallCheck"
+	# No margin, so a row is the switch's 22 px as in the mock-up; `small_check` stays for the playtest overlay.
+	var flush := StyleBoxEmpty.new()
+	for state: String in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]: toggle.add_theme_stylebox_override(state, flush)
 	toggle.toggled.connect(save)
 	toggle.toggled.connect(changed)
 	_switches.append([toggle, stored])
@@ -287,8 +296,8 @@ func _controls_list() -> HBoxContainer:
 		grid.add_theme_constant_override("v_separation", 4)
 		columns.add_child(grid)
 		for section: Array in part:
-			# An empty row: 8 px more above every later title.
-			if grid.get_child_count() > 0: for i: int in 2: grid.add_child(Control.new())
+			# A 4 px row: with its two gaps, 12 px above every later title.
+			if grid.get_child_count() > 0: for i: int in 2: grid.add_child(_gap(4.0))
 			grid.add_child(_label(section[0], &"HudLabel"))
 			grid.add_child(Control.new())
 			for row: Array in section[1]:

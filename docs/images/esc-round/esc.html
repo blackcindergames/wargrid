@@ -88,7 +88,7 @@ function saveRow(){
  const also=named.slice(1).map(span);
  return [span(named[0]),'Save a group'+(also.length?', also '+also.join(' or '):'')];
 }
-const LEFT=['Left-click','Select a unit or a building'], DRAG=['Drag','Select the units in a box'], SHIFT=['Shift+click','Add or remove a unit'],
+const LEFT=['Left-click','Select a unit or a building'], DRAG=['Left-drag','Select the units in a box'], SHIFT=['Shift+click','Add or remove a unit'],
  DBL=['Double-click','Select that kind on screen'], ALT=['Alt+double-click','Select that kind on the map'],
  RC=[['Right-click','Move, attack, gather or enter'],['Right-click','Set the rally point (factory or barracks selected)'],['Right-click','Cancel the last queued of that unit (on its button)']],
  RDRAG=['Right-drag','Pan, faster the farther you drag'], MDRAG=['Middle-drag','Drag the map along'],
@@ -102,7 +102,7 @@ const S={
   ['A','Attack move: armed units fight their way to the spot you click'],['S','Stop'],['F','Unload'],
   ['Click or right-click','Cancel the unit in production (on NOW PRODUCING)'],['Top-right production icons','Click: select its building · Double-click: go there']],
  Groups:[['1-9','Select a group, twice to centre on it'],saveRow(),['Shift+1-9','Add the selection to a group']],
- Other:[['Esc','Back out one step, then this menu'],['M','Mute'],['F3','Performance numbers']]};
+ Other:[['Esc','Back out one step, then the menu'],['M','Mute'],['F3','Performance numbers']]};
 // A key list stacks its chips: the mac trackpad gesture sits under the mouse one.
 const PRIMER=[['Left-click / drag','Select, or a box of units'],['Right-click','Move, attack, gather or enter'],[mac?['Right-drag','Two-finger swipe']:'Right-drag','Pan'],[mac?['Wheel','Pinch']:'Wheel','Zoom']];
 

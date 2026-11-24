@@ -339,11 +339,21 @@ func test_pages_layout(runner) -> bool:
 			runner.check(leaves.size() >= 3 and bad.is_empty(), "L1 %s: %d words and controls whole and apart, got %s" % [at, leaves.size(), bad.slice(0, 4)])
 			if step[1] == "SettingsPage":
 				runner.check(leaves.filter(func(control: Control) -> bool: return control is Range).size() == 3 and leaves.filter(func(control: Control) -> bool: return control is CheckButton).size() == 5, "L1 %s: three volume sliders, four switches and Mute" % at)
+				var switches: Array = leaves.filter(func(control: Control) -> bool: return control is CheckButton and control.name != "Mute")
+				runner.check(switches.all(func(control: Control) -> bool: return control.size.y == 22.0), "L1 %s: the switches are 22 px high as in the mock-up, got %s" % [at, switches.map(func(control: Control) -> float: return control.size.y)])
+				runner.check(page.find_child("Volume", true, false).get_theme_constant("h_separation") == 24, "L1 %s: the sliders sit 24 px from their words" % at)
+			if step[1] == "ControlsPage":
+				var titles: Array = leaves.filter(func(control: Control) -> bool: return control is Label and control.theme_type_variation == &"HudLabel")
+				var gaps: Array = []
+				for title: Label in titles:
+					var above: Array = leaves.filter(func(control: Control) -> bool: return control is Label and control.get_parent() == title.get_parent() and control.get_global_rect().end.y <= title.get_global_rect().position.y)
+					if not above.is_empty(): gaps.append(title.get_global_rect().position.y - above.map(func(control: Control) -> float: return control.get_global_rect().end.y).max())
+				runner.check(gaps.size() == 3 and gaps.all(func(gap: float) -> bool: return is_equal_approx(gap, 12.0)), "L1 %s: 12 px above each later section title, got %s" % [at, gaps])
 		port.free()
 	return true
 
 const PAD_ROWS: Array = [["Two-finger swipe", "Pan (trackpad)"], ["Pinch", "Zoom (trackpad)"]]
-const MOUSE_ROWS: Array = [["Left-click", "Select a unit or a building"], ["Drag", "Select the units in a box"], ["Shift+click", "Add or remove a unit"], ["Double-click", "Select that kind on screen"], ["Alt+double-click", "Select that kind on the map"], ["Left-click", "Place the building (right-click cancels)"], ["Right-click", "Move, attack, gather or enter"], ["Right-click", "Set the rally point (factory or barracks selected)"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Right-drag", "Pan, faster the farther you drag"], ["Middle-drag", "Drag the map along"], ["Wheel", "Zoom"]]
+const MOUSE_ROWS: Array = [["Left-click", "Select a unit or a building"], ["Left-drag", "Select the units in a box"], ["Shift+click", "Add or remove a unit"], ["Double-click", "Select that kind on screen"], ["Alt+double-click", "Select that kind on the map"], ["Left-click", "Place the building (right-click cancels)"], ["Right-click", "Move, attack, gather or enter"], ["Right-click", "Set the rally point (factory or barracks selected)"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Right-drag", "Pan, faster the farther you drag"], ["Middle-drag", "Drag the map along"], ["Wheel", "Zoom"]]
 
 func test_mouse_rows_in_button_order(runner) -> bool:
 	for mac: bool in [false, true]:
@@ -383,9 +393,9 @@ static func _shown_texts(list: Control) -> Array:
 	return list.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
 
 # Written apart from controls(), so dropping a gesture or a qualifier from the table fails here.
-const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "Set the rally point"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Click or right-click", "Cancel the unit in production"], ["Left-click", "right-click cancels"], ["Right-drag", "faster the farther"], ["Middle-drag", "Drag the map"], ["Wheel", "Zoom"], ["Screen edge", "Pan"], ["Top-right production icons", "Click: select its building"]]
+const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Left-drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "Set the rally point"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Click or right-click", "Cancel the unit in production"], ["Left-click", "right-click cancels"], ["Right-drag", "faster the farther"], ["Middle-drag", "Drag the map"], ["Wheel", "Zoom"], ["Screen edge", "Pan"], ["Top-right production icons", "Click: select its building"]]
 static var mac_mouse: Array = [["Two-finger swipe", "Pan (trackpad)"], ["Pinch", "Zoom (trackpad)"]] if OS.has_feature("macos") or OS.has_feature("web_macos") else []
-const REQUIRED_WORDS := {"attack_move": "armed units", "last_attack": "your or an ally's base"}
+const REQUIRED_WORDS := {"attack_move": "armed units", "last_attack": "your or an ally's base", "esc": "then the menu"}
 
 func test_controls_list_shows_every_row(runner) -> bool:
 	var menu = PauseMenu.new(false)
