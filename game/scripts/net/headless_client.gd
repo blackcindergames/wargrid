@@ -120,7 +120,7 @@ func _map_id() -> String:
 func _start(message: Dictionary) -> void:
 	var settings: Dictionary = message.settings.duplicate()
 	if _args.has("perturb-map-hash") and _seat == 2: settings["map_hash"] = str(settings.get("map_hash", "")) + "x"
-	var reason: String = MatchSettings.refusal(settings)
+	var reason: String = MatchSettings.refusal(settings, message.seats.size())
 	if not reason.is_empty():
 		_finish("ended_settings", reason)
 		return

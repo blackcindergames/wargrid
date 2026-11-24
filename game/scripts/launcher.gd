@@ -515,7 +515,7 @@ func _fill_waiting() -> void:
 	_show_countdown(_welcome_msec)
 
 func _start(message: Dictionary) -> bool:
-	var reason: String = MatchSettings.refusal(message.settings)
+	var reason: String = MatchSettings.refusal(message.settings, message.seats.size())
 	if not reason.is_empty():
 		_transport.close()
 		_fail(reason)
