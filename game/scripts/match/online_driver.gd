@@ -61,7 +61,7 @@ func _on_session(message: Dictionary) -> bool:
 	_phase = "playing"
 	return true
 
-func create(map_path: String, starts: Array[int], _factions: Dictionary, match_seed: int) -> void:
+func create(map_path: String, starts: Array[int], factions: Dictionary, match_seed: int) -> void:
 	_map_path = map_path
 	_starts = starts
 	_seed = match_seed
@@ -70,7 +70,11 @@ func create(map_path: String, starts: Array[int], _factions: Dictionary, match_s
 	_rejections_seen = 0
 	_log_seen = 0
 	_credit = 0
-	adopt(Skirmish.create(true, "human", {}, map_path, starts))
+	var bots: Array[int] = _lockstep.bots()
+	var bot_factions := {}
+	for bot: int in bots:
+		if factions.has(bot): bot_factions[bot] = factions[bot]
+	adopt(Skirmish.create(true, "human", bot_factions, map_path, starts, _lockstep.seat_ids().size() + bots.size(), teams()))
 
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
@@ -249,6 +253,18 @@ func play_again() -> void:
 	if _phase != "over": return
 	_transport.send_text(Wire.encode({"type": "again"}))
 	_phase = "again"
+
+func teammate() -> int:
+	if _lockstep.bots().is_empty(): return 0
+	for seat: int in _lockstep.seat_ids():
+		if seat != _seat: return seat
+	return 0
+
+func bot_players() -> Array[int]:
+	return _lockstep.bots()
+
+func teams() -> Array[int]:
+	return MatchSettings.teams(_lockstep.seat_ids().size(), _lockstep.bots().size())
 
 func take_rematch() -> int:
 	var match_seed: int = _rematch_seed

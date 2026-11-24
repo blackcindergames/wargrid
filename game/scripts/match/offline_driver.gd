@@ -176,6 +176,12 @@ func can_play_again() -> bool:
 func play_again() -> void:
 	pass
 
+func teammate() -> int:
+	return 0
+
+func bot_players() -> Array[int]:
+	return BOTS
+
 func take_rematch() -> int:
 	return -1
 

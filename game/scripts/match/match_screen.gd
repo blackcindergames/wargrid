@@ -1,6 +1,7 @@
 extends Node
 
 const Iso = preload("res://scripts/presentation/isometric.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const PerfOverlay = preload("res://scripts/presentation/perf_overlay.gd")
 const PauseMenu = preload("res://scripts/presentation/pause_menu.gd")
@@ -203,6 +204,8 @@ func _reset_camera() -> void:
 
 func _create_world() -> void:
 	driver.create(map_path, starts, factions, match_seed)
+	if driver.teammate() == 0: Palette.clear_team_colours()
+	else: Palette.set_team_colours(local_player, driver.teammate(), driver.bot_players())
 
 func playtest_context() -> Dictionary:
 	var camera: Vector2 = Iso.plane_to_world(_camera.position)
@@ -263,6 +266,7 @@ func _leave() -> void:
 	driver.leave()
 	get_viewport().gui_release_focus()
 	close_match(false)
+	Palette.clear_team_colours()
 	change_scene.call(LAUNCHER_SCENE)
 
 func close_match(file_sitting: bool) -> void:
@@ -675,7 +679,7 @@ func _restart() -> void:
 
 func _rematch(match_seed_value: int) -> void:
 	match_seed = match_seed_value
-	starts = MatchSettings.starts(map_path.get_file().get_basename(), match_seed_value)
+	starts = MatchSettings.starts(map_path.get_file().get_basename(), match_seed_value, driver.teams())
 	_restart_world()
 
 func _restart_world() -> void:

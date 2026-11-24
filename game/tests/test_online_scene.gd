@@ -12,6 +12,9 @@ const SkirmishMain = preload("res://scripts/match/match_screen.gd")
 const BaseScene = preload("res://tests/test_base_scene.gd")
 const SkirmishScene = preload("res://tests/test_skirmish_scene.gd")
 const IcRows = preload("res://tests/input_script_rows.gd")
+const View = preload("res://scripts/presentation/world_view.gd")
+const SeatFixture = preload("res://tests/seat_fixture.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
 const JoinLink = preload("res://scripts/join_link.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const Wire = preload("res://scripts/net/wire.gd")
@@ -66,12 +69,17 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_joiner_counts_bots_from_the_seat_count, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_space_never_leaves_the_result_card, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_online_builder_lost_in_the_click_step, test_online_builder_lost_in_the_drained_tick,test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_refused_cancel_marks_nothing, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_f33_online_red_ghost_refused_after_two_callbacks, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_joiner_counts_bots_from_the_seat_count, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_space_never_leaves_the_result_card, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_online_builder_lost_in_the_click_step, test_online_builder_lost_in_the_drained_tick,test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_refused_cancel_marks_nothing, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_f33_online_red_ghost_refused_after_two_callbacks, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected, test_four_seat_create_teams, test_default_create_with_teams_unchanged, test_2v2_rematch_keeps_bots_teams_and_allowed, test_2v2_create_sets_viewer_colours, test_right_click_teammate_moves]
 
-func _online(runner, seat: int) -> Dictionary:
+func _online(runner, seat: int, with_bots: bool = false) -> Dictionary:
 	var transport := FakeTransport.new()
 	var seats: Array[int] = [1, 2]
 	var lockstep = Lockstep.new(seat, seats)
+	if with_bots:
+		SkirmishMain.map_path = MatchSettings.map_path("broken_crown")
+		SkirmishMain.starts = MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2))
+		SkirmishMain.factions = {3: "china", 4: "frc"}
+		lockstep = Lockstep.new(seat, seats, 4, 30, Time.get_ticks_usec, {1: [1, 3, 4]})
 	var main = OnlineScene.instantiate()
 	main.setup(transport, lockstep, seat)
 	runner.root.add_child(main)
@@ -906,6 +914,10 @@ func test_launcher_faction_rows(runner) -> bool:
 
 func _start_message(id: String, match_seed: int) -> Dictionary:
 	return {"type": "start", "seats": [1, 2], "delay": 4, "seed": match_seed, "settings": MatchSettings.for_map(id)}
+
+func _start_message_2v2(match_seed: int) -> Dictionary:
+	var bots: Array = [{"player": 3, "faction": "china"}, {"player": 4, "faction": "frc"}]
+	return {"type": "start", "seats": [1, 2], "delay": 4, "seed": match_seed, "settings": MatchSettings.for_map("broken_crown", bots)}
 
 func test_plays_dry_wells_from_each_seat(runner) -> bool:
 	var before: String = SkirmishMain.map_path
@@ -2441,4 +2453,113 @@ func test_match_starts_with_builder_selected(runner) -> bool:
 	_run(main, 1)
 	runner.check(main.orders.selected_ids == [start], "SS9 online: the note closed, the start builder %d is selected, got %s" % [start, main.orders.selected_ids])
 	main.free()
+	return true
+
+func _player_rows(sim) -> Dictionary:
+	var rows := {}
+	for player: Dictionary in sim.snapshot().players: rows[player.id] = player
+	return rows
+
+func _restore_match_statics(before: Array) -> void:
+	SkirmishMain.map_path = before[0]
+	SkirmishMain.starts = before[1]
+	SkirmishMain.match_seed = before[2]
+	SkirmishMain.factions = before[3]
+
+func _restore_statics(before: Array) -> void:
+	_restore_match_statics(before)
+	Palette.clear_team_colours()
+
+func _statics() -> Array:
+	return [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed, SkirmishMain.factions]
+
+func test_four_seat_create_teams(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _online(runner, 2, true)
+	var state: Dictionary = online.main.driver.pump.live().snapshot()
+	var teams: Array = state.players.map(func(player: Dictionary) -> int: return player.team)
+	var rows: Dictionary = _player_rows(online.main.driver.pump.live())
+	runner.check(teams == [1, 1, 2, 2] and state.match.players == [1, 2, 3, 4], "T23 four seats on teams 1 1 2 2, got %s %s" % [teams, state.match.players])
+	runner.check(rows.size() == 4 and rows[3].get("faction") == "china" and rows[4].get("faction") == "frc", "T23 bots 3 and 4 are seated with their factions, got %s" % [rows])
+	runner.check(not rows[1].has("faction") and not rows[2].has("faction") and state.match.status == "setup", "T23 the humans wait for choose_faction, status %s" % state.match.status)
+	var owners: Array = state.entities.map(func(unit: Dictionary) -> int: return unit.owner)
+	runner.check(owners.has(3) and owners.has(4) and not owners.has(1) and not owners.has(2), "T23 only the bots have units before the choice, got %s" % [owners])
+	online.main.free()
+	_restore_statics(before)
+	return true
+
+func test_default_create_with_teams_unchanged(runner) -> bool:
+	var plain: RefCounted = Skirmish.create()
+	var explicit: RefCounted = Skirmish.create(true, "human", Skirmish.Registry.Factions.DEFAULT_SKIRMISH, Skirmish.MAP_PATH, [] as Array[int], 2, [1, 2] as Array[int])
+	runner.check(plain.tick_hash() == explicit.tick_hash() and plain.snapshot() == explicit.snapshot(), "T23 an explicit default team list changes nothing")
+	runner.check(plain.snapshot().match.status == "ongoing", "T23 the default skirmish still starts ongoing")
+	return true
+
+func test_2v2_rematch_keeps_bots_teams_and_allowed(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _online(runner, 2, true)
+	var main = online.main
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	# FRC leaves a rebuild hole behind its first dead building, so a second pass.
+	for _pass in 2:
+		for bot: int in [3, 4]: SeatFixture.defeat(main.driver.pump.live(), bot)
+	_run(main, 2)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	online.transport.frames.append(Wire.encode(_start_message_2v2(99)))
+	_peer_packets(online.transport, 1, 4, 4)
+	_run(main, 1)
+	var sim = main.driver.pump.live()
+	var teams: Array = sim.snapshot().players.map(func(player: Dictionary) -> int: return player.team)
+	var rows: Dictionary = _player_rows(sim)
+	runner.check(teams == [1, 1, 2, 2] and rows[3].get("faction") == "china" and rows[4].get("faction") == "frc", "T23 the rematch rebuilds four seats with the bots' factions, got %s %s" % [teams, rows])
+	runner.check(main.driver._lockstep.allowed(1) == [1, 3, 4] and main.driver._lockstep.bots() == [3, 4], "T23 the new lockstep keeps the allowed sets")
+	runner.check(SkirmishMain.starts == MatchSettings.starts("broken_crown", 99, MatchSettings.teams(2, 2)), "T23 the rematch places four starts for the new seed, got %s want %s teams %s" % [SkirmishMain.starts, MatchSettings.starts("broken_crown", 99, MatchSettings.teams(2, 2)), main.driver.teams()])
+	main.free()
+	_restore_statics(before)
+	return true
+
+func test_2v2_create_sets_viewer_colours(runner) -> bool:
+	var before: Array = _statics()
+	var want := {1: ["628ffa", "0e92a7", "d6120c", "ec8600"], 2: ["0e92a7", "628ffa", "d6120c", "ec8600"]}
+	for seat: int in [1, 2]:
+		var online: Dictionary = await _online(runner, seat, true)
+		var got: Array = [1, 2, 3, 4].map(func(owner: int) -> String: return View.owner_color(owner).to_html(false))
+		runner.check(got == want[seat], "T23 seat %d sees you blue, the teammate teal, bots red and orange, got %s" % [seat, got])
+		online.main.free()
+	_restore_match_statics(before)
+	var plain: Dictionary = await _online(runner, 2)
+	runner.check(View.owner_color(1) == Palette.OWNER_BASE[0] and View.owner_color(2) == Palette.OWNER_BASE[1], "T23 a 1v1 create after a 2v2 is back to today's colours")
+	plain.main.free()
+	var left: Dictionary = await _online(runner, 2, true)
+	left.main.change_scene = func(_path: String) -> void: pass
+	left.main.get_node("HUD/ResultPanel").change_setup_pressed.emit()
+	runner.check(View.owner_color(2) == Palette.OWNER_BASE[1], "T23 leaving a 2v2 drops its colours")
+	left.main.free()
+	_restore_statics(before)
+	return true
+
+func test_right_click_teammate_moves(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _online(runner, 2, true)
+	var main = online.main
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	var own: Dictionary = {}
+	var mate: Dictionary = {}
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
+		if unit.owner == 2 and own.is_empty(): own = unit
+		if unit.owner == 1 and mate.is_empty(): mate = unit
+	runner.check(not own.is_empty() and not mate.is_empty(), "T23 fixture: both teammates have a unit")
+	main.orders.selected_ids.assign([own.id])
+	var plane: Vector2 = Iso.world_to_plane(Vector2(mate.position[0], mate.position[1])) + Vector2(0, -8)
+	runner.check(main._view.pick_target(plane, 3) == mate.id, "T23 fixture: the click lands on the teammate's unit, not on the ground")
+	BaseScene.new().right_click(main, plane)
+	_run(main, 20)
+	var types: Array = _own_commands(online.transport).map(func(command: Dictionary) -> String: return command.type)
+	runner.check(types == ["move"] and online.lockstep.rejections().is_empty(), "T23 a right-click on the teammate's unit is one move and no refusal, got %s" % [types])
+	main.free()
+	_restore_statics(before)
 	return true

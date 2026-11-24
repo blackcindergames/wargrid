@@ -9,9 +9,15 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
+const View = preload("res://scripts/presentation/world_view.gd")
+const ALLY := Color("69ceaa")
+# Machado 2009, severity 1, applied in linear light.
+const DEUTAN: Array = [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]]
+const MIN_DELTA_E: float = 20.0
 
 func cases() -> Array[Callable]:
-	return [test_sort_key_orders_layers_then_depth, test_unit_in_front_of_factory_draws_later, test_unit_behind_factory_draws_earlier, test_air_kind_draws_above_ground, test_build_one_submission, test_empty_state, test_rise_from_work, test_damage_stage_edges, test_building_rises_with_work, test_supply_stack_shrinks, test_small_pile_inside_footprint, test_shadow_only_with_flag, test_lab_roles_mapped, test_back_to_front_across_objects, test_lifts_clear_unit_height, test_top_lift_by_role, test_golden_output, test_shot_dash, test_depth_order_matches_sorted, test_unit_item_rewrite_leaves_nothing_stale, test_structure_items_follow_units]
+	return [test_sort_key_orders_layers_then_depth, test_unit_in_front_of_factory_draws_later, test_unit_behind_factory_draws_earlier, test_air_kind_draws_above_ground, test_build_one_submission, test_empty_state, test_rise_from_work, test_damage_stage_edges, test_building_rises_with_work, test_supply_stack_shrinks, test_small_pile_inside_footprint, test_shadow_only_with_flag, test_lab_roles_mapped, test_back_to_front_across_objects, test_lifts_clear_unit_height, test_top_lift_by_role, test_golden_output, test_shot_dash, test_depth_order_matches_sorted, test_unit_item_rewrite_leaves_nothing_stale, test_structure_items_follow_units, test_team_colours_by_viewer, test_team_colours_delta_e, test_colour_remap_reset_between_matches, test_one_v_one_colours_unchanged]
 
 func _find(items: Array[Dictionary], id: int) -> Dictionary:
 	for item in items:
@@ -343,4 +349,86 @@ func test_structure_items_follow_units(runner) -> bool:
 	var all: Array[Dictionary] = WorldBatch.objects(state)
 	var structures: Array[Dictionary] = WorldBatch.structure_items(state)
 	runner.check(structures.size() == 10 and all.slice(state.entities.size()) == structures, "WB22 structure_items are the buildings then sources of objects()")
+	return true
+
+static func _linear(channel: float) -> float:
+	return channel / 12.92 if channel <= 0.04045 else pow((channel + 0.055) / 1.055, 2.4)
+
+static func _seen(colour: Color, deutan: bool) -> Array:
+	var light: Array = [_linear(colour.r), _linear(colour.g), _linear(colour.b)]
+	if not deutan: return light
+	var out: Array = []
+	for row: Array in DEUTAN: out.append(clampf(row[0] * light[0] + row[1] * light[1] + row[2] * light[2], 0.0, 1.0))
+	return out
+
+static func _lab(light: Array) -> Array:
+	var x: float = (0.4124564 * light[0] + 0.3575761 * light[1] + 0.1804375 * light[2]) / 0.95047
+	var y: float = 0.2126729 * light[0] + 0.7151522 * light[1] + 0.072175 * light[2]
+	var z: float = (0.0193339 * light[0] + 0.119192 * light[1] + 0.9503041 * light[2]) / 1.08883
+	var f := func(t: float) -> float: return pow(t, 1.0 / 3.0) if t > 0.008856 else 7.787 * t + 16.0 / 116.0
+	return [116.0 * f.call(y) - 16.0, 500.0 * (f.call(x) - f.call(y)), 200.0 * (f.call(y) - f.call(z))]
+
+static func _delta_e(a: Color, b: Color, deutan: bool) -> float:
+	var la: Array = _lab(_seen(a, deutan))
+	var lb: Array = _lab(_seen(b, deutan))
+	return sqrt(pow(la[0] - lb[0], 2) + pow(la[1] - lb[1], 2) + pow(la[2] - lb[2], 2))
+
+func _ring_colours(batch) -> Array[Color]:
+	var found: Array[Color] = []
+	for colour: Color in batch.colors:
+		var opaque := Color(colour, 1.0)
+		if colour.a < 1.0 and not found.has(opaque): found.append(opaque)
+	return found
+
+func test_team_colours_by_viewer(runner) -> bool:
+	var sets := {false: ["628ffa", "0e92a7", "d6120c", "ec8600"], true: ["2f7bff", "00d8e8", "ff2f45", "ff7a00"]}
+	var bots: Array[int] = [3, 4]
+	for local: int in [1, 2]:
+		var mate: int = 3 - local
+		Palette.set_team_colours(local, mate, bots)
+		for bright: bool in [false, true]:
+			var got: Array = [local, mate, 3, 4].map(func(owner: int) -> String: return View.owner_color(owner, bright).to_html(false))
+			runner.check(got == sets[bright], "TC1 viewer %d, Neon %s: you, teammate, bot 3, bot 4 are %s, got %s" % [local, bright, sets[bright], got])
+	Palette.clear_team_colours()
+	return true
+
+func test_team_colours_delta_e(runner) -> bool:
+	var bots: Array[int] = [3, 4]
+	Palette.set_team_colours(1, 2, bots)
+	for bright: bool in [false, true]:
+		var set_name: String = "neon" if bright else "base"
+		var colours: Array = [1, 2, 3, 4].map(func(owner: int) -> Color: return View.owner_color(owner, bright))
+		for deutan: bool in [false, true]:
+			var lowest: float = 1000.0
+			for i in colours.size():
+				for j in range(i + 1, colours.size()): lowest = minf(lowest, _delta_e(colours[i], colours[j], deutan))
+				if i > 0: lowest = minf(lowest, _delta_e(colours[i], ALLY, deutan))
+			print("TEAM COLOURS %s deuteranopia=%s lowest dE76 %.1f" % [set_name, deutan, lowest])
+			runner.check(lowest >= MIN_DELTA_E, "TC2 %s set, deuteranopia %s: every pair and each against ally is at least %.0f apart, lowest %.1f" % [set_name, deutan, MIN_DELTA_E, lowest])
+	Palette.clear_team_colours()
+	return true
+
+func test_colour_remap_reset_between_matches(runner) -> bool:
+	var items: Array[Dictionary] = WorldBatch.objects(_golden_state())
+	for item: Dictionary in items: item.horde = item.owner == 3
+	Palette.clear_team_colours()
+	var plain := WorldBatch.new()
+	plain.build(items, {}, 1, false)
+	var bots: Array[int] = [3, 4]
+	Palette.set_team_colours(1, 2, bots)
+	var team := WorldBatch.new()
+	team.build(items, {}, 1, false)
+	runner.check(team.colors != plain.colors and not team.colors.has(Palette.OWNER_BASE[2]), "TC3 a 2v2 create repaints a batch built from the same cached bodies")
+	var rings: Array[Color] = _ring_colours(team)
+	runner.check(rings.has(Palette.owner_colors(3)[0]) and not rings.has(Palette.OWNER_BASE[2]), "TC3 and the horde rings, got %s" % [rings])
+	Palette.clear_team_colours()
+	var again := WorldBatch.new()
+	again.build(items, {}, 1, false)
+	runner.check(again.colors == plain.colors, "TC3 a 1v1 create after it draws today's colours")
+	return true
+
+func test_one_v_one_colours_unchanged(runner) -> bool:
+	Palette.clear_team_colours()
+	for owner in range(1, 9):
+		runner.check(Palette.owner_colors(owner)[0] == Palette.OWNER_BASE[owner - 1] and Palette.owner_colors(owner, true)[0] == Palette.OWNER_BRIGHT[owner - 1], "TC4 owner %d keeps its slot colour in both sets" % owner)
 	return true

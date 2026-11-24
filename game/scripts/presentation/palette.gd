@@ -27,11 +27,28 @@ const HEALTH_GREEN := Color("5cc85a")
 const HEALTH_YELLOW := Color("e0d060")
 const HEALTH_RED := Color("d8453a")
 
+# Base and bright slot per bot: red and orange in each set.
+const BOT_SLOTS: Array = [[1, 1], [6, 4]]
+# Owner -> [base, bright]; world_batch keys its colour caches on colour_version.
+static var colour_version: int = 0
+static var _team: Dictionary = {}
+
+# You and your teammate are two blues; the first two bots are red and orange.
+static func set_team_colours(local: int, mate: int, bots: Array[int]) -> void:
+	_team = {local: [OWNER_BASE[0], OWNER_BRIGHT[0]], mate: [OWNER_BASE[4], OWNER_BRIGHT[6]]}
+	for i in mini(bots.size(), BOT_SLOTS.size()): _team[bots[i]] = [OWNER_BASE[BOT_SLOTS[i][0]], OWNER_BRIGHT[BOT_SLOTS[i][1]]]
+	colour_version += 1
+
+static func clear_team_colours() -> void:
+	_team = {}
+	colour_version += 1
+
 # Eight slots: the Shapes slots; bright swaps in the Neon hues.
 static func owner_colors(owner: int, bright: bool = false) -> PackedColorArray:
 	var owned: bool = owner >= 1 and owner <= OWNER_BASE.size()
 	var base: Color = OWNER_BASE[owner - 1] if owned else (NEUTRAL if owner == 0 else FALLBACK)
 	if bright and owned: base = OWNER_BRIGHT[owner - 1]
+	if _team.has(owner): base = _team[owner][1 if bright else 0]
 	return PackedColorArray([
 		base, base.darkened(0.25), OWNER_SIDE if owned else SIDE, OWNER_SIDE_DARK if owned else SIDE_DARK,
 		MACHINE, SMOKE, base, SKIN,

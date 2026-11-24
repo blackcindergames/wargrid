@@ -203,6 +203,9 @@ func wants_snapshot(tick: int) -> bool:
 func bot_rejections() -> Array[Dictionary]:
 	return _bot_rejections
 
+func seat_ids() -> Array[int]:
+	return _seats.duplicate()
+
 func bots() -> Array[int]:
 	var found: Array[int] = []
 	for s in _seats:

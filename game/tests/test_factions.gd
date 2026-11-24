@@ -12,7 +12,7 @@ const MapData = preload("res://scripts/simulation/map_data.gd")
 const LockstepTests = preload("res://tests/test_lockstep.gd")
 
 func cases() -> Array[Callable]:
-	return [test_foundation_keeps_seat_alive, test_cancel_last_foundation_defeats, test_choose_faction_online_same_hash, test_match_waits_for_all_factions, test_setup_rejects_commands_until_all_chose, test_choose_faction_same_tick_cases, test_capability_rules, test_start_has_command_center_and_builder, test_survival_counts_buildings_only, test_bot_trains_builder_without_one, test_bot_without_command_center, test_china_start, test_china_power_and_prerequisites, test_choose_faction_online_china_same_hash, test_choose_faction_online_frc_same_hash, test_frc_start, test_frc_needs_no_power]
+	return [test_foundation_keeps_seat_alive, test_cancel_last_foundation_defeats, test_choose_faction_online_same_hash, test_match_waits_for_all_factions, test_setup_rejects_commands_until_all_chose, test_choose_faction_same_tick_cases, test_capability_rules, test_start_has_command_center_and_builder, test_survival_counts_buildings_only, test_bot_trains_builder_without_one, test_bot_without_command_center, test_china_start, test_china_power_and_prerequisites, test_choose_faction_online_china_same_hash, test_choose_faction_online_frc_same_hash, test_frc_start, test_frc_needs_no_power, test_short_names]
 
 func test_capability_rules(runner) -> bool:
 	Registry.add_test_kind("x_maker", {"class": "vehicle", "cost": 1, "ticks": 1, "speed": 1.0, "locomotor": "wheels", "max_hp": 1000, "armor": "builder_vehicle", "weapon": "", "builds": ["usa_barracks"]})
@@ -301,4 +301,10 @@ func test_frc_needs_no_power(runner) -> bool:
 	runner.check(barracks != -1 and sim.snapshot().players[0].power_supply == 0 and sim.snapshot().players[0].power_demand == 0, "Fr2 FRC buildings add no power supply or demand")
 	var center: int = EconomyFixture.build(runner, sim, "frc_supply_center", Vector2i(16, 4))
 	runner.check(center != -1 and sim.preview_build(1, laborer, "frc_factory", Vector2i(20, 10)).ok, "Fr2 a completed supply center unlocks the factory")
+	return true
+
+func test_short_names(runner) -> bool:
+	var names := {}
+	for faction: String in Registry.Factions.FACTIONS: names[faction] = Registry.Factions.FACTIONS[faction].get("short_name")
+	runner.check(names == {"usa": "USA", "china": "China", "frc": "FRC"}, "F40 every faction has its short name, got %s" % [names])
 	return true

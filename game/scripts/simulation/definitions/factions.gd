@@ -6,6 +6,7 @@ const DEFAULT_SKIRMISH := {1: "usa", 2: "usa"}
 const FACTIONS := {
 	"usa": {
 		"display_name": "United States",
+		"short_name": "USA",
 		"start_building": "usa_command_center",
 		"start_unit": "usa_builder",
 		"build_order": ["usa_power_plant", "usa_supply_center", "usa_barracks", "usa_factory"],
@@ -15,6 +16,7 @@ const FACTIONS := {
 	},
 	"china": {
 		"display_name": "China",
+		"short_name": "China",
 		"start_building": "china_command_center",
 		"start_unit": "china_builder",
 		"build_order": ["china_power_plant", "china_supply_center", "china_barracks", "china_factory"],
@@ -24,6 +26,7 @@ const FACTIONS := {
 	},
 	"frc": {
 		"display_name": "Free Resistance Coalition",
+		"short_name": "FRC",
 		"start_building": "frc_command_center",
 		"start_unit": "frc_builder",
 		"build_order": ["frc_supply_center", "frc_barracks", "frc_factory", "frc_defence"],

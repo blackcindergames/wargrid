@@ -5,7 +5,7 @@ Status: describes the code at e3a4b2b plus the view rows change, task 2 (2026-11
 ## Construct and set up (before tick 0)
 - `Simulation.new(blocked_cells, size)`: empty world. `simulation.gd`
 - `MapData.create(map, seats) -> Simulation`: map, players, start units and supply sources in one call; the normal entry. `map_data.gd`
-- `Skirmish.create(with_match, second_controller, factions, map_path, starts, seat_count) -> Simulation`: standard game on top of `MapData.create`, two seats unless `seat_count` says more (one team per seat; seats after the first take `second_controller`). `skirmish.gd`
+- `Skirmish.create(with_match, second_controller, factions, map_path, starts, seat_count, teams) -> Simulation`: standard game on top of `MapData.create`, two seats unless `seat_count` says more (one team per seat unless `teams` gives one per seat; seats after the first take `second_controller`; a seat missing from `factions` waits for its `choose_faction`). `skirmish.gd`
 - `add_player(player, credits, controller, team) -> Dictionary`: register a seat. `simulation.gd`
 - `spawn(owner, position, kind, occupied) -> int`: add a unit, -1 if blocked. `simulation.gd`
 - `add_supply_source(origin, boxes, footprint, delete_when_empty) -> int`. `simulation.gd`
