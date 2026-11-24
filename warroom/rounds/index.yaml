@@ -18,3 +18,5 @@
   title: 'P16 strip marker: what shows that other kinds follow in a queue'
 - id: licensed-audio
   title: 'Licensed audio: first pass through the packs'
+- id: esc-menu
+  title: 'P18 Esc menu: four buttons, a Settings page and a Controls page'

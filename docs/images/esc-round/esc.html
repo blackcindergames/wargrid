@@ -1,0 +1,205 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid · Esc menu study</title>
+<!-- P18 Esc menu round: variants as hash or query params; the defaults are the round's recommendations. -->
+<style>
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Regular.ttf)}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-SemiBold.ttf);font-weight:600}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Bold.ttf);font-weight:700}
+/* Values from game/ui/launcher_theme.tres: HudSmallButton, HudSmallPanel, HudKey, HudLabel, HudSmallLabel, HudTitle, HudHint, small_focus, switch_on/off.svg. */
+:root{--text:#eef3f5;--muted:#93a5b0;--well:#0c141a;--line:#2e3f4b;--small:rgba(26,26,26,.6);--small-hov:rgba(57,57,57,.6);--small-down:rgba(0,0,0,.6);--btn-text:#dfdfdf;--btn-hov:#f2f2f2;--focus:#ccc;--on:#d4d4d4;--off:#808080;--knob:#2b2b2b}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font:400 12px/14px Public,sans-serif;overflow:hidden}
+main{position:relative;background:url(../hud-v5/source/worlds/w-factory.png) center/cover;transform-origin:top left;overflow:hidden}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.row{display:flex;gap:16px;align-items:flex-start}
+.panel{background:var(--small);padding:8px 12px}
+.col{display:flex;flex-direction:column;gap:4px}
+.menu{width:244px}
+.btn{height:22px;padding:4px;font:600 12px/14px Public;color:var(--btn-text);background:var(--small);text-align:center;white-space:nowrap}
+.btn.hov{background:var(--small-hov);color:var(--btn-hov)}
+.btn.focus{box-shadow:0 0 0 2px var(--focus)}
+.btn.sel{background:var(--small-down);color:#fff}
+.btn.auto{padding:4px 8px}
+kbd{justify-self:start;display:block;padding:0 4px;font:700 12px/14px Public;color:var(--muted);background:var(--well);white-space:nowrap}
+.w{white-space:nowrap}
+.keys{display:flex;flex-direction:column;gap:2px;justify-self:start}.keys kbd{justify-self:auto;align-self:flex-start}
+.lab{font:700 12px/14px Public;letter-spacing:1px;color:var(--muted)}
+.hint{color:var(--muted)}
+.title{font:700 14px/17px Public;letter-spacing:1px;color:var(--text)}
+.grid{display:grid;grid-template-columns:auto auto;justify-content:start;column-gap:8px;row-gap:4px;align-content:start}
+.grid .sec{grid-column:1/-1}
+.grid .sec~.sec{margin-top:8px}
+.cols{display:flex;gap:24px;align-items:flex-start}
+.divider{height:1px;background:var(--line);margin:4px 0}
+.head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.head .hint{margin-left:auto;padding-left:24px}
+.set{display:grid;grid-template-columns:auto auto;column-gap:24px;row-gap:4px;align-items:center;align-content:start}
+.set .sec{grid-column:1/-1}
+.set .sec~.sec{margin-top:8px}
+.set .ctl{justify-self:end;display:flex;align-items:center;gap:8px}
+.set>span{line-height:22px}
+.sw{display:block;width:40px;height:22px}
+.seg{display:flex}
+.seg span{width:48px;height:22px;padding:4px;text-align:center;font:600 12px/14px Public;color:var(--btn-text);background:var(--small)}
+.seg span.on{background:var(--on);color:#1a1a1a}
+.slider{position:relative;width:200px;height:16px}
+.slider i{position:absolute;left:0;right:0;top:6px;height:4px;background:var(--small)}
+.slider b{position:absolute;left:0;top:6px;height:4px;background:rgba(178,178,178,.8)}
+.slider u{position:absolute;top:2px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#fff}
+.val{display:inline-block;width:40px;text-align:right;color:#ccc}
+.vol{display:grid;grid-template-columns:auto 200px 40px;column-gap:4px;row-gap:4px;align-items:center}
+.check{display:flex;align-items:center;gap:4px;padding:4px;justify-self:start}
+.set .check{padding:0;gap:8px}
+.pic{position:relative;width:540px;height:150px}
+.pic svg{position:absolute;inset:0}
+.co{position:absolute;display:flex;gap:8px;align-items:center;white-space:nowrap}
+.co.l{flex-direction:row-reverse}
+.pad{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid var(--line);align-self:flex-start}
+.band{display:flex;gap:24px;align-items:flex-start}
+.more{color:var(--muted)}
+.question{width:220px;text-align:center;margin-bottom:4px}
+#mtab{position:fixed;left:0;top:0;z-index:9;background:#fff;color:#000;font:400 13px/17px Public;padding:6px 8px;white-space:pre}
+</style>
+<main><div class="dim"></div><div class="center"></div></main>
+<script>
+const P=new URLSearchParams(location.hash.length>1?location.hash.slice(1):location.search);
+const opt=(k,d,allowed)=>{const v=P.get(k);return v!=null&&allowed.includes(v)?v:d};
+const view=opt('view','menu',['menu','confirm','settings','controls']);
+const os=opt('os','mac',['mac','win','web']);
+const size=opt('size','1280x720',['1280x720','1280x800','1920x1080']);
+const menuLook=opt('menu','mouse',['plain','mouse','side']);
+const ctl=opt('controls','two',['two','three','picture']);
+const setLook=opt('settings','switch',['switch','text','cols']);
+const page=opt('page','replace',['replace','beside']);
+const focus=P.get('focus')??(view==='menu'?'Resume':view==='confirm'?'Cancel':'');
+const web=os==='web', mac=os==='mac';
+// The game stretches canvas_items from 1280x720 with aspect "expand" (project.godot): UI scales by the smaller ratio, the rest of the window is extra room.
+const [WW,WH]=size.split('x').map(Number), GK=Math.min(WW/1280,WH/720), LW=Math.round(WW/GK), LH=Math.round(WH/GK);
+const main=document.querySelector('main'), center=main.querySelector('.center');
+main.style.width=LW+'px';main.style.height=LH+'px';
+
+// pause_menu.gd controls(web, mac), plus the P17 mouse rows it does not list yet.
+function saveRow(){
+ const span=m=>m+'1-9';
+ const named=web?['Shift+Ctrl+','Ctrl+']:['Ctrl+','Shift+Ctrl+'];
+ if(mac)named.push('Cmd+');
+ const also=named.slice(1).map(span);
+ return [span(named[0]),'Save a group'+(also.length?', also '+also.join(' or '):'')];
+}
+const LEFT=['Left-click','Select a unit or a building'], DRAG=['Drag','Select the units in a box'], SHIFT=['Shift+click','Add or remove a unit'],
+ DBL=['Double-click','Select that kind on screen'], ALT=['Alt+double-click','Select that kind on the map'],
+ RC=[['Right-click','Move, attack, gather or enter'],['Right-click','Set the rally point (factory or barracks selected)'],['Right-click','Cancel the last queued of that unit (on its button)']],
+ RDRAG=['Right-drag','Pan, faster the farther you drag'], MDRAG=['Middle-drag','Drag the map along'],
+ PLACE=['Left-click','Place the building (right-click cancels)'], WHEEL=['Wheel','Zoom'],
+ PAD=[['Two-finger swipe','Pan (trackpad)'],['Pinch','Zoom (trackpad)']];
+const MOUSE=[LEFT,DRAG,SHIFT,DBL,ALT,PLACE,...RC,RDRAG,MDRAG,WHEEL,...(mac?PAD:[])];
+const S={
+ Mouse:MOUSE,
+ Camera:[['Arrows','Pan'],['Screen edge','Pan with the pointer'],['H','Centre on your Headquarters, again to go back'],['Space',"Jump to your or an ally's base under attack"]],
+ Commands:[['QWER · ASDF · ZXCV','The button in that spot of the card; Shift: five'],['Q','Build, with one builder selected'],['V',"Back to the builder's buttons"],
+  ['A','Attack move: armed units fight their way to the spot you click'],['S','Stop'],['F','Unload'],
+  ['Click or right-click','Cancel the unit in production (on NOW PRODUCING)'],['Top-right production icons','Click: select its building · Double-click: go there']],
+ Groups:[['1-9','Select a group, twice to centre on it'],saveRow(),['Shift+1-9','Add the selection to a group']],
+ Other:[['Esc','Back out one step, then this menu'],['M','Mute'],['F3','Performance numbers']]};
+// A key list stacks its chips: the mac trackpad gesture sits under the mouse one.
+const PRIMER=[['Left-click / drag','Select, or a box of units'],['Right-click','Move, attack, gather or enter'],[mac?['Right-drag','Two-finger swipe']:'Right-drag','Pan'],[mac?['Wheel','Pinch']:'Wheel','Zoom']];
+
+const btn=(name,label=name,cls='')=>'<div class="btn'+(focus===name?' hov focus':'')+cls+'">'+label+'</div>';
+const chip=k=>Array.isArray(k)?'<span class="keys">'+k.map(chip).join('')+'</span>':'<kbd>'+k+'</kbd>';
+const rows=list=>list.map(([k,w])=>chip(k)+'<span class="w">'+w+'</span>').join('');
+const grid=names=>'<div class="grid" data-rows>'+names.map(n=>'<div class="lab sec">'+n+'</div>'+rows(S[n])).join('')+'</div>';
+const panel=(name,body,cls='')=>'<div class="panel '+cls+'" data-name="'+name+'">'+body+'</div>';
+const MENU=['Resume','Settings','Controls','Leave match',...(web?[]:['Quit'])];
+const menuCol=sel=>MENU.map(n=>btn(n,n,n===sel?' sel':'')).join('');
+
+function menuView(){
+ if(menuLook==='side')return '<div class="row">'+panel('menu','<div class="col">'+menuCol()+'</div>','menu')+panel('mouse',grid(['Mouse']))+'</div>';
+ const primer=menuLook==='mouse'?'<div class="divider"></div><div class="grid" data-rows><div class="lab sec">Mouse</div>'+rows(PRIMER)+'</div>':'';
+ return panel('menu','<div class="col">'+menuCol()+primer+'</div>',menuLook==='plain'?'menu':'');
+}
+const confirmView=()=>panel('confirm','<div class="col"><div class="question">Leave the match? Your opponent wins and the room closes.</div>'+btn('Leave')+btn('Cancel')+'</div>','menu');
+
+const SWITCH={on:'<svg class="sw" viewBox="0 0 40 22"><rect width="40" height="22" fill="#d4d4d4"/><rect x="21" y="3" width="16" height="16" fill="#2b2b2b"/></svg>',
+ off:'<svg class="sw" viewBox="0 0 40 22"><rect width="40" height="22" fill="#808080"/><rect x="1" y="1" width="38" height="20" fill="#2b2b2b"/><rect x="3" y="3" width="16" height="16" fill="#808080"/></svg>'};
+const slider=v=>'<span class="slider"><i></i><b style="width:'+v*2+'px"></b><u style="left:'+v*2+'px"></u></span>';
+const VOL=[['Music',70],['Effects',100],['Voice',85]];
+const GFX=[['Quality','seg'],['Neon colours',false],['Smooth movement',true],['Show unit destinations',false]];
+const srow=(label,control)=>'<span>'+label+'</span><span class="ctl">'+control+'</span>';
+const mute='<span class="check">Mute'+SWITCH.off+'</span>';
+const gfxRows=()=>'<div class="lab sec">GRAPHICS</div>'+GFX.map(([l,v])=>srow(l,v==='seg'?'<span class="seg"><span>Low</span><span class="on">High</span></span>':SWITCH[v?'on':'off'])).join('');
+const soundRows=()=>'<div class="lab sec">SOUND</div>'+VOL.map(([l,v])=>srow(l,slider(v)+'<span class="val">'+v+'</span>')).join('')+srow('Master',mute);
+const gameRows=()=>'<div class="lab sec">GAME</div>'+srow('Playtest helper',SWITCH.off);
+function settingsBody(){
+ if(setLook==='switch')return '<div class="set" data-rows>'+gfxRows()+soundRows()+gameRows()+'</div>';
+ if(setLook==='cols')return '<div class="cols"><div class="set" data-rows>'+gfxRows()+'</div><div class="set" data-rows>'+soundRows()+gameRows()+'</div></div>';
+ const vol='<div class="vol" data-rows>'+VOL.map(([l,v])=>'<span>'+l+'</span>'+slider(v)+'<span class="val">'+v+'</span>').join('')+'<span>Master</span>'+mute+'<span></span></div>';
+ return '<div class="col" data-rows><div class="lab">GRAPHICS</div>'+btn('Quality','Quality: High')+btn('Neon','Neon colours: Off')+btn('Smooth','Smooth movement: On')+btn('Destinations','Show unit destinations: Off')+
+  '<div class="lab" style="margin-top:8px">SOUND</div>'+vol+'<div class="lab" style="margin-top:8px">GAME</div>'+btn('Playtest','Playtest helper: Off')+'</div>';
+}
+
+// The mouse drawing: body 80 x 140 at (190, 6); call-outs end at the part they name.
+function picture(){
+ const callout=(cls,x,y,k,w)=>'<div class="co '+cls+'" style="'+(cls==='l'?'right:'+(540-x):'left:'+x)+'px;top:'+(y-7)+'px"><kbd>'+k+'</kbd><span class="w">'+w+'</span></div>';
+ const line=(x1,y1,x2,y2)=>'<polyline points="'+x1+','+y1+' '+x2+','+y2+'" fill="none" stroke="#93a5b0"/><circle cx="'+x1+'" cy="'+y1+'" r="2" fill="#93a5b0"/>';
+ const svg='<svg width="540" height="150" viewBox="0 0 540 150"><rect x="190" y="6" width="80" height="138" rx="36" fill="#0c141a" stroke="#93a5b0" stroke-width="1.5"/>'+
+  '<path d="M190 62h80M230 6v56" stroke="#93a5b0" stroke-width="1.5"/><rect x="224" y="20" width="12" height="26" rx="6" fill="#26384a" stroke="#93a5b0" stroke-width="1.5"/>'+
+  line(208,34,176,34)+line(252,22,286,14)+line(236,26,286,40)+line(230,46,286,66)+line(258,50,286,92)+'</svg>';
+ const mouse='<div class="pic">'+svg+callout('l',172,34,'Left-click','Select, place')+callout('r',290,14,'Right-click','Order, rally, cancel')+
+  callout('r',290,40,'Wheel','Zoom')+callout('r',290,66,'Middle-drag','Drag the map along')+callout('r',290,92,'Right-drag','Pan, faster the farther you drag')+'</div>';
+ const pad=mac?'<div class="pad"><svg width="120" height="64" viewBox="0 0 120 64"><rect x=".75" y=".75" width="118.5" height="62.5" rx="6" fill="#0c141a" stroke="#93a5b0" stroke-width="1.5"/>'+
+  '<circle cx="34" cy="28" r="5" fill="#93a5b0"/><circle cx="48" cy="28" r="5" fill="#93a5b0"/><path d="M30 44h22m-4-3 4 3-4 3" fill="none" stroke="#93a5b0" stroke-width="1.5"/>'+
+  '<circle cx="80" cy="22" r="5" fill="#93a5b0"/><circle cx="96" cy="42" r="5" fill="#93a5b0"/><path d="M72 14l-5-5m0 4v-4h4M104 50l5 5m0-4v4h-4" fill="none" stroke="#93a5b0" stroke-width="1.5"/></svg>'+
+  '<div class="grid" data-rows>'+rows(PAD.map(([k,w])=>[k,w.replace(' (trackpad)','')]))+'</div></div>':'';
+ // The full rows the call-outs shorten, beside the modifier rows.
+ const mods='<div class="cols"><div class="grid" data-rows>'+rows([DRAG,SHIFT,DBL,ALT])+'</div><div class="grid" data-rows>'+rows([PLACE,...RC.slice(1)])+'</div></div>';
+ return '<div class="band">'+mouse+pad+'</div>'+mods+'<div class="divider" style="margin:8px 0"></div>'+
+  '<div class="cols">'+grid(['Camera'])+grid(['Commands'])+grid(['Groups','Other'])+'</div>';
+}
+function controlsBody(){
+ if(ctl==='picture')return picture();
+ const parts=ctl==='two'?[['Mouse'],['Camera','Commands','Groups','Other']]:[['Mouse'],['Camera','Commands'],['Groups','Other']];
+ return '<div class="cols">'+parts.map(grid).join('')+'</div>';
+}
+function subPage(){
+ const title=view==='settings'?'SETTINGS':'CONTROLS', body=view==='settings'?settingsBody():controlsBody();
+ const back=page==='replace'?btn('Back','‹ Back',' auto'):'';
+ const p=panel(view,'<div class="head">'+back+'<span class="title">'+title+'</span><span class="hint">Esc: back</span></div>'+body);
+ if(page==='replace')return p;
+ return '<div class="row">'+panel('menu','<div class="col">'+menuCol(view==='settings'?'Settings':'Controls')+'</div>','menu')+p+'</div>';
+}
+
+const scaleK=()=>Math.min(innerWidth/LW,innerHeight/LH);
+function box(el){const r=el.getBoundingClientRect(),m=main.getBoundingClientRect(),k=scaleK();return {x:(r.left-m.left)/k,y:(r.top-m.top)/k,w:r.width/k,h:r.height/k}}
+// Rows for War Room's measurement table: panels, the 16 px margin, the tightest row gap, the widest key.
+function measure(){
+ const out=[['window',WW+'×'+WH+(GK!==1?' (UI ×'+GK+', '+LW+'×'+LH+' logical)':'')]];
+ const panels=[...main.querySelectorAll('.panel')].map(p=>[p.dataset.name,box(p)]);
+ for(const [name,b] of panels)out.push([name+' panel',Math.round(b.w)+'×'+Math.round(b.h)]);
+ const l=Math.min(...panels.map(p=>p[1].x)),t=Math.min(...panels.map(p=>p[1].y)),r=Math.max(...panels.map(p=>p[1].x+p[1].w)),b=Math.max(...panels.map(p=>p[1].y+p[1].h));
+ const over=Math.max(16-l,16-t,r-(LW-16),b-(LH-16));
+ out.push(['fits with 16 px margin',over<=0?'yes, '+Math.round(l-16)+' px spare at the sides, '+Math.round(t-16)+' above and below':'no, over by '+Math.ceil(over)+' px',over<=0]);
+ let gap=Infinity;
+ for(const g of main.querySelectorAll('[data-rows]')){
+  const items=[...g.children].map(box).filter(x=>x.h>0).sort((a,c)=>a.y-c.y);
+  for(let i=1;i<items.length;i++){const d=items[i].y-(items[i-1].y+items[i-1].h);if(d>0.5)gap=Math.min(gap,d)}
+ }
+ if(gap<Infinity)out.push(['smallest row gap',Math.round(gap)+' px']);
+ const keys=[...main.querySelectorAll('kbd')].map(k=>[box(k).w,k.textContent]).sort((a,c)=>c[0]-a[0]);
+ if(keys.length)out.push(['longest key label',Math.round(keys[0][0])+' px ('+keys[0][1]+')']);
+ parent.postMessage({type:'wr:measure',rows:out},location.origin);
+ if(P.get('measure')==='1')(document.getElementById('mtab')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'mtab'}))).textContent=out.map(x=>x[0]+': '+x[1]).join('\n');
+}
+function render(){
+ center.innerHTML=view==='menu'?menuView():view==='confirm'?confirmView():subPage();
+ main.style.transform='scale('+scaleK()+')';
+ measure();
+}
+render();
+// Again once Public Sans is in, so the measurements are in it.
+Promise.all(['400','600','700'].map(w=>document.fonts.load(w+' 12px Public'))).then(render);
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='wr:ask-measure')measure()});
+onresize=render;
+onhashchange=()=>location.reload();
+</script>

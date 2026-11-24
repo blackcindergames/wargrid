@@ -1725,3 +1725,13 @@ Questions from writing the [income points proposal](../superpowers/specs/2026-11
 - **Floor before batch A:** step 1 waits for ground batch A's capped passive set, so a player who ignores points never runs out of income once the piles are empty; no pre-owned home point, no temporary trickle (user, 2026-11-22).
 - **Switch:** "Income points" is a lobby match setting, on by default, synced with the match settings (user, 2026-11-22).
 - **Capture times:** the proposal's 20 s capture and 7 s neutralise are a starting point, tuned by playtest; 30 s and 10 s is the second pair to try (user, 2026-11-22).
+
+## Esc menu round (user, 2026-11-24)
+
+War Room round `esc-menu` (`warroom/rounds/esc-menu/`, pictures in `docs/images/esc-round/`) for P18, blocking; a player-experience pass and one fix round before the owner saw it. Zero Hour's Esc menu has five buttons and no controls text (CnC_Generals_Zero_Hour `0a05454`, `QuitMenu.cpp:88-105`). Three picks are the recommendation; the menu is not.
+
+- **Menu (A):** buttons only (Resume, Settings, Controls, Leave match, Quit on desktop); no mouse primer. The package's risk stays open: the first match must teach the mouse elsewhere (the first-match hints candidate in packages).
+- **Controls (A):** one page, two columns, Mouse left; Camera, Commands, Groups and Other right.
+- **Settings (A):** switches in one column under GRAPHICS, SOUND and GAME; Quality as a Low/High toggle.
+- **Page (A):** a page replaces the menu, `‹ Back` and its title top left, `Esc: back` top right.
+- **Defaults stated in the round, kept:** "Back to main menu" becomes "Leave match" and keeps its confirm box online (a bot match leaves at once); Quit in an online match asks the same question first; Esc on a page returns to the menu, on the menu resumes; Mouse rows in button order with P17's `Right-drag`, `Middle-drag` and, on macOS, `Two-finger swipe` and `Pinch` rows; no rebinding.

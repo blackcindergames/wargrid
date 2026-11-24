@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Where does a page open from the menu?
+why: >-
+  Settings and Controls are pages; this step asks whether the menu stays visible beside them. Zero Hour's
+  Options replaces the Esc menu; Zero-K's Epic Menu opens sub-pages beside its tree (Zero-K `54ef574db`,
+  `LuaUI/Widgets/gui_epicmenu.lua:3146-3150`). Drawn on Settings; Controls opens the same way.
+look: The menu column, and where the Back way out is.
+controls:
+  state: [settings, controls]
+rec: A
+recWhy: >-
+  one panel at a time keeps the screen as calm as the menu itself, and Controls gets the full width it
+  needs at 720 px; Back and Esc both return. B saves a click when switching between Settings and
+  Controls, which a match rarely needs, and at 1280 x 720 fits only Controls layout A beside the menu.
+neutral: None of these
+options:
+  A:
+    name: The page replaces the menu
+    render: {params: {page: replace}}
+    sees: 'The page alone in the middle, "‹ Back" and its title at the top left, a muted "Esc: back" at the top right.'
+    notes: One panel on screen; Back or Esc returns.
+  B:
+    name: The page opens beside the menu
+    render: {params: {page: beside}}
+    sees: The menu column stays at the left with Settings shown selected, the page to its right.
+    notes: Switch pages in one click; at 1280 wide only Controls layout A fits beside it.
