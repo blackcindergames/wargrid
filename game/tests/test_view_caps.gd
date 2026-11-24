@@ -193,6 +193,7 @@ func test_bar_release_reaches_the_gui(runner) -> bool:
 	main.get_node("HUD/Playtest/Checklist").hide()
 	await _resize(runner, root, Vector2i(3840, 1080))
 	main._pause.open()
+	main._pause.find_children("*", "Button", true, false).filter(func(button: Button) -> bool: return button.text == "Settings")[0].pressed.emit()
 	await runner.process_frame
 	var slider: HSlider = main._pause.find_child("Music", true, false)
 	slider.value = 0.5

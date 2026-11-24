@@ -8,18 +8,13 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const UnitGlyphs = preload("res://scripts/presentation/unit_glyphs.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
 const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
-# Chip C: an 18 px glyph stacked over a 40 x 4 bar.
-const CHIP: Vector2 = Vector2(48, 26)
-const BAR: Vector2 = Vector2(40, 4)
 const GLYPH: float = 18.0
 # The owner's pick after trying both (user, 2026-11-23): count column, glyph and a 4 x 20 bar side by side.
 const UPRIGHT_CHIP: Vector2 = Vector2(42, 26)
-# Wide enough for one digit at 12 px, kept while the count hides, so a chip never changes width.
+# Wide enough for one digit at 12 px (nine in a queue at most), so a chip never changes width.
 const COUNT_WIDTH: float = 9.0
 const UPRIGHT_BAR: Vector2 = Vector2(4, 20)
 const TIP_DELAY_MSEC: int = 250
-# The round's idle grey (strip.html `--idle`).
-const IDLE: Color = Color("#7b8d99")
 # The owner's one-time hint (user, 2026-11-23), remembered in the settings file once gone.
 const HINT := "Your busy buildings: click one to select it, double-click to go there"
 const HINT_MSEC: int = 10000
@@ -28,17 +23,12 @@ const HINT_KEY := "strip_seen"
 const HINT_UNREAD: float = -2.0
 const HINT_GONE: float = -1.0
 
-# Upright by default (user, 2026-11-23); F7 (`orders._debug_key`) flips to the stacked chip for the session.
-static var upright: bool = true
-
 var now_msec: Callable = Time.get_ticks_msec
 var helpers: Array[Control] = []
 var _row: HBoxContainer
 var _more: Button
 var _tip: PanelContainer
 var _chips: Array = []
-# The records as given, so a bar-length switch redraws from the true progress.
-var _source: Array = []
 var _tip_words: Array = []
 var _folded: Array = []
 var _selected: int = -1
@@ -101,11 +91,6 @@ func _build_looks() -> void:
 	_looks.track = StyleBoxFlat.new()
 	_looks.track.anti_aliasing = false
 	_looks.track.bg_color = get_theme_color("well", &"Tokens")
-	_looks.hollow = StyleBoxFlat.new()
-	_looks.hollow.anti_aliasing = false
-	_looks.hollow.draw_center = false
-	_looks.hollow.border_color = IDLE
-	_looks.hollow.set_border_width_all(1)
 
 # `+N`: muted, as wide as its words, a hover list of the folded producers; no click.
 func _build_more() -> void:
@@ -113,7 +98,7 @@ func _build_more() -> void:
 	# Hover only: no button mask means no press, so no click sound either.
 	_more.button_mask = 0
 	_more.mouse_default_cursor_shape = CURSOR_HELP
-	_more.custom_minimum_size = Vector2(0, CHIP.y)
+	_more.custom_minimum_size = Vector2(0, UPRIGHT_CHIP.y)
 	for state: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]: _more.add_theme_color_override(state, get_theme_color("muted", &"Tokens"))
 	var padded := _looks.normal.duplicate() as StyleBoxFlat
 	padded.content_margin_left = 8
@@ -209,32 +194,22 @@ func _chip(index: int) -> Button:
 	count.mouse_filter = MOUSE_FILTER_IGNORE
 	count.custom_minimum_size.x = COUNT_WIDTH
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	count.visible = false
 	chip.add_child(count)
 	_shape(chip)
 	return chip
 
-# Stacked: glyph 1 from the top, the bar 2 under it, the count right of the glyph; upright: count, glyph and bar in columns (2 | 9 | 2 | 18 | 4 | 4 | 3), the count top-aligned with the glyph.
+# Count, glyph and bar in columns (2 | 9 | 2 | 18 | 4 | 4 | 3), the count top-aligned with the glyph.
 func _shape(chip: Button) -> void:
-	chip.custom_minimum_size = UPRIGHT_CHIP if upright else CHIP
-	var glyph: Control = chip.get_node("Glyph")
+	chip.custom_minimum_size = UPRIGHT_CHIP
+	(chip.get_node("Glyph") as Control).position = Vector2(13, 4)
 	var track: Control = chip.get_node("Track")
-	glyph.position = Vector2(13, 4) if upright else Vector2(15, 1)
-	track.position = Vector2(35, 3) if upright else Vector2(4, 21)
-	track.size = UPRIGHT_BAR if upright else BAR
-	(chip.get_node("Count") as Control).position = Vector2(2, 4) if upright else Vector2(38, 0)
-
-func set_upright(on: bool) -> void:
-	upright = on
-	for i: int in range(1, _row.get_child_count()): _shape(_row.get_child(i))
-	_chips = []
-	show_chips(_source, _selected, _colour)
+	track.position = Vector2(35, 3)
+	track.size = UPRIGHT_BAR
+	(chip.get_node("Count") as Control).position = Vector2(2, 4)
 
 # F38: an unchanged view returns here, progress compared in drawn pixels; a changed one touches only what differs.
 func show_chips(chips: Array, selected: int, colour: Color) -> void:
-	var length: float = UPRIGHT_BAR.y if upright else BAR.x
-	var drawn: Array = chips.map(func(chip: Dictionary) -> Dictionary: return chip.merged({"fraction": roundf(chip.fraction * length) / length}, true))
-	_source = chips
+	var drawn: Array = chips.map(func(chip: Dictionary) -> Dictionary: return chip.merged({"fraction": roundf(chip.fraction * UPRIGHT_BAR.y) / UPRIGHT_BAR.y}, true))
 	if drawn == _chips and selected == _selected and colour == _colour: return
 	var before: Array = HudModel.strip_split(_chips)[1].map(_id)
 	_chips = drawn
@@ -243,7 +218,7 @@ func show_chips(chips: Array, selected: int, colour: Color) -> void:
 	var split: Array = HudModel.strip_split(drawn)
 	_folded = split[0]
 	# The owner's rule (user, 2026-11-23): nothing in production, no strip.
-	visible = drawn.any(_busy)
+	visible = not drawn.is_empty()
 	_follow_hint()
 	_more.visible = not _folded.is_empty()
 	var count: String = "+%d" % _folded.size()
@@ -260,21 +235,17 @@ func show_chips(chips: Array, selected: int, colour: Color) -> void:
 func _fill(chip: Button, record: Dictionary) -> void:
 	chip.visible = true
 	chip.set_meta("chip", record)
-	var idle: bool = record.look == "idle"
 	var glyph: TextureRect = chip.get_node("Glyph")
 	var texture: Texture2D = UnitGlyphs.texture(record.unit)
 	if glyph.texture != texture: glyph.texture = texture
-	var tint: Color = IDLE / Color(UnitGlyphs.COLOUR) if idle else Color.WHITE
-	if glyph.self_modulate != tint: glyph.self_modulate = tint
-	_style(chip.get_node("Track"), "panel", _looks.hollow if idle else _looks.track)
+	_style(chip.get_node("Track"), "panel", _looks.track)
 	var fill: ColorRect = chip.get_node("Track/Fill")
 	var tone: Color = _looks.warn if record.look in ["slowed", "blocked"] else _colour
 	if fill.color != tone: fill.color = tone
 	_progress(fill, record.fraction)
 	# The head kind's total, the cell's ×N: a number beside a glyph counts that unit (user, 2026-11-23).
 	var count: Label = chip.get_node("Count")
-	count.visible = not record.kinds.is_empty()
-	if count.visible and count.text != str(record.kinds[0].count): count.text = str(record.kinds[0].count)
+	if count.text != str(record.kinds[0].count): count.text = str(record.kinds[0].count)
 	var look: StyleBox = _looks.selected if record.id == _selected else _looks.normal
 	for state: String in ["normal", "pressed"]: _style(chip, state, look)
 	for state: String in ["hover", "hover_pressed"]: _style(chip, state, _looks.selected if record.id == _selected else _looks.hover)
@@ -282,14 +253,10 @@ func _fill(chip: Button, record: Dictionary) -> void:
 static func _id(record: Dictionary) -> int:
 	return record.id
 
-static func _busy(record: Dictionary) -> bool:
-	return record.look != "idle"
-
-# Whole pixels from the track's bottom (upright) or left edge: a fractional edge rendered a pixel off the track's.
+# Whole pixels from the track's bottom: a fractional edge rendered a pixel off the track's.
 func _progress(fill: Control, fraction: float) -> void:
-	var bar: Vector2 = UPRIGHT_BAR if upright else BAR
-	var length: float = roundf(fraction * (bar.y if upright else bar.x))
-	var rect := Rect2(0, bar.y - length, bar.x, length) if upright else Rect2(0, 0, length, bar.y)
+	var length: float = roundf(fraction * UPRIGHT_BAR.y)
+	var rect := Rect2(0, UPRIGHT_BAR.y - length, UPRIGHT_BAR.x, length)
 	if fill.position != rect.position: fill.position = rect.position
 	if fill.size != rect.size: fill.size = rect.size
 

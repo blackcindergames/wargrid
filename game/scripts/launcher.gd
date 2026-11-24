@@ -327,7 +327,7 @@ func _quality_toggle() -> HBoxContainer:
 	refresh.call()
 	return row
 
-# Same stored keys and labels as the Esc menu; pause_menu.gd keeps its state in the menu, so it cannot be shared as is.
+# Same stored keys and labels as the Esc menu's Settings page.
 func _graphics_switch(switch_name: String, label: String, on: bool, save: Callable) -> CheckButton:
 	var toggle := CheckButton.new()
 	toggle.name = switch_name

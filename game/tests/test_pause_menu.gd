@@ -30,7 +30,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_quit_hidden_on_web, test_menu_layout, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_controls_list_layout]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -140,8 +140,15 @@ func test_offline_leave_and_quit(runner) -> bool:
 	var scenes: Array[String] = []
 	main.change_scene = func(path: String) -> void: scenes.append(path)
 	_open_menu(main)
-	_click(main, "Back to main menu")
+	_click(main, "Leave match")
 	runner.check(scenes == [LAUNCHER], "E3 offline leave goes straight to the launcher, got " + str(scenes))
+	main.free()
+	main = await _scene(runner, Skirmish)
+	var quits: Array[int] = [0]
+	main.quit = func() -> void: quits[0] += 1
+	_open_menu(main)
+	_click(main, "Quit")
+	runner.check(quits[0] == 1, "E3 offline Quit quits at once, got %d quits" % quits[0])
 	_helper_restore(saved)
 	main.free()
 	return true
@@ -166,7 +173,7 @@ func test_online_leave_confirm(runner) -> bool:
 	var scenes: Array[String] = []
 	main.change_scene = func(path: String) -> void: scenes.append(path)
 	_esc(main)
-	_click(main, "Back to main menu")
+	_click(main, "Leave match")
 	runner.check(scenes.is_empty() and online.transport.close_calls == 0, "E5 asking does not leave yet")
 	runner.check(main.get_node("HUD/PauseMenu").is_confirming(), "E5 confirmation shown")
 	_click(main, "Leave")
@@ -183,11 +190,11 @@ func test_online_leave_cancel(runner) -> bool:
 	var scenes: Array[String] = []
 	main.change_scene = func(path: String) -> void: scenes.append(path)
 	_esc(main)
-	_click(main, "Back to main menu")
+	_click(main, "Leave match")
 	_click(main, "Cancel")
 	runner.check(scenes.is_empty() and online.transport.close_calls == 0 and online.lockstep.status() != "ended_relay", "E6 cancel keeps the match")
 	runner.check(main.menu_open() and not main.get_node("HUD/PauseMenu").is_confirming(), "E6 back on the main menu list")
-	_click(main, "Back to main menu")
+	_click(main, "Leave match")
 	_esc(main)
 	runner.check(main.menu_open() and not main.get_node("HUD/PauseMenu").is_confirming(), "E6 Esc in the confirmation returns to the list")
 	main.free()
@@ -209,7 +216,7 @@ func test_online_leave_text_and_focus(runner) -> bool:
 		var scenes: Array[String] = []
 		main.change_scene = func(path: String) -> void: scenes.append(path)
 		_esc(main)
-		_click(main, "Back to main menu")
+		_click(main, "Leave match")
 		await runner.process_frame
 		await runner.process_frame
 		var menu: Control = main.get_node("HUD/PauseMenu")
@@ -228,55 +235,122 @@ func test_online_leave_text_and_focus(runner) -> bool:
 		port.queue_free()
 	return true
 
-func test_quit_hidden_on_web(runner) -> bool:
-	for web in [false, true]:
+func test_online_quit_asks_first(runner) -> bool:
+	var saved: String = _helper_off()
+	var online: Dictionary = await _online(runner)
+	var main = online.main
+	var quits: Array[int] = [0]
+	main.quit = func() -> void: quits[0] += 1
+	var menu: Control = main.get_node("HUD/PauseMenu")
+	_esc(main)
+	_click(main, "Quit")
+	var question: Label = menu.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree())[0]
+	runner.check(quits[0] == 0 and online.transport.close_calls == 0 and menu.is_confirming(), "Q1 online Quit asks first")
+	runner.check(question.text == "Quit the game? Your opponent wins and the room closes.", "Q1 the quit question says what happens, got '%s'" % question.text)
+	_click(main, "Cancel")
+	runner.check(quits[0] == 0 and main.menu_open() and not menu.is_confirming(), "Q1 Cancel keeps the game")
+	_click(main, "Leave match")
+	runner.check(menu.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree())[0].text.begins_with("Leave the match?"), "Q1 Leave match asks its own question after a cancelled Quit")
+	_click(main, "Cancel")
+	_click(main, "Quit")
+	_click(main, "Quit")
+	runner.check(quits[0] == 1, "Q1 confirming quits once, got %d" % quits[0])
+	_helper_restore(saved)
+	main.free()
+	return true
+
+const MENU_BUTTONS: Array[String] = ["Resume", "Settings", "Controls", "Leave match", "Quit"]
+
+func test_menu_buttons(runner) -> bool:
+	for web: bool in [false, true]:
 		var menu = PauseMenu.new(web)
-		var texts: Array = menu.find_children("*", "Button", true, false).map(func(button: Button) -> String: return button.text)
-		runner.check(texts.has("Quit") != web, "E7 Quit present only off the web (web=%s)" % web)
+		var texts: Array = menu.find_child("Menu", true, false).find_children("*", "Button", true, false).map(func(button: Button) -> String: return button.text)
+		var want: Array = MENU_BUTTONS.slice(0, 4) if web else MENU_BUTTONS
+		runner.check(texts == want, "M1 web=%s: the menu holds only %s, got %s" % [web, want, texts])
 		menu.free()
 	return true
 
-func test_menu_layout(runner) -> bool:
+static func _shown(menu: Control, part: String) -> bool:
+	var node: Control = menu.find_child(part, true, false)
+	return node != null and node.is_visible_in_tree()
+
+func test_pages_and_back(runner) -> bool:
+	var main = await _scene(runner, Skirmish)
+	var menu: Control = main.get_node("HUD/PauseMenu")
+	_open_menu(main)
+	var focus: Control = main.get_viewport().gui_get_focus_owner()
+	runner.check(focus is Button and (focus as Button).text == "Resume", "M2 Resume has the focus on open, got %s" % focus)
+	for page: Array in [["Settings", "SettingsPage"], ["Controls", "ControlsPage"]]:
+		for way: String in ["Esc", "‹ Back"]:
+			_click(main, page[0])
+			runner.check(_shown(menu, page[1]) and not _shown(menu, "Menu"), "M2 %s replaces the menu with its page" % page[0])
+			if way == "Esc": _esc(main)
+			else: _click(main, way)
+			runner.check(main.menu_open() and _shown(menu, "Menu") and not _shown(menu, page[1]), "M2 %s on the %s page returns to the menu" % [way, page[0]])
+	_esc(main)
+	runner.check(not main.menu_open(), "M2 Esc on the menu resumes")
+	main.free()
+	return true
+
+func test_playtest_switch(runner) -> bool:
+	var saved: String = _helper_off()
+	var menu = PauseMenu.new(false)
+	runner.root.add_child(menu)
+	var seen: Array[bool] = []
+	menu.playtest_changed.connect(func(on: bool) -> void: seen.append(on))
+	var switch: CheckButton = menu.find_child("Playtest", true, false)
+	runner.check(switch != null and not switch.button_pressed, "M3 the Playtest switch starts off")
+	switch.button_pressed = true
+	runner.check(seen == [true] and PlaytestSettings.enabled(), "M3 the switch saves and emits, got %s" % [seen])
+	PlaytestSettings.save_enabled(false)
+	menu.open()
+	runner.check(not switch.button_pressed and seen == [true], "M3 opening the menu re-reads the stored setting without a signal")
+	menu.free()
+	_helper_restore(saved)
+	return true
+
+static func _leaves(page: Control) -> Array:
+	return page.find_children("*", "Control", true, false).filter(func(control: Control) -> bool: return control.is_visible_in_tree() and (control is Label or control is BaseButton or control is Range))
+
+# The brief's three sizes and the ultrawide one: each page 16 px inside the view, its words whole and apart.
+func test_pages_layout(runner) -> bool:
 	for pair: Array in BaseScene.HUD_SIZES:
 		var size: Vector2i = pair[1]
+		var inner := Rect2(Vector2.ZERO, Vector2(size)).grow(-16.0)
 		var port := BaseScene.sized_port(runner, pair[0], size)
 		var main = await _scene(runner, Skirmish, port)
+		main.get_node("HUD/PauseMenu").confirm_leave = true
 		_open_menu(main)
-		BaseScene.select_own_unit(main)
-		await runner.process_frame
-		await runner.process_frame
-		runner.check(main.get_viewport().get_visible_rect().size == Vector2(size), "E8 the viewport really is %s, got %s" % [size, main.get_viewport().get_visible_rect().size])
-		var menu: Control = main.get_node("HUD/PauseMenu")
-		var buttons: Array = menu.find_children("*", "Button", true, false).filter(func(button: Button) -> bool: return button.is_visible_in_tree())
-		var panels: Dictionary = BaseScene.hud_panels(main)
-		runner.check(panels.has("HUD/MenuChip") and panels.has("HUD/Hud/TopStrip") and panels.has("HUD/Hud/SelectionPanel"), "E8 the list holds the Menu chip, the strip and the selection panel at %s, got %s" % [size, panels.keys()])
-		var hud: Array = panels.values()
-		var quality: Button = menu.find_child("Quality", true, false)
-		runner.check(quality != null and quality.is_visible_in_tree() and buttons.has(quality), "E8 quality toggle is visible")
-		var neon: Button = menu.find_child("Neon", true, false)
-		runner.check(neon != null and neon.is_visible_in_tree() and buttons.has(neon), "E8 the Neon toggle is visible at %s" % size)
-		var smooth: Button = menu.find_child("Smooth", true, false)
-		runner.check(smooth != null and smooth.is_visible_in_tree() and buttons.has(smooth), "E8 the Smooth toggle is visible at %s" % size)
-		var destinations: Button = menu.find_child("Destinations", true, false)
-		runner.check(destinations != null and destinations.is_visible_in_tree() and buttons.has(destinations), "E8 the Destinations toggle is visible at %s" % size)
-		var playtest: Button = menu.find_child("Playtest", true, false)
-		runner.check(playtest != null and playtest.is_visible_in_tree() and buttons.has(playtest), "E8 the Playtest toggle is visible at %s" % size)
-		var sliders: Array = menu.find_children("*", "Range", true, false).filter(func(slider: Range) -> bool: return slider.is_visible_in_tree())
-		var labels: Array = menu.find_child("Volume", true, false).find_children("*Label", "Label", true, false)
-		runner.check(sliders.size() == 3 and labels.size() == 4, "E8 menu has 3 sliders and their labels, got %d and %d" % [sliders.size(), labels.size()])
-		var values: Array = menu.find_child("Volume", true, false).find_children("*Value", "Label", true, false)
-		runner.check(values.size() == 3, "E8 menu shows a value for each slider, got %d" % values.size())
-		for control: Control in sliders + labels + values:
-			var rect: Rect2 = control.get_global_rect()
-			runner.check(Rect2(Vector2.ZERO, Vector2(size)).encloses(rect), "E8 %s inside %s" % [control.name, size])
-			for other in hud: runner.check(not rect.intersects(other), "E8 %s clear of HUD text at %s" % [control.name, size])
-			for button: Control in buttons: runner.check(not rect.intersects(button.get_global_rect()), "E8 %s clear of %s at %s" % [control.name, button.name, size])
-		for i in buttons.size():
-			var rect: Rect2 = buttons[i].get_global_rect()
-			runner.check(Rect2(Vector2.ZERO, Vector2(size)).encloses(rect), "E8 button %d inside %s" % [i, size])
-			for other in hud: runner.check(not rect.intersects(other), "E8 button %d clear of HUD text at %s" % [i, size])
-			for j in range(i + 1, buttons.size()): runner.check(not rect.intersects(buttons[j].get_global_rect()), "E8 buttons %d and %d apart at %s" % [i, j, size])
+		for step: Array in [["", "Menu"], ["Settings", "SettingsPage"], ["‹ Back", "Menu"], ["Controls", "ControlsPage"], ["‹ Back", "Menu"], ["Leave match", "Confirm"]]:
+			if not step[0].is_empty(): _click(main, step[0])
+			await runner.process_frame
+			await runner.process_frame
+			var page: Control = main.get_node("HUD/PauseMenu").find_child(step[1], true, false)
+			var at: String = "%s at %s" % [step[1], size]
+			runner.check(main.get_viewport().get_visible_rect().size == Vector2(size), "L1 the viewport really is %s" % size)
+			runner.check(page.is_visible_in_tree() and inner.encloses(page.get_global_rect()), "L1 %s: the panel %s 16 px inside the view" % [at, page.get_global_rect()])
+			var leaves: Array = _leaves(page)
+			var bad: Array = []
+			for i: int in leaves.size():
+				var rect: Rect2 = leaves[i].get_global_rect()
+				if not page.get_global_rect().encloses(rect) or leaves[i].size.x < leaves[i].get_minimum_size().x - 0.5: bad.append("%s cut %s" % [leaves[i].name, rect])
+				for j: int in range(i + 1, leaves.size()):
+					if rect.intersects(leaves[j].get_global_rect()): bad.append("%s over %s" % [leaves[i].name, leaves[j].name])
+			runner.check(leaves.size() >= 3 and bad.is_empty(), "L1 %s: %d words and controls whole and apart, got %s" % [at, leaves.size(), bad.slice(0, 4)])
+			if step[1] == "SettingsPage":
+				runner.check(leaves.filter(func(control: Control) -> bool: return control is Range).size() == 3 and leaves.filter(func(control: Control) -> bool: return control is CheckButton).size() == 5, "L1 %s: three volume sliders, four switches and Mute" % at)
 		port.free()
+	return true
+
+const PAD_ROWS: Array = [["Two-finger swipe", "Pan (trackpad)"], ["Pinch", "Zoom (trackpad)"]]
+const MOUSE_ROWS: Array = [["Left-click", "Select a unit or a building"], ["Drag", "Select the units in a box"], ["Shift+click", "Add or remove a unit"], ["Double-click", "Select that kind on screen"], ["Alt+double-click", "Select that kind on the map"], ["Left-click", "Place the building (right-click cancels)"], ["Right-click", "Move, attack, gather or enter"], ["Right-click", "Set the rally point (factory or barracks selected)"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Right-drag", "Pan, faster the farther you drag"], ["Middle-drag", "Drag the map along"], ["Wheel", "Zoom"]]
+
+func test_mouse_rows_in_button_order(runner) -> bool:
+	for mac: bool in [false, true]:
+		var mouse: Array = PauseMenu.controls(false, mac)[0]
+		var rows: Array = mouse[1].map(func(row: Array) -> Array: return [row[1], row[2]])
+		var want: Array = MOUSE_ROWS + (PAD_ROWS if mac else [])
+		runner.check(mouse[0] == "Mouse" and rows == want, "CL4 mac=%s: the Mouse rows in button order, got %s" % [mac, rows])
 	return true
 
 const PROBES: Array[String] = ["pan", "home", "last_attack", "grid", "build", "back", "attack_move", "stop", "unload", "recall", "save", "add", "esc", "mute", "perf"]
@@ -309,7 +383,8 @@ static func _shown_texts(list: Control) -> Array:
 	return list.find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
 
 # Written apart from controls(), so dropping a gesture or a qualifier from the table fails here.
-const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "Set the rally point"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Click or right-click", "Cancel the unit in production"], ["Left-click", "right-click cancels"], ["Wheel", "Zoom"], ["Screen edge", "Pan"], ["Top-right production icons", "Click: select its building"]]
+const REQUIRED_MOUSE: Array = [["Left-click", "Select a unit"], ["Drag", "box"], ["Shift+click", "Add or remove"], ["Double-click", "on screen"], ["Alt+double-click", "on the map"], ["Right-click", "Move, attack"], ["Right-click", "Set the rally point"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Click or right-click", "Cancel the unit in production"], ["Left-click", "right-click cancels"], ["Right-drag", "faster the farther"], ["Middle-drag", "Drag the map"], ["Wheel", "Zoom"], ["Screen edge", "Pan"], ["Top-right production icons", "Click: select its building"]]
+static var mac_mouse: Array = [["Two-finger swipe", "Pan (trackpad)"], ["Pinch", "Zoom (trackpad)"]] if OS.has_feature("macos") or OS.has_feature("web_macos") else []
 const REQUIRED_WORDS := {"attack_move": "armed units", "last_attack": "your or an ally's base"}
 
 func test_controls_list_shows_every_row(runner) -> bool:
@@ -322,9 +397,9 @@ func test_controls_list_shows_every_row(runner) -> bool:
 	var shown: Array = _shown_texts(list)
 	runner.check(shown == _expected_texts(), "CL1 the list shows every section title, key and line in order, got %s" % [shown])
 	var mouse: Array = _rows().filter(func(row: Array) -> bool: return row[3].is_empty())
-	for pair: Array in REQUIRED_MOUSE:
+	for pair: Array in REQUIRED_MOUSE + mac_mouse:
 		runner.check(mouse.filter(func(row: Array) -> bool: return row[1] == pair[0] and row[2].contains(pair[1])).size() == 1, "CL1 one pointer row %s says '%s', got %s" % [pair[0], pair[1], mouse.map(func(row: Array) -> String: return "%s: %s" % [row[1], row[2]])])
-	runner.check(mouse.size() == REQUIRED_MOUSE.size(), "CL1 the pointer rows are the required ones, got %d" % mouse.size())
+	runner.check(mouse.size() == REQUIRED_MOUSE.size() + mac_mouse.size(), "CL1 the pointer rows are the required ones, got %d" % mouse.size())
 	for probe: String in REQUIRED_WORDS:
 		var rows: Array = _rows().filter(func(row: Array) -> bool: return row[0] == probe)
 		runner.check(rows.size() == 1 and rows[0][2].contains(REQUIRED_WORDS[probe]), "CL1 the %s row says '%s', got %s" % [probe, REQUIRED_WORDS[probe], rows])
@@ -508,37 +583,4 @@ func test_controls_list_keys_work(runner) -> bool:
 	runner.check(probed == PROBES, "CL2 every key row has its probe and every probe its row, got %s" % [probed])
 	runner.check(placed == ["Q", "W", "E", "R", "A"], "CL2 the grid keys place every builder's buildings, got %s" % [placed])
 	main.free()
-	return true
-
-func test_controls_list_layout(runner) -> bool:
-	for pair: Array in BaseScene.HUD_SIZES:
-		var size: Vector2i = pair[1]
-		var view := Rect2(Vector2.ZERO, Vector2(size))
-		var port := BaseScene.sized_port(runner, pair[0], size)
-		var main = await _scene(runner, Skirmish, port)
-		_open_menu(main)
-		BaseScene.select_own_unit(main)
-		await runner.process_frame
-		await runner.process_frame
-		var menu: Control = main.get_node("HUD/PauseMenu")
-		var list: Control = menu.find_child("Controls", true, false)
-		runner.check(list != null and list.is_visible_in_tree(), "CL3 the Controls list shows with the menu at %s" % size)
-		if list == null:
-			port.free()
-			continue
-		var hud: Dictionary = BaseScene.hud_panels(main)
-		var others: Array = menu.find_children("*", "Button", true, false) + menu.find_child("Volume", true, false).find_children("*", "Control", true, false)
-		var settings: Array = others.filter(func(control: Control) -> bool: return control.is_visible_in_tree() and not list.is_ancestor_of(control))
-		var box: Rect2 = list.get_global_rect()
-		runner.check(view.encloses(box), "CL3 the list %s inside %s" % [box, size])
-		for path: String in hud: runner.check(not box.intersects(hud[path]), "CL3 the list clear of %s at %s, list %s panel %s" % [path, size, box, hud[path]])
-		for control: Control in settings: runner.check(not box.intersects(control.get_global_rect()), "CL3 the list clear of %s at %s" % [control.name, size])
-		for label: Label in list.find_children("*", "Label", true, false):
-			runner.check(box.encloses(label.get_global_rect()) and label.size.x >= label.get_minimum_size().x - 0.5, "CL3 '%s' whole inside the list at %s, rect %s" % [label.text, size, label.get_global_rect()])
-		menu.confirm_leave = true
-		_click(main, "Back to main menu")
-		runner.check(not list.is_visible_in_tree(), "CL3 the leave question hides the list at %s" % size)
-		_click(main, "Cancel")
-		runner.check(list.is_visible_in_tree(), "CL3 Cancel shows it again at %s" % size)
-		port.free()
 	return true

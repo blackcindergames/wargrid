@@ -1837,7 +1837,7 @@ func test_freeze_card_on_a_failed_pump(runner) -> bool:
 	return true
 
 func test_freeze_leave_reaches_the_launcher(runner) -> bool:
-	for way: String in ["Back to menu", "Esc then Back to main menu"]:
+	for way: String in ["Back to menu", "Esc then Leave match"]:
 		var saved: Dictionary = _helper_on()
 		var main = await _setup(runner)
 		var scenes: Array[String] = []

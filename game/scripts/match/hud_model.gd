@@ -200,46 +200,32 @@ static func newest_of_kind(queue: Array, kind: String, skip: Dictionary = {}, co
 		if queue[i].kind == kind and not skip.has(queue[i].id): ids.append(queue[i].id)
 	return ids
 
-# Production strip round (user, 2026-11-23): by kind, then by age; Headquarters and Supply Depot kinds only while they produce; eight chips, then `+N`.
+# Production strip round (user, 2026-11-23): by kind, then by age; only producing buildings (P18 rider, user, 2026-11-24); eight chips, then `+N`.
 const STRIP_ORDER: Array[String] = ["command_center", "supply_center", "barracks", "factory", "airfield"]
-const STRIP_BUSY_ONLY: Array[String] = ["command_center", "supply_center"]
 const STRIP_CHIPS: int = 8
 const STRIP_HINT := "Click: select it · Double-click: go there"
 # A shared empty default, so a skipped building allocates nothing.
 const NONE: Array = []
 
-# One chip per finished own producer: {id, kind, unit, look, fraction, queue, kinds, left, slow}; `last` keeps each producer's newest unit in production for its idle glyph.
-static func strip_chips(view: Dictionary, seat: int, last: Dictionary) -> Array:
+# One chip per finished own producer with a queue: {id, kind, unit, look, fraction, queue, kinds, left, slow}.
+static func strip_chips(view: Dictionary, seat: int) -> Array:
 	var rate: int = player(view, seat).get("work_rate", 1000)
 	var slow: String = low_power_hint(rate, player(view, seat).get("faction", Registry.Factions.DEFAULT_FACTION)) if rate < 1000 else ""
 	var chips: Array = []
 	for found: Dictionary in view.buildings:
 		# Every refresh walks every building, so the cheap tests come first.
-		if found.owner != seat or not found.get("completed", true) or Registry.kind(found.kind).get("produces", NONE).is_empty(): continue
-		var queue: Array = found.get("queue", NONE)
-		if queue.is_empty() and role(found.kind) in STRIP_BUSY_ONLY: continue
-		if not queue.is_empty(): last[found.id] = queue[0].kind
-		chips.append(_strip_chip(found, queue, last.get(found.id, ""), rate, slow))
+		if found.owner != seat or found.get("queue", NONE).is_empty() or not found.get("completed", true) or Registry.kind(found.kind).get("produces", NONE).is_empty(): continue
+		chips.append(_strip_chip(found, found.queue, rate, slow))
 	chips.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.rank < b.rank or (a.rank == b.rank and a.id < b.id))
 	return chips
 
-# Idle shows a hollow bar; slowed (low power) and blocked (work done, no free exit) draw in warn.
-static func _strip_chip(found: Dictionary, queue: Array, idle_unit: String, rate: int, slow: String) -> Dictionary:
+# Slowed (low power) and blocked (work done, no free exit) draw in warn.
+static func _strip_chip(found: Dictionary, queue: Array, rate: int, slow: String) -> Dictionary:
 	var rank: int = STRIP_ORDER.find(role(found.kind))
-	var chip: Dictionary = {"id": found.id, "kind": found.kind, "rank": rank if rank != -1 else STRIP_ORDER.size(), "unit": idle_unit, "look": "idle", "fraction": 0.0, "queue": 0, "kinds": NONE, "left": "", "slow": slow}
-	if queue.is_empty():
-		if idle_unit.is_empty(): chip.unit = _first_cell(Registry.kind(found.kind).produces)
-		return chip
 	var head: Dictionary = queue[0]
-	chip.merge({"unit": head.kind, "queue": queue.size(), "kinds": kind_totals(queue), "left": time_left(head, rate), "fraction": minf(1.0, head.work / (Definitions.unit(head.kind).ticks * 1000.0))}, true)
-	chip.look = "blocked" if chip.left == EXIT_BLOCKED else ("slowed" if rate < 1000 else "busy")
-	return chip
-
-# The unit on the card's first cell (Q).
-static func _first_cell(kinds: Array) -> String:
-	var cells: Array = kind_cells(kinds)
-	cells.sort_custom(func(a: Array, b: Array) -> bool: return GRID_KEYS.find(a[0]) < GRID_KEYS.find(b[0]))
-	return cells[0][1]
+	var left: String = time_left(head, rate)
+	return {"id": found.id, "kind": found.kind, "rank": rank if rank != -1 else STRIP_ORDER.size(), "unit": head.kind, "queue": queue.size(), "kinds": kind_totals(queue), "left": left, "slow": slow,
+		"fraction": minf(1.0, head.work / (Definitions.unit(head.kind).ticks * 1000.0)), "look": "blocked" if left == EXIT_BLOCKED else ("slowed" if rate < 1000 else "busy")}
 
 # [the folded front of the order, the chips that stay].
 static func strip_split(chips: Array) -> Array:
@@ -248,7 +234,6 @@ static func strip_split(chips: Array) -> Array:
 
 # The chip's count is the head kind's total, so line 1 names the first two kinds with theirs and how many units follow (as NEXT counts them); line 2 is the head unit's time or, in NOW's hover words, why it waits.
 static func strip_tip(chip: Dictionary) -> String:
-	if chip.look == "idle": return "Idle"
 	var named: Array = chip.kinds.slice(0, 2)
 	var parts: Array = named.map(run_name)
 	var rest: int = chip.queue - named.reduce(func(sum: int, run: Dictionary) -> int: return sum + run.count, 0)
@@ -259,9 +244,7 @@ static func strip_tip(chip: Dictionary) -> String:
 	return "\n".join(lines)
 
 static func strip_hidden_line(chip: Dictionary) -> String:
-	var name: String = Registry.kind(chip.kind).display_name
-	if chip.look == "idle": return name + " · idle"
-	return "%s · %s · %s" % [name, run_name(chip.kinds[0]), chip.left if chip.look == "blocked" else "ready in " + chip.left]
+	return "%s · %s · %s" % [Registry.kind(chip.kind).display_name, run_name(chip.kinds[0]), chip.left if chip.look == "blocked" else "ready in " + chip.left]
 
 const BATCH: int = 5
 
