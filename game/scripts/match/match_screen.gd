@@ -121,6 +121,7 @@ func _ready() -> void:
 	_pause = PauseMenu.new()
 	_pause.confirm_leave = driver.confirm_leave()
 	_pause.resume_requested.connect(_pause.close)
+	_pause.opened.connect(_fill_questions)
 	hud.menu_pressed.connect(_pause.open)
 	_pause.leave_requested.connect(_leave)
 	if not quit.is_valid(): quit = get_tree().quit
@@ -268,6 +269,13 @@ func _leave() -> void:
 	close_match(false)
 	Palette.clear_team_colours()
 	change_scene.call(LAUNCHER_SCENE)
+
+# An empty driver question keeps the 1v1 words.
+func _fill_questions() -> void:
+	var leave: String = driver.leave_question()
+	var quitting: String = driver.quit_question()
+	_pause.leave_question = leave if not leave.is_empty() else PauseMenu.LEAVE_QUESTION
+	_pause.quit_question = quitting if not quitting.is_empty() else PauseMenu.QUIT_QUESTION
 
 func close_match(file_sitting: bool) -> void:
 	driver.stop()
@@ -601,7 +609,7 @@ func _hud_selection() -> Dictionary:
 
 func _result(state: Dictionary) -> String:
 	var result: String = _result_text(state.match)
-	return "Victory" if result.is_empty() and driver.opponent_left() else result
+	return result if not result.is_empty() else driver.leave_heading()
 
 func _show_result(state: Dictionary) -> void:
 	var result: String = _result(state)
@@ -616,13 +624,23 @@ func _show_freeze() -> void:
 
 func _result_rows(state: Dictionary) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
+	var ours: Array[Dictionary] = [{"group": "Your team"}]
 	var stats: Array[Dictionary] = driver.match_stats()
+	var mate: int = driver.teammate()
 	for player: Dictionary in state.players:
 		var row: Dictionary = stats.filter(func(entry: Dictionary) -> bool: return entry.player == player.id)[0]
 		var you: bool = player.id == local_player
-		var faction: String = Registry.faction(player.get("faction", Registry.Factions.DEFAULT_FACTION)).display_name
-		rows.append({"name": "P%d %s%s" % [player.id, faction, " (you)" if you else ""], "you": you, "built": row.units_built, "units_lost": row.units_lost, "buildings_lost": row.buildings_lost})
-	return rows
+		var mark: String = " (you)" if you else " (teammate)" if player.id == mate else " (bot)" if driver.bot_players().has(player.id) else ""
+		var shown: Dictionary = {"name": ResultPanel.player_name(player.id, player.get("faction", "")) + mark, "you": you, "built": row.units_built, "units_lost": row.units_lost, "buildings_lost": row.buildings_lost}
+		if mate != 0: shown.colour = Palette.owner_colors(player.id, _view.bright_owners())[0]
+		if mate == 0 or not (you or player.id == mate): rows.append(shown)
+		elif you: ours.insert(1, shown)
+		else: ours.append(shown)
+	# Grouped only with a human teammate, so the offline and 1v1 tables keep their shape (7-19).
+	if mate == 0: return rows
+	ours.append({"group": "Enemy bots"})
+	ours.append_array(rows)
+	return ours
 
 func _result_text(match_state: Variant) -> String:
 	return ResultPanel.result_text(match_state, _local_team())

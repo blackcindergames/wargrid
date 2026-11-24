@@ -14,6 +14,8 @@ const SkirmishTests = preload("res://tests/test_skirmish_scene.gd")
 const CameraTests = preload("res://tests/test_camera_keys.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
+const OnlineTests = preload("res://tests/test_online_scene.gd")
+const SeatFixture = preload("res://tests/seat_fixture.gd")
 
 class FakeTransport extends RefCounted:
 	var patient: bool = false
@@ -25,12 +27,13 @@ class FakeTransport extends RefCounted:
 		return out
 	func send_text(_text: String) -> void: pass
 	func closed() -> bool: return close_calls > 0
+	func refused() -> bool: return false
 	func silent(_now: int) -> bool: return false
 	func close() -> void: close_calls += 1
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_2v2_guest_questions, test_2v2_questions_layout]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -593,4 +596,90 @@ func test_controls_list_keys_work(runner) -> bool:
 	runner.check(probed == PROBES, "CL2 every key row has its probe and every probe its row, got %s" % [probed])
 	runner.check(placed == ["Q", "W", "E", "R", "A"], "CL2 the grid keys place every builder's buildings, got %s" % [placed])
 	main.free()
+	return true
+
+const HOST_LEAVE: String = "Leave the match? You run the bots. Leaving ends the match for your friend."
+const HOST_QUIT: String = "Quit the game? You run the bots. Quitting ends the match for your friend."
+const GUEST_LEAVE: String = "Leave the match? The match ends for your friend too."
+const GUEST_QUIT: String = "Quit the game? The match ends for your friend too."
+const OUT_LEAVE: String = "Leave the match? Your friend plays on against the bots."
+const OUT_QUIT: String = "Quit the game? Your friend plays on against the bots."
+
+func _question(main) -> String:
+	var shown: Array = main.get_node("HUD/PauseMenu").find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree())
+	return shown[0].text if not shown.is_empty() else ""
+
+# The questions as the menu asks them: [Leave match, Quit].
+func _asked(main) -> Array:
+	main._pause.open()
+	_click(main, "Leave match")
+	var leave: String = _question(main)
+	_click(main, "Cancel")
+	_click(main, "Quit")
+	var quit: String = _question(main)
+	_click(main, "Cancel")
+	main._pause.close()
+	return [leave, quit]
+
+func _team_match(runner, online_tests, seat: int, parent: Node = null) -> Dictionary:
+	var online: Dictionary = await online_tests._online(runner, seat, true, parent)
+	online_tests._peer_packets(online.transport, 3 - seat, 4, 60)
+	online_tests._run(online.main, 8)
+	return online
+
+func test_defeated_host_leave_question(runner) -> bool:
+	var online_tests = OnlineTests.new()
+	var before: Array = online_tests._statics()
+	var online: Dictionary = await _team_match(runner, online_tests, 1)
+	var main = online.main
+	SeatFixture.defeat(main.driver.pump.live(), 1)
+	online_tests._run(main, 2)
+	runner.check(online.lockstep.status() == "running" and not main.driver.pump.live().survivors().has(1), "T26 fixture: the host is out and the match runs, got %s" % online.lockstep.status())
+	var asked: Array = _asked(main)
+	runner.check(asked == [HOST_LEAVE, HOST_QUIT], "T26 the defeated host is told leaving ends the match for the friend, got %s" % [asked])
+	main.free()
+	online_tests._restore_statics(before)
+	return true
+
+func test_2v2_guest_questions(runner) -> bool:
+	var online_tests = OnlineTests.new()
+	var before: Array = online_tests._statics()
+	var online: Dictionary = await _team_match(runner, online_tests, 2)
+	var main = online.main
+	var asked: Array = _asked(main)
+	runner.check(asked == [GUEST_LEAVE, GUEST_QUIT], "T26 the playing guest is told the match ends for the friend too, got %s" % [asked])
+	SeatFixture.defeat(main.driver.pump.live(), 2)
+	online_tests._run(main, 2)
+	asked = _asked(main)
+	runner.check(asked == [OUT_LEAVE, OUT_QUIT], "T26 the defeated guest is told the friend plays on, got %s" % [asked])
+	main.free()
+	online_tests._restore_statics(before)
+	return true
+
+func test_2v2_questions_layout(runner) -> bool:
+	var online_tests = OnlineTests.new()
+	var before: Array = online_tests._statics()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var screen := Rect2(Vector2.ZERO, Vector2(size))
+		for seat: int in [1, 2]:
+			var port := BaseScene.sized_port(runner, pair[0], size)
+			var online: Dictionary = await _team_match(runner, online_tests, seat, port)
+			var main = online.main
+			if seat == 2:
+				SeatFixture.defeat(main.driver.pump.live(), 2)
+				online_tests._run(main, 2)
+			var menu: Control = main.get_node("HUD/PauseMenu")
+			for button: String in ["Leave match", "Quit"]:
+				main._pause.open()
+				_click(main, button)
+				await runner.process_frame
+				await runner.process_frame
+				var question: Label = menu.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree())[0]
+				var box: Rect2 = menu.find_child("Confirm", true, false).get_global_rect()
+				runner.check(question.text in [HOST_LEAVE, HOST_QUIT, OUT_LEAVE, OUT_QUIT] and screen.encloses(box) and box.encloses(question.get_global_rect()) and question.get_global_rect().size.y > 0.0, "T26 seat %d %s question inside its box inside %s, '%s' rect %s box %s" % [seat, button, size, question.text, question.get_global_rect(), box])
+				_click(main, "Cancel")
+				main._pause.close()
+			port.queue_free()
+	online_tests._restore_statics(before)
 	return true

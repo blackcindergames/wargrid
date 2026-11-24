@@ -38,6 +38,7 @@ class PairTransport extends RefCounted:
 		if Wire.decode(text).message.get("type") == "tick": peer.inbox.append(text)
 		else: others.append(text)
 	func closed() -> bool: return false
+	func refused() -> bool: return false
 	func silent(_now: int) -> bool: return false
 	func close() -> void: pass
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
@@ -57,6 +58,7 @@ class TrioEnd extends RefCounted:
 		if not order.accepts(text): push_error("relay refused: %s" % text)
 		if Wire.decode(text).message.get("type") == "tick": relay.forward(seat, text)
 	func closed() -> bool: return false
+	func refused() -> bool: return false
 	func silent(_now: int) -> bool: return false
 	func close() -> void: pass
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
@@ -78,7 +80,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -985,6 +987,16 @@ func test_pal_played_on_catches_up(runner) -> bool:
 	trio.relay.ends.clear()
 	return true
 
+func test_trio_leave_has_no_match_ended_heading(runner) -> bool:
+	var trio: Dictionary = _trio_drivers()
+	var one = trio.drivers[0]
+	runner.check(_trio_until(trio.drivers, 40), "T26 fixture: three drivers reach tick 40")
+	trio.relay.leave(3, _last_sent(trio, 3))
+	_trio_frames([one, trio.drivers[1]], 60)
+	runner.check(one._lockstep.status() == "ended_left" and one.leave_heading() == "", "T26 Match ended is the 2v2 heading only, got %s '%s'" % [one._lockstep.status(), one.leave_heading()])
+	trio.relay.ends.clear()
+	return true
+
 func test_pal_driver_play_on_then_end_closes_room(runner) -> bool:
 	var trio: Dictionary = _trio_drivers()
 	var one = trio.drivers[0]
@@ -998,7 +1010,7 @@ func test_pal_driver_play_on_then_end_closes_room(runner) -> bool:
 		if one.over(): break
 		for driver in rest: _single(driver)
 	runner.check(one.over() and one._phase == "done" and not one.can_play_again(), "PAL a played-on match that ends closes the room, phase %s" % one._phase)
-	runner.check(one.rematch_line() == "Your friend left" and not one.opponent_left() and one.notice() == "", "PAL the line says the friend left, not a relay loss, got '%s' notice '%s'" % [one.rematch_line(), one.notice()])
+	runner.check(one.rematch_line() == "P2 USA left the match" and not one.opponent_left() and one.notice() == "", "PAL the line says the friend left, not a relay loss, got '%s' notice '%s'" % [one.rematch_line(), one.notice()])
 	trio.relay.ends.clear()
 	return true
 

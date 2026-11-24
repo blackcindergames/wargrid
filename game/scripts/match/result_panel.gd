@@ -1,6 +1,8 @@
 extends Control
 
 const MatchSettings = preload("res://scripts/match_settings.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const MATCH_ENDED := "Match ended"
 const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]
 
 signal play_again_pressed
@@ -177,6 +179,9 @@ func show_result(outcome: String, status: String, can_play: bool, rows: Array[Di
 	_status.text = status
 	_play_again.disabled = not can_play
 	_play_again.text = "Accept rematch" if accept and can_play else "Play again"
+	_play_again.visible = outcome != MATCH_ENDED
+	var look: StringName = &"" if _play_again.visible else &"PrimaryButton"
+	if _change_setup.theme_type_variation != look: _square(_change_setup, look)
 	visible = not outcome.is_empty()
 	_length.text = length
 	_length.visible = not rows.is_empty()
@@ -260,22 +265,39 @@ func _rebuild_table() -> void:
 	if _rows.is_empty(): return
 	for header: String in ["", "Units built", "Units lost", "Buildings lost"]: _cell(header, false, header.is_empty())
 	for row in _rows:
+		if row.has("group"):
+			_cell(row.group, true, true).add_theme_color_override("font_color", Color("#d4d4d4"))
+			for i in 3: _cell("", false, false)
+			continue
 		var you: bool = row.you
-		_cell(row.name, you, true)
+		var named: Label = _cell(row.name, you, true)
+		if row.has("colour"): _mark_owner(named, row.colour)
 		for key: String in ["built", "units_lost", "buildings_lost"]: _cell(str(row[key]), you, false)
 
-func _cell(text: String, bold: bool, left: bool) -> void:
+# The mock-up's 8 px owner square in the label's left margin, so the cell stays one Label.
+func _mark_owner(label: Label, colour: Color) -> void:
+	var margin := StyleBoxEmpty.new()
+	margin.content_margin_left = 14.0
+	label.add_theme_stylebox_override("normal", margin)
+	label.draw.connect(func() -> void: label.draw_rect(Rect2(0.0, (label.size.y - 8.0) / 2.0, 8.0, 8.0), colour))
+
+func _cell(text: String, bold: bool, left: bool) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if left else HORIZONTAL_ALIGNMENT_RIGHT
 	if bold: label.add_theme_font_override("font", get_theme_font("font", "PrimaryButton"))
 	_table.add_child(label)
+	return label
 
 static func result_text(match_state: Variant, team: int) -> String:
 	if match_state == null: return ""
 	if match_state.status == "draw": return "Draw"
 	if match_state.status != "won": return ""
 	return "Victory" if match_state.winner == team else "Defeat"
+
+static func player_name(id: int, faction: String) -> String:
+	var tag: String = Registry.faction(faction).get("short_name", "")
+	return "P%d %s" % [id, tag] if not tag.is_empty() else "P%d" % id
 
 static func length_text(ticks: int, rate: int) -> String:
 	var seconds: int = floori(float(ticks) / rate)

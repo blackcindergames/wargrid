@@ -233,6 +233,10 @@ func set_relay_lost() -> void:
 	if _ended(): return
 	_end("ended_relay", "connection to relay lost")
 
+func set_send_refused() -> void:
+	if _ended(): return
+	_end("ended_send", "frame send refused")
+
 func set_protocol_error(reason: String) -> void:
 	if _ended(): return
 	_end("ended_protocol", reason)

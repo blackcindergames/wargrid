@@ -7,11 +7,16 @@ const Wire = preload("res://scripts/net/wire.gd")
 const TimingStats = preload("res://scripts/debug/timing_stats.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const ResultPanel = preload("res://scripts/match/result_panel.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const CATCH_UP_STEPS: int = 2
 const MAX_CATCH_UP_CREDIT: int = 4
 const DESYNC_DIR: String = "user://desync"
 const LATENCY_FILE: String = "user://netplay-latency.txt"
 const TOO_MANY_ORDERS: String = "Too many orders at once; wait a moment"
+const START_LINE_TICKS: int = 150
+const HOST_LEFT: String = "The host left. The match is over."
+const RELAY_LOST: String = "Connection to relay lost"
 
 var pump: SimPump
 var first_note: SimPump.Note
@@ -40,6 +45,7 @@ var _friend_again: bool = false
 var _rematch_seed: int = -1
 var _taken: Array[int] = []
 var _next_tick: int = 0
+var _start_tick: int = -1
 
 func _init(transport: RefCounted, lockstep: RefCounted, faction: String, seat: int) -> void:
 	_transport = transport
@@ -84,6 +90,7 @@ func adopt(value: Simulation) -> void:
 	_last = first_note
 	_next_tick = first_note.tick
 	_taken = []
+	_start_tick = -1
 	_answers = []
 	_preview_request = {}
 	_preview_answer = {}
@@ -113,6 +120,7 @@ func leave() -> void:
 
 func step() -> void:
 	for text: Variant in _transport.poll(): _lockstep.receive(text)
+	if not _finished and _transport.refused(): _lockstep.set_send_refused()
 	if not _finished and (_transport.closed() or _transport.silent(Time.get_ticks_usec())): _lockstep.set_relay_lost()
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
 	for i in CATCH_UP_STEPS:
@@ -144,6 +152,7 @@ func drain() -> Array[SimPump.Note]:
 		if not note.preview.is_empty(): _preview_answer = note.preview
 		_finish_job(note)
 	if not notes.is_empty(): _last = notes[-1]
+	if _start_tick < 0 and teammate() != 0 and current().view.players.all(func(player: Dictionary) -> bool: return player.has("faction")): _start_tick = current().tick
 	_answers.append_array(_new_answers())
 	_settle()
 	return notes
@@ -236,6 +245,21 @@ func can_restart() -> bool:
 func opponent_left() -> bool:
 	return _lockstep.opponent_left()
 
+func leave_heading() -> String:
+	if opponent_left(): return "Victory"
+	return ResultPanel.MATCH_ENDED if teammate() != 0 and _lockstep.status() == "ended_left" and not _lockstep.left_before_start() else ""
+
+func leave_question() -> String:
+	return _team_question("Leave the match?", "Leaving")
+
+func quit_question() -> String:
+	return _team_question("Quit the game?", "Quitting")
+
+func _team_question(ask: String, doing: String) -> String:
+	if teammate() == 0: return ""
+	if _lockstep.allowed(_seat).size() > 1: return "%s You run the bots. %s ends the match for your friend." % [ask, doing]
+	return ask + (" The match ends for your friend too." if _last.survivors.has(_seat) else " Your friend plays on against the bots.")
+
 func rematch_pending() -> bool:
 	return _phase == "again"
 
@@ -243,8 +267,8 @@ func friend_wants_rematch() -> bool:
 	return _friend_again
 
 func rematch_line() -> String:
-	if opponent_left(): return "Your opponent left"
-	if _lockstep.left_seat() != 0: return "Your friend left"
+	var left: int = _lockstep.left_seat()
+	if left != 0: return HOST_LEFT if left == 1 and teammate() != 0 and leave_heading() == ResultPanel.MATCH_ENDED else "%s left the match" % ResultPanel.player_name(left, _faction(left))
 	if _phase == "done": return "The room closed"
 	if _friend_again: return "Your friend wants a rematch"
 	return "Waiting for your friend…" if _phase == "again" else ""
@@ -347,12 +371,27 @@ func _ms(microseconds: PackedInt64Array) -> PackedFloat64Array:
 	for value in microseconds: out.append(float(value) / 1000.0)
 	return out
 
+# After the start a leave's line is the result panel's, so it shows once.
 func notice() -> String:
 	if _left: return "" # leave() ends the lockstep through set_relay_lost, which is no relay loss
 	match _lockstep.status():
-		"waiting": return "Waiting for player %d" % _lockstep.waiting_for()[0]
-		"ended_left": return "Opponent left before the start (a different map or version, or their game tab was hidden)" if _lockstep.left_before_start() else "Player %d disconnected" % _lockstep.left_seat()
-		"ended_relay": return "Connection to relay lost" if _lockstep.end_reason() == "connection to relay lost" else "Relay: " + _lockstep.end_reason()
+		"waiting": return "Waiting for your teammate…" if teammate() != 0 else "Waiting for player %d" % _lockstep.waiting_for()[0]
+		"ended_left": return "Opponent left before the start (a different map or version, or their game tab was hidden)" if _lockstep.left_before_start() else ""
+		"ended_relay": return RELAY_LOST if _lockstep.end_reason() == "connection to relay lost" else "Relay: " + _lockstep.end_reason()
+		"ended_send": return RELAY_LOST
 		"ended_desync": return ("Desync — report downloaded as %s" if web else "Desync — report saved to %s") % _report_path
 		"ended_protocol": return "Match stopped: game error. Please report it."
+	if teammate() == 0: return ""
+	# The host runs the bots, so its leave ends the friend's match: no watch-or-leave line for it.
+	if _lockstep.allowed(_seat).size() == 1 and not _last.over and not _last.survivors.has(_seat): return "You are out. Your teammate plays on: watch, or leave from the menu (Esc)."
+	return _start_line()
+
+func _start_line() -> String:
+	if _start_tick < 0 or current().tick >= _start_tick + START_LINE_TICKS: return ""
+	var tags := PackedStringArray(bot_players().map(func(bot: int) -> String: return Registry.faction(_faction(bot)).get("short_name", "?")))
+	return "You and %s vs %d bots (%s)" % [ResultPanel.player_name(teammate(), _faction(teammate())), tags.size(), ", ".join(tags)]
+
+func _faction(player: int) -> String:
+	for row: Dictionary in current().view.players:
+		if row.id == player: return row.get("faction", "")
 	return ""

@@ -17,6 +17,8 @@ signal opened
 const LEAVE_QUESTION := "Leave the match? Your opponent wins and the room closes."
 const QUIT_QUESTION := "Quit the game? Your opponent wins and the room closes."
 var confirm_leave: bool = false
+var leave_question: String = LEAVE_QUESTION
+var quit_question: String = QUIT_QUESTION
 var _menu: Control
 var _confirm: Control
 var _settings: Control
@@ -49,9 +51,9 @@ func _init(web: bool = OS.has_feature("web")) -> void:
 	_resume = _button(buttons, "Resume", resume_requested.emit)
 	_button(buttons, "Settings", func() -> void: _show(_settings, _settings.find_child("Back", true, false)))
 	_button(buttons, "Controls", func() -> void: _show(_controls, _controls.find_child("Back", true, false)))
-	_button(buttons, "Leave match", _ask.bind(LEAVE_QUESTION, "Leave", leave_requested.emit))
+	_button(buttons, "Leave match", func() -> void: _ask(leave_question, "Leave", leave_requested.emit))
 	# The browser tab cannot be closed by the game.
-	if not web: _button(buttons, "Quit", _ask.bind(QUIT_QUESTION, "Quit", quit_requested.emit))
+	if not web: _button(buttons, "Quit", func() -> void: _ask(quit_question, "Quit", quit_requested.emit))
 	var box: VBoxContainer = _column()
 	_confirm = _panel(center, "Confirm", box)
 	_question = _label("", &"HudSmallLabel")

@@ -50,6 +50,7 @@ class FakeTransport extends RefCounted:
 	var close_calls: int = 0
 	var order := RelayFrameOrder.new()
 	var expect_refusal: bool = false
+	var is_refused: bool = false
 	func poll() -> PackedStringArray:
 		var out := frames
 		frames = PackedStringArray()
@@ -62,7 +63,8 @@ class FakeTransport extends RefCounted:
 		if not expect_refusal: push_error("relay refused: %s" % text)
 		frames.append(Wire.encode({"type": "error", "reason": "invalid message"}))
 		is_closed = true
-	func closed() -> bool: return is_closed
+	func closed() -> bool: return is_closed or is_refused
+	func refused() -> bool: return is_refused
 	func silent(_now: int) -> bool: return is_silent
 	func close() -> void:
 		close_calls += 1
@@ -70,9 +72,9 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_joiner_counts_bots_from_the_seat_count, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_space_never_leaves_the_result_card, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_online_builder_lost_in_the_click_step, test_online_builder_lost_in_the_drained_tick,test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_refused_cancel_marks_nothing, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_f33_online_red_ghost_refused_after_two_callbacks, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected, test_four_seat_create_teams, test_default_create_with_teams_unchanged, test_2v2_rematch_keeps_bots_teams_and_allowed, test_2v2_create_sets_viewer_colours, test_right_click_teammate_moves, test_online_2v2_record_replays]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_joiner_counts_bots_from_the_seat_count, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_space_never_leaves_the_result_card, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_online_builder_lost_in_the_click_step, test_online_builder_lost_in_the_drained_tick,test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_refused_cancel_marks_nothing, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_f33_online_red_ghost_refused_after_two_callbacks, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected, test_four_seat_create_teams, test_default_create_with_teams_unchanged, test_2v2_rematch_keeps_bots_teams_and_allowed, test_2v2_create_sets_viewer_colours, test_right_click_teammate_moves, test_online_2v2_record_replays, test_host_left_panel, test_teammate_quit_panel, test_leave_line_once, test_one_v_one_leave_line_under_victory, test_ended_send_status_and_line, test_rows_mark_bot_and_teammate_grouped, test_stall_line_teammate, test_start_line_five_seconds, test_defeated_guest_notice, test_2v2_end_texts_layout]
 
-func _online(runner, seat: int, with_bots: bool = false) -> Dictionary:
+func _online(runner, seat: int, with_bots: bool = false, parent: Node = null) -> Dictionary:
 	var transport := FakeTransport.new()
 	var seats: Array[int] = [1, 2]
 	var lockstep = Lockstep.new(seat, seats)
@@ -83,7 +85,7 @@ func _online(runner, seat: int, with_bots: bool = false) -> Dictionary:
 		lockstep = Lockstep.new(seat, seats, 4, 30, Time.get_ticks_usec, {1: [1, 3, 4]})
 	var main = OnlineScene.instantiate()
 	main.setup(transport, lockstep, seat)
-	runner.root.add_child(main)
+	(parent if parent != null else runner.root).add_child(main)
 	main.set_physics_process(false)
 	main.set_process(false)
 	# The open checklist covers the right of the view where these cases click, and it takes those clicks (Task 13).
@@ -156,7 +158,7 @@ func test_status_lines_and_layout(runner) -> bool:
 	var left: Dictionary = await _online(runner, 2)
 	left.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": 4}))
 	_run(left.main, 12)
-	runner.check(BaseScene.hud_text(left.main).contains("Player 1 disconnected"), "N2 left line")
+	runner.check(BaseScene.hud_text(left.main).count("P1 left the match") == 1, "N2 left line: the 7-20 line once, the host's faction never arrived")
 	_layout_ok(runner, left.main, "left", true)
 	left.main.free()
 	var lost: Dictionary = await _online(runner, 2)
@@ -255,7 +257,7 @@ func test_abnormal_end_closes_without_rematch(runner) -> bool:
 	left.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": 40}))
 	_run(left.main, 40)
 	runner.check(left.lockstep.status() == "ended_left" and left.transport.close_calls == 1 and _sent_types(left.transport, "over") == 0, "N13 a friend leaving mid-match closes once and sends no over, got %s %d" % [left.lockstep.status(), left.transport.close_calls])
-	runner.check(_panel_line(left.main) == "Your opponent left" and not left.main.driver.can_play_again(), "N13 a leave mid-match tells the opponent left and closes the room, got '%s'" % _panel_line(left.main))
+	runner.check(_panel_line(left.main) == "P1 USA left the match" and not left.main.driver.can_play_again(), "N13 a leave mid-match tells the opponent left and closes the room, got '%s'" % _panel_line(left.main))
 	left.main.free()
 	var lost: Dictionary = await _online(runner, 2)
 	_peer_packets(lost.transport, 1, 4, PEER_TICKS)
@@ -309,7 +311,7 @@ func test_friend_left_after_end(runner) -> bool:
 	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
 	online.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": PEER_TICKS}))
 	_run(main, 3)
-	runner.check(_panel_line(main) == "Your friend left" and _play_again_button(main).disabled, "N16 friend left line, Play again disabled, got '%s'" % _panel_line(main))
+	runner.check(_panel_line(main) == "P1 USA left the match" and _play_again_button(main).disabled, "N16 friend left line, Play again disabled, got '%s'" % _panel_line(main))
 	runner.check(online.transport.close_calls == 1, "N16 the socket closes once, got %d" % online.transport.close_calls)
 	runner.check(main.driver.notice() == "" and not BaseScene.hud_text(main).contains("relay"), "N16 a friend leaving is no relay loss, got '%s'" % main.driver.notice())
 	main.free()
@@ -325,7 +327,7 @@ func test_accept_rematch_ends_with_the_friend(runner) -> bool:
 	runner.check(_play_again_button(main).text == "Accept rematch" and not _play_again_button(main).disabled, "N34 fixture: the friend's again offers Accept rematch")
 	online.transport.frames.append(Wire.encode({"type": "left", "seat": 1, "after_tick": PEER_TICKS}))
 	_run(main, 3)
-	runner.check(_panel_line(main) == "Your friend left" and _play_again_button(main).disabled and _play_again_button(main).text == "Play again", "N34 the friend leaving after their again greys the button back to Play again, got '%s' '%s'" % [_panel_line(main), _play_again_button(main).text])
+	runner.check(_panel_line(main) == "P1 USA left the match" and _play_again_button(main).disabled and _play_again_button(main).text == "Play again", "N34 the friend leaving after their again greys the button back to Play again, got '%s' '%s'" % [_panel_line(main), _play_again_button(main).text])
 	main.free()
 	var closed: Dictionary = await _online(runner, 2)
 	_end_match(closed)
@@ -548,7 +550,7 @@ func test_start_then_left_same_batch(runner) -> bool:
 		"room expired": [_rematch_start(99), Wire.encode({"type": "error", "reason": "room expired"})],
 		"closed": [_rematch_start(99)],
 	}
-	var lines: Dictionary = {"left": "Your friend left", "room expired": "The room closed", "closed": "The room closed"}
+	var lines: Dictionary = {"left": "P1 USA left the match", "room expired": "The room closed", "closed": "The room closed"}
 	for label: String in batches:
 		var online: Dictionary = await _online(runner, 2)
 		var main = online.main
@@ -1163,7 +1165,7 @@ func test_host_told_opponent_left_before_start(runner) -> bool:
 	late.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
 	_run(late.main, 80)
 	var text: String = BaseScene.hud_text(late.main)
-	runner.check(text.contains("Player 2 disconnected") and not text.contains(notice), "N16 a later leave keeps the plain text, got " + text)
+	runner.check(text.contains("P2 USA left the match") and not text.contains(notice), "N16 a later leave keeps the plain text, got " + text)
 	late.main.free()
 	return true
 
@@ -1176,10 +1178,10 @@ func test_opponent_left_mid_match(runner) -> bool:
 	var panel: Control = main.get_node("HUD/ResultPanel")
 	var cells: Array = main.get_node("HUD/ResultPanel/Center/Card/Box/Table").get_children()
 	runner.check(panel.visible and main.get_node("HUD/ResultPanel/Center/Card/Box/Outcome").text == "Victory", "N29 the opponent leaving mid-match is a Victory")
-	runner.check(_panel_line(main) == "Your opponent left" and _play_again_button(main).disabled, "N29 the line says the opponent left, Play again disabled, got '%s'" % _panel_line(main))
+	runner.check(_panel_line(main) == "P2 USA left the match" and _play_again_button(main).disabled, "N29 the line says the opponent left, Play again disabled, got '%s'" % _panel_line(main))
 	runner.check(main.get_viewport().gui_get_focus_owner() == main.get_node("HUD/ResultPanel/Center/Card/Box/Buttons/ChangeSetup"), "N29 Back to menu has the focus")
 	runner.check(cells.size() == 12 and cells[4].text.ends_with("(you)") and not cells[8].text.contains("(you)"), "N29 the table shows both players, got %d cells" % cells.size())
-	runner.check(BaseScene.hud_text(main).contains("Player 2 disconnected"), "N29 the status line keeps the disconnect text")
+	runner.check(BaseScene.hud_text(main).count("P2 USA left the match") == 1, "N29 the leave line shows once")
 	BaseScene.slab_clear(runner, main, "N29")
 	main.free()
 	return true
@@ -2011,7 +2013,7 @@ func test_sb4_leave_on_end_tick_catch_up(runner) -> bool:
 	_end_in_catch_up(runner, online, 9, [Wire.encode({"type": "left", "seat": 1, "after_tick": 9})])
 	runner.check(online.lockstep.status() == "running" and not driver.opponent_left(), "SB4 a leave after the end tick is a normal end, got " + online.lockstep.status())
 	runner.check(_sent_types(online.transport, "over") == 1, "SB4 one over, got %d" % _sent_types(online.transport, "over"))
-	runner.check(driver.rematch_line() == "Your friend left", "SB4 friend-left line, got '%s'" % driver.rematch_line())
+	runner.check(driver.rematch_line() == "P1 USA left the match", "SB4 friend-left line, got '%s'" % driver.rematch_line())
 	online.main.free()
 	return true
 
@@ -2592,5 +2594,242 @@ func test_right_click_teammate_moves(runner) -> bool:
 	var types: Array = _own_commands(online.transport).map(func(command: Dictionary) -> String: return command.type)
 	runner.check(types == ["move"] and online.lockstep.rejections().is_empty(), "T23 a right-click on the teammate's unit is one move and no refusal, got %s" % [types])
 	main.free()
+	_restore_statics(before)
+	return true
+
+const HOST_LEFT: String = "The host left. The match is over."
+const OUT_LINE: String = "You are out. Your teammate plays on: watch, or leave from the menu (Esc)."
+const START_LINE: String = "You and P1 USA vs 2 bots (China, FRC)"
+const STALL_LINE: String = "Waiting for your teammate…"
+
+func _outcome(main) -> String:
+	return main.get_node("HUD/ResultPanel/Center/Card/Box/Outcome").text
+
+func _defeat_bots(main) -> void:
+	# FRC leaves a rebuild hole behind its first dead building, so a second pass.
+	for _pass in 2:
+		for bot: int in [3, 4]: SeatFixture.defeat(main.driver.pump.live(), bot)
+
+func _host_leaves_2v2(runner) -> Dictionary:
+	var online: Dictionary = await _online(runner, 2, true)
+	_peer_packets(online.transport, 1, 4, 40)
+	online.lockstep.receive('{"type":"left","seat":1,"after_tick":40}')
+	_run(online.main, 80)
+	return online
+
+func _guest_quits_2v2(runner) -> Dictionary:
+	var online: Dictionary = await _online(runner, 1, true)
+	_peer_packets(online.transport, 2, 4, 40)
+	online.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
+	_run(online.main, 80)
+	return online
+
+func test_host_left_panel(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _host_leaves_2v2(runner)
+	var main = online.main
+	runner.check(online.lockstep.status() == "ended_left" and main.get_node("HUD/ResultPanel").visible and _outcome(main) == "Match ended", "T26 the host leaving a 2v2 shows Match ended, got %s '%s'" % [online.lockstep.status(), _outcome(main)])
+	runner.check(_panel_line(main) == HOST_LEFT, "T26 the guest reads the host-left line, got '%s'" % _panel_line(main))
+	runner.check(not _play_again_button(main).visible and _focus_owner(main) == main.get_node(BACK_TO_MENU), "T26 Play again hidden, Back to menu focused")
+	runner.check(main.get_node(BACK_TO_MENU).theme_type_variation == &"PrimaryButton", "T26 Back to menu is the primary button when it is the only one")
+	main.free()
+	_restore_statics(before)
+	return true
+
+func test_teammate_quit_panel(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _guest_quits_2v2(runner)
+	var main = online.main
+	runner.check(online.lockstep.status() == "ended_left" and main.get_node("HUD/ResultPanel").visible and _outcome(main) == "Match ended", "T26 the teammate quitting shows Match ended, got %s '%s'" % [online.lockstep.status(), _outcome(main)])
+	runner.check(_panel_line(main) == "P2 USA left the match" and not _play_again_button(main).visible, "T26 the host reads who left, Play again hidden, got '%s'" % _panel_line(main))
+	main.free()
+	_restore_statics(before)
+	return true
+
+func test_leave_line_once(runner) -> bool:
+	var before: Array = _statics()
+	var quit: Dictionary = await _guest_quits_2v2(runner)
+	var quit_text: String = BaseScene.hud_text(quit.main)
+	runner.check(quit_text.count("P2 USA left the match") == 1 and not quit_text.contains("disconnected"), "T26 a quit: the leave line shows once, got " + quit_text)
+	quit.main.free()
+	var drop: Dictionary = await _host_leaves_2v2(runner)
+	var drop_text: String = BaseScene.hud_text(drop.main)
+	runner.check(drop_text.count(HOST_LEFT) == 1 and not drop_text.contains("disconnected"), "T26 a drop: the host-left line shows once, got " + drop_text)
+	drop.main.free()
+	var online: Dictionary = await _online(runner, 1, true)
+	var main = online.main
+	_peer_packets(online.transport, 2, 4, 40)
+	_run(main, 20)
+	SeatFixture.defeat(main.driver.pump.live(), 2)
+	online.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
+	_run(main, 40)
+	runner.check(online.lockstep.status() == "running" and main.driver.current().tick > 42 and not main.get_node("HUD/ResultPanel").visible, "T26 fixture: the host plays on after the defeated guest left, got %s at %d" % [online.lockstep.status(), main.driver.current().tick])
+	_defeat_bots(main)
+	_run(main, 2)
+	var text: String = BaseScene.hud_text(main)
+	runner.check(_outcome(main) == "Victory" and text.count("P2 USA left the match") == 1, "T26 play on, then the end: Victory and the leave line once, got '%s' %s" % [_outcome(main), text])
+	main.free()
+	_restore_statics(before)
+	return true
+
+func test_one_v_one_leave_line_under_victory(runner) -> bool:
+	var online: Dictionary = await _online(runner, 1)
+	var main = online.main
+	_opponent_leaves(online)
+	runner.check(_outcome(main) == "Victory" and _panel_line(main) == "P2 USA left the match", "T26 a 1v1 leave reads the 7-20 line under Victory, got '%s' '%s'" % [_outcome(main), _panel_line(main)])
+	runner.check(BaseScene.hud_text(main).count("P2 USA left the match") == 1 and _play_again_button(main).visible and _play_again_button(main).disabled, "T26 the line shows once and Play again stays, disabled")
+	runner.check(main.get_node(BACK_TO_MENU).theme_type_variation == &"", "T26 beside Play again, Back to menu keeps the secondary look")
+	main.free()
+	return true
+
+func test_ended_send_status_and_line(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	online.transport.is_refused = true
+	_run(main, 2)
+	runner.check(online.lockstep.status() == "ended_send", "T26 a refused send ends the match as ended_send, got " + online.lockstep.status())
+	runner.check(BaseScene.hud_text(main).contains("Connection to relay lost") and not main.get_node("HUD/ResultPanel").visible, "T26 the line reads as a relay loss, got " + BaseScene.hud_text(main))
+	main.free()
+	return true
+
+func _first_cells(main) -> Array:
+	var cells: Array = main.get_node("HUD/ResultPanel/Center/Card/Box/Table").get_children()
+	var names: Array = []
+	for at in range(0, cells.size(), 4): names.append(cells[at].text)
+	return names
+
+func test_rows_mark_bot_and_teammate_grouped(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _online(runner, 2, true)
+	var main = online.main
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	_defeat_bots(main)
+	_run(main, 2)
+	var want: Array = ["", "Your team", "P2 USA (you)", "P1 USA (teammate)", "Enemy bots", "P3 China (bot)", "P4 FRC (bot)"]
+	runner.check(_outcome(main) == "Victory" and _first_cells(main) == want, "T26 grouped rows, you first, marks on teammate and bots, got '%s' %s" % [_outcome(main), _first_cells(main)])
+	var cells: Array = main.get_node("HUD/ResultPanel/Center/Card/Box/Table").get_children()
+	runner.check(cells.size() == 28 and [5, 6, 7, 17, 18, 19].all(func(at: int) -> bool: return cells[at].text.is_empty()), "T26 a group row holds only its title, got %d cells" % cells.size())
+	var colours: Array = main._result_rows(main.shown_state).filter(func(row: Dictionary) -> bool: return row.has("name")).map(func(row: Dictionary) -> Color: return row.get("colour", Color.BLACK))
+	runner.check(colours == [2, 1, 3, 4].map(func(owner: int) -> Color: return View.owner_color(owner)), "T26 each grouped row carries its owner colour, got %s" % [colours])
+	if cells.size() == 28: runner.check([8, 12, 20, 24].all(func(at: int) -> bool: return cells[at].get_theme_stylebox("normal").content_margin_left >= 14.0), "T26 the name cells leave room for the owner square")
+	main.free()
+	_restore_statics(before)
+	return true
+
+func test_stall_line_teammate(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _online(runner, 2, true)
+	_run(online.main, 12)
+	var text: String = BaseScene.hud_text(online.main)
+	runner.check(online.lockstep.status() == "waiting" and text.contains(STALL_LINE) and not text.contains("Waiting for player"), "T26 a 2v2 stall waits for the teammate, got " + text)
+	online.main.free()
+	_restore_statics(before)
+	return true
+
+func _all_chose(main) -> bool:
+	return main.driver.current().view.players.all(func(player: Dictionary) -> bool: return player.has("faction"))
+
+func test_start_line_five_seconds(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _online(runner, 2, true)
+	var main = online.main
+	var driver = main.driver
+	_peer_packets(online.transport, 1, 4, 220)
+	var first: int = -1
+	var wrong: Array = []
+	var shown: bool = false
+	for frame in 400:
+		_run(main, 1)
+		var tick: int = driver.current().tick
+		if first < 0 and _all_chose(main): first = tick
+		var want: String = START_LINE if first >= 0 and tick < first + 150 else ""
+		if driver.notice() != want: wrong.append([tick, driver.notice()])
+		if driver.notice() == START_LINE and BaseScene.hud_text(main).contains(START_LINE): shown = true
+		if tick >= 200: break
+	runner.check(first > 0 and wrong.is_empty() and driver.current().tick >= first + 150, "T26 the start line shows for 150 ticks from tick %d, wrong at %s" % [first, wrong])
+	runner.check(shown, "T26 the start line reaches the HUD")
+	_defeat_bots(main)
+	_run(main, 2)
+	online.transport.frames.append(Wire.encode({"type": "again", "seat": 1}))
+	_play_again_button(main).pressed.emit()
+	_run(main, 1)
+	online.transport.frames.append(Wire.encode(_start_message_2v2(99)))
+	_peer_packets(online.transport, 1, 4, 30)
+	_run(main, 10)
+	runner.check(driver.current().tick < 30 and driver.notice() == START_LINE, "T26 a rematch shows the start line again, got '%s' at %d" % [driver.notice(), driver.current().tick])
+	main.free()
+	_restore_statics(before)
+	return true
+
+func test_defeated_guest_notice(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _online(runner, 2, true)
+	var main = online.main
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 8)
+	runner.check(online.lockstep.status() == "running" and main.driver.current().tick > 5, "T26 fixture: the match runs, got %s" % online.lockstep.status())
+	SeatFixture.defeat(main.driver.pump.live(), 2)
+	_run(main, 2)
+	runner.check(online.lockstep.status() == "running" and main.driver.notice() == OUT_LINE and BaseScene.hud_text(main).contains(OUT_LINE), "T26 a defeated guest reads the watch line while the teammate plays on, got '%s'" % main.driver.notice())
+	runner.check(not main.get_node("HUD/ResultPanel").visible, "T26 no result panel while the teammate plays on")
+	main.free()
+	var host: Dictionary = await _online(runner, 1, true)
+	_peer_packets(host.transport, 2, 4, PEER_TICKS)
+	_run(host.main, 8)
+	SeatFixture.defeat(host.main.driver.pump.live(), 1)
+	_run(host.main, 2)
+	runner.check(host.lockstep.status() == "running" and host.main.driver.notice() != OUT_LINE and not BaseScene.hud_text(host.main).contains(OUT_LINE), "T26 a defeated host gets no watch line, since leaving ends the friend's match, got '%s'" % host.main.driver.notice())
+	host.main.free()
+	_restore_statics(before)
+	return true
+
+func _notice_clear(runner, main, line: String, label: String) -> void:
+	var notice: Control = main.get_node("HUD/Hud/Notice")
+	var text: Label = main.get_node("HUD/Hud/Notice/Text")
+	runner.check(notice.is_visible_in_tree() and text.text == line, "T26 %s: the notice reads '%s', got '%s'" % [label, line, text.text])
+	var panels: Dictionary = BaseScene.hud_panels(main)
+	var rect: Rect2 = panels.get("HUD/Hud/Notice", Rect2())
+	runner.check(main.get_viewport().get_visible_rect().encloses(rect), "T26 %s: the notice inside the view, rect %s" % [label, rect])
+	for path: String in panels:
+		if path != "HUD/Hud/Notice": runner.check(not rect.intersects(panels[path]), "T26 %s: the notice clear of %s, %s and %s" % [label, path, rect, panels[path]])
+
+func _panel_fits(runner, main, heading: String, line: String, label: String) -> void:
+	var box: String = "HUD/ResultPanel/Center/Card/Box/"
+	var card: Rect2 = main.get_node("HUD/ResultPanel/Center/Card").get_global_rect()
+	runner.check(main.get_viewport().get_visible_rect().encloses(card), "T26 %s: the card inside the view, card %s" % [label, card])
+	for part: String in ["Outcome", "Status", "Length", "Table", "Buttons"]:
+		runner.check(card.grow(-16.0).encloses(main.get_node(box + part).get_global_rect()), "T26 %s: %s inside the card" % [label, part])
+	runner.check(not main.get_node(box + "Table").get_global_rect().intersects(main.get_node(box + "Buttons").get_global_rect()), "T26 %s: buttons clear of the table" % label)
+	runner.check(_outcome(main) == heading and _panel_line(main) == line and _play_again_button(main).visible == (heading != "Match ended") and main.get_node(BACK_TO_MENU).visible, "T26 %s: heading, line and buttons" % label)
+
+func test_2v2_end_texts_layout(runner) -> bool:
+	var before: Array = _statics()
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
+		var online: Dictionary = await _online(runner, 2, true, port)
+		var main = online.main
+		_run(main, 12)
+		await runner.process_frame
+		_notice_clear(runner, main, STALL_LINE, "stall at %s" % size)
+		_peer_packets(online.transport, 1, 4, PEER_TICKS)
+		_run(main, 8)
+		await runner.process_frame
+		_notice_clear(runner, main, START_LINE, "start at %s" % size)
+		SeatFixture.defeat(main.driver.pump.live(), 2)
+		_run(main, 2)
+		await runner.process_frame
+		_notice_clear(runner, main, OUT_LINE, "out at %s" % size)
+		var rows: Array[Dictionary] = main._result_rows(main.shown_state)
+		runner.check(rows.size() == 6, "T26 fixture: four rows in two groups at %s, got %d" % [size, rows.size()])
+		for end: Array in [["Victory", ""], ["Defeat", ""], ["Match ended", "P1 USA left the match"], ["Match ended", HOST_LEFT]]:
+			main.get_node("HUD/ResultPanel").show_result(end[0], end[1], end[0] != "Match ended", rows, "Match length 14:32")
+			await runner.process_frame
+			await runner.process_frame
+			_panel_fits(runner, main, end[0], end[1], "%s '%s' at %s" % [end[0], end[1], size])
+		port.queue_free()
 	_restore_statics(before)
 	return true

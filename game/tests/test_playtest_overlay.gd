@@ -30,6 +30,7 @@ class FakeTransport extends RefCounted:
 		return PackedStringArray()
 	func send_text(_text: String) -> void: pass
 	func closed() -> bool: return close_calls > 0
+	func refused() -> bool: return false
 	func silent(_now: int) -> bool: return false
 	func close() -> void: close_calls += 1
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()

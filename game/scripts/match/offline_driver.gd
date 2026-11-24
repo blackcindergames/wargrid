@@ -158,8 +158,14 @@ func closes_placement_on_click() -> bool:
 func confirm_leave() -> bool:
 	return false
 
-func opponent_left() -> bool:
-	return false
+func leave_heading() -> String:
+	return ""
+
+func leave_question() -> String:
+	return ""
+
+func quit_question() -> String:
+	return ""
 
 func rematch_pending() -> bool:
 	return false
