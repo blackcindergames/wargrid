@@ -4,6 +4,7 @@ const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const SECTION := "launcher"
+const TEAM_BOT_KEYS: Array[String] = ["team_bot_1", "team_bot_2"]
 
 static func load_picks() -> Dictionary:
 	var config := ConfigFile.new()
@@ -14,6 +15,13 @@ static func load_picks() -> Dictionary:
 		"bot_faction": _valid(config, "bot_faction", Registry.Factions.FACTIONS, Registry.Factions.DEFAULT_FACTION),
 		"map": _valid(config, "map", MatchSettings.PLAY_MAPS, default_map),
 	}
+
+static func load_team_bots() -> Array[String]:
+	var config := ConfigFile.new()
+	config.load(AudioSettings.path)
+	var bots: Array[String] = []
+	for key: String in TEAM_BOT_KEYS: bots.append(_valid(config, key, Registry.Factions.FACTIONS, Registry.Factions.DEFAULT_FACTION))
+	return bots
 
 static func save_picks(picks: Dictionary) -> void:
 	var config := ConfigFile.new()

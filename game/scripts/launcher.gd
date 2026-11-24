@@ -19,6 +19,7 @@ const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const FocusCardView = preload("res://scripts/playtest/focus_card_view.gd")
 const PasteShim = preload("res://scripts/presentation/paste_shim.gd")
 const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
 const OFFLINE_SCENE: String = "res://scenes/skirmish.tscn"
 const HEADLESS_FLAGS: Array[String] = ["--netclient", "--relay", "--replay-log", "--probe-relay"]
 const PAGES: Array[String] = ["Play", "Join", "Settings", "Credits", "Waiting"]
@@ -28,11 +29,21 @@ const OWNS: Array[String] = ["Pages/Play/Body/Own", "Pages/Join/Body/Own"]
 const FOLDS: Array[String] = ["Pages/Play/Body/Advanced", "Pages/Join/Body/Advanced"]
 const BOT_ONLY: Array[String] = ["Body/BotLabel", "Body/Spacer2", "Body/Bot", "Body/Spacer3", "Footer/Start"]
 const FRIEND_ONLY: Array[String] = ["Body/OpenSlot", "Body/Spacer4", "Footer/Create"]
+const TEAM_ONLY: Array[String] = ["Body/TeamBots", "Body/MapHidden"]
+const TEAM_BOTS: Array[String] = ["Pages/Play/Body/TeamBots/Bot3", "Pages/Play/Body/TeamBots/Bot4"]
+const MODES: Dictionary = {"BotToggle": "bot", "FriendToggle": "friend", "TeamToggle": "team"}
+const WAITING_BOTS: Array[String] = ["Three", "Four"]
+const TEAM_STARTS := 4
 # Page content is 960 px wide: leaves room for the 170 px button, the gap and the strip padding.
 const STATUS_WIDTH := 700.0
 const FRIEND_HINT := "You get a link to send to your friend."
 const CANCELLED := "Match cancelled"
 const DID_NOT_JOIN := "Your friend did not join in time"
+const PLAY_SUBTITLE := "Set up a match against a bot or a friend."
+const TEAM_SUBTITLE := "Team up with a friend against two bots."
+const MAP_HIDDEN := "%s has %d start positions; team matches need %d."
+# The relay refuses only the joiner (relay/room.go), so the line tells the guest how the pair starts again.
+const VERSION_MISMATCH := "Your friend’s game is a different version from yours (v%s). Whoever is behind updates or reloads, then the host creates a new match."
 var _transport: RefCounted
 var _clock: Callable = Time.get_ticks_usec
 var _connect_msec: int = 0
@@ -41,9 +52,12 @@ var _match: String = ""
 var _seat: int = 0
 var _code: String = ""
 var _hello_sent: bool = false
+var _settings: Dictionary = {}
 var _lockstep: RefCounted
 var current_page: String = "Play"
 var opponent: String = "bot"
+# The player's map; the team path may not list it.
+var _map_pick: String = MatchSettings.PLAY_MAPS.keys()[0]
 var _origin: String = "Play"
 var _play_error: bool = false
 static var code_applied: bool = false
@@ -151,21 +165,33 @@ func _relay_url() -> String:
 func set_opponent(kind: String) -> void:
 	opponent = kind
 	var bot: bool = kind == "bot"
-	$Pages/Play/Body/Opponent/BotToggle.set_pressed_no_signal(bot)
-	$Pages/Play/Body/Opponent/FriendToggle.set_pressed_no_signal(not bot)
+	for toggle: String in MODES: get_node("Pages/Play/Body/Opponent/" + toggle).set_pressed_no_signal(kind == MODES[toggle])
 	for path in BOT_ONLY: get_node("Pages/Play/" + path).visible = bot
 	for path in FRIEND_ONLY: get_node("Pages/Play/" + path).visible = not bot
+	for path in TEAM_ONLY: get_node("Pages/Play/" + path).visible = kind == "team"
+	# The muted line takes Spacer1's cell, right under the map info; the fold then pairs with the bot rows so 720 px fits.
+	$Pages/Play/Body/Spacer1.visible = kind != "team"
+	$Pages/Play/Subtitle.text = TEAM_SUBTITLE if kind == "team" else PLAY_SUBTITLE
 	$Pages/Play/Body/Advanced.visible = prerelease and not bot
+	_fill_maps()
 	_play_error = false
 	_refresh_play()
 	if current_page == "Play" and is_inside_tree(): _focus_primary()
 
 func _refresh_play() -> void:
 	$Pages/Play/Body/MapInfo.text = _map_info(_map_id())
+	var map_hidden: bool = opponent == "team" and _map_id() != _map_pick
+	$Pages/Play/Body/MapHidden.text = MAP_HIDDEN % [MatchSettings.PLAY_MAPS[_map_pick], _start_count(_map_pick), TEAM_STARTS] if map_hidden else ""
 	if not _play_error: _show_status($Pages/Play/Footer/Status, _summary() if opponent == "bot" else FRIEND_HINT)
 
+func _map_data(id: String) -> Dictionary:
+	return JSON.parse_string(FileAccess.get_file_as_string(MatchSettings.map_path(id)))
+
+func _start_count(id: String) -> int:
+	return _map_data(id).starts.size()
+
 func _map_info(id: String) -> String:
-	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(MatchSettings.map_path(id)))
+	var data: Dictionary = _map_data(id)
 	return "%d start positions · %d supply sources" % [data.starts.size(), data.sources.size()]
 
 func _summary() -> String:
@@ -174,6 +200,7 @@ func _summary() -> String:
 func _connect_play_controls() -> void:
 	$Pages/Play/Body/Opponent/BotToggle.pressed.connect(set_opponent.bind("bot"))
 	$Pages/Play/Body/Opponent/FriendToggle.pressed.connect(set_opponent.bind("friend"))
+	$Pages/Play/Body/Opponent/TeamToggle.pressed.connect(set_opponent.bind("team"))
 	for path in OWNS:
 		var selector: OptionButton = get_node(path)
 		var on_play: bool = path.begins_with("Pages/Play")
@@ -181,7 +208,8 @@ func _connect_play_controls() -> void:
 			if on_play: _play_error = false
 			_set_own(selector.get_item_metadata(index))
 			_focus_primary())
-	for selector: OptionButton in [$Pages/Play/Body/Bot, $Pages/Play/Body/Map]:
+	$Pages/Play/Body/Map.item_selected.connect(func(_index: int) -> void: _map_pick = _map_id())
+	for selector: OptionButton in [$Pages/Play/Body/Bot, $Pages/Play/Body/Map, get_node(TEAM_BOTS[0]), get_node(TEAM_BOTS[1])]:
 		selector.item_selected.connect(func(_index: int) -> void:
 			_play_error = false
 			_refresh_play()
@@ -194,6 +222,9 @@ func _apply_picks() -> void:
 	var picks: Dictionary = LauncherSettings.load_picks()
 	_select_id($Pages/Play/Body/Bot, picks.bot_faction)
 	_select_id($Pages/Play/Body/Map, picks.map)
+	_map_pick = picks.map
+	var bots: Array[String] = LauncherSettings.load_team_bots()
+	for i in TEAM_BOTS.size(): _select_id(get_node(TEAM_BOTS[i]), bots[i])
 	_set_own(picks.faction)
 
 func _set_own(id: String) -> void:
@@ -361,7 +392,7 @@ func _add_audio() -> void:
 func _fill_factions() -> void:
 	var ids: Array = Registry.Factions.FACTIONS.keys()
 	ids.sort()
-	for selector: OptionButton in [$Pages/Play/Body/Own, $Pages/Join/Body/Own, $Pages/Play/Body/Bot]:
+	for selector: OptionButton in [$Pages/Play/Body/Own, $Pages/Join/Body/Own, $Pages/Play/Body/Bot, get_node(TEAM_BOTS[0]), get_node(TEAM_BOTS[1])]:
 		for id: String in ids:
 			selector.add_item(Registry.faction(id).display_name)
 			selector.set_item_metadata(selector.item_count - 1, id)
@@ -372,9 +403,14 @@ func _faction(selector: OptionButton) -> String:
 
 func _fill_maps() -> void:
 	var selector: OptionButton = $Pages/Play/Body/Map
+	# Only the full list shows the player's own pick as selected.
+	if selector.item_count == MatchSettings.PLAY_MAPS.size(): _map_pick = _map_id()
+	selector.clear()
 	for id: String in MatchSettings.PLAY_MAPS:
+		if opponent == "team" and _start_count(id) < TEAM_STARTS: continue
 		selector.add_item(MatchSettings.PLAY_MAPS[id])
 		selector.set_item_metadata(selector.item_count - 1, id)
+	_select_id(selector, _map_pick)
 
 func _map_id() -> String:
 	var selector: OptionButton = $Pages/Play/Body/Map
@@ -420,6 +456,7 @@ func _show_countdown(now_msec: int) -> void:
 
 func _connect(code: String) -> void:
 	_match = code
+	_settings = {}
 	_hello_sent = false
 	_welcome_msec = -1
 	_connect_msec = _now_msec()
@@ -435,7 +472,7 @@ func _connect(code: String) -> void:
 func _set_busy(busy: bool) -> void:
 	for path: String in ["Play", "Join"]: get_node("Pages/%s/Footer/CancelConnect" % path).visible = busy
 	for button_name: String in NAV_PAGES + ["Quit"]: _lock(get_node("Sidebar/Nav/" + button_name), busy)
-	for path: String in ["Play/Footer/Start", "Play/Footer/Create", "Play/Body/Advanced/RelayUrl", "Join/Body/Advanced/RelayUrl", "Join/Body/Code", "Join/Footer/Join", "Play/Body/Own", "Join/Body/Own", "Play/Body/Bot", "Play/Body/Map", "Play/Body/Opponent/BotToggle", "Play/Body/Opponent/FriendToggle"]:
+	for path: String in ["Play/Footer/Start", "Play/Footer/Create", "Play/Body/Advanced/RelayUrl", "Join/Body/Advanced/RelayUrl", "Join/Body/Code", "Join/Footer/Join", "Play/Body/Own", "Join/Body/Own", "Play/Body/Bot", "Play/Body/Map", "Play/Body/Opponent/BotToggle", "Play/Body/Opponent/FriendToggle", "Play/Body/Opponent/TeamToggle", "Play/Body/TeamBots/Bot3", "Play/Body/TeamBots/Bot4"]:
 		var control: Control = get_node("Pages/" + path)
 		if control is BaseButton: _lock(control, busy)
 		else: control.editable = not busy
@@ -462,7 +499,9 @@ func _process(_delta: float) -> void:
 	if _transport.is_open() and not _hello_sent:
 		_hello_sent = true
 		var hello: Dictionary = {"type": "hello", "protocol": Wire.PROTOCOL, "build": str(ProjectSettings.get_setting("application/config/version")), "match": _match}
-		if _match.is_empty(): hello["settings"] = MatchSettings.for_map(_map_id())
+		if _match.is_empty():
+			_settings = MatchSettings.for_map(_map_id(), _team_bots())
+			hello["settings"] = _settings
 		_transport.send_text(Wire.encode(hello))
 	for text in frames:
 		if _lockstep != null: _lockstep.receive(text)
@@ -495,13 +534,26 @@ func _handle(text: String) -> bool:
 		"start": return _start(message)
 		"error":
 			_transport.close()
-			_fail(DID_NOT_JOIN if message.reason == "lobby expired" else message.reason)
+			_fail(_relay_reason(message.reason))
 			return false
 		_:
 			_transport.close()
 			_fail("Protocol error: unexpected " + message.type)
 			return false
 	return true
+
+func _relay_reason(reason: String) -> String:
+	match reason:
+		"lobby expired": return DID_NOT_JOIN
+		"build mismatch": return VERSION_MISMATCH % ProjectSettings.get_setting("application/config/version")
+	return reason
+
+func _team_bots() -> Array:
+	var bots: Array = []
+	if opponent != "team": return bots
+	# Bot players follow the two relay seats.
+	for i in TEAM_BOTS.size(): bots.append({"player": 3 + i, "faction": _faction(get_node(TEAM_BOTS[i]))})
+	return bots
 
 func _fill_waiting() -> void:
 	var body: Control = $Pages/Waiting/Body
@@ -512,7 +564,26 @@ func _fill_waiting() -> void:
 	body.get_node("Left/One/Row/Faction").text = own.get_item_text(own.selected)
 	body.get_node("Right/Map/Box/Name").text = MatchSettings.PLAY_MAPS[id]
 	body.get_node("Right/Map/Box/Info").text = _map_info(id)
+	_fill_waiting_bots(body.get_node("Left"))
 	_show_countdown(_welcome_msec)
+
+func _fill_waiting_bots(left: Control) -> void:
+	var bots: Array = _settings.get("bots", [])
+	left.get_node("PlayersLabel").text = "Players" if bots.is_empty() else "Your team"
+	left.get_node("BotsLabel").visible = not bots.is_empty()
+	left.get_node("One").remove_theme_stylebox_override("panel")
+	if not bots.is_empty(): _paint_edge(left.get_node("One"), Palette.OWNER_BASE[0])
+	for i in WAITING_BOTS.size():
+		var row: Control = left.get_node(WAITING_BOTS[i])
+		row.visible = i < bots.size()
+		if not row.visible: continue
+		row.get_node("Row/Who").text = Registry.faction(bots[i].faction).display_name + " (bot)"
+		_paint_edge(row, Palette.OWNER_BASE[Palette.BOT_SLOTS[i][0]])
+
+func _paint_edge(row: Control, colour: Color) -> void:
+	var style: StyleBoxFlat = row.get_theme_stylebox("panel").duplicate()
+	style.border_color = colour
+	row.add_theme_stylebox_override("panel", style)
 
 func _start(message: Dictionary) -> bool:
 	var reason: String = MatchSettings.refusal(message.settings, message.seats.size())
@@ -522,12 +593,19 @@ func _start(message: Dictionary) -> bool:
 		return false
 	_lockstep = Lockstep.for_start(_seat, message)
 	var id: String = message.settings.map
+	var bots: Array[int] = MatchSettings.bot_players(message.settings)
+	# Wire numbers arrive as floats; integer keys, or the bots never get their factions.
+	var factions: Dictionary = {}
+	for i in bots.size(): factions[bots[i]] = message.settings.bots[i].faction
 	var picks: Dictionary = {"faction": _faction($Pages/Play/Body/Own)}
 	if _seat == 1: picks["map"] = id
+	if _seat == 1 and bots.size() == LauncherSettings.TEAM_BOT_KEYS.size():
+		for i in bots.size(): picks[LauncherSettings.TEAM_BOT_KEYS[i]] = factions[bots[i]]
 	LauncherSettings.save_picks(picks)
+	SkirmishMain.factions = factions
 	SkirmishMain.map_path = MatchSettings.map_path(id)
 	SkirmishMain.match_seed = message.seed
-	SkirmishMain.starts = MatchSettings.starts(id, message.seed)
+	SkirmishMain.starts = MatchSettings.starts(id, message.seed, MatchSettings.teams(message.seats.size(), bots.size()))
 	var game: Node = OnlineScene.instantiate()
 	game.setup(_transport, _lockstep, _seat, _faction($Pages/Play/Body/Own))
 	get_tree().root.add_child(game)

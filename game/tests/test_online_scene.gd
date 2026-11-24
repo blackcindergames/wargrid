@@ -863,7 +863,7 @@ func test_launcher_faction_rows(runner) -> bool:
 		await runner.process_frame
 		await runner.process_frame
 		var body: Control = page.get_node("Body")
-		runner.check(_row_texts(body) == ["You", "Map", "Own", "Map", "Opponent", launcher._map_info("dry_wells"), "Opponent", "Spacer1", "Bot", "Spacer2", "Bot", "Spacer3", "OpenSlot", "Spacer4", "Advanced"], "N25 Play body children at %s, got %s" % [size, _row_texts(body)])
+		runner.check(_row_texts(body) == ["You", "Map", "Own", "Map", "Mode", launcher._map_info("dry_wells"), "Opponent", "Spacer1", "", "Bot", "Spacer2", "Bot", "Spacer3", "OpenSlot", "Spacer4", "TeamBots", "Advanced"], "N25 Play body children at %s, got %s" % [size, _row_texts(body)])
 		runner.check(page.find_children("Own", "OptionButton", true, false).size() == 1, "N25 Play has one Own selector at %s" % size)
 		runner.check(page.get_node("Footer/Create").text == "Create match" and page.get_node("Footer/Start").text == "Start match", "N25 button texts kept at %s" % size)
 		var controls: Array[Control] = _faction_row_controls(page)
@@ -926,6 +926,7 @@ func test_plays_dry_wells_from_each_seat(runner) -> bool:
 	var before: String = SkirmishMain.map_path
 	var before_starts: Array[int] = SkirmishMain.starts
 	var before_seed: int = SkirmishMain.match_seed
+	var before_factions: Dictionary = SkirmishMain.factions
 	runner.check(before == "res://data/maps/skirmish.json", "N7 without the launcher the scenes keep the test map")
 	for seat in [1, 2]:
 		var launcher = Launcher.instantiate()
@@ -943,10 +944,11 @@ func test_plays_dry_wells_from_each_seat(runner) -> bool:
 	SkirmishMain.map_path = before
 	SkirmishMain.starts = before_starts
 	SkirmishMain.match_seed = before_seed
+	SkirmishMain.factions = before_factions
 	return true
 
 func test_online_start_saves_picks(runner) -> bool:
-	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var before := [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed, SkirmishMain.factions]
 	for seat in [1, 2]:
 		LauncherSettings.save_picks({"faction": "usa", "bot_faction": "china", "map": "dry_wells"})
 		var launcher = Launcher.instantiate()
@@ -964,6 +966,7 @@ func test_online_start_saves_picks(runner) -> bool:
 	SkirmishMain.map_path = before[0]
 	SkirmishMain.starts = before[1]
 	SkirmishMain.match_seed = before[2]
+	SkirmishMain.factions = before[3]
 	return true
 
 func test_offline_uses_chosen_map(runner) -> bool:
@@ -1128,6 +1131,7 @@ func test_both_seats_share_map_and_starts(runner) -> bool:
 	var before_path: String = SkirmishMain.map_path
 	var before_starts: Array[int] = SkirmishMain.starts
 	var before_seed: int = SkirmishMain.match_seed
+	var before_factions: Dictionary = SkirmishMain.factions
 	var chosen: Array[int] = MatchSettings.starts("ashfall", 11)
 	var raw: Dictionary = MapData.load(MatchSettings.map_path("ashfall"))
 	runner.check((chosen[0] - chosen[1] + 8) % 8 == 4, "N19 the seeded pair is diagonal, got %s" % str(chosen))
@@ -1149,6 +1153,7 @@ func test_both_seats_share_map_and_starts(runner) -> bool:
 	SkirmishMain.map_path = before_path
 	SkirmishMain.starts = before_starts
 	SkirmishMain.match_seed = before_seed
+	SkirmishMain.factions = before_factions
 	return true
 
 func test_host_told_opponent_left_before_start(runner) -> bool:
