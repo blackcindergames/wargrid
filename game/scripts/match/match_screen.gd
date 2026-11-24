@@ -213,21 +213,21 @@ func playtest_context() -> Dictionary:
 
 func playtest_match() -> Dictionary:
 	var played: Dictionary = driver.match_log()
-	return _match_record(played.mode, played.factions, played.commands).merged({"end": played.get("end", "")})
+	return _match_record(played, played.commands).merged({"end": played.get("end", "")})
 
 func playtest_header() -> Dictionary:
 	var played: Dictionary = driver.match_header()
-	return _header(played.mode, played.factions)
+	return _header(played)
 
-func _header(mode: String, match_factions: Array) -> Dictionary:
-	return {"mode": mode, "map": _map_id(), "seed": match_seed, "factions": match_factions, "seat": local_player, "controller": "human", "build": PlaytestSettings.build_id()}
+func _header(played: Dictionary) -> Dictionary:
+	return {"mode": played.mode, "map": _map_id(), "seed": match_seed, "factions": played.factions, "teams": played.teams, "bots": played.bots, "seat": local_player, "controller": "human", "build": PlaytestSettings.build_id()}
 
 func _map_id() -> String:
 	return map_path.get_file().get_basename()
 
-func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
+func _match_record(header: Dictionary, lines: PackedStringArray) -> Dictionary:
 	var record: Dictionary = driver.record()
-	var played: Dictionary = _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines, "accidental_cancels": orders.accidental_cancels, "next_clicks": hud.next_clicks})
+	var played: Dictionary = _header(header).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines, "accidental_cancels": orders.accidental_cancels, "next_clicks": hud.next_clicks})
 	if record.has("tick_hashes"): played.tick_hashes = record.tick_hashes
 	return played
 

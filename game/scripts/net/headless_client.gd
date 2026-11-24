@@ -42,6 +42,7 @@ func _ready() -> void:
 	var arg_error: String = _faction_error()
 	if arg_error == "": arg_error = _defeat_error()
 	if arg_error == "": arg_error = _controller_error()
+	if arg_error == "": arg_error = _bots_error()
 	if arg_error != "":
 		printerr(arg_error)
 		get_tree().quit(2)
@@ -80,7 +81,7 @@ func _pre_start() -> void:
 		_hello_sent = true
 		var build: String = _args.get("build", str(ProjectSettings.get_setting("application/config/version")))
 		var hello: Dictionary = {"type": "hello", "protocol": Wire.PROTOCOL, "build": build, "match": "" if _args.get("match", "new") == "new" else _args["match"]}
-		if _args.get("match", "new") == "new": hello["settings"] = MatchSettings.for_map(_map_id())
+		if _args.get("match", "new") == "new": hello["settings"] = MatchSettings.for_map(_map_id(), _bots_arg())
 		_transport.send_text(Wire.encode(hello))
 
 func _receive(frames: PackedStringArray) -> void:
@@ -126,13 +127,12 @@ func _start(message: Dictionary) -> void:
 		return
 	var id: String = message.settings.map
 	_match_map = id
-	_match_seed = message.seed
+	_match_seed = _int_arg("seed") if _args.has("seed") else message.seed
 	var count: int = message.seats.size()
-	var teams: Array[int] = []
-	for seat in range(1, count + 1): teams.append(seat)
-	_chosen = MatchSettings.starts(id, _match_seed, teams)
-	print("NETCLIENT MAP ", id, " SEED ", message.seed, " STARTS ", ",".join(_chosen.map(str)) if not _chosen.is_empty() else "-")
-	_sim = _match_sim(id, _chosen, count)
+	var bots: Dictionary = _bot_factions(settings.get("bots", []))
+	_chosen = MatchSettings.starts(id, _match_seed, MatchSettings.teams(count, bots.size()))
+	print("NETCLIENT MAP ", id, " SEED ", _match_seed, " STARTS ", ",".join(_chosen.map(str)) if not _chosen.is_empty() else "-")
+	_sim = _match_sim(id, _chosen, count, bots)
 	_lockstep = Lockstep.for_start(_seat, message)
 	if _args.has("pump"):
 		_driver = OnlineDriver.new(_transport, _lockstep, _args.get("faction", Skirmish.default_faction()), _seat)
@@ -153,13 +153,26 @@ func _on_session(message: Dictionary) -> bool:
 	_start(message) # swap now so the peer's tick 4 in the same poll batch reaches the new lockstep
 	return true
 
-func _match_sim(id: String, chosen: Array[int], count: int = 2) -> Simulation:
-	return Skirmish.create(true, "human", {}, MatchSettings.map_path(id), chosen, count)
+func _match_sim(id: String, chosen: Array[int], count: int = 2, bots: Dictionary = {}) -> Simulation:
+	return Skirmish.create(true, "human", bots, MatchSettings.map_path(id), chosen, count + bots.size(), MatchSettings.teams(count, bots.size()))
+
+func _bot_factions(rows: Array) -> Dictionary:
+	var factions: Dictionary = {}
+	for row: Dictionary in rows: factions[int(row.player)] = row.faction
+	return factions
+
+func _bots_arg() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for entry in str(_args.get("bots", "")).split(",", false):
+		var parts: PackedStringArray = entry.split(":")
+		rows.append({"player": int(parts[0]), "faction": parts[1]})
+	return rows
 
 func _oracle_sim() -> Simulation:
 	var id: String = _map_id()
-	var chosen: Array[int] = MatchSettings.starts(id, int(_args.get("seed", "0")))
-	if not _args.has("factions"): return _match_sim(id, chosen)
+	var bots: Dictionary = _bot_factions(_bots_arg())
+	var chosen: Array[int] = MatchSettings.starts(id, int(_args.get("seed", "0")), MatchSettings.teams(2, bots.size()))
+	if not _args.has("factions"): return _match_sim(id, chosen, 2, bots)
 	var names: PackedStringArray = str(_args["factions"]).split(",")
 	return Skirmish.create(true, str(_args.get("controller", "ai")), {1: names[0], 2: names[1]}, MatchSettings.map_path(id), chosen)
 
@@ -246,16 +259,17 @@ func _test_hooks(tick: int) -> bool:
 
 func _apply_defeats(tick: int) -> void:
 	for seat: int in _defeats.get(tick, []):
-		while _remove_buildings(seat): pass
+		while _remove_owned(seat): pass
 		print("NETCLIENT DEFEAT ", seat, " AT ", tick)
 	_defeats.erase(tick)
 
-# Repeated because removed FRC buildings open rebuild holes, which count for victory.
-func _remove_buildings(seat: int) -> bool:
+# Repeated because removed FRC buildings open rebuild holes, which count for victory; units go too so no builder can fill one.
+func _remove_owned(seat: int) -> bool:
 	var removed: bool = false
-	for building: Dictionary in _sim.snapshot().buildings:
-		if building.owner == seat:
-			_sim.remove_object(building.id)
+	var state: Dictionary = _sim.snapshot()
+	for row: Dictionary in state.buildings + state.entities:
+		if row.owner == seat:
+			_sim.remove_object(row.id)
 			removed = true
 	return removed
 
@@ -387,6 +401,19 @@ func _faction_error() -> String:
 func _controller_error() -> String:
 	var controller: String = str(_args.get("controller", "ai"))
 	return "" if controller in ["human", "ai"] else "Unknown --controller '%s'; expected human or ai" % controller
+
+func _bots_error() -> String:
+	if not _args.has("bots"): return ""
+	if _args.has("factions"): return "--bots cannot be combined with --factions"
+	var known: String = ", ".join(Registry.Factions.FACTIONS.keys())
+	var seen: Array[int] = []
+	for entry in str(_args.bots).split(","):
+		var parts: PackedStringArray = entry.split(":")
+		if parts.size() != 2 or not parts[0].is_valid_int(): return "Bad --bots entry '%s'; expected PLAYER:FACTION[,PLAYER:FACTION]" % entry
+		if parts[0].to_int() < 3 or seen.has(parts[0].to_int()): return "Bad --bots player '%s'; bots are players 3 and up, each once" % parts[0]
+		seen.append(parts[0].to_int())
+		if Registry.faction(parts[1]).is_empty(): return "Unknown --bots faction '%s'; expected one of: %s" % [parts[1], known]
+	return ""
 
 func _defeat_error() -> String:
 	if not _args.has("defeat"): return ""

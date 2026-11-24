@@ -25,6 +25,7 @@ const Profiler = preload("res://scripts/debug/profiler.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
 const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
+const ReplayTests = preload("res://tests/test_playtest_replay.gd")
 const PEER_TICKS: int = 60
 const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
 
@@ -69,7 +70,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_joiner_counts_bots_from_the_seat_count, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_space_never_leaves_the_result_card, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_online_builder_lost_in_the_click_step, test_online_builder_lost_in_the_drained_tick,test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_refused_cancel_marks_nothing, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_f33_online_red_ghost_refused_after_two_callbacks, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected, test_four_seat_create_teams, test_default_create_with_teams_unchanged, test_2v2_rematch_keeps_bots_teams_and_allowed, test_2v2_create_sets_viewer_colours, test_right_click_teammate_moves]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_joiner_counts_bots_from_the_seat_count, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_space_never_leaves_the_result_card, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_online_builder_lost_in_the_click_step, test_online_builder_lost_in_the_drained_tick,test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_refused_cancel_marks_nothing, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_f33_online_red_ghost_refused_after_two_callbacks, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected, test_four_seat_create_teams, test_default_create_with_teams_unchanged, test_2v2_rematch_keeps_bots_teams_and_allowed, test_2v2_create_sets_viewer_colours, test_right_click_teammate_moves, test_online_2v2_record_replays]
 
 func _online(runner, seat: int, with_bots: bool = false) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -1372,6 +1373,36 @@ func test_online_playtest_record(runner) -> bool:
 	runner.check(record.commands == Lockstep.log_lines(online.lockstep.command_log()) and record.commands.size() >= 1, "N-PT1 the record holds the lockstep command lines")
 	runner.check(main.playtest_context().over == false, "N-PT1 a running online match is not over")
 	main.free()
+	return true
+
+func test_online_2v2_record_replays(runner) -> bool:
+	var before: Array = _statics()
+	var online: Dictionary = await _online(runner, 1, true)
+	var main = online.main
+	SkirmishMain.match_seed = 7
+	_peer_packets(online.transport, 2, 4, 140)
+	_run(main, 120)
+	var record: Dictionary = main.playtest_match()
+	runner.check(record.get("teams") == [1, 1, 2, 2] and record.get("bots") == [{"player": 3, "faction": "china"}, {"player": 4, "faction": "frc"}], "T25 a 2v2 record carries teams and bots, got %s %s" % [record.get("teams"), record.get("bots")])
+	var bot_lines: int = 0
+	for line in record.commands:
+		for command: Dictionary in Wire.decode(line).message.commands:
+			if command.player in [3, 4]: bot_lines += 1
+	runner.check(bot_lines > 0 and record.end_tick > 100, "T25 the record holds bot orders, got %d by tick %d" % [bot_lines, record.end_tick])
+	var bots: Array = record.bots.map(func(bot: Dictionary) -> String: return "%d:%s" % [int(bot.player), bot.faction])
+	var args := {"map": record.map, "seed": str(int(record.seed)), "bots": ",".join(bots), "oracle-ticks": str(record.end_tick)}
+	var path := "user://t25-replay-%d.log" % OS.get_process_id()
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string("\n".join(record.commands) + "\n")
+	file.close()
+	var client = ReplayTests.OracleClient.new()
+	client._args = args.merged({"replay-log": path})
+	client._replay_oracle()
+	DirAccess.remove_absolute(path)
+	runner.check(client._sim.tick() == record.end_tick and StateHash.digest(client._sim.snapshot()) == record.end_digest, "T25 the recorded 2v2 header and log replay to the recorded digest")
+	client.free()
+	main.free()
+	_restore_statics(before)
 	return true
 
 func _launcher(runner, parent: Node, prerelease: bool, search: String = "", page: String = "", first_visit: bool = true):

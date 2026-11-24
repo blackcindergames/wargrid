@@ -282,8 +282,9 @@ func over() -> bool:
 	return _finished
 
 func match_header() -> Dictionary:
-	var seats: Array = current().view.players.map(func(player: Dictionary) -> String: return player.get("faction", ""))
-	return {"mode": "online", "factions": seats}
+	var players: Array = current().view.players
+	var bots: Array = players.filter(func(player: Dictionary) -> bool: return bot_players().has(player.id)).map(func(player: Dictionary) -> Dictionary: return {"player": player.id, "faction": player.get("faction", "")})
+	return {"mode": "online", "factions": players.map(func(player: Dictionary) -> String: return player.get("faction", "")), "teams": teams(), "bots": bots}
 
 func match_log() -> Dictionary:
 	return match_header().merged({"commands": Lockstep.log_lines(_lockstep.command_log()), "end": (_lockstep.status() + " " + _lockstep.end_reason()).strip_edges()})

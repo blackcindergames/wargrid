@@ -201,7 +201,7 @@ func detach() -> void:
 	pass
 
 func match_header() -> Dictionary:
-	return {"mode": "offline", "factions": [_factions[1], _factions[2]]}
+	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "teams": [1, 2], "bots": []}
 
 func match_log() -> Dictionary:
 	var played: Dictionary = pump.record()

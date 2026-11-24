@@ -129,6 +129,7 @@ def replay_rows(session: dict, path: Path) -> list[str]:
             ticks,
             m.get("controller") or "-",
             _build(session, m),
+            ",".join(f"{int(bot['player'])}:{bot['faction']}" for bot in m.get("bots") or []) or "-",
         ]
         rows.append("\t".join(row))
     return rows
