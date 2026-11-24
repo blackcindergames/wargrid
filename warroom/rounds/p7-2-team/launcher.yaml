@@ -2,14 +2,14 @@
 kind: gallery
 question: Play page, waiting view and version line as drawn
 why: >-
-  T2-7 builds these. The mode row replaces the Bot and Friend toggles under a new label, Mode, since
-  "Opponent" does not fit a mode where your friend is on your side; the third toggle hugs its text (195 px)
-  and the other two share the rest of the 544 px column. The team path shows the friend's open slot and
+  T2-7 builds these. The mode row keeps the Bot and Friend toggles under a new label, Mode, since
+  "Opponent" does not fit a mode where your friend is on your side; under vs Friend an Opponents choice,
+  none or 2 bots (user, 2026-11-24, after the 2v2 match; it replaced a third toggle). The 2 bots path shows the friend's open slot and
   two enemy bot pickers, each the remembered pick, else the default; maps with fewer than four starts are
   hidden, and a muted line under the map info says why. The team path's subtitle names the mode. The
   waiting view groups the seats as the end panel does, each row with its owner colour on the left edge.
   The version line replaces the raw "build mismatch"; the relay refuses only the joiner, so the host
-  never learns of it (P8) and the line tells the guest how the pair starts again.
+  never learns of it (P8).
 items:
 - id: play-bot
   label: vs Bot
@@ -17,11 +17,11 @@ items:
   render: {state: play, params: {mode: bot}}
 - id: play-friend
   label: vs Friend
-  caption: The friend path, 1v1 as today.
+  caption: The friend path with Opponents none, 1v1 as today.
   render: {state: play, params: {mode: friend}}
 - id: play-team
-  label: With a friend vs 2 bots
-  caption: Open slot for your friend, then Enemy bots with two faction pickers; Create match.
+  label: vs Friend, 2 bots
+  caption: Opponents 2 bots; open slot for your friend, then Enemy bots with two faction pickers; Create match.
   render: {state: play, params: {mode: team}}
 - id: play-team-hidden
   label: Hidden map

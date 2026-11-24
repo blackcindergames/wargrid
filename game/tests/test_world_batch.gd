@@ -17,7 +17,7 @@ const DEUTAN: Array = [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.0
 const MIN_DELTA_E: float = 20.0
 
 func cases() -> Array[Callable]:
-	return [test_sort_key_orders_layers_then_depth, test_unit_in_front_of_factory_draws_later, test_unit_behind_factory_draws_earlier, test_air_kind_draws_above_ground, test_build_one_submission, test_empty_state, test_rise_from_work, test_damage_stage_edges, test_building_rises_with_work, test_supply_stack_shrinks, test_small_pile_inside_footprint, test_shadow_only_with_flag, test_lab_roles_mapped, test_back_to_front_across_objects, test_lifts_clear_unit_height, test_top_lift_by_role, test_golden_output, test_shot_dash, test_depth_order_matches_sorted, test_unit_item_rewrite_leaves_nothing_stale, test_structure_items_follow_units, test_team_colours_by_viewer, test_team_colours_delta_e, test_colour_remap_reset_between_matches, test_one_v_one_colours_unchanged]
+	return [test_sort_key_orders_layers_then_depth, test_unit_in_front_of_factory_draws_later, test_unit_behind_factory_draws_earlier, test_air_kind_draws_above_ground, test_build_one_submission, test_empty_state, test_rise_from_work, test_damage_stage_edges, test_building_rises_with_work, test_supply_stack_shrinks, test_small_pile_inside_footprint, test_shadow_only_with_flag, test_lab_roles_mapped, test_back_to_front_across_objects, test_lifts_clear_unit_height, test_top_lift_by_role, test_golden_output, test_shot_dash, test_depth_order_matches_sorted, test_unit_item_rewrite_leaves_nothing_stale, test_structure_items_follow_units, test_team_colours_by_player, test_team_colours_delta_e, test_colour_remap_reset_between_matches, test_one_v_one_colours_unchanged]
 
 func _find(items: Array[Dictionary], id: int) -> Dictionary:
 	for item in items:
@@ -380,15 +380,13 @@ func _ring_colours(batch) -> Array[Color]:
 		if colour.a < 1.0 and not found.has(opaque): found.append(opaque)
 	return found
 
-func test_team_colours_by_viewer(runner) -> bool:
+func test_team_colours_by_player(runner) -> bool:
 	var sets := {false: ["628ffa", "0e92a7", "d6120c", "ec8600"], true: ["2f7bff", "00d8e8", "ff2f45", "ff7a00"]}
 	var bots: Array[int] = [3, 4]
-	for local: int in [1, 2]:
-		var mate: int = 3 - local
-		Palette.set_team_colours(local, mate, bots)
-		for bright: bool in [false, true]:
-			var got: Array = [local, mate, 3, 4].map(func(owner: int) -> String: return View.owner_color(owner, bright).to_html(false))
-			runner.check(got == sets[bright], "TC1 viewer %d, Neon %s: you, teammate, bot 3, bot 4 are %s, got %s" % [local, bright, sets[bright], got])
+	Palette.set_team_colours(1, 2, bots)
+	for bright: bool in [false, true]:
+		var got: Array = [1, 2, 3, 4].map(func(owner: int) -> String: return View.owner_color(owner, bright).to_html(false))
+		runner.check(got == sets[bright], "TC1 Neon %s: host, guest, bot 3, bot 4 are %s, got %s" % [bright, sets[bright], got])
 	Palette.clear_team_colours()
 	return true
 

@@ -58,7 +58,8 @@ func _init(web: bool = OS.has_feature("web")) -> void:
 	_confirm = _panel(center, "Confirm", box)
 	_question = _label("", &"HudSmallLabel")
 	_question.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_question.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# One line, the box widening to fit: the owner found a wrapped question hard to read (2v2 match, 2026-11-24).
+	_question.autowrap_mode = TextServer.AUTOWRAP_OFF
 	box.add_child(_question)
 	_confirm_button = _button(box, "", func() -> void: _on_confirm.call())
 	_cancel = _button(box, "Cancel", _show_main)

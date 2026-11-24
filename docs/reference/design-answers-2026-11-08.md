@@ -1651,21 +1651,23 @@ Plan written 2026-11-24 ([plan](../superpowers/plans/2026-11-24-p7-2-team-online
 
 - **Names (Q1):** `<name>` is the result-row name with a short faction tag (`P2 USA`; tags USA, China, FRC); start line "You and P1 USA vs 2 bots (China, FRC)" (decided for the owner, 2026-11-24).
 - **1v1 leave line (Q2):** 7-20's line also replaces 1v1's "Your opponent left", under F27's Victory heading (decided for the owner, 2026-11-24).
-- **Colours by viewer (Q3):** by viewer and by colour, not by slot, since the Neon set swaps slots 5 and 7 (user, 2026-11-24).
-- **Colour values (Q4):** base you `#628ffa`, teammate `#0e92a7`, bots `#d6120c` and `#ec8600`; Neon you `#2f7bff`, teammate `#00d8e8`, bots `#ff2f45` and `#ff7a00`; the ΔE76 test covers both sets, normal and deuteranopia (user, 2026-11-24).
+- **Colours by player (Q3):** the host (player 1) is always blue and the guest (player 2) teal, in both windows; by colour, not by slot, since the Neon set swaps slots 5 and 7; replaces Q3's "by viewer" (user, 2026-11-24, after the 2v2 match).
+- **Colour values (Q4):** base host `#628ffa`, guest `#0e92a7`, bots `#d6120c` and `#ec8600`; Neon host `#2f7bff`, guest `#00d8e8`, bots `#ff2f45` and `#ff7a00`; the ΔE76 test covers both sets, normal and deuteranopia (user, 2026-11-24; host and guest for Q4's you and teammate, user, 2026-11-24, after the 2v2 match).
 - **Where (Q5):** only in matches with a human teammate; offline and 1v1 keep today's colours (user, 2026-11-24).
 - **Ping key (Q6):** `G`, checked in browsers at the gate (decided for the owner, 2026-11-24).
 - **Ping button (Q7):** shown only with a human teammate (decided for the owner, 2026-11-24).
 - **2v2 records (Q8):** replayable; the header gains `teams` and `bots` (decided for the owner, 2026-11-24).
 - **Rendered 2v2 row (Q9):** a scripted four-bot 2v2 on Ashfall, a gate task (decided for the owner, 2026-11-24).
+- **Leave and quit questions:** each is one line in the confirm box, which widens to fit its text, never wrapped or split into two lines; the wording of every variant stays (user, 2026-11-24, after the 2v2 match, where "Leave the match? The match ends for / your friend too." wrapped in the 244 px box).
 - **Defeated host's leave (Q10):** "You run the bots. Leaving ends the match for your friend.", with truthful 2v2 guest leave and quit questions (decided for the owner, 2026-11-24).
 - **Host-left heading (Q11):** "Match ended", with 7-21's line under it (decided for the owner, 2026-11-24).
 - **Refused send (Q12):** its own status `ended_send` with the relay-lost line; P8 words the reason (decided for the owner, 2026-11-24).
 - **Mock-up review (Q13):** the player-experience reviewer on a static mock-up, plus an advisory War Room round that never blocks (user, 2026-11-24).
 - **Approvals (Q14):** one local commit per green task on `p7-2-team-online`; one push of that branch at the gate, after the owner's match; never `main`, no merge, no deploy (user, 2026-11-24).
 
-- **Play page (7-16):** one row `vs Bot · vs Friend · With a friend vs 2 bots`, no A/B (user, 2026-11-21); replaces the Play page A/B of [Online teams refinement](#online-teams-refinement-user-2026-11-16) and of the [online teams design](../superpowers/specs/2026-11-16-online-teams-design.md).
+- **Play page (7-16):** two modes, `vs Bot · vs Friend`; under vs Friend an Opponents choice, "none" (1v1 against your friend) or "2 bots" (you and your friend against two bots), the two bot faction rows only for "2 bots"; no A/B (user, 2026-11-24, after the 2v2 match); replaces 7-16's three-entry row `vs Bot · vs Friend · With a friend vs 2 bots` (user, 2026-11-21), which replaced the Play page A/B of [Online teams refinement](#online-teams-refinement-user-2026-11-16) and of the [online teams design](../superpowers/specs/2026-11-16-online-teams-design.md).
 - **Version mismatch (7-17):** a static mock-up checked by the player-experience reviewer, no A/B (user, 2026-11-21); replaces the version-message A/B of the online teams design.
+- **Version line:** exactly "Your friend’s game is a different version from yours (v<version>).", the second sentence ("Whoever is behind updates or reloads, then the host creates a new match.") dropped; replaces the plan's 7-17 wording (user, 2026-11-24, War Room round `p7-2-team`).
 - **Who left (7-20):** "<name> left the match" for every leave; the reasons (quit, connection lost, did not return in 60 s) come with P8 (user, 2026-11-21); defers the reasons of the online teams design's teammate-quit rule to P8; the panel still names who left.
 - **Stall text (7-18):** "Waiting for your teammate…" (user, 2026-11-21).
 - **Bot marker (7-19):** `P3 FRC (bot)` in lists (user, 2026-11-21).
@@ -1679,6 +1681,7 @@ Plan written 2026-11-24 ([plan](../superpowers/plans/2026-11-24-p7-2-team-online
 - **Invite link (7-28):** carries no settings (user, 2026-11-21).
 - **Start countdown (7-29):** none; it stays P11 (user, 2026-11-21).
 - **Quit panel (7-30):** heading "Match ended", no winner, after a teammate quits (user, 2026-11-21).
+- **Own colour and start position:** choosing your own colour and start position goes into P11's lobby (user, 2026-11-24).
 
 ### P15
 

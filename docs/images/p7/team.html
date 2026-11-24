@@ -35,6 +35,7 @@ main{position:relative;width:1280px;height:720px;transform-origin:top left;overf
 .toggles{display:flex;gap:6px}
 .toggles span{flex:1 1 0;min-width:max-content;height:43px;padding:12px;text-align:center;font-weight:600;color:var(--soft);background:var(--field);border-radius:2px;white-space:nowrap}
 .toggles span.on{background:var(--sel)}
+.toggles .vlabel{width:96px;align-self:center}
 .slotgap{padding:28px 16px 12px;margin-top:-16px;position:relative;display:flex;gap:12px;align-items:baseline}
 .slotgap::before{content:'';position:absolute;left:0;right:0;bottom:0;top:16px;border:1px dashed var(--edge)}
 .stack{display:flex;flex-direction:column;gap:8px}
@@ -77,8 +78,8 @@ kbd{display:inline-block;min-width:18px;height:18px;padding:0 4px;font:700 12px/
 .off,.off span{color:#808080}
 .primary.off{background:#9a8150;color:var(--ink)}
 /* Esc menu confirm box, as docs/images/esc-round/esc.html draws it (HudSmallPanel, HudSmallButton). */
-.small{width:244px;background:rgba(26,26,26,.6);padding:8px 12px;display:flex;flex-direction:column;gap:4px}
-.small .q{text-align:center;font:400 12px/14px Public;margin-bottom:4px}
+.small{min-width:244px;background:rgba(26,26,26,.6);padding:8px 12px;display:flex;flex-direction:column;gap:4px}
+.small .q{white-space:nowrap;text-align:center;font:400 12px/14px Public;margin-bottom:4px}
 .small span{height:22px;padding:4px;font:600 12px/14px Public;color:#dfdfdf;background:rgba(26,26,26,.6);text-align:center}
 .small span.focus{box-shadow:0 0 0 2px #ccc}
 /* Result card */
@@ -114,8 +115,9 @@ const web=os==='web';
 const who=opt('who',view==='end'&&end==='left'?'host':'guest',['host','guest','out']);
 const host=who==='host';
 const VERSION='0.17.0';
-// Owner answers Q4 (user, 2026-11-24): colours by viewer, base and Neon.
-const C={base:{you:'#628ffa',mate:'#0e92a7',b3:'#d6120c',b4:'#ec8600'},neon:{you:'#2f7bff',mate:'#00d8e8',b3:'#ff2f45',b4:'#ff7a00'}}[set];
+// Colours by player (user, 2026-11-24, after the 2v2 match): the host blue, the guest teal in both windows, base and Neon.
+const PC={base:{host:'#628ffa',guest:'#0e92a7',b3:'#d6120c',b4:'#ec8600'},neon:{host:'#2f7bff',guest:'#00d8e8',b3:'#ff2f45',b4:'#ff7a00'}}[set];
+const C={you:host?PC.host:PC.guest,mate:host?PC.guest:PC.host,b3:PC.b3,b4:PC.b4};
 const ME=host?'P1 USA':'P2 China', MATE=host?'P2 China':'P1 USA';
 const sq=c=>`<i class="sq" style="background:${c}"></i>`;
 const main=document.querySelector('main');
@@ -131,13 +133,14 @@ const footer=(status,buttons,error)=>`<div class="divider"></div><div class="foo
 function play(){
   const team=mode==='team', bot=mode==='bot';
   const map=team?'Broken Crown':'Dry Wells', info=team?'4 start positions · 8 supply sources':'2 start positions · 16 supply sources';
-  const toggles=`<div class="toggles${off}" id="mode"><span class="${bot?'on':''}">vs Bot</span><span class="${mode==='friend'?'on':''}">vs Friend</span><span class="${team?'on':''}">With a friend vs 2 bots</span></div>`;
+  const toggles=`<div class="toggles${off}" id="mode"><span class="${bot?'on':''}">vs Bot</span><span class="${bot?'':'on'}">vs Friend</span></div>`;
+  const versus=`<div class="toggles${off}" id="versus"><b class="vlabel">Opponents</b><span class="${team?'':'on'}">none</span><span class="${team?'on':''}">2 bots</span></div>`;
   const slot='<div class="slotgap"><span>Open slot</span><span class="hint">Your friend picks their own faction.</span></div>';
   const mapInfo=`<div class="stack" style="align-self:start;gap:4px"><div class="hint">${info}</div>${team&&hidden?'<div class="hint" id="hidden">Dry Wells has 2 start positions; team matches need 4.</div>':''}</div>`;
   const cells=['<div class="flabel">You</div>','<div class="flabel">Map</div>',field('United States'),field(map),
     '<div class="flabel">Mode</div>',mapInfo,toggles,'<div></div>'];
   if(bot) cells.push('<div class="flabel">Bot</div>','<div></div>',field('China'),'<div></div>');
-  else cells.push(slot,'<div></div>');
+  else cells.push(versus,'<div></div>',slot,'<div></div>');
   if(team) cells.push(`<div class="stack" id="bots"><div class="flabel">Enemy bots</div>${field('China')}${field('Free Resistance Coalition')}</div>`,'<div></div>');
   const status=busy?'Connecting… 2 s':bot?'Dry Wells · United States vs China bot':'You get a link to send to your friend.';
   const buttons=busy?'<div class="secondary">Cancel</div><div class="primary off">Create match</div>':`<div class="primary">${bot?'Start match':'Create match'}</div>`;
@@ -151,7 +154,7 @@ function waiting(){
   const left=`<div class="flabel">${web?'Invite link':'Match code'}</div>
     <div style="display:flex;gap:12px"><div class="field" style="flex:1;color:#ebebeb">${web?'https://play.wargrid.example/?code=K7Q2XD':'K7Q2XD'}</div><div class="primary" style="min-width:0">${web?'Copy link':'Copy code'}</div></div>
     <div class="hint">Or tell them the code: <b style="color:#fff">K7Q2XD</b></div>
-    <div class="flabel">Your team</div>${row(1,'You','United States',C.you)}
+    <div class="flabel">Your team</div>${row(1,'You','United States',PC.host)}
     <div class="open"><span>2</span><span>Open</span><span class="hint">waiting for your friend…</span></div>
     <div class="flabel">Enemy bots</div>${row(3,'China (bot)','',C.b3)}${row(4,'Free Resistance Coalition (bot)','',C.b4)}`;
   const right='<div class="flabel">Map</div><div class="mappanel"><span class="bold">Broken Crown</span><span class="hint">4 start positions · 8 supply sources</span></div>';
@@ -162,7 +165,7 @@ function waiting(){
 
 function join(){
   // The relay refuses only the joiner (relay/room.go join), so the line must tell the guest how the pair gets going again.
-  const line=`Your friend’s game is a different version from yours (v${VERSION}). Whoever is behind updates or reloads, then the host creates a new match.`;
+  const line=`Your friend’s game is a different version from yours (v${VERSION}).`;
   const cells=['<div class="flabel">Match code</div>','<div class="flabel">Map</div>',
     '<div class="field" style="height:50px">K7Q2XD</div>','<div class="hint" style="align-self:start">The host chooses the map.</div>',
     '<div class="hint">Opened a join link? The code is already filled in.</div>','<div></div>',

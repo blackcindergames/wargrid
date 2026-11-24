@@ -226,6 +226,7 @@ func test_online_leave_text_and_focus(runner) -> bool:
 		var question: Label = menu.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree())[0]
 		runner.check(question.text == "Leave the match? Your opponent wins and the room closes.", "E9 the leave question says what happens, got '%s'" % question.text)
 		runner.check(Rect2(Vector2.ZERO, Vector2(size)).encloses(question.get_global_rect()) and question.get_global_rect().size.y > 0.0, "E9 the question sits inside %s, rect %s" % [size, question.get_global_rect()])
+		await _confirm_on_one_line(runner, main, Rect2(Vector2.ZERO, Vector2(size)), "E9 1v1 leave at %s" % size, [PauseMenu.LEAVE_QUESTION])
 		var cancel: Button = menu.find_children("*", "Button", true, false).filter(func(button: Button) -> bool: return button.text == "Cancel")[0]
 		runner.check(main.get_viewport().gui_get_focus_owner() == cancel, "E9 Cancel has the focus")
 		var enter := InputEventKey.new()
@@ -235,6 +236,8 @@ func test_online_leave_text_and_focus(runner) -> bool:
 			enter.pressed = pressed
 			main.get_viewport().push_input(enter.duplicate())
 		runner.check(transport.close_calls == 0 and scenes.is_empty() and not menu.is_confirming(), "E9 Enter on the confirmation does not leave, calls %d" % transport.close_calls)
+		_click(main, "Quit")
+		await _confirm_on_one_line(runner, main, Rect2(Vector2.ZERO, Vector2(size)), "E9 1v1 quit at %s" % size, [PauseMenu.QUIT_QUESTION])
 		port.queue_free()
 	return true
 
@@ -656,28 +659,33 @@ func test_2v2_guest_questions(runner) -> bool:
 	online_tests._restore_statics(before)
 	return true
 
+# The owner's 2v2 match: a wrapped question read badly, so each is one line in one label, the box widening to fit.
+func _confirm_on_one_line(runner, main, screen: Rect2, label: String, texts: Array) -> void:
+	await runner.process_frame
+	await runner.process_frame
+	var box: Control = main.get_node("HUD/PauseMenu").find_child("Confirm", true, false)
+	var shown: Array = box.find_children("*", "Label", true, false).filter(func(each: Label) -> bool: return each.is_visible_in_tree())
+	var question: Label = shown[0]
+	runner.check(shown.size() == 1 and question.text in texts and question.get_line_count() == 1, "%s: one question label on one line, got %d labels, '%s' on %d lines" % [label, shown.size(), question.text, question.get_line_count()])
+	runner.check(screen.grow(-16.0).encloses(box.get_global_rect()) and box.get_global_rect().encloses(question.get_global_rect()) and question.size.x >= question.get_minimum_size().x, "%s: the box fits its question inside the 16 px margin, rect %s box %s" % [label, question.get_global_rect(), box.get_global_rect()])
+
 func test_2v2_questions_layout(runner) -> bool:
 	var online_tests = OnlineTests.new()
 	var before: Array = online_tests._statics()
 	for pair: Array in BaseScene.HUD_SIZES:
 		var size: Vector2i = pair[1]
 		var screen := Rect2(Vector2.ZERO, Vector2(size))
-		for seat: int in [1, 2]:
+		for seat: int in [1, 2, 3]:
 			var port := BaseScene.sized_port(runner, pair[0], size)
-			var online: Dictionary = await _team_match(runner, online_tests, seat, port)
+			var online: Dictionary = await _team_match(runner, online_tests, mini(seat, 2), port)
 			var main = online.main
-			if seat == 2:
+			if seat == 3:
 				SeatFixture.defeat(main.driver.pump.live(), 2)
 				online_tests._run(main, 2)
-			var menu: Control = main.get_node("HUD/PauseMenu")
 			for button: String in ["Leave match", "Quit"]:
 				main._pause.open()
 				_click(main, button)
-				await runner.process_frame
-				await runner.process_frame
-				var question: Label = menu.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree())[0]
-				var box: Rect2 = menu.find_child("Confirm", true, false).get_global_rect()
-				runner.check(question.text in [HOST_LEAVE, HOST_QUIT, OUT_LEAVE, OUT_QUIT] and screen.encloses(box) and box.encloses(question.get_global_rect()) and question.get_global_rect().size.y > 0.0, "T26 seat %d %s question inside its box inside %s, '%s' rect %s box %s" % [seat, button, size, question.text, question.get_global_rect(), box])
+				await _confirm_on_one_line(runner, main, screen, "T26 seat %d %s at %s" % [seat, button, size], [HOST_LEAVE, HOST_QUIT, GUEST_LEAVE, GUEST_QUIT, OUT_LEAVE, OUT_QUIT])
 				_click(main, "Cancel")
 				main._pause.close()
 			port.queue_free()

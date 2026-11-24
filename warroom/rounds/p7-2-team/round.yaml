@@ -4,14 +4,13 @@ advisory: true
 intro: >-
   Advisory (user, 2026-11-24, Q13): the 2v2 slice builds from this mock-up and the player-experience
   reviewer's pass; nothing waits on this round. An unanswered step ships as drawn; a note goes into the
-  package before its gate. Decided, not asked: the mode row's three modes (7-16), "Waiting for your
+  package before its gate. Decided, not asked: the mode row (7-16; two modes since the owner's 2v2 match, vs Friend with an Opponents choice), "Waiting for your
   teammate…" (7-18), `(bot)` on bot rows (7-19), "<name> left the match" (7-20), "The host left. The
   match is over." (7-21), every bot slot in the waiting view (7-26), the muted line for a hidden map
   (7-27), "Match ended" with no winner after a leave (7-30, Q11), the start line (Q1) and the colours
-  (Q3-Q5, base and Neon by viewer). Every picture is 1280 x 720; the host is P1 USA, the guest P2 China,
+  (Q3-Q5, base and Neon; by player since the owner's 2v2 match: the host blue, the guest teal). Every picture is 1280 x 720; the host is P1 USA, the guest P2 China,
   and the match screens show the guest's view except the host's leave question and the teammate-left
-  panel. Equal-width mode toggles were tried and do not fit: the third label needs 171 px, a third of
-  the column leaves 153. Y switches the world to the Neon colours, Shift+C to colour-vision filters. Pings
+  panel. Y switches the world to the Neon colours, Shift+C to colour-vision filters. Pings
   (key G, the Ping button only with a human teammate) come after the owner's first 2v2 match.
   Source and 2x pictures: docs/images/p7/ (team.html).
 steps: [launcher, ending, ping, words]

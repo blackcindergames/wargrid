@@ -28,10 +28,11 @@ const SHELL: Array[String] = ["SidebarBg", "ContentBg", "Sidebar", "Pages"]
 const OWNS: Array[String] = ["Pages/Play/Body/Own", "Pages/Join/Body/Own"]
 const FOLDS: Array[String] = ["Pages/Play/Body/Advanced", "Pages/Join/Body/Advanced"]
 const BOT_ONLY: Array[String] = ["Body/BotLabel", "Body/Spacer2", "Body/Bot", "Body/Spacer3", "Footer/Start"]
-const FRIEND_ONLY: Array[String] = ["Body/OpenSlot", "Body/Spacer4", "Footer/Create"]
+const FRIEND_ONLY: Array[String] = ["Body/Versus", "Body/Spacer5", "Body/OpenSlot", "Body/Spacer4", "Footer/Create"]
 const TEAM_ONLY: Array[String] = ["Body/TeamBots", "Body/MapHidden"]
 const TEAM_BOTS: Array[String] = ["Pages/Play/Body/TeamBots/Bot3", "Pages/Play/Body/TeamBots/Bot4"]
-const MODES: Dictionary = {"BotToggle": "bot", "FriendToggle": "friend", "TeamToggle": "team"}
+# The team mode is vs Friend with 2 bots as opponents (user, 2026-11-24, after the 2v2 match).
+const MODES: Dictionary = {"Opponent/BotToggle": ["bot"], "Opponent/FriendToggle": ["friend", "team"], "Versus/NoneToggle": ["friend"], "Versus/BotsToggle": ["team"]}
 const WAITING_BOTS: Array[String] = ["Three", "Four"]
 const TEAM_STARTS := 4
 # Page content is 960 px wide: leaves room for the 170 px button, the gap and the strip padding.
@@ -42,8 +43,7 @@ const DID_NOT_JOIN := "Your friend did not join in time"
 const PLAY_SUBTITLE := "Set up a match against a bot or a friend."
 const TEAM_SUBTITLE := "Team up with a friend against two bots."
 const MAP_HIDDEN := "%s has %d start positions; team matches need %d."
-# The relay refuses only the joiner (relay/room.go), so the line tells the guest how the pair starts again.
-const VERSION_MISMATCH := "Your friend’s game is a different version from yours (v%s). Whoever is behind updates or reloads, then the host creates a new match."
+const VERSION_MISMATCH := "Your friend’s game is a different version from yours (v%s)."
 var _transport: RefCounted
 var _clock: Callable = Time.get_ticks_usec
 var _connect_msec: int = 0
@@ -165,7 +165,7 @@ func _relay_url() -> String:
 func set_opponent(kind: String) -> void:
 	opponent = kind
 	var bot: bool = kind == "bot"
-	for toggle: String in MODES: get_node("Pages/Play/Body/Opponent/" + toggle).set_pressed_no_signal(kind == MODES[toggle])
+	for toggle: String in MODES: get_node("Pages/Play/Body/" + toggle).set_pressed_no_signal(kind in MODES[toggle])
 	for path in BOT_ONLY: get_node("Pages/Play/" + path).visible = bot
 	for path in FRIEND_ONLY: get_node("Pages/Play/" + path).visible = not bot
 	for path in TEAM_ONLY: get_node("Pages/Play/" + path).visible = kind == "team"
@@ -199,8 +199,9 @@ func _summary() -> String:
 
 func _connect_play_controls() -> void:
 	$Pages/Play/Body/Opponent/BotToggle.pressed.connect(set_opponent.bind("bot"))
-	$Pages/Play/Body/Opponent/FriendToggle.pressed.connect(set_opponent.bind("friend"))
-	$Pages/Play/Body/Opponent/TeamToggle.pressed.connect(set_opponent.bind("team"))
+	$Pages/Play/Body/Opponent/FriendToggle.pressed.connect(func() -> void: set_opponent("friend" if opponent == "bot" else opponent))
+	$Pages/Play/Body/Versus/NoneToggle.pressed.connect(set_opponent.bind("friend"))
+	$Pages/Play/Body/Versus/BotsToggle.pressed.connect(set_opponent.bind("team"))
 	for path in OWNS:
 		var selector: OptionButton = get_node(path)
 		var on_play: bool = path.begins_with("Pages/Play")
@@ -472,7 +473,7 @@ func _connect(code: String) -> void:
 func _set_busy(busy: bool) -> void:
 	for path: String in ["Play", "Join"]: get_node("Pages/%s/Footer/CancelConnect" % path).visible = busy
 	for button_name: String in NAV_PAGES + ["Quit"]: _lock(get_node("Sidebar/Nav/" + button_name), busy)
-	for path: String in ["Play/Footer/Start", "Play/Footer/Create", "Play/Body/Advanced/RelayUrl", "Join/Body/Advanced/RelayUrl", "Join/Body/Code", "Join/Footer/Join", "Play/Body/Own", "Join/Body/Own", "Play/Body/Bot", "Play/Body/Map", "Play/Body/Opponent/BotToggle", "Play/Body/Opponent/FriendToggle", "Play/Body/Opponent/TeamToggle", "Play/Body/TeamBots/Bot3", "Play/Body/TeamBots/Bot4"]:
+	for path: String in ["Play/Footer/Start", "Play/Footer/Create", "Play/Body/Advanced/RelayUrl", "Join/Body/Advanced/RelayUrl", "Join/Body/Code", "Join/Footer/Join", "Play/Body/Own", "Join/Body/Own", "Play/Body/Bot", "Play/Body/Map", "Play/Body/Opponent/BotToggle", "Play/Body/Opponent/FriendToggle", "Play/Body/Versus/NoneToggle", "Play/Body/Versus/BotsToggle", "Play/Body/TeamBots/Bot3", "Play/Body/TeamBots/Bot4"]:
 		var control: Control = get_node("Pages/" + path)
 		if control is BaseButton: _lock(control, busy)
 		else: control.editable = not busy

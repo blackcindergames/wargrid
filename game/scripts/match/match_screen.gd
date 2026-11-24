@@ -206,7 +206,7 @@ func _reset_camera() -> void:
 func _create_world() -> void:
 	driver.create(map_path, starts, factions, match_seed)
 	if driver.teammate() == 0: Palette.clear_team_colours()
-	else: Palette.set_team_colours(local_player, driver.teammate(), driver.bot_players())
+	else: Palette.set_team_colours(mini(local_player, driver.teammate()), maxi(local_player, driver.teammate()), driver.bot_players())
 
 func playtest_context() -> Dictionary:
 	var camera: Vector2 = Iso.plane_to_world(_camera.position)
