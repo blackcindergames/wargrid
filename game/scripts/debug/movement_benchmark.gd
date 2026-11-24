@@ -6,6 +6,7 @@ const Iso = preload("res://scripts/presentation/isometric.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const CombatWorkload = preload("res://scripts/debug/combat_workload.gd")
 const SoundPlayer = preload("res://scripts/presentation/sound_player.gd")
+const Cues = preload("res://scripts/presentation/sound_cues.gd")
 const VisualDirector = preload("res://scripts/presentation/visual_director.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
@@ -155,6 +156,7 @@ func _begin_layout() -> void:
 		_simulation = CombatWorkload.create("horde_render_500" if _units() == 500 else "horde_render")
 		if _sound_mode and _sound == null:
 			_sound = SoundPlayer.new(1)
+			Cues.assume(false)  # cue counts must not depend on which machine has the licensed files
 			add_child(_sound)
 		_sound_cues = 0
 		_sound_times.clear()

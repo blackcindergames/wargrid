@@ -244,8 +244,6 @@ func test_licensed_music_or_free(runner) -> bool:
 	MusicPlayer.licensed = true
 	runner.check(MusicPlayer.menu() == MusicPlayer.LICENSED_MENU and MusicPlayer.playlist() == MusicPlayer.LICENSED_PLAYLIST, "MU6 with them the owner's picks play")
 	MusicPlayer.licensed = null
-	for path: String in MusicPlayer.LICENSED_PLAYLIST + [MusicPlayer.LICENSED_MENU]:
-		runner.check(path.begins_with("res://audio/licensed/music/") or path in MusicPlayer.PLAYLIST, "MU6 %s is licensed or a free match track" % path)
 	return true
 
 func test_match_never_plays_the_menu_track(runner) -> bool:

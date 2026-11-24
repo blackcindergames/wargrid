@@ -11,7 +11,7 @@ const LICENSED_PLAYLIST: Array[String] = [
 	"res://audio/music/conflict.ogg", "res://audio/music/enemy_spotted.ogg", "res://audio/licensed/music/assault_main_theme.ogg",
 	"res://audio/licensed/music/knuckles.ogg", "res://audio/licensed/music/incoming.ogg",
 ]
-# Tests pin it; null looks for the files, which tools/audio/licensed.py always builds together.
+# Tests pin it; null checks every file, since one missing track would stop the playlist.
 static var licensed: Variant = null
 var _paths: Array[String] = []
 var _gap: float = 0.0
@@ -25,7 +25,7 @@ func _init() -> void:
 	finished.connect(func() -> void: _wait = _gap)
 
 static func has_licensed() -> bool:
-	if licensed == null: licensed = ResourceLoader.exists(LICENSED_MENU)
+	if licensed == null: licensed = (LICENSED_PLAYLIST + [LICENSED_MENU]).all(func(path: String) -> bool: return ResourceLoader.exists(path))
 	return licensed
 
 static func menu() -> String:

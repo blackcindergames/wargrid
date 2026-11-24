@@ -206,6 +206,7 @@ func _shot(event: Dictionary, current: Dictionary, teams: Dictionary, requests: 
 	if cue.is_empty(): return
 	var new_burst: bool = event.tick - last > definition.delay_ticks + 1
 	var held: bool = event.tick - _last_play.get(event.attacker_id, -1000000) < Cues.hold_ticks(cue)
+	# shortcut: a hold starts even when the player drops the voice (cap, distance), so a shooter can stay silent up to one hold; feed slots back if that is heard.
 	if (new_burst or not Cues.CUES[cue].get("burst", false)) and not held:
 		_last_play[event.attacker_id] = event.tick
 		requests.append(_world(cue, attacker.position))

@@ -48,7 +48,8 @@ PEAK_DB = -1.0
 
 # shortcut: asetrate assumes a 44.1 kHz source (every pitched pack file is); read the rate before pitching others.
 def shape(seconds: float, pitch: float) -> str:
-    stages = [f"asetrate=44100*{pitch}", "aresample=44100"] if pitch != 1.0 else ["aresample=44100"]
+    stages = ["aformat=channel_layouts=mono"]  # measured as written, so the level lands on target
+    stages += [f"asetrate=44100*{pitch}", "aresample=44100"] if pitch != 1.0 else ["aresample=44100"]
     stages += [f"atrim=0:{seconds}", f"afade=t=out:st={round(seconds - FADE_S, 3)}:d={FADE_S}"]
     return ",".join(stages)
 
@@ -86,8 +87,6 @@ def build(packs: Path, out: Path) -> None:
             str(src),
             "-af",
             af,
-            "-ac",
-            "1",
             "-c:a",
             "pcm_s16le",
             str(dest),

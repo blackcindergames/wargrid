@@ -52,6 +52,7 @@ jobs:
           cp -R build/private/audio/. game/audio/licensed/
           rm -rf build/private
           test -s game/audio/licensed/sfx/impact.wav
+          test -s game/audio/licensed/music/night_infiltration.ogg
       - name: Install pinned Godot
         run: python3 tools/install_godot.py
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6

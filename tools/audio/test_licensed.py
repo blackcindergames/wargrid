@@ -23,7 +23,8 @@ class LicensedTest(unittest.TestCase):
 
     def test_shape_bakes_pitch_then_cuts(self) -> None:
         self.assertEqual(
-            licensed.shape(1.2, 1.3), "asetrate=44100*1.3,aresample=44100,atrim=0:1.2,afade=t=out:st=0.9:d=0.3"
+            licensed.shape(1.2, 1.3),
+            "aformat=channel_layouts=mono,asetrate=44100*1.3,aresample=44100,atrim=0:1.2,afade=t=out:st=0.9:d=0.3",
         )
         self.assertNotIn("asetrate", licensed.shape(2.0, 1.0))
 

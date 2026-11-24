@@ -37,9 +37,9 @@ const CUES := {
 const SHOT_BY_WEAPON := {"rifle": "rifle_burst", "militia_gun": "carbine", "scout_gun": "usa_mg", "pickup_gun": "frc_mg", "tunnel_gun": "frc_mg", "rotary_gun": "china_rotary", "rotary_tower_gun": "china_rotary_tower", "cannon": "cannon", "pickup_cannon": "frc_cannon", "light_tank_gun": "frc_cannon", "light_tank_gun_plus": "frc_cannon", "rocket": "launch", "battery": "usa_battery", "pickup_rocket": "frc_launch"}
 # Zero Hour gives every faction its own fire sound; these weapons are shared between factions here.
 const SHOT_BY_FACTION := {"frc": {"rifle": "frc_rifle", "rocket": "frc_launch"}, "china": {"cannon": "china_cannon", "rocket": "china_launch"}}
+const SHOT_BY_DAMAGE := {"small_arms": "carbine", "rapid_fire": "carbine", "gattling": "carbine", "armor_piercing": "cannon", "infantry_missile": "launch", "explosion": "launch"}
 
 static var _present: Dictionary = {}
-const SHOT_BY_DAMAGE := {"small_arms": "carbine", "rapid_fire": "carbine", "gattling": "carbine", "armor_piercing": "cannon", "infantry_missile": "launch", "explosion": "launch"}
 
 static func weapon_id(kind: String, tier: int) -> String:
 	var row: Dictionary = Registry.kind(kind)
