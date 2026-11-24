@@ -91,9 +91,15 @@ func test_strip_tip_words(runner) -> bool:
 	var chips: Array = HudModel.strip_chips(_view([_building(1, "china_command_center", [_entry(DOZER, _ticks(DOZER) - 90000)]), _building(5, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM) - 120000), _entry(MEDIUM), _entry(ROTARY), _entry(MEDIUM)]),
 		_building(3, "china_barracks"), _building(7, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM))])]), 1, {})
 	var lines: Array = chips.map(HudModel.strip_tip)
-	runner.check(lines == ["Bulldozer · 3s · QUEUE 1 / 9", "Idle", "Medium Tank ×3 · 4s, Rotary Gun Tank · QUEUE 4 / 9", "Medium Tank · Exit blocked · QUEUE 1 / 9"], "PS6 chip cards: the head kind with its total and its seconds, the other kinds with their totals and the queue, or Idle, got %s" % [lines])
+	runner.check(lines == ["Bulldozer · QUEUE 1 / 9\nBulldozer ready in 3s", "Idle", "Medium Tank ×3, Rotary Gun Tank · QUEUE 4 / 9\nMedium Tank ready in 4s", "Medium Tank · QUEUE 1 / 9\n" + HudModel.EXIT_BLOCKED_HINT], "PS6 chip cards: the kinds with their totals and the queue, then the head unit's seconds or why it waits, or Idle, got %s" % [lines])
 	var hidden: Array = chips.map(HudModel.strip_hidden_line)
-	runner.check(hidden == ["Headquarters · Bulldozer 3s", "Barracks · idle", "Vehicle Factory · Medium Tank 4s", "Vehicle Factory · Medium Tank · Exit blocked"], "PS6 +N list lines, got %s" % [hidden])
+	runner.check(hidden == ["Headquarters · Bulldozer · ready in 3s", "Barracks · idle", "Vehicle Factory · Medium Tank ×3 · ready in 4s", "Vehicle Factory · Medium Tank · Exit blocked"], "PS6 +N list lines, got %s" % [hidden])
+	var slowed: Dictionary = HudModel.strip_chips(_view([_building(5, "china_factory", [_entry(MEDIUM)])], 500), 1, {})[0]
+	var slow_line: String = "Medium Tank · QUEUE 1 / 9\nMedium Tank ready in %s\n%s" % [slowed.left, HudModel.low_power_hint(500, Registry.Factions.DEFAULT_FACTION)]
+	runner.check(HudModel.strip_tip(slowed) == slow_line, "PS6 a slowed chip's card names low power as NOW's hover does, got '%s'" % HudModel.strip_tip(slowed))
+	var both: Dictionary = HudModel.strip_chips(_view([_building(5, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM))])], 500), 1, {})[0]
+	var both_line: String = "Medium Tank · QUEUE 1 / 9\n%s\n%s" % [HudModel.EXIT_BLOCKED_HINT, HudModel.low_power_hint(500, Registry.Factions.DEFAULT_FACTION)]
+	runner.check(HudModel.strip_tip(both) == both_line, "PS6 blocked under low power names both, in NOW's order, got '%s'" % HudModel.strip_tip(both))
 	runner.check(HudModel.STRIP_HINT == "Click: select it · Double-click: go there", "PS6 the hint line")
 	return true
 
@@ -296,7 +302,7 @@ func test_strip_more_list(runner) -> bool:
 	await _frames(runner)
 	var tip: Control = _tip(main)
 	var text: String = "\n".join(tip.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree()).map(func(label: Label) -> String: return label.text))
-	runner.check(tip.is_visible_in_tree() and text == "ALSO PRODUCING\nHeadquarters · Bulldozer 1s\nSupply Depot · Supply Truck 6s\nBarracks · idle", "PS11 the list names the hidden producers in order, got '%s'" % text)
+	runner.check(tip.is_visible_in_tree() and text == "ALSO PRODUCING\nHeadquarters · Bulldozer · ready in 1s\nSupply Depot · Supply Truck · ready in 6s\nBarracks · idle", "PS11 the list names the hidden producers in order, got '%s'" % text)
 	runner.check(main.hud.blocks(_centre(more)), "PS11 `+3` blocks the map")
 	_end(world)
 	return true
@@ -699,17 +705,18 @@ func test_strip_hides_while_nothing_is_made(runner) -> bool:
 	_end(world)
 	return true
 
-# The owner's pick (user, 2026-11-23, late): the chip card names each kind with its total, two kinds at most, then how many more kinds, keeping QUEUE n / 9.
+# The owner's pick (user, 2026-11-23, late): the chip card names each kind with its total, two kinds at most, then how many more units (as NEXT counts them), keeping QUEUE n / 9.
 func test_strip_tip_names_the_kinds(runner) -> bool:
-	var rows: Array = [[[MEDIUM, MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, ROTARY], "Medium Tank ×4 · 6s, Rotary Gun Tank ×3 · QUEUE 7 / 9"], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "Medium Tank ×7 · 6s · QUEUE 7 / 9"],
-		[[MEDIUM, ROTARY, MEDIUM, ROTARY, MEDIUM, ROTARY], "Medium Tank ×3 · 6s, Rotary Gun Tank ×3 · QUEUE 6 / 9"], [[MEDIUM, ROTARY, MEDIUM], "Medium Tank ×2 · 6s, Rotary Gun Tank · QUEUE 3 / 9"],
-		[[MEDIUM, ROTARY, MILITIA, MEDIUM], "Medium Tank ×2 · 6s, Rotary Gun Tank · +1 more · QUEUE 4 / 9"], [[MEDIUM, ROTARY, MILITIA, DOZER, TRUCK], "Medium Tank · 6s, Rotary Gun Tank · +3 more · QUEUE 5 / 9"]]
+	var rows: Array = [[[MEDIUM, MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, ROTARY], "Medium Tank ×4, Rotary Gun Tank ×3 · QUEUE 7 / 9"], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "Medium Tank ×7 · QUEUE 7 / 9"],
+		[[MEDIUM, ROTARY, MEDIUM, ROTARY, MEDIUM, ROTARY], "Medium Tank ×3, Rotary Gun Tank ×3 · QUEUE 6 / 9"], [[MEDIUM, ROTARY, MEDIUM], "Medium Tank ×2, Rotary Gun Tank · QUEUE 3 / 9"],
+		[[MEDIUM, ROTARY, MILITIA, MEDIUM], "Medium Tank ×2, Rotary Gun Tank, +1 more · QUEUE 4 / 9"], [[MEDIUM, ROTARY, MILITIA, DOZER, TRUCK], "Medium Tank, Rotary Gun Tank, +3 more · QUEUE 5 / 9"],
+		[[MEDIUM, ROTARY, MILITIA, MILITIA, MILITIA], "Medium Tank, Rotary Gun Tank, +3 more · QUEUE 5 / 9"]]
 	for row: Array in rows:
 		var entries: Array = []
 		for i in row[0].size(): entries.append({"id": i, "kind": row[0][i], "paid_cost": 800, "work": 126000 if i == 0 else 0})
 		var got: String = HudModel.strip_tip(HudModel.strip_chips(_view([_building(5, "china_factory", entries)]), 1, {})[0])
-		runner.check(got == row[1], "PS26 %s reads '%s', got '%s'" % [row[0], row[1], got])
-	# The widest card a Barracks can show stays one line inside the smallest view.
+		runner.check(got == row[1] + "\nMedium Tank ready in 6s", "PS26 %s reads '%s', got '%s'" % [row[0], row[1], got])
+	# The widest card a Barracks can show stays inside the smallest view.
 	var world: Array = await _world(runner)
 	var main = world[3]
 	var ids: Dictionary = world[4]
@@ -726,10 +733,10 @@ func test_strip_tip_names_the_kinds(runner) -> bool:
 	now[0] = 1000
 	await _frames(runner)
 	var text: Label = _tip(main).get_node("Lines/Text")
-	var line: String = text.text.get_slice("\n", 0)
+	var line: String = text.text.get_slice("\n", 0) + "\n" + text.text.get_slice("\n", 1)
 	var tip: Rect2 = _tip(main).get_global_rect()
 	print("PS26 widest chip card at 1280x720: %.0f px for '%s'" % [tip.size.x, line])
-	runner.check(line == "Anti-Tank Trooper ×4 · Exit blocked, Militia ×3 · +1 more · QUEUE 9 / 9" and text.text.count("\n") == 1 and Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(tip), "PS26 the widest card, one line inside the view, got '%s' %s" % [line, tip])
+	runner.check(line == "Anti-Tank Trooper ×4, Militia ×3, +2 more · QUEUE 9 / 9\n" + HudModel.EXIT_BLOCKED_HINT and text.text.count("\n") == 2 and Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(tip), "PS26 the widest card, two lines and the hint inside the view, got '%s' %s" % [line, tip])
 	_end(world)
 	return true
 
@@ -836,7 +843,7 @@ func test_strip_hint_once(runner) -> bool:
 	runner.check(not _hint_shown(main) and _hint_saved() and config.get_value("audio", "music", 0.0) == 0.3, "PS24 a chip click ends it and saves hints/strip_seen beside the other settings")
 	var fresh = ProductionStrip.new()
 	world[2].add_child(fresh)
-	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1, {}) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "kinds": [{"kind": MEDIUM, "count": 1}], "left": "5s"}], -1, Color.WHITE)
+	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1, {}) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "kinds": [{"kind": MEDIUM, "count": 1}], "left": "5s", "slow": ""}], -1, Color.WHITE)
 	await _frames(runner)
 	runner.check(fresh.is_visible_in_tree() and not fresh.get_node("Hint").is_visible_in_tree(), "PS24 a fresh strip with the setting saved shows no hint")
 	_end(world)
