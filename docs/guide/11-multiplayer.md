@@ -200,12 +200,14 @@ The online 2v2 is two humans on team 1 (the host is seat 1, the guest seat 2) ag
 | Lockstep status `waiting` in a 2v2: the start, and any later stall while a packet is missing | "Waiting for your teammate…" | HUD notice |
 | 5 s (`START_LINE_TICKS`, 150 ticks) after every player's faction arrived | "You and P2 USA vs 2 bots (China, FRC)" | HUD notice |
 | Guest defeated, host plays on (guest only) | "You are out. Your teammate plays on: watch, or leave from the menu (Esc)." | HUD notice |
+| Host defeated, guest plays on (host only) | "You are out. Keep this window open: it runs the bots for your teammate." | HUD notice |
 | The guest left | `P2 USA left the match` under the heading "Match ended", Play again hidden | result panel |
 | The host left, guest's panel | "The host left. The match is over." under "Match ended" | result panel |
 | The WebSocket refused a send (`ended_send`) or the relay was lost | "Connection to relay lost" | HUD notice |
 | Esc, Leave match, as host | "Leave the match? You run the bots. Leaving ends the match for your friend." | pause menu |
 | Esc, Leave match, as guest, still in | "Leave the match? The match ends for your friend too." | pause menu |
 | Esc, Leave match, as guest, defeated | "Leave the match? Your friend plays on against the bots." | pause menu |
+| Esc, Leave match, as host after the defeated guest left | "Leave the match? Your friend already left." | pause menu |
 
 The Quit question is the same with "Quit the game?" and "Quitting". An empty driver question keeps the 1v1 words. The result table groups the rows under "Your team" (you first, then "(teammate)") and "Enemy bots" (each "(bot)"), with an owner-colour square beside each name; offline and 1v1 tables keep their single list.
 

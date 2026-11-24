@@ -72,6 +72,7 @@ func test_refusal_rejects_bad_bots(runner) -> bool:
 	for what: String in bad_rows:
 		runner.check(not MatchSettings.refusal(base.merged({"bots": bad_rows[what]}), 2).is_empty(), "MS7 refused: %s" % what)
 	runner.check(not MatchSettings.refusal(base.merged({"bots": "3"}), 2).is_empty(), "MS7 refused: bots that is no list")
+	runner.check(MatchSettings.refusal(base.merged({"bots": null}), 2) == MatchSettings.BAD_BOTS, "MS7 refused: a bots key that is null")
 	runner.check(MatchSettings.refusal(base.merged({"bots": []}), 2) == MatchSettings.BAD_BOTS, "MS7 refused: an empty bots list")
 	runner.check(not MatchSettings.refusal(base.merged({"bots": _bots(3, ["usa"])}), 3).is_empty(), "MS7 refused: bots counted from the wrong seat count")
 	for id: String in ["dry_wells", "skirmish"]:

@@ -221,7 +221,7 @@ func bots() -> Array[int]:
 	return found
 
 func allowed(seat: int) -> Array:
-	return _allowed.get(seat, [])
+	return _allowed.get(seat, []).duplicate()
 
 func rejections() -> Array[Dictionary]:
 	return _rejections

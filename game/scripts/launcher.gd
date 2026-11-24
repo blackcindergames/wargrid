@@ -573,13 +573,16 @@ func _fill_waiting_bots(left: Control) -> void:
 	left.get_node("PlayersLabel").text = "Players" if bots.is_empty() else "Your team"
 	left.get_node("BotsLabel").visible = not bots.is_empty()
 	left.get_node("One").remove_theme_stylebox_override("panel")
-	if not bots.is_empty(): _paint_edge(left.get_node("One"), Palette.OWNER_BASE[0])
+	# The hues the match will draw, so Neon players see the same colours here.
+	var neon: bool = GraphicsSettings.load_neon()
+	var hues: Array[Color] = Palette.OWNER_BRIGHT if neon else Palette.OWNER_BASE
+	if not bots.is_empty(): _paint_edge(left.get_node("One"), hues[0])
 	for i in WAITING_BOTS.size():
 		var row: Control = left.get_node(WAITING_BOTS[i])
 		row.visible = i < bots.size()
 		if not row.visible: continue
 		row.get_node("Row/Who").text = Registry.faction(bots[i].faction).display_name + " (bot)"
-		_paint_edge(row, Palette.OWNER_BASE[Palette.BOT_SLOTS[i][0]])
+		_paint_edge(row, hues[Palette.BOT_SLOTS[i][1 if neon else 0]])
 
 func _paint_edge(row: Control, colour: Color) -> void:
 	var style: StyleBoxFlat = row.get_theme_stylebox("panel").duplicate()

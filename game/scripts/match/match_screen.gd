@@ -265,6 +265,8 @@ func _take_answers() -> void:
 func _take_pings() -> void:
 	for ping: Dictionary in driver.take_pings():
 		_pings.add(ping.player, ping.target)
+		# The pinger knows where it clicked, and its tone's cooldown would mute the teammate's answer.
+		if ping.player == local_player: continue
 		_ensure_sound()
 		_sound.director.announcer.request("ping", ping.tick)
 

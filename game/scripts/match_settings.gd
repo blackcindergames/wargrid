@@ -40,10 +40,11 @@ static func refusal(settings: Dictionary, seat_count: int = 2) -> String:
 	if not id is String or not _valid_id(id) or not FileAccess.file_exists(map_path(id)): return NOT_IN_BUILD
 	var theirs: Variant = settings.get("map_hash")
 	if not theirs is String or theirs != map_hash(map_path(id)): return "Your copy of %s differs from the host's" % PLAY_MAPS.get(id, id)
-	return _bots_refusal(settings.get("bots"), seat_count, id)
+	# Key presence, not a null value: a crafted "bots": null would pass and break the start.
+	if not settings.has("bots"): return ""
+	return _bots_refusal(settings.bots, seat_count, id)
 
 static func _bots_refusal(rows: Variant, seat_count: int, id: String) -> String:
-	if rows == null: return ""
 	if rows is not Array or rows.is_empty(): return BAD_BOTS
 	for i: int in rows.size():
 		var row: Variant = rows[i]

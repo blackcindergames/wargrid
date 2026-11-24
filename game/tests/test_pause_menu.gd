@@ -33,7 +33,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_2v2_guest_questions, test_2v2_questions_layout]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_host_questions_after_friend_left, test_2v2_guest_questions, test_2v2_questions_layout]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -646,6 +646,21 @@ func test_defeated_host_leave_question(runner) -> bool:
 	runner.check(online.lockstep.status() == "running" and not main.driver.pump.live().survivors().has(1), "T26 fixture: the host is out and the match runs, got %s" % online.lockstep.status())
 	var asked: Array = _asked(main)
 	runner.check(asked == [HOST_LEAVE, HOST_QUIT], "T26 the defeated host is told leaving ends the match for the friend, got %s" % [asked])
+	main.free()
+	online_tests._restore_statics(before)
+	return true
+
+func test_host_questions_after_friend_left(runner) -> bool:
+	var online_tests = OnlineTests.new()
+	var before: Array = online_tests._statics()
+	var online: Dictionary = await _team_match(runner, online_tests, 1)
+	var main = online.main
+	SeatFixture.defeat(main.driver.pump.live(), 2)
+	online.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
+	online_tests._run(main, 40)
+	runner.check(online.lockstep.status() == "running" and online.lockstep.left_seat() == 2, "T26 fixture: the guest is out and gone, the host plays on, got %s" % online.lockstep.status())
+	var asked: Array = _asked(main)
+	runner.check(asked == ["Leave the match? Your friend already left.", "Quit the game? Your friend already left."], "T26 the host alone is told the friend already left, got %s" % [asked])
 	main.free()
 	online_tests._restore_statics(before)
 	return true

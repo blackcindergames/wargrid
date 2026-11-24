@@ -23,6 +23,31 @@ class Client extends RefCounted:
 	var results: Array = []
 	var sent: Array[String] = []
 
+# Records what the full frame refused, so a test can look for the same order later.
+class DropSpy extends RefCounted:
+	var inner: RefCounted
+	var dropped: Array[Dictionary] = []
+
+	func _init(seat_sim: RefCounted) -> void:
+		inner = seat_sim
+
+	func issue_command(command: Dictionary) -> Dictionary:
+		var result: Dictionary = inner.issue_command(command)
+		if result.error == "too many orders": dropped.append(command.duplicate(true))
+		return result
+
+	func snapshot() -> Dictionary:
+		return inner.snapshot()
+
+	func tick() -> int:
+		return inner.tick()
+
+	func map_data() -> Dictionary:
+		return inner.map_data()
+
+	func simulation() -> RefCounted:
+		return inner.simulation()
+
 class Net extends RefCounted:
 	var clients: Array[Client] = []
 	var now: int = 0
@@ -104,12 +129,17 @@ func test_seat_sim_full_frame_refusal_recovers(runner) -> bool:
 	var full: Dictionary = host.seat_sim.issue_command({"type": "cancel_build", "building_id": 99999, "player": 3})
 	runner.check(full.error == "Missing owned foundation", "L22 an invalid order gets the sim's error, not the full-frame one, got '%s'" % full.error)
 	host.ls._queue_bytes = 0
+	var spy := DropSpy.new(host.seat_sim)
 	net.clients[0].hook = func(c, tick: int) -> void:
 		if tick == 33: c.ls._queue_bytes = Wire.MAX_FRAME_BYTES
-		if tick == 33 or tick == 63: Skirmish.issue_opponents(c.seat_sim, [3])
+		if tick == 33: Skirmish.issue_opponents(spy, [3])
+		if tick == 63: Skirmish.issue_opponents(c.seat_sim, [3])
 	net.run()
-	var ticks: Array = host.ls.command_log().filter(func(m: Dictionary) -> bool: return m.player == 3).map(func(m: Dictionary) -> int: return m.tick)
-	runner.check(not ticks.is_empty() and ticks.min() > 38, "L22 the order refused by a full frame is dropped, and the bot's next decision sends it (ticks %s)" % [ticks])
+	var later: Array = host.ls.command_log().filter(func(m: Dictionary) -> bool: return m.player == 3)
+	var ticks: Array = later.map(func(m: Dictionary) -> int: return m.tick)
+	runner.check(not spy.dropped.is_empty() and not ticks.is_empty() and ticks.min() > 38, "L22 fixture: the full frame dropped the bot's orders (%d) and none landed before tick 39 (ticks %s)" % [spy.dropped.size(), ticks])
+	for order: Dictionary in spy.dropped:
+		runner.check(later.any(func(m: Dictionary) -> bool: return m.type == order.type and m.get("entity_ids", []) == order.get("entity_ids", [])), "L22 the dropped %s for %s is sent at the bot's next decision" % [order.type, order.get("entity_ids", [])])
 	return true
 
 func _scripts(net: Net) -> void:

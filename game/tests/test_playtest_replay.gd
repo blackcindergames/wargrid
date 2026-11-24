@@ -292,7 +292,7 @@ func test_oracle_bots_arg(runner) -> bool:
 	client = OracleClient.new()
 	client._args = {"bots": "3:china,4:frc"}
 	runner.check(client._bots_error() == "", "RP11 well-formed --bots passes")
-	for bad: String in ["3:nope,4:frc", "3china", "3:china,", "x:china", "0:china", "-3:china", "1:china", "2:china", "3:china,3:frc"]:
+	for bad: String in ["3:nope,4:frc", "3china", "3:china,", "x:china", "0:china", "-3:china", "1:china", "2:china", "3:china,3:frc", "4:china", "4:china,3:frc"]:
 		client._args = {"bots": bad}
 		runner.check(client._bots_error() != "", "RP11 --bots '%s' is refused" % bad)
 	client._args = {"bots": "3:china", "factions": "frc,china"}

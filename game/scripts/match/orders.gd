@@ -55,7 +55,8 @@ func _init(screen: Node) -> void:
 func handle(event: InputEvent) -> void:
 	if not takes_orders(): return
 	if event.is_action_pressed("deselect"):
-		inspected_id = -1
+		# An armed ping is the outer layer, so this Esc only disarms it.
+		if not ping_armed: inspected_id = -1
 		gestures += 1
 	var mouse := event as InputEventMouse
 	var on_hud: bool = mouse != null and _screen.hud.blocks(mouse.position)
@@ -89,6 +90,7 @@ func arm_attack_move() -> void:
 func stop_selected() -> void:
 	if not takes_orders() or busy() or selected_ids.is_empty(): return
 	_set_attack_move(false)
+	_set_ping(false)
 	_screen._submit({"type":"stop","entity_ids":selected_ids.duplicate()})
 
 func busy() -> bool:
@@ -220,6 +222,7 @@ func _recall_group(slot: int) -> void:
 	gestures += 1
 	_sub_grid = false
 	_set_attack_move(false)
+	_set_ping(false)
 	var centre: bool = groups.double_tap(slot)
 	if not live.is_empty():
 		selected_ids.assign(live)
@@ -233,6 +236,7 @@ func select_producer(id: int, jump: bool) -> void:
 	var found: Dictionary = HudModel.building(_screen.shown_state, id)
 	if not takes_orders() or found.get("owner", -1) != _screen.local_player or not found.get("completed", true): return
 	if not _placement_kind.is_empty(): _clear_placement()
+	_set_ping(false)
 	gestures += 1
 	selected_ids.clear()
 	selected_building_id = id
@@ -275,6 +279,7 @@ func _open_build() -> void:
 	else:
 		_sub_grid = true
 		_set_attack_move(false)
+		_set_ping(false)
 	_screen._reshow()
 
 # Back cancels a placement to the sub-grid, else closes the sub-grid; like Esc, it keeps a late refusal from reopening placement.
@@ -326,7 +331,7 @@ func _set_ping(on: bool) -> void:
 
 func _ping_key(event: InputEvent) -> bool:
 	var key := event as InputEventKey
-	if key == null or not key.pressed or key.echo or key.physical_keycode != HudModel.PING_KEY: return false
+	if key == null or not key.pressed or key.echo or key.physical_keycode != HudModel.PING_KEY or not _screen.can_ping(): return false
 	if not (key.ctrl_pressed or key.meta_pressed or key.alt_pressed): arm_ping()
 	return true
 
@@ -463,8 +468,8 @@ func _finish_selection(point: Vector2, on_hud: bool) -> void:
 		pick = _screen._view.resolve_pick(plane)
 	var own: bool = _owner(pick) == _screen.local_player
 	# Alt+click pings at once (7-23), never on an own unit, so Alt+double-click keeps its whole-map select.
-	if not _dragged and _alt and not _double and _screen.can_ping() and not (own and pick.tier == "unit"):
-		_ping_at(plane)
+	if not _dragged and _alt and _screen.can_ping() and not (own and pick.tier == "unit"):
+		if not _double: _ping_at(plane)
 		return
 	selected_building_id = pick.id if pick.tier == "building" and own else -1
 	inspected_id = pick.id if pick.tier != "ground" and not own else -1
@@ -630,6 +635,7 @@ func _context_order(id: int) -> bool:
 func _unload_selected() -> void:
 	if busy(): return
 	_set_attack_move(false)
+	_set_ping(false)
 	var id: int = HudModel.unload_target(_screen.shown_state, _screen._hud_selection(), _screen.local_player)
 	if id != -1: _screen._submit({"type":"unload","target_id":id})
 

@@ -32,7 +32,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_cell_cost_clear_of_chip, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_held_now_release_and_mark, test_after_next_forgets_a_hidden_hover, test_shift_counts_orders_in_flight, test_rematch_forgets_cancels, test_glyphs_warm_with_the_hud, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies, test_ping_key_then_click_pings, test_ping_button_then_click_pings, test_armed_ping_esc_disarms, test_alt_click_ground_pings, test_alt_double_click_unit_sends_no_ping, test_ping_replaces_own_older, test_enemy_ping_not_shown, test_ping_expires_30s, test_edge_arrow_click_jumps, test_edge_arrow_outside_edge_band, test_ping_button_only_with_teammate, test_ping_full_frame_refusal_silent, test_ping_invalid_target_silent, test_ping_hud_layout, test_ping_in_dock_band_gets_arrow, test_accepted_ping_keeps_refusal_line, test_ping_hidden_after_teammate_left, test_alt_double_click_ground_pings_once, test_ping_in_leave_tick_applies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_cell_cost_clear_of_chip, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_held_now_release_and_mark, test_after_next_forgets_a_hidden_hover, test_shift_counts_orders_in_flight, test_rematch_forgets_cancels, test_glyphs_warm_with_the_hud, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies, test_ping_key_then_click_pings, test_ping_button_then_click_pings, test_armed_ping_esc_disarms, test_alt_click_ground_pings, test_alt_double_click_unit_sends_no_ping, test_ping_replaces_own_older, test_enemy_ping_not_shown, test_ping_expires_30s, test_edge_arrow_click_jumps, test_edge_arrow_outside_edge_band, test_ping_button_only_with_teammate, test_ping_full_frame_refusal_silent, test_ping_invalid_target_silent, test_ping_hud_layout, test_ping_in_dock_band_gets_arrow, test_accepted_ping_keeps_refusal_line, test_ping_hidden_after_teammate_left, test_alt_double_click_ground_pings_once, test_ping_in_leave_tick_applies, test_ping_esc_backs_out_one_layer, test_modes_disarm_ping, test_ping_chip_key_follows_layout, test_edge_arrow_jumps_on_release, test_own_ping_silent_teammate_heard]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -4531,7 +4531,7 @@ func test_ping_button_then_click_pings(runner) -> bool:
 	chip.pressed.emit()
 	var hint: Control = main.hud.get_node_or_null("PingHint")
 	runner.check(_armed_ping(main) and chip.theme_type_variation == &"HudButtonArmed", "PI2 the chip arms the ping and takes the armed look, got %s" % chip.theme_type_variation)
-	runner.check(hint != null and hint.is_visible_in_tree() and BaseScene.hud_text(main).contains("Click the ground or a building to ping · Esc cancels"), "PI2 the armed hint shows")
+	runner.check(hint != null and hint.is_visible_in_tree() and BaseScene.hud_text(main).contains("Click a spot to ping · Esc cancels"), "PI2 the armed hint shows")
 	var plane: Vector2 = _ground(main)
 	_ping_click(main, plane)
 	var pings: Array = _sent_pings(online)
@@ -4666,10 +4666,12 @@ func test_edge_arrow_click_jumps(runner) -> bool:
 	var arrows: Array = _visible_arrows(main)
 	runner.check(arrows.size() == 1, "PI9 an off-screen ping shows one edge arrow, got %d" % arrows.size())
 	if arrows.size() == 1:
-		var click := InputEventMouseButton.new()
-		click.button_index = MOUSE_BUTTON_LEFT
-		click.pressed = true
-		arrows[0].gui_input.emit(click)
+		for pressed: bool in [true, false]:
+			var click := InputEventMouseButton.new()
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.pressed = pressed
+			click.position = arrows[0].size / 2.0
+			arrows[0].gui_input.emit(click)
 		main._process(main.GLIDE_MAX_SECONDS)
 		var camera: Camera2D = main.get_node("Camera2D")
 		runner.check(camera.position.distance_to(main._landing(far)) < 1.0, "PI9 a click on the arrow jumps to the ping, camera %s want %s" % [camera.position, main._landing(far)])
@@ -4870,10 +4872,13 @@ func test_ping_hidden_after_teammate_left(runner) -> bool:
 func test_alt_double_click_ground_pings_once(runner) -> bool:
 	var online: Dictionary = await _ping_match(runner)
 	var main = online.main
+	BaseScene.select_own_unit(main)
+	var selected: Array[int] = main.orders.selected_ids.duplicate()
 	var plane: Vector2 = _ground(main)
 	_ping_click(main, plane, true)
 	_ping_click(main, plane, true, true)
 	runner.check(_sent_pings(online).size() == 1, "PI18 Alt+double-click on ground sends one ping, got %s" % [_sent_pings(online)])
+	runner.check(not selected.is_empty() and main.orders.selected_ids == selected, "PI18 the second click keeps the selection, got %s" % [main.orders.selected_ids])
 	_end_ping_match(online)
 	return true
 
@@ -4893,4 +4898,113 @@ func test_ping_in_leave_tick_applies(runner) -> bool:
 	runner.check(_marks(main).has(1) and _marks(main)[1].target == Vector2(30.5, 30.5), "PI19 the ping in the leave tick applied and shows, got %s" % [_marks(main)])
 	main.free()
 	online_tests._restore_statics(before)
+	return true
+
+func test_ping_esc_backs_out_one_layer(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	var other: int = main.driver.pump.live().snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner != main.local_player)[0].id
+	main.orders.selected_ids.clear()
+	main.orders.inspected_id = other
+	main._refresh()
+	BaseScene.new().key(main, KEY_G)
+	BaseScene.new().key(main, KEY_ESCAPE)
+	runner.check(not _armed_ping(main) and main.orders.inspected_id == other, "PI20 the first Esc only disarms the ping, inspected %d" % main.orders.inspected_id)
+	BaseScene.new().key(main, KEY_ESCAPE)
+	runner.check(main.orders.inspected_id == -1 and not main.menu_open(), "PI20 the second Esc drops the inspection")
+	_end_ping_match(online)
+	return true
+
+func test_modes_disarm_ping(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	var orders = main.orders
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
+		if unit.owner != main.local_player: continue
+		orders.selected_ids.assign([unit.id])
+		if orders._builder() != -1: break
+	var producers: Array = main.shown_state.buildings.filter(func(found: Dictionary) -> bool: return found.owner == main.local_player and found.get("completed", true))
+	runner.check(orders._builder() != -1 and not producers.is_empty(), "PI21 fixture: a selected builder and an own producer")
+	var unit_ids: Array[int] = orders.selected_ids.duplicate()
+	orders.groups.save(0, unit_ids)
+	var modes: Dictionary = {
+		"group recall": func() -> void: BaseScene.new().key(main, KEY_1),
+		"build grid": func() -> void: orders._open_build(),
+		"stop": func() -> void: orders.stop_selected(),
+		"unload": func() -> void: orders._unload_selected(),
+		"producer": func() -> void: orders.select_producer(producers[0].id if not producers.is_empty() else -1, false),
+	}
+	for label: String in modes:
+		orders._sub_grid = false
+		orders.selected_ids.assign(unit_ids)
+		orders.selected_building_id = -1
+		orders.arm_ping()
+		var armed: bool = _armed_ping(main)
+		modes[label].call()
+		runner.check(armed and not _armed_ping(main), "PI21 %s disarms the ping" % label)
+	_end_ping_match(online)
+	return true
+
+func test_ping_chip_key_follows_layout(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	var key: Label = _ping_chip(main).get_node("Row/Key")
+	key.text = "?"
+	main.hud.read_keys()
+	runner.check(key.text == HudModel.key_label(HudModel.PING_KEY), "PI22 a layout re-read relabels the Ping chip's key, got '%s'" % key.text)
+	_end_ping_match(online)
+	return true
+
+# Armed, a press that jumps would hide the arrow and drop its release onto the map as a ping.
+func test_edge_arrow_jumps_on_release(runner) -> bool:
+	var before: Array = OnlineTests.new()._statics()
+	var online: Dictionary = await _ping_match(runner)
+	var far: Vector2 = _far_world(online.main)
+	_end_ping_match(online)
+	OnlineTests.new()._restore_statics(before)
+	online = await _ping_match(runner, {20: [_host_ping(20, 1, 1, far)]})
+	var main = online.main
+	_run_to(main, 24)
+	main._process(0.0)
+	var arrows: Array = _visible_arrows(main)
+	runner.check(arrows.size() == 1, "PI23 fixture: one edge arrow, got %d" % arrows.size())
+	if arrows.size() == 1:
+		var at: Vector2 = (arrows[0] as Control).get_global_rect().get_center()
+		BaseScene.new().key(main, KEY_G)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.position = at
+		click.pressed = true
+		main.get_viewport().push_input(click)
+		main._process(main.GLIDE_MAX_SECONDS)
+		main._process(0.0)
+		var camera: Camera2D = main.get_node("Camera2D")
+		runner.check(camera.position.distance_to(main._landing(far)) > 1.0, "PI23 the press alone does not jump")
+		var release: InputEventMouseButton = click.duplicate()
+		release.pressed = false
+		main.get_viewport().push_input(release)
+		main._process(main.GLIDE_MAX_SECONDS)
+		runner.check(camera.position.distance_to(main._landing(far)) < 1.0, "PI23 the release jumps, camera %s want %s" % [camera.position, main._landing(far)])
+		runner.check(_sent_pings(online).is_empty() and _armed_ping(main), "PI23 the arrow keeps press and release: no ping leaks onto the map")
+	_end_ping_match(online)
+	return true
+
+# The pinger knows where it clicked; its own tone would also hold the cooldown against the teammate's answer.
+func test_own_ping_silent_teammate_heard(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	BaseScene.new().key(main, KEY_G)
+	_ping_click(main, _ground(main))
+	_run_to(main, main.driver.current().tick + 12)
+	var own: Array = online.lockstep.command_log().filter(func(command: Dictionary) -> bool: return command.type == "ping" and command.player == 2)
+	runner.check(own.size() == 1 and _marks(main).has(2), "PT2 fixture: the own ping applied, got %s" % [own])
+	var announcer = main._sound.director.announcer
+	runner.check(announcer._last_started.get("ping", -1) == -1, "PT2 the own ping plays no tone")
+	var at: int = own[0].tick + 60 if own.size() == 1 else 70
+	for tick in range(OnlineTests.PEER_TICKS + 1, at + 20):
+		var commands: Array = [_host_ping(tick, 1, 1, Vector2(20.5, 20.5))] if tick == at else []
+		online.transport.frames.append(Wire.encode(Wire.tick_message(1, tick, commands, null)))
+	_run_to(main, at + 8)
+	runner.check(_marks(main).has(1) and announcer._last_started.get("ping", -1) >= at, "PT2 the teammate's ping 60 ticks later plays its tone, started %d" % announcer._last_started.get("ping", -1))
+	_end_ping_match(online)
 	return true

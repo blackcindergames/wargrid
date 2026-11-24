@@ -21,6 +21,7 @@ class Arrow extends Control:
 	signal clicked(world: Vector2)
 	var target: Vector2
 	var direction: Vector2 = Vector2.RIGHT
+	var _pressed: bool = false
 
 	func _init() -> void:
 		size = Vector2(ARROW, ARROW)
@@ -30,9 +31,12 @@ class Arrow extends Control:
 
 	func _take_click(event: InputEvent) -> void:
 		var click := event as InputEventMouseButton
-		if click == null or click.button_index != MOUSE_BUTTON_LEFT or not click.pressed: return
+		if click == null or click.button_index != MOUSE_BUTTON_LEFT: return
 		accept_event()
-		clicked.emit(target)
+		# On release like a Button: a jump on the press hid the arrow and dropped the release onto the map.
+		var released: bool = _pressed and not click.pressed and Rect2(Vector2.ZERO, size).has_point(click.position)
+		_pressed = click.pressed
+		if released: clicked.emit(target)
 
 	func _draw() -> void:
 		var points := PackedVector2Array()

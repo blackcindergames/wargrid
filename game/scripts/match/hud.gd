@@ -395,7 +395,7 @@ func _build_ping() -> void:
 	_ping_hint.offset_right = -12
 	_ping_hint.offset_top = -100
 	_ping_hint.offset_bottom = -72
-	_label(_ping_hint, "Text", &"HudRow", "Click the ground or a building to ping · Esc cancels").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	_label(_ping_hint, "Text", &"HudRow", "Click a spot to ping · Esc cancels").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
 	_ping_hint.visible = false
 
 # After the slab is fitted, so the tab sits on its top edge, or 8 above the bottom with no slab.
@@ -616,6 +616,7 @@ static func _cell_label(cell: Button, label_name: String, variation: StringName,
 # Chips name the cell's position in the player's layout; a reset and the menu opening re-read them.
 func read_keys() -> void:
 	for cell: Node in _card.get_children(): (cell.get_node("Chip") as Label).text = HudModel.key_label(HudModel.GRID_KEYS[cell.get_index()])
+	(_ping.get_node("Row/Key") as Label).text = HudModel.key_label(HudModel.PING_KEY)
 
 func _grid(grid_name: String, columns: int) -> GridContainer:
 	var grid := GridContainer.new()

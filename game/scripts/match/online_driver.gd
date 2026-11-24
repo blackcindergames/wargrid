@@ -283,6 +283,7 @@ func quit_question() -> String:
 
 func _team_question(ask: String, doing: String) -> String:
 	if teammate() == 0: return ""
+	if _lockstep.left_seat() == teammate(): return ask + " Your friend already left."
 	if _lockstep.allowed(_seat).size() > 1: return "%s You run the bots. %s ends the match for your friend." % [ask, doing]
 	return ask + (" The match ends for your friend too." if _last.survivors.has(_seat) else " Your friend plays on against the bots.")
 
@@ -408,8 +409,10 @@ func notice() -> String:
 		"ended_desync": return ("Desync — report downloaded as %s" if web else "Desync — report saved to %s") % _report_path
 		"ended_protocol": return "Match stopped: game error. Please report it."
 	if teammate() == 0: return ""
-	# The host runs the bots, so its leave ends the friend's match: no watch-or-leave line for it.
-	if _lockstep.allowed(_seat).size() == 1 and not _last.over and not _last.survivors.has(_seat): return "You are out. Your teammate plays on: watch, or leave from the menu (Esc)."
+	var out: bool = not _last.over and not _last.survivors.has(_seat)
+	if out and _lockstep.allowed(_seat).size() == 1: return "You are out. Your teammate plays on: watch, or leave from the menu (Esc)."
+	# The host runs the bots, so its leave would end the friend's match.
+	if out and _lockstep.left_seat() != teammate(): return "You are out. Keep this window open: it runs the bots for your teammate."
 	return _start_line()
 
 func _start_line() -> String:

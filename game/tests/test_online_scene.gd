@@ -2605,6 +2605,7 @@ func test_right_click_teammate_moves(runner) -> bool:
 
 const HOST_LEFT: String = "The host left. The match is over."
 const OUT_LINE: String = "You are out. Your teammate plays on: watch, or leave from the menu (Esc)."
+const HOST_OUT_LINE: String = "You are out. Keep this window open: it runs the bots for your teammate."
 const START_LINE: String = "You and P1 USA vs 2 bots (China, FRC)"
 const STALL_LINE: String = "Waiting for your teammate…"
 
@@ -2787,7 +2788,7 @@ func test_defeated_guest_notice(runner) -> bool:
 	_run(host.main, 8)
 	SeatFixture.defeat(host.main.driver.pump.live(), 1)
 	_run(host.main, 2)
-	runner.check(host.lockstep.status() == "running" and host.main.driver.notice() != OUT_LINE and not BaseScene.hud_text(host.main).contains(OUT_LINE), "T26 a defeated host gets no watch line, since leaving ends the friend's match, got '%s'" % host.main.driver.notice())
+	runner.check(host.lockstep.status() == "running" and host.main.driver.notice() == HOST_OUT_LINE and BaseScene.hud_text(host.main).contains(HOST_OUT_LINE), "T26 a defeated host is told to keep the window open for the bots, got '%s'" % host.main.driver.notice())
 	host.main.free()
 	_restore_statics(before)
 	return true

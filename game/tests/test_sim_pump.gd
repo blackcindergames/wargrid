@@ -1116,6 +1116,7 @@ func _quad_sim():
 	var starts: Array[int] = MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2))
 	return Skirmish.create(true, "human", {3: "china", 4: "frc"}, MatchSettings.map_path("broken_crown"), starts, 4, MatchSettings.teams(2, 2))
 
+# Guard: setup already refuses every non-faction order; this pins that no bot order is planned or sent then.
 func test_setup_plans_no_bot_orders(runner) -> bool:
 	var pump = SimPump.new(_quad_sim())
 	pump.start()
@@ -1198,7 +1199,17 @@ func test_guest_runs_no_bot(runner) -> bool:
 	_unpair(pair)
 	return true
 
+func _bot_orders(driver, player: int) -> Array:
+	return driver._lockstep.command_log().filter(func(m: Dictionary) -> bool: return m.player == player)
+
+# The same seed and orders without the full frame: its first bot orders are the ones the full frame dropped.
 func test_bot_refused_submit_recovers_next_decision(runner) -> bool:
+	var twin: Dictionary = _quad_drivers()
+	_trio_until(twin.drivers, 33, true)
+	_trio_frames(twin.drivers, 90)
+	var first: Array = _bot_orders(twin.drivers[0], 3)
+	first = first.filter(func(m: Dictionary) -> bool: return m.tick == first[0].tick) if not first.is_empty() else []
+	_unpair(twin)
 	var pair: Dictionary = _quad_drivers()
 	var drivers: Array = pair.drivers
 	_trio_until(drivers, 33, true)
@@ -1206,7 +1217,10 @@ func test_bot_refused_submit_recovers_next_decision(runner) -> bool:
 	one._lockstep._queue_bytes = Wire.MAX_FRAME_BYTES
 	_single(one)
 	_trio_frames(drivers, 90)
-	var ticks: Array = _player_ticks(one, 3)
-	runner.check(not ticks.is_empty() and ticks.min() > 38 and not _ended_any(drivers), "PB6 the order a full frame dropped is sent at the bot's next decision (ticks %s)" % [ticks])
+	var later: Array = _bot_orders(one, 3)
+	var ticks: Array = later.map(func(m: Dictionary) -> int: return m.tick)
+	runner.check(not first.is_empty() and not ticks.is_empty() and ticks.min() > first[0].tick and not _ended_any(drivers), "PB6 fixture: the full frame dropped the tick-33 orders %s, later ticks %s" % [first.map(func(m: Dictionary) -> String: return m.type), ticks])
+	for order: Dictionary in first:
+		runner.check(later.any(func(m: Dictionary) -> bool: return m.type == order.type and m.get("entity_ids", []) == order.get("entity_ids", [])), "PB6 the dropped %s for %s is sent at the bot's next decision" % [order.type, order.get("entity_ids", [])])
 	_unpair(pair)
 	return true

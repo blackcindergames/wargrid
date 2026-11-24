@@ -410,7 +410,8 @@ func _bots_error() -> String:
 	for entry in str(_args.bots).split(","):
 		var parts: PackedStringArray = entry.split(":")
 		if parts.size() != 2 or not parts[0].is_valid_int(): return "Bad --bots entry '%s'; expected PLAYER:FACTION[,PLAYER:FACTION]" % entry
-		if parts[0].to_int() < 3 or seen.has(parts[0].to_int()): return "Bad --bots player '%s'; bots are players 3 and up, each once" % parts[0]
+		# Contiguous from 3 like MatchSettings: the oracle makes seats 1..N and would drop a gap's bot.
+		if parts[0].to_int() != 3 + seen.size(): return "Bad --bots player '%s'; bots are players 3, 4, ... in order, each once" % parts[0]
 		seen.append(parts[0].to_int())
 		if Registry.faction(parts[1]).is_empty(): return "Unknown --bots faction '%s'; expected one of: %s" % [parts[1], known]
 	return ""
