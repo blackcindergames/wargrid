@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: What does the Esc menu show besides its buttons?
+why: >-
+  The four buttons are decided; this step asks how much of the old cheat sheet stays one key away. The
+  package's named risk: the controls move one click further, so a first match must still teach the mouse.
+  None of the surveyed engines puts mouse controls on the Esc menu; 0 A.D. puts hotkeys in its buttons'
+  tooltips instead (0ad `136720dada`, `gui/session/MenuButtons.js:23`). N shows the confirm box after
+  Leave match. The primer only teaches a player who opens the menu; the first-match hints candidate in
+  packages is the real fix, so this step narrows the risk, not closes it.
+look: The panel in the middle; Y for the browser (no Quit), N for the confirm box.
+controls:
+  state: [menu, confirm]
+rec: B
+recWhy: >-
+  four rows cover what a newcomer needs in a first match (select and box-select, order, pan, zoom; on
+  macOS with the trackpad gestures beside the mouse ones) and keep the panel
+  small; everything else is one click away on Controls. A is cleanest but leaves the mouse unexplained
+  unless the player finds the page. C keeps the whole Mouse section and brings back the crowded screen
+  you wanted gone. Risk: the primer is a second, shorter list with its own words; a test will check
+  that each of its keys is also on the Controls page.
+neutral: None of these
+options:
+  A:
+    name: Buttons only
+    render: {params: {menu: plain}}
+    sees: One 220 px panel, Resume, Settings, Controls, Leave match, Quit; nothing else.
+    notes: As Zero Hour and Warzone 2100; the mouse is taught only on the Controls page.
+  B:
+    name: Buttons and a four-row mouse primer
+    render: {params: {menu: mouse}}
+    sees: 'The buttons, a divider, then four rows: select or box-select, order, pan, zoom; on macOS each also names the trackpad gesture.'
+    notes: Keeps the cheat sheet's core on the menu; four rows, not 26.
+  C:
+    name: Buttons and the whole Mouse section
+    render: {params: {menu: side}}
+    sees: The buttons left, the full Mouse section (14 rows on macOS) in a panel to their right.
+    notes: Every mouse action stays on the menu; keys move to Controls.

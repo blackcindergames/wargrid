@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'P18 Esc menu: four buttons, a Settings page and a Controls page'
+intro: >-
+  This round blocks P18's build. Today's Esc menu has eight buttons, the volume sliders and a 26-row
+  controls list on one screen; P17's drag and trackpad rows no longer fit at 720 px. Decided, not asked
+  (P18 row, user 2026-11-23): the menu keeps Resume, Settings, Controls and Leave match, plus Quit on
+  desktop (a browser tab cannot be closed by the game); the toggles and sliders move to Settings; the
+  controls list becomes its own page, mouse first, from the same rows the game probes today.
+  Claude's defaults, not asked: "Back to main menu" becomes "Leave match" and keeps its confirm box online (a bot match leaves at once,
+  as today); Quit in an online match asks the same question first (today it quits without asking); Esc
+  on a page goes back to the menu, Esc on the menu resumes; the new Mouse rows read `Right-drag` "Pan,
+  faster the farther you drag", `Middle-drag` "Drag the map along", and on macOS `Two-finger swipe` "Pan
+  (trackpad)" and `Pinch` "Zoom (trackpad)"; the Mouse rows go in button order, so "Place the building"
+  moves up beside the other left-click rows; no rebinding. The production strip's stacked chip, its `F7`
+  toggle and idle chips go as decided (user, 2026-11-24) and get no step.
+  Every picture is the menu over a dimmed China base without the HUD (the game dims the HUD too) at 1280 x 720 on macOS (the most rows); S switches to
+  1280 x 800 and 1920 x 1080, Y to Windows and the browser. Each step changes one thing and draws the
+  others as Claude recommends them. Engine survey (private, esc-menu-patterns-2026-11-23): Zero Hour's
+  Esc menu has five buttons and no controls text (CnC_Generals_Zero_Hour `0a05454`, `QuitMenu.cpp:88-105`);
+  Warzone 2100 five or six, OpenRA about seven, Zero-K four roots, 0 A.D. ten; every one puts its control
+  reference behind its own button or page.
+  A neutral answer records no winner, and the build waits for your note.
+steps: [menu, controls, settings, page]
+render:
+  page: docs/images/esc-round/esc.html
+  w: 1280
+  h: 720
+  hash: view={state}
+  pass:
+    size: size
+controls:
+  size: [1280x720, 1280x800, 1920x1080]
+  fit: true
+  extra:
+  - id: os
+    label: Platform
+    key: y
+    values:
+    - v: mac
+      label: macOS
+    - v: win
+      label: Windows
+    - v: web
+      label: Browser

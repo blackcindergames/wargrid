@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=57 format=3]
+[gd_resource type="Theme" load_steps=58 format=3]
 
 [ext_resource type="FontFile" path="res://fonts/PublicSans-Regular.ttf" id="font_regular"]
 [ext_resource type="FontFile" path="res://fonts/PublicSans-SemiBold.ttf" id="font_semibold"]
@@ -399,6 +399,13 @@ content_margin_right = 4.0
 content_margin_bottom = 4.0
 bg_color = Color(0, 0, 0, 0.6)
 
+[sub_resource type="StyleBoxFlat" id="small_toggle_on"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.83137256, 0.83137256, 0.83137256, 1)
+
 [sub_resource type="StyleBoxFlat" id="small_button_disabled"]
 content_margin_left = 4.0
 content_margin_top = 4.0
@@ -677,6 +684,11 @@ HudSmallButton/styles/hover = SubResource("small_button_hover")
 HudSmallButton/styles/hover_pressed = SubResource("small_button_pressed")
 HudSmallButton/styles/normal = SubResource("small_button")
 HudSmallButton/styles/pressed = SubResource("small_button_pressed")
+HudSmallToggle/base_type = &"HudSmallButton"
+HudSmallToggle/colors/font_hover_pressed_color = Color(0.101960786, 0.101960786, 0.101960786, 1)
+HudSmallToggle/colors/font_pressed_color = Color(0.101960786, 0.101960786, 0.101960786, 1)
+HudSmallToggle/styles/hover_pressed = SubResource("small_toggle_on")
+HudSmallToggle/styles/pressed = SubResource("small_toggle_on")
 HudSmallField/base_type = &"LineEdit"
 HudSmallField/colors/font_color = Color(0.875, 0.875, 0.875, 1)
 HudSmallField/font_sizes/font_size = 12

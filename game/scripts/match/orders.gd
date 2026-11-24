@@ -315,13 +315,12 @@ func _hover(event: InputEvent, on_hud: bool) -> void:
 			_screen._view.set_hovered(hovered)
 			_screen._reshow()
 
-# F3 the performance numbers, F7 the strip's upright bars; neither reaches here while a text field has the focus.
+# F3 the performance numbers; it never reaches here while a text field has the focus.
 func _debug_key(event: InputEvent) -> bool:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo: return false
-	if key.physical_keycode == KEY_F3: _screen._perf.toggle()
-	elif key.physical_keycode == KEY_F7: _screen.hud.toggle_upright()
-	else: return false
+	if key.physical_keycode != KEY_F3: return false
+	_screen._perf.toggle()
 	return true
 
 func _placement_input(event: InputEvent) -> void:

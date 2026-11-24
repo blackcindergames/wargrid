@@ -124,8 +124,6 @@ var _tip_open: bool = false
 var _strip_args: Array = []
 var _blockers: Array[Control] = []
 var _producers: ProductionStrip
-# Each producer's newest unit in production, for its idle chip (`HudModel.strip_chips`).
-var _last_made: Dictionary = {}
 # The playtest helper's surfaces draw above the cell card and the strip's cards, so those step left of them.
 var helpers: Array[Control] = []:
 	set(surfaces):
@@ -303,9 +301,6 @@ func _build_menu_chip() -> void:
 	_menu.pressed.connect(menu_pressed.emit)
 	_menu.resized.connect(_beside_menu)
 
-func toggle_upright() -> void:
-	_producers.set_upright(not ProductionStrip.upright)
-
 # Anchor C (strip round): the strip ends 8 left of Menu, so the held slabs never move it.
 func _beside_menu() -> void:
 	_producers.offset_left = -16.0 - _menu.size.x
@@ -427,7 +422,6 @@ func reset() -> void:
 	_counts = {}
 	pending_cancels = {}
 	next_clicks = 0
-	_last_made = {}
 	_producers.reset()
 	_cancelled_id = -1
 	if _economy != null:
@@ -643,7 +637,7 @@ func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat:
 	if _economy != null: _economy_controls(view, building, selection, seat)
 	_strip_args = [view, selection, view_player]
 	_show_strip(view, selection, view_player)
-	_producers.show_chips(HudModel.strip_chips(view, seat, _last_made), selection.building_id, View.owner_color(seat, selection.bright_owners))
+	_producers.show_chips(HudModel.strip_chips(view, seat), selection.building_id, View.owner_color(seat, selection.bright_owners))
 	_count_rebuild(selection)
 
 # Structural changes only; values patch in place.

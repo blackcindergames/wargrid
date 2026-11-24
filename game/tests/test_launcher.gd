@@ -610,11 +610,10 @@ func test_graphics_mirror_esc_menu(runner) -> bool:
 		var menu = PauseMenu.new(false)
 		var column: Control = launcher.get_node("Pages/Settings/Body/Playtest")
 		var quality: String = "Low" if column.get_node("Quality/Low").button_pressed else "High"
-		runner.check(menu.find_child("Quality", true, false).text == "Quality: " + quality, "R2 launcher and Esc menu agree on Quality for %s" % [stored])
+		runner.check(menu.find_child("Quality", true, false).get_node(quality).button_pressed, "R2 launcher and Esc menu agree on Quality for %s" % [stored])
 		for each: String in ["Neon", "Smooth", "Destinations"]:
 			var control: CheckButton = column.get_node(each)
-			var expected: String = "%s: %s" % [control.text, "On" if control.button_pressed else "Off"]
-			runner.check(menu.find_child(each, true, false).text == expected, "R2 launcher %s switch and Esc menu button say the same, expected %s for %s" % [each, expected, stored])
+			runner.check(menu.find_child(each, true, false).button_pressed == control.button_pressed, "R2 launcher %s switch and Esc menu switch agree for %s" % [each, stored])
 		menu.free()
 		launcher.free()
 	_restore(saved)

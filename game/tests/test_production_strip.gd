@@ -21,7 +21,7 @@ const DOZER: String = "china_builder"
 const TRUCK: String = "china_collector"
 
 func cases() -> Array[Callable]:
-	return [test_strip_order, test_strip_busy_only_kinds, test_strip_looks, test_strip_last_made_glyph, test_strip_fold, test_strip_tip_words, test_strip_click_selects, test_strip_double_click_glides, test_strip_holds_through_a_forecast, test_strip_blocks_the_map, test_strip_more_list, test_strip_layout, test_strip_chip_looks, test_strip_unchanged_refresh, test_strip_upright_bars, test_strip_upright_key_skips_typing, test_strip_reset_forgets_last_made, test_strip_tip_neighbour_rule, test_strip_click_ends_modes, test_strip_click_needs_orders_and_an_own_producer, test_strip_bar_stays_in_its_track, test_strip_queue_count, test_strip_hides_while_nothing_is_made, test_strip_hint_once, test_strip_hint_layout, test_strip_tip_names_the_kinds, test_strip_count_matches_the_cell, test_strip_hidden_under_the_pointer, test_strip_click_under_the_freeze_card, test_strip_card_steps_aside_for_a_notice, test_strip_card_follows_a_shifted_chip]
+	return [test_strip_order, test_strip_busy_only_kinds, test_strip_looks, test_strip_fold, test_strip_tip_words, test_strip_click_selects, test_strip_double_click_glides, test_strip_holds_through_a_forecast, test_strip_blocks_the_map, test_strip_more_list, test_strip_layout, test_strip_chip_looks, test_strip_unchanged_refresh, test_strip_upright_bars, test_strip_tip_neighbour_rule, test_strip_click_ends_modes, test_strip_click_needs_orders_and_an_own_producer, test_strip_bar_stays_in_its_track, test_strip_queue_count, test_strip_hides_while_nothing_is_made, test_strip_hint_once, test_strip_hint_layout, test_strip_tip_names_the_kinds, test_strip_count_matches_the_cell, test_strip_hidden_under_the_pointer, test_strip_click_under_the_freeze_card, test_strip_card_steps_aside_for_a_notice, test_strip_card_follows_a_shifted_chip]
 
 static func _entry(kind: String, work: int = 0) -> Dictionary:
 	return {"id": 1, "kind": kind, "paid_cost": 800, "work": work}
@@ -43,67 +43,60 @@ func test_strip_order(runner) -> bool:
 	var view: Dictionary = _view([_building(5, "china_factory", [_entry(MEDIUM)]), _building(3, "china_barracks", [_entry(MILITIA)]), _building(9, "china_barracks"),
 		_building(2, "china_command_center", [_entry(DOZER)]), _building(4, "china_supply_center", [_entry(TRUCK)]), _building(7, "china_factory"), _building(6, "china_power_plant"),
 		_building(10, "china_factory", [_entry(MEDIUM)], 2), _building(11, "china_factory", [], 1, false), _building(1, "china_barracks")])
-	var got: Array = _ids(HudModel.strip_chips(view, 1, {}))
-	runner.check(got == [2, 4, 1, 3, 9, 5, 7], "PS1 kind order then age, no power plant, enemy or site: [2, 4, 1, 3, 9, 5, 7], got %s" % [got])
+	var got: Array = _ids(HudModel.strip_chips(view, 1))
+	runner.check(got == [2, 4, 3, 5], "PS1 kind order then age, no idle producer, power plant, enemy or site: [2, 4, 3, 5], got %s" % [got])
 	return true
 
-# Strip round default: Headquarters and Supply Depot chips only while they produce; an idle Barracks or Vehicle Factory keeps its chip.
+# P18 rider (user, 2026-11-24): the strip shows only producing buildings; an idle one has no chip, also beside a busy one.
 func test_strip_busy_only_kinds(runner) -> bool:
 	var idle: Dictionary = _view([_building(2, "china_command_center"), _building(4, "china_supply_center"), _building(3, "china_barracks"), _building(5, "china_factory")])
-	runner.check(_ids(HudModel.strip_chips(idle, 1, {})) == [3, 5], "PS2 a resting HQ and Supply Depot have no chip, the idle Barracks and factory keep theirs, got %s" % [_ids(HudModel.strip_chips(idle, 1, {}))])
+	runner.check(HudModel.strip_chips(idle, 1).is_empty(), "PS2 no idle producer has a chip, got %s" % [_ids(HudModel.strip_chips(idle, 1))])
+	var beside: Dictionary = _view([_building(3, "china_barracks"), _building(5, "china_factory", [_entry(MEDIUM)]), _building(7, "china_factory")])
+	runner.check(_ids(HudModel.strip_chips(beside, 1)) == [5], "PS2 beside a busy factory the idle Barracks and factory have none, got %s" % [_ids(HudModel.strip_chips(beside, 1))])
 	var frc: Dictionary = _view([_building(2, "frc_command_center"), _building(4, "frc_supply_center", [_entry("frc_builder")]), _building(3, "frc_barracks")])
-	runner.check(_ids(HudModel.strip_chips(frc, 1, {})) == [4, 3], "PS2 FRC: the producing Supply Cache shows, its resting HQ does not, got %s" % [_ids(HudModel.strip_chips(frc, 1, {}))])
+	runner.check(_ids(HudModel.strip_chips(frc, 1)) == [4], "PS2 FRC: the producing Supply Cache shows, its resting HQ and Barracks do not, got %s" % [_ids(HudModel.strip_chips(frc, 1))])
 	return true
 
-# Idle a hollow bar, busy the progress, slowed (work_rate under 1000) and blocked (work done, still queued) in warn, blocked full.
+# Busy the progress, slowed (work_rate under 1000) and blocked (work done, still queued) in warn, blocked full.
 func test_strip_looks(runner) -> bool:
 	var half: int = roundi(_ticks(MEDIUM) * 0.5)
-	var rows: Array = [["busy", 1000, [_entry(MEDIUM, half)], "busy", 0.5], ["idle", 1000, [], "idle", 0.0], ["slowed", 600, [_entry(MEDIUM, half)], "slowed", 0.5],
+	var rows: Array = [["busy", 1000, [_entry(MEDIUM, half)], "busy", 0.5], ["slowed", 600, [_entry(MEDIUM, half)], "slowed", 0.5],
 		["blocked", 1000, [_entry(MEDIUM, _ticks(MEDIUM)), _entry(ROTARY)], "blocked", 1.0], ["blocked under low power", 600, [_entry(MEDIUM, _ticks(MEDIUM))], "blocked", 1.0]]
 	for row: Array in rows:
-		var chips: Array = HudModel.strip_chips(_view([_building(5, "china_factory", row[2])], row[1]), 1, {})
+		var chips: Array = HudModel.strip_chips(_view([_building(5, "china_factory", row[2])], row[1]), 1)
 		var chip: Dictionary = chips[0] if chips.size() == 1 else {}
 		runner.check(chip.get("look") == row[3] and is_equal_approx(chip.get("fraction", -1.0), row[4]), "PS3 %s: look %s at %.1f, got %s" % [row[0], row[3], row[4], chip])
-	return true
-
-# An idle military producer shows its last-made unit; one that made none shows the first unit of its card (the Q cell).
-func test_strip_last_made_glyph(runner) -> bool:
-	var last: Dictionary = {}
-	var busy: Array = HudModel.strip_chips(_view([_building(5, "china_factory", [_entry(ROTARY), _entry(MEDIUM)]), _building(3, "china_barracks")]), 1, last)
-	runner.check(busy.map(func(chip: Dictionary) -> String: return chip.unit) == [MILITIA, ROTARY], "PS4 busy shows the unit in production, a never-used Barracks its Q cell's Militia, got %s" % [busy])
-	var rested: Array = HudModel.strip_chips(_view([_building(5, "china_factory"), _building(3, "china_barracks"), _building(7, "china_factory")]), 1, last)
-	runner.check(rested.map(func(chip: Dictionary) -> String: return chip.unit) == [MILITIA, ROTARY, MEDIUM], "PS4 the factory rests on its last-made Rotary Gun Tank, a new one on its Q cell's Medium Tank, got %s" % [rested])
 	return true
 
 # Overflow B: eight chips, then `+N` at the left; the front of the order folds first.
 func test_strip_fold(runner) -> bool:
 	var buildings: Array = [_building(1, "china_command_center", [_entry(DOZER)]), _building(2, "china_supply_center", [_entry(TRUCK)])]
-	for id: int in range(3, 7): buildings.append(_building(id, "china_barracks"))
-	for id: int in range(7, 12): buildings.append(_building(id, "china_factory"))
-	var split: Array = HudModel.strip_split(HudModel.strip_chips(_view(buildings), 1, {}))
+	for id: int in range(3, 7): buildings.append(_building(id, "china_barracks", [_entry(MILITIA)]))
+	for id: int in range(7, 12): buildings.append(_building(id, "china_factory", [_entry(MEDIUM)]))
+	var split: Array = HudModel.strip_split(HudModel.strip_chips(_view(buildings), 1))
 	runner.check(split.size() == 2 and _ids(split[0]) == [1, 2, 3] and _ids(split[1]) == [4, 5, 6, 7, 8, 9, 10, 11], "PS5 eleven producers: HQ, depot and the first Barracks fold, eight stay, got %s" % [split.map(_ids)])
-	var eight: Array = HudModel.strip_split(HudModel.strip_chips(_view(buildings.slice(3)), 1, {}))
+	var eight: Array = HudModel.strip_split(HudModel.strip_chips(_view(buildings.slice(3)), 1))
 	runner.check(eight.size() == 2 and eight[0].is_empty() and eight[1].size() == 8, "PS5 eight producers fold nothing, got %s" % [eight.map(_ids)])
 	return true
 
 # The chip's hover card and the `+N` list words (strip round pictures `state-hover`, `state-more`).
 func test_strip_tip_words(runner) -> bool:
 	var chips: Array = HudModel.strip_chips(_view([_building(1, "china_command_center", [_entry(DOZER, _ticks(DOZER) - 90000)]), _building(5, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM) - 120000), _entry(MEDIUM), _entry(ROTARY), _entry(MEDIUM)]),
-		_building(3, "china_barracks"), _building(7, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM))])]), 1, {})
+		_building(7, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM))])]), 1)
 	var lines: Array = chips.map(HudModel.strip_tip)
-	runner.check(lines == ["Bulldozer · QUEUE 1 / 9\nBulldozer ready in 3s", "Idle", "Medium Tank ×3, Rotary Gun Tank · QUEUE 4 / 9\nMedium Tank ready in 4s", "Medium Tank · QUEUE 1 / 9\n" + HudModel.EXIT_BLOCKED_HINT], "PS6 chip cards: the kinds with their totals and the queue, then the head unit's seconds or why it waits, or Idle, got %s" % [lines])
+	runner.check(lines == ["Bulldozer · QUEUE 1 / 9\nBulldozer ready in 3s", "Medium Tank ×3, Rotary Gun Tank · QUEUE 4 / 9\nMedium Tank ready in 4s", "Medium Tank · QUEUE 1 / 9\n" + HudModel.EXIT_BLOCKED_HINT], "PS6 chip cards: the kinds with their totals and the queue, then the head unit's seconds or why it waits, got %s" % [lines])
 	var hidden: Array = chips.map(HudModel.strip_hidden_line)
-	runner.check(hidden == ["Headquarters · Bulldozer · ready in 3s", "Barracks · idle", "Vehicle Factory · Medium Tank ×3 · ready in 4s", "Vehicle Factory · Medium Tank · Exit blocked"], "PS6 +N list lines, got %s" % [hidden])
-	var slowed: Dictionary = HudModel.strip_chips(_view([_building(5, "china_factory", [_entry(MEDIUM)])], 500), 1, {})[0]
+	runner.check(hidden == ["Headquarters · Bulldozer · ready in 3s", "Vehicle Factory · Medium Tank ×3 · ready in 4s", "Vehicle Factory · Medium Tank · Exit blocked"], "PS6 +N list lines, got %s" % [hidden])
+	var slowed: Dictionary = HudModel.strip_chips(_view([_building(5, "china_factory", [_entry(MEDIUM)])], 500), 1)[0]
 	var slow_line: String = "Medium Tank · QUEUE 1 / 9\nMedium Tank ready in %s\n%s" % [slowed.left, HudModel.low_power_hint(500, Registry.Factions.DEFAULT_FACTION)]
 	runner.check(HudModel.strip_tip(slowed) == slow_line, "PS6 a slowed chip's card names low power as NOW's hover does, got '%s'" % HudModel.strip_tip(slowed))
-	var both: Dictionary = HudModel.strip_chips(_view([_building(5, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM))])], 500), 1, {})[0]
+	var both: Dictionary = HudModel.strip_chips(_view([_building(5, "china_factory", [_entry(MEDIUM, _ticks(MEDIUM))])], 500), 1)[0]
 	var both_line: String = "Medium Tank · QUEUE 1 / 9\n%s\n%s" % [HudModel.EXIT_BLOCKED_HINT, HudModel.low_power_hint(500, Registry.Factions.DEFAULT_FACTION)]
 	runner.check(HudModel.strip_tip(both) == both_line, "PS6 blocked under low power names both, in NOW's order, got '%s'" % HudModel.strip_tip(both))
 	runner.check(HudModel.STRIP_HINT == "Click: select it · Double-click: go there", "PS6 the hint line")
 	return true
 
-# Every China producer (HudTests._queue_world plus the HQ, which makes a Bulldozer), more Barracks and factories when `extra`, nothing selected.
+# Every China producer (HudTests._queue_world plus the HQ) busy but the depot, more busy Barracks and factories when `extra`, nothing selected.
 func _world(runner, port: SubViewport = null, extra: int = 0) -> Array:
 	var overlays = OverlayTests.new()
 	var saved: String = overlays._begin()
@@ -115,8 +108,10 @@ func _world(runner, port: SubViewport = null, extra: int = 0) -> Array:
 	for i in extra: ids.more.append(Fixture.add_completed(main.driver.pump.live(), 1, "china_barracks" if i < 2 else "china_factory", Vector2i(2 + 3 * (i % 4), 26 + 3 * floori(i / 4.0))))
 	BaseScene.publish(main)
 	HudTests._select(main, [])
-	# The strip shows only while something is produced: the HQ makes a Bulldozer.
-	_queues(main, {ids.hq: [DOZER]})
+	# The strip shows only producing buildings.
+	var queues: Dictionary = {ids.hq: [DOZER], ids.barracks: [MILITIA], ids.factory: [MEDIUM]}
+	for id: int in ids.more: queues[id] = [MEDIUM] if HudModel.building(main.driver.current().view, id).kind == "china_factory" else [MILITIA]
+	_queues(main, queues)
 	await _frames(runner)
 	return [overlays, saved, port, main, ids]
 
@@ -176,7 +171,7 @@ func test_strip_click_selects(runner) -> bool:
 	_clock(main, now)
 	var before: Vector2 = camera.position
 	var barracks: Button = _chip_of(main, ids.barracks)
-	runner.check(barracks != null, "PS7 fixture: the idle Barracks has a chip")
+	runner.check(barracks != null, "PS7 fixture: the Barracks has a chip")
 	if barracks == null:
 		_end(world)
 		return true
@@ -302,7 +297,7 @@ func test_strip_more_list(runner) -> bool:
 	await _frames(runner)
 	var tip: Control = _tip(main)
 	var text: String = "\n".join(tip.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree()).map(func(label: Label) -> String: return label.text))
-	runner.check(tip.is_visible_in_tree() and text == "ALSO PRODUCING\nHeadquarters · Bulldozer · ready in 1s\nSupply Depot · Supply Truck · ready in 6s\nBarracks · idle", "PS11 the list names the hidden producers in order, got '%s'" % text)
+	runner.check(tip.is_visible_in_tree() and text == "ALSO PRODUCING\nHeadquarters · Bulldozer · ready in 1s\nSupply Depot · Supply Truck · ready in 6s\nBarracks · Militia · ready in 6s", "PS11 the list names the hidden producers in order, got '%s'" % text)
 	runner.check(main.hud.blocks(_centre(more)), "PS11 `+3` blocks the map")
 	var presses: Array = [0]
 	more.pressed.connect(func() -> void: presses[0] += 1)
@@ -311,10 +306,8 @@ func test_strip_more_list(runner) -> bool:
 	_end(world)
 	return true
 
-# HUD headless layout at every HUD size, stacked and upright, with the most chips (eight and `+N`) and the widest held forecast; FRC has no power slab.
+# HUD headless layout at every HUD size, with the most chips (eight and `+N`) and the widest held forecast; FRC has no power slab.
 func test_strip_layout(runner) -> bool:
-	# The default stays whatever the game ships, so a later case still sees it.
-	var was: bool = ProductionStrip.upright
 	for pair: Array in BaseScene.HUD_SIZES:
 		var size: Vector2i = pair[1]
 		var view_rect := Rect2(Vector2.ZERO, Vector2(size))
@@ -325,41 +318,38 @@ func test_strip_layout(runner) -> bool:
 		var now: Array = [0]
 		_clock(main, now)
 		_queues(main, {ids.hq: [DOZER], ids.depot: [TRUCK], ids.factory: [MEDIUM, MEDIUM]})
-		for upright: bool in [false, true]:
-			_strip(main).set_upright(upright)
-			for faction: Array in [["usa", 14, 10], ["frc", 0, 0]]:
-				var view: Dictionary = main.driver.current().view
-				HudModel.player(view, 1).merge({"faction": faction[0], "power_demand": faction[1], "power_supply": faction[2]}, true)
-				main.hud.update_hud(view, HudTests._placement(faction[0] + "_barracks"), 1, 1)
-				await _frames(runner)
-				var at: String = "%s at %s%s" % [faction[0], size, " upright" if upright else ""]
-				var strip: Control = _strip(main)
-				runner.check(strip != null and strip.is_visible_in_tree(), "PS12 %s: the strip shows" % at)
-				if strip == null: break
-				var rect: Rect2 = strip.get_global_rect()
-				var menu: Rect2 = main.get_node("HUD/MenuChip").get_global_rect()
-				runner.check(is_equal_approx(rect.end.x, menu.position.x - 8.0) and rect.position.y == 8.0 and rect.size.y == 32.0 and view_rect.encloses(rect), "PS12 %s: 32 high at y 8, ending 8 left of Menu (%.0f), got %s" % [at, menu.position.x - 8.0, rect])
-				if pair[0] == Vector2i(1280, 720) and faction[0] == "usa":
-					var gap: float = rect.position.x - main.get_node("HUD/Hud/TopStrip").get_global_rect().end.x
-					print("PS12 free gap at 1280x720%s between the held power slab and eight chips plus `+N`: %.1f px" % [" upright" if upright else "", gap])
-					runner.check(gap >= 0.0, "PS12 the held power slab ends left of the strip at 1280x720, gap %.1f" % gap)
-				for other: Array in [["the held slabs", main.get_node("HUD/Hud/TopStrip").get_global_rect()], ["Menu", menu], ["the Playtest chip", main.get_node("HUD/Playtest/Chip").get_global_rect()]]:
-					runner.check(not rect.intersects(other[1]), "PS12 %s: clear of %s %s, got %s" % [at, other[0], other[1], rect])
-				var chips: Array = _chips(main)
-				runner.check(chips.size() == 8 and _more(main).is_visible_in_tree() and chips.all(func(chip: Control) -> bool: return chip.size == (Vector2(42, 26) if upright else Vector2(48, 26)) and rect.grow(-1.0).encloses(chip.get_global_rect())), "PS12 %s: eight 48 or 42 x 26 chips and `+N` inside the slab" % at)
-				# The chip beside Menu: its card would sit under the Playtest chip.
-				HudTests._move(port, _centre(chips.back()))
-				now[0] += 1000
-				await _frames(runner)
-				var tip: Rect2 = _tip(main).get_global_rect()
-				runner.check(_tip(main).is_visible_in_tree() and view_rect.encloses(tip) and not tip.intersects(main.get_node("HUD/Playtest/Chip").get_global_rect()) and tip.position.y >= rect.end.y, "PS12 %s: the chip card under the strip, inside the view, clear of the Playtest chip, got %s" % [at, tip])
-				HudTests._move(port, Vector2(size.x / 2.0, 300.0))
-				await _frames(runner)
-		_strip(main).set_upright(was)
+		for faction: Array in [["usa", 14, 10], ["frc", 0, 0]]:
+			var view: Dictionary = main.driver.current().view
+			HudModel.player(view, 1).merge({"faction": faction[0], "power_demand": faction[1], "power_supply": faction[2]}, true)
+			main.hud.update_hud(view, HudTests._placement(faction[0] + "_barracks"), 1, 1)
+			await _frames(runner)
+			var at: String = "%s at %s" % [faction[0], size]
+			var strip: Control = _strip(main)
+			runner.check(strip != null and strip.is_visible_in_tree(), "PS12 %s: the strip shows" % at)
+			if strip == null: break
+			var rect: Rect2 = strip.get_global_rect()
+			var menu: Rect2 = main.get_node("HUD/MenuChip").get_global_rect()
+			runner.check(is_equal_approx(rect.end.x, menu.position.x - 8.0) and rect.position.y == 8.0 and rect.size.y == 32.0 and view_rect.encloses(rect), "PS12 %s: 32 high at y 8, ending 8 left of Menu (%.0f), got %s" % [at, menu.position.x - 8.0, rect])
+			if pair[0] == Vector2i(1280, 720) and faction[0] == "usa":
+				var gap: float = rect.position.x - main.get_node("HUD/Hud/TopStrip").get_global_rect().end.x
+				print("PS12 free gap at 1280x720 between the held power slab and eight chips plus `+N`: %.1f px" % gap)
+				runner.check(gap >= 0.0, "PS12 the held power slab ends left of the strip at 1280x720, gap %.1f" % gap)
+			for other: Array in [["the held slabs", main.get_node("HUD/Hud/TopStrip").get_global_rect()], ["Menu", menu], ["the Playtest chip", main.get_node("HUD/Playtest/Chip").get_global_rect()]]:
+				runner.check(not rect.intersects(other[1]), "PS12 %s: clear of %s %s, got %s" % [at, other[0], other[1], rect])
+			var chips: Array = _chips(main)
+			runner.check(chips.size() == 8 and _more(main).is_visible_in_tree() and chips.all(func(chip: Control) -> bool: return chip.size == Vector2(42, 26) and rect.grow(-1.0).encloses(chip.get_global_rect())), "PS12 %s: eight 42 x 26 chips and `+N` inside the slab" % at)
+			# The chip beside Menu: its card would sit under the Playtest chip.
+			HudTests._move(port, _centre(chips.back()))
+			now[0] += 1000
+			await _frames(runner)
+			var tip: Rect2 = _tip(main).get_global_rect()
+			runner.check(_tip(main).is_visible_in_tree() and view_rect.encloses(tip) and not tip.intersects(main.get_node("HUD/Playtest/Chip").get_global_rect()) and tip.position.y >= rect.end.y, "PS12 %s: the chip card under the strip, inside the view, clear of the Playtest chip, got %s" % [at, tip])
+			HudTests._move(port, Vector2(size.x / 2.0, 300.0))
+			await _frames(runner)
 		_end(world)
 	return true
 
-# Selected chip: panel2 fill and a 1 px sel inset; bars: owner colour, warn when slowed or blocked (full), a hollow track when idle.
+# Selected chip: panel2 fill and a 1 px sel inset; bars: owner colour, warn when slowed or blocked (full).
 func test_strip_chip_looks(runner) -> bool:
 	var world: Array = await _world(runner)
 	var main = world[3]
@@ -380,9 +370,6 @@ func test_strip_chip_looks(runner) -> bool:
 	runner.check(plain != null and plain.bg_color == token.call("btn") and plain.border_width_left == 0, "PS13 an unselected chip: btn fill, no frame")
 	var fill: ColorRect = factory.get_node("Track/Fill")
 	runner.check(fill.color == main.hud.panel_edge() and fill.size == Vector2(4, 8), "PS13 busy: the owner colour, 8 of 20 px at 42 %%, got %s %s" % [fill.color, fill.size])
-	var hollow: StyleBoxFlat = barracks.get_node("Track").get_theme_stylebox("panel") as StyleBoxFlat
-	runner.check(hollow != null and not hollow.draw_center and hollow.border_width_left == 1 and is_zero_approx((barracks.get_node("Track/Fill") as Control).size.y), "PS13 idle: a 1 px outline track, empty")
-	runner.check(barracks.get_node("Glyph").self_modulate != Color.WHITE and factory.get_node("Glyph").self_modulate == Color.WHITE, "PS13 idle glyph darker than busy")
 	_queues(main, {ids.factory: [MEDIUM]}, 600)
 	await _frames(runner)
 	runner.check(fill.color == token.call("warn") and fill.size == Vector2(4, 8), "PS13 slowed: warn at 42 %%, got %s" % [fill.color])
@@ -447,78 +434,31 @@ func test_strip_unchanged_refresh(runner) -> bool:
 	main.free()
 	return true
 
-# Upright by default (user, 2026-11-23): count | glyph | 4 x 20 bar, 42 wide; F7 flips to the stacked 48 px chip and back.
+# Upright only (P18 rider, user, 2026-11-24): count | glyph | 4 x 20 bar, 42 wide; F7 changes nothing.
 func test_strip_upright_bars(runner) -> bool:
-	var was: bool = ProductionStrip.upright
 	var world: Array = await _world(runner)
 	var main = world[3]
 	var ids: Dictionary = world[4]
 	_queues(main, {ids.factory: [MEDIUM]})
 	await _frames(runner)
-	var key := func() -> void:
-		var event := InputEventKey.new()
-		event.physical_keycode = KEY_F7
-		event.keycode = KEY_F7
-		event.pressed = true
-		world[2].push_input(event, true)
-	for step: String in ["default", "F7", "F7 again"]:
-		if step != "default":
-			key.call()
+	for step: String in ["default", "F7"]:
+		if step == "F7":
+			var event := InputEventKey.new()
+			event.physical_keycode = KEY_F7
+			event.keycode = KEY_F7
+			event.pressed = true
+			world[2].push_input(event, true)
 			await _frames(runner)
-		var upright: bool = step != "F7"
 		var chip: Button = _chip_of(main, ids.factory)
 		if chip == null:
 			runner.check(false, "PS15 %s: the factory has a chip" % step)
 			continue
 		var track: Control = chip.get_node("Track")
 		var fill: Control = track.get_node("Fill")
-		if upright:
-			runner.check(chip.size == Vector2(42, 26) and track.size == Vector2(4, 20) and fill.position == Vector2(0, 12) and fill.size == Vector2(4, 8), "PS15 %s: 42 x 26, a 4 x 20 bar filled 8 px from the bottom, got %s %s %s" % [step, chip.size, fill.position, fill.size])
-			var count: Rect2 = (chip.get_node("Count") as Control).get_global_rect()
-			var glyph: Rect2 = (chip.get_node("Glyph") as Control).get_global_rect()
-			runner.check(count.end.x <= glyph.position.x and glyph.end.x <= track.get_global_rect().position.x, "PS15 %s: count, glyph and bar side by side, got %s %s %s" % [step, count, glyph, track.get_global_rect()])
-		else:
-			runner.check(chip.size == Vector2(48, 26) and track.size == Vector2(40, 4) and fill.position == Vector2.ZERO and fill.size == Vector2(17, 4), "PS15 %s: the stacked 48 x 26 chip, a 40 x 4 bar filled 17 px, got %s %s %s" % [step, chip.size, fill.position, fill.size])
-	_strip(main).set_upright(was)
-	_end(world)
-	return true
-
-# F7 goes through `orders` like F3, so a focused playtest field keeps the key.
-func test_strip_upright_key_skips_typing(runner) -> bool:
-	var was: bool = ProductionStrip.upright
-	var world: Array = await _world(runner)
-	var main = world[3]
-	var ids: Dictionary = world[4]
-	_queues(main, {ids.factory: [MEDIUM]})
-	var field: LineEdit = world[0]._field(main, "Answer_" + world[0]._questions()[0].id)
-	field.grab_focus()
-	await _frames(runner)
-	runner.check(main._typing(), "PS16 fixture: the playtest answer field has the focus")
-	var event := InputEventKey.new()
-	event.physical_keycode = KEY_F7
-	event.keycode = KEY_F7
-	event.pressed = true
-	world[2].push_input(event, true)
-	await _frames(runner)
-	var chip: Button = _chip_of(main, ids.factory)
-	runner.check(chip != null and chip.size == Vector2(42, 26), "PS16 F7 while typing in the note leaves the chips upright, got %s" % [chip.size if chip != null else Vector2.ZERO])
-	_strip(main).set_upright(was)
-	_end(world)
-	return true
-
-# A rematch's producers start without a last-made unit: an idle factory shows its Q cell's unit again.
-func test_strip_reset_forgets_last_made(runner) -> bool:
-	var world: Array = await _world(runner)
-	var main = world[3]
-	var ids: Dictionary = world[4]
-	_queues(main, {ids.factory: [ROTARY]})
-	_queues(main, {ids.factory: []})
-	await _frames(runner)
-	runner.check(_chip_of(main, ids.factory).get_meta("chip").unit == ROTARY, "PS17 fixture: the idle factory shows its last-made Rotary Gun Tank")
-	main.hud.reset()
-	_queues(main, {ids.factory: []})
-	await _frames(runner)
-	runner.check(_chip_of(main, ids.factory).get_meta("chip").unit == MEDIUM, "PS17 after a reset the idle factory shows its Q cell's Medium Tank, got %s" % [_chip_of(main, ids.factory).get_meta("chip").unit])
+		runner.check(chip.size == Vector2(42, 26) and track.size == Vector2(4, 20) and fill.position == Vector2(0, 12) and fill.size == Vector2(4, 8), "PS15 %s: 42 x 26, a 4 x 20 bar filled 8 px from the bottom, got %s %s %s" % [step, chip.size, fill.position, fill.size])
+		var count: Rect2 = (chip.get_node("Count") as Control).get_global_rect()
+		var glyph: Rect2 = (chip.get_node("Glyph") as Control).get_global_rect()
+		runner.check(count.end.x <= glyph.position.x and glyph.end.x <= track.get_global_rect().position.x, "PS15 %s: count, glyph and bar side by side, got %s %s %s" % [step, count, glyph, track.get_global_rect()])
 	_end(world)
 	return true
 
@@ -579,7 +519,7 @@ func test_strip_click_needs_orders_and_an_own_producer(runner) -> bool:
 	var site: int = Fixture.add_completed(live, 1, "china_barracks", Vector2i(20, 12))
 	BaseScene.publish(main)
 	HudModel.building(main.driver.current().view, site).completed = false
-	_queues(main, {ids.hq: [DOZER]})
+	_queues(main, {ids.hq: [DOZER], ids.factory: [MEDIUM]})
 	main.orders.selected_ids.assign([1])
 	main.orders.selected_building_id = -1
 	main._reshow()
@@ -597,69 +537,58 @@ func test_strip_click_needs_orders_and_an_own_producer(runner) -> bool:
 	_end(world)
 	return true
 
-# The fill stays inside its track: upright it keeps the track's bottom and grows up, stacked it keeps the left edge, round(fraction x length) long.
+# The fill stays inside its track: it keeps the track's bottom and grows up, round(fraction x length) long.
 func test_strip_bar_stays_in_its_track(runner) -> bool:
-	var was: bool = ProductionStrip.upright
 	for pair: Array in [BaseScene.HUD_SIZES[0], BaseScene.HUD_SIZES[2]]:
 		var port: SubViewport = BaseScene.sized_port(runner, pair[0], pair[1])
 		var world: Array = await _world(runner, port)
 		var main = world[3]
 		var ids: Dictionary = world[4]
 		var ticks: int = _ticks(MEDIUM)
-		for upright: bool in [false, true]:
-			_strip(main).set_upright(upright)
-			var bad: Array = []
-			var works: Array = [0.0, 0.01, 0.33, 0.5, 0.99, 1.0].map(func(f: float) -> int: return roundi(f * ticks))
-			for step: int in range(0, ticks + 1, 1000): works.append(step)
-			for work: int in works:
-				_queues(main, {ids.factory: [MEDIUM]})
-				var view: Dictionary = main.driver.current().view
-				HudModel.building(view, ids.factory).queue[0].work = work
-				main._show(view)
-				await runner.process_frame
-				var track: Control = _chip_of(main, ids.factory).get_node("Track")
-				var fill: Control = track.get_node("Fill")
-				var outer: Rect2 = track.get_global_rect()
-				var inner: Rect2 = fill.get_global_rect()
-				var fraction: float = minf(1.0, float(work) / ticks)
-				var length: float = roundf(fraction * (outer.size.y if upright else outer.size.x))
-				var held: bool = outer.encloses(inner) and (is_equal_approx(inner.end.y, outer.end.y) and is_equal_approx(inner.size.y, length) and is_equal_approx(inner.size.x, outer.size.x) if upright else is_equal_approx(inner.position.x, outer.position.x) and is_equal_approx(inner.size.x, length) and is_equal_approx(inner.size.y, outer.size.y))
-				if not held: bad.append([snappedf(fraction, 0.001), outer, inner])
-			var edge: StyleBoxFlat = _chip_of(main, ids.factory).get_node("Track").get_theme_stylebox("panel") as StyleBoxFlat
-			var hollow: StyleBoxFlat = _chip_of(main, ids.barracks).get_node("Track").get_theme_stylebox("panel") as StyleBoxFlat
-			runner.check(edge != null and not edge.anti_aliasing and hollow != null and hollow != edge and not hollow.anti_aliasing, "PS21 %s: the busy and the idle (hollow) tracks draw hard edges like the fill" % ("upright" if upright else "stacked"))
-			runner.check(bad.is_empty(), "PS21 %s at %s: the fill stays in its track at its length, got %d off: %s" % ["upright" if upright else "stacked", pair[0], bad.size(), bad.slice(0, 4)])
-		_strip(main).set_upright(was)
+		var bad: Array = []
+		var works: Array = [0.0, 0.01, 0.33, 0.5, 0.99, 1.0].map(func(f: float) -> int: return roundi(f * ticks))
+		for step: int in range(0, ticks + 1, 1000): works.append(step)
+		for work: int in works:
+			_queues(main, {ids.factory: [MEDIUM]})
+			var view: Dictionary = main.driver.current().view
+			HudModel.building(view, ids.factory).queue[0].work = work
+			main._show(view)
+			await runner.process_frame
+			var track: Control = _chip_of(main, ids.factory).get_node("Track")
+			var fill: Control = track.get_node("Fill")
+			var outer: Rect2 = track.get_global_rect()
+			var inner: Rect2 = fill.get_global_rect()
+			var fraction: float = minf(1.0, float(work) / ticks)
+			var length: float = roundf(fraction * outer.size.y)
+			if not (outer.encloses(inner) and is_equal_approx(inner.end.y, outer.end.y) and is_equal_approx(inner.size.y, length) and is_equal_approx(inner.size.x, outer.size.x)): bad.append([snappedf(fraction, 0.001), outer, inner])
+		var edge: StyleBoxFlat = _chip_of(main, ids.factory).get_node("Track").get_theme_stylebox("panel") as StyleBoxFlat
+		runner.check(edge != null and not edge.anti_aliasing, "PS21 the track draws hard edges like the fill")
+		runner.check(bad.is_empty(), "PS21 at %s: the fill stays in its track at its length, got %d off: %s" % [pair[0], bad.size(), bad.slice(0, 4)])
 		_end(world)
 	return true
 
 # The owner's pick (user, 2026-11-23, late): the count is the head kind's total in the queue (the build card cell's ×N), small (12 px, the HUD's floor)
-# in its column, no mark; none when idle, chips as wide as before.
+# in its column, no mark, chips as wide as before.
 func test_strip_queue_count(runner) -> bool:
-	var was: bool = ProductionStrip.upright
 	var world: Array = await _world(runner)
 	var main = world[3]
 	var ids: Dictionary = world[4]
 	var four_three: Array = [MEDIUM, MEDIUM, MEDIUM, MEDIUM, ROTARY, ROTARY, ROTARY]
-	for upright: bool in [false, true]:
-		_strip(main).set_upright(upright)
-		var mode: String = "upright" if upright else "stacked"
-		for row: Array in [[four_three, "4"], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "7"], [[MEDIUM, ROTARY, MEDIUM], "2"], [[MEDIUM], "1"], [[], ""]]:
-			_queues(main, {ids.hq: [DOZER], ids.factory: row[0]})
-			await _frames(runner)
-			var chip: Button = _chip_of(main, ids.factory)
-			var count: Label = chip.get_node_or_null("Count") if chip != null else null
-			var shown: String = count.text if count != null and count.is_visible_in_tree() else ""
-			runner.check(shown == row[1] and chip != null and chip.get_node_or_null("Then") == null, "PS22 %s: %s shows '%s' and no mark, got '%s'" % [mode, row[0], row[1], shown])
-			runner.check(chip != null and chip.size == (Vector2(42, 26) if upright else Vector2(48, 26)), "PS22 %s, %d queued: the chip keeps its width, got %s" % [mode, row[0].size(), chip.size if chip != null else Vector2.ZERO])
-			if count == null or not count.is_visible_in_tree(): continue
-			var box: Rect2 = count.get_global_rect()
-			var glyph: Rect2 = (chip.get_node("Glyph") as Control).get_global_rect()
-			var track: Rect2 = (chip.get_node("Track") as Control).get_global_rect()
-			runner.check(chip.get_global_rect().encloses(box) and not box.intersects(track) and not box.intersects(glyph), "PS22 %s: the count inside the chip, clear of the glyph and the bar, got %s glyph %s" % [mode, box, glyph])
-			if upright: runner.check(box.position.x < glyph.position.x and is_equal_approx(box.position.y, glyph.position.y), "PS22 upright: the count in its own column left of the glyph, top-aligned with it, got %s glyph %s" % [box, glyph])
-			runner.check(count.get_theme_font_size("font_size") == 12 and count.get_theme_color("font_color") == main.hud.get_theme_color("muted", &"Tokens"), "PS22 %s: 12 px muted" % mode)
-	_strip(main).set_upright(was)
+	for row: Array in [[four_three, "4"], [[MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM, MEDIUM], "7"], [[MEDIUM, ROTARY, MEDIUM], "2"], [[MEDIUM], "1"]]:
+		_queues(main, {ids.hq: [DOZER], ids.factory: row[0]})
+		await _frames(runner)
+		var chip: Button = _chip_of(main, ids.factory)
+		var count: Label = chip.get_node_or_null("Count") if chip != null else null
+		var shown: String = count.text if count != null and count.is_visible_in_tree() else ""
+		runner.check(shown == row[1] and chip != null and chip.get_node_or_null("Then") == null, "PS22 %s shows '%s' and no mark, got '%s'" % [row[0], row[1], shown])
+		runner.check(chip != null and chip.size == Vector2(42, 26), "PS22 %d queued: the chip keeps its width, got %s" % [row[0].size(), chip.size if chip != null else Vector2.ZERO])
+		if count == null or not count.is_visible_in_tree(): continue
+		var box: Rect2 = count.get_global_rect()
+		var glyph: Rect2 = (chip.get_node("Glyph") as Control).get_global_rect()
+		var track: Rect2 = (chip.get_node("Track") as Control).get_global_rect()
+		runner.check(chip.get_global_rect().encloses(box) and not box.intersects(track) and not box.intersects(glyph), "PS22 the count inside the chip, clear of the glyph and the bar, got %s glyph %s" % [box, glyph])
+		runner.check(box.position.x < glyph.position.x and is_equal_approx(box.position.y, glyph.position.y), "PS22 the count in its own column left of the glyph, top-aligned with it, got %s glyph %s" % [box, glyph])
+		runner.check(count.get_theme_font_size("font_size") == 12 and count.get_theme_color("font_color") == main.hud.get_theme_color("muted", &"Tokens"), "PS22 12 px muted")
 	_end(world)
 	return true
 
@@ -686,7 +615,7 @@ func test_strip_hides_while_nothing_is_made(runner) -> bool:
 	var strip: Control = _strip(main)
 	var spot: Vector2 = _centre(strip)
 	HudTests._select(main, [], ids.factory)
-	_queues(main, {ids.hq: []})
+	_queues(main, {ids.hq: [], ids.barracks: [], ids.factory: []})
 	await _frames(runner)
 	runner.check(not strip.is_visible_in_tree() and not main.hud.blocks(spot), "PS23 all idle, the factory selected: no strip and the map takes clicks there")
 	var watched: Array = [strip] + strip.find_children("*", "Control", true, false)
@@ -702,7 +631,7 @@ func test_strip_hides_while_nothing_is_made(runner) -> bool:
 	_queues(main, {ids.factory: [MEDIUM]})
 	await _frames(runner)
 	var barracks: Button = _chip_of(main, ids.barracks)
-	runner.check(strip.is_visible_in_tree() and main.hud.blocks(spot) and barracks != null and barracks.get_meta("chip").look == "idle", "PS23 one unit in production shows the strip, the idle Barracks hollow beside it")
+	runner.check(strip.is_visible_in_tree() and main.hud.blocks(_centre(strip)) and _chips(main).size() == 1 and barracks == null, "PS23 one unit in production shows the strip with its one chip, no idle Barracks beside it, got %d chips" % _chips(main).size())
 	_queues(main, {ids.factory: []})
 	await _frames(runner)
 	runner.check(not strip.is_visible_in_tree(), "PS23 the last one finished hides the strip again")
@@ -718,7 +647,7 @@ func test_strip_tip_names_the_kinds(runner) -> bool:
 	for row: Array in rows:
 		var entries: Array = []
 		for i in row[0].size(): entries.append({"id": i, "kind": row[0][i], "paid_cost": 800, "work": 126000 if i == 0 else 0})
-		var got: String = HudModel.strip_tip(HudModel.strip_chips(_view([_building(5, "china_factory", entries)]), 1, {})[0])
+		var got: String = HudModel.strip_tip(HudModel.strip_chips(_view([_building(5, "china_factory", entries)]), 1)[0])
 		runner.check(got == row[1] + "\nMedium Tank ready in 6s", "PS26 %s reads '%s', got '%s'" % [row[0], row[1], got])
 	# The widest card a Barracks can show stays inside the smallest view.
 	var world: Array = await _world(runner)
@@ -759,7 +688,7 @@ func test_strip_hidden_under_the_pointer(runner) -> bool:
 	now[0] = 300
 	await _frames(runner)
 	runner.check(_tip(main).visible, "PS30 fixture: the factory's card is open")
-	_queues(main, {ids.hq: [], ids.factory: []})
+	_queues(main, {ids.hq: [], ids.barracks: [], ids.factory: []})
 	await _frames(runner)
 	runner.check(not _strip(main).is_visible_in_tree() and not _tip(main).visible, "PS30 fixture: nothing in production, strip and card gone")
 	HudTests._move(port, Vector2(640, 400))
@@ -847,7 +776,7 @@ func test_strip_hint_once(runner) -> bool:
 	runner.check(not _hint_shown(main) and _hint_saved() and config.get_value("audio", "music", 0.0) == 0.3, "PS24 a chip click ends it and saves hints/strip_seen beside the other settings")
 	var fresh = ProductionStrip.new()
 	world[2].add_child(fresh)
-	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1, {}) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "kinds": [{"kind": MEDIUM, "count": 1}], "left": "5s", "slow": ""}], -1, Color.WHITE)
+	fresh.show_chips(HudModel.strip_chips(main.shown_state, 1) + [{"id": 99, "kind": "china_factory", "rank": 3, "unit": MEDIUM, "look": "busy", "fraction": 0.5, "queue": 1, "kinds": [{"kind": MEDIUM, "count": 1}], "left": "5s", "slow": ""}], -1, Color.WHITE)
 	await _frames(runner)
 	runner.check(fresh.is_visible_in_tree() and not fresh.get_node("Hint").is_visible_in_tree(), "PS24 a fresh strip with the setting saved shows no hint")
 	_end(world)
@@ -859,7 +788,7 @@ func test_strip_hint_once(runner) -> bool:
 	strip.set_process(false)
 	runner.check(_hint_shown(main), "PS24 fixture: a new machine shows the hint again")
 	strip._process(6.0)
-	_queues(main, {ids.hq: []})
+	_queues(main, {ids.hq: [], ids.barracks: [], ids.factory: []})
 	await _frames(runner)
 	runner.check(not _hint_shown(main) and not _hint_saved(), "PS24 the strip hiding hides the hint without ending it")
 	strip._process(20.0)

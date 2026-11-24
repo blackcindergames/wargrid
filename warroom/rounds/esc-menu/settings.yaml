@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How does the Settings page show its toggles?
+why: >-
+  The page holds what leaves the menu: Quality, Neon colours, Smooth movement, Show unit destinations,
+  the playtest helper and the volume sliders with mute, under GRAPHICS, SOUND and GAME. Today each
+  toggle is a button whose text carries its state ("Quality: High"). Zero Hour's Options window is a
+  separate screen of labelled controls (CnC_Generals_Zero_Hour `0a05454`, `OptionsMenu.cpp`). No new
+  setting is added.
+look: How fast you can tell what is on and change it.
+controls:
+  state: [settings]
+rec: A
+recWhy: >-
+  one column reads top to bottom, label left and state right, and at about 345 px tall it takes half a
+  720 px screen. Switches read on or off at a glance, where the text buttons make you read each line. C
+  splits four graphics rows from six sound and game rows and leaves half its left column empty; it is the
+  fallback if you want the page shorter. B is least work but you still read each line to learn its state.
+neutral: None of these
+options:
+  A:
+    name: Switches, one column
+    render: {params: {settings: switch}}
+    sees: GRAPHICS, SOUND, GAME stacked; the label left, a switch or Low/High toggle right, sliders under SOUND.
+    notes: Label left, state right, one column.
+  B:
+    name: Today's text buttons, grouped
+    render: {params: {settings: text}}
+    sees: 'Today''s buttons ("Quality: High", "Neon colours: Off") under the three headings, sliders below.'
+    notes: Least change; the state stays in the button text.
+  C:
+    name: Switches, two columns
+    render: {params: {settings: cols}}
+    sees: GRAPHICS in the left column, SOUND and GAME in the right, switches as in A.
+    notes: Everything visible at once, shorter panel.

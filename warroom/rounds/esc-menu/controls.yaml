@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How is the Controls page laid out?
+why: >-
+  The page shows every row of `PauseMenu.controls()` plus P17's drag and trackpad rows: Mouse 14 rows on
+  macOS (12 elsewhere), Camera 4, Commands 8, Groups 3, Other 3. Mouse comes first in every option. BAR's
+  "Keybind/Mouse Info" is the nearest model, a panel of its own (Beyond-All-Reason `a31aa1c194`,
+  `gui_keybind_info.lua`). The measurements beside each option say whether the panel fits each window
+  size; S to check 1280 x 800 and 1920 x 1080, Y for the Windows and browser wording of the save row.
+look: The Mouse rows first, then whether a key you look for is quick to find.
+controls:
+  state: [controls]
+rec: A
+recWhy: >-
+  Mouse gets a whole column and is read first; the keys sit in one column beside it, in today's order,
+  so a player who knew the old list finds every row where it was. B is shorter but 1281 px wide, one
+  pixel over a 1280 window, so it would need shorter wording to ship. C teaches best at a glance but is the most build work
+  and its drawing must stay true when a binding changes; it is the fallback if the first match shows
+  players still miss right-drag.
+neutral: None of these
+options:
+  A:
+    name: Two columns, Mouse left
+    render: {params: {controls: two}}
+    sees: One panel; Mouse in the left column, Camera, Commands, Groups and Other in the right.
+    notes: Today's list split in two, Mouse first.
+  B:
+    name: Three columns
+    render: {params: {controls: three}}
+    sees: Mouse, then Camera with Commands, then Groups with Other, in three shorter columns.
+    notes: Shortest panel; as drawn 1 px wider than a 1280 window, so its words would need trimming.
+  C:
+    name: A mouse picture, then the keys
+    render: {params: {controls: picture}}
+    sees: A drawn mouse with short call-outs (and a trackpad on macOS) on top, the full click rows under it, keys in three columns below.
+    notes: Teaches the buttons by place, not by reading.

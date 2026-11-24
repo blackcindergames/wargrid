@@ -14,21 +14,21 @@ signal smooth_changed(smooth: bool)
 signal destinations_changed(on: bool)
 signal playtest_changed(on: bool)
 signal opened
+const LEAVE_QUESTION := "Leave the match? Your opponent wins and the room closes."
+const QUIT_QUESTION := "Quit the game? Your opponent wins and the room closes."
 var confirm_leave: bool = false
-var _confirming: bool = false
-var _main_row: HBoxContainer
-var _main_box: VBoxContainer
-var _confirm_box: VBoxContainer
-var _quality_button: Button
-var _neon_button: Button
-var _smooth_button: Button
-var _smooth: bool = true
-var _destinations_button: Button
-var _destinations: bool = false
-var _playtest_button: Button
-var _playtest: bool = false
-var _neon: bool = false
-var _quality: int = GraphicsSettings.HIGH
+var _menu: Control
+var _confirm: Control
+var _settings: Control
+var _controls: Control
+var _resume: Button
+var _cancel: Button
+var _question: Label
+var _confirm_button: Button
+var _on_confirm: Callable
+var _quality: HBoxContainer
+# Each switch with its stored value's reader, so `open()` can show what another screen saved.
+var _switches: Array = []
 
 func _init(web: bool = OS.has_feature("web")) -> void:
 	name = "PauseMenu"
@@ -44,45 +44,26 @@ func _init(web: bool = OS.has_feature("web")) -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
-	_main_row = HBoxContainer.new()
-	_main_row.add_theme_constant_override("separation", 16)
-	center.add_child(_main_row)
-	_main_box = _box(_main_row)
-	_main_row.add_child(_controls_list())
-	_button(_main_box, "Resume", resume_requested.emit)
-	_button(_main_box, "Back to main menu", _leave_pressed)
+	var buttons: VBoxContainer = _column()
+	_menu = _panel(center, "Menu", buttons)
+	_resume = _button(buttons, "Resume", resume_requested.emit)
+	_button(buttons, "Settings", func() -> void: _show(_settings, _settings.find_child("Back", true, false)))
+	_button(buttons, "Controls", func() -> void: _show(_controls, _controls.find_child("Back", true, false)))
+	_button(buttons, "Leave match", _ask.bind(LEAVE_QUESTION, "Leave", leave_requested.emit))
 	# The browser tab cannot be closed by the game.
-	if not web: _button(_main_box, "Quit", quit_requested.emit)
-	_quality_button = _button(_main_box, "", _toggle_quality)
-	_quality_button.name = "Quality"
-	_show_quality(GraphicsSettings.stored_quality())
-	_neon_button = _button(_main_box, "", _toggle_neon)
-	_neon_button.name = "Neon"
-	_show_neon(GraphicsSettings.load_neon())
-	_smooth_button = _button(_main_box, "", _toggle_smooth)
-	_smooth_button.name = "Smooth"
-	_show_smooth(GraphicsSettings.load_smooth())
-	_destinations_button = _button(_main_box, "", _toggle_destinations)
-	_destinations_button.name = "Destinations"
-	_show_destinations(GraphicsSettings.load_destinations())
-	_playtest_button = _button(_main_box, "", _toggle_playtest)
-	_playtest_button.name = "Playtest"
-	_show_playtest(PlaytestSettings.enabled())
-	var sliders := VolumeSliders.new()
-	for child: Node in sliders.get_children():
-		if child is Label: child.theme_type_variation = &"HudSmallLabel"
-		elif child is CheckButton: child.theme_type_variation = &"HudSmallCheck"
-	_main_box.add_child(sliders)
-	_confirm_box = _box(center)
-	_confirm_box.visible = false
-	var question := Label.new()
-	question.theme_type_variation = &"HudSmallLabel"
-	question.text = "Leave the match? Your opponent wins and the room closes."
-	question.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	question.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_confirm_box.add_child(question)
-	_button(_confirm_box, "Leave", leave_requested.emit)
-	_button(_confirm_box, "Cancel", _show_main)
+	if not web: _button(buttons, "Quit", _ask.bind(QUIT_QUESTION, "Quit", quit_requested.emit))
+	var box: VBoxContainer = _column()
+	_confirm = _panel(center, "Confirm", box)
+	_question = _label("", &"HudSmallLabel")
+	_question.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_question.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_question)
+	_confirm_button = _button(box, "", func() -> void: _on_confirm.call())
+	_cancel = _button(box, "Cancel", _show_main)
+	_settings = _page(center, "SettingsPage", "SETTINGS", _settings_body())
+	_controls = _page(center, "ControlsPage", "CONTROLS", _controls_list())
+	_read_settings()
+	_show(_menu, null)
 
 # Sections of [probe, keys, words, presses]; a press is a physical key with its modifier mask, read from the constants the input code reads, and test_pause_menu CL2 sends each one through the match.
 static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_feature("macos") or OS.has_feature("web_macos")) -> Array:
@@ -93,15 +74,17 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 	return [
 		["Mouse", [
 			["", "Left-click", "Select a unit or a building", []],
-			["", "Drag", "Select the units in a box", []],
+			["", "Left-drag", "Select the units in a box", []],
 			["", "Shift+click", "Add or remove a unit", []],
 			["", "Double-click", "Select that kind on screen", []],
 			["", "Alt+double-click", "Select that kind on the map", []],
+			["", "Left-click", "Place the building (right-click cancels)", []],
 			["", "Right-click", "Move, attack, gather or enter", []],
 			["", "Right-click", "Set the rally point (factory or barracks selected)", []],
 			["", "Right-click", "Cancel the last queued of that unit (on its button)", []],
-			["", "Left-click", "Place the building (right-click cancels)", []],
-			["", "Wheel", "Zoom", []]]],
+			["", "Right-drag", "Pan, faster the farther you drag", []],
+			["", "Middle-drag", "Drag the map along", []],
+			["", "Wheel", "Zoom", []]] + ([["", "Two-finger swipe", "Pan (trackpad)", []], ["", "Pinch", "Zoom (trackpad)", []]] if mac else [])],
 		["Camera", [
 			["pan", "Arrows", "Pan", [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]],
 			["", "Screen edge", "Pan with the pointer", []],
@@ -121,7 +104,7 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 			_save_row(digits, web, mac),
 			["add", _span(digits, KEY_MASK_SHIFT), "Add the selection to a group", _masked(digits, [KEY_MASK_SHIFT])]]],
 		["Other", [
-			["esc", "Esc", "Back out one step, then this menu", [(InputMap.action_get_events("deselect")[0] as InputEventKey).keycode]],
+			["esc", "Esc", "Back out one step, then the menu", [(InputMap.action_get_events("deselect")[0] as InputEventKey).keycode]],
 			_key_row("mute", KEY_M, "Mute"),
 			_key_row("perf", KEY_F3, "Performance numbers")]]]
 
@@ -147,14 +130,10 @@ static func _masked(keys: Array, masks: Array) -> Array:
 	return presses
 
 func is_confirming() -> bool:
-	return _confirming
+	return _confirm.visible
 
 func open() -> void:
-	_show_quality(GraphicsSettings.stored_quality())
-	_show_neon(GraphicsSettings.load_neon())
-	_show_smooth(GraphicsSettings.load_smooth())
-	_show_destinations(GraphicsSettings.load_destinations())
-	_show_playtest(PlaytestSettings.enabled())
+	_read_settings()
 	_show_controls()
 	visible = true
 	_show_main()
@@ -163,37 +142,162 @@ func open() -> void:
 func close() -> void:
 	visible = false
 
+# Esc and Back: a page or the question returns to the menu, the menu resumes.
 func back() -> void:
-	if _confirming: _show_main()
-	else: close()
+	if _menu.visible: close()
+	else: _show_main()
 
-func _box(parent: Control) -> VBoxContainer:
+func _show_main() -> void:
+	_show(_menu, _resume)
+
+func _show(part: Control, focus: Control) -> void:
+	for each: Control in [_menu, _confirm, _settings, _controls]: each.visible = each == part
+	if focus != null: focus.grab_focus()
+
+func _ask(question: String, verb: String, action: Callable) -> void:
+	if not confirm_leave:
+		action.call()
+		return
+	_question.text = question
+	_confirm_button.text = verb
+	_on_confirm = action
+	_show(_confirm, _cancel)
+
+func _column() -> VBoxContainer:
 	var box := VBoxContainer.new()
 	box.custom_minimum_size.x = 220.0
-	parent.add_child(box)
+	box.add_theme_constant_override("separation", 4)
 	return box
 
-func _controls_list() -> PanelContainer:
+func _panel(parent: Control, panel_name: String, content: Control) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.name = "Controls"
+	panel.name = panel_name
 	panel.theme_type_variation = &"HudSmallPanel"
-	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var margin := MarginContainer.new()
 	for side: Array in [["left", 12], ["top", 8], ["right", 12], ["bottom", 8]]: margin.add_theme_constant_override("margin_" + side[0], side[1])
+	margin.add_child(content)
 	panel.add_child(margin)
+	parent.add_child(panel)
+	return panel
+
+# Esc menu round, page A: `‹ Back` and the title top left, `Esc: back` top right.
+func _page(parent: Control, page_name: String, title: String, body: Control) -> PanelContainer:
+	var page := VBoxContainer.new()
+	page.add_theme_constant_override("separation", 8)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	page.add_child(head)
+	_button(head, "‹ Back", _show_main).name = "Back"
+	var heading: Label = _label(title, &"HudTitle")
+	# The page title is a deliberate step up the type scale, as in the mock-up.
+	heading.add_theme_font_size_override("font_size", 14)
+	head.add_child(heading)
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(gap)
+	head.add_child(_label("Esc: back", &"HudHint"))
+	page.add_child(body)
+	return _panel(parent, page_name, page)
+
+func _settings_body() -> VBoxContainer:
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 4)
+	_section(body, "GRAPHICS")
+	_quality = _quality_toggle()
+	_row(body, "Quality", _quality)
+	for each: Array in [["Neon", "Neon colours", GraphicsSettings.load_neon, GraphicsSettings.save_neon, neon_changed.emit],
+			["Smooth", "Smooth movement", GraphicsSettings.load_smooth, GraphicsSettings.save_smooth, smooth_changed.emit],
+			["Destinations", "Show unit destinations", GraphicsSettings.load_destinations, GraphicsSettings.save_destinations, destinations_changed.emit]]:
+		_row(body, each[1], _switch(each[0], each[2], each[3], each[4]))
+	_section(body, "SOUND")
+	var sliders := VolumeSliders.new()
+	sliders.add_theme_constant_override("h_separation", 24)
+	for child: Node in sliders.get_children():
+		if child is Label:
+			child.theme_type_variation = &"HudSmallLabel"
+			(child as Label).vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		elif child is CheckButton: child.theme_type_variation = &"HudSmallCheck"
+	body.add_child(sliders)
+	_section(body, "GAME")
+	_row(body, "Playtest helper", _switch("Playtest", PlaytestSettings.enabled, PlaytestSettings.save_enabled, playtest_changed.emit))
+	return body
+
+func _section(body: VBoxContainer, title: String) -> void:
+	if body.get_child_count() > 0: body.add_child(_gap(4.0))
+	body.add_child(_label(title, &"HudLabel"))
+
+func _gap(height: float) -> Control:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = height
+	return gap
+
+func _row(body: VBoxContainer, words: String, control: Control) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 24)
+	var label: Label = _label(words, &"HudSmallLabel")
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(label)
+	control.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(control)
+	body.add_child(row)
+
+func _switch(switch_name: String, stored: Callable, save: Callable, changed: Callable) -> CheckButton:
+	var toggle := CheckButton.new()
+	toggle.name = switch_name
+	toggle.theme_type_variation = &"HudSmallCheck"
+	# No margin, so a row is the switch's 22 px as in the mock-up; `small_check` stays for the playtest overlay.
+	var flush := StyleBoxEmpty.new()
+	for state: String in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]: toggle.add_theme_stylebox_override(state, flush)
+	toggle.toggled.connect(save)
+	toggle.toggled.connect(changed)
+	_switches.append([toggle, stored])
+	return toggle
+
+func _quality_toggle() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = "Quality"
+	row.add_theme_constant_override("separation", 0)
+	var group := ButtonGroup.new()
+	for side: Array in [["Low", GraphicsSettings.LOW], ["High", GraphicsSettings.HIGH]]:
+		var button := Button.new()
+		button.name = side[0]
+		button.text = side[0]
+		button.theme_type_variation = &"HudSmallToggle"
+		button.toggle_mode = true
+		button.button_group = group
+		button.custom_minimum_size.x = 48.0
+		button.toggled.connect(_quality_toggled.bind(side[1]))
+		row.add_child(button)
+	return row
+
+func _quality_toggled(on: bool, quality: int) -> void:
+	if not on: return
+	GraphicsSettings.save_quality(quality)
+	quality_changed.emit(quality)
+
+func _read_settings() -> void:
+	var quality: int = GraphicsSettings.stored_quality()
+	(_quality.get_node("Low") as Button).set_pressed_no_signal(quality == GraphicsSettings.LOW)
+	(_quality.get_node("High") as Button).set_pressed_no_signal(quality == GraphicsSettings.HIGH)
+	for pair: Array in _switches: (pair[0] as CheckButton).set_pressed_no_signal(pair[1].call())
+
+# Esc menu round, Controls A: Mouse left; Camera, Commands, Groups and Other right.
+func _controls_list() -> HBoxContainer:
 	var columns := HBoxContainer.new()
+	columns.name = "Controls"
 	columns.add_theme_constant_override("separation", 24)
-	margin.add_child(columns)
 	var sections: Array = controls()
-	for part: Array in [sections.slice(0, 2), sections.slice(2)]:
+	for part: Array in [sections.slice(0, 1), sections.slice(1)]:
 		# One grid per column, so its words line up under every title.
 		var grid := GridContainer.new()
 		grid.columns = 2
 		grid.add_theme_constant_override("h_separation", 8)
-		# 2, not 3: the strip row (P16) fits above the command card at 1280x720.
-		grid.add_theme_constant_override("v_separation", 2)
+		grid.add_theme_constant_override("v_separation", 4)
 		columns.add_child(grid)
 		for section: Array in part:
+			# A 4 px row: with its two gaps, 12 px above every later title.
+			if grid.get_child_count() > 0: for i: int in 2: grid.add_child(_gap(4.0))
 			grid.add_child(_label(section[0], &"HudLabel"))
 			grid.add_child(Control.new())
 			for row: Array in section[1]:
@@ -203,7 +307,7 @@ func _controls_list() -> PanelContainer:
 				var words: Label = _label(row[2], &"HudSmallLabel")
 				words.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 				grid.add_child(words)
-	return panel
+	return columns
 
 # The layout can change between matches, as the card's chips re-read it on a reset.
 func _show_controls() -> void:
@@ -211,7 +315,7 @@ func _show_controls() -> void:
 	for section: Array in controls():
 		texts.append(section[0])
 		for row: Array in section[1]: texts.append_array([row[1], row[2]])
-	var labels: Array[Node] = _main_row.get_node("Controls").find_children("*", "Label", true, false)
+	var labels: Array[Node] = _controls.find_child("Controls", true, false).find_children("*", "Label", true, false)
 	for at: int in labels.size(): (labels[at] as Label).text = texts[at]
 
 func _label(text: String, variation: StringName) -> Label:
@@ -227,63 +331,3 @@ func _button(parent: Control, text: String, action: Callable) -> Button:
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
-
-func _leave_pressed() -> void:
-	if not confirm_leave:
-		leave_requested.emit()
-		return
-	_confirming = true
-	_main_row.visible = false
-	_confirm_box.visible = true
-	_confirm_box.get_child(2).grab_focus()
-
-func _show_main() -> void:
-	_confirming = false
-	_confirm_box.visible = false
-	_main_row.visible = true
-	_main_box.get_child(0).grab_focus()
-
-func _toggle_quality() -> void:
-	_show_quality(GraphicsSettings.HIGH if _quality == GraphicsSettings.LOW else GraphicsSettings.LOW)
-	GraphicsSettings.save_quality(_quality)
-	quality_changed.emit(_quality)
-
-func _show_quality(quality: int) -> void:
-	_quality = quality
-	_quality_button.text = "Quality: " + ("Low" if _quality == GraphicsSettings.LOW else "High")
-
-func _toggle_neon() -> void:
-	_show_neon(not _neon)
-	GraphicsSettings.save_neon(_neon)
-	neon_changed.emit(_neon)
-
-func _show_neon(neon: bool) -> void:
-	_neon = neon
-	_neon_button.text = "Neon colours: " + ("On" if neon else "Off")
-
-func _toggle_smooth() -> void:
-	_show_smooth(not _smooth)
-	GraphicsSettings.save_smooth(_smooth)
-	smooth_changed.emit(_smooth)
-
-func _show_smooth(smooth: bool) -> void:
-	_smooth = smooth
-	_smooth_button.text = "Smooth movement: " + ("On" if smooth else "Off")
-
-func _toggle_destinations() -> void:
-	_show_destinations(not _destinations)
-	GraphicsSettings.save_destinations(_destinations)
-	destinations_changed.emit(_destinations)
-
-func _show_destinations(on: bool) -> void:
-	_destinations = on
-	_destinations_button.text = "Show unit destinations: " + ("On" if on else "Off")
-
-func _toggle_playtest() -> void:
-	_show_playtest(not _playtest)
-	PlaytestSettings.save_enabled(_playtest)
-	playtest_changed.emit(_playtest)
-
-func _show_playtest(on: bool) -> void:
-	_playtest = on
-	_playtest_button.text = "Playtest helper: " + ("On" if on else "Off")
