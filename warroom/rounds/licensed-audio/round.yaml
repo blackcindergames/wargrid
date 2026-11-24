@@ -8,4 +8,4 @@ intro: >-
   matched to the slot by name and length, at -18 LUFS, with today's sound as option A. Left out: ambiences, vehicle
   and machinery loops, droid voices and spaceships (no slot uses them yet), EliteGameMusic (parked). These are previews
   only; the files never leave this machine.
-steps: [music-assault, music-industrial-1, music-industrial-2, music-pinkbloom-1, music-pinkbloom-2, sfx-rifle, sfx-carbine, sfx-cannon, sfx-impact, sfx-launch, flame, spray]
+steps: [music-assault, music-industrial-1, music-industrial-2, music-pinkbloom-1, music-pinkbloom-2, sfx-rifle, sfx-carbine, sfx-cannon, sfx-impact, sfx-launch, flame, spray, plasma, music-match, music-menu, music-assault-more]

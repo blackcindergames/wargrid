@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Menu track: which one?"
+why: "The first 25 s of each, as the menu plays it from the start. Option A is today's."
+neutral: "Keep today's"
+options:
+  A:
+    name: "Stay the Course (today, menu)"
+    audio: game/audio/licensed/preview/menu-stay-the-course.mp3
+    level: "first 25 s"
+    notes: "Level-matched to the others."
+  B:
+    name: "Patrol (pack)"
+    audio: game/audio/licensed/preview/menu-mus-tension-patrol-full-90bpm.mp3
+    level: "first 25 s"
+    notes: "Level-matched to the others."
+  C:
+    name: "Night Infiltration (pack)"
+    audio: game/audio/licensed/preview/menu-mus-tension-nightinfiltration-full-80bpm.mp3
+    level: "first 25 s"
+    notes: "Level-matched to the others."
+  D:
+    name: "Target Acquired (pack)"
+    audio: game/audio/licensed/preview/menu-mus-tension-targetacquired-full-85bpm.mp3
+    level: "first 25 s"
+    notes: "Level-matched to the others."
+  E:
+    name: "Mineshaft (pack)"
+    audio: game/audio/licensed/preview/menu-industrial-mineshaft-main.mp3
+    level: "first 25 s"
+    notes: "Level-matched to the others."
+  F:
+    name: "Matts Fridge (pack)"
+    audio: game/audio/licensed/preview/menu-industrial-matts-fridge-main.mp3
+    level: "first 25 s"
+    notes: "Level-matched to the others."
+  G:
+    name: "Assault MainTheme (pack)"
+    audio: game/audio/licensed/preview/menu-mus-combat-assault-maintheme-full-85bpm.mp3
+    level: "first 25 s"
+    notes: "Level-matched to the others."

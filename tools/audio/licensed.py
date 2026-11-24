@@ -1,13 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Builds the licensed sound effects from the owner's packs; their files never enter this repository.
 
-Usage: licensed.py PACKS_DIR OUT_DIR  (OUT_DIR/sfx/<stem>.wav, imported as QOA; for builds: game/audio/licensed)
+Usage: licensed.py PACKS_DIR OUT_DIR  (OUT_DIR/sfx/<stem>.wav imported as QOA, OUT_DIR/music/<stem>.ogg at Vorbis q5;
+for builds: game/audio/licensed)
 """
 
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+from process import encode
 
 LIGHT, HEAVY = "Sound Effects/Sci-Fi/Weapon/Light/", "Sound Effects/Sci-Fi/Weapon/Heavy/"
 GUNSHOTS = "Sound Effects/Sci-Fi III/Weapon/Gunshots/"
@@ -29,6 +32,15 @@ SFX = {
     "frc_launch": (HEAVY + "Missile Launch C.wav", LAUNCH, 2.0, 1.0),
     "usa_battery": (HEAVY + "Missile Launch C.wav", LAUNCH, 1.2, 1.3),
     "impact": (HEAVY + "Rocket Explosion A.wav", IMPACT, 2.5, 1.0),
+}
+MUSIC_DIR = "Music/Assault - Modern Warfare Music Pack/Tracks/MUS_"
+INDUSTRIAL = "Music/Industrial Music Pack Vol. 1/"
+# stem: pack file; names match LICENSED_MENU and LICENSED_PLAYLIST in music_player.gd.
+MUSIC = {
+    "night_infiltration": MUSIC_DIR + "Tension_NightInfiltration_Full_80BPM.wav",
+    "assault_main_theme": MUSIC_DIR + "Combat_Assault_MainTheme_Full_85BPM.wav",
+    "incoming": MUSIC_DIR + "Combat_Incoming_Full_100BPM.wav",
+    "knuckles": INDUSTRIAL + "Knuckles (RT 1.164)/Industrial Knuckles Main.wav",
 }
 FADE_S = 0.3
 PEAK_DB = -1.0
@@ -82,6 +94,9 @@ def build(packs: Path, out: Path) -> None:
         ]
         subprocess.run(cmd, check=True)
         print(f"{stem}: {rel} {db:+.1f} dB")
+    for stem, rel in MUSIC.items():
+        encode(packs / rel, out / "music" / f"{stem}.ogg", stem, ("-q", "5"))
+        print(f"{stem}: {rel}")
 
 
 if __name__ == "__main__":

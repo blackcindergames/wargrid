@@ -5,6 +5,14 @@ const MENU := "res://audio/music/stay_the_course.ogg"
 const PLAYLIST: Array[String] = [
 	"res://audio/music/conflict.ogg", "res://audio/music/enemy_spotted.ogg", "res://audio/music/mammoth.ogg", "res://audio/music/hitman.ogg",
 ]
+const LICENSED_MENU := "res://audio/licensed/music/night_infiltration.ogg"
+# The owner's picks from the licensed packs (2026-11-24); without them the free tracks above play.
+const LICENSED_PLAYLIST: Array[String] = [
+	"res://audio/music/conflict.ogg", "res://audio/music/enemy_spotted.ogg", "res://audio/licensed/music/assault_main_theme.ogg",
+	"res://audio/licensed/music/knuckles.ogg", "res://audio/licensed/music/incoming.ogg",
+]
+# Tests pin it; null looks for the files, which tools/audio/licensed.py always builds together.
+static var licensed: Variant = null
 var _paths: Array[String] = []
 var _gap: float = 0.0
 var _index: int = 0
@@ -15,6 +23,16 @@ func _init() -> void:
 	name = "Music"
 	bus = &"Music"
 	finished.connect(func() -> void: _wait = _gap)
+
+static func has_licensed() -> bool:
+	if licensed == null: licensed = ResourceLoader.exists(LICENSED_MENU)
+	return licensed
+
+static func menu() -> String:
+	return LICENSED_MENU if has_licensed() else MENU
+
+static func playlist() -> Array[String]:
+	return LICENSED_PLAYLIST if has_licensed() else PLAYLIST
 
 static func shuffled(paths: Array[String], rng: RandomNumberGenerator) -> Array[String]:
 	var order := paths.duplicate()
@@ -42,7 +60,7 @@ func play_list(paths: Array[String], gap: float) -> void:
 
 func play_match(rng: RandomNumberGenerator, gap: float) -> void:
 	_rng = rng
-	play_list(avoiding(shuffled(PLAYLIST, rng), _last_played, rng), gap)
+	play_list(avoiding(shuffled(playlist(), rng), _last_played, rng), gap)
 
 func advance(delta: float) -> void:
 	if _wait < 0.0: return

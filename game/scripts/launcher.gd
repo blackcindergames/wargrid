@@ -351,7 +351,7 @@ func _add_audio() -> void:
 	add_child(SoundPlayer.new(0))
 	var music := MusicPlayer.new()
 	add_child(music)
-	music.play_list([MusicPlayer.MENU], 0.0)
+	music.play_list([MusicPlayer.menu()], 0.0)
 	var sliders := VolumeSliders.new()
 	sliders.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sliders.add_theme_constant_override("v_separation", 15)

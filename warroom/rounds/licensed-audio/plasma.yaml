@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Plasma torch (Dragon Tank, Inferno): which sound?"
+why: "Zero Hour flame gameplay with a plasma-jet sound. Nothing bright above 4 kHz, no crackle. 2 s; repeats while firing."
+neutral: "None of them"
+options:
+  A:
+    name: "Torch + Quantum Engine"
+    audio: game/audio/licensed/preview/plasma-a.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Roar and hot hum over the Quantum Engine loop (your flame pick C), softened"
+  B:
+    name: "Torch + Plasma Turret"
+    audio: game/audio/licensed/preview/plasma-b.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Roar and hum with the Plasma Turret long burst under it, below 2.5 kHz"
+  C:
+    name: "Torch + Force Field"
+    audio: game/audio/licensed/preview/plasma-c.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Roar and hum over the Force Field Engine drone"
+  D:
+    name: "Heavy hum torch"
+    audio: game/audio/licensed/preview/plasma-d.mp3
+    level: "2 s at -26 LUFS"
+    notes: "More hum than roar, over the Quantum Engine loop; the most electric of the four"

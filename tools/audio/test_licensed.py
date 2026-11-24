@@ -13,6 +13,10 @@ class LicensedTest(unittest.TestCase):
         stems = set(re.findall(r'"licensed": "(\w+)"', CUES.read_text()))
         self.assertEqual(stems, set(licensed.SFX))
 
+    def test_every_music_path_is_built(self) -> None:
+        player = (CUES.parent / "music_player.gd").read_text()
+        self.assertEqual(set(re.findall(r"res://audio/licensed/music/(\w+)\.ogg", player)), set(licensed.MUSIC))
+
     def test_gain_never_clips(self) -> None:
         self.assertEqual(licensed.gain(-40.0, -20.0, -30.0), 10.0)
         self.assertEqual(licensed.gain(-40.0, -3.0, -30.0), 2.0)
