@@ -234,6 +234,7 @@ func show_chips(chips: Array, selected: int, colour: Color) -> void:
 	var drawn: Array = chips.map(func(chip: Dictionary) -> Dictionary: return chip.merged({"fraction": roundf(chip.fraction * length) / length}, true))
 	_source = chips
 	if drawn == _chips and selected == _selected and colour == _colour: return
+	var before: Array = HudModel.strip_split(_chips)[1].map(_id)
 	_chips = drawn
 	_selected = selected
 	_colour = colour
@@ -246,6 +247,10 @@ func show_chips(chips: Array, selected: int, colour: Color) -> void:
 	var count: String = "+%d" % _folded.size()
 	if _more.visible and _more.text != count: _more.text = count
 	var shown: Array = split[1]
+	# The row is pinned at its right edge and a still pointer gets no exit when it shifts, so the card would name the neighbour; it waits for the next hover.
+	if shown.map(_id) != before:
+		_hover_since = -1
+		_tip_open = false
 	for i: int in shown.size(): _fill(_chip(i), shown[i])
 	for i: int in range(shown.size() + 1, _row.get_child_count()): _row.get_child(i).visible = false
 	if _tip.visible: _show_tip()
@@ -271,6 +276,9 @@ func _fill(chip: Button, record: Dictionary) -> void:
 	var look: StyleBox = _looks.selected if record.id == _selected else _looks.normal
 	for state: String in ["normal", "pressed"]: _style(chip, state, look)
 	for state: String in ["hover", "hover_pressed"]: _style(chip, state, _looks.selected if record.id == _selected else _looks.hover)
+
+static func _id(record: Dictionary) -> int:
+	return record.id
 
 static func _busy(record: Dictionary) -> bool:
 	return record.look != "idle"

@@ -21,7 +21,7 @@ const DOZER: String = "china_builder"
 const TRUCK: String = "china_collector"
 
 func cases() -> Array[Callable]:
-	return [test_strip_order, test_strip_busy_only_kinds, test_strip_looks, test_strip_last_made_glyph, test_strip_fold, test_strip_tip_words, test_strip_click_selects, test_strip_double_click_glides, test_strip_holds_through_a_forecast, test_strip_blocks_the_map, test_strip_more_list, test_strip_layout, test_strip_chip_looks, test_strip_unchanged_refresh, test_strip_upright_bars, test_strip_upright_key_skips_typing, test_strip_reset_forgets_last_made, test_strip_tip_neighbour_rule, test_strip_click_ends_modes, test_strip_click_needs_orders_and_an_own_producer, test_strip_bar_stays_in_its_track, test_strip_queue_count, test_strip_hides_while_nothing_is_made, test_strip_hint_once, test_strip_hint_layout, test_strip_tip_names_the_kinds, test_strip_count_matches_the_cell, test_strip_hidden_under_the_pointer, test_strip_click_under_the_freeze_card, test_strip_card_steps_aside_for_a_notice]
+	return [test_strip_order, test_strip_busy_only_kinds, test_strip_looks, test_strip_last_made_glyph, test_strip_fold, test_strip_tip_words, test_strip_click_selects, test_strip_double_click_glides, test_strip_holds_through_a_forecast, test_strip_blocks_the_map, test_strip_more_list, test_strip_layout, test_strip_chip_looks, test_strip_unchanged_refresh, test_strip_upright_bars, test_strip_upright_key_skips_typing, test_strip_reset_forgets_last_made, test_strip_tip_neighbour_rule, test_strip_click_ends_modes, test_strip_click_needs_orders_and_an_own_producer, test_strip_bar_stays_in_its_track, test_strip_queue_count, test_strip_hides_while_nothing_is_made, test_strip_hint_once, test_strip_hint_layout, test_strip_tip_names_the_kinds, test_strip_count_matches_the_cell, test_strip_hidden_under_the_pointer, test_strip_click_under_the_freeze_card, test_strip_card_steps_aside_for_a_notice, test_strip_card_follows_a_shifted_chip]
 
 static func _entry(kind: String, work: int = 0) -> Dictionary:
 	return {"id": 1, "kind": kind, "paid_cost": 800, "work": work}
@@ -754,22 +754,22 @@ func test_strip_hidden_under_the_pointer(runner) -> bool:
 	HudTests._move(port, _centre(_chip_of(main, ids.factory)))
 	now[0] = 300
 	await _frames(runner)
-	runner.check(_tip(main).visible, "PS27 fixture: the factory's card is open")
+	runner.check(_tip(main).visible, "PS30 fixture: the factory's card is open")
 	_queues(main, {ids.hq: [], ids.factory: []})
 	await _frames(runner)
-	runner.check(not _strip(main).is_visible_in_tree() and not _tip(main).visible, "PS27 fixture: nothing in production, strip and card gone")
+	runner.check(not _strip(main).is_visible_in_tree() and not _tip(main).visible, "PS30 fixture: nothing in production, strip and card gone")
 	HudTests._move(port, Vector2(640, 400))
 	await _frames(runner)
 	_queues(main, {ids.factory: [MEDIUM]})
 	now[0] = 2000
 	await _frames(runner)
-	runner.check(_strip(main).is_visible_in_tree() and not _tip(main).visible, "PS27 the strip back with the pointer on the map: no card")
+	runner.check(_strip(main).is_visible_in_tree() and not _tip(main).visible, "PS30 the strip back with the pointer on the map: no card")
 	HudTests._move(port, _centre(_chip_of(main, ids.factory)))
 	await _frames(runner)
-	runner.check(not _tip(main).visible, "PS27 the next hover waits again")
+	runner.check(not _tip(main).visible, "PS30 the next hover waits again")
 	now[0] = 2250
 	await _frames(runner)
-	runner.check(_tip(main).visible, "PS27 and opens after 250 ms")
+	runner.check(_tip(main).visible, "PS30 and opens after 250 ms")
 	_end(world)
 	return true
 
@@ -921,4 +921,47 @@ func test_strip_hint_layout(runner) -> bool:
 		var hovered: Control = main.get_viewport().gui_get_hovered_control()
 		runner.check(hovered == null, "PS25 %s: the pointer on the hint is on the map, no control takes it, got %s" % [at, hovered])
 		_end(world)
+	return true
+
+# Opus gate review: chips are pooled by position and a still pointer gets no exit when the row shifts under it, so the open card must not name the neighbour.
+func test_strip_card_follows_a_shifted_chip(runner) -> bool:
+	var world: Array = await _world(runner)
+	var port: SubViewport = world[2]
+	var main = world[3]
+	var ids: Dictionary = world[4]
+	var now: Array = [0]
+	_clock(main, now)
+	_queues(main, {ids.hq: [DOZER], ids.depot: [TRUCK], ids.factory: [MEDIUM]})
+	await _frames(runner)
+	var at: Vector2 = _centre(_chip_of(main, ids.barracks))
+	HudTests._move(port, at)
+	now[0] = 300
+	await _frames(runner)
+	runner.check(_tip(main).visible and (_tip(main).get_node("Lines/Name") as Label).text == "Barracks", "PS31 fixture: the Barracks card is open")
+	_queues(main, {ids.hq: [], ids.depot: [TRUCK], ids.factory: [MEDIUM]})
+	now[0] = 400
+	await _frames(runner)
+	var under: Array = _chips(main).filter(func(chip: Control) -> bool: return chip.get_global_rect().has_point(at))
+	var name: String = (_tip(main).get_node("Lines/Name") as Label).text
+	var expected: String = Registry.kind(under[0].get_meta("chip").kind).display_name if under.size() == 1 else "?"
+	runner.check(not _tip(main).visible or name == expected, "PS31 a chip gone before the hovered one: the card closes or names the chip under the pointer, got '%s' over '%s'" % [name, expected])
+	HudTests._move(port, at + Vector2(1, 0))
+	await _frames(runner)
+	runner.check(not _tip(main).visible, "PS31 the next hover waits again")
+	now[0] = 700
+	await _frames(runner)
+	runner.check(_tip(main).visible and (_tip(main).get_node("Lines/Name") as Label).text == expected, "PS31 and opens after 250 ms on the chip under the pointer")
+	# A producer added after the hovered one shifts every chip left; the hovered chip keeps its record.
+	var view: Dictionary = main.driver.current().view
+	var added: Dictionary = HudModel.building(view, ids.factory).duplicate(true)
+	added.id = 9999
+	view.buildings.append(added)
+	main._show(view)
+	now[0] = 800
+	await _frames(runner)
+	under = _chips(main).filter(func(chip: Control) -> bool: return chip.get_global_rect().has_point(at + Vector2(1, 0)))
+	name = (_tip(main).get_node("Lines/Name") as Label).text
+	expected = Registry.kind(under[0].get_meta("chip").kind).display_name if under.size() == 1 else "?"
+	runner.check(not _tip(main).visible or name == expected, "PS31 a chip added after the hovered one: the card closes or names the chip under the pointer, got '%s' over '%s'" % [name, expected])
+	_end(world)
 	return true
