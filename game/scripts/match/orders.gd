@@ -316,7 +316,6 @@ func _combat_input(event: InputEvent) -> bool:
 			return true
 	return false
 
-# The Ping chip and G toggle it (Q6); never during a drag or a placement, and only with a human teammate (Q7).
 func arm_ping() -> void:
 	if not takes_orders() or busy() or not _screen.can_ping(): return
 	_set_ping(not ping_armed)
@@ -335,7 +334,6 @@ func _ping_key(event: InputEvent) -> bool:
 	if not (key.ctrl_pressed or key.meta_pressed or key.alt_pressed): arm_ping()
 	return true
 
-# Armed, the next left click pings where it lands; Esc or a right-click disarms.
 func _ping_input(event: InputEvent) -> bool:
 	if not ping_armed: return false
 	var click := event as InputEventMouseButton

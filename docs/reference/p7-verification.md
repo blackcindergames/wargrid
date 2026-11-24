@@ -539,7 +539,7 @@ The five `team*` scenarios add about 20 s to the CI loop (the export job allows 
 
 ## Colours by player
 
-Host blue and guest teal in both windows, bots red and orange (`Palette.set_team_colours(host, guest, bots)`; offline and 1v1 keep the eight fixed slots). Pinned by `test_team_colours_by_player`, the ΔE76 floor of 20 by `test_team_colours_delta_e` (normal and deuteranopia, both sets, every pair and each non-host colour against the ping colour; at planning the lowest pair was 23.6).
+Host blue and guest teal in both windows, bots red and orange (`Palette.set_team_colours(bots)`; offline and 1v1 keep the eight fixed slots). Pinned by `test_team_colours_by_player`, the ΔE76 floor of 20 by `test_team_colours_delta_e` (normal and deuteranopia, both sets, every pair and each non-host colour against the ping colour; at planning the lowest pair was 23.6).
 
 | Player | Base | Neon |
 |---|---|---|

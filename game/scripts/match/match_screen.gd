@@ -120,7 +120,7 @@ func _ready() -> void:
 	hud.ping_pressed.connect(orders.arm_ping)
 	# Made here, not at declaration: a scene freed before it enters the tree would orphan the node.
 	_pings = PingMarks.new()
-	_pings.setup(hud, hud.block)
+	_pings.hud = hud
 	_pings.jump.connect(centre_camera)
 	_view.add_child(_pings)
 	hud.hint_covered = func() -> bool: return menu_open() or not _focused or input_over()
@@ -215,7 +215,7 @@ func _reset_camera() -> void:
 func _create_world() -> void:
 	driver.create(map_path, starts, factions, match_seed)
 	if driver.teammate() == 0: Palette.clear_team_colours()
-	else: Palette.set_team_colours(mini(local_player, driver.teammate()), maxi(local_player, driver.teammate()), driver.bot_players())
+	else: Palette.set_team_colours(driver.bot_players())
 
 func playtest_context() -> Dictionary:
 	var camera: Vector2 = Iso.plane_to_world(_camera.position)

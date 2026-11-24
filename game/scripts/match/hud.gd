@@ -375,7 +375,7 @@ func _build_alert_line() -> void:
 	_alert_text.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 	_alert_line.visible = false
 
-# Mock-up docs/images/p7 `match-armed`: a tab on the slab's top edge, 8 from the right; the hint stacks above the group line.
+# Mock-up: docs/images/p7 `match-armed`.
 func _build_ping() -> void:
 	_ping = chip("PingChip", 0, [["Label", &"HudRow", "Ping"], ["Key", &"HudKey", HudModel.key_label(HudModel.PING_KEY)]])
 	_ping.anchor_top = 1.0

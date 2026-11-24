@@ -383,7 +383,7 @@ func _ring_colours(batch) -> Array[Color]:
 func test_team_colours_by_player(runner) -> bool:
 	var sets := {false: ["628ffa", "0e92a7", "d6120c", "ec8600"], true: ["2f7bff", "00d8e8", "ff2f45", "ff7a00"]}
 	var bots: Array[int] = [3, 4]
-	Palette.set_team_colours(1, 2, bots)
+	Palette.set_team_colours(bots)
 	for bright: bool in [false, true]:
 		var got: Array = [1, 2, 3, 4].map(func(owner: int) -> String: return View.owner_color(owner, bright).to_html(false))
 		runner.check(got == sets[bright], "TC1 Neon %s: host, guest, bot 3, bot 4 are %s, got %s" % [bright, sets[bright], got])
@@ -392,7 +392,7 @@ func test_team_colours_by_player(runner) -> bool:
 
 func test_team_colours_delta_e(runner) -> bool:
 	var bots: Array[int] = [3, 4]
-	Palette.set_team_colours(1, 2, bots)
+	Palette.set_team_colours(bots)
 	for bright: bool in [false, true]:
 		var set_name: String = "neon" if bright else "base"
 		var colours: Array = [1, 2, 3, 4].map(func(owner: int) -> Color: return View.owner_color(owner, bright))
@@ -413,7 +413,7 @@ func test_colour_remap_reset_between_matches(runner) -> bool:
 	var plain := WorldBatch.new()
 	plain.build(items, {}, 1, false)
 	var bots: Array[int] = [3, 4]
-	Palette.set_team_colours(1, 2, bots)
+	Palette.set_team_colours(bots)
 	var team := WorldBatch.new()
 	team.build(items, {}, 1, false)
 	runner.check(team.colors != plain.colors and not team.colors.has(Palette.OWNER_BASE[2]), "TC3 a 2v2 create repaints a batch built from the same cached bodies")

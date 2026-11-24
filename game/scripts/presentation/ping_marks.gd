@@ -48,18 +48,13 @@ class Arrow extends Control:
 var now_usec: Callable = Time.get_ticks_usec
 var marks: Dictionary = {}
 var arrows: Dictionary = {}
-var _layer: Control
-var _block: Callable
+# Arrows are HUD surfaces, kept once made: the Hud's blocker list holds them for the match.
+var hud: Control
 var _circle := PackedVector2Array()
 
 func _init() -> void:
 	name = "PingMarks"
 	for i in 33: _circle.append(Vector2.from_angle(TAU * i / 32.0))
-
-# Arrows are HUD surfaces: kept once made, since the Hud's blocker list holds them for the match.
-func setup(layer: Control, block: Callable) -> void:
-	_layer = layer
-	_block = block
 
 func add(player: int, target: Vector2) -> void:
 	marks[player] = {"target": target, "started": now_usec.call()}
@@ -91,8 +86,8 @@ func _place_arrow(player: int, point: Vector2, view: Rect2, floor_y: float) -> v
 		arrow = Arrow.new()
 		arrow.name = "PingArrow%d" % player
 		arrow.clicked.connect(jump.emit)
-		_layer.add_child(arrow)
-		_block.call(arrow)
+		hud.add_child(arrow)
+		hud.block(arrow)
 		arrows[player] = arrow
 	var spot: Vector2 = arrow_spot(point, view, floor_y)
 	arrow.target = marks[player].target
@@ -113,7 +108,7 @@ static func arrow_spot(point: Vector2, view: Rect2, floor_y: float) -> Vector2:
 	if offset.y != 0.0: reach = minf(reach, area.size.y / 2.0 / absf(offset.y))
 	return centre + offset * reach
 
-# The ring pulses twice, then holds and fades over its last 5 s; dark under-strokes keep it readable on sand (art direction §11).
+# Dark under-strokes keep the ring readable on sand (art direction §11).
 func _draw() -> void:
 	var now: int = now_usec.call()
 	for player: int in marks:

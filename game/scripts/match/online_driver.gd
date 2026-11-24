@@ -268,11 +268,8 @@ func confirm_leave() -> bool:
 func can_restart() -> bool:
 	return false
 
-func opponent_left() -> bool:
-	return _lockstep.opponent_left()
-
 func leave_heading() -> String:
-	if opponent_left(): return "Victory"
+	if _lockstep.opponent_left(): return "Victory"
 	return ResultPanel.MATCH_ENDED if teammate() != 0 and _lockstep.status() == "ended_left" and not _lockstep.left_before_start() else ""
 
 func leave_question() -> String:

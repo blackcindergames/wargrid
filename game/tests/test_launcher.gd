@@ -278,7 +278,7 @@ func test_own_faction_shared(runner) -> bool:
 
 func test_start_saves_picks(runner) -> bool:
 	var saved: String = AudioSettings.path
-	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var before: Array = OnlineTests._statics()
 	var launcher = await _launcher_with(runner, "saves", {"faction": "usa", "bot_faction": "usa", "map": "dry_wells"})
 	launcher._set_own("china")
 	launcher._select_id(launcher.get_node("Pages/Play/Body/Bot"), "frc")
@@ -287,10 +287,7 @@ func test_start_saves_picks(runner) -> bool:
 	var stored: Dictionary = LauncherSettings.load_picks()
 	_restore(saved)
 	# The next case's match must not start on this case's picks.
-	SkirmishMain.factions = before[0]
-	SkirmishMain.map_path = before[1]
-	SkirmishMain.starts = before[2]
-	SkirmishMain.match_seed = before[3]
+	OnlineTests._restore_statics(before)
 	runner.check(stored == {"faction": "china", "bot_faction": "frc", "map": "ashfall"}, "L9e a bot start saves all three, got %s" % [stored])
 	launcher.free()
 	return true
@@ -1465,16 +1462,6 @@ func _hello(transport) -> Dictionary:
 		if message.get("type") == "hello": return message
 	return {}
 
-func _statics() -> Array:
-	return [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
-
-func _restore_statics(before: Array) -> void:
-	SkirmishMain.factions = before[0]
-	SkirmishMain.map_path = before[1]
-	SkirmishMain.starts = before[2]
-	SkirmishMain.match_seed = before[3]
-	Palette.clear_team_colours()
-
 # The start goes through the wire, so its numbers arrive as floats like the relay's.
 func _start_through_wire(runner, launcher, message: Dictionary) -> Array:
 	launcher._transport = OnlineTests.FakeTransport.new()
@@ -1541,7 +1528,7 @@ func test_team_bot_factions_remembered(runner) -> bool:
 	_restore(saved)
 	runner.check(defaults == ["usa", "usa"], "M9 without a file both bots are the default faction, got %s" % [defaults])
 	runner.check(fallback == ["china", "usa"], "M9 a bad stored bot falls back alone, got %s" % [fallback])
-	var before: Array = _statics()
+	var before: Array = OnlineTests._statics()
 	AudioSettings.path = scratch_for("team-bots")
 	LauncherSettings.save_picks({"team_bot_1": "frc", "team_bot_2": "china"})
 	var launcher = Launcher.instantiate()
@@ -1555,7 +1542,7 @@ func test_team_bot_factions_remembered(runner) -> bool:
 	var stored: Array[String] = LauncherSettings.load_team_bots()
 	var picks: Dictionary = LauncherSettings.load_picks()
 	_restore(saved)
-	_restore_statics(before)
+	OnlineTests._restore_statics(before)
 	runner.check(stored == ["china", "frc"], "M9 the host's start remembers the bots it played, got %s" % [stored])
 	runner.check(picks.bot_faction == "usa", "M9 the team bots leave the 1v1 bot pick alone, got %s" % picks.bot_faction)
 	return true
@@ -1669,7 +1656,7 @@ func test_waiting_edges_neon(runner) -> bool:
 	return true
 
 func test_start_sets_bot_factions_and_teams(runner) -> bool:
-	var before: Array = _statics()
+	var before: Array = OnlineTests._statics()
 	var saved: String = AudioSettings.path
 	var launcher = await _launcher_with(runner, "team-start", {})
 	_restore(saved)
@@ -1688,12 +1675,12 @@ func test_start_sets_bot_factions_and_teams(runner) -> bool:
 	await runner.process_frame
 	got = await _start_through_wire(runner, launcher, OnlineTests.new()._start_message("ashfall", 7))
 	_restore(saved)
-	_restore_statics(before)
+	OnlineTests._restore_statics(before)
 	runner.check(got[0] == {} and got[1] == MatchSettings.starts("ashfall", 7), "M15 a 1v1 start passes no bot factions and the 1v1 starts, got %s %s" % [got[0], got[1]])
 	return true
 
 func test_guest_start_matches_host(runner) -> bool:
-	var before: Array = _statics()
+	var before: Array = OnlineTests._statics()
 	var saved: String = AudioSettings.path
 	var launcher = await _launcher_with(runner, "guest-start", {"map": "dry_wells"})
 	var message: Dictionary = OnlineTests.new()._start_message_2v2(7)
@@ -1707,7 +1694,7 @@ func test_guest_start_matches_host(runner) -> bool:
 	var stored: Array[String] = LauncherSettings.load_team_bots()
 	var map: String = LauncherSettings.load_picks().map
 	_restore(saved)
-	_restore_statics(before)
+	OnlineTests._restore_statics(before)
 	runner.check(got[0] == {3: "china", 4: "frc"} and got[1] == MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2)), "M18 the guest seats the host's bots on the host's team starts, got %s %s" % [got[0], got[1]])
 	runner.check(stored == ["usa", "usa"] and map == "dry_wells", "M18 the guest remembers neither the host's bots nor its map, got %s %s" % [stored, map])
 	return true

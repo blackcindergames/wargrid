@@ -22,32 +22,11 @@ class Job:
 	var preview: Dictionary = {}
 	var stamp_sequence: bool = false
 
-class PlanRecorder extends RefCounted:
-	var _sim: Simulation
-	var _commands: Array[Dictionary] = []
-
-	func _init(sim: Simulation) -> void:
-		_sim = sim
-
+class PlanRecorder extends CommandRecorder:
 	func issue_command(command: Dictionary) -> Dictionary:
 		var error: String = _sim.check_command(command)
 		if error.is_empty(): _commands.append(command.duplicate(true))
 		return {"ok": error.is_empty(), "error": error}
-
-	func commands() -> Array[Dictionary]:
-		return _commands
-
-	func snapshot() -> Dictionary:
-		return _sim.snapshot()
-
-	func tick() -> int:
-		return _sim.tick()
-
-	func map_data() -> Dictionary:
-		return _sim.map_data()
-
-	func simulation() -> Simulation:
-		return _sim
 
 class Note:
 	var done: bool = true

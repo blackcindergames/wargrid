@@ -33,9 +33,9 @@ const BOT_SLOTS: Array = [[1, 1], [6, 4]]
 static var colour_version: int = 0
 static var _team: Dictionary = {}
 
-# By player, so both windows agree: the host blue, the guest teal; the first two bots red and orange.
-static func set_team_colours(host: int, guest: int, bots: Array[int]) -> void:
-	_team = {host: [OWNER_BASE[0], OWNER_BRIGHT[0]], guest: [OWNER_BASE[4], OWNER_BRIGHT[6]]}
+# By player, so both windows agree: the host (1) blue, the guest (2) teal; the first two bots red and orange.
+static func set_team_colours(bots: Array[int]) -> void:
+	_team = {1: [OWNER_BASE[0], OWNER_BRIGHT[0]], 2: [OWNER_BASE[4], OWNER_BRIGHT[6]]}
 	for i in mini(bots.size(), BOT_SLOTS.size()): _team[bots[i]] = [OWNER_BASE[BOT_SLOTS[i][0]], OWNER_BRIGHT[BOT_SLOTS[i][1]]]
 	colour_version += 1
 

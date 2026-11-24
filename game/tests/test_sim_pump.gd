@@ -1010,7 +1010,7 @@ func test_pal_driver_play_on_then_end_closes_room(runner) -> bool:
 		if one.over(): break
 		for driver in rest: _single(driver)
 	runner.check(one.over() and one._phase == "done" and not one.can_play_again(), "PAL a played-on match that ends closes the room, phase %s" % one._phase)
-	runner.check(one.rematch_line() == "P2 USA left the match" and not one.opponent_left() and one.notice() == "", "PAL the line says the friend left, not a relay loss, got '%s' notice '%s'" % [one.rematch_line(), one.notice()])
+	runner.check(one.rematch_line() == "P2 USA left the match" and not one._lockstep.opponent_left() and one.notice() == "", "PAL the line says the friend left, not a relay loss, got '%s' notice '%s'" % [one.rematch_line(), one.notice()])
 	trio.relay.ends.clear()
 	return true
 

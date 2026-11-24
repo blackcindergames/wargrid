@@ -2016,7 +2016,7 @@ func test_sb4_leave_on_end_tick_catch_up(runner) -> bool:
 	var online: Dictionary = await _online(runner, 2)
 	var driver = online.main.driver
 	_end_in_catch_up(runner, online, 9, [Wire.encode({"type": "left", "seat": 1, "after_tick": 9})])
-	runner.check(online.lockstep.status() == "running" and not driver.opponent_left(), "SB4 a leave after the end tick is a normal end, got " + online.lockstep.status())
+	runner.check(online.lockstep.status() == "running" and not online.lockstep.opponent_left(), "SB4 a leave after the end tick is a normal end, got " + online.lockstep.status())
 	runner.check(_sent_types(online.transport, "over") == 1, "SB4 one over, got %d" % _sent_types(online.transport, "over"))
 	runner.check(driver.rematch_line() == "P1 USA left the match", "SB4 friend-left line, got '%s'" % driver.rematch_line())
 	online.main.free()
@@ -2498,17 +2498,17 @@ func _player_rows(sim) -> Dictionary:
 	for player: Dictionary in sim.snapshot().players: rows[player.id] = player
 	return rows
 
-func _restore_match_statics(before: Array) -> void:
+static func _restore_match_statics(before: Array) -> void:
 	SkirmishMain.map_path = before[0]
 	SkirmishMain.starts = before[1]
 	SkirmishMain.match_seed = before[2]
 	SkirmishMain.factions = before[3]
 
-func _restore_statics(before: Array) -> void:
+static func _restore_statics(before: Array) -> void:
 	_restore_match_statics(before)
 	Palette.clear_team_colours()
 
-func _statics() -> Array:
+static func _statics() -> Array:
 	return [SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed, SkirmishMain.factions]
 
 func test_four_seat_create_teams(runner) -> bool:
