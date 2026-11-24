@@ -304,6 +304,10 @@ func test_strip_more_list(runner) -> bool:
 	var text: String = "\n".join(tip.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.is_visible_in_tree()).map(func(label: Label) -> String: return label.text))
 	runner.check(tip.is_visible_in_tree() and text == "ALSO PRODUCING\nHeadquarters · Bulldozer · ready in 1s\nSupply Depot · Supply Truck · ready in 6s\nBarracks · idle", "PS11 the list names the hidden producers in order, got '%s'" % text)
 	runner.check(main.hud.blocks(_centre(more)), "PS11 `+3` blocks the map")
+	var presses: Array = [0]
+	more.pressed.connect(func() -> void: presses[0] += 1)
+	HudTests._click_in(port, _centre(more))
+	runner.check(presses[0] == 0, "PS11 `+3` takes no click, so it plays no click sound")
 	_end(world)
 	return true
 

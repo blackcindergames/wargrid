@@ -1038,8 +1038,12 @@ func _flash(kind: String) -> void:
 	var targets: Array[Control] = [_credits_slab]
 	if _card != null: targets.append_array(_card.get_children().filter(func(cell: Control) -> bool: return cell.visible and cell.get_meta("action") == kind))
 	for target: Control in targets:
+		# A fade still running would drag a second flash down with it.
+		if target.has_meta("flash"): (target.get_meta("flash") as Tween).kill()
 		target.modulate = FLASH
-		create_tween().tween_property(target, "modulate", Color.WHITE, FLASH_SECONDS)
+		var tween: Tween = create_tween()
+		tween.tween_property(target, "modulate", Color.WHITE, FLASH_SECONDS)
+		target.set_meta("flash", tween)
 
 func _now_input(event: InputEvent) -> void:
 	if _right_click(event, _now) and not _now.disabled: _cancel_now()

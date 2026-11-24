@@ -2426,6 +2426,16 @@ func test_cancel_flashes(runner) -> bool:
 	await _frames(runner)
 	_click_in(port, _centre(_now(main)))
 	runner.check(_cell(main, MEDIUM).modulate != Color.WHITE, "CF1 a cancel on NOW flashes the cell of its kind")
+	# Gemini gate review: a second cancel inside the fade starts a full flash, not one the first fade drags down.
+	await runner.create_timer(0.45).timeout
+	_queue_kinds(main, ids.factory, [MEDIUM, ROTARY, ROTARY, ROTARY])
+	await _frames(runner)
+	cell = _cell(main, ROTARY)
+	_right_click_in(port, _centre(cell))
+	await runner.create_timer(0.2).timeout
+	_right_click_in(port, _centre(cell))
+	await _frames(runner)
+	runner.check(cell.modulate.r > 1.4, "CF2 a second cancel 0.2 s into the fade flashes in full, got %s" % cell.modulate)
 	_end_port(scene)
 	return true
 
@@ -2441,6 +2451,12 @@ func test_accidental_cancels_and_next_clicks(runner) -> bool:
 	for i in 30: BaseScene.tick(main)
 	_produce(main, [MEDIUM])
 	runner.check(main.orders.accidental_cancels == 1, "AC1 a cancel, then the same kind within 2 s counts, got %d" % main.orders.accidental_cancels)
+	await _frames(runner)
+	_right_click_in(port, _centre(_cell(main, MEDIUM)))
+	for i in HudModel.QUEUE_LIMIT: main.orders._producing.append({"building_id": ids.factory, "unit_kind": MEDIUM})
+	main.orders.press_cell(MEDIUM, true)
+	main.orders._producing.clear()
+	runner.check(main.orders.accidental_cancels == 1, "AC2b a Shift press that queues nothing is no accident, got %d" % main.orders.accidental_cancels)
 	await _frames(runner)
 	_right_click_in(port, _centre(_cell(main, MEDIUM)))
 	for i in 61: BaseScene.tick(main)

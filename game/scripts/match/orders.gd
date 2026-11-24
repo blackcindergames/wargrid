@@ -480,9 +480,9 @@ func _press(kind: String, shift: bool) -> void:
 	if selected_building_id == -1:
 		_enter_placement(kind)
 		return
-	_count_accident(kind)
 	# The drained view, which the answers that free `_producing` match.
 	var count: int = HudModel.batch(_screen.driver.current().view, selected_building_id, kind, _screen.local_player, _producing) if shift else 1
+	if count > 0: _count_accident(kind)
 	for i: int in count:
 		var order: Dictionary = {"type":"produce","building_id":selected_building_id,"unit_kind":kind}
 		_producing.append(order)

@@ -110,6 +110,8 @@ func _build_looks() -> void:
 # `+N`: muted, as wide as its words, a hover list of the folded producers; no click.
 func _build_more() -> void:
 	_more = _button("More")
+	# Hover only: no button mask means no press, so no click sound either.
+	_more.button_mask = 0
 	_more.mouse_default_cursor_shape = CURSOR_HELP
 	_more.custom_minimum_size = Vector2(0, CHIP.y)
 	for state: String in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]: _more.add_theme_color_override(state, get_theme_color("muted", &"Tokens"))
@@ -303,7 +305,7 @@ func _hover(control: Control, entered: bool) -> void:
 
 # The hint counts only frames it is seen in: shown, uncovered.
 func _process(delta: float) -> void:
-	if _hovered != null and not _tip.visible: _show_tip()
+	if _hovered != null and _hover_since >= 0 and not _tip.visible: _show_tip()
 	if not _hint.visible: return
 	if not covered.call(): _hint_left -= delta * 1000.0
 	if _hint_left <= 0.0: _end_hint()
