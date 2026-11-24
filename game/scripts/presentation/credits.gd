@@ -3,6 +3,7 @@ extends RefCounted
 const WARGRID_LINE: String = "Wargrid © 2026 Philipp Stuber. Free software under the GNU GPL v3 or later, with no warranty. License and source: github.com/pdstuber/wargrid"
 const PUBLIC_SANS_LINE: String = "Public Sans 2.001, github.com/uswds/public-sans, SIL Open Font License 1.1."
 const MACLEOD_HEADING: String = "Attribution text requested by Kevin MacLeod"
+const LICENSED_HEADING: String = "Licensed music and sound effects"
 
 static func text(credits_md: String, notice_md: String, license_text: String, components: Array, licenses: Dictionary, font_license: String = "") -> String:
 	var md: String = credits_md.replace("\r\n", "\n")
@@ -38,14 +39,14 @@ static func _music(credits_md: String) -> String:
 		var line: String = '"%s" by %s (%s), licensed %s (%s)' % [c[2], c[4], c[3], c[5], c[6]]
 		if c[7] != "-": line += "; " + c[7]
 		lines.append(line + "; changes: " + c[8].replace("`", ""))
-	return "\n".join(lines) + "\n\n" + _macleod(credits_md)
+	return "\n".join(lines) + "\n\n" + _fenced(credits_md, MACLEOD_HEADING) + "\n\n" + _fenced(credits_md, LICENSED_HEADING)
 
-static func _macleod(credits_md: String) -> String:
-	var heading: int = credits_md.find(MACLEOD_HEADING)
+static func _fenced(credits_md: String, title: String) -> String:
+	var heading: int = credits_md.find(title)
 	var start: int = credits_md.find("```text\n", heading)
 	if heading < 0 or start < 0: return ""
 	start += 8
-	return MACLEOD_HEADING + ":\n" + credits_md.substr(start, credits_md.find("```", start) - start).strip_edges()
+	return title + ":\n" + credits_md.substr(start, credits_md.find("```", start) - start).strip_edges()
 
 static func _voice(credits_md: String) -> String:
 	var rows := _rows(credits_md, "voice/")

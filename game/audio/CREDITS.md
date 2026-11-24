@@ -42,3 +42,11 @@ Stay the Course Kevin MacLeod (incompetech.com)
 Licensed under Creative Commons: By Attribution 4.0
 https://creativecommons.org/licenses/by/4.0/
 ```
+
+Licensed music and sound effects (released builds only; the files are not in this repository and not covered by the GPL):
+
+```text
+Music from ASSAULT - Modern Warfare Music Pack, (c) 2026 Luca Baradel.
+Music from Industrial Music Pack Vol. 1, and sound effects from the Sci-Fi and Sci-Fi III packs, by Ovani Sound (ovanisound.com).
+Used under their licences inside the compiled game.
+```
