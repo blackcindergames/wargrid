@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Rocket launch (today: `explosion` pitched up): which sound?"
+why: "Today is option A. Keep it if nothing beats it."
+neutral: "Can't tell them apart"
+options:
+  A:
+    name: "Today"
+    audio: game/audio/licensed/preview/sfx-launch-today.mp3
+    level: "the shipped sound"
+    notes: "Today's generated sound, for comparison."
+  B:
+    name: "Missile Launch A"
+    audio: game/audio/licensed/preview/sfx-launch-missile-launch-a.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  C:
+    name: "Missile Launch B"
+    audio: game/audio/licensed/preview/sfx-launch-missile-launch-b.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  D:
+    name: "Missile Launch C"
+    audio: game/audio/licensed/preview/sfx-launch-missile-launch-c.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."

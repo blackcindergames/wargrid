@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Rocket and shell impact (`explosion`): which sound?"
+why: "Today is option A. Keep it if nothing beats it."
+neutral: "Can't tell them apart"
+options:
+  A:
+    name: "Today"
+    audio: game/audio/licensed/preview/sfx-impact-today.mp3
+    level: "the shipped sound"
+    notes: "Today's generated sound, for comparison."
+  B:
+    name: "Rocket Explosion A"
+    audio: game/audio/licensed/preview/sfx-impact-rocket-explosion-a.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  C:
+    name: "Rocket Explosion B"
+    audio: game/audio/licensed/preview/sfx-impact-rocket-explosion-b.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  D:
+    name: "Rocket Explosion C"
+    audio: game/audio/licensed/preview/sfx-impact-rocket-explosion-c.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."
+  E:
+    name: "Orbital Bombardment 001"
+    audio: game/audio/licensed/preview/sfx-impact-orbital-bombardment-001.mp3
+    level: "Heavy"
+    notes: "Level-matched to Today."

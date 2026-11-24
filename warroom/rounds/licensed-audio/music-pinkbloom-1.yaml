@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Pink Bloom (synthwave), 1 of 2: which track is best for a match?"
+why: "Pick the strongest. Write any other keepers, or a menu-track candidate, in the note."
+neutral: "None fit Wargrid"
+options:
+  A:
+    name: "Pink Bloom"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-01-pink-bloom.mp3
+    level: "25 s from 1:44, track 2:22"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  B:
+    name: "Portal to Underworld"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-02-portal-to-underworld.mp3
+    level: "25 s from 1:54, track 2:24"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  C:
+    name: "To the Unknown"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-03-to-the-unknown.mp3
+    level: "25 s from 1:06, track 2:42"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  D:
+    name: "Valley of Spirits"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-04-valley-of-spirits.mp3
+    level: "25 s from 0:25, track 3:17"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  E:
+    name: "Western Cyberhorse"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-05-western-cyberhorse.mp3
+    level: "25 s from 0:08, track 2:03"
+    notes: "Loudest 25 s of the track, level-matched to the others."

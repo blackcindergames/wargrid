@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Assault (modern warfare): which track is best for a match?"
+why: "Pick the strongest. Write any other keepers, or a menu-track candidate, in the note."
+neutral: "None fit Wargrid"
+options:
+  A:
+    name: "Assault MainTheme"
+    audio: game/audio/licensed/preview/mus-combat-assault-maintheme-full-85bpm.mp3
+    level: "25 s from 1:10, track 1:56"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  B:
+    name: "Incoming"
+    audio: game/audio/licensed/preview/mus-combat-incoming-full-100bpm.mp3
+    level: "25 s from 1:22, track 2:03"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  C:
+    name: "NightInfiltration"
+    audio: game/audio/licensed/preview/mus-tension-nightinfiltration-full-80bpm.mp3
+    level: "25 s from 0:42, track 2:15"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  D:
+    name: "Patrol"
+    audio: game/audio/licensed/preview/mus-tension-patrol-full-90bpm.mp3
+    level: "25 s from 1:16, track 2:13"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  E:
+    name: "TargetAcquired"
+    audio: game/audio/licensed/preview/mus-tension-targetacquired-full-85bpm.mp3
+    level: "25 s from 1:46, track 2:39"
+    notes: "Loudest 25 s of the track, level-matched to the others."

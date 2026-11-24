@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Militia and gattling small arms (`carbine`): which sound?"
+why: "Today is option A. Keep it if nothing beats it."
+neutral: "Can't tell them apart"
+options:
+  A:
+    name: "Today"
+    audio: game/audio/licensed/preview/sfx-carbine-today.mp3
+    level: "the shipped sound"
+    notes: "Today's generated sound, for comparison."
+  B:
+    name: "Laser Pistol Shot Single A"
+    audio: game/audio/licensed/preview/sfx-carbine-laser-pistol-shot-single-a.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  C:
+    name: "Pulse Shot Single A"
+    audio: game/audio/licensed/preview/sfx-carbine-pulse-shot-single-a.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  D:
+    name: "Electromagnetic Rifle Shot Single A"
+    audio: game/audio/licensed/preview/sfx-carbine-electromagnetic-rifle-shot-single-a.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  E:
+    name: "Laser Rifle Shot Single A"
+    audio: game/audio/licensed/preview/sfx-carbine-laser-rifle-shot-single-a.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  F:
+    name: "Electro Rifle Shot Single A"
+    audio: game/audio/licensed/preview/sfx-carbine-electro-rifle-shot-single-a.mp3
+    level: "Light"
+    notes: "Level-matched to Today."
+  G:
+    name: "MagnetCrossbow Single 001"
+    audio: game/audio/licensed/preview/sfx-carbine-magnetcrossbow-single-001.mp3
+    level: "Gunshots"
+    notes: "Level-matched to Today."
+  H:
+    name: "Sonic Disrupter Single 001"
+    audio: game/audio/licensed/preview/sfx-carbine-sonic-disrupter-single-001.mp3
+    level: "Gunshots"
+    notes: "Level-matched to Today."

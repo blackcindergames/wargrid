@@ -22,6 +22,7 @@ var _previous_rows: RefCounted = ViewRows.new()
 var _previous_status: String = ""
 var _has_previous: bool = false
 var _last_shot: Dictionary = {}
+var _last_play: Dictionary = {}
 var _funds_rejected: bool = false
 var _was_low_power: bool = false
 var _tick: int = 0
@@ -85,7 +86,9 @@ func update(state: Dictionary) -> Array[Dictionary]:
 	_was_low_power = _low_power(state)
 	_pending.clear()
 	for id: Variant in _last_shot.keys():
-		if not current.has(id) and _rows.index_of(id) == -1: _last_shot.erase(id)
+		if not current.has(id) and _rows.index_of(id) == -1:
+			_last_shot.erase(id)
+			_last_play.erase(id)
 	_previous = current
 	_previous_rows = _rows
 	_previous_status = status
@@ -107,6 +110,7 @@ func reset() -> void:
 	_queued.clear()
 	_consumed.clear()
 	_last_shot.clear()
+	_last_play.clear()
 	_own_hit = {}
 	_allied_hit = {}
 	_alert = ""
@@ -195,12 +199,17 @@ func _shot(event: Dictionary, current: Dictionary, teams: Dictionary, requests: 
 	var attacker: Dictionary = _lookup(event.attacker_id, current)
 	if attacker.is_empty() or event.splash: return
 	var weapon: String = Cues.weapon_id(attacker.kind, attacker.tier)
-	var cue: String = Cues.shot_cue(weapon)
+	var cue: String = Cues.shot_cue(weapon, Cues.faction(attacker.kind))
 	var definition: Dictionary = Shared.WEAPONS.get(weapon, {})
 	var last: int = _last_shot.get(event.attacker_id, -1000000)
 	_last_shot[event.attacker_id] = event.tick
 	if cue.is_empty(): return
-	if cue != "rifle_burst" or event.tick - last > definition.delay_ticks + 1: requests.append(_world(cue, attacker.position))
+	var new_burst: bool = event.tick - last > definition.delay_ticks + 1
+	var held: bool = event.tick - _last_play.get(event.attacker_id, -1000000) < Cues.hold_ticks(cue)
+	# shortcut: a hold starts even when the player drops the voice (cap, distance), so a shooter can stay silent up to one hold; feed slots back if that is heard.
+	if (new_burst or not Cues.CUES[cue].get("burst", false)) and not held:
+		_last_play[event.attacker_id] = event.tick
+		requests.append(_world(cue, attacker.position))
 	var target: Dictionary = _lookup(event.target_id, current)
 	if not definition.affects.is_empty() and not target.is_empty(): requests.append(_world("impact", target.position))
 
@@ -223,10 +232,10 @@ func _placements(current: Dictionary, status: String, requests: Array[Dictionary
 			requests.append(ui_request("placement"))
 
 func _world(cue: String, position: Vector2) -> Dictionary:
-	return {"cue": cue, "sound": Cues.CUES[cue].sound, "pitch": Cues.CUES[cue].pitch, "position": position}
+	return {"cue": cue, "sound": Cues.sound(cue), "pitch": Cues.pitch(cue), "position": position}
 
 func ui_request(cue: String) -> Dictionary:
-	return {"cue": cue, "sound": Cues.CUES[cue].sound, "pitch": Cues.CUES[cue].pitch, "position": null}
+	return {"cue": cue, "sound": Cues.sound(cue), "pitch": Cues.pitch(cue), "position": null}
 
 func _teams(state: Dictionary) -> Dictionary:
 	var teams: Dictionary = {}

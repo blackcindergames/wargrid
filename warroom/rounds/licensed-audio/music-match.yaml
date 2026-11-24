@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Match music: which track is strongest?"
+why: "Today's four match tracks beside your three pack picks. In the note, list every track to keep in the match playlist."
+neutral: "Can't choose"
+options:
+  A:
+    name: "Conflict (today, match)"
+    audio: game/audio/licensed/preview/conflict.mp3
+    level: "loudest 25 s"
+    notes: "Level-matched to the others."
+  B:
+    name: "Enemy Spotted (today, match)"
+    audio: game/audio/licensed/preview/enemy-spotted.mp3
+    level: "loudest 25 s"
+    notes: "Level-matched to the others."
+  C:
+    name: "Mammoth (today, match)"
+    audio: game/audio/licensed/preview/mammoth.mp3
+    level: "loudest 25 s"
+    notes: "Level-matched to the others."
+  D:
+    name: "Hitman (today, match)"
+    audio: game/audio/licensed/preview/hitman.mp3
+    level: "loudest 25 s"
+    notes: "Level-matched to the others."
+  E:
+    name: "Assault MainTheme (pack)"
+    audio: game/audio/licensed/preview/mus-combat-assault-maintheme-full-85bpm.mp3
+    level: "loudest 25 s"
+    notes: "Level-matched to the others."
+  F:
+    name: "Knuckles (pack)"
+    audio: game/audio/licensed/preview/industrial-knuckles-main.mp3
+    level: "loudest 25 s"
+    notes: "Level-matched to the others."
+  G:
+    name: "Shadowrun (pack)"
+    audio: game/audio/licensed/preview/industrial-shadowrun-main.mp3
+    level: "loudest 25 s"
+    notes: "Level-matched to the others."

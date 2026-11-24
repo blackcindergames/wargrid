@@ -37,6 +37,22 @@ jobs:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # Licensed packs may ship only inside the compiled game: fetched here, never uploaded on their own.
+      - name: Fetch licensed audio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: pdstuber/wargrid-private
+          ssh-key: ${{ secrets.WARGRID_PRIVATE_KEY }}
+          persist-credentials: false
+          sparse-checkout: audio
+          path: build/private
+      - name: Place licensed audio
+        run: |
+          mkdir -p game/audio/licensed
+          cp -R build/private/audio/. game/audio/licensed/
+          rm -rf build/private
+          test -s game/audio/licensed/sfx/impact.wav
+          test -s game/audio/licensed/music/night_infiltration.ogg
       - name: Install pinned Godot
         run: python3 tools/install_godot.py
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6

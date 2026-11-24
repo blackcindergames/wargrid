@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Flamethrower (Dragon Tank, later Inferno): which sound?"
+why: "Made here, since the packs have no flame. One 2 s piece; in game it repeats while the unit fires."
+neutral: "None of them"
+options:
+  A:
+    name: "Synth roar"
+    audio: game/audio/licensed/preview/flame-a.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Noise roar with 7 Hz flutter, hiss and crackle; no pack sound"
+  B:
+    name: "Roar + Force Field Engine"
+    audio: game/audio/licensed/preview/flame-b.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Synth roar over the Sci-Fi Force Field Engine hum"
+  C:
+    name: "Roar + Quantum Engine"
+    audio: game/audio/licensed/preview/flame-c.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Synth roar over the Sci-Fi III Quantum Engine loop"
+  D:
+    name: "Roar + Plasma Turret"
+    audio: game/audio/licensed/preview/flame-d.mp3
+    level: "2 s at -26 LUFS"
+    notes: "Synth roar with the Plasma Turret long burst low-passed under it"

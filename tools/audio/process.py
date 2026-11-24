@@ -40,7 +40,7 @@ def ffmpeg(*args: str) -> str:
     return subprocess.run(cmd, capture_output=True, text=True, check=True).stderr
 
 
-def encode(src: Path, dest: Path, name: str) -> None:
+def encode(src: Path, dest: Path, name: str, rate: tuple[str, str] = ("-b", "96")) -> None:
     with tempfile.TemporaryDirectory() as d:
         wav = Path(d) / "t.wav"
         first = ffmpeg("-i", str(src), "-af", f"{LOUDNORM}:print_format=json", "-f", "null", "-")
@@ -60,7 +60,7 @@ def encode(src: Path, dest: Path, name: str) -> None:
         if last_json(second)["normalization_type"] == "dynamic":
             raise RuntimeError(f"{name}: loudnorm fell back to dynamic mode")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["oggenc", "-b", "96", "-o", str(dest), str(wav)], capture_output=True, check=True)
+        subprocess.run(["oggenc", *rate, "-o", str(dest), str(wav)], capture_output=True, check=True)
 
 
 def main(argv: list[str]) -> int:

@@ -14,7 +14,7 @@ const Fixture = preload("res://tests/combat_fixture.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
 
 func cases() -> Array[Callable]:
-	return [test_catch_up_collects_every_step, test_collect_step_copies, test_stalled_tick_is_collected_once, test_event_accessors_are_live, test_every_weapon_and_kind_has_a_cue, test_cue_by_weapon_then_damage_type, test_tier_picks_weapon, test_rifle_burst_plays_once_per_burst, test_splash_weapons_add_impact, test_death_cues, test_death_uses_previous_snapshot, test_unknown_dead_object_is_skipped, test_limits_and_cap, test_far_shot_takes_no_voice, test_mass_death_batch, test_container_burst, test_placement_and_errors, test_hole_and_site_are_not_placements, test_setup_phase_is_silent, test_stalled_tick_is_silent, test_first_shot_after_restart_is_heard, test_scenes_boot_with_sound, test_bus_layout, test_update_drains_pending, test_click_after_leaving_tree_is_silent]
+	return [test_catch_up_collects_every_step, test_collect_step_copies, test_stalled_tick_is_collected_once, test_event_accessors_are_live, test_every_weapon_and_kind_has_a_cue, test_cue_by_weapon_then_damage_type, test_tier_picks_weapon, test_shared_weapons_split_by_faction, test_missing_licensed_plays_today, test_licensed_resolves, test_burst_file_holds, test_rifle_burst_plays_once_per_burst, test_splash_weapons_add_impact, test_death_cues, test_death_uses_previous_snapshot, test_unknown_dead_object_is_skipped, test_limits_and_cap, test_far_shot_takes_no_voice, test_mass_death_batch, test_container_burst, test_placement_and_errors, test_hole_and_site_are_not_placements, test_setup_phase_is_silent, test_stalled_tick_is_silent, test_first_shot_after_restart_is_heard, test_scenes_boot_with_sound, test_bus_layout, test_update_drains_pending, test_click_after_leaving_tree_is_silent]
 
 func test_catch_up_collects_every_step(runner) -> bool:
 	var suite = OnlineTests.new()
@@ -97,6 +97,7 @@ func _director(state: Dictionary):
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1
 	var director = Director.new(1, rng)
+	Cues.assume(false)
 	director.update(state)
 	return director
 
@@ -120,7 +121,7 @@ func test_every_weapon_and_kind_has_a_cue(runner) -> bool:
 	return true
 
 func test_cue_by_weapon_then_damage_type(runner) -> bool:
-	var expected := {"rifle": "rifle_burst", "militia_gun": "carbine", "scout_gun": "carbine", "rotary_gun": "carbine", "rotary_tower_gun": "carbine", "pickup_gun": "carbine", "tunnel_gun": "carbine", "cannon": "cannon", "pickup_cannon": "cannon", "light_tank_gun": "cannon", "light_tank_gun_plus": "cannon", "rocket": "launch", "battery": "launch", "pickup_rocket": "launch", "no_such": ""}
+	var expected := {"rifle": "rifle_burst", "militia_gun": "carbine", "scout_gun": "usa_mg", "rotary_gun": "china_rotary", "rotary_tower_gun": "china_rotary_tower", "pickup_gun": "frc_mg", "tunnel_gun": "frc_mg", "cannon": "cannon", "pickup_cannon": "frc_cannon", "light_tank_gun": "frc_cannon", "light_tank_gun_plus": "frc_cannon", "rocket": "launch", "battery": "usa_battery", "pickup_rocket": "frc_launch", "no_such": ""}
 	for weapon: String in expected: runner.check(Cues.shot_cue(weapon) == expected[weapon], "SD6 %s gives %s, got '%s'" % [weapon, expected[weapon], Cues.shot_cue(weapon)])
 	return true
 
@@ -129,7 +130,49 @@ func test_tier_picks_weapon(runner) -> bool:
 		var director = _director(_state([_unit(1, "frc_light_vehicle", 1, Vector2(5, 5), tier)]))
 		_feed(director, 1, [_shot(1, 1, 1)])
 		var got: Array = _cues(director.update(_state([_unit(1, "frc_light_vehicle", 1, Vector2(5, 5), tier)])))
-		runner.check(got.has(["carbine", "cannon", "launch"][tier]), "SD7 tier %d gives %s" % [tier, ["carbine", "cannon", "launch"][tier]])
+		runner.check(got.has(["frc_mg", "frc_cannon", "frc_launch"][tier]), "SD7 tier %d gives %s" % [tier, ["frc_mg", "frc_cannon", "frc_launch"][tier]])
+	return true
+
+func test_shared_weapons_split_by_faction(runner) -> bool:
+	var expected := [["rifle", "usa", "rifle_burst"], ["rifle", "frc", "frc_rifle"], ["cannon", "usa", "cannon"], ["cannon", "china", "china_cannon"], ["rocket", "usa", "launch"], ["rocket", "china", "china_launch"], ["rocket", "frc", "frc_launch"]]
+	for row in expected: runner.check(Cues.shot_cue(row[0], row[1]) == row[2], "SD14 %s of %s gives %s, got '%s'" % [row[0], row[1], row[2], Cues.shot_cue(row[0], row[1])])
+	runner.check(Cues.faction("china_light_vehicle") == "china", "SD14 faction from the kind prefix")
+	var state := _state([_unit(1, "frc_rifle_infantry", 1, Vector2(5, 5)), _unit(2, "china_light_vehicle", 1, Vector2(6, 5)), _unit(3, "usa_tank", 2, Vector2(9, 9))])
+	var director = _director(state)
+	_feed(director, 1, [_shot(1, 1, 3), _shot(1, 2, 3)])
+	var got: Array = _cues(director.update(state))
+	runner.check(got == ["frc_rifle", "china_cannon", "impact"], "SD14 the director passes the shooter's faction, got %s" % [got])
+	return true
+
+# Without the licensed files every new cue must sound exactly like the cue it splits off.
+func test_missing_licensed_plays_today(runner) -> bool:
+	Cues.assume(false)
+	var replaces := {"frc_rifle": "rifle_burst", "usa_mg": "carbine", "frc_mg": "carbine", "china_rotary": "carbine", "china_rotary_tower": "carbine", "china_cannon": "cannon", "frc_cannon": "cannon", "china_launch": "launch", "frc_launch": "launch", "usa_battery": "launch"}
+	for cue: String in Cues.CUES:
+		var today: String = replaces.get(cue, cue)
+		var same: bool = Cues.sound(cue) == Cues.CUES[today].sound and Cues.pitch(cue) == Cues.CUES[today].pitch and Cues.gain_db(cue) == Cues.CUES[today].gain_db and Cues.hold_ticks(cue) == 0
+		runner.check(same and Cues.CUES[cue].limit == Cues.CUES[today].limit, "SD15 %s plays like %s without licensed files" % [cue, today])
+	return true
+
+func test_licensed_resolves(runner) -> bool:
+	Cues.assume(true)
+	for cue: String in Cues.CUES:
+		if not Cues.CUES[cue].has("licensed"): continue
+		runner.check(Cues.sound(cue) == "licensed/" + Cues.CUES[cue].licensed and Cues.pitch(cue) == 1.0 and Cues.gain_db(cue) == 0.0, "SD16 %s uses its licensed file at baked pitch and level" % cue)
+	runner.check(Cues.path("licensed/usa_mg") == "res://audio/licensed/sfx/usa_mg.wav" and Cues.path("cannon") == "res://audio/sfx/cannon.wav", "SD16 paths")
+	Cues.assume(false)
+	return true
+
+func test_burst_file_holds(runner) -> bool:
+	var state := _state([_unit(1, "usa_light_vehicle", 1, Vector2(5, 5)), _unit(2, "usa_tank", 2, Vector2(6, 6))])
+	var counts: Array[int] = []
+	for licensed: bool in [true, false]:
+		var director = _director(state)
+		Cues.assume(licensed)
+		for tick in range(100, 161, 6): _feed(director, tick, [_shot(tick, 1, 2)])
+		counts.append(director.update(state).size())
+	Cues.assume(false)
+	runner.check(counts == [3, 11], "SD17 a %d-tick burst file replays at 100, 124 and 148, a free shot every 6 ticks; got %s" % [Cues.CUES.usa_mg.hold, counts])
 	return true
 
 func test_rifle_burst_plays_once_per_burst(runner) -> bool:
@@ -207,6 +250,8 @@ func test_limits_and_cap(runner) -> bool:
 		for i in cue[1]: full.append(cue[0])
 	var impact: Array[Dictionary] = [_request("impact")]
 	runner.check(full.size() == 25 and Player.plan(impact, full, Vector2.ZERO, Player.MAX_DISTANCE_PX) == [-1], "SD13 impact dropped with all 25 slots busy")
+	var split: Array[Dictionary] = [_request("china_launch")]
+	runner.check(Player.plan(split, _playing(4, "launch"), Vector2.ZERO, Player.MAX_DISTANCE_PX) == [-1], "SD13 a faction's launch counts against the shared launch limit")
 	var click: Array[Dictionary] = [_request("click", null)]
 	runner.check(Player.plan(click, ["error", "error"], Vector2.ZERO, Player.MAX_DISTANCE_PX) == [-1], "SD13 click dropped with both UI slots busy")
 	return true

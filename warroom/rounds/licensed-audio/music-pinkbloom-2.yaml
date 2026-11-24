@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "Pink Bloom (synthwave), 2 of 2: which track is best for a match?"
+why: "Pick the strongest. Write any other keepers, or a menu-track candidate, in the note."
+neutral: "None fit Wargrid"
+options:
+  A:
+    name: "Diamonds on The Ceiling"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-06-diamonds-on-the-ceiling.mp3
+    level: "25 s from 1:09, track 1:54"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  B:
+    name: "The Hidden One"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-07-the-hidden-one.mp3
+    level: "25 s from 1:20, track 2:02"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  C:
+    name: "Lost Spaceship's Signal"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-08-lost-spaceship-s-signal.mp3
+    level: "25 s from 1:26, track 2:02"
+    notes: "Loudest 25 s of the track, level-matched to the others."
+  D:
+    name: "Lightyear City"
+    audio: game/audio/licensed/preview/davidkbd-pink-bloom-pack-09-lightyear-city.mp3
+    level: "25 s from 1:48, track 2:19"
+    notes: "Loudest 25 s of the track, level-matched to the others."

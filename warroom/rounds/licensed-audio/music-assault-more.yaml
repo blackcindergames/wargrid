@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: audio
+question: "More Assault: which track belongs in the match playlist?"
+why: "The three other Assault tracks, two parts each. Night Infiltration is your menu pick and stays out. In the note, list every track to add."
+neutral: "None of them"
+options:
+  A:
+    name: "Incoming, loudest part"
+    audio: game/audio/licensed/preview/more-mus-combat-incoming-full-100bpm-peak.mp3
+    level: "25 s from 1:22"
+    notes: "Level-matched to the others."
+  B:
+    name: "Incoming, a calmer part"
+    audio: game/audio/licensed/preview/more-mus-combat-incoming-full-100bpm-other.mp3
+    level: "25 s from 0:10"
+    notes: "Level-matched to the others."
+  C:
+    name: "Patrol, loudest part"
+    audio: game/audio/licensed/preview/more-mus-tension-patrol-full-90bpm-peak.mp3
+    level: "25 s from 1:16"
+    notes: "Level-matched to the others."
+  D:
+    name: "Patrol, a calmer part"
+    audio: game/audio/licensed/preview/more-mus-tension-patrol-full-90bpm-other.mp3
+    level: "25 s from 0:10"
+    notes: "Level-matched to the others."
+  E:
+    name: "Target Acquired, loudest part"
+    audio: game/audio/licensed/preview/more-mus-tension-targetacquired-full-85bpm-peak.mp3
+    level: "25 s from 1:46"
+    notes: "Level-matched to the others."
+  F:
+    name: "Target Acquired, a calmer part"
+    audio: game/audio/licensed/preview/more-mus-tension-targetacquired-full-85bpm-other.mp3
+    level: "25 s from 0:10"
+    notes: "Level-matched to the others."
