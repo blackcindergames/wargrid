@@ -12,7 +12,7 @@ const COMPONENTS: Array = [
 const LICENSES: Dictionary = {"Expat": "EXPAT-LICENCE-TEXT", "Zlib": "ZLIB-LICENCE-TEXT"}
 
 func cases() -> Array[Callable]:
-	return [test_every_music_row, test_new_row_appears, test_macleod_block, test_voice_line, test_allied_voice_row, test_unit_voice_rows, test_maps_notice, test_godot_license, test_wargrid_line, test_third_party_components, test_third_party_engine_data, test_macleod_ignores_earlier_fence, test_crlf_credits, test_public_sans_notice, test_exports_ship_the_font_licence]
+	return [test_every_music_row, test_new_row_appears, test_macleod_block, test_licensed_block, test_voice_line, test_allied_voice_row, test_unit_voice_rows, test_maps_notice, test_godot_license, test_wargrid_line, test_third_party_components, test_third_party_engine_data, test_macleod_ignores_earlier_fence, test_crlf_credits, test_public_sans_notice, test_exports_ship_the_font_licence]
 
 func _credits() -> String:
 	return FileAccess.get_file_as_string(CREDITS_PATH).replace("\r\n", "\n")
@@ -54,8 +54,14 @@ func test_macleod_block(runner) -> bool:
 	runner.check(block.length() > 50 and block in _panel(text), "CR3 the MacLeod attribution block is verbatim")
 	return true
 
-func _block(text: String) -> String:
-	var start := text.find("```text\n", text.find(Credits.MACLEOD_HEADING)) + 8
+func test_licensed_block(runner) -> bool:
+	var text := _credits()
+	var block := _block(text, Credits.LICENSED_HEADING)
+	runner.check("Luca Baradel" in block and "Ovani Sound" in block and block in _panel(text), "CR16 the licensed music and effects credit is shown")
+	return true
+
+func _block(text: String, heading: String = Credits.MACLEOD_HEADING) -> String:
+	var start := text.find("```text\n", text.find(heading)) + 8
 	return text.substr(start, text.find("```", start) - start).strip_edges()
 
 func test_voice_line(runner) -> bool:

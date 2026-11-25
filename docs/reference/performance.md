@@ -7,41 +7,41 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 218% | 🔺 2% worse (busy host) | 2026-11-24 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 213% | 🔻 2% better (busy host) | 2026-11-24 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame** | 🔴 Over | ██████████▶ 188% | 🆕 first run | 2026-11-22 |
-| **3v3 match, bots and simulation (real 3v3)** | 🔴 Over | ██████████▶ 178% | 🔻 2% better (busy host) | 2026-11-24 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 162% | 🔻 2% better (busy host) | 2026-11-24 |
-| **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 147% | 🔻 3% better (busy host) | 2026-11-24 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 147% | 🔺 1% worse (busy host) | 2026-11-24 |
-| **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 127% | ➖ same (busy host) | 2026-11-24 |
+| **3v3 match, bots and simulation (real 3v3)** | 🔴 Over | ██████████▶ 182% | 🔺 2% worse (busy host) | 2026-11-24 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 163% | 🔺 1% worse (busy host) | 2026-11-24 |
+| **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 151% | 🔺 3% worse (busy host) | 2026-11-24 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 145% | 🔻 1% better (busy host) | 2026-11-24 |
+| **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 126% | ➖ same (busy host) | 2026-11-24 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 77% | 🔺 4% worse | 2026-11-24 |
 | Drawing the screen | 🟢 OK | ███████░░░ 75% | 🔺 3% worse | 2026-11-24 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 75% | ➖ same (busy host) | 2026-11-24 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 2% better (busy host) | 2026-11-24 |
-| Unit movement | 🟢 OK | ████░░░░░░ 43% | 🔻 7% better (busy host) | 2026-11-24 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔻 22% better (busy host) | 2026-11-24 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better (busy host) | 2026-11-24 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 2% worse (busy host) | 2026-11-24 |
+| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 3% worse (busy host) | 2026-11-24 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same (busy host) | 2026-11-24 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 6% worse (busy host) | 2026-11-24 |
 
 Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 43% of budget (P7 part 2 Team online, 2026-11-24), 7% faster than P18 A short Esc menu (worst vs worst); run-to-run spread up to 50%, busy host (load 3.9)
-- movement p99: 25% of budget (P7 part 2 Team online, 2026-11-24), 22% faster than P18 A short Esc menu (worst vs worst); run-to-run spread up to 50%, busy host (load 3.9)
-- combat gated p95: 75% of budget (P7 part 2 Team online, 2026-11-24), unchanged vs P18 A short Esc menu (worst vs worst); run-to-run spread up to 58%, busy host (load 3.9)
-- combat gated p99: 58% of budget (P7 part 2 Team online, 2026-11-24), 2% faster than P18 A short Esc menu (worst vs worst); run-to-run spread up to 58%, busy host (load 3.9)
-- combat stress p95: 162% of budget, exceeded (P7 part 2 Team online, 2026-11-24), 2% faster than P18 A short Esc menu (worst vs worst); run-to-run spread up to 41%, busy host (load 3.9)
-- plumbing, movement layouts: 147% of budget, exceeded (P7 part 2 Team online, 2026-11-24), 1% slower than P18 A short Esc menu (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
-- plumbing, horde: 218% of budget, exceeded (P7 part 2 Team online, 2026-11-24), 2% slower than P18 A short Esc menu (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
+- movement p95: 44% of budget (auto 7b69cb7a, 2026-11-24), 3% slower than P7 part 2 Team online (worst vs worst); run-to-run spread up to 50%, busy host (load 2.5)
+- movement p99: 25% of budget (auto 7b69cb7a, 2026-11-24), unchanged vs P7 part 2 Team online (worst vs worst); run-to-run spread up to 50%, busy host (load 2.5)
+- combat gated p95: 75% of budget (auto 7b69cb7a, 2026-11-24), unchanged vs P7 part 2 Team online (worst vs worst); run-to-run spread up to 58%, busy host (load 2.5)
+- combat gated p99: 59% of budget (auto 7b69cb7a, 2026-11-24), 2% slower than P7 part 2 Team online (worst vs worst); run-to-run spread up to 58%, busy host (load 2.5)
+- combat stress p95: 163% of budget, exceeded (auto 7b69cb7a, 2026-11-24), 1% slower than P7 part 2 Team online (worst vs worst); run-to-run spread up to 41%, busy host (load 2.5)
+- plumbing, movement layouts: 145% of budget, exceeded (auto 7b69cb7a, 2026-11-24), 1% faster than P7 part 2 Team online (worst vs worst); run-to-run spread not measured, busy host (load 2.5)
+- plumbing, horde: 213% of budget, exceeded (auto 7b69cb7a, 2026-11-24), 2% faster than P7 part 2 Team online (worst vs worst); run-to-run spread not measured, busy host (load 2.5)
 - rendered tick-frame p95: 75% of budget (P18 A short Esc menu, 2026-11-24), 3% slower than P16 finish (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 77% of budget (P18 A short Esc menu, 2026-11-24), 4% slower than P16 finish (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (P7 part 2 Team online, 2026-11-24), 3% faster than P18 A short Esc menu (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
+- lockstep p99: 11% of budget (auto 7b69cb7a, 2026-11-24), 6% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured, busy host (load 2.5)
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
-- 3v3 upkeep: 127% of budget, exceeded (P7 part 2 Team online, 2026-11-24), unchanged vs P18 A short Esc menu (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
-- 3v3 sim p95: 147% of budget, exceeded (P7 part 2 Team online, 2026-11-24), 3% faster than P18 A short Esc menu (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
-- 3v3 bots + sim p95: 178% of budget, exceeded (P7 part 2 Team online, 2026-11-24), 2% faster than P18 A short Esc menu (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
+- 3v3 upkeep: 126% of budget, exceeded (auto 7b69cb7a, 2026-11-24), unchanged vs P7 part 2 Team online (worst vs worst); run-to-run spread not measured, busy host (load 2.5)
+- 3v3 sim p95: 151% of budget, exceeded (auto 7b69cb7a, 2026-11-24), 3% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured, busy host (load 2.5)
+- 3v3 bots + sim p95: 182% of budget, exceeded (auto 7b69cb7a, 2026-11-24), 2% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured, busy host (load 2.5)
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
@@ -175,6 +175,10 @@ All rows: this Mac, Godot 4.7.2, Compatibility renderer, 64×64 map, 300 units, 
 **Unmeasured devices (D19, user, 2026-11-19).** No laptop and no LCD Deck are available: the L1 (Ryzen 5 5600H, GTX 1650 laptop) and L2 (Iris Xe thin-and-light) factors and the LCD Deck (APU 0405, inferred; 60 Hz) stay unmeasured; the L1 and L2 factors in the low-end report (private) are estimates from CPU benchmarks, and the LCD Deck has none.
 
 **Proposals (not applied).** W1 is report-only in the spike plan (user, 2026-11-15); W2 and M1 were never applied; the Deck rows decide at SB6 ([critique review(design-answers-2026-11-08.md#sim-boundary-critique-review-user-2026-11-18)). [Worker-thread design](../superpowers/specs/2026-11-12-worker-thread-design.md) proposes three rows for worker builds only; nothing here changes a budget, ceiling or guard, and each needs the user's yes plus a step-8 measurement row first. W1 worker tick p95 (`run_job`: step + bots + `view_state` + event copies) 3.40 ms dev machine (20 ms on target, 60 % of a tick), replacing sim-only p95 1.82 (looser). W2 worker tick p99 5.66 ms (33.3 ms on target, 100 % of a tick), replacing p99 3.64 (looser). M1 main presentation per published tick (`view.sort` + `view.batch` + HUD + sound update) 0.85 ms (5 ms on target, 30 % of a frame), replacing the plumbing 0.91 (slightly tighter, new definition). Design estimates (inferred, not measured): skirmish3v3 M1 0.38 pass, team_match 0.67-0.76 pass, hordes300 1.48 exceeded, movement_open about 1.0 exceeded. While production is a no-threads build, today's rows bind.
+
+**Proposed: 30 frames per second as the Steam Deck target (user, 2026-11-24, "should probably consider"; not decided, not applied).** The Deck frame goal row (60 frames per second: CPU p95 ≤ 16.7 ms, p99 ≤ 33.3 ms) would become a 30 frames per second goal. Today's measured median of 3 (2026-11-22, `main` `d5a60035`) is CPU p95 30.88 ms and p99 35.34 ms, so p95 would sit inside a 33.3 ms frame and p99 just over it; the limits for a 30 frames per second goal (frame time, long-frame threshold, frames per second floor) are not set and need the owner's yes plus a measurement row before any budget changes. Until then the 60 frames per second rows bind and nothing is loosened. Packages that add units or drawing cost (P15, the 3v3 gate P9) read this proposal at planning.
+
+**Three levers against the red rows (agent proposal, 2026-11-24; not decided, nothing applied).** Most red rows are the browser projection, not the game: every simulation budget is the target divided by F = 5.5, the Steam Deck in Firefox against this Mac (Slowdown factor above), while the Deck runs natively at 3.4 to 4.4 and this Mac renders Ashfall at a 2.15 ms frame p95 (P18 rendered row). They combine: (1) **Native first:** the native Deck build becomes the performance target (F about 4) and the browser plays but may be slower; this reverses the 2026-11-06 browser-target decision and, on today's rows, turns 3v3 background upkeep (126 %) green and brings armies on the move (146 %) and 3v3 simulation (151 %) to about 106 % and 110 %, while huge battles (165 %), 3v3 bots (183 %) and huge crowds (214 %) stay red (scaled by 4 / 5.5, not measured). (2) **Threads** (SB5a native, SB5b browser, SB6 decision rows): the simulation leaves the render thread; native needs no headers, the browser pays the threads tax (about 4.7 % to 8.3 % in Firefox, [perf spike verification](perf-spike-verification.md)). (3) **30 frames per second as the browser floor** (the proposal above): Zero Hour itself caps the frame rate at 30 (retail `data\ini\gamedata.ini:11` `FramesPerSecondLimit = 30`, read with `tools/zh_ini.py`) and ticks its logic 30 times a second like Wargrid. Recommended: 1 plus 2, with 3 for the browser only. Native first is a scope decision for the owner.
 
 Reading the M4 rows (superseded for combat by the M4.1 section below): all three combat layouts pass the headless budget, but `open` (1.600 vs 1.67) and `dense` (1.638 vs 1.67) have only 4% and 2% margin (run-to-run noise is about ±0.03 ms), and the movement benchmark has about the same. The final `contact` layout (3 columns × 50 rows per side, tanks and infantry interleaved, fronts 2 cells apart, so rifles and cannons both fire from tick 0) resolves most of the fight inside the 300 warm-up ticks (232 deaths), so its gated window is light; the warm-up numbers above are the real contact cost, and they exceed the p99 budget (3.3 ms) and spike to 16–28 ms on tick 0. Those spikes are outside the gate by the plan's fixed window. The budget already assumes the 6× slower target, so there is no headroom for further per-tick combat work. The timed window excludes the tick-0 scan spike (45,300 checks). The rendered movement benchmark was rerun after the WorldView changes and passes (row above); the Skirmish scene itself (HP bars, cues, labels under combat) has not been rendered under load. Unmeasured: plumbing in the Skirmish scene (opponent decision and snapshot each tick), web export, other machines. Not checked: the review's moving-target-chase and unreachable-attack layouts (not built).
 

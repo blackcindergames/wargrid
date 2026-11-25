@@ -1758,3 +1758,30 @@ War Room round `esc-menu` (`warroom/rounds/esc-menu/`, pictures in `docs/images/
 - **Settings (A):** switches in one column under GRAPHICS, SOUND and GAME; Quality as a Low/High toggle.
 - **Page (A):** a page replaces the menu, `‹ Back` and its title top left, `Esc: back` top right.
 - **Defaults stated in the round, kept:** "Back to main menu" becomes "Leave match" and keeps its confirm box online (a bot match leaves at once); Quit in an online match asks first, in its own words ("Quit the game? Your opponent wins and the room closes.", buttons Quit and Cancel); Esc on a page returns to the menu, on the menu resumes; Mouse rows in button order with P17's `Right-drag`, `Middle-drag` and, on macOS, `Two-finger swipe` and `Pinch` rows; no rebinding.
+
+## SB5 planning answers (user, 2026-11-24)
+
+The owner questions from the SB5 planning run (research dossier, private) for the [SB5a plan](../superpowers/plans/2026-11-22-sim-boundary-sb5a.md) and the [SB5b plan](../superpowers/plans/2026-11-25-sim-boundary-sb5b.md).
+
+- **Plans on `main` (Q5):** both plans landed on `main` before the SB5a night (`5a0aba1c`), so the run branch contains its plan.
+- **Deck window (Q6):** starting the SB5a night approves Task 13's visible window on the Steam Deck over SSH (Deck windowed runs approved 2026-11-20); the Mac stays headless.
+- **Night settings (Q7):** the night's proposed settings are adopted (the SB5a worktree and its tool allows in, the stale P16 worktree out).
+- **After a P7 part 2 merge (Q8):** the SB5a night runs every task with local checks only; push, CI, benchmark and gate reviews stay with the owner.
+- **SB5b Task 5 (Q1):** the browser benchmark and the release-build fault probe move to SB6, as the design's package cut has it.
+- **SB5b approvals (Q3):** the test-app deploy, the branch push and the rendered benchmark window are asked once, together, for one named commit after local checks pass.
+- **Listen check (Q4):** a ten-minute offline match with music and combat plus a rematch on the threaded test app, repeated in a chat app's browser where the link check passed.
+- **Chat-app link check (Q2):** Discord only, and report-only, not a blocker before production goes threaded (links from chat apps are not a high priority); softens the SB5b gate of the [critique review](#sim-boundary-critique-review-user-2026-11-18).
+- **SB6 arms (Q11):** the physics-cap arm is dropped; SB6 compares the worker against inline.
+- **Input after an online end (Q12):** blocking input after an online match ends, as Zero Hour does, rides on P2.3a2 with its end wording.
+- **SB6 go-rule limits (Q9, Q10):** set at the SB6 plan, with SB5a's measurements in hand.
+
+## Lobby prototype answers (user, 2026-11-24)
+
+The owner wrote an HTML lobby prototype (private) that improves the launcher now and leaves room for later lobby features. Answers before its War Room round:
+
+- **Placement:** a new package, P20 A lobby for every match, right after P7 part 2 and ahead of P15; Skirmish and Host game share one slot page; P11 later adds ready-up and humans on both sides into the same layout.
+- **Features that do not exist:** stay hidden, as the [new launcher](#new-launcher-user-2026-11-13) rule has it; the layout reserves room where each goes (Quick play, public games, larger formats, match settings, bot levels), so adding one later does not redesign the page.
+- **Start flow:** online, the friend lands in the slot list and the host presses Start match; no ready badges until P11; no relay or protocol change.
+- **No match format row:** the map decides how many slots there are (one per start), as in Zero Hour; fewer players than starts stays allowed, for example a 1v1 with a friend on a 4-start map; never more players than starts, so a 2v2 never runs on a 2-start map; the format shows only as a label worked out from the teams (director and player-experience reviewer, both recommended; user, 2026-11-24).
+- **Round first:** a blocking War Room round built from the prototype (the look is the question): Play page (mode cards against today's mode row, reopening the P2.1 "no mode-card start screen" rule), slot list layout, slot colours (player colours, decided after the P7 part 2 match, against team colours), invite placement, guest view, map and faction pickers. Added after an engine and modern-RTS idea sweep (user, 2026-11-24): start pick on the map preview and a colour per slot with clash handling (both already planned for P11; the round shows where they go so the layout reserves room), a Random faction, and the host closing any single start (OpenRA). Out: a launcher results page (the in-match result panel stays), lobby chat, spectators; remembering the last setup and Play again exist already (P2.1, P2.2).
+

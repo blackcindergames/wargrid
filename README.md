@@ -50,7 +50,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**16 of 46 parts done**
+**18 of 47 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -68,11 +68,12 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | Quick rematch | Done |
 | ✅ | Notes that never block | Done |
 | ✅ | See your selection | Done |
-| ⏭ | Build from the dock | Next |
+| ✅ | Build from the dock | Done |
 | ✅ | Pan with the mouse | Done |
 | ✅ | Know what your factory is making | Done |
-| 📋 | A short Esc menu | Planned |
-| 📋 | Team up against bots | Planned |
+| ✅ | A short Esc menu | Done |
+| ⏭ | Team up against bots | Next |
+| 📋 | A lobby for every match | Planned |
 | 📋 | First new units | Planned |
 | 📋 | Hear the whole battlefield | Planned |
 | 📋 | Know why an order failed | Planned |
@@ -114,10 +115,10 @@ Performance against the low-end budget (generated):
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 77% | 🔺 4% worse | 2026-11-24 |
 | Drawing the screen | 🟢 OK | ███████░░░ 75% | 🔺 3% worse | 2026-11-24 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 75% | ➖ same (busy host) | 2026-11-24 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 2% better (busy host) | 2026-11-24 |
-| Unit movement | 🟢 OK | ████░░░░░░ 43% | 🔻 7% better (busy host) | 2026-11-24 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔻 22% better (busy host) | 2026-11-24 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better (busy host) | 2026-11-24 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 2% worse (busy host) | 2026-11-24 |
+| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 3% worse (busy host) | 2026-11-24 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same (busy host) | 2026-11-24 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 6% worse (busy host) | 2026-11-24 |
 
 Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
@@ -129,14 +130,14 @@ These areas are over their limit and no known change brings them under it yet, s
 
 | Area | Latest on this Mac | Recent runs → | vs recent runs | As of |
 | --- | --- | --- | --- | --- |
-| Background upkeep, huge crowds (stress) | mean 1.98 ms | ▄▄▄▄▄▆▄▄ | 🔺 2% slower | 2026-11-24 |
-| Combat, huge battles (stress) | p95 2.95 ms | ▄▄▄▄▄▄▄▄ | ➖ same, -2% (noise ±41%) | 2026-11-24 |
-| Background upkeep, armies on the move (stress) | mean 1.34 ms | ▄▄▄▄▄▄▄▄ | 🔺 2% slower | 2026-11-24 |
-| Combat, big armies in the open (stress) | p95 1.91 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-24 |
-| Combat, big armies packed close (stress) | p95 1.86 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-24 |
+| Background upkeep, huge crowds (stress) | mean 1.94 ms | ▄▄▄▄▆▄▄▄ | 🔻 2% faster | 2026-11-24 |
+| Combat, huge battles (stress) | p95 2.97 ms | ▄▄▄▄▄▄▄▄ | ➖ same, -1% (noise ±41%) | 2026-11-24 |
+| Background upkeep, armies on the move (stress) | mean 1.32 ms | ▄▄▄▄▄▄▄▄ | 🔻 1% faster | 2026-11-24 |
+| Combat, big armies in the open (stress) | p95 1.93 ms | ▄▄▄▄▄▄▄▄ | ➖ same, +1% (noise ±41%) | 2026-11-24 |
+| Combat, big armies packed close (stress) | p95 1.87 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-24 |
 | 3v3 match, background upkeep (real 3v3) | mean 1.15 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-24 |
-| 3v3 match, simulation (real 3v3) | p95 2.68 ms | ▄▄▄▄▄▄▅▄ | 🔻 1% faster | 2026-11-24 |
-| 3v3 match, bots and simulation (real 3v3) | p95 3.24 ms | ▄▄▄▅▄▄▄▄ | 🔻 2% faster | 2026-11-24 |
+| 3v3 match, simulation (real 3v3) | p95 2.75 ms | ▄▄▄▄▄▅▄▄ | 🔺 2% slower | 2026-11-24 |
+| 3v3 match, bots and simulation (real 3v3) | p95 3.32 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-24 |
 
 The latest run of every tracked area was on a busy host.
 
@@ -165,4 +166,4 @@ Developed with AI coding agents (Claude Code) working from written plans, review
 
 Code and the Wargrid logo (`game/art/logo-32.png` and the sizes derived from it): GPL-3.0-or-later, see [LICENSE](LICENSE). The Ashfall, Dry Wells and Broken Crown maps (`game/data/maps/`) are converted from Electronic Arts' GPL-3.0 map sources and keep EA's copyright line and additional terms, see the [map notice](game/data/maps/NOTICE.md). Unit and weapon numbers were researched from EA's GPL source and the retail game's configuration; no EA files, art, audio or text are copied. Wargrid is not affiliated with or endorsed by Electronic Arts; Command & Conquer is a trademark of Electronic Arts Inc. and is named only to describe the inspiration.
 
-Released zips and the web build carry `LICENSE`, the map notice, the audio credits (`game/audio/CREDITS.md`), the font license (`game/fonts/PublicSans-OFL.txt`) and Godot's license notices (`GODOT_LICENSES.txt`); the launcher shows the license and the source link, and its Credits button lists the music, voice, map, font, Godot and Wargrid notices. Wargrid-made audio (generated effects, vocoded announcer lines): GPL-3.0-or-later. Music: CC BY 3.0 / 4.0, credited in [game/audio/CREDITS.md](game/audio/CREDITS.md). Wargrid's own art (the art-direction sheets in `docs/art-direction/` and any later Wargrid-made art): GPL-3.0-or-later.
+Released zips and the web build carry `LICENSE`, the map notice, the audio credits (`game/audio/CREDITS.md`), the font license (`game/fonts/PublicSans-OFL.txt`) and Godot's license notices (`GODOT_LICENSES.txt`); the launcher shows the license and the source link, and its Credits button lists the music, voice, map, font, Godot and Wargrid notices. Wargrid-made audio (generated effects, vocoded announcer lines): GPL-3.0-or-later. Free music: CC BY 3.0 / 4.0; released builds also carry licensed music and sound effects (Luca Baradel's ASSAULT pack and Ovani Sound packs), used under their licences inside the compiled game and not part of this repository; both credited in [game/audio/CREDITS.md](game/audio/CREDITS.md). Wargrid's own art (the art-direction sheets in `docs/art-direction/` and any later Wargrid-made art): GPL-3.0-or-later.
