@@ -1685,6 +1685,7 @@ Plan written 2026-11-24 ([plan](../superpowers/plans/2026-11-24-p7-2-team-online
 - **Ping tone (finish run):** the tone goes through the announcer's queue, priority 5 and a 150-tick cooldown, so a burst of pings sounds once and a base alarm outranks it (decided for the owner, 2026-11-24).
 - **Armed click on a unit (finish run):** with the ping armed, a click on a unit pings that spot; only Alt+click skips an own unit, so Alt+double-click keeps its whole-map select (decided for the owner, 2026-11-24).
 - **Defeated guest pings (finish run):** a defeated guest who watches may keep pinging (decided for the owner, 2026-11-24).
+- **Ping look (user, 2026-11-25):** the flat ring looked jagged; the ping is now the owner's beacon sketch (dashed ground ellipse, light beam, outlined chevron, centre dot) with anti-aliased outlines, the ground ellipse at the old ring's size; the owner checked it on the test app in Safari and Firefox ("looks perfect").
 - **Ping chip once the teammate left (finish run):** the Ping chip and `G` are hidden from then on (decided for the owner, 2026-11-24).
 - **Audio asset list (finish run):** `tools/test_audio_assets.py` lists `sfx/ping.wav`, since that test pins each folder's contents (decided for the owner, 2026-11-24).
 

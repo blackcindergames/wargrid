@@ -8,6 +8,13 @@ const PULSE_USEC: int = 1000000
 const PULSES: int = 2
 const ALLY := Color("69ceaa")
 const UNDER := Color("0c141a")
+const GLOW := Color("85ffe1")
+const FILL := Color("a8fff1")
+const BEAM := Color("a1ffe7")
+const LINE := Color("9affea")
+const OUTLINE := Color("17393e")
+const SMALL := Color("b6ffed")
+const DOT := Color("e4fff8")
 const RING := Vector2(24, 12)
 const ARROW: float = 28.0
 const ARROW_INSET: float = 8.0
@@ -54,7 +61,7 @@ var _circle := PackedVector2Array()
 
 func _init() -> void:
 	name = "PingMarks"
-	for i in 33: _circle.append(Vector2.from_angle(TAU * i / 32.0))
+	for i in 65: _circle.append(Vector2.from_angle(TAU * i / 64.0))
 
 func add(player: int, target: Vector2) -> void:
 	marks[player] = {"target": target, "started": now_usec.call()}
@@ -108,7 +115,7 @@ static func arrow_spot(point: Vector2, view: Rect2, floor_y: float) -> Vector2:
 	if offset.y != 0.0: reach = minf(reach, area.size.y / 2.0 / absf(offset.y))
 	return centre + offset * reach
 
-# Dark under-strokes keep the ring readable on sand (art direction §11).
+# Beacon after the owner's sketch (user, 2026-11-25), drawn in its 300x190 coordinates around the ground point (150, 130).
 func _draw() -> void:
 	var now: int = now_usec.call()
 	for player: int in marks:
@@ -117,14 +124,31 @@ func _draw() -> void:
 		var centre: Vector2 = Iso.world_to_plane(marks[player].target)
 		if age < PULSES * PULSE_USEC:
 			var phase: float = float(age % PULSE_USEC) / PULSE_USEC
-			_ring(centre, RING * (1.0 + phase), 2.5, alpha * 0.8 * (1.0 - phase))
-		_ring(centre, RING, 3.0, alpha)
-		draw_colored_polygon(_ellipse(centre, Vector2(5, 2.5)).slice(0, -1), Color(ALLY, alpha))
+			draw_polyline(_ellipse(centre, RING * (1.0 + phase)), Color(GLOW, alpha * 0.8 * (1.0 - phase)), 2.0, true)
+		_beacon(centre, alpha)
 
-func _ring(centre: Vector2, radii: Vector2, width: float, alpha: float) -> void:
-	var points: PackedVector2Array = _ellipse(centre, radii)
-	draw_polyline(points, Color(UNDER, alpha), width + 2.0)
-	draw_polyline(points, Color(ALLY, alpha), width)
+func _beacon(centre: Vector2, alpha: float) -> void:
+	var k: float = RING.x / 55.0
+	var at := func(x: float, y: float) -> Vector2: return centre + Vector2(x - 150.0, y - 130.0) * k
+	draw_colored_polygon(_ellipse(centre, RING).slice(0, -1), Color(FILL, alpha * 0.08))
+	_dashed(centre, RING, Color(GLOW, alpha), 2.0 * k)
+	draw_colored_polygon([at.call(145, 130), at.call(130, 31), at.call(170, 31), at.call(155, 130)], Color(BEAM, alpha * 0.15))
+	draw_line(at.call(150, 66), at.call(150, 130), Color(LINE, alpha * 0.8), 2.0 * k, true)
+	var chevron := PackedVector2Array([at.call(129, 40), at.call(150, 53), at.call(171, 40), at.call(171, 53), at.call(150, 66), at.call(129, 53)])
+	draw_colored_polygon(chevron, Color(LINE, alpha))
+	chevron.append(chevron[0])
+	draw_polyline(chevron, Color(OUTLINE, alpha), 2.5 * k, true)
+	draw_polyline([at.call(139, 76), at.call(150, 83), at.call(161, 76)], Color(SMALL, alpha), 3.0 * k, true)
+	draw_colored_polygon(_ellipse(centre, Vector2(7, 3.5) * k).slice(0, -1), Color(DOT, alpha))
+
+# 14 dashes of 13 with gaps of 6, as in the sketch's ring.
+func _dashed(centre: Vector2, radii: Vector2, color: Color, width: float) -> void:
+	for dash in 14:
+		var points := PackedVector2Array()
+		for step in 5:
+			var angle: float = TAU * (dash + 13.0 / 19.0 * step / 4.0) / 14.0
+			points.append(centre + Vector2.from_angle(angle) * radii)
+		draw_polyline(points, color, width, true)
 
 func _ellipse(centre: Vector2, radii: Vector2) -> PackedVector2Array:
 	var points := PackedVector2Array()
