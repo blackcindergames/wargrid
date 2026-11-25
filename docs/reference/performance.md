@@ -15,9 +15,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 147% | 🔺 1% worse (busy host) | 2026-11-24 |
 | **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 127% | ➖ same (busy host) | 2026-11-24 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 77% | 🔺 4% worse | 2026-11-24 |
-| Drawing the screen | 🟢 OK | ███████░░░ 75% | 🔺 3% worse | 2026-11-24 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 75% | ➖ same (busy host) | 2026-11-24 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 73% | 🔻 6% better | 2026-11-25 |
+| Drawing the screen | 🟢 OK | ██████░░░░ 68% | 🔻 10% better | 2026-11-25 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better (busy host) | 2026-11-24 |
 | Unit movement | 🟢 OK | ████░░░░░░ 43% | 🔻 3% better (busy host) | 2026-11-24 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same (busy host) | 2026-11-24 |
@@ -34,8 +34,8 @@ Details:
 - combat stress p95: 162% of budget, exceeded (P7 part 2 Team online, 2026-11-24), 1% faster than auto 7b69cb7a (worst vs worst); run-to-run spread up to 41%, busy host (load 3.9)
 - plumbing, movement layouts: 147% of budget, exceeded (P7 part 2 Team online, 2026-11-24), 1% slower than auto 7b69cb7a (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
 - plumbing, horde: 218% of budget, exceeded (P7 part 2 Team online, 2026-11-24), 2% slower than auto 7b69cb7a (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
-- rendered tick-frame p95: 75% of budget (P18 A short Esc menu, 2026-11-24), 3% slower than P16 finish (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 77% of budget (P18 A short Esc menu, 2026-11-24), 4% slower than P16 finish (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 68% of budget (P7 part 2 Team online, 2026-11-25), 10% faster than P18 A short Esc menu (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 73% of budget (P7 part 2 Team online, 2026-11-25), 6% faster than P18 A short Esc menu (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (P7 part 2 Team online, 2026-11-24), 6% faster than auto 7b69cb7a (worst vs worst); run-to-run spread not measured, busy host (load 3.9)
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured

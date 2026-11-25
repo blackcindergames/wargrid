@@ -2074,3 +2074,13 @@ date,commit,label,machine,metric,scenario,run,p95_ms,p99_ms,mean_ms,method,load,
 2026-11-24,1dce9eea,P7 part 2 Team online,dev,plumbing,team_match_pump:profile,1,,,1.1544,P1,3.87,log sha256:1f429604e03f
 2026-11-24,1dce9eea,P7 part 2 Team online,dev,team_tick,team_match:profile,1,3.242,,1.5796,P1,3.87,log sha256:1f429604e03f
 2026-11-24,1dce9eea,P7 part 2 Team online,dev,step,team_match:profile,1,2.678,,1.4258,P1,3.87,log sha256:1f429604e03f
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,frame_interval,open,2,0.694,4.835,,P1,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,tick_frame,open,2,2.074,2.196,,tick-frame,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,frame_interval,dense,2,0.727,5.142,,P1,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,tick_frame,dense,2,2.077,2.291,,tick-frame,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,frame_interval,ashfall,2,1.976,5.947,,P1,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,tick_frame,ashfall,2,2.229,2.369,,tick-frame,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,frame_interval,horde,2,0.741,7.258,,P1,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,tick_frame,horde,2,5.126,5.484,,tick-frame,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,frame_interval,team2v2,2,0.843,5.401,,P1,1.95,log sha256:7d331a9921e0
+2026-11-25,e313ae9e,P7 part 2 Team online,dev,tick_frame,team2v2,2,2.942,3.544,,tick-frame,1.95,log sha256:7d331a9921e0
