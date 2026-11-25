@@ -748,6 +748,7 @@ function baseStage(over) {
   const cfg = { ...CFG0, ...over }, { el, ctx } = startStage(cfg), z = +cfg.zoom, b = baseItems(cfg);
   cfg.origin = { ox: b.ox, oy: b.oy };
   paintGround(ctx, z, b.ox, b.oy, GROUND[cfg.ground]);
+  if (cfg.groundWash) cfg.groundWash(ctx, z, b.ox, b.oy);
   if (PAL) paintDecorGround(ctx, z, b.ox, b.oy, PAL.decor, cfg.ground);
   paintItems(ctx, b.items, cfg);
   if (PAL && PAL.fog.factor && PAL.fog.factor < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - PAL.fog.factor})`; ctx.fillRect(b.edge, 0, 1280 - b.edge, 720); }
@@ -1314,8 +1315,8 @@ function addHud(stage, o, state, scale) {
   layer.innerHTML = HUDV5.hud(o, { state, size: '1280x720', tier: H.get('tier') || 'full' });
   stage.appendChild(layer);
 }
-function drawPic(name, o) {
-  const p = PICS[name], as = H.get('as') === 'shot' ? 'shot' : 'final', scale = H.get('scale') === '2' ? 2 : 1;
+function drawPic(p, o) {
+  const as = H.get('as') === 'shot' ? 'shot' : 'final', scale = H.get('scale') === '2' ? 2 : 1;
   document.body.className = 'shot'; app.className = 'shot';
   app.innerHTML = '';
   const stage = p.draw({ sel: p[as], scale });
@@ -1428,6 +1429,8 @@ async function start() {
   const job = { export: runExport, roundtrip: runRoundtrip, audit: runAudit }[[...H.keys()].find((k) => ['export', 'roundtrip', 'audit'].includes(k))];
   const pickPage = !(name || rep || job || shot || H.has('list') || H.has('world')), scale = H.get('scale') === '2' ? 2 : 1;
   const wantHud = H.get('hud') || (name && PICS[name] && PICS[name].hud);
+  // These unlabelled pictures also open in hidden War Room frames, where Firefox defers CSS fonts.
+  if (name === 'ground-cells' || name === 'ground-wash') return drawPic(groundStudy(name));
   const [, hudOpts, saved] = await Promise.all([loadFonts(), wantHud || pickPage ? hudOptions().catch((e) => { if (wantHud) throw e; return null; }) : null, fetchPicks(pickPage)]);
   SAVED = saved;
   if (job) await job();
@@ -1438,7 +1441,7 @@ async function start() {
     await post(file, reports[rep]());
   } else if (stepPic) drawStepShot(+stepPic[1], stepPic[2], stepPic[3] ? 'dark' : 'sand', H.get('zoom'), scale);
   else if (shot) drawStepShot(+H.get('step'), H.get('show'), H.get('ground'), H.get('zoom'), scale);
-  else if (name && PICS[name]) drawPic(name, wantHud ? hudOpts : null);
+  else if (name && PICS[name]) drawPic(PICS[name], wantHud ? hudOpts : null);
   else if (H.has('world')) { document.body.className = 'shot'; app.className = 'shot'; app.innerHTML = ''; app.appendChild(MARKS.worldStage(H.get('world'), scale)); }
   else if (pickPage) {
     UI.hudOpts = hudOpts;

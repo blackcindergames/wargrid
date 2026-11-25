@@ -1,0 +1,1532 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Wargrid battlefield studies</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101518;
+        --panel: #171e22;
+        --line: #303b40;
+        --ink: #e7eeeb;
+        --muted: #a0b1b0;
+        --accent: #90d2b7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
+      }
+      header {
+        padding: 24px 28px 18px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: 25px;
+        letter-spacing: -0.7px;
+        margin: 0;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 0 0 10px;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+      small,
+      .eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      main {
+        max-width: 1600px;
+        margin: auto;
+        padding: 20px 28px 32px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 16px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px;
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 17px;
+      }
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+      .field > label {
+        font-weight: 600;
+      }
+      .styles {
+        display: grid;
+        gap: 6px;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+      }
+      button,
+      select {
+        background: #232d32;
+        border: 1px solid #435055;
+        color: var(--ink);
+        border-radius: 6px;
+        padding: 8px 10px;
+      }
+      button {
+        cursor: pointer;
+        text-align: left;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+      button.active {
+        border-color: var(--accent);
+        background: #233a33;
+      }
+      button strong {
+        display: block;
+      }
+      button span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+      input[type="checkbox"] {
+        accent-color: var(--accent);
+      }
+      .toggles {
+        display: grid;
+        gap: 6px;
+      }
+      .toggles label {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .scene-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+      }
+      .scene-head strong {
+        font-size: 17px;
+      }
+      .scene {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #151d21;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16/10;
+        background: #253b38;
+      }
+      .scene-foot {
+        padding: 12px 14px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .swatches {
+        display: flex;
+        gap: 2px;
+      }
+      .swatches i {
+        width: 28px;
+        height: 17px;
+        display: block;
+        border-radius: 2px;
+      }
+      .below {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .note {
+        font-size: 13px;
+      }
+      .compare {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .mini {
+        background: #101619;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .mini canvas {
+        aspect-ratio: 16/10;
+      }
+      .mini button {
+        width: 100%;
+        border: 0;
+        border-radius: 0;
+        font-size: 12px;
+      }
+      .pill {
+        color: var(--accent);
+        font-size: 12px;
+      }
+      .legend {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .legend b {
+        font-weight: 500;
+      }
+      .dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 5px;
+      }
+      a {
+        color: var(--accent);
+      }
+      @media (max-width: 850px) {
+        .layout,
+        .below {
+          grid-template-columns: 1fr;
+        }
+        .styles {
+          grid-template-columns: 1fr 1fr;
+        }
+        main {
+          padding: 12px;
+        }
+        header {
+          padding: 16px;
+        }
+        .controls {
+          gap: 12px;
+        }
+      }
+      @media (max-width: 450px) {
+        .compare {
+          grid-template-columns: 1fr;
+        }
+        .styles {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <div class="eyebrow">WARGRID / CONCEPT STUDIES</div>
+        <h1>Battlefield studies</h1>
+        <p>
+          Five ways to draw the same fictional battlefield. Use the War Room
+          comparison to judge the ground beside Wargrid’s units.
+        </p>
+      </div>
+      <small>Procedural Canvas 2D · offline prototype</small>
+    </header>
+    <main>
+      <div class="layout">
+        <aside class="panel controls">
+          <div>
+            <h2>Visual direction</h2>
+            <div class="styles" id="styles"></div>
+          </div>
+          <div class="field">
+            <label for="biome">Study palette</label
+            ><select id="biome">
+              <option value="valley">Temperate valley</option>
+              <option value="desert">Desert study</option>
+              <option value="ash">Volcanic study</option>
+              <option value="ice">Frozen frontier</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="zoom">Study zoom <output id="zoomVal"></output></label
+            ><input
+              id="zoom"
+              type="range"
+              min="65"
+              max="160"
+              value="100"
+              step="5"
+            />
+          </div>
+          <div class="field">
+            <label for="sun"
+              >Shadow direction <output id="sunVal"></output></label
+            ><input
+              id="sun"
+              type="range"
+              min="0"
+              max="360"
+              value="135"
+              step="15"
+            />
+          </div>
+          <div class="field">
+            <label for="detail"
+              >Ground detail <output id="detailVal"></output></label
+            ><input
+              id="detail"
+              type="range"
+              min="0"
+              max="100"
+              value="75"
+              step="5"
+            />
+          </div>
+          <div class="toggles">
+            <label
+              ><input id="shadows" type="checkbox" checked /> Projected
+              shadows</label
+            ><label
+              ><input id="facets" type="checkbox" checked /> Faceted units &
+              props</label
+            ><label
+              ><input id="water" type="checkbox" checked /> Water details</label
+            ><label
+              ><input id="battle" type="checkbox" checked /> Battle
+              activity</label
+            ><label
+              ><input id="overlay" type="checkbox" /> Tactical overlay /
+              footprints</label
+            ><label
+              ><input id="motion" type="checkbox" /> Animate effects</label
+            >
+          </div>
+          <button id="reset">Reset controls</button>
+        </aside>
+        <section class="scene">
+          <div class="scene-head">
+            <div>
+              <strong id="name"></strong>
+              <p id="description"></p>
+            </div>
+            <span class="pill" id="tag"></span>
+          </div>
+          <canvas
+            id="mainCanvas"
+            width="1152"
+            height="720"
+            aria-label="Procedural RTS battlefield preview"
+          ></canvas>
+          <div class="scene-foot">
+            <div class="legend">
+              <b><i class="dot" style="background: #4bdbfa"></i>Blue force</b
+              ><b><i class="dot" style="background: #ff786b"></i>Red force</b
+              ><b
+                ><i class="dot" style="background: #f6cf79"></i>Supply /
+                objective</b
+              >
+            </div>
+            <div id="palette" class="swatches"></div>
+            <span
+              >Fixed battlefield layout · illustrative, not game footage</span
+            >
+          </div>
+        </section>
+      </div>
+      <div class="below">
+        <section class="panel">
+          <h2>Side-by-side style studies</h2>
+          <p class="note">
+            All thumbnails share the biome, camera and unit placement. Click to
+            inspect.
+          </p>
+          <div class="compare" id="compare"></div>
+        </section>
+        <section class="panel">
+          <h2>Art direction notes</h2>
+          <div id="notes"></div>
+          <hr
+            style="border: 0; border-top: 1px solid var(--line); margin: 16px 0"
+          />
+          <h2>Evaluation</h2>
+          <p class="note">
+            Compare zoomed-out faction recognition, terrain/vehicle separation
+            and whether shadows or decoration obscure important paths. Disable
+            individual layers to isolate their value. This prototype is not a
+            benchmark of Godot or an exact map reproduction.
+          </p>
+          <p class="note" style="margin-top: 12px">
+            Wargrid’s picked look uses owner-coloured tops, neutral sides, flat
+            decoration and short unit shadows. These drawings explore
+            alternatives.
+          </p>
+        </section>
+      </div>
+    </main>
+    <script>
+      const STYLES = {
+        A: {
+          name: "A — Refined geometric",
+          desc: "Clean edges, restrained palette, precise military silhouettes.",
+          tag: "Evolution",
+          notes:
+            "Prioritize chamfered hulls, limited facets and clean ground masks. Short, understated shadows. Compare its quiet ground with the War Room control.",
+          terrain: 0.55,
+          trees: 0.55,
+          shadow: 0.7,
+          grade: 0,
+        },
+        B: {
+          name: "B — Illustrated landscape",
+          desc: "Warm highlights, cool shadows, organic shapes and layered terrain.",
+          tag: "Wallpaper study",
+          notes:
+            "Treat landscape as large illustrated shapes. Irregular rock strata, layered canopies and shoreline ribbons. Preserve strong gameplay boundaries.",
+          terrain: 1,
+          trees: 1,
+          shadow: 0.95,
+          grade: 0.25,
+        },
+        C: {
+          name: "C — Tactical miniature",
+          desc: "Long cast shadows, compact objects and sharply legible silhouettes.",
+          tag: "Readability study",
+          notes:
+            "Strong projected shadows make the battlefield feel like a tabletop. Keep player colour clear; avoid shadows masking obstacles or units.",
+          terrain: 0.45,
+          trees: 0.65,
+          shadow: 1.65,
+          grade: 0.05,
+        },
+        D: {
+          name: "D — Cinematic geometric",
+          desc: "Atmospheric grading, directional light and selective emissive details.",
+          tag: "Atmosphere study",
+          notes:
+            "Use a subtle screen-space grade and warm-to-cool light. Effects must not overpower combat readability. Test web shader costs.",
+          terrain: 0.8,
+          trees: 0.8,
+          shadow: 1.2,
+          grade: 0.65,
+        },
+        E: {
+          name: "E — Illustrated terrain + engineered units",
+          desc: "Illustrated ground surrounds machines with crisp silhouettes.",
+          tag: "Hybrid study",
+          notes:
+            "The hybrid keeps the illustrated ground at the edges. Patches fade beside the armies and buildings so the original machine silhouettes stand clear.",
+          terrain: 1,
+          trees: 1,
+          shadow: 0.9,
+          grade: 0.16,
+        },
+      };
+      const P = {
+        valley: [
+          "#81966b",
+          "#677e59",
+          "#9cab7c",
+          "#253e4a",
+          "#e4af95",
+          "#284f3e",
+          "#5b8f78",
+          "#a2d2bf",
+          "#53617a",
+          "#233748",
+          "#c9ba91",
+        ],
+        desert: [
+          "#c2a17b",
+          "#ac8968",
+          "#d9ba8e",
+          "#55465e",
+          "#f3bd8d",
+          "#776945",
+          "#648d88",
+          "#9bc3b1",
+          "#837083",
+          "#413c53",
+          "#e6c79a",
+        ],
+        ash: [
+          "#77757a",
+          "#5e5c65",
+          "#969097",
+          "#30303c",
+          "#e2a077",
+          "#4d5c54",
+          "#85564e",
+          "#db906a",
+          "#706575",
+          "#35313e",
+          "#a7a094",
+        ],
+        ice: [
+          "#b7d0d3",
+          "#8eafb8",
+          "#dce9e5",
+          "#304858",
+          "#f2c3ae",
+          "#416c71",
+          "#568fa9",
+          "#b7e5e5",
+          "#6f91a7",
+          "#314c68",
+          "#d2e5e5",
+        ],
+      };
+      const $ = (id) => document.getElementById(id);
+      let style = "A";
+      const W = 1152,
+        H = 720;
+      let state = {};
+      function read() {
+        state = {
+          biome: $("biome").value,
+          zoom: +$("zoom").value / 100,
+          sun: (+$("sun").value * Math.PI) / 180,
+          detail: +$("detail").value / 100,
+          shadows: $("shadows").checked,
+          facets: $("facets").checked,
+          water: $("water").checked,
+          battle: $("battle").checked,
+          overlay: $("overlay").checked,
+          motion: $("motion").checked,
+        };
+        $("zoomVal").value = Math.round(state.zoom * 100) + "%";
+        $("sunVal").value = $("sun").value + "°";
+        $("detailVal").value = $("detail").value + "%";
+      }
+      function rnd(seed) {
+        let n = seed >>> 0;
+        return () => {
+          n = (Math.imul(n, 1664525) + 1013904223) >>> 0;
+          return n / 4294967296;
+        };
+      }
+      function mix(a, b, t) {
+        let v = (x) => [
+          parseInt(x.slice(1, 3), 16),
+          parseInt(x.slice(3, 5), 16),
+          parseInt(x.slice(5, 7), 16),
+        ];
+        let x = v(a),
+          y = v(b);
+        return (
+          "#" +
+          x
+            .map((q, i) =>
+              Math.round(q + (y[i] - q) * t)
+                .toString(16)
+                .padStart(2, "0"),
+            )
+            .join("")
+        );
+      }
+      function poly(c, pts, fill, stroke = null, w = 1) {
+        c.beginPath();
+        pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+        c.closePath();
+        c.fillStyle = fill;
+        c.fill();
+        if (stroke) {
+          c.strokeStyle = stroke;
+          c.lineWidth = w;
+          c.stroke();
+        }
+      }
+      function line(c, pts, stroke, w = 1) {
+        c.beginPath();
+        pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+        c.strokeStyle = stroke;
+        c.lineWidth = w;
+        c.lineCap = "round";
+        c.lineJoin = "round";
+        c.stroke();
+      }
+      function ellipse(c, x, y, rx, ry, col) {
+        c.beginPath();
+        c.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+        c.fillStyle = col;
+        c.fill();
+      }
+      function alpha(c, a, fn) {
+        c.save();
+        c.globalAlpha = a;
+        fn();
+        c.restore();
+      }
+      const riverTop = [
+          [0, 105],
+          [110, 91],
+          [223, 111],
+          [329, 154],
+          [445, 189],
+          [514, 228],
+          [570, 296],
+          [607, 371],
+          [679, 435],
+          [783, 469],
+          [932, 490],
+          [1152, 554],
+        ],
+        riverBottom = [
+          [0, 158],
+          [104, 147],
+          [219, 174],
+          [307, 210],
+          [411, 246],
+          [461, 283],
+          [507, 341],
+          [547, 418],
+          [626, 481],
+          [757, 526],
+          [908, 550],
+          [1152, 616],
+        ];
+      const cliffSets = [
+        [
+          [0, 0],
+          [358, 0],
+          [350, 50],
+          [285, 66],
+          [254, 100],
+          [158, 72],
+          [85, 95],
+          [0, 74],
+        ],
+        [
+          [790, 0],
+          [1152, 0],
+          [1152, 225],
+          [1075, 208],
+          [1010, 138],
+          [941, 144],
+          [900, 91],
+          [828, 78],
+        ],
+        [
+          [0, 520],
+          [81, 535],
+          [144, 591],
+          [203, 625],
+          [246, 720],
+          [0, 720],
+        ],
+        [
+          [984, 658],
+          [1063, 624],
+          [1152, 652],
+          [1152, 720],
+          [957, 720],
+        ],
+      ];
+      const road1 = [
+        [0, 398],
+        [181, 380],
+        [348, 369],
+        [492, 350],
+        [590, 325],
+        [715, 287],
+        [911, 290],
+        [1152, 310],
+      ];
+      const road2 = [
+        [211, 720],
+        [287, 598],
+        [378, 492],
+        [492, 350],
+        [548, 263],
+        [612, 124],
+        [646, 0],
+      ];
+      const units = [
+        { x: 300, y: 321, a: 1.1, t: "tank", f: 0 },
+        { x: 348, y: 338, a: 1.35, t: "tank", f: 0 },
+        { x: 385, y: 301, a: 1.4, t: "scout", f: 0 },
+        { x: 400, y: 360, a: 1.7, t: "tank", f: 0 },
+        { x: 445, y: 385, a: 1.4, t: "heavy", f: 0 },
+        { x: 463, y: 429, a: 1.1, t: "inf", f: 0 },
+        { x: 439, y: 447, a: 1.2, t: "inf", f: 0 },
+        { x: 476, y: 456, a: 1.1, t: "inf", f: 0 },
+        { x: 734, y: 327, a: -1.7, t: "tank", f: 1 },
+        { x: 778, y: 351, a: -1.5, t: "heavy", f: 1 },
+        { x: 799, y: 306, a: -1.7, t: "scout", f: 1 },
+        { x: 845, y: 344, a: -1.6, t: "tank", f: 1 },
+        { x: 744, y: 394, a: -1.8, t: "inf", f: 1 },
+        { x: 764, y: 407, a: -1.5, t: "inf", f: 1 },
+        { x: 714, y: 380, a: -1.7, t: "inf", f: 1 },
+      ];
+      const bases = [
+        { x: 172, y: 304, w: 96, h: 72, t: "hq", f: 0 },
+        { x: 102, y: 435, w: 82, h: 56, t: "factory", f: 0 },
+        { x: 236, y: 455, w: 62, h: 42, t: "power", f: 0 },
+        { x: 923, y: 235, w: 96, h: 72, t: "hq", f: 1 },
+        { x: 1050, y: 337, w: 82, h: 56, t: "factory", f: 1 },
+        { x: 934, y: 387, w: 62, h: 42, t: "power", f: 1 },
+      ];
+      const fc = ["#4bdbfa", "#ff786b"];
+      function shade(c, x, y, rx, ry, p, s, opt) {
+        if (!opt.shadows) return;
+        let len = s.shadow,
+          dx = -Math.cos(opt.sun) * rx * 0.95 * len,
+          dy = Math.sin(opt.sun) * rx * 0.52 * len;
+        alpha(c, 0.34, () => {
+          poly(
+            c,
+            [
+              [x - rx * 0.85, y - ry * 0.4],
+              [x + rx * 0.75, y - ry * 0.4],
+              [x + rx * 0.75 + dx, y + dy + ry * 0.6],
+              [x - rx * 0.85 + dx, y + dy + ry * 0.6],
+            ],
+            p[3],
+          );
+          ellipse(c, x + dx * 0.45, y + dy * 0.45, rx, ry, p[3]);
+        });
+      }
+      function rock(c, x, y, r, seed, p, s, o) {
+        const R = rnd(seed);
+        shade(c, x, y, r * 0.85, r * 0.25, p, s, o);
+        const a = [
+          [x - r, y],
+          [x - r * 0.6, y - r * 0.7],
+          [x + r * 0.05, y - r * (0.7 + R() * 0.35)],
+          [x + r * 0.68, y - r * 0.42],
+          [x + r, y],
+          [x + r * 0.27, y + r * 0.32],
+        ];
+        poly(c, a, p[8]);
+        if (o.facets) {
+          const m = [x - r * 0.03, y - r * 0.18];
+          poly(c, [a[0], a[1], a[2], m], mix(p[8], p[4], 0.67));
+          poly(c, [a[2], a[3], a[4], m], mix(p[8], p[3], 0.4));
+          poly(c, [a[0], m, a[4], a[5]], mix(p[8], p[3], 0.68));
+        }
+      }
+      function tree(c, x, y, r, seed, p, s, o) {
+        const R = rnd(seed);
+        shade(c, x, y, r, r * 0.34, p, s, o);
+        if (o.biome === "desert") {
+          line(
+            c,
+            [
+              [x, y],
+              [x, y - r * 1.4],
+            ],
+            p[5],
+            r * 0.22,
+          );
+          line(
+            c,
+            [
+              [x - r * 0.6, y - r * 0.55],
+              [x - r * 0.6, y - r],
+              [x, y - r * 0.8],
+              [x + r * 0.5, y - r],
+              [x + r * 0.5, y - r * 1.25],
+            ],
+            p[5],
+            r * 0.17,
+          );
+          return;
+        }
+        line(
+          c,
+          [
+            [x, y],
+            [x + r * 0.06, y - r * 0.85],
+          ],
+          mix(p[3], p[4], 0.25),
+          r * 0.18,
+        );
+        let cx = x,
+          cy = y - r * 0.8;
+        let pts = [];
+        for (let i = 0; i < 11; i++) {
+          let a = (i * Math.PI * 2) / 11,
+            k = 0.8 + R() * 0.25;
+          pts.push([cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * 0.65 * k]);
+        }
+        poly(c, pts, mix(p[5], p[3], 0.25));
+        if (s.trees > 0.6 && o.facets) {
+          let q = pts.slice(0, 6);
+          poly(c, [...q, [cx, cy + r * 0.06]], mix(p[5], p[2], 0.19));
+          poly(
+            c,
+            [pts[6], pts[7], pts[8], pts[9], pts[10], [cx, cy + r * 0.06]],
+            mix(p[5], p[2], 0.52),
+          );
+        } else
+          ellipse(
+            c,
+            cx - r * 0.14,
+            cy - r * 0.16,
+            r * 0.65,
+            r * 0.37,
+            mix(p[5], p[2], 0.25),
+          );
+      }
+      function cliff(c, pts, p, s, o, seed) {
+        poly(c, pts, p[3]);
+        let R = rnd(seed);
+        for (let i = 0; i < pts.length - 1; i++) {
+          let a = pts[i],
+            b = pts[i + 1],
+            d = [
+              (a[0] + b[0]) / 2 + R() * 15,
+              (a[1] + b[1]) / 2 + 35 + R() * 25,
+            ];
+          poly(
+            c,
+            [a, b, d, [a[0] + 5, a[1] + 38]],
+            mix(p[8], p[3], R() * 0.55),
+          );
+          if (o.facets && s.terrain > 0.5)
+            poly(
+              c,
+              [a, [a[0] + (b[0] - a[0]) * 0.7, a[1] + (b[1] - a[1]) * 0.7], d],
+              mix(p[4], p[8], 0.25 + R() * 0.45),
+            );
+        }
+        poly(
+          c,
+          pts.map(([x, y]) => [x, y - 22]),
+          p[8],
+        );
+        if (s.terrain > 0.6 && o.facets)
+          for (let i = 1; i < pts.length - 2; i++) {
+            let a = pts[i],
+              b = pts[i + 1];
+            poly(
+              c,
+              [
+                [a[0], a[1] - 22],
+                [b[0], b[1] - 22],
+                [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 38],
+              ],
+              mix(p[8], p[4], 0.3),
+            );
+          }
+      }
+      function building(c, b, p, s, o) {
+        let { x, y, w, h, t, f } = b;
+        shade(c, x, y, w * 0.62, h * 0.22, p, s, o);
+        c.save();
+        c.translate(x, y);
+        let col = fc[f],
+          wall = mix(p[3], "#829697", 0.52),
+          top = mix(wall, "#d1dcd3", 0.57);
+        let a = [
+          [-w / 2, -h / 2],
+          [-w / 2 + 9, -h / 2 - 7],
+          [w / 2 - 9, -h / 2 - 7],
+          [w / 2, -h / 2 + 2],
+          [w / 2, h / 2 - 12],
+          [w / 2 - 9, h / 2],
+          [-w / 2 + 9, h / 2],
+          [-w / 2, h / 2 - 8],
+        ];
+        poly(c, a, wall);
+        let roof = a.map(([x, y]) => [x, y - 13]);
+        poly(c, roof, top, "#263b40", 1);
+        poly(
+          c,
+          [roof[4], roof[5], roof[6], a[6], a[5], a[4]],
+          mix(wall, p[3], 0.45),
+        );
+        if (o.facets) {
+          poly(
+            c,
+            [roof[0], roof[1], roof[2], roof[3], [-w * 0.2, -h * 0.1 - 13]],
+            mix(top, p[4], 0.21),
+          );
+          poly(
+            c,
+            [roof[3], roof[4], roof[5], [w * 0.16, h * 0.12 - 13]],
+            mix(top, p[3], 0.22),
+          );
+        }
+        poly(
+          c,
+          [
+            [-w * 0.38, -h * 0.32],
+            [w * 0.38, -h * 0.32],
+            [w * 0.38, -h * 0.22],
+            [-w * 0.38, -h * 0.22],
+          ],
+          col,
+        );
+        if (t === "factory") {
+          poly(
+            c,
+            [
+              [-w * 0.28, h * 0.05],
+              [w * 0.28, h * 0.05],
+              [w * 0.28, h * 0.43],
+              [-w * 0.28, h * 0.43],
+            ],
+            "#26343b",
+          );
+          for (let i = 0; i < 4; i++)
+            line(
+              c,
+              [
+                [-w * 0.25, h * 0.1 + i * 5],
+                [w * 0.25, h * 0.1 + i * 5],
+              ],
+              "#748584",
+              2,
+            );
+        } else if (t === "power") {
+          for (let i of [-1, 1]) {
+            ellipse(c, i * 14, -2, 10, 13, "#3c5557");
+            ellipse(c, i * 14, -6, 8, 9, col);
+            ellipse(c, i * 14, -7, 4, 5, "#d3f5e9");
+          }
+        } else {
+          poly(
+            c,
+            [
+              [-15, -10],
+              [15, -10],
+              [21, 6],
+              [0, 18],
+              [-21, 6],
+            ],
+            "#3d5154",
+          );
+          line(
+            c,
+            [
+              [0, 4],
+              [0, -30],
+              [9, -35],
+            ],
+            "#e1e7d8",
+            2,
+          );
+          ellipse(c, 0, 4, 4, 3, col);
+        }
+        c.restore();
+      }
+      function unit(c, u, p, s, o) {
+        let { x, y, a, t, f } = u,
+          col = fc[f],
+          r = t === "heavy" ? 1.16 : t === "scout" ? 0.72 : 1;
+        shade(
+          c,
+          x,
+          y,
+          t === "inf" ? 7 : 19 * r,
+          t === "inf" ? 4 : 7 * r,
+          p,
+          s,
+          o,
+        );
+        c.save();
+        c.translate(x, y);
+        c.rotate(a);
+        c.scale(r, r);
+        if (t === "inf") {
+          ellipse(c, 0, 1, 5, 6, "#364745");
+          ellipse(c, 0, -4, 3.5, 3.5, col);
+          line(
+            c,
+            [
+              [3, 1],
+              [3, -7],
+            ],
+            "#cad5c7",
+            2,
+          );
+        } else {
+          let body = f === 0 ? "#90a99e" : "#a49b92",
+            dark = mix(body, p[3], 0.52);
+          for (let i of [-1, 1]) {
+            poly(
+              c,
+              [
+                [i * 10 - 5, -18],
+                [i * 10 + 5, -18],
+                [i * 10 + 5, 16],
+                [i * 10 - 5, 16],
+              ],
+              "#28353a",
+            );
+            if (o.detail > 0.45)
+              for (let j = -13; j < 16; j += 6)
+                line(
+                  c,
+                  [
+                    [i * 10 - 3, j],
+                    [i * 10 + 3, j],
+                  ],
+                  "#5b6a69",
+                  1,
+                );
+          }
+          let hull =
+            f === 0
+              ? [
+                  [-10, -19],
+                  [10, -19],
+                  [14, -11],
+                  [13, 15],
+                  [-13, 15],
+                  [-14, -11],
+                ]
+              : [
+                  [-12, -15],
+                  [0, -20],
+                  [12, -15],
+                  [13, 16],
+                  [-13, 16],
+                ];
+          poly(c, hull, body, "#26363b", 1);
+          if (o.facets) {
+            poly(
+              c,
+              [hull[0], hull[1], [7, -7], [-7, -7]],
+              mix(body, p[4], 0.35),
+            );
+            poly(
+              c,
+              [
+                [8, -7],
+                [13, 15],
+                [5, 13],
+              ],
+              dark,
+            );
+            poly(
+              c,
+              [
+                [-13, 15],
+                [13, 15],
+                [7, 8],
+                [-7, 8],
+              ],
+              dark,
+            );
+          }
+          poly(
+            c,
+            [
+              [-10, 8],
+              [10, 8],
+              [10, 13],
+              [-10, 13],
+            ],
+            col,
+          );
+          if (f === 0)
+            poly(
+              c,
+              [
+                [-8, -8],
+                [7, -8],
+                [10, 4],
+                [0, 10],
+                [-10, 4],
+              ],
+              mix(body, "#dde4d9", 0.35),
+              "#526966",
+              1,
+            );
+          else
+            poly(
+              c,
+              [
+                [0, -10],
+                [10, -2],
+                [6, 9],
+                [-6, 9],
+                [-10, -2],
+              ],
+              mix(body, "#e9dbd0", 0.36),
+              "#655d59",
+              1,
+            );
+          line(
+            c,
+            [
+              [0, 0],
+              [0, -25],
+            ],
+            "#293c41",
+            5,
+          );
+          line(
+            c,
+            [
+              [-1, 0],
+              [-1, -24],
+            ],
+            mix(body, "#e0e9d6", 0.6),
+            2,
+          );
+          if (t === "heavy")
+            line(
+              c,
+              [
+                [5, -1],
+                [5, -21],
+              ],
+              "#34464a",
+              3,
+            );
+          if (s.grade > 0.4)
+            ellipse(c, 0, 11, 3, 1.6, mix(col, "#ffffff", 0.65));
+        }
+        c.restore();
+        if (o.overlay) {
+          c.strokeStyle = col;
+          c.lineWidth = 1;
+          c.strokeRect(x - 17, y - 17, 34, 34);
+          alpha(c, 0.8, () => {
+            line(
+              c,
+              [
+                [x - 13, y - 25],
+                [x + 13, y - 25],
+              ],
+              "#1b2d32",
+              4,
+            );
+            line(
+              c,
+              [
+                [x - 13, y - 25],
+                [x + 8, y - 25],
+              ],
+              col,
+              2,
+            );
+          });
+        }
+      }
+      function draw(canvas, key, o, t = 0) {
+        let c = canvas.getContext("2d"),
+          s = STYLES[key],
+          p = P[o.biome];
+        c.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+        c.fillStyle = p[0];
+        c.fillRect(0, 0, W, H);
+        c.save();
+        c.translate(W / 2, H / 2);
+        c.scale(o.zoom, o.zoom);
+        c.translate(-W / 2, -H / 2);
+        c.fillStyle = p[0];
+        c.fillRect(-W, -H, W * 3, H * 3);
+        let R = rnd(184);
+        for (let i = 0; i < Math.floor(25 + o.detail * 70 * s.terrain); i++) {
+          let x = R() * W,
+            y = R() * H,
+            r = 25 + R() * 100;
+          let pts = Array.from({ length: 7 }, (_, j) => {
+            let a = (j * 2 * Math.PI) / 7,
+              k = 0.6 + R() * 0.55;
+            return [x + Math.cos(a) * r * k, y + Math.sin(a) * r * 0.38 * k];
+          });
+          const nearPieces =
+            key === "E" &&
+            (units.some((u) => Math.hypot(x - u.x, y - u.y) < 100) ||
+              bases.some((b) => Math.hypot(x - b.x, y - b.y) < 100));
+          alpha(c, nearPieces ? 0.08 : 0.24 + s.terrain * 0.23, () =>
+            poly(c, pts, R() > 0.48 ? p[1] : p[2]),
+          );
+        }
+        for (let road of [road1, road2]) {
+          line(c, road, mix(p[1], p[3], 0.2), 36);
+          line(c, road, p[10], 29);
+          if (s.terrain > 0.8) line(c, road, mix(p[10], p[2], 0.4), 17);
+        }
+        poly(c, [...riverTop, ...riverBottom.slice().reverse()], p[6]);
+        if (o.water) {
+          line(c, riverTop, p[7], 3);
+          line(c, riverBottom, mix(p[6], p[3], 0.55), 4);
+          for (let i = 0; i < riverTop.length - 1; i++) {
+            let [x, y] = riverTop[i],
+              b = riverBottom[i];
+            alpha(c, 0.27, () =>
+              line(
+                c,
+                [
+                  [x + 15, y + 15],
+                  [x + 34, b[1] - 16],
+                  [x + 65, b[1] - 9],
+                ],
+                p[7],
+                2,
+              ),
+            );
+          }
+        } // two bridge crossings, including the road's central crossing
+        for (let [x, y, a] of [
+          [535, 327, -0.75],
+          [339, 199, 1.83],
+        ]) {
+          c.save();
+          c.translate(x, y);
+          c.rotate(a);
+          poly(
+            c,
+            [
+              [-48, -19],
+              [48, -19],
+              [48, 19],
+              [-48, 19],
+            ],
+            p[3],
+          );
+          poly(
+            c,
+            [
+              [-45, -15],
+              [45, -15],
+              [45, 15],
+              [-45, 15],
+            ],
+            p[10],
+          );
+          line(
+            c,
+            [
+              [-45, -15],
+              [45, -15],
+            ],
+            p[4],
+            3,
+          );
+          line(
+            c,
+            [
+              [-45, 15],
+              [45, 15],
+            ],
+            p[8],
+            3,
+          );
+          for (let j = -38; j < 45; j += 12)
+            line(
+              c,
+              [
+                [j, -13],
+                [j, 13],
+              ],
+              mix(p[10], p[3], 0.33),
+              1,
+            );
+          c.restore();
+        }
+        cliffSets.forEach((a, i) => cliff(c, a, p, s, o, i + 9));
+        R = rnd(4852);
+        let props = [];
+        for (let [cx, cy, n] of [
+          [110, 230, 12],
+          [308, 93, 9],
+          [707, 124, 13],
+          [1070, 198, 8],
+          [64, 578, 12],
+          [328, 628, 14],
+          [850, 600, 15],
+          [1063, 637, 7],
+        ]) {
+          for (let i = 0; i < n; i++) {
+            let x = cx + (R() - 0.5) * 120,
+              y = cy + (R() - 0.5) * 73;
+            props.push({
+              x,
+              y,
+              r: 10 + R() * 16,
+              seed: Math.floor(R() * 99999),
+              tree: R() > 0.25,
+            });
+          }
+        }
+        for (let i = 0; i < Math.floor(o.detail * 32); i++)
+          props.push({
+            x: 15 + R() * 1120,
+            y: R() > 0.5 ? 40 + R() * 65 : 610 + R() * 100,
+            r: 5 + R() * 13,
+            seed: i + 155,
+            tree: false,
+          });
+        props.sort((a, b) => a.y - b.y);
+        for (let q of props) {
+          if (q.r < 15 && o.zoom < 0.85) continue;
+          (q.tree ? tree : rock)(c, q.x, q.y, q.r, q.seed, p, s, o);
+        } // bases and objective
+        for (let b of bases) {
+          alpha(c, 0.5, () =>
+            poly(
+              c,
+              [
+                [b.x - b.w * 0.7, b.y - b.h * 0.7],
+                [b.x + b.w * 0.7, b.y - b.h * 0.7],
+                [b.x + b.w * 0.7, b.y + b.h * 0.7],
+                [b.x - b.w * 0.7, b.y + b.h * 0.7],
+              ],
+              mix(p[1], p[3], 0.28),
+            ),
+          );
+          building(c, b, p, s, o);
+          if (o.overlay) {
+            c.strokeStyle = fc[b.f];
+            c.strokeRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
+          }
+        }
+        for (let [x, y] of [
+          [192, 518],
+          [1004, 440],
+          [624, 215],
+        ]) {
+          ellipse(c, x, y, 32, 16, mix(p[1], p[3], 0.4));
+          for (let i = 0; i < 4; i++) {
+            let xx = x + (i % 2) * 16 - 13,
+              yy = y + Math.floor(i / 2) * 12 - 10;
+            poly(
+              c,
+              [
+                [xx, yy],
+                [xx + 12, yy - 4],
+                [xx + 21, yy],
+                [xx + 21, yy + 9],
+                [xx + 8, yy + 13],
+                [xx, yy + 9],
+              ],
+              "#8d7545",
+            );
+            poly(
+              c,
+              [
+                [xx, yy],
+                [xx + 12, yy - 4],
+                [xx + 21, yy],
+                [xx + 8, yy + 5],
+              ],
+              "#f0c876",
+            );
+          }
+        }
+        ellipse(c, 643, 353, 22, 12, "#344b4a");
+        ellipse(c, 643, 350, 15, 8, "#e4c474");
+        ellipse(c, 643, 350, 8, 4, "#3b4c48");
+        line(
+          c,
+          [
+            [643, 350],
+            [643, 323],
+          ],
+          "#e8e5c6",
+          2,
+        );
+        poly(
+          c,
+          [
+            [643, 323],
+            [660, 327],
+            [643, 334],
+          ],
+          "#f6cf79",
+        );
+        units
+          .slice()
+          .sort((a, b) => a.y - b.y)
+          .forEach((u) => unit(c, u, p, s, o));
+        if (o.battle) {
+          let shift = o.motion ? Math.sin(t * 0.003) * 9 : 0;
+          for (let [x, y, tx, ty] of [
+            [415, 351, 683, 326],
+            [473, 386, 721, 342],
+            [766, 334, 488, 365],
+          ]) {
+            let q = 0.48 + shift * 0.01;
+            line(
+              c,
+              [
+                [x + (tx - x) * q, y + (ty - y) * q],
+                [x + (tx - x) * (q + 0.07), y + (ty - y) * (q + 0.07)],
+              ],
+              "#f3dda0",
+              2,
+            );
+          }
+          for (let [x, y] of [
+            [686, 339],
+            [520, 385],
+          ]) {
+            alpha(c, 0.25, () =>
+              ellipse(c, x, y, 19 + shift * 0.3, 10, "#e8a16d"),
+            );
+            ellipse(c, x, y, 6, 3, "#ffd998");
+            for (let i = 0; i < 5; i++) {
+              alpha(c, 0.16, () =>
+                ellipse(c, x - i * 3, y - i * 7, 6 + i * 2, 5 + i * 2, p[3]),
+              );
+            }
+          }
+        }
+        c.restore();
+        if (s.grade) {
+          let g = c.createLinearGradient(0, 0, W, H);
+          g.addColorStop(0, `rgba(255,178,122,${s.grade * 0.19})`);
+          g.addColorStop(1, `rgba(39,53,105,${s.grade * 0.25})`);
+          c.fillStyle = g;
+          c.fillRect(0, 0, W, H);
+        }
+        if (key === "D") {
+          let g = c.createRadialGradient(
+            W * 0.48,
+            H * 0.48,
+            100,
+            W * 0.5,
+            H * 0.5,
+            W * 0.68,
+          );
+          g.addColorStop(0, "#00000000");
+          g.addColorStop(1, "#17223455");
+          c.fillStyle = g;
+          c.fillRect(0, 0, W, H);
+        }
+      }
+      const study = new URLSearchParams(location.hash.slice(1)).get("study");
+      if (Object.hasOwn(STYLES, study)) {
+        const canvas = $("mainCanvas");
+        document.body.replaceChildren(canvas);
+        canvas.style.cssText = "display:block;width:100vw;height:100vh";
+        draw(canvas, study, {
+          biome: "desert",
+          zoom: 1,
+          sun: (135 * Math.PI) / 180,
+          detail: 0.75,
+          shadows: true,
+          facets: true,
+          water: true,
+          battle: true,
+          overlay: false,
+          motion: false,
+        });
+      } else {
+        const minis = {};
+        for (let k of Object.keys(STYLES)) {
+          let b = document.createElement("button");
+          b.dataset.style = k;
+          b.innerHTML =
+            "<strong>" +
+            STYLES[k].name +
+            "</strong><span>" +
+            STYLES[k].tag +
+            "</span>";
+          b.onclick = () => {
+            style = k;
+            update();
+          };
+          $("styles").append(b);
+          let d = document.createElement("div");
+          d.className = "mini";
+          let cv = document.createElement("canvas");
+          cv.width = 480;
+          cv.height = 300;
+          let click = document.createElement("button");
+          click.textContent = STYLES[k].name;
+          click.onclick = () => {
+            style = k;
+            update();
+          };
+          d.append(cv, click);
+          $("compare").append(d);
+          minis[k] = cv;
+        }
+        function update() {
+          read();
+          let s = STYLES[style];
+          $("name").textContent = s.name;
+          $("description").textContent = s.desc;
+          $("tag").textContent = s.tag;
+          $("notes").innerHTML =
+            "<p>" +
+            s.notes +
+            '</p><p style="margin-top:10px">Terrain complexity ' +
+            Math.round(s.terrain * 100) +
+            "% · shadow length " +
+            s.shadow.toFixed(2) +
+            "× · atmospheric grade " +
+            Math.round(s.grade * 100) +
+            "%</p>";
+          $("palette").innerHTML = P[state.biome]
+            .slice(0, 9)
+            .map((x) => `<i style="background:${x}" title="${x}"></i>`)
+            .join("");
+          document.querySelectorAll("[data-style]").forEach((b) => {
+            b.classList.toggle("active", b.dataset.style === style);
+            b.setAttribute("aria-pressed", b.dataset.style === style);
+          });
+          draw($("mainCanvas"), style, state);
+          for (let [k, cv] of Object.entries(minis)) draw(cv, k, state);
+        }
+        document
+          .querySelectorAll("input,select")
+          .forEach((e) => e.addEventListener("input", update));
+        $("reset").onclick = () => {
+          style = "A";
+          $("biome").value = "valley";
+          $("zoom").value = 100;
+          $("sun").value = 135;
+          $("detail").value = 75;
+          for (let id of ["shadows", "facets", "water", "battle"])
+            $(id).checked = true;
+          for (let id of ["overlay", "motion"]) $(id).checked = false;
+          update();
+        };
+        update();
+        let prev = 0;
+        function tick(t) {
+          if (state.motion && t - prev > 50) {
+            draw($("mainCanvas"), style, state, t);
+            prev = t;
+          }
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+    </script>
+  </body>
+</html>

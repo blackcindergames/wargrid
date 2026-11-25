@@ -41,6 +41,29 @@ const PICS = {
 };
 
 PICS['old-shapes-check-z1'] = pic(SEL6, oldShapesCheck);
+
+function paintGroundWash(ctx, zoom, ox, oy) {
+  const [left, right, top, bottom] = groundRange(zoom, ox, oy);
+  for (let x = Math.floor((left - 2) / 9) * 9; x <= right + 2; x += 9) {
+    for (let y = Math.floor((top - 2) / 9) * 9; y <= bottom + 2; y += 9) {
+      const hash = (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+      if (hash % 4 === 0) continue;
+      const dx = (hash % 5) - 2, dy = ((hash >>> 8) % 5) - 2;
+      const patch = [[0, 1], [4, 0], [7, 2], [8, 5], [4, 6], [1, 4]];
+      const points = patch.map(([a, b]) => toScreen(ox, oy, zoom, [x + dx + a, y + dy + b]));
+      fillPoly(ctx, points, hash % 3 ? 'rgba(86,63,76,0.14)' : 'rgba(248,204,149,0.19)');
+    }
+  }
+}
+
+function groundStudy(name) {
+  return pic(FIN, () => baseStage({
+    mix: true, dmg: true,
+    ground: H.get('ground') === 'dark' ? 'dark' : 'sand',
+    zoom: ZOOMS.includes(H.get('zoom')) ? H.get('zoom') : '0.5',
+    groundWash: name === 'ground-wash' ? paintGroundWash : null,
+  }));
+}
 PICS['marks-z1'] = pic(SEL6, () => MARKS.marksStage());
 PICS['gate-reference-z1'] = { ...pic(SEL6, () => MARKS.gateStage()), hud: 'one' };
 

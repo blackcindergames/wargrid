@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Which study has a detail you’d bring back to Wargrid?
+look: Compare the riverbank, the vehicles beside the crossing and the shadows. Name the detail in your note.
+why: >-
+  These are five treatments of one invented desert scene. The machines, flag and bridges belong to
+  the illustration. The previous step shows Wargrid’s picked geometry. A note can single out one
+  detail even if you dislike the rest of a drawing.
+rec: E
+recWhy: >-
+  The hybrid is the original brief’s hypothesis. Its separation of quiet fighting space from richer
+  surroundings is worth testing with the real unit sizes.
+neutral: Keep the existing direction
+controls: {fit: true}
+render:
+  page: docs/images/art-direction-study/index.html
+  w: 1152
+  h: 720
+  hash: study={state}
+options:
+  A:
+    name: Refined geometric
+    notes: Fewer ground patches and short shadows.
+    render: {state: A}
+  B:
+    name: Illustrated landscape
+    notes: Richer ground and a warm-to-cool tint.
+    render: {state: B}
+  C:
+    name: Tactical miniature
+    notes: Longer cast shadows and sparse ground.
+    render: {state: C}
+  D:
+    name: Cinematic geometric
+    notes: Stronger grading and darker corners.
+    render: {state: D}
+  E:
+    name: Hybrid
+    notes: Illustrated ground fades around armies and bases. The edges keep their colour.
+    render: {state: E}
