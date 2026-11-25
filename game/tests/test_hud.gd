@@ -21,6 +21,8 @@ const Economy = preload("res://scripts/simulation/economy_definitions.gd")
 const Palette = preload("res://scripts/presentation/palette.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const UnitGlyphs = preload("res://scripts/presentation/unit_glyphs.gd")
+const Wire = preload("res://scripts/net/wire.gd")
+const SeatFixture = preload("res://tests/seat_fixture.gd")
 const LOW: String = "LOW POWER · DEFENCES OFF"
 const MINUS: String = "\u2212"
 const THEME_PATH: String = "res://ui/launcher_theme.tres"
@@ -30,7 +32,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_cell_cost_clear_of_chip, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_held_now_release_and_mark, test_after_next_forgets_a_hidden_hover, test_shift_counts_orders_in_flight, test_rematch_forgets_cancels, test_glyphs_warm_with_the_hud, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_cell_cost_clear_of_chip, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_held_now_release_and_mark, test_after_next_forgets_a_hidden_hover, test_shift_counts_orders_in_flight, test_rematch_forgets_cancels, test_glyphs_warm_with_the_hud, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies, test_ping_key_then_click_pings, test_ping_button_then_click_pings, test_armed_ping_esc_disarms, test_alt_click_ground_pings, test_alt_double_click_unit_sends_no_ping, test_ping_replaces_own_older, test_enemy_ping_not_shown, test_ping_expires_30s, test_edge_arrow_click_jumps, test_edge_arrow_outside_edge_band, test_ping_button_only_with_teammate, test_ping_full_frame_refusal_silent, test_ping_invalid_target_silent, test_ping_hud_layout, test_ping_in_dock_band_gets_arrow, test_accepted_ping_keeps_refusal_line, test_ping_hidden_after_teammate_left, test_alt_double_click_ground_pings_once, test_ping_in_leave_tick_applies, test_ping_esc_backs_out_one_layer, test_modes_disarm_ping, test_ping_chip_key_follows_layout, test_edge_arrow_jumps_on_release, test_own_ping_silent_teammate_heard]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -4433,4 +4435,576 @@ func test_local_hints_on_the_line(runner) -> bool:
 	runner.check(_line_text(main) == "Select one builder" and main.hud.refusal == "Select one builder", "RN6 Build with two builders says so on the line, got '%s'" % _line_text(main))
 	runner.check(skirmish._error_cues(main) == 0, "RN6 a local hint asks for no sound, got %d" % skirmish._error_cues(main))
 	main.free()
+	return true
+
+# A 2v2 from the guest's seat; the host's frames carry `extra[tick]` (its own and its bots' commands).
+func _ping_match(runner, extra: Dictionary = {}, parent: Node = null) -> Dictionary:
+	var online_tests = OnlineTests.new()
+	var before: Array = online_tests._statics()
+	var online: Dictionary = await online_tests._online(runner, 2, true, parent)
+	for tick in range(4, OnlineTests.PEER_TICKS + 1):
+		var commands: Array = [{"type": "choose_faction", "faction": "usa", "tick": 4, "player": 1, "sequence": 0}] if tick == 4 else []
+		commands.append_array(extra.get(tick, []))
+		online.transport.frames.append(Wire.encode(Wire.tick_message(1, tick, commands, null)))
+	online_tests._run(online.main, 8)
+	online.before = before
+	online.tests = online_tests
+	return online
+
+func _end_ping_match(online: Dictionary) -> void:
+	online.main.free()
+	online.tests._restore_statics(online.before)
+
+static func _host_ping(tick: int, player: int, sequence: int, target: Vector2) -> Dictionary:
+	return {"type": "ping", "target": [target.x, target.y], "tick": tick, "player": player, "sequence": sequence}
+
+static func _run_to(main, tick: int) -> void:
+	for i in 200:
+		if main.driver.current().tick >= tick: return
+		BaseScene.tick(main)
+
+# One frame first: an own command leaves in its tick's frame.
+static func _sent_pings(online: Dictionary) -> Array:
+	BaseScene.tick(online.main)
+	return online.tests._own_commands(online.transport).filter(func(command: Dictionary) -> bool: return command.type == "ping")
+
+static func _marks(main) -> Dictionary:
+	var pings: Variant = main.get("_pings")
+	return pings.marks if pings != null else {}
+
+static func _armed_ping(main) -> bool:
+	return main.orders.get("ping_armed") == true
+
+static func _ping_chip(main) -> Button:
+	return main.hud.get_node_or_null("PingChip")
+
+# A plane point on open ground inside the view and off every HUD panel.
+static func _ground(main) -> Vector2:
+	var view: Rect2 = main.get_viewport().get_visible_rect()
+	for share: Vector2 in [Vector2(0.3, 0.3), Vector2(0.7, 0.3), Vector2(0.3, 0.55), Vector2(0.7, 0.55), Vector2(0.5, 0.2), Vector2(0.15, 0.4), Vector2(0.85, 0.4)]:
+		var screen: Vector2 = view.position + view.size * share
+		var plane: Vector2 = main._view.make_canvas_position_local(screen)
+		if main._view.resolve_pick(plane).tier == "ground" and not main.hud.blocks(screen): return plane
+	return Vector2.INF
+
+static func _ping_click(main, plane: Vector2, alt: bool = false, double: bool = false) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventMouseButton.new()
+		event.position = main.get_node("WorldView").get_global_transform_with_canvas() * plane
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = pressed
+		event.alt_pressed = alt
+		event.double_click = double and pressed
+		main._unhandled_input(event)
+
+static func _sent_at(ping: Dictionary, plane: Vector2) -> bool:
+	return Vector2(ping.target[0], ping.target[1]).distance_to(Iso.plane_to_world(plane)) < 0.01
+
+func test_ping_key_then_click_pings(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	BaseScene.select_own_unit(main)
+	var selected: Array[int] = main.orders.selected_ids.duplicate()
+	var plane: Vector2 = _ground(main)
+	runner.check(plane != Vector2.INF and not selected.is_empty(), "PI1 fixture: open ground in view and a selected unit")
+	BaseScene.new().key(main, KEY_G)
+	runner.check(_armed_ping(main), "PI1 G arms the ping")
+	_ping_click(main, plane)
+	var pings: Array = _sent_pings(online)
+	runner.check(pings.size() == 1 and _sent_at(pings[0], plane), "PI1 the next left click sends one ping at the clicked ground, got %s" % [pings])
+	runner.check(not _armed_ping(main) and main.orders.selected_ids == selected, "PI1 the click disarms and keeps the selection, got %s" % [main.orders.selected_ids])
+	_run_to(main, main.driver.current().tick + 12)
+	var marks: Dictionary = _marks(main)
+	runner.check(marks.size() == 1 and marks.has(2) and marks[2].target.distance_to(Iso.plane_to_world(plane)) < 0.01, "PI1 the applied ping shows one mark, got %s" % [marks])
+	_end_ping_match(online)
+	return true
+
+func test_ping_button_then_click_pings(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	var chip: Button = _ping_chip(main)
+	runner.check(chip != null and chip.is_visible_in_tree(), "PI2 the Ping chip shows with a human teammate")
+	if chip == null:
+		_end_ping_match(online)
+		return true
+	runner.check(BaseScene.shown_texts(chip) == ["Ping", "G"], "PI2 the chip reads Ping with its key, got %s" % [BaseScene.shown_texts(chip)])
+	chip.pressed.emit()
+	var hint: Control = main.hud.get_node_or_null("PingHint")
+	runner.check(_armed_ping(main) and chip.theme_type_variation == &"HudButtonArmed", "PI2 the chip arms the ping and takes the armed look, got %s" % chip.theme_type_variation)
+	runner.check(hint != null and hint.is_visible_in_tree() and BaseScene.hud_text(main).contains("Click a spot to ping · Esc cancels"), "PI2 the armed hint shows")
+	var plane: Vector2 = _ground(main)
+	_ping_click(main, plane)
+	var pings: Array = _sent_pings(online)
+	runner.check(pings.size() == 1 and _sent_at(pings[0], plane), "PI2 the next left click sends one ping, got %s" % [pings])
+	runner.check(not _armed_ping(main) and chip.theme_type_variation == &"HudChip" and not hint.is_visible_in_tree(), "PI2 the click disarms the chip and hides the hint")
+	_end_ping_match(online)
+	return true
+
+func test_armed_ping_esc_disarms(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	BaseScene.select_own_unit(main)
+	var selected: Array[int] = main.orders.selected_ids.duplicate()
+	BaseScene.new().key(main, KEY_G)
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	main.get_viewport().push_input(esc)
+	runner.check(not _armed_ping(main) and not main.menu_open() and main.orders.selected_ids == selected, "PI3 Esc disarms first, keeps the selection and opens no menu, got armed %s menu %s" % [_armed_ping(main), main.menu_open()])
+	_ping_click(main, _ground(main))
+	runner.check(_sent_pings(online).is_empty(), "PI3 a click after Esc sends no ping")
+	_end_ping_match(online)
+	return true
+
+func test_alt_click_ground_pings(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	BaseScene.select_own_unit(main)
+	var selected: Array[int] = main.orders.selected_ids.duplicate()
+	var plane: Vector2 = _ground(main)
+	_ping_click(main, plane, true)
+	var pings: Array = _sent_pings(online)
+	runner.check(pings.size() == 1 and _sent_at(pings[0], plane), "PI4 Alt+click on ground pings at once, got %s" % [pings])
+	runner.check(main.orders.selected_ids == selected and not _armed_ping(main), "PI4 Alt+click keeps the selection, got %s" % [main.orders.selected_ids])
+	_end_ping_match(online)
+	return true
+
+func test_alt_double_click_unit_sends_no_ping(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	var own: Dictionary = {}
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
+		if unit.owner == 2 and own.is_empty(): own = unit
+	var plane: Vector2 = Iso.world_to_plane(Vector2(own.position[0], own.position[1])) + Vector2(0, -8)
+	runner.check(main._view.resolve_pick(plane).id == own.id, "PI5 fixture: the click lands on an own unit")
+	_ping_click(main, plane, true)
+	_ping_click(main, plane, true, true)
+	var whole: Array[int] = main.orders._matching_ids(own.id, true)
+	whole.sort()
+	runner.check(_sent_pings(online).is_empty(), "PI5 Alt+click and Alt+double-click on an own unit send no ping, got %s" % [_sent_pings(online)])
+	runner.check(main.orders.selected_ids == whole and whole.has(own.id), "PI5 Alt+double-click still selects that kind on the map, got %s want %s" % [main.orders.selected_ids, whole])
+	_end_ping_match(online)
+	return true
+
+func test_ping_replaces_own_older(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner, {30: [_host_ping(30, 1, 1, Vector2(30.5, 30.5))]})
+	var main = online.main
+	var first: Vector2 = _ground(main)
+	var second: Vector2 = first + Vector2(40, 20)
+	BaseScene.new().key(main, KEY_G)
+	_ping_click(main, first)
+	BaseScene.new().key(main, KEY_G)
+	_ping_click(main, second)
+	runner.check(_sent_pings(online).size() == 2, "PI6 fixture: two pings sent in one frame")
+	_run_to(main, 34)
+	var marks: Dictionary = _marks(main)
+	runner.check(marks.has(2) and marks[2].target.distance_to(Iso.plane_to_world(second)) < 0.01, "PI6 the newer of two pings in a tick is the one mark, got %s" % [marks])
+	runner.check(marks.size() == 2 and marks.has(1) and marks[1].target == Vector2(30.5, 30.5), "PI6 the teammate's ping is its own mark, got %s" % [marks])
+	var third: Vector2 = first + Vector2(-40, 30)
+	_ping_click(main, third, true)
+	_run_to(main, main.driver.current().tick + 12)
+	marks = _marks(main)
+	runner.check(marks.size() == 2 and marks[2].target.distance_to(Iso.plane_to_world(third)) < 0.01, "PI6 a later ping replaces the older one, got %s" % [marks])
+	_end_ping_match(online)
+	return true
+
+static func _toned(main) -> bool:
+	var announcer = main._sound.director.announcer
+	return announcer._last_started.has("ping") or announcer._waiting.any(func(entry: Dictionary) -> bool: return entry.line == "ping")
+
+func test_enemy_ping_not_shown(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner, {18: [_host_ping(18, 3, 0, Vector2(20.5, 20.5))], 30: [_host_ping(30, 1, 1, Vector2(30.5, 30.5))]})
+	var main = online.main
+	_run_to(main, 24)
+	runner.check(_marks(main).is_empty() and not _toned(main), "PI7 a bot's ping draws no mark and plays no tone, got %s" % [_marks(main)])
+	_run_to(main, 34)
+	runner.check(_marks(main).keys() == [1] and _toned(main), "PI7 the teammate's ping draws its mark and plays the tone, got %s" % [_marks(main)])
+	_end_ping_match(online)
+	return true
+
+func test_ping_expires_30s(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner, {20: [_host_ping(20, 1, 1, Vector2(30.5, 30.5))]})
+	var main = online.main
+	var pings: Variant = main.get("_pings")
+	runner.check(pings != null, "PI8 the screen holds the ping marks")
+	if pings == null:
+		_end_ping_match(online)
+		return true
+	var now: Array[int] = [1000000]
+	pings.now_usec = func() -> int: return now[0]
+	_run_to(main, 24)
+	runner.check(_marks(main).has(1), "PI8 fixture: the teammate's mark shows")
+	now[0] += 29900000
+	main._process(0.0)
+	runner.check(_marks(main).has(1), "PI8 the mark still shows at 29.9 s")
+	now[0] += 100000
+	main._process(0.0)
+	runner.check(_marks(main).is_empty(), "PI8 the mark is gone at 30 s, got %s" % [_marks(main)])
+	_end_ping_match(online)
+	return true
+
+static func _far_world(main) -> Vector2:
+	var building: Dictionary = main.driver.pump.live().snapshot().buildings.filter(func(found: Dictionary) -> bool: return found.owner == 3)[0]
+	return Vector2(building.origin[0], building.origin[1])
+
+static func _visible_arrows(main) -> Array:
+	var pings: Variant = main.get("_pings")
+	if pings == null: return []
+	return pings.arrows.values().filter(func(arrow: Control) -> bool: return arrow.is_visible_in_tree())
+
+func test_edge_arrow_click_jumps(runner) -> bool:
+	var before: Array = OnlineTests.new()._statics()
+	var online: Dictionary = await _ping_match(runner)
+	var far: Vector2 = _far_world(online.main)
+	_end_ping_match(online)
+	OnlineTests.new()._restore_statics(before)
+	online = await _ping_match(runner, {20: [_host_ping(20, 1, 1, far)]})
+	var main = online.main
+	_run_to(main, 24)
+	main._process(0.0)
+	var arrows: Array = _visible_arrows(main)
+	runner.check(arrows.size() == 1, "PI9 an off-screen ping shows one edge arrow, got %d" % arrows.size())
+	if arrows.size() == 1:
+		for pressed: bool in [true, false]:
+			var click := InputEventMouseButton.new()
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.pressed = pressed
+			click.position = arrows[0].size / 2.0
+			arrows[0].gui_input.emit(click)
+		main._process(main.GLIDE_MAX_SECONDS)
+		var camera: Camera2D = main.get_node("Camera2D")
+		runner.check(camera.position.distance_to(main._landing(far)) < 1.0, "PI9 a click on the arrow jumps to the ping, camera %s want %s" % [camera.position, main._landing(far)])
+		main._process(0.0)
+		runner.check(_visible_arrows(main).is_empty(), "PI9 the arrow hides once the ping is on screen")
+	_end_ping_match(online)
+	return true
+
+# Off-screen pings all round the view; each arrow stays inside the view, out of the edge-scroll band and above the dock band.
+func _arrows_clear(runner, main, label: String) -> void:
+	await runner.process_frame
+	var view: Rect2 = main.get_viewport().get_visible_rect()
+	var centre: Vector2 = view.get_center()
+	var band: float = main.EDGE_BAND
+	var panels: Dictionary = BaseScene.hud_panels(main)
+	for step: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1), Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
+		var screen: Vector2 = centre + step * view.size
+		var world: Vector2 = Iso.plane_to_world(main._view.make_canvas_position_local(screen))
+		main._pings.add(1, world)
+		main._process(0.0)
+		var arrows: Array = _visible_arrows(main)
+		runner.check(arrows.size() == 1, "%s %s: one arrow, got %d" % [label, step, arrows.size()])
+		if arrows.size() != 1: continue
+		var rect: Rect2 = arrows[0].get_global_rect()
+		runner.check(view.grow(-band).encloses(rect), "%s %s: inside the view and out of the %d px edge band, %s" % [label, step, band, rect])
+		runner.check(rect.end.y <= minf(view.end.y - main.DOCK_HEIGHT, main.hud.dock_top()) - 8.0 + 0.01, "%s %s: 8 above the dock band and every dock panel, %s" % [label, step, rect])
+		for path: String in panels: runner.check(not rect.intersects(panels[path]), "%s %s: clear of %s, %s and %s" % [label, step, path, rect, panels[path]])
+		var towards: Vector2 = (screen - rect.get_center()).normalized()
+		var pointing: Variant = arrows[0].get("direction")
+		runner.check(pointing is Vector2 and pointing.dot(towards) > 0.99, "%s %s: the arrow points at the ping, got %s want %s" % [label, step, pointing, towards])
+
+func test_edge_arrow_outside_edge_band(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	if main.get("_pings") == null: runner.check(false, "PI10 the screen holds the ping marks")
+	else: await _arrows_clear(runner, main, "PI10")
+	_end_ping_match(online)
+	return true
+
+func test_ping_button_only_with_teammate(runner) -> bool:
+	var offline = await BaseScene.new().setup(runner)
+	offline._refresh()
+	var chip: Button = _ping_chip(offline)
+	runner.check(chip == null or not chip.is_visible_in_tree(), "PI11 offline: no Ping chip")
+	BaseScene.new().key(offline, KEY_G)
+	runner.check(not _armed_ping(offline), "PI11 offline: G arms nothing")
+	var plane: Vector2 = _ground(offline)
+	_ping_click(offline, plane, true)
+	runner.check(offline.driver.queued().filter(func(command: Dictionary) -> bool: return command.type == "ping").is_empty(), "PI11 offline: Alt+click sends no ping")
+	offline.free()
+	var online_tests = OnlineTests.new()
+	var duel: Dictionary = await online_tests._online(runner, 2)
+	online_tests._peer_packets(duel.transport, 1, 4, OnlineTests.PEER_TICKS)
+	online_tests._run(duel.main, 8)
+	chip = _ping_chip(duel.main)
+	runner.check(chip == null or not chip.is_visible_in_tree(), "PI11 1v1 online: no Ping chip")
+	BaseScene.new().key(duel.main, KEY_G)
+	runner.check(not _armed_ping(duel.main), "PI11 1v1 online: G arms nothing")
+	duel.main.free()
+	var team: Dictionary = await _ping_match(runner)
+	chip = _ping_chip(team.main)
+	runner.check(chip != null and chip.is_visible_in_tree(), "PI11 with a human teammate: the Ping chip shows")
+	_end_ping_match(team)
+	return true
+
+static func _cues(main) -> Array:
+	return main._sound.last_requests().map(func(request: Dictionary) -> String: return request.cue) + main._sound.director._queued.map(func(request: Dictionary) -> String: return request.cue)
+
+func test_ping_full_frame_refusal_silent(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	BaseScene.select_own_unit(main)
+	var plane: Vector2 = _ground(main)
+	online.lockstep._queue_bytes = Wire.MAX_FRAME_BYTES
+	BaseScene.new().key(main, KEY_G)
+	_ping_click(main, plane)
+	BaseScene.tick(main)
+	runner.check(main.hud.refusal == "" and not BaseScene.hud_text(main).contains(main.driver.TOO_MANY_ORDERS) and not _cues(main).has("error"), "PI12 a ping the full frame refuses shows no line and plays no sound, got '%s' %s" % [main.hud.refusal, _cues(main)])
+	online.lockstep._queue_bytes = Wire.MAX_FRAME_BYTES
+	main._submit({"type": "move", "entity_ids": main.orders.selected_ids.duplicate(), "target": [30.5, 30.5]})
+	BaseScene.tick(main)
+	runner.check(main.hud.refusal == main.driver.TOO_MANY_ORDERS, "PI12 fixture: the same full frame refuses a move with the line, got '%s'" % main.hud.refusal)
+	_end_ping_match(online)
+	return true
+
+func test_ping_invalid_target_silent(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	BaseScene.new().key(main, KEY_G)
+	_ping_click(main, Iso.world_to_plane(Vector2(-20.5, -20.5)))
+	runner.check(_sent_pings(online).size() == 1, "PI13 fixture: the off-map ping is sent")
+	_run_to(main, main.driver.current().tick + 12)
+	var errors: Array = online.lockstep.rejections().map(func(row: Dictionary) -> String: return row.error)
+	runner.check(errors == ["Target outside map"], "PI13 fixture: the simulation refuses it, got %s" % [errors])
+	runner.check(main.hud.refusal == "" and not _cues(main).has("error") and _marks(main).is_empty(), "PI13 the refused ping shows no line, plays no sound and draws no mark, got '%s' %s" % [main.hud.refusal, _cues(main)])
+	_end_ping_match(online)
+	return true
+
+# Plan "HUD layout tests" for T2-8: the chip, the armed hint, the mark and the arrows at every HUD size.
+func test_ping_hud_layout(runner) -> bool:
+	for pair: Array in BaseScene.HUD_SIZES:
+		var size: Vector2i = pair[1]
+		var port := BaseScene.sized_port(runner, pair[0], size)
+		var online: Dictionary = await _ping_match(runner, {}, port)
+		var main = online.main
+		var label: String = "PI14 %s" % size
+		var view: Rect2 = main.get_viewport().get_visible_rect()
+		var chip: Button = _ping_chip(main)
+		if chip == null:
+			runner.check(false, "%s: the Ping chip exists" % label)
+			port.queue_free()
+			online.tests._restore_statics(online.before)
+			continue
+		for selected: bool in [true, false]:
+			if selected: BaseScene.select_own_unit(main)
+			else:
+				main.orders.selected_ids.clear()
+				main._refresh()
+			await runner.process_frame
+			var rect: Rect2 = Rect2(chip.global_position, chip.get_combined_minimum_size())
+			var economy: Control = main.get_node("HUD/Economy")
+			var floor_y: float = economy.get_global_rect().position.y if economy.visible else view.end.y - 8.0
+			runner.check(view.encloses(rect) and is_equal_approx(rect.end.x, view.end.x - 8.0) and absf(rect.end.y - floor_y) <= 1.0, "%s selected=%s: the chip 8 from the right, on the slab's top or 8 above the bottom, %s floor %s" % [label, selected, rect, floor_y])
+			var panels: Dictionary = BaseScene.hud_panels(main)
+			for path: String in panels: runner.check(not rect.intersects(panels[path]), "%s selected=%s: the chip clear of %s, %s and %s" % [label, selected, path, rect, panels[path]])
+		BaseScene.select_own_unit(main)
+		chip.pressed.emit()
+		await runner.process_frame
+		var hint: Control = main.hud.get_node_or_null("PingHint")
+		if hint != null:
+			var hint_rect: Rect2 = Rect2(hint.global_position, hint.get_combined_minimum_size())
+			runner.check(hint.is_visible_in_tree() and view.encloses(hint_rect) and not hint_rect.intersects(Rect2(chip.global_position, chip.get_combined_minimum_size())), "%s: the armed hint inside the view, clear of the chip, %s" % [label, hint_rect])
+			var panels: Dictionary = BaseScene.hud_panels(main)
+			for path: String in panels: runner.check(not hint_rect.intersects(panels[path]), "%s: the armed hint clear of %s, %s and %s" % [label, path, hint_rect, panels[path]])
+		else: runner.check(false, "%s: the armed hint exists" % label)
+		main.orders._set_ping(false)
+		var on_screen: Vector2 = Iso.plane_to_world(_ground(main))
+		main._pings.add(1, on_screen)
+		main._process(0.0)
+		runner.check(_marks(main).has(1) and _visible_arrows(main).is_empty(), "%s: an on-screen mark has no arrow" % label)
+		await _arrows_clear(runner, main, label)
+		main.free()
+		port.queue_free()
+		online.tests._restore_statics(online.before)
+	return true
+
+# Review P2: the bottom band is under the dock, so a ping there gets an arrow instead of a ring hidden under the slab.
+func test_ping_in_dock_band_gets_arrow(runner) -> bool:
+	var port := BaseScene.sized_port(runner, BaseScene.HUD_SIZES[0][0], BaseScene.HUD_SIZES[0][1])
+	var online: Dictionary = await _ping_match(runner, {}, port)
+	var main = online.main
+	var view: Rect2 = main.get_viewport().get_visible_rect()
+	var screen := Vector2(view.get_center().x, view.end.y - 80.0)
+	main._pings.add(1, Iso.plane_to_world(main._view.make_canvas_position_local(screen)))
+	main._process(0.0)
+	runner.check(_visible_arrows(main).size() == 1, "PI15 a ping inside the bottom %d px gets an edge arrow, got %d" % [main.DOCK_HEIGHT, _visible_arrows(main).size()])
+	main.free()
+	port.queue_free()
+	online.tests._restore_statics(online.before)
+	return true
+
+# Review P3a: an accepted ping is no answer to the refused order, so the refusal line stays.
+func test_accepted_ping_keeps_refusal_line(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	main.refuse("Test refusal", "")
+	BaseScene.new().key(main, KEY_G)
+	_ping_click(main, _ground(main))
+	_run_to(main, main.driver.current().tick + 12)
+	runner.check(_marks(main).has(2), "PI16 fixture: the ping was accepted")
+	runner.check(main.hud.refusal == "Test refusal", "PI16 an accepted ping leaves the refusal line, got '%s'" % main.hud.refusal)
+	_end_ping_match(online)
+	return true
+
+# Review P3b: the host plays on after the defeated guest left; with no human teammate left, no chip and no ping input.
+func test_ping_hidden_after_teammate_left(runner) -> bool:
+	var online_tests = OnlineTests.new()
+	var before: Array = online_tests._statics()
+	var online: Dictionary = await online_tests._online(runner, 1, true)
+	var main = online.main
+	online_tests._peer_packets(online.transport, 2, 4, 40)
+	online_tests._run(main, 20)
+	runner.check(_ping_chip(main).is_visible_in_tree(), "PI17 fixture: the host's chip shows while the guest plays")
+	SeatFixture.defeat(main.driver.pump.live(), 2)
+	online.lockstep.receive('{"type":"left","seat":2,"after_tick":40}')
+	online_tests._run(main, 40)
+	runner.check(online.lockstep.status() == "running" and main.driver.current().tick > 42, "PI17 fixture: the host plays on, got %s" % online.lockstep.status())
+	runner.check(not _ping_chip(main).is_visible_in_tree(), "PI17 the chip hides once the teammate left")
+	BaseScene.new().key(main, KEY_G)
+	runner.check(not _armed_ping(main), "PI17 G arms nothing once the teammate left")
+	_ping_click(main, _ground(main), true)
+	runner.check(_sent_pings({"main": main, "tests": online_tests, "transport": online.transport}).is_empty(), "PI17 Alt+click sends no ping once the teammate left")
+	main.free()
+	online_tests._restore_statics(before)
+	return true
+
+# Guards the `not _double` clause: the second click of an Alt+double-click on ground is not a second ping.
+func test_alt_double_click_ground_pings_once(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	BaseScene.select_own_unit(main)
+	var selected: Array[int] = main.orders.selected_ids.duplicate()
+	var plane: Vector2 = _ground(main)
+	_ping_click(main, plane, true)
+	_ping_click(main, plane, true, true)
+	runner.check(_sent_pings(online).size() == 1, "PI18 Alt+double-click on ground sends one ping, got %s" % [_sent_pings(online)])
+	runner.check(not selected.is_empty() and main.orders.selected_ids == selected, "PI18 the second click keeps the selection, got %s" % [main.orders.selected_ids])
+	_end_ping_match(online)
+	return true
+
+# Same-tick table: a ping in the pinger's leave tick applies as any command of that tick.
+func test_ping_in_leave_tick_applies(runner) -> bool:
+	var online_tests = OnlineTests.new()
+	var before: Array = online_tests._statics()
+	var online: Dictionary = await online_tests._online(runner, 2, true)
+	var main = online.main
+	for tick in range(4, 41):
+		var commands: Array = [{"type": "choose_faction", "faction": "usa", "tick": 4, "player": 1, "sequence": 0}] if tick == 4 else []
+		if tick == 40: commands.append(_host_ping(40, 1, 1, Vector2(30.5, 30.5)))
+		online.transport.frames.append(Wire.encode(Wire.tick_message(1, tick, commands, null)))
+	online.lockstep.receive('{"type":"left","seat":1,"after_tick":40}')
+	online_tests._run(main, 80)
+	runner.check(online.lockstep.status() == "ended_left", "PI19 fixture: the host's leave ends the match, got %s" % online.lockstep.status())
+	runner.check(_marks(main).has(1) and _marks(main)[1].target == Vector2(30.5, 30.5), "PI19 the ping in the leave tick applied and shows, got %s" % [_marks(main)])
+	main.free()
+	online_tests._restore_statics(before)
+	return true
+
+func test_ping_esc_backs_out_one_layer(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	var other: int = main.driver.pump.live().snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner != main.local_player)[0].id
+	main.orders.selected_ids.clear()
+	main.orders.inspected_id = other
+	main._refresh()
+	BaseScene.new().key(main, KEY_G)
+	BaseScene.new().key(main, KEY_ESCAPE)
+	runner.check(not _armed_ping(main) and main.orders.inspected_id == other, "PI20 the first Esc only disarms the ping, inspected %d" % main.orders.inspected_id)
+	BaseScene.new().key(main, KEY_ESCAPE)
+	runner.check(main.orders.inspected_id == -1 and not main.menu_open(), "PI20 the second Esc drops the inspection")
+	_end_ping_match(online)
+	return true
+
+func test_modes_disarm_ping(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	var orders = main.orders
+	for unit: Dictionary in main.driver.pump.live().snapshot().entities:
+		if unit.owner != main.local_player: continue
+		orders.selected_ids.assign([unit.id])
+		if orders._builder() != -1: break
+	var producers: Array = main.shown_state.buildings.filter(func(found: Dictionary) -> bool: return found.owner == main.local_player and found.get("completed", true))
+	runner.check(orders._builder() != -1 and not producers.is_empty(), "PI21 fixture: a selected builder and an own producer")
+	var unit_ids: Array[int] = orders.selected_ids.duplicate()
+	orders.groups.save(0, unit_ids)
+	var modes: Dictionary = {
+		"group recall": func() -> void: BaseScene.new().key(main, KEY_1),
+		"build grid": func() -> void: orders._open_build(),
+		"stop": func() -> void: orders.stop_selected(),
+		"unload": func() -> void: orders._unload_selected(),
+		"producer": func() -> void: orders.select_producer(producers[0].id if not producers.is_empty() else -1, false),
+	}
+	for label: String in modes:
+		orders._sub_grid = false
+		orders.selected_ids.assign(unit_ids)
+		orders.selected_building_id = -1
+		orders.arm_ping()
+		var armed: bool = _armed_ping(main)
+		modes[label].call()
+		runner.check(armed and not _armed_ping(main), "PI21 %s disarms the ping" % label)
+	_end_ping_match(online)
+	return true
+
+func test_ping_chip_key_follows_layout(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	var key: Label = _ping_chip(main).get_node("Row/Key")
+	key.text = "?"
+	main.hud.read_keys()
+	runner.check(key.text == HudModel.key_label(HudModel.PING_KEY), "PI22 a layout re-read relabels the Ping chip's key, got '%s'" % key.text)
+	_end_ping_match(online)
+	return true
+
+# Armed, a press that jumps would hide the arrow and drop its release onto the map as a ping.
+func test_edge_arrow_jumps_on_release(runner) -> bool:
+	var before: Array = OnlineTests.new()._statics()
+	var online: Dictionary = await _ping_match(runner)
+	var far: Vector2 = _far_world(online.main)
+	_end_ping_match(online)
+	OnlineTests.new()._restore_statics(before)
+	online = await _ping_match(runner, {20: [_host_ping(20, 1, 1, far)]})
+	var main = online.main
+	_run_to(main, 24)
+	main._process(0.0)
+	var arrows: Array = _visible_arrows(main)
+	runner.check(arrows.size() == 1, "PI23 fixture: one edge arrow, got %d" % arrows.size())
+	if arrows.size() == 1:
+		var at: Vector2 = (arrows[0] as Control).get_global_rect().get_center()
+		BaseScene.new().key(main, KEY_G)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.position = at
+		click.pressed = true
+		main.get_viewport().push_input(click)
+		main._process(main.GLIDE_MAX_SECONDS)
+		main._process(0.0)
+		var camera: Camera2D = main.get_node("Camera2D")
+		runner.check(camera.position.distance_to(main._landing(far)) > 1.0, "PI23 the press alone does not jump")
+		var release: InputEventMouseButton = click.duplicate()
+		release.pressed = false
+		main.get_viewport().push_input(release)
+		main._process(main.GLIDE_MAX_SECONDS)
+		runner.check(camera.position.distance_to(main._landing(far)) < 1.0, "PI23 the release jumps, camera %s want %s" % [camera.position, main._landing(far)])
+		runner.check(_sent_pings(online).is_empty() and _armed_ping(main), "PI23 the arrow keeps press and release: no ping leaks onto the map")
+	_end_ping_match(online)
+	return true
+
+# The pinger knows where it clicked; its own tone would also hold the cooldown against the teammate's answer.
+func test_own_ping_silent_teammate_heard(runner) -> bool:
+	var online: Dictionary = await _ping_match(runner)
+	var main = online.main
+	BaseScene.new().key(main, KEY_G)
+	_ping_click(main, _ground(main))
+	_run_to(main, main.driver.current().tick + 12)
+	var own: Array = online.lockstep.command_log().filter(func(command: Dictionary) -> bool: return command.type == "ping" and command.player == 2)
+	runner.check(own.size() == 1 and _marks(main).has(2), "PT2 fixture: the own ping applied, got %s" % [own])
+	var announcer = main._sound.director.announcer
+	runner.check(announcer._last_started.get("ping", -1) == -1, "PT2 the own ping plays no tone")
+	var at: int = own[0].tick + 60 if own.size() == 1 else 70
+	for tick in range(OnlineTests.PEER_TICKS + 1, at + 20):
+		var commands: Array = [_host_ping(tick, 1, 1, Vector2(20.5, 20.5))] if tick == at else []
+		online.transport.frames.append(Wire.encode(Wire.tick_message(1, tick, commands, null)))
+	_run_to(main, at + 8)
+	runner.check(_marks(main).has(1) and announcer._last_started.get("ping", -1) >= at, "PT2 the teammate's ping 60 ticks later plays its tone, started %d" % announcer._last_started.get("ping", -1))
+	_end_ping_match(online)
 	return true

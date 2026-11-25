@@ -12,6 +12,7 @@ const CommandRecorder = preload("res://scripts/playtest/command_recorder.gd")
 class Job:
 	var commands: Array[Dictionary] = []
 	var bots: Array[int] = []
+	var plan_bots: bool = false
 	var step: bool = true
 	var want_digest: bool = false
 	var want_ring: bool = false
@@ -20,6 +21,12 @@ class Job:
 	var want_bot_lines: bool = false
 	var preview: Dictionary = {}
 	var stamp_sequence: bool = false
+
+class PlanRecorder extends CommandRecorder:
+	func issue_command(command: Dictionary) -> Dictionary:
+		var error: String = _sim.check_command(command)
+		if error.is_empty(): _commands.append(command.duplicate(true))
+		return {"ok": error.is_empty(), "error": error}
 
 class Note:
 	var done: bool = true
@@ -157,9 +164,10 @@ static func run_job(sim: Simulation, command_recorder: CommandRecorder, job: Job
 		if job.stamp_sequence and not command.has("sequence"): command.sequence = sim.last_sequence(command.player) + 1
 		var result: Dictionary = command_recorder.issue_command(command)
 		note.issued.append({"command": command, "ok": result.ok, "error": result.error})
-	var recorded: int = command_recorder.commands().size()
-	Skirmish.issue_opponents(command_recorder, job.bots)
-	note.bot_commands.assign(command_recorder.commands().slice(recorded).duplicate(true))
+	var planner: RefCounted = PlanRecorder.new(sim) if job.plan_bots else command_recorder
+	var recorded: int = planner.commands().size()
+	Skirmish.issue_opponents(planner, job.bots)
+	note.bot_commands.assign(planner.commands().slice(recorded).duplicate(true))
 	if job.step: sim.step()
 	note.events = sim.combat_events().duplicate(true)
 	note.results = sim.command_results().duplicate(true)

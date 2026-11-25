@@ -23,10 +23,11 @@ Controls are the same as offline. Restart is hidden online.
 | Line | Meaning |
 |---|---|
 | `Waiting for player N` | Their input for the next tick has not arrived. The game resumes by itself. |
-| `Player N disconnected` | The other player left or lost connection. The match stops. |
+| `P2 USA left the match` (on the result panel, with their player number and faction) | The other player left or lost connection after the start. In a 1v1 you win (Victory). In a 2v2 with bots the panel reads Match ended, because the host runs the bots and a leave ends the match for the friend; a friend who was already out leaves without ending it. If the host leaves, the guest's panel reads `The host left. The match is over.` |
+| `Opponent left before the start (…)` | The other player left before the first tick: a different map or version, or their game tab was hidden. |
 | `Connection to relay lost` | No data from the relay for 5 s, the socket closed, or the game could not send a frame. The match stops. When joining, a wrong code can also show this while the relay is flooded with bad codes; check the code and try again. |
 | `Relay: <reason>` | The relay ended a running match with an error (for example `too far ahead`, listed below the table). Refusals at join time appear in the launcher's status line instead, in the relay's own words; a malformed frame at join time shows there as `Protocol error: <reason>`. |
-| `Rejected: Too many orders at once; wait a moment` | A note, not an end: so many orders piled up in one tick that they would not fit one network packet, so every order past that point was dropped. Give them again a moment later. |
+| `Too many orders at once; wait a moment` | A note, not an end: so many orders piled up in one tick that they would not fit one network packet, so every order past that point was dropped. Give them again a moment later. |
 | `Desync — report saved to <path>` | The two games disagreed. The match stops and the report is written. |
 | `Match stopped: game error. Please report it.` | The game hit an internal error or a malformed frame arrived. The match stops. The technical reason goes into the playtest helper's match record (`end`) and the game's log as `NETPLAY PROTOCOL END <reason>`: `logs/godot.log` in the user data directory on desktop, the browser console on the web. With the helper on, send the session file. |
 

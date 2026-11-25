@@ -9,7 +9,7 @@ const Launcher = preload("res://scenes/launcher.tscn")
 const SessionForm = preload("res://scripts/playtest/session_form.gd")
 const FocusCardView = preload("res://scripts/playtest/focus_card_view.gd")
 const HEADER := {"mode": "offline", "map": "dry_wells", "seed": 1, "factions": ["frc", "china"], "seat": 0, "build": "0.11.0-dev+abc"}
-const SHIPPED := ["p16-factory", "p2.3b-slice", "p2.3a1-see-your-selection", "p12-notes", "p2.2-slice-2", "p2.2-quick-rematch", "p2.1-new-launcher", "p2-you-clicked", "p1-frc-economy", "p1-frc-tunnels-online", "p1-look-and-m6-fixes"]
+const SHIPPED := ["p7-team-online", "p16-factory", "p2.3b-slice", "p2.3a1-see-your-selection", "p12-notes", "p2.2-slice-2", "p2.2-quick-rematch", "p2.1-new-launcher", "p2-you-clicked", "p1-frc-economy", "p1-frc-tunnels-online", "p1-look-and-m6-fixes"]
 var scratch: String = "user://test-playtest-settings-%d.cfg" % OS.get_process_id()
 var commit_scratch: String = "user://test-playtest-commit-%d.txt" % OS.get_process_id()
 var sessions: String = "user://test-playtests-%d" % OS.get_process_id()
@@ -323,7 +323,7 @@ func test_marker_fields(runner) -> bool:
 	return true
 
 func _record(seed_value: int) -> Dictionary:
-	return {"mode": "offline", "map": "dry_wells", "seed": seed_value, "factions": ["frc", "china"], "seat": 0, "controller": "human", "end_tick": 600, "end_digest": "abc", "result": "won", "commands": ["l1"], "build": "0.11.0-dev+abc"}
+	return {"mode": "offline", "map": "dry_wells", "seed": seed_value, "factions": ["frc", "china"], "seat": 0, "controller": "human", "end_tick": 600, "end_digest": "abc", "result": "won", "commands": ["l1"], "build": "0.11.0-dev+abc", "teams": [1, 2], "bots": []}
 
 func _marker(tick: int) -> Dictionary:
 	return MarkerCapture.marker("good", "ok", {"tick": tick, "camera": [1.0, 2.0], "selected": []}, "")
@@ -350,7 +350,7 @@ func test_session_schema(runner) -> bool:
 	runner.check(int(parsed.answers.q1.score) == 4 and parsed.answers.q1.text == "fine" and parsed.checklist.t1 == true, "PT9 answer and checklist, got %s" % [parsed.answers])
 	var match_keys: Array = parsed.matches[0].keys()
 	match_keys.sort()
-	runner.check(match_keys == ["build", "commands", "controller", "end_digest", "end_tick", "factions", "map", "markers", "mode", "result", "seat", "seed"], "PT9 match keys, got %s" % [match_keys])
+	runner.check(match_keys == ["bots", "build", "commands", "controller", "end_digest", "end_tick", "factions", "map", "markers", "mode", "result", "seat", "seed", "teams"], "PT9 match keys, got %s" % [match_keys])
 	session.set_comment(0, 0, "why")
 	runner.check(session.data.matches[0].markers[0].comment == "why", "PT9 set_comment reaches the marker")
 	_end(saved)

@@ -203,9 +203,11 @@ func survivors() -> Array[int]:
 		if _survives(player): found.append(player)
 	return found
 
+func check_command(command: Dictionary) -> String:
+	return "Match ended" if match_over() else _validate(command)
+
 func issue_command(command: Dictionary) -> Dictionary:
-	if match_over(): return {"ok":false,"error":"Match ended"}
-	var error: String = _validate(command)
+	var error: String = check_command(command)
 	if not error.is_empty():
 		return {"ok":false,"error":error}
 	var normalized := {"tick":command.tick,"player":command.player,"sequence":command.sequence,"type":command.type}
@@ -235,6 +237,7 @@ func _payload_fields(type: String) -> Array:
 		"enter": return ["entity_ids","target_id"]
 		"unload": return ["target_id"]
 		"defence_attack": return ["building_id","target_id"]
+		"ping": return ["target"]
 	return []
 
 func _validate(command: Dictionary, due: bool = false) -> String:
@@ -274,7 +277,7 @@ func _validate(command: Dictionary, due: bool = false) -> String:
 		var usable: Array = _commandable(live)
 		if usable.is_empty(): return "Unit cannot be commanded" if live.any(func(id: int) -> bool: return _entities[id].has("hole_id")) else "Unit is inside a transport"
 		live = usable
-	if command.type == "move": return _validate_target(command,due)
+	if command.type in ["move","ping"]: return _validate_target(command,due)
 	if command.type in ["stop","choose_faction"]: return ""
 	if command.type == "enter": return Containers.enter_error(self,command,live)
 	if command.type == "unload": return Containers.unload_error(self,command)

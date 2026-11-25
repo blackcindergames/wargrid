@@ -11,6 +11,9 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const RelayTransport = preload("res://scripts/net/relay_transport.gd")
 const SkirmishMain = preload("res://scripts/match/match_screen.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
+const BaseScene = preload("res://tests/test_base_scene.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
+const Wire = preload("res://scripts/net/wire.gd")
 const LOOPBACK := "wss://127.0.0.1:9/ws"
 const FocusCards = preload("res://scripts/playtest/focus_cards.gd")
 const PauseMenu = preload("res://scripts/presentation/pause_menu.gd")
@@ -30,7 +33,7 @@ const SIZES: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1920, 1080), Vecto
 const STRETCHED: Array[Array] = [[Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(2576, 1145), Vector2i(1620, 720)]]
 
 func cases() -> Array[Callable]:
-	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_launcher_effective_sizes, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits]
+	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_launcher_effective_sizes, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_advanced_only_prerelease, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits, test_mode_row_two_modes, test_team_mode_shows_bot_rows, test_team_bot_factions_remembered, test_team_mode_hides_small_maps, test_hidden_map_muted_line, test_team_hello_carries_bots, test_team_controls_locked_while_connecting, test_waiting_lists_bot_slots, test_waiting_edges_neon, test_start_sets_bot_factions_and_teams, test_version_mismatch_plain_line, test_team_layout_hud_sizes, test_guest_start_matches_host]
 
 func _picked(selector: OptionButton) -> String:
 	return selector.get_item_metadata(selector.selected)
@@ -275,7 +278,7 @@ func test_own_faction_shared(runner) -> bool:
 
 func test_start_saves_picks(runner) -> bool:
 	var saved: String = AudioSettings.path
-	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var before: Array = OnlineTests._statics()
 	var launcher = await _launcher_with(runner, "saves", {"faction": "usa", "bot_faction": "usa", "map": "dry_wells"})
 	launcher._set_own("china")
 	launcher._select_id(launcher.get_node("Pages/Play/Body/Bot"), "frc")
@@ -284,10 +287,7 @@ func test_start_saves_picks(runner) -> bool:
 	var stored: Dictionary = LauncherSettings.load_picks()
 	_restore(saved)
 	# The next case's match must not start on this case's picks.
-	SkirmishMain.factions = before[0]
-	SkirmishMain.map_path = before[1]
-	SkirmishMain.starts = before[2]
-	SkirmishMain.match_seed = before[3]
+	OnlineTests._restore_statics(before)
 	runner.check(stored == {"faction": "china", "bot_faction": "frc", "map": "ashfall"}, "L9e a bot start saves all three, got %s" % [stored])
 	launcher.free()
 	return true
@@ -749,10 +749,10 @@ func test_vertical_rhythm(runner) -> bool:
 	var gap: float = _text_top(launcher.get_node("Pages/Join/Body/OwnLabel")) - hint.get_global_rect().end.y
 	runner.check(gap >= 20.0 and gap <= 26.0, "L19d Join: the code hint to the You label text is 20-26 px, got %s" % gap)
 	await _settle(runner, launcher, "Play", "friend")
-	var toggles: Control = launcher.get_node("Pages/Play/Body/Opponent")
+	var toggles: Control = launcher.get_node("Pages/Play/Body/Versus")
 	var slot: Control = launcher.get_node("Pages/Play/Body/OpenSlot")
 	var drawn_top: float = slot.get_global_rect().position.y - slot.get_theme_stylebox("panel").expand_margin_top
-	runner.check(drawn_top - toggles.get_global_rect().end.y >= 20.0, "L19d the open slot is drawn 20 px or more under the toggles, got %s" % (drawn_top - toggles.get_global_rect().end.y))
+	runner.check(drawn_top - toggles.get_global_rect().end.y >= 20.0, "L19d the open slot is drawn 20 px or more under the Opponents toggles, got %s" % (drawn_top - toggles.get_global_rect().end.y))
 	built[1].free()
 	built[0].free()
 	AudioSettings.path = saved
@@ -1417,4 +1417,366 @@ func test_focus_ring_fits(runner) -> bool:
 		runner.check(clipped.is_empty(), "L30 every focus ring on %s (%s) stays inside the 1280x720 window, clipped: %s" % [page[0], page[1], clipped])
 	setup[1].free()
 	setup[0].free()
+	return true
+
+class OpenTransport extends OnlineTests.FakeTransport:
+	func is_open() -> bool: return true
+
+const TEAM_PLAY_MAPS: Array[String] = ["broken_crown", "ashfall"]
+const VERSION_LINE := "Your friend’s game is a different version from yours (v%s)."
+
+func _team_launcher(runner, name: String, picks: Dictionary):
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, name, picks)
+	_restore(saved)
+	launcher.set_opponent("team")
+	return launcher
+
+func _map_ids(launcher) -> Array[String]:
+	var selector: OptionButton = launcher.get_node("Pages/Play/Body/Map")
+	var ids: Array[String] = []
+	for i in selector.item_count: ids.append(selector.get_item_metadata(i))
+	return ids
+
+func _pick(selector: OptionButton, id: String) -> void:
+	var index: int = _index_where(selector, func(item: String) -> bool: return item == id)
+	selector.select(index)
+	selector.item_selected.emit(index)
+
+# Creates a team match and sends the hello through a transport that is already open.
+func _host_team(launcher, bots: Array = ["china", "frc"]) -> Object:
+	launcher._set_relay(LOOPBACK)
+	launcher.set_opponent("team")
+	_pick(launcher.get_node("Pages/Play/Body/TeamBots/Bot3"), bots[0])
+	_pick(launcher.get_node("Pages/Play/Body/TeamBots/Bot4"), bots[1])
+	launcher.get_node("Pages/Play/Footer/Create").pressed.emit()
+	launcher.set_process(false)
+	var transport := OpenTransport.new()
+	launcher._transport = transport
+	launcher._process(0.0)
+	return transport
+
+func _hello(transport) -> Dictionary:
+	for text: String in transport.sent:
+		var message: Dictionary = Wire.decode(text).message
+		if message.get("type") == "hello": return message
+	return {}
+
+# The start goes through the wire, so its numbers arrive as floats like the relay's.
+func _start_through_wire(runner, launcher, message: Dictionary) -> Array:
+	launcher._transport = OnlineTests.FakeTransport.new()
+	launcher._seat = 1
+	launcher._handle(Wire.encode(message))
+	var got: Array = [SkirmishMain.factions, SkirmishMain.starts]
+	var main = runner.root.get_tree().current_scene
+	if main != null and main != launcher: got.append(main.driver.pump.live().snapshot())
+	if main != null and main != launcher: main.free()
+	await runner.process_frame
+	return got
+
+func test_mode_row_two_modes(runner) -> bool:
+	var launcher = await _team_launcher(runner, "modes", {})
+	launcher.set_opponent("bot")
+	var play: Control = launcher.get_node("Pages/Play")
+	var row: Control = play.get_node("Body/Opponent")
+	var versus: Control = play.get_node("Body/Versus")
+	var names: Array = row.get_children().map(func(each: Node) -> String: return each.name)
+	var texts: Array = row.get_children().map(func(each: Button) -> String: return each.text)
+	runner.check(names == ["BotToggle", "FriendToggle"] and texts == ["vs Bot", "vs Friend"], "M7 the mode row is vs Bot and vs Friend only, got %s %s" % [names, texts])
+	runner.check(play.get_node("Body/OpponentLabel").text == "Mode" and not versus.visible, "M7 the row's label is Mode; no Opponents choice on the bot path")
+	var none: Button = versus.get_node("NoneToggle")
+	var bots: Button = versus.get_node("BotsToggle")
+	row.get_node("FriendToggle").pressed.emit()
+	runner.check(versus.visible and versus.get_node("Label").text == "Opponents" and none.text == "none" and bots.text == "2 bots", "M7 vs Friend shows Opponents: none, 2 bots, got '%s' '%s' '%s'" % [versus.get_node("Label").text, none.text, bots.text])
+	runner.check(launcher.opponent == "friend" and none.button_pressed and not bots.button_pressed and not play.get_node("Body/TeamBots").visible and play.get_node("Subtitle").text == "Set up a match against a bot or a friend.", "M7 vs Friend opens on none, today's 1v1")
+	bots.pressed.emit()
+	runner.check(launcher.opponent == "team" and bots.button_pressed and not none.button_pressed and row.get_node("FriendToggle").button_pressed and not row.get_node("BotToggle").button_pressed, "M7 2 bots selects the team mode under vs Friend")
+	runner.check(play.get_node("Footer/Create").visible and not play.get_node("Footer/Start").visible and play.get_node("Body/OpenSlot").visible and play.get_node("Body/TeamBots").visible and not play.get_node("Body/Bot").visible, "M7 2 bots creates a match with an open slot and the bot rows")
+	runner.check(play.get_node("Subtitle").text == "Team up with a friend against two bots." and play.get_node("Footer/Status").text == LauncherScript.FRIEND_HINT, "M7 team subtitle and footer hint, got '%s'" % play.get_node("Subtitle").text)
+	row.get_node("FriendToggle").pressed.emit()
+	runner.check(launcher.opponent == "team" and row.get_node("FriendToggle").button_pressed, "M7 pressing vs Friend again keeps 2 bots")
+	none.pressed.emit()
+	runner.check(launcher.opponent == "friend" and none.button_pressed and not play.get_node("Body/TeamBots").visible, "M7 none goes back to the 1v1 path")
+	await runner.process_frame
+	await runner.process_frame
+	runner.check(absf(row.get_node("BotToggle").size.x - row.get_node("FriendToggle").size.x) < 1.0 and absf(none.size.x - bots.size.x) < 1.0, "M7 each row's two toggles share its width, got %s %s" % [row.get_node("BotToggle").size.x, none.size.x])
+	launcher.free()
+	return true
+
+func test_team_mode_shows_bot_rows(runner) -> bool:
+	var launcher = await _team_launcher(runner, "bot-rows", {})
+	var bots: Control = launcher.get_node("Pages/Play/Body/TeamBots")
+	for mode: String in ["bot", "friend", "team"]:
+		launcher.set_opponent(mode)
+		runner.check(bots.visible == (mode == "team") and launcher.get_node("Pages/Play/Body/MapHidden").visible == (mode == "team"), "M8 the bot rows show on the team path only, %s" % mode)
+	runner.check(bots.get_node("Label").text == "Enemy bots", "M8 the bot rows are headed Enemy bots")
+	for path: String in ["Bot3", "Bot4"]:
+		var selector: OptionButton = bots.get_node(path)
+		runner.check(selector.item_count == 3 and selector.get_item_text(1) == "Free Resistance Coalition", "M8 %s lists the factions by display name" % path)
+	launcher.free()
+	return true
+
+func test_team_bot_factions_remembered(runner) -> bool:
+	var saved: String = AudioSettings.path
+	AudioSettings.path = scratch_for("team-bots-defaults")
+	var defaults: Array[String] = LauncherSettings.load_team_bots()
+	var config := ConfigFile.new()
+	config.set_value("launcher", "team_bot_1", "china")
+	config.set_value("launcher", "team_bot_2", "gla")
+	config.save(AudioSettings.path)
+	var fallback: Array[String] = LauncherSettings.load_team_bots()
+	_restore(saved)
+	runner.check(defaults == ["usa", "usa"], "M9 without a file both bots are the default faction, got %s" % [defaults])
+	runner.check(fallback == ["china", "usa"], "M9 a bad stored bot falls back alone, got %s" % [fallback])
+	var before: Array = OnlineTests._statics()
+	AudioSettings.path = scratch_for("team-bots")
+	LauncherSettings.save_picks({"team_bot_1": "frc", "team_bot_2": "china"})
+	var launcher = Launcher.instantiate()
+	runner.root.add_child(launcher)
+	await runner.process_frame
+	launcher.set_opponent("team")
+	var bots: Control = launcher.get_node("Pages/Play/Body/TeamBots")
+	runner.check(bots.get_node("Bot3").item_count == 3 and _picked(bots.get_node("Bot3")) == "frc" and _picked(bots.get_node("Bot4")) == "china", "M9 the bot rows show the remembered picks")
+	_host_team(launcher, ["china", "usa"])
+	await _start_through_wire(runner, launcher, OnlineTests.new()._start_message_2v2(5))
+	var stored: Array[String] = LauncherSettings.load_team_bots()
+	var picks: Dictionary = LauncherSettings.load_picks()
+	_restore(saved)
+	OnlineTests._restore_statics(before)
+	runner.check(stored == ["china", "frc"], "M9 the host's start remembers the bots it played, got %s" % [stored])
+	runner.check(picks.bot_faction == "usa", "M9 the team bots leave the 1v1 bot pick alone, got %s" % picks.bot_faction)
+	return true
+
+func test_team_mode_hides_small_maps(runner) -> bool:
+	var launcher = await _team_launcher(runner, "small-maps", {"map": "dry_wells"})
+	for id: String in MatchSettings.PLAY_MAPS:
+		var starts: int = JSON.parse_string(FileAccess.get_file_as_string(MatchSettings.map_path(id))).starts.size()
+		runner.check((id in _map_ids(launcher)) == (starts >= 4), "M10 %s (%d starts) listed on the team path only with four or more" % [id, starts])
+	runner.check(_map_ids(launcher) == TEAM_PLAY_MAPS, "M10 the team path lists %s, got %s" % [TEAM_PLAY_MAPS, _map_ids(launcher)])
+	launcher.set_opponent("friend")
+	runner.check(_map_ids(launcher) == MatchSettings.PLAY_MAPS.keys() and launcher._map_id() == "dry_wells", "M10 vs Friend lists every map and keeps the remembered one, got %s %s" % [_map_ids(launcher), launcher._map_id()])
+	launcher.set_opponent("team")
+	_pick(launcher.get_node("Pages/Play/Body/Map"), "ashfall")
+	launcher.set_opponent("bot")
+	runner.check(_map_ids(launcher) == MatchSettings.PLAY_MAPS.keys() and launcher._map_id() == "ashfall", "M10 a map picked on the team path stays picked, got %s" % launcher._map_id())
+	launcher.set_opponent("team")
+	runner.check(launcher._map_id() == "ashfall", "M10 a listed remembered map stays selected on the team path, got %s" % launcher._map_id())
+	launcher.free()
+	return true
+
+func test_hidden_map_muted_line(runner) -> bool:
+	var launcher = await _team_launcher(runner, "hidden-map", {"map": "dry_wells"})
+	var line: Label = launcher.get_node("Pages/Play/Body/MapHidden")
+	runner.check(line.visible and line.text == "Dry Wells has 2 start positions; team matches need 4.", "M11 the hidden remembered map gets the muted line, got '%s'" % line.text)
+	runner.check(line.theme_type_variation == &"Hint" and launcher._map_id() == "broken_crown" and launcher.get_node("Pages/Play/Body/MapInfo").text == launcher._map_info("broken_crown"), "M11 muted, and the first team map is shown with its info")
+	_pick(launcher.get_node("Pages/Play/Body/Map"), "ashfall")
+	runner.check(line.text.is_empty(), "M11 picking a team map drops the line, got '%s'" % line.text)
+	launcher.free()
+	launcher = await _team_launcher(runner, "listed-map", {"map": "broken_crown"})
+	runner.check(launcher.get_node("Pages/Play/Body/MapHidden").text.is_empty(), "M11 no line when the remembered map is listed")
+	launcher.set_opponent("bot")
+	runner.check(not launcher.get_node("Pages/Play/Body/MapHidden").visible, "M11 the line stays off the bot path")
+	launcher.free()
+	return true
+
+func _bot_rows(settings: Dictionary) -> Array:
+	return settings.get("bots", []).map(func(row: Dictionary) -> Array: return [row.player, row.faction])
+
+func test_team_hello_carries_bots(runner) -> bool:
+	var launcher = await _team_launcher(runner, "team-hello", {"map": "ashfall"})
+	var team: Dictionary = _hello(_host_team(launcher)).get("settings", {})
+	var plain: Dictionary = MatchSettings.for_map("ashfall")
+	runner.check(team.get("map") == "ashfall" and team.get("map_hash") == plain.map_hash and _bot_rows(team) == [[3.0, "china"], [4.0, "frc"]], "M12 the team hello carries the map and both bots, got %s" % [team])
+	launcher._fail(LauncherScript.CANCELLED)
+	_host(launcher)
+	var open := OpenTransport.new()
+	launcher._transport = open
+	launcher._process(0.0)
+	var friend: Dictionary = _hello(open).get("settings", {})
+	runner.check(friend == {"map": "ashfall", "map_hash": plain.map_hash}, "M12 vs Friend keeps the 1v1 hello, got %s" % [friend])
+	launcher._transport = null
+	launcher.free()
+	return true
+
+func test_team_controls_locked_while_connecting(runner) -> bool:
+	var launcher = await _team_launcher(runner, "team-lock", {"map": "ashfall"})
+	var transport = _host_team(launcher, ["frc", "china"])
+	var paths: Array[String] = ["Body/Opponent/BotToggle", "Body/Opponent/FriendToggle", "Body/Versus/NoneToggle", "Body/Versus/BotsToggle", "Body/TeamBots/Bot3", "Body/TeamBots/Bot4"]
+	var locked: Array = paths.map(func(path: String) -> bool: return launcher.get_node("Pages/Play/" + path).disabled)
+	runner.check(locked == [true, true, true, true, true, true], "M13 connecting locks all four toggles and both bot pickers, got %s" % [locked])
+	runner.check(_drawn_selected(launcher.get_node("Pages/Play/Body/Versus/BotsToggle")), "M13 the locked 2 bots toggle still draws the selection grey")
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	var sent: Array = _hello(transport).get("settings", {}).get("bots", []).map(func(row: Dictionary) -> String: return Registry.faction(row.faction).display_name + " (bot)")
+	var shown: Array = ["Three", "Four"].map(func(row: String) -> String: return launcher.get_node("Pages/Waiting/Body/Left/%s/Row/Who" % row).text)
+	runner.check(sent == ["Free Resistance Coalition (bot)", "China (bot)"] and shown == sent, "M13 the waiting view shows the bots the hello sent, sent %s shown %s" % [sent, shown])
+	launcher._fail("Connection to relay lost")
+	locked = paths.map(func(path: String) -> bool: return launcher.get_node("Pages/Play/" + path).disabled)
+	runner.check(locked == [false, false, false, false, false, false] and launcher.opponent == "team", "M13 a failure unlocks them and stays on the team path, got %s" % [locked])
+	launcher.free()
+	return true
+
+func test_waiting_lists_bot_slots(runner) -> bool:
+	var launcher = await _team_launcher(runner, "team-waiting", {"faction": "usa", "map": "broken_crown"})
+	_host_team(launcher, ["china", "frc"])
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	var left: Control = launcher.get_node("Pages/Waiting/Body/Left")
+	runner.check(launcher.current_page == "Waiting" and left.get_node("PlayersLabel").text == "Your team" and left.get_node("BotsLabel").visible and left.get_node("BotsLabel").text == "Enemy bots", "M14 Waiting groups Your team and Enemy bots")
+	runner.check(_texts(left.get_node("One")) == ["1", "You", "United States", "READY"] and "Open" in _texts(left.get_node("Two")), "M14 the host's row, then the open friend slot, got %s" % [_texts(left.get_node("One"))])
+	var rows: Array = [["Three", ["3", "China (bot)", "READY"], Palette.OWNER_BASE[1]], ["Four", ["4", "Free Resistance Coalition (bot)", "READY"], Palette.OWNER_BASE[6]]]
+	for row: Array in rows:
+		var panel: Control = left.get_node(row[0])
+		var edge: StyleBox = panel.get_theme_stylebox("panel")
+		runner.check(panel.visible and _texts(panel) == row[1], "M14 bot slot %s reads %s, got %s" % [row[0], row[1], _texts(panel)])
+		runner.check(edge is StyleBoxFlat and edge.border_color == row[2] and edge.border_width_left == 4, "M14 bot slot %s has its owner colour on the left edge" % row[0])
+	var own: StyleBox = left.get_node("One").get_theme_stylebox("panel")
+	runner.check(own is StyleBoxFlat and own.border_color == Palette.OWNER_BASE[0], "M14 your row has your colour on the left edge")
+	launcher._cancel()
+	_host(launcher)
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	var plain: StyleBox = left.get_node("One").get_theme_stylebox("panel")
+	runner.check(left.get_node("PlayersLabel").text == "Players" and not left.get_node("BotsLabel").visible and not left.get_node("Three").visible and not left.get_node("Four").visible, "M14 a 1v1 Waiting view lists no bot slot")
+	runner.check(plain is StyleBoxFlat and plain.border_color != Palette.OWNER_BASE[0], "M14 a 1v1 Waiting view keeps the plain row edge")
+	launcher._transport = null
+	launcher.free()
+	return true
+
+func test_waiting_edges_neon(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "team-waiting-neon", {"faction": "usa", "map": "broken_crown"})
+	GraphicsSettings.save_neon(true)
+	_host_team(launcher, ["china", "frc"])
+	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+	var left: Control = launcher.get_node("Pages/Waiting/Body/Left")
+	var edges: Array = ["One", "Three", "Four"].map(func(row: String) -> Color: return (left.get_node(row).get_theme_stylebox("panel") as StyleBoxFlat).border_color)
+	var want: Array = [Palette.OWNER_BRIGHT[0], Palette.OWNER_BRIGHT[Palette.BOT_SLOTS[0][1]], Palette.OWNER_BRIGHT[Palette.BOT_SLOTS[1][1]]]
+	runner.check(edges == want, "M14 under Neon the Waiting edges use the Neon hues the match will show, got %s want %s" % [edges, want])
+	launcher._transport = null
+	launcher.free()
+	_restore(saved)
+	return true
+
+func test_start_sets_bot_factions_and_teams(runner) -> bool:
+	var before: Array = OnlineTests._statics()
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "team-start", {})
+	_restore(saved)
+	AudioSettings.path = scratch_for("team-start-picks")
+	var message: Dictionary = OnlineTests.new()._start_message_2v2(7)
+	var got: Array = await _start_through_wire(runner, launcher, message)
+	var keys: Array = got[0].keys().map(func(key: Variant) -> int: return typeof(key))
+	runner.check(got[0] == {3: "china", 4: "frc"} and keys == [TYPE_INT, TYPE_INT], "M15 the start's bot factions reach the match with integer keys, got %s %s" % [got[0], keys])
+	var team_starts: Array[int] = MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2))
+	runner.check(got[1] == team_starts and got[1].size() == 4, "M15 the starts follow the teams, got %s, want %s" % [got[1], team_starts])
+	var players: Array = got[2].players if got.size() > 2 else []
+	var factions: Array = players.map(func(player: Dictionary) -> String: return player.get("faction", ""))
+	runner.check(factions == ["", "", "china", "frc"] and got[2].match.status == "setup", "M15 the bots are seated with their factions, so setup can end, got %s" % [factions])
+	launcher = Launcher.instantiate()
+	runner.root.add_child(launcher)
+	await runner.process_frame
+	got = await _start_through_wire(runner, launcher, OnlineTests.new()._start_message("ashfall", 7))
+	_restore(saved)
+	OnlineTests._restore_statics(before)
+	runner.check(got[0] == {} and got[1] == MatchSettings.starts("ashfall", 7), "M15 a 1v1 start passes no bot factions and the 1v1 starts, got %s %s" % [got[0], got[1]])
+	return true
+
+func test_guest_start_matches_host(runner) -> bool:
+	var before: Array = OnlineTests._statics()
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "guest-start", {"map": "dry_wells"})
+	var message: Dictionary = OnlineTests.new()._start_message_2v2(7)
+	launcher._transport = OnlineTests.FakeTransport.new()
+	launcher._seat = 2
+	launcher._handle(Wire.encode(message))
+	var got: Array = [SkirmishMain.factions, SkirmishMain.starts]
+	var main = runner.root.get_tree().current_scene
+	if main != null and main != launcher: main.free()
+	await runner.process_frame
+	var stored: Array[String] = LauncherSettings.load_team_bots()
+	var map: String = LauncherSettings.load_picks().map
+	_restore(saved)
+	OnlineTests._restore_statics(before)
+	runner.check(got[0] == {3: "china", 4: "frc"} and got[1] == MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2)), "M18 the guest seats the host's bots on the host's team starts, got %s %s" % [got[0], got[1]])
+	runner.check(stored == ["usa", "usa"] and map == "dry_wells", "M18 the guest remembers neither the host's bots nor its map, got %s %s" % [stored, map])
+	return true
+
+func _version_footer(runner, launcher, web: bool) -> Label:
+	launcher.web = web
+	launcher.show_page("Join")
+	launcher._set_relay(LOOPBACK)
+	launcher.get_node("Pages/Join/Body/Code").text = "ABC234"
+	launcher.get_node("Pages/Join/Footer/Join").pressed.emit()
+	launcher.set_process(false)
+	launcher._transport = OnlineTests.FakeTransport.new()
+	launcher._handle('{"type":"error","reason":"build mismatch"}')
+	await runner.process_frame
+	await runner.process_frame
+	return launcher.get_node("Pages/Join/Footer/Status")
+
+func test_version_mismatch_plain_line(runner) -> bool:
+	var line: String = VERSION_LINE % ProjectSettings.get_setting("application/config/version")
+	var seen: Array[String] = []
+	for web: bool in [false, true]:
+		var saved: String = AudioSettings.path
+		var launcher = await _launcher_with(runner, "version", {})
+		_restore(saved)
+		var status: Label = await _version_footer(runner, launcher, web)
+		runner.check(status.text == line and status.theme_type_variation == &"FooterError", "M16 the refused joiner reads the version line (web %s), got '%s'" % [web, status.text])
+		runner.check(launcher.current_page == "Join" and launcher._transport == null, "M16 the joiner stays on Join, disconnected")
+		seen.append(status.text)
+		launcher.free()
+	runner.check(seen[0] == seen[1], "M16 browser and desktop read the same line")
+	return true
+
+func _layout_ok(runner, launcher, root: Control, label: String) -> void:
+	var view: Rect2 = launcher.get_viewport().get_visible_rect()
+	var content: Rect2 = launcher.get_node("Pages").get_global_rect().grow(0.5)
+	var controls: Array[Control] = []
+	_visible_controls(root, controls)
+	var outside: Array[String] = []
+	for control in controls:
+		if not (content.encloses(control.get_global_rect()) and view.encloses(control.get_global_rect())): outside.append(str(control.name))
+		if control.get_child_count() > 0: _overlap_free(runner, control, label)
+	runner.check(controls.size() > 3 and outside.is_empty(), "M17 every visible control inside the content, %s, outside: %s page %s content %s" % [label, outside, root.get_global_rect(), content])
+	_overlap_free(runner, root, label)
+
+func test_team_layout_hud_sizes(runner) -> bool:
+	var saved: String = AudioSettings.path
+	AudioSettings.path = scratch_for("team-layout")
+	LauncherSettings.save_picks({"map": "dry_wells"})
+	for pair: Array in BaseScene.HUD_SIZES:
+		var built: Array = _port_with_launcher(runner, pair[0], pair[1])
+		var launcher = built[1]
+		var size: Vector2i = pair[1]
+		for mode: String in ["bot", "friend", "team"]:
+			for fold: bool in [false, true]:
+				launcher.get_node("Pages/Play/Body/Advanced/Toggle").button_pressed = fold
+				await _settle(runner, launcher, "Play", mode)
+				_layout_ok(runner, launcher, launcher.get_node("Pages/Play"), "Play %s fold %s at %s" % [mode, fold, size])
+		var body: Control = launcher.get_node("Pages/Play/Body")
+		var line: Label = body.get_node("MapHidden")
+		var info: Rect2 = body.get_node("MapInfo").get_global_rect()
+		var map: Rect2 = body.get_node("Map").get_global_rect()
+		# The grid puts the line one row below the info, beside the toggles: the Mode label makes that row 20 px taller than the info.
+		var gap: float = line.get_global_rect().position.y - info.end.y
+		runner.check(line.visible and not line.text.is_empty() and gap >= 0.0 and gap <= 30.0 and absf(line.get_global_rect().position.y - body.get_node("Opponent").get_global_rect().position.y) < 1.0 and absf(line.get_global_rect().position.x - map.position.x) < 1.0 and line.get_global_rect().end.x <= map.end.x + 0.5, "M17 the hidden-map line sits right under the map info in the map column at %s, gap %s, got %s" % [size, gap, line.get_global_rect()])
+		runner.check(line.get_line_count() == 1 and line.size.x >= line.get_minimum_size().x, "M17 the hidden-map line shows whole on one line at %s" % size)
+		var footer_top: float = launcher.get_node("Pages/Play/Divider").get_global_rect().position.y
+		runner.check(body.get_node("TeamBots").get_global_rect().end.y <= footer_top, "M17 the bot rows end above the footer at %s" % size)
+		launcher.get_node("Pages/Play/Body/Advanced/Toggle").button_pressed = false
+		_host_team(launcher)
+		launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
+		await runner.process_frame
+		await runner.process_frame
+		var left: Control = launcher.get_node("Pages/Waiting/Body/Left")
+		runner.check(launcher.current_page == "Waiting" and left.get_node("Three").visible and left.get_node("Four").visible, "M17 fixture: Waiting with both bot slots at %s" % size)
+		_layout_ok(runner, launcher, launcher.get_node("Pages/Waiting"), "Waiting team at %s" % size)
+		runner.check(left.get_node("Four").get_global_rect().end.y <= launcher.get_node("Pages/Waiting/Divider").get_global_rect().position.y, "M17 the last bot slot ends above the footer at %s" % size)
+		launcher._cancel()
+		var status: Label = await _version_footer(runner, launcher, false)
+		var join: Rect2 = launcher.get_node("Pages/Join/Footer/Join").get_global_rect()
+		runner.check(launcher.get_node("Pages/Join/Footer").get_global_rect().grow(0.5).encloses(status.get_global_rect()) and not status.get_global_rect().intersects(join) and status.get_line_count() == 1, "M17 the version line fits the Join footer beside the button on one line at %s, got %s lines" % [size, status.get_line_count()])
+		_layout_ok(runner, launcher, launcher.get_node("Pages/Join"), "Join version line at %s" % size)
+		built[1].free()
+		built[0].free()
+	_restore(saved)
 	return true

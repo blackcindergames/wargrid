@@ -79,22 +79,22 @@ static func _slot(sim: RefCounted, kind: String, player: int) -> Vector2i:
 	var map: Dictionary = sim.map_data()
 	return MapData.slot(map if not map.is_empty() else _default_map(), player, kind)
 
-static func create(with_match: bool = true, second_controller: String = "human", factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH, map_path: String = MAP_PATH, starts: Array[int] = [], seat_count: int = 2) -> Simulation:
+static func create(with_match: bool = true, second_controller: String = "human", factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH, map_path: String = MAP_PATH, starts: Array[int] = [], seat_count: int = 2, teams: Array[int] = []) -> Simulation:
 	var ids: Array[int] = []
 	var seats: Array[Dictionary] = []
 	for seat in range(1, seat_count + 1):
 		ids.append(seat)
-		seats.append({"seat": seat, "team": seat, "controller": "human" if seat == 1 else second_controller, "credits": START_CREDITS})
+		seats.append({"seat": seat, "team": teams[seat - 1] if not teams.is_empty() else seat, "controller": "human" if seat == 1 else second_controller, "credits": START_CREDITS})
 	for seat in seats:
 		if factions.has(seat.seat): seat.faction = factions[seat.seat]
-		seat.defer = factions.is_empty()
+		seat.defer = not factions.has(seat.seat)
 	var map: Dictionary = _default_map() if map_path == MAP_PATH else MapData.load(map_path)
 	if not starts.is_empty():
 		map = MapData.with_starts(map, starts)
 		if map.is_empty(): push_error("Chosen starts not on map: " + str(starts))
 	var sim: Simulation = MapData.create(map, seats)
 	if not with_match: return sim
-	if factions.is_empty(): sim.begin_setup(ids)
+	if seats.any(func(seat: Dictionary) -> bool: return seat.defer): sim.begin_setup(ids)
 	else: sim.start_match(ids)
 	return sim
 

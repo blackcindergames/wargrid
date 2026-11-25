@@ -13,7 +13,7 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const Fixture = preload("res://tests/economy_fixture.gd")
 
 const EXPECTED_ROLES := {"usa_builder": "worker", "usa_collector": "worker", "china_builder": "worker", "china_collector": "worker", "frc_builder": "worker", "usa_rifle_infantry": "infantry", "usa_rocket_infantry": "infantry", "china_rifle_infantry": "infantry", "china_rocket_infantry": "infantry", "frc_rifle_infantry": "infantry", "frc_rocket_infantry": "infantry", "usa_light_vehicle": "vehicle", "usa_tank": "vehicle", "china_light_vehicle": "vehicle", "china_tank": "vehicle", "frc_light_vehicle": "vehicle", "frc_tank": "vehicle"}
-const SILENT := ["stop", "set_rally", "produce", "cancel_build", "cancel_production", "defence_attack"]
+const SILENT := ["stop", "set_rally", "produce", "cancel_build", "cancel_production", "defence_attack", "ping"]
 const PREFIX := "res://audio/voice/units/"
 
 func cases() -> Array[Callable]:

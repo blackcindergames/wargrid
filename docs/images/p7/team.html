@@ -1,0 +1,271 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid · P7 part 2 team screens</title>
+<!-- P7 part 2 mock-up: variants as hash or query params (README.md beside this file). -->
+<style>
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Regular.ttf)}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-SemiBold.ttf);font-weight:600}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Bold.ttf);font-weight:700}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-ExtraBold.ttf);font-weight:800}
+/* Launcher values from game/ui/launcher_theme.tres and game/scenes/launcher.tscn; HUD values from the HudSlab, HudChip, HudKey,
+   HudButtonArmed styles and docs/reference/hud-v5-layout.md; the result card from game/scripts/match/result_panel.gd. */
+:root{--side:#2a2a2a;--content:#4a4a4a;--field:#2a2a2a;--edge:#808080;--sel:#666a6c;--soft:#d4d4d4;--primary:#f7c871;--ink:#1a1408;--rule:#707070;
+--bg:#121c24;--btn:#223241;--panel2:#26384a;--well:#0c141a;--line:#2e3f4b;--text:#eef3f5;--muted:#93a5b0;--cyan:#60e5ed;--ally:#69ceaa;--hudyou:#628ffa}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font:400 16px/19px Public,sans-serif;overflow:hidden}
+main{position:relative;width:1280px;height:720px;transform-origin:top left;overflow:hidden}
+/* Launcher */
+.sidebg{position:absolute;left:0;top:0;bottom:0;width:232px;background:var(--side)}
+.contentbg{position:absolute;left:232px;top:0;right:0;bottom:0;background:var(--content)}
+.sidebar{position:absolute;left:16px;top:0;bottom:0;width:200px;display:flex;flex-direction:column}
+.logo{font:800 24px/29px Public;letter-spacing:2px;padding:24px 0 24px 12px}
+.nav{display:flex;flex-direction:column;gap:6px;flex:1}
+.nav span{padding:12px 16px;font-weight:600;color:var(--soft);border-radius:2px}
+.nav span.on{background:var(--sel)}
+.nav hr,.divider{border:0;height:1px;background:var(--rule);margin:0}
+.version{font-size:12px;line-height:14px;color:var(--soft);padding:12px 0 24px 12px}
+.page{position:absolute;left:232px;top:0;right:0;bottom:0;padding:36px 44px 10px;display:flex;flex-direction:column}
+.title{font:800 30px/36px Public}
+.subtitle{color:var(--soft);padding-bottom:4px}
+.body{flex:1;display:grid;grid-template-columns:544px 380px;column-gap:36px;row-gap:8px;align-content:start}
+.flabel{font-weight:700;padding-top:16px}
+.field{height:44px;padding:12px 16px;background:var(--field);border:1px solid var(--edge);border-radius:2px;font-weight:600;display:flex;align-items:center;justify-content:space-between;white-space:nowrap}
+.field i{width:10px;height:5px;background:var(--soft);clip-path:polygon(0 0,100% 0,50% 100%);margin-left:16px;flex:none}
+.hint{font-size:13px;line-height:16px;color:var(--soft)}
+.toggles{display:flex;gap:6px}
+.toggles span{flex:1 1 0;min-width:max-content;height:43px;padding:12px;text-align:center;font-weight:600;color:var(--soft);background:var(--field);border-radius:2px;white-space:nowrap}
+.toggles span.on{background:var(--sel)}
+.toggles .vlabel{width:96px;align-self:center}
+.slotgap{padding:28px 16px 12px;margin-top:-16px;position:relative;display:flex;gap:12px;align-items:baseline}
+.slotgap::before{content:'';position:absolute;left:0;right:0;bottom:0;top:16px;border:1px dashed var(--edge)}
+.stack{display:flex;flex-direction:column;gap:8px}
+.footer{height:88px;display:flex;align-items:center;gap:16px}
+.status{color:var(--soft);max-width:700px}
+.status.error{color:#ffdede;background:#614545;border-left:4px solid #998080;padding:8px 12px}
+.fill{flex:1}
+.primary{height:52px;min-width:170px;padding:16px 36px;background:var(--primary);color:var(--ink);font:800 16px/19px Public;border-radius:2px;text-align:center;white-space:nowrap}
+.secondary{height:46px;min-width:140px;padding:12px 16px;background:var(--field);border:1px solid var(--edge);border-radius:2px;font-weight:600;text-align:center}
+.prow{display:flex;gap:12px;align-items:baseline;padding:12px 16px;background:var(--field);border-left:4px solid var(--edge);border-radius:2px}
+.prow .grow{flex:1}
+.open{display:flex;gap:12px;align-items:baseline;padding:12px 16px;border:1px dashed var(--edge)}
+.mappanel{padding:12px 16px;background:var(--field);border-radius:2px;display:flex;flex-direction:column;gap:4px}
+.bold{font-weight:700}
+/* Match */
+.world{position:absolute;inset:0}
+.slab{position:absolute;background:var(--bg);border:1px solid var(--line)}
+.hudlabel{font:700 12px/14px Public;letter-spacing:.1em;color:var(--muted)}
+.strip{position:absolute;left:8px;top:8px;display:flex;gap:8px}
+.strip .slab{position:static;height:32px;padding:0 8px;display:flex;align-items:center;gap:8px}
+.num{font:700 16px/19px Public;font-variant-numeric:tabular-nums;color:var(--text)}
+.num13{font:700 13px/16px Public;font-variant-numeric:tabular-nums;color:var(--text)}
+.chip{position:absolute;height:32px;padding:0 8px;display:flex;align-items:center;gap:8px;background:var(--btn);border:1px solid var(--line);font:600 13px/16px Public;color:var(--text)}
+.chip.armed{background:var(--panel2);border:2px solid var(--cyan);padding:0 7px}
+kbd{display:inline-block;min-width:18px;height:18px;padding:0 4px;font:700 12px/18px Public;color:var(--muted);background:var(--well);text-align:center}
+.notice{position:absolute;top:48px;left:50%;transform:translateX(-50%);height:28px;padding:0 8px;display:flex;align-items:center;font:600 13px/16px Public;color:var(--muted);white-space:nowrap}
+.answer{position:absolute;left:50%;transform:translateX(-50%);height:28px;padding:0 8px;display:flex;align-items:center;font:600 13px/16px Public;color:var(--muted);white-space:nowrap}
+.selpanel{position:absolute;left:0;bottom:0;width:408px;background:var(--bg);border-top:1px solid var(--line);border-right:1px solid var(--line);border-left:4px solid var(--hudyou);padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.krow{width:186px;height:26px;padding:0 8px 4px;background:var(--btn);display:flex;align-items:center;justify-content:space-between;font:600 13px/16px Public;color:var(--text);position:relative}
+.krow b{position:absolute;left:0;right:0;bottom:0;height:3px;background:#5cc85a}
+.card{position:absolute;right:0;bottom:0;width:432px;background:var(--bg);border-top:1px solid var(--line);border-left:4px solid var(--hudyou);padding:8px 8px 8px 8px;display:grid;grid-template-columns:repeat(4,100px);gap:4px}
+.cell{height:60px;background:#0f1820;border:1px solid var(--line);position:relative}
+.cell.ready{background:var(--btn)}
+.cell .nm{position:absolute;left:8px;top:28px;font:600 12px/14px Public;color:var(--text)}
+.cell kbd{position:absolute;right:8px;top:5px}
+.edge{position:absolute;width:28px;height:28px}
+.chip.tab{border-bottom:0}
+.sq{display:inline-block;width:8px;height:8px;margin-right:6px;flex:none;vertical-align:1px}
+/* Disabled while connecting (launcher.gd _set_busy): grey text, the pressed toggle keeps its fill. */
+.off,.off span{color:#808080}
+.primary.off{background:#9a8150;color:var(--ink)}
+/* Esc menu confirm box, as docs/images/esc-round/esc.html draws it (HudSmallPanel, HudSmallButton). */
+.small{min-width:244px;background:rgba(26,26,26,.6);padding:8px 12px;display:flex;flex-direction:column;gap:4px}
+.small .q{white-space:nowrap;text-align:center;font:400 12px/14px Public;margin-bottom:4px}
+.small span{height:22px;padding:4px;font:600 12px/14px Public;color:#dfdfdf;background:rgba(26,26,26,.6);text-align:center}
+.small span.focus{box-shadow:0 0 0 2px #ccc}
+/* Result card */
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.rcard{background:#2a2a2a;border:1px solid var(--edge);padding:24px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.outcome{font:800 30px/36px Public}
+.rstatus{color:var(--soft);min-height:20px}
+table{border-collapse:separate;border-spacing:24px 0;margin:0 -24px}
+td{padding:0;line-height:19px;white-space:nowrap;text-align:right}
+td:first-child{text-align:left}
+tr.you td{font-weight:800}
+tr.group td{font:700 13px/16px Public;color:var(--soft);padding-top:8px}
+tr.group.first td{padding-top:0}
+.rbuttons{display:flex;gap:12px;margin-top:16px}
+.rbuttons span{min-width:144px;height:36px;padding:4px 12px;display:flex;align-items:center;justify-content:center;font:600 15px/18px Public;background:var(--field);border:1px solid var(--edge)}
+.rbuttons span.p{background:var(--primary);color:var(--ink);border:0;font-weight:800}
+#mtab{position:fixed;left:0;top:0;z-index:9;background:#fff;color:#000;font:400 13px/17px Public;padding:6px 8px;white-space:pre}
+</style>
+<main></main>
+<script>
+const P=new URLSearchParams(location.hash.length>1?location.hash.slice(1):location.search);
+const opt=(k,d,allowed)=>{const v=P.get(k);return v!=null&&allowed.includes(v)?v:d};
+const view=opt('view','play',['play','waiting','join','match','end','confirm']);
+const mode=opt('mode','team',['bot','friend','team']);
+const hidden=P.get('hidden')==='1', busy=P.get('busy')==='1';
+const os=opt('os','mac',['mac','win','web']);
+const state=opt('state','start',['start','stall','ping','armed','mark','out']);
+const end=opt('end','victory',['victory','defeat','left','host']);
+const set=opt('set','base',['base','neon']);
+const web=os==='web';
+// Viewer: the host is P1 USA, the guest P2 China; a teammate leave is drawn from the host's side, every other match screen from the guest's.
+const who=opt('who',view==='end'&&end==='left'?'host':'guest',['host','guest','out']);
+const host=who==='host';
+const VERSION='0.17.0';
+// Colours by player (user, 2026-11-24, after the 2v2 match): the host blue, the guest teal in both windows, base and Neon.
+const PC={base:{host:'#628ffa',guest:'#0e92a7',b3:'#d6120c',b4:'#ec8600'},neon:{host:'#2f7bff',guest:'#00d8e8',b3:'#ff2f45',b4:'#ff7a00'}}[set];
+const C={you:host?PC.host:PC.guest,mate:host?PC.guest:PC.host,b3:PC.b3,b4:PC.b4};
+const ME=host?'P1 USA':'P2 China', MATE=host?'P2 China':'P1 USA';
+const sq=c=>`<i class="sq" style="background:${c}"></i>`;
+const main=document.querySelector('main');
+
+function sidebar(on){
+  const nav=['Play','Join','|','Settings','Credits'].concat(web?[]:['Quit']).map(n=>n==='|'?'<hr>':`<span class="${n===on?'on':busy?'off':''}">${n}</span>`).join('');
+  return `<div class="sidebg"></div><div class="contentbg"></div><div class="sidebar"><div class="logo">WARGRID</div><div class="nav">${nav}</div><div class="version">v${VERSION}</div></div>`;
+}
+const off=busy?' off':'';
+const field=t=>`<div class="field${off}"><span>${t}</span><i></i></div>`;
+const footer=(status,buttons,error)=>`<div class="divider"></div><div class="footer"><div class="status${error?' error':''}">${status}</div><div class="fill"></div>${buttons}</div>`;
+
+function play(){
+  const team=mode==='team', bot=mode==='bot';
+  const map=team?'Broken Crown':'Dry Wells', info=team?'4 start positions · 8 supply sources':'2 start positions · 16 supply sources';
+  const toggles=`<div class="toggles${off}" id="mode"><span class="${bot?'on':''}">vs Bot</span><span class="${bot?'':'on'}">vs Friend</span></div>`;
+  const versus=`<div class="toggles${off}" id="versus"><b class="vlabel">Opponents</b><span class="${team?'':'on'}">none</span><span class="${team?'on':''}">2 bots</span></div>`;
+  const slot='<div class="slotgap"><span>Open slot</span><span class="hint">Your friend picks their own faction.</span></div>';
+  const mapInfo=`<div class="stack" style="align-self:start;gap:4px"><div class="hint">${info}</div>${team&&hidden?'<div class="hint" id="hidden">Dry Wells has 2 start positions; team matches need 4.</div>':''}</div>`;
+  const cells=['<div class="flabel">You</div>','<div class="flabel">Map</div>',field('United States'),field(map),
+    '<div class="flabel">Mode</div>',mapInfo,toggles,'<div></div>'];
+  if(bot) cells.push('<div class="flabel">Bot</div>','<div></div>',field('China'),'<div></div>');
+  else cells.push(versus,'<div></div>',slot,'<div></div>');
+  if(team) cells.push(`<div class="stack" id="bots"><div class="flabel">Enemy bots</div>${field('China')}${field('Free Resistance Coalition')}</div>`,'<div></div>');
+  const status=busy?'Connecting… 2 s':bot?'Dry Wells · United States vs China bot':'You get a link to send to your friend.';
+  const buttons=busy?'<div class="secondary">Cancel</div><div class="primary off">Create match</div>':`<div class="primary">${bot?'Start match':'Create match'}</div>`;
+  const subtitle=team?'Team up with a friend against two bots.':'Set up a match against a bot or a friend.';
+  return sidebar('Play')+`<div class="page"><div class="title">Play</div><div class="subtitle">${subtitle}</div><div class="body">${cells.join('')}</div>`+
+    footer(status,buttons)+'</div>';
+}
+
+function waiting(){
+  const row=(seat,name,faction,c)=>`<div class="prow" style="border-left-color:${c}"><span>${seat}</span><span>${name}</span><span class="hint grow">${faction}</span><span class="hint">READY</span></div>`;
+  const left=`<div class="flabel">${web?'Invite link':'Match code'}</div>
+    <div style="display:flex;gap:12px"><div class="field" style="flex:1;color:#ebebeb">${web?'https://play.wargrid.example/?code=K7Q2XD':'K7Q2XD'}</div><div class="primary" style="min-width:0">${web?'Copy link':'Copy code'}</div></div>
+    <div class="hint">Or tell them the code: <b style="color:#fff">K7Q2XD</b></div>
+    <div class="flabel">Your team</div>${row(1,'You','United States',PC.host)}
+    <div class="open"><span>2</span><span>Open</span><span class="hint">waiting for your friend…</span></div>
+    <div class="flabel">Enemy bots</div>${row(3,'China (bot)','',C.b3)}${row(4,'Free Resistance Coalition (bot)','',C.b4)}`;
+  const right='<div class="flabel">Map</div><div class="mappanel"><span class="bold">Broken Crown</span><span class="hint">4 start positions · 8 supply sources</span></div>';
+  return sidebar('Play')+`<div class="page"><div class="title">Waiting for your friend</div><div class="subtitle">The match starts as soon as they join.</div>
+    <div style="flex:1;display:flex;gap:36px"><div class="stack" style="width:544px">${left}</div><div class="stack" style="width:380px">${right}</div></div>`+
+    footer('Match code <b style="color:#fff">K7Q2XD</b> · closes in 9:41','<div class="secondary">Cancel match</div>')+'</div>';
+}
+
+function join(){
+  // The relay refuses only the joiner (relay/room.go join), so the line must tell the guest how the pair gets going again.
+  const line=`Your friend’s game is a different version from yours (v${VERSION}).`;
+  const cells=['<div class="flabel">Match code</div>','<div class="flabel">Map</div>',
+    '<div class="field" style="height:50px">K7Q2XD</div>','<div class="hint" style="align-self:start">The host chooses the map.</div>',
+    '<div class="hint">Opened a join link? The code is already filled in.</div>','<div></div>',
+    '<div class="flabel">You</div>','<div></div>',field('China'),'<div></div>'];
+  return sidebar('Join')+`<div class="page"><div class="title">Join a match</div><div class="subtitle">Enter the code your friend sent you.</div><div class="body">${cells.join('')}</div>`+
+    footer(line,'<div class="primary">Join match</div>',true)+'</div>';
+}
+
+// World: plain sand and boxes in the owner colours, so both colour sets draw exactly.
+function iso(x,y,a,h,top,plate){
+  const d=a/2, p=plate?`<polygon points="${x},${y-d-5} ${x+a+10},${y} ${x},${y+d+5} ${x-a-10},${y}" fill="${top}" opacity=".55"/>`:'';
+  return p+`<polygon points="${x-a},${y-h} ${x},${y-h+d} ${x},${y+d} ${x-a},${y}" fill="#1c2b3c"/>`+
+    `<polygon points="${x},${y-h+d} ${x+a},${y-h} ${x+a},${y} ${x},${y+d}" fill="#0f1924"/>`+
+    `<polygon points="${x},${y-h-d} ${x+a},${y-h} ${x},${y-h+d} ${x-a},${y-h}" fill="${top}"/>`;
+}
+const tank=(x,y,c,dir=1)=>iso(x,y,10,6,c)+iso(x,y-6,5,4,c)+`<line x1="${x}" y1="${y-9}" x2="${x+14*dir}" y2="${y-9+(dir>0?-4:4)}" stroke="#1c2b3c" stroke-width="2"/>`;
+const base=(x,y,c,early)=>iso(x,y,70,42,c,true)+iso(x,y-42,22,12,c)+(early?'':iso(x-120,y+40,46,22,c,true)+iso(x+110,y+48,40,16,c,true));
+const rubble=(x,y)=>`<polygon points="${x},${y-30} ${x+60},${y} ${x},${y+30} ${x-60},${y}" fill="#3a3226" opacity=".55"/>`;
+function sand(){
+  return '<defs><pattern id="sand" width="128" height="64" patternUnits="userSpaceOnUse"><rect width="128" height="64" fill="#a98c5b"/>'+
+    '<polygon points="64,0 128,32 64,64 0,32" fill="#ad9161"/><polygon points="0,0 32,16 0,32" fill="#a48858"/><polygon points="128,32 96,48 128,64" fill="#a48858"/></pattern></defs>'+
+    '<rect width="1280" height="720" fill="url(#sand)"/>';
+}
+function world(early,out){
+  // The left base is always the viewer's own, the lower one the teammate's.
+  let s=sand()+(out?rubble(330,250)+rubble(210,290)+rubble(440,298):base(330,250,C.you,early))+base(600,420,C.mate,early);
+  if(early) return s+tank(430,320,C.you)+tank(700,500,C.mate);
+  if(!out) for(let i=0;i<6;i++) s+=tank(720+(i%3)*30,250+Math.floor(i/3)*22+(i%3)*8,C.you);
+  for(let i=0;i<5;i++) s+=tank(800+(i%3)*30,360+Math.floor(i/3)*22+(i%3)*8,C.mate);
+  for(let i=0;i<4;i++) s+=tank(1010+(i%2)*28,170+Math.floor(i/2)*22,C.b3,-1);
+  for(let i=0;i<3;i++) s+=tank(1060+(i%2)*28,280+Math.floor(i/2)*22,C.b4,-1);
+  return s;
+}
+function hud(){
+  const out=state==='out';
+  const strip=`<div class="strip"><div class="slab"><i style="width:8px;height:8px;background:${C.you}"></i><span class="hudlabel">CREDITS</span><span class="num">${out?'350':'4800'}</span></div>`+
+    `<div class="slab"><span class="hudlabel">POWER</span><span class="num13">${out?'0 / 0':'6 / 10'}</span></div></div>`;
+  const menu='<div class="chip" style="right:8px;top:8px">Menu<kbd>Esc</kbd></div>';
+  if(view==='end') return strip+menu;
+  const dockless=state==='start'||out;
+  const cardTop=720-140;
+  const sel=dockless?'':'<div class="selpanel"><div style="font:700 14px/18px Public;color:var(--text)">6 selected</div><div class="krow"><span>Medium Tank</span><span class="num13">6</span><b></b></div></div>'+
+    '<div class="card">'+['Attack Move:A','Stop:S','','','','','',''].map(c=>c?`<div class="cell ready"><span class="nm">${c.split(':')[0]}</span><kbd>${c.split(':')[1]}</kbd></div>`:'<div class="cell"></div>').join('')+'</div>';
+  // Q7: the Ping button only with a human teammate; a tab on the card's top edge, 8 from the right.
+  const ping=`<div class="chip tab${state==='armed'?' armed':''}" id="ping" style="right:8px;top:${cardTop-32}px">Ping<kbd>G</kbd></div>`;
+  const notices={start:`${sq(C.you)}You and ${sq(C.mate)}P1 USA vs 2 bots (${sq(C.b3)}China, ${sq(C.b4)}FRC)`,stall:'Waiting for your teammate…',
+    out:'You are out. Your teammate plays on: watch, or leave from the menu (Esc).'};
+  const notice=notices[state]?`<div class="slab notice"><span>${notices[state]}</span></div>`:'';
+  const cross='<path d="M11 0v8M11 14v8M0 11h8M14 11h8" stroke="#000" stroke-width="3"/><path d="M11 0v8M11 14v8M0 11h8M14 11h8" stroke="#fff" stroke-width="1"/>';
+  const armed=state==='armed'?`<div class="slab answer" style="top:${cardTop-8-28}px">Click the ground or a building to ping · Esc cancels</div>`+
+    `<svg style="position:absolute;left:878px;top:318px" width="22" height="22" viewBox="0 0 22 22">${cross}</svg>`:'';
+  // Ally edge arrow: a notched chevron with a dark stroke, 8 in from the edge (beyond the 3 px edge-scroll band), pointing at the ping.
+  const arrow=state==='mark'?'<svg class="edge" id="arrow" style="right:8px;top:300px" viewBox="0 0 28 28"><polygon points="5,4 25,14 5,24 11,14" fill="var(--ally)" stroke="#0c141a" stroke-width="1.5" stroke-linejoin="round"/></svg>':'';
+  return strip+menu+notice+sel+(dockless?'':ping)+armed+arrow;
+}
+function mark(){
+  // Drawn mid-pulse: the ring pulses twice, then fades over its last 5 s; dark under-strokes keep it readable on sand (art direction §11).
+  const x=930,y=300,ring=(rx,ry,w,o)=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="none" stroke="#0c141a" stroke-width="${w+2}" opacity="${o}"/><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="none" stroke="var(--ally)" stroke-width="${w}" opacity="${o}"/>`;
+  return ring(40,20,2.5,.8)+ring(24,12,3,1)+`<ellipse cx="${x}" cy="${y}" rx="5" ry="2.5" fill="var(--ally)" stroke="#0c141a" stroke-width="1"/>`;
+}
+function match(){
+  const early=view==='match'&&state==='start';
+  return `<svg class="world" viewBox="0 0 1280 720">${world(early,view==='match'&&state==='out')}${view==='match'&&state==='mark'?mark():''}</svg>`+hud();
+}
+
+function confirmBox(){
+  // Q10 and the plan's 2v2 guest questions; Quit asks the same with "Quit the game?".
+  const q={host:'Leave the match? You run the bots. Leaving ends the match for your friend.',guest:'Leave the match? The match ends for your friend too.',
+    out:'Leave the match? Your friend plays on against the bots.'}[who];
+  return `<svg class="world" viewBox="0 0 1280 720">${world(false,who==='out')}</svg><div class="dim"></div><div class="center"><div class="small"><div class="q">${q}</div><span>Leave</span><span class="focus">Cancel</span></div></div>`;
+}
+
+function endPanel(){
+  const head={victory:'Victory',defeat:'Defeat',left:'Match ended',host:'Match ended'}[end];
+  const line={victory:'',defeat:'',left:`${MATE} left the match`,host:'The host left. The match is over.'}[end];
+  const r=(name,c,b,u,l,you)=>`<tr class="${you?'you':''}"><td>${sq(c)}${name}</td><td>${b}</td><td>${u}</td><td>${l}</td></tr>`;
+  // Grouped only with a human teammate (7-19); you first in your team.
+  const rows=`<tr><td></td><td>Units built</td><td>Units lost</td><td>Buildings lost</td></tr>
+    <tr class="group first"><td colspan="4">Your team</td></tr>${r(ME+' (you)',C.you,24,9,end==='defeat'?8:1,true)}${r(MATE+' (teammate)',C.mate,19,12,end==='defeat'?7:2)}
+    <tr class="group"><td colspan="4">Enemy bots</td></tr>${r('P3 China (bot)',C.b3,31,end==='defeat'?14:28,end==='defeat'?1:6)}${r('P4 FRC (bot)',C.b4,27,end==='defeat'?11:25,end==='defeat'?0:7)}`;
+  const buttons=end==='victory'||end==='defeat'?'<span class="p">Play again</span><span>Back to menu</span>':'<span class="p">Back to menu</span>';
+  return match()+`<div class="dim"></div><div class="center"><div class="rcard"><div class="outcome">${head}</div><div class="rstatus">${line}</div>
+    <div>Match length 14:32</div><table id="rows">${rows}</table><div class="rbuttons">${buttons}</div></div></div>`;
+}
+
+main.innerHTML={play,waiting,join,match,end:endPanel,confirm:confirmBox}[view]();
+const scaleK=()=>Math.min(innerWidth/1280,innerHeight/720);
+function measure(){
+  const out=[];
+  const w=id=>{const el=document.getElementById(id);return el?Math.round(el.getBoundingClientRect().width/scaleK()):null};
+  const m=document.getElementById('mode');
+  if(m) out.push(['mode toggles',[...m.children].map(c=>Math.round(c.getBoundingClientRect().width/scaleK())).join(' · ')+' px',m.scrollWidth<=Math.ceil(m.clientWidth)+1]);
+  if(w('rows')) out.push(['result table',w('rows')+' px']);
+  if(w('ping')) out.push(['Ping chip',w('ping')+' × 32 px']);
+  parent.postMessage({type:'wr:measure',rows:out},location.origin);
+  if(P.get('measure')==='1')(document.getElementById('mtab')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'mtab'}))).textContent=out.map(x=>x[0]+': '+x[1]).join('\n');
+}
+function fit(){main.style.transform='scale('+scaleK()+')';measure()}
+addEventListener('resize',fit);
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='wr:ask-measure')measure()});
+fit();
+document.fonts.ready.then(fit);
+</script>

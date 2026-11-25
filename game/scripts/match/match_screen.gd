@@ -1,6 +1,7 @@
 extends Node
 
 const Iso = preload("res://scripts/presentation/isometric.gd")
+const Palette = preload("res://scripts/presentation/palette.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const PerfOverlay = preload("res://scripts/presentation/perf_overlay.gd")
 const PauseMenu = preload("res://scripts/presentation/pause_menu.gd")
@@ -25,6 +26,7 @@ const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
 const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
+const PingMarks = preload("res://scripts/presentation/ping_marks.gd")
 const AUTO_FRAMES: int = 120
 const AUTO_SKIP_FRAMES: int = 60
 const EDGE_BAND: float = 3.0
@@ -76,6 +78,7 @@ var _auto_pending: bool = false
 var _auto_frame: int = 0
 var _auto_tick_usec: int = 0
 var _visuals := VisualDirector.new()
+var _pings: PingMarks
 var _playtest: PlaytestOverlay
 var _leaving: bool = false
 var _unanswered: int = 0
@@ -114,12 +117,19 @@ func _ready() -> void:
 	hud.cancel_build_pressed.connect(orders._cancel_build)
 	hud.row_clicked.connect(_select_kind)
 	hud.producer_pressed.connect(orders.select_producer)
+	hud.ping_pressed.connect(orders.arm_ping)
+	# Made here, not at declaration: a scene freed before it enters the tree would orphan the node.
+	_pings = PingMarks.new()
+	_pings.hud = hud
+	_pings.jump.connect(centre_camera)
+	_view.add_child(_pings)
 	hud.hint_covered = func() -> bool: return menu_open() or not _focused or input_over()
 	_perf = PerfOverlay.new()
 	$HUD.add_child(_perf)
 	_pause = PauseMenu.new()
 	_pause.confirm_leave = driver.confirm_leave()
 	_pause.resume_requested.connect(_pause.close)
+	_pause.opened.connect(_fill_questions)
 	hud.menu_pressed.connect(_pause.open)
 	_pause.leave_requested.connect(_leave)
 	if not quit.is_valid(): quit = get_tree().quit
@@ -163,6 +173,7 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	mouse_pan.drop()
 	orders._set_attack_move(false)
+	orders._set_ping(false)
 	driver.detach()
 	ViewCaps.release(get_tree().root)
 
@@ -203,6 +214,8 @@ func _reset_camera() -> void:
 
 func _create_world() -> void:
 	driver.create(map_path, starts, factions, match_seed)
+	if driver.teammate() == 0: Palette.clear_team_colours()
+	else: Palette.set_team_colours(driver.bot_players())
 
 func playtest_context() -> Dictionary:
 	var camera: Vector2 = Iso.plane_to_world(_camera.position)
@@ -210,21 +223,21 @@ func playtest_context() -> Dictionary:
 
 func playtest_match() -> Dictionary:
 	var played: Dictionary = driver.match_log()
-	return _match_record(played.mode, played.factions, played.commands).merged({"end": played.get("end", "")})
+	return _match_record(played, played.commands).merged({"end": played.get("end", "")})
 
 func playtest_header() -> Dictionary:
 	var played: Dictionary = driver.match_header()
-	return _header(played.mode, played.factions)
+	return _header(played)
 
-func _header(mode: String, match_factions: Array) -> Dictionary:
-	return {"mode": mode, "map": _map_id(), "seed": match_seed, "factions": match_factions, "seat": local_player, "controller": "human", "build": PlaytestSettings.build_id()}
+func _header(played: Dictionary) -> Dictionary:
+	return {"mode": played.mode, "map": _map_id(), "seed": match_seed, "factions": played.factions, "teams": played.teams, "bots": played.bots, "seat": local_player, "controller": "human", "build": PlaytestSettings.build_id()}
 
 func _map_id() -> String:
 	return map_path.get_file().get_basename()
 
-func _match_record(mode: String, match_factions: Array, lines: PackedStringArray) -> Dictionary:
+func _match_record(header: Dictionary, lines: PackedStringArray) -> Dictionary:
 	var record: Dictionary = driver.record()
-	var played: Dictionary = _header(mode, match_factions).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines, "accidental_cancels": orders.accidental_cancels, "next_clicks": hud.next_clicks})
+	var played: Dictionary = _header(header).merged({"end_tick": record.tick, "end_digest": record.digest, "result": _result_text(record.match), "commands": lines, "accidental_cancels": orders.accidental_cancels, "next_clicks": hud.next_clicks})
 	if record.has("tick_hashes"): played.tick_hashes = record.tick_hashes
 	return played
 
@@ -235,17 +248,31 @@ func _take_answers() -> void:
 	var refused: Dictionary = {}
 	var fresh: bool = false
 	for answer: Dictionary in answers:
-		if not answer.ok: refused = answer
+		# A refused ping stays silent (plan T2-8): its only effect would have been the mark.
+		if not answer.ok and answer.command.get("type") != "ping": refused = answer
 		if answer.command.is_empty(): continue
 		_unanswered = maxi(_unanswered - 1, 0)
 		if _stale > 0: _stale -= 1
-		elif answer.ok: fresh = true
+		elif answer.ok and answer.command.get("type") != "ping": fresh = true
 	if not refused.is_empty(): refuse(refused.error, SoundPlayer.SoundDirector.refusal_sound(refused.error))
 	elif fresh: hud.clear_refusal()
 	for answer: Dictionary in answers:
 		if answer.ok: _playtest.observe_command(answer.command)
 		orders.answered(answer)
 		hud.cancel_answered(answer)
+
+# Each team ping asks for the tone; the announcer's cooldown keeps a burst to one (7-24).
+func _take_pings() -> void:
+	for ping: Dictionary in driver.take_pings():
+		_pings.add(ping.player, ping.target)
+		# The pinger knows where it clicked, and its tone's cooldown would mute the teammate's answer.
+		if ping.player == local_player: continue
+		_ensure_sound()
+		_sound.director.announcer.request("ping", ping.tick)
+
+# Pings go to a human teammate, so the chip and the input exist only with one (Q7).
+func can_ping() -> bool:
+	return driver.can_ping() and not input_over()
 
 func menu_open() -> bool:
 	return _pause.visible or _playtest.holds_match()
@@ -263,7 +290,15 @@ func _leave() -> void:
 	driver.leave()
 	get_viewport().gui_release_focus()
 	close_match(false)
+	Palette.clear_team_colours()
 	change_scene.call(LAUNCHER_SCENE)
+
+# An empty driver question keeps the 1v1 words.
+func _fill_questions() -> void:
+	var leave: String = driver.leave_question()
+	var quitting: String = driver.quit_question()
+	_pause.leave_question = leave if not leave.is_empty() else PauseMenu.LEAVE_QUESTION
+	_pause.quit_question = quitting if not quitting.is_empty() else PauseMenu.QUIT_QUESTION
 
 func close_match(file_sitting: bool) -> void:
 	driver.stop()
@@ -323,6 +358,7 @@ func _show_esc_chip() -> void:
 # The pause menu and the note form open without a new view, so this runs every frame too.
 func _drop_stale_attack_move() -> void:
 	if orders._attack_move_mode and (not orders.takes_orders() or _pause.visible or not HudModel.has_armed_unit(shown_state, orders.selected_ids, local_player)): orders._set_attack_move(false)
+	if orders.ping_armed and (not orders.takes_orders() or _pause.visible or not can_ping()): orders._set_ping(false)
 
 func _typing() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
@@ -352,6 +388,7 @@ func _drain_notes() -> bool:
 		if note.tick > last_tick: stepped_results.append_array(note.results)
 		last_tick = note.tick
 	_take_answers()
+	_take_pings()
 	# A stall frame (online, waiting for the peer) is not a step frame; counting it would inflate the split share.
 	var advanced: bool = driver.current().tick != tick_before
 	if not is_processing() or (advanced and _clock.stepped(Engine.get_process_frames(), driver.current().tick)) or (not advanced and _note() != _shown_note):
@@ -377,6 +414,8 @@ func _process(delta: float) -> void:
 	elif mouse_pan.anchoring() and not orders.is_selecting(): _pan_by(mouse_pan.anchor_offset() * minf(delta, EDGE_STEP_MAX))
 	elif not mouse_pan.grabbing(): edge_scroll(delta)
 	glide_camera(delta)
+	var view: Rect2 = get_viewport().get_visible_rect()
+	_pings.advance(view, _view.get_global_transform_with_canvas(), minf(view.end.y - DOCK_HEIGHT, hud.dock_top()))
 	_view.advance_frame()
 	if not _auto_pending: return
 	_auto_sample((_auto_tick_usec + _view.draw_usec) / 1000.0)
@@ -564,6 +603,7 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	_ensure_sound()
 	_take_results(state)
 	hud.update_hud(state, _hud_selection(), view_player, local_player)
+	hud.show_ping(can_ping(), orders.ping_armed)
 	_place_floor()
 	_view.set_inspected(orders.inspected_id)
 	if frozen(): _show_freeze()
@@ -597,7 +637,7 @@ func _hud_selection() -> Dictionary:
 
 func _result(state: Dictionary) -> String:
 	var result: String = _result_text(state.match)
-	return "Victory" if result.is_empty() and driver.opponent_left() else result
+	return result if not result.is_empty() else driver.leave_heading()
 
 func _show_result(state: Dictionary) -> void:
 	var result: String = _result(state)
@@ -612,13 +652,23 @@ func _show_freeze() -> void:
 
 func _result_rows(state: Dictionary) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = []
+	var ours: Array[Dictionary] = [{"group": "Your team"}]
 	var stats: Array[Dictionary] = driver.match_stats()
+	var mate: int = driver.teammate()
 	for player: Dictionary in state.players:
 		var row: Dictionary = stats.filter(func(entry: Dictionary) -> bool: return entry.player == player.id)[0]
 		var you: bool = player.id == local_player
-		var faction: String = Registry.faction(player.get("faction", Registry.Factions.DEFAULT_FACTION)).display_name
-		rows.append({"name": "P%d %s%s" % [player.id, faction, " (you)" if you else ""], "you": you, "built": row.units_built, "units_lost": row.units_lost, "buildings_lost": row.buildings_lost})
-	return rows
+		var mark: String = " (you)" if you else " (teammate)" if player.id == mate else " (bot)" if driver.bot_players().has(player.id) else ""
+		var shown: Dictionary = {"name": ResultPanel.player_name(player.id, player.get("faction", "")) + mark, "you": you, "built": row.units_built, "units_lost": row.units_lost, "buildings_lost": row.buildings_lost}
+		if mate != 0: shown.colour = Palette.owner_colors(player.id, _view.bright_owners())[0]
+		if mate == 0 or not (you or player.id == mate): rows.append(shown)
+		elif you: ours.insert(1, shown)
+		else: ours.append(shown)
+	# Grouped only with a human teammate, so the offline and 1v1 tables keep their shape (7-19).
+	if mate == 0: return rows
+	ours.append({"group": "Enemy bots"})
+	ours.append_array(rows)
+	return ours
 
 func _result_text(match_state: Variant) -> String:
 	return ResultPanel.result_text(match_state, _local_team())
@@ -675,7 +725,7 @@ func _restart() -> void:
 
 func _rematch(match_seed_value: int) -> void:
 	match_seed = match_seed_value
-	starts = MatchSettings.starts(map_path.get_file().get_basename(), match_seed_value)
+	starts = MatchSettings.starts(map_path.get_file().get_basename(), match_seed_value, driver.teams())
 	_restart_world()
 
 func _restart_world() -> void:
@@ -686,6 +736,7 @@ func _restart_world() -> void:
 	_sound.director.reset()
 	_sound._unit_voice.stop()
 	_visuals.reset()
+	_pings.clear()
 	orders.reset()
 	hud.reset()
 	_unanswered = 0

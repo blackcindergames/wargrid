@@ -6,6 +6,7 @@ signal cancel_build_pressed()
 signal menu_pressed()
 signal row_clicked(kind: String, shift: bool)
 signal producer_pressed(id: int, jump: bool)
+signal ping_pressed()
 
 # Wider notices wrap, so a long desync path grows down, clear of the chips at 1280.
 const NOTICE_WIDTH: float = 600.0
@@ -84,6 +85,8 @@ var _alert_line: PanelContainer
 var _alert_text: Label
 var _alerted_at: int = 0
 var _esc: Label
+var _ping: Button
+var _ping_hint: PanelContainer
 var _resume: Label
 var _production: VBoxContainer
 var _now: Button
@@ -148,9 +151,10 @@ func _init() -> void:
 	_build_refusal_line()
 	_build_group_line()
 	_build_alert_line()
+	_build_ping()
 	_build_looks()
 	_build_panel()
-	for surface: Control in [_top_strip, _producers, _menu, _panel]: block(surface)
+	for surface: Control in [_top_strip, _producers, _menu, _panel, _ping]: block(surface)
 
 # The spec's HUD blocks: a click, drag release or wheel on a panel never reaches the map.
 func block(surface: Control) -> void:
@@ -371,6 +375,38 @@ func _build_alert_line() -> void:
 	_alert_text.add_theme_color_override("font_color", get_theme_color("warn", &"Tokens"))
 	_alert_line.visible = false
 
+# Mock-up: docs/images/p7 `match-armed`.
+func _build_ping() -> void:
+	_ping = chip("PingChip", 0, [["Label", &"HudRow", "Ping"], ["Key", &"HudKey", HudModel.key_label(HudModel.PING_KEY)]])
+	_ping.anchor_top = 1.0
+	_ping.anchor_bottom = 1.0
+	var key: Label = _ping.get_node("Row/Key")
+	key.custom_minimum_size = Vector2(18, 18)
+	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	key.size_flags_vertical = SIZE_SHRINK_CENTER
+	_ping.pressed.connect(ping_pressed.emit)
+	_ping.visible = false
+	add_child(_ping)
+	_ping_hint = _slab("PingHint", Vector2.ZERO)
+	_flat(_ping_hint, 28)
+	_ping_hint.set_anchors_preset(PRESET_CENTER_BOTTOM)
+	_ping_hint.grow_horizontal = GROW_DIRECTION_BOTH
+	_ping_hint.offset_left = -12
+	_ping_hint.offset_right = -12
+	_ping_hint.offset_top = -100
+	_ping_hint.offset_bottom = -72
+	_label(_ping_hint, "Text", &"HudRow", "Click a spot to ping · Esc cancels").add_theme_color_override("font_color", get_theme_color("muted", &"Tokens"))
+	_ping_hint.visible = false
+
+# After the slab is fitted, so the tab sits on its top edge, or 8 above the bottom with no slab.
+func show_ping(shown: bool, armed: bool) -> void:
+	_ping.visible = shown
+	_ping_hint.visible = shown and armed
+	_ping.theme_type_variation = &"HudButtonArmed" if armed else &"HudChip"
+	var bottom: float = _economy.offset_top if _economy != null and _economy.visible else -8.0
+	_ping.offset_top = bottom - _ping.custom_minimum_size.y
+	_ping.offset_bottom = bottom
+
 func alert(text: String) -> void:
 	_alerted_at = now_msec.call()
 	_alert_text.text = text
@@ -580,6 +616,7 @@ static func _cell_label(cell: Button, label_name: String, variation: StringName,
 # Chips name the cell's position in the player's layout; a reset and the menu opening re-read them.
 func read_keys() -> void:
 	for cell: Node in _card.get_children(): (cell.get_node("Chip") as Label).text = HudModel.key_label(HudModel.GRID_KEYS[cell.get_index()])
+	(_ping.get_node("Row/Key") as Label).text = HudModel.key_label(HudModel.PING_KEY)
 
 func _grid(grid_name: String, columns: int) -> GridContainer:
 	var grid := GridContainer.new()
@@ -623,10 +660,15 @@ func _fit_slab() -> void:
 	_economy.offset_top = -(height + 2.0 * PAD_Y)
 	_economy.queue_redraw()
 
-# The slab's top for the helper stack, read from offsets because the rect catches up a frame late.
+# The slab's top for the helper stack, read from offsets because the rect catches up a frame late; the Ping tab counts as slab.
 func slab_top() -> float:
 	var height: float = get_viewport_rect().size.y
+	if _ping.visible: return height + _ping.offset_top
 	return height + _economy.offset_top if _economy != null and _economy.visible else height
+
+# The highest bottom panel, so a screen-edge arrow stays above the whole dock.
+func dock_top() -> float:
+	return minf(slab_top(), _panel.get_global_rect().position.y) if _panel.visible else slab_top()
 
 func update_hud(view: Dictionary, selection: Dictionary, view_player: int, seat: int) -> void:
 	var building: Dictionary = HudModel.building(view, selection.building_id)

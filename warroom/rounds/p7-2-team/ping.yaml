@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: gallery
+question: Ping button, armed state, ping mark and edge arrow as drawn
+why: >-
+  T2-8, after the owner's match. The Ping button (Menu chip look, key G) is a tab on the command card's
+  top edge, 8 from the right, so it rides with the card's top (140 or 204 high) and sits on the screen's
+  bottom edge when no card shows; armed it takes the armed look (`panel2`, 2 px cyan frame), the pointer
+  is the crosshair and a muted line says what the next click does. The mark is a flat ring in `ally`
+  (#69ceaa) with a dark under-stroke, as the crosshair has (art direction §11), pulsing twice and fading
+  over its last 5 s of 30. A ping off screen shows a notched `ally` chevron with a dark stroke, 8 in from
+  the edge (clear of the 3 px edge-scroll band), never under the dock; a click on it jumps there.
+items:
+- id: match-ping
+  label: Ping button
+  caption: Medium Tanks selected; the Ping tab on the card's top edge.
+  render: {state: match, params: {state: ping}}
+- id: match-armed
+  label: Armed
+  caption: After G or a click on Ping; Esc disarms.
+  render: {state: match, params: {state: armed}}
+- id: match-mark
+  label: Mark and arrow
+  caption: Your ping on the map mid-pulse; your teammate's ping off screen to the right.
+  render: {state: match, params: {state: mark}}
+- id: match-mark-neon
+  label: Mark, Neon
+  caption: The same with Neon colours on.
+  img: docs/images/p7/match-mark-neon.webp
+verdict:
+  key: ping-verdict
+  pass: Build as drawn
+  changes: Needs changes

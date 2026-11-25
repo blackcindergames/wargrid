@@ -50,6 +50,7 @@ OFFSET_DB = {
     "infantry_death": -2.0,
     "click": -4.3,
     "error": -4.3,
+    "ping": 2.0,
 }
 
 
@@ -240,6 +241,14 @@ def f_error(rng: Rng) -> Arr:
     return tail_fade(mix((0, a, 1.0), (int(0.12 * SR), b, 1.0)), 0.02)
 
 
+def _blip(freq: float) -> Arr:
+    return decay(np.sin(2 * np.pi * freq * t(0.12)), 0.04, 0.002)
+
+
+def f_ping(rng: Rng) -> Arr:
+    return tail_fade(mix((0, _blip(880), 1.0), (int(0.09 * SR), _blip(1320), 0.9)), 0.02)
+
+
 def band_edges(n: int, lo: float = 120, hi: float = 7500) -> Arr:
     return np.geomspace(lo, hi, n + 1)
 
@@ -309,6 +318,7 @@ EFFECTS: dict[str, tuple[str, Callable[[Rng], Arr]]] = {
     "infantry_death": ("infantry-death-f", f_infantry),
     "click": ("click-f", f_click),
     "error": ("error-f", f_error),
+    "ping": ("ping-f", f_ping),
 }
 
 

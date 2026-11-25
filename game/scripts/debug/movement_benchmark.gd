@@ -11,12 +11,15 @@ const VisualDirector = preload("res://scripts/presentation/visual_director.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const Hud = preload("res://scripts/match/hud.gd")
+const TeamMatch = preload("res://scripts/debug/team_match.gd")
 # New with the ashfall layout (R2): worst of six rendered runs 3.02 ms plus about 50%. No ceiling exists for the other layouts.
 const ASHFALL_FRAME_P95_MS: float = 3.3
 # Fixed ceilings on max draw calls per frame in the sample window; never raised to pass.
 # hud_select: 1.5 x the stop gate B scratch maximum of 20 (both window sizes), rounded up to 10.
 const DRAW_CALL_CEILINGS: Dictionary = {"open": 50, "dense": 50, "horde": 50, "ashfall": 60, "hud_select": 30}
-const LAYOUTS: Array[String] = ["open", "dense", "ashfall", "horde"]
+# A four-bot 2v2 on Ashfall; no budget or draw-call ceiling exists for it yet, so it only reports.
+const TEAM_LAYOUT: String = "team2v2"
+const LAYOUTS: Array[String] = ["open", "dense", "ashfall", "horde", TEAM_LAYOUT]
 const HUD_LAYOUT: String = "hud_select"
 const HUD_SELECTED: int = 120
 const SELECTION_LINE_POINTS: int = 8
@@ -73,6 +76,8 @@ var _sampling_done: bool = false
 var _horde_start: Dictionary = {}
 var _horde_peak: int = 0
 var _horde_marked_ticks: int = 0
+var _team_orders: int = 0
+var _team_shots: int = 0
 @onready var _view: Node2D = $WorldView
 @onready var _status: Label = $HUD/Status
 
@@ -150,8 +155,13 @@ func _begin_layout() -> void:
 	_horde_start.clear()
 	_horde_peak = 0
 	_horde_marked_ticks = 0
+	_team_orders = 0
+	_team_shots = 0
 	if _layout_name() == HUD_LAYOUT:
 		_begin_hud()
+	elif _layout_name() == TEAM_LAYOUT:
+		_simulation = CombatWorkload.create("late_game_2v2")
+		$Camera2D.position = team_camera(_simulation.view_state().units)
 	elif _layout_name() == "horde":
 		_simulation = CombatWorkload.create("horde_render_500" if _units() == 500 else "horde_render")
 		if _sound_mode and _sound == null:
@@ -190,6 +200,9 @@ func _physics_process(_delta: float) -> void:
 		return
 	if _layout_name() == "horde":
 		_horde_tick()
+		return
+	if _layout_name() == TEAM_LAYOUT:
+		_team_tick()
 		return
 	var started: int = Time.get_ticks_usec()
 	var command_tick: bool = _leg == -1 or Workload.settled(_simulation)
@@ -297,6 +310,23 @@ func _script_ms() -> float:
 static func units_run(requested: int, layouts: Array[String]) -> int:
 	return 500 if requested == 500 and layouts.has("horde") else 300
 
+# The count names the gated layouts only, so perf_record.py's marker stays "PASSED 4" with team2v2 in the run.
+static func passed_line(sequence: Array[String]) -> String:
+	var gated: int = sequence.filter(func(layout: String) -> bool: return layout != TEAM_LAYOUT).size()
+	return "RENDERED BENCHMARK PASSED " + str(gated) if gated > 0 else ""
+
+static func team_failure(orders: int, shots: int, teams_alive: int) -> String:
+	if orders == 0: return "Rendered team2v2: the bots issued no orders in the sample window"
+	if shots == 0: return "Rendered team2v2: no shots in the sample window"
+	if teams_alive < 2: return "Rendered team2v2: a team has no units left"
+	return ""
+
+# The fight is mostly over by the end of the warmup, so the camera follows the units instead of staying where it started.
+static func team_camera(rows: RefCounted) -> Vector2:
+	var sum := Vector2.ZERO
+	for i in range(rows.size()): sum += Vector2(rows.x[i], rows.y[i])
+	return Iso.world_to_plane(sum / maxi(rows.size(), 1))
+
 static func hud_failure(header: String, drawn_lines: int, selected: int, match_started: bool) -> String:
 	if not header.begins_with("%d selected" % selected):
 		return "hud_select panel header reads '%s', not %d selected" % [header, selected]
@@ -341,7 +371,7 @@ func _report_only() -> bool:
 
 func _report_draw_calls(layout: String) -> bool:
 	var max_calls: float = Stats.summary(_draw_calls).max
-	var failure: String = draw_call_failure(layout, max_calls)
+	var failure: String = "" if layout == TEAM_LAYOUT else draw_call_failure(layout, max_calls)
 	_emit("DRAW_CALLS " + layout + " max=" + str(int(max_calls)) + " p50=" + str(int(Stats.summary(_draw_calls).p50)) + " ceiling=" + str(DRAW_CALL_CEILINGS.get(layout, -1)) + " over=" + str(failure != ""))
 	var gate: String = "" if _report_only() else failure
 	if gate != "":
@@ -377,8 +407,8 @@ func _advance() -> void:
 		return
 	if _hud_mode:
 		_emit("RENDERED HUD " + ("CALIBRATION " if _report_only() else "PASSED ") + _size_text(_expected_window))
-	else:
-		_emit("RENDERED BENCHMARK PASSED " + str(_sequence.size()))
+	elif passed_line(_sequence) != "":
+		_emit(passed_line(_sequence))
 	if _profile:
 		_begin_large()
 	elif _web:
@@ -448,6 +478,40 @@ func _finish_horde(state: Dictionary) -> void:
 			_fail("RENDERED SOUND cues=0")
 			return
 		print("RENDERED SOUND cues=", _sound_cues, " update_p95_ms=", Stats.summary(_sound_times).p95)
+	_advance()
+
+func _team_tick() -> void:
+	var started: int = Time.get_ticks_usec()
+	TeamMatch.step(_simulation, TeamMatch.SEATS_2V2)
+	var state: Dictionary = _simulation.view_state()
+	_visuals.collect_step(state.tick, _simulation.combat_events(), _simulation.command_results())
+	var no_selection: Array[int] = []
+	$Camera2D.position = team_camera(state.units)
+	_view.set_view(state, no_selection)
+	_status.text = "team2v2 | %s | tick %d | Esc: quit" % ["draining" if _sampling_done else ("sampling" if _sample_started > 0 else "warmup"), state.tick]
+	if _sample_started > 0 and not _sampling_done:
+		_sample_ticks += 1
+		_window_ticks += 1
+		_tick_times.append((Time.get_ticks_usec() - started) / 1000.0)
+		_script_usec += Time.get_ticks_usec() - started
+		_team_orders += _simulation.command_results().filter(func(result: Dictionary) -> bool: return result.ok).size()
+		_team_shots += _simulation.combat_events().filter(func(event: Dictionary) -> bool: return event.type == "shot").size()
+	Profiler.end_tick()
+	if _sampling_done: _finish_team()
+
+func _finish_team() -> void:
+	var teams := {}
+	for entry: Dictionary in TeamMatch.SEATS_2V2: teams[entry.seat] = entry.team
+	var alive := {}
+	for unit: Dictionary in _simulation.snapshot().entities:
+		if teams.has(unit.owner): alive[teams[unit.owner]] = true
+	var failure: String = team_failure(_team_orders, _team_shots, alive.size())
+	if failure != "":
+		_fail(failure)
+		return
+	_report_draw_calls(TEAM_LAYOUT)
+	_emit("RENDERED COMPLETE team2v2 bot_orders=" + str(_team_orders) + " shots=" + str(_team_shots) + " ticks=" + str(_sample_ticks))
+	_emit("RENDERED TEAM2V2 PASSED 1")
 	_advance()
 
 func _begin_hud() -> void:

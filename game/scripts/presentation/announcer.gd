@@ -1,15 +1,16 @@
 extends RefCounted
 
 const EXPIRY_TICKS := 150
-const COOLDOWN_TICKS := {"base_under_attack": 900, "building_lost": 900, "low_power": 3600, "insufficient_funds": 900, "allied_base_under_attack": 900}
+const COOLDOWN_TICKS := {"base_under_attack": 900, "building_lost": 900, "low_power": 3600, "insufficient_funds": 900, "allied_base_under_attack": 900, "ping": 150}
 # Zero Hour retail Eva.ini priorities; victory and defeat are not EVA lines, so they rank on top.
-const PRIORITY := {"victory": 9, "defeat": 9, "building_lost": 8, "base_under_attack": 7, "allied_base_under_attack": 6, "insufficient_funds": 3, "low_power": 2, "construction_complete": 1, "unit_ready": 1}
+const PRIORITY := {"victory": 9, "defeat": 9, "building_lost": 8, "base_under_attack": 7, "allied_base_under_attack": 6, "insufficient_funds": 3, "low_power": 2, "construction_complete": 1, "unit_ready": 1, "ping": 5}
 
 var _waiting: Array[Dictionary] = []
 var _last_started: Dictionary = {}
 
+# A tone is a synthesized effect, not a spoken line.
 static func path(line: String) -> String:
-	return "res://audio/voice/%s.wav" % line
+	return ("res://audio/sfx/%s.wav" if line == "ping" else "res://audio/voice/%s.wav") % line
 
 func request(line: String, tick: int) -> void:
 	for entry: Dictionary in _waiting:

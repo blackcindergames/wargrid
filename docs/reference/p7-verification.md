@@ -497,3 +497,53 @@ Tree `695b702c` (branch tip before the `main` merge) unless named.
 - Rendered benchmark on `2fabf03d` (`695b702c`): `RENDERED BENCHMARK PASSED 4`, load 1.7 to 2.3.
 - CI run 45032170483 on `695b702c`: success (Linux and Windows tests, exported builds, Compare replays, relay, tools). `sh tools/compare_local_traces.sh 45032170483`: replay, economy and combat `REPLAYS MATCHED 1200`, team `100`, netplay `325`.
 - `main` merge `526192a6` (docs and War Room only on the `main` side; conflicts in `packages.md` kept both sides, generated tables regenerated): full suite CASES 1380 CHECKS 153149 FAILURES 0, `run_checks` CHECKS PASSED 5, netplay match and rematch passed, team match `won tick=40182 winner=2 units_peak=314`; every pin equals its pre-merge value. No separate merge review: the resolution touched docs and generated tables only.
+
+---
+
+# P7 part 2 verification: team online (2v2 against host-run bots)
+
+Plan: [P7 part 2](../superpowers/plans/2026-11-24-p7-2-team-online.md), decisions in the [design answers](design-answers-2026-11-08.md#p7-part-2). Branch `p7-2-team-online` from `main` `7b69cb7a`. This section holds the rulings made while building, the netplay wall times and the colour table; the gate rows (whole-branch reviews, CI, benchmark, the rendered 2v2 row, the friend session) are added when they run. Raw run logs are private.
+
+## Rulings while building (reversible)
+
+- **Play page tests:** N25 (`game/tests/test_online_scene.gd`, the full `Body` child list of the Play page) read, at T2-7, `You, Map, Own, Map, Mode, <map info>, Opponent, Spacer1, "", Bot, Spacer2, Bot, Spacer3, OpenSlot, Spacer4, TeamBots, Advanced`: the "Opponent" label became "Mode" and the toggles "vs Bot" and "vs Friend", as the mock-up and its War Room round have them. After the owner's 2v2 match the Opponents row (None or 2 bots under vs Friend) was added; the list in `test_online_scene.gd` now reads `You, Map, Own, Map, Mode, <map info>, Opponent, Spacer1, "", Versus, Spacer5, Bot, Spacer2, Bot, Spacer3, OpenSlot, Spacer4, TeamBots, Advanced`.
+- **Static leak:** three `test_online_scene.gd` fixtures save and restore `SkirmishMain.factions`, since the launcher's `_start` now writes `{}` in a 1v1; no assertion changed.
+- **Audio asset pin:** `tools/test_audio_assets.py` lists `sfx/ping.wav`; that file pins each folder's contents, so the new tone needs its entry (T2-8; cost if wrong: drop the wav and the entry).
+- **Lockstep bound:** test L4's tick bound moved from +141 to +152, because the ping row in `test_lockstep.gd` adds sends.
+- **Pins:** the netplay `match` end tick 9746 did not move; the new `team` scenario pins the tick-6000 digest `3f515e4b795fc678`, which moves with every simulation tune that changes a 2v2 match (re-read it from the oracle line, never edit it to pass).
+- **Open for the whole-branch player-experience pass:** the start line has no owner-colour squares (a plain label); the hidden-map line sits 28 px under the map info, not beside it as drawn; the Waiting-view row edges use the base colours even with Neon on; the "Match ended" heading shows only in a 2v2; the defeated host gets no "You are out" notice (leaving ends the friend's match). Gate fix round: the Waiting edges now follow Neon and the defeated host reads "You are out. Keep this window open: it runs the bots for your teammate."; the start-line squares stay out (more than a small change to the notice label); the rest stands as accepted.
+- **Launcher layout bar:** `LAUNCHER_PAGE_PATHS["Play:friend"]` gained `Body/Versus`, and L19d now measures from the Versus toggles, following the Versus row added after the owner's match; no bar moved.
+- **Accepted at the gate (reviews, 2026-11-24):** a trio leave after the start is silent (not reachable from the launcher); `Lockstep._bot_rejections` grows for the whole match; `Hud.dock_top()` and `slab_top()` can read the previous frame's slab height for one frame when the card changes height (cosmetic).
+
+## Known limits
+
+- **The bot planner validates only against the live simulation.** `PlanRecorder` checks each order with `Simulation.check_command` at the decision tick, so two conflicting orders of one decision both pass, exactly as offline; an order that was valid at the decision and not at its applying tick is refused by the simulation then, silently.
+- **Input delay 30 or more is untested.** A bot decides every 30 ticks; with a delay of 30 ticks or more a bot could decide again before its order applies. The relay fixes the delay at 4 (`relay/room.go:21`), so the same-tick row for it is not covered by a test.
+
+## Netplay wall times
+
+On a Mac, local relay, each `NETPLAY PASSED`:
+
+| Scenario | Wall time |
+|---|---|
+| `match` | 17 s |
+| `rematch` | 29 s |
+| `left-mid-pump`, `version` | 2 s each |
+| `trio-play-on` | 4 s |
+| `trio-left-first`, `trio-result` | 3 s each |
+| `team` | 9.0 s when built (T2-5); 11 s in the slice check |
+| `team-guest-defeated`, `team-guest-quits`, `team-defeated-host-leaves` | 2 s each |
+| `team-host-leaves` | 3 s |
+
+The five `team*` scenarios add about 20 s to the CI loop (the export job allows 25 min, `.github/workflows/ci.yml`); CI runs 24 scenarios, the script's usage line lists 26 (`silent` and `relay-term` stay local).
+
+## Colours by player
+
+Host blue and guest teal in both windows, bots red and orange (`Palette.set_team_colours(bots)`; offline and 1v1 keep the eight fixed slots). Pinned by `test_team_colours_by_player`, the ΔE76 floor of 20 by `test_team_colours_delta_e` (normal and deuteranopia, both sets, every pair and each non-host colour against the ping colour; at planning the lowest pair was 23.6).
+
+| Player | Base | Neon |
+|---|---|---|
+| 1, host | `#628ffa` | `#2f7bff` |
+| 2, guest | `#0e92a7` | `#00d8e8` |
+| 3, first bot | `#d6120c` | `#ff2f45` |
+| 4, second bot | `#ec8600` | `#ff7a00` |

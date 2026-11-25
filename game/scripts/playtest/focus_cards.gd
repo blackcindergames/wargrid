@@ -2,7 +2,7 @@ extends RefCounted
 
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const PATH := "res://data/playtest/focus.json"
-const COMMAND_TYPES: Array[String] = ["move", "attack_move", "stop", "gather", "attack", "enter", "unload", "build", "resume_build", "cancel_build", "produce", "cancel_production", "set_rally", "defence_attack"]
+const COMMAND_TYPES: Array[String] = ["move", "attack_move", "stop", "gather", "attack", "enter", "unload", "build", "resume_build", "cancel_build", "produce", "cancel_production", "set_rally", "defence_attack", "ping"]
 const MIN_QUESTIONS: int = 3
 const MAX_QUESTIONS: int = 5
 static var chosen: String = ""

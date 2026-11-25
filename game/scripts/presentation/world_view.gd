@@ -410,15 +410,21 @@ func crate_marks() -> Array[Vector2]:
 	return marks
 
 func pick_target(plane_point: Vector2, own: int) -> int:
+	var teams: Dictionary = _teams()
 	for n in range(_order.size() - 1, -1, -1):
 		var i: int = _order[n]
-		if _rows.owner[i] != own and (_rows.flags[i] & ViewRows.CONTAINED) == 0 and not Registry.air_kinds.has(_kind_of(i)) and _pick_bounds(i).has_point(plane_point): return _rows.id[i]
+		if teams.get(_rows.owner[i], _rows.owner[i]) != teams.get(own, own) and (_rows.flags[i] & ViewRows.CONTAINED) == 0 and not Registry.air_kinds.has(_kind_of(i)) and _pick_bounds(i).has_point(plane_point): return _rows.id[i]
 	var point: Vector2 = Iso.plane_to_world(plane_point)
 	for building: Dictionary in _state.get("buildings", []):
 		var definition: Dictionary = Definitions.building(building.kind)
-		if building.owner == own or definition.is_empty() or Combat.masked(building): continue
+		if teams.get(building.owner, building.owner) == teams.get(own, own) or definition.is_empty() or Combat.masked(building): continue
 		if Rect2(Vector2(building.origin[0], building.origin[1]), Vector2(definition.footprint)).has_point(point): return building.id
 	return -1
+
+func _teams() -> Dictionary:
+	var teams := {}
+	for player: Dictionary in _state.get("players", []): teams[player.id] = player.get("team", player.id)
+	return teams
 
 func pick_entity(plane_point: Vector2, any_owner: bool = false) -> int:
 	for n in range(_order.size() - 1, -1, -1):

@@ -99,12 +99,41 @@ class PlaytestSessionTest(unittest.TestCase):
         cmd1 = self.path.parent / "sess-m1.cmd"
         self.assertEqual(
             rows[0],
-            ["1", str(cmd1), "offline", "skirmish", "7", "frc,china", "60", "aa", "30,60", "-", "0.11.0-dev+abc1234"],
+            [
+                "1",
+                str(cmd1),
+                "offline",
+                "skirmish",
+                "7",
+                "frc,china",
+                "60",
+                "aa",
+                "30,60",
+                "-",
+                "0.11.0-dev+abc1234",
+                "-",
+            ],
         )
         self.assertEqual(rows[1][5], "-", "online rows pass no --factions")
         self.assertEqual(rows[1][8], "-")
         self.assertEqual(rows[1][10], "0.11.0-dev+def5678")
         self.assertEqual(cmd1.read_text(), "line one\nline two\n")
+
+    def test_replay_rows_carry_bots(self):
+        data = session()
+        data["matches"][1]["bots"] = [{"player": 3, "faction": "china"}, {"player": 4, "faction": "frc"}]
+        data["matches"][1]["teams"] = [1, 1, 2, 2]
+        path = self._write(data)
+        rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
+        self.assertEqual(rows[1][11], "3:china,4:frc")
+        self.assertEqual(rows[0][11], "-", "a record without bots passes none")
+
+    def test_replay_rows_bots_from_a_resumed_sitting(self):
+        data = session()
+        data["matches"][1]["bots"] = [{"player": 3.0, "faction": "china"}, {"player": 4.0, "faction": "frc"}]
+        path = self._write(data)
+        rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
+        self.assertEqual(rows[1][11], "3:china,4:frc")
 
     def test_replay_rows_carry_controller(self):
         data = session()

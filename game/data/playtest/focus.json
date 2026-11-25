@@ -1,4 +1,19 @@
 [
+ {"id": "p7-team-online", "title": "Team up against two bots online",
+  "new": ["Host a match with a friend against two bots: on Play choose vs Friend, then Opponents 2 bots, pick the map and both bot factions, and Create match. Your friend joins with the code. You run the bots, so if you leave the match ends for both of you.", "You start side by side. The host is blue and the guest is teal in both windows; the bots are red and orange. Right-click one of your friend's units and your selection moves there instead of attacking.", "Ping the map for your friend: press G (or click Ping above the dock) and click a spot, or Alt+click. Your friend hears a short tone and sees a ring there, with an arrow at the screen edge if it is off screen. It fades after 30 seconds.", "If one of you leaves while both are still in the match, the other sees a Match ended panel that says who left. If you are the guest, have lost all your buildings and your host plays on, you may watch or leave from the menu (Esc) without ending the match.", "Known, not new: when an order is refused online, the unit voice answers before the refusal sounds."],
+  "try": [
+   {"id": "setup", "text": "Host: set up vs Friend with 2 bots and start the match with a friend"},
+   {"id": "colours", "text": "Look at the colours: find your units, your friend's and each bot's"},
+   {"id": "ping", "text": "Press G and click a spot to ping it, then ask your friend to ping one; try one off screen and click its arrow", "trigger": "ping"},
+   {"id": "first_attack", "text": "Note the time when the first bot attack reaches either of you"},
+   {"id": "leave", "text": "Open the menu (Esc) and read the Leave match question as host and as guest"}
+  ],
+  "questions": [
+   {"id": "contributed", "text": "Did you feel you contributed?"},
+   {"id": "tell_apart", "text": "Could you tell your friend's units from the bots'?"},
+   {"id": "ping_helped", "text": "Did a ping help?"},
+   {"id": "first_attack_fair", "text": "When did the first attack come, and did it feel fair?"}
+  ]},
  {"id": "p16-factory", "title": "Know what your factory is making",
   "new": ["Select a factory: NOW PRODUCING shows the unit, its bar and the seconds left; NEXT shows what comes after it, with repeats merged as ×N; +N more lists the rest. QUEUE n / 9 says how full it is.", "Click or right-click NOW PRODUCING to cancel that unit. Right-click a unit's button to cancel the last one of that kind. Hold Shift to queue or cancel five.", "Slow or stuck production says why: the seconds turn red under low power, and NOW reads Exit blocked when the unit cannot get out.", "The top right shows one icon per busy building: click to select it, double-click to go there. Its number counts every queued unit of the kind being made, the same as the ×N on that unit's button; hover it to see what is queued.", "Every unit button has a picture now, and the $ coin is gone: a cost you cannot afford is red."],
   "try": [

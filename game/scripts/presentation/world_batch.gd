@@ -52,6 +52,7 @@ static var _quads: Dictionary = {}
 static var _quad_colors: Dictionary = {}
 static var _ring_mesh := PackedVector2Array()
 static var _ring_colors: Dictionary = {}
+static var _ring_version: int = 0
 
 # [role, layer] per unit kind; test kinds replace Registry.air_kinds, which drops the cache.
 static func kind_info(kind: String) -> Array:
@@ -230,6 +231,9 @@ static func _body(role: StringName, detail: int, variant: int, bucket: int, turr
 
 # Cached on the merged body itself, so a dropped body drops its colours with it.
 func _mesh_colors(mesh: Dictionary, owner: int) -> PackedColorArray:
+	if mesh.get("colour_version") != Palette.colour_version:
+		mesh.erase("colors")
+		mesh.colour_version = Palette.colour_version
 	var by_owner: Dictionary = mesh.get_or_add("colors", {})
 	var key: int = owner + (1000 if bright_owners else 0)
 	if not by_owner.has(key):
@@ -268,6 +272,9 @@ func _append_ring(centre: Vector2, owner: int) -> void:
 	if _ring_mesh.is_empty(): _ring_mesh = _build_ring()
 	points.append_array(Transform2D(0.0, centre) * _ring_mesh)
 	var key: int = owner + (1000 if bright_owners else 0)
+	if _ring_version != Palette.colour_version:
+		_ring_colors.clear()
+		_ring_version = Palette.colour_version
 	if not _ring_colors.has(key):
 		var base: Color = Palette.owner_colors(owner, bright_owners)[0]
 		var built := PackedColorArray()

@@ -4,6 +4,7 @@ const Wire = preload("res://scripts/net/wire.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
+const MatchSettings = preload("res://scripts/match_settings.gd")
 const MAX_QUEUED_TICKS: int = 300 # a legitimate peer queues at most about 2 * input delay + 2 ticks; raise this if the relay delay nears 150
 const FRAME_RESERVE_BYTES: int = 256 # the tick envelope and hash around the commands, with room to spare
 
@@ -36,8 +37,10 @@ var _end_reason: String = ""
 var _desync_tick: int = -1
 var _rejections: Array[Dictionary] = []
 var _received_any: bool = false
+var _allowed: Dictionary = {}
+var _bot_rejections: Array[Dictionary] = []
 
-func _init(seat: int, seats: Array[int], delay: int = 4, hash_interval: int = 30, clock: Callable = Time.get_ticks_usec) -> void:
+func _init(seat: int, seats: Array[int], delay: int = 4, hash_interval: int = 30, clock: Callable = Time.get_ticks_usec, seat_players: Dictionary = {}) -> void:
 	_seat = seat
 	_seats = seats.duplicate()
 	_seats.sort()
@@ -48,13 +51,17 @@ func _init(seat: int, seats: Array[int], delay: int = 4, hash_interval: int = 30
 	for s in _seats:
 		_packets[s] = {}
 		_last_received[s] = delay - 1
+		_allowed[s] = seat_players.get(s, [s])
 		for tick in delay:
 			_packets[s][tick] = {"commands": []}
 
 static func for_start(seat: int, message: Dictionary) -> RefCounted:
 	var seats: Array[int] = []
 	seats.assign(message.seats)
-	return new(seat, seats, message.delay)
+	var seat_players: Dictionary = {}
+	var players: Array[int] = MatchSettings.bot_players(message.get("settings", {})).filter(func(player: int) -> bool: return not seats.has(player))
+	if not players.is_empty(): seat_players[1] = [1] + players
+	return new(seat, seats, message.delay, 30, Time.get_ticks_usec, seat_players)
 
 func received_any() -> bool:
 	return _received_any
@@ -63,10 +70,18 @@ func start(state: Dictionary, digest: String = "") -> void:
 	_last_sent = _delay - 1
 	finish_tick(0, state, digest)
 
-func submit(payload: Dictionary) -> bool:
+func owner_of(player: int) -> int:
+	return player if player != 0 else _seat
+
+func may_submit(player: int) -> bool:
+	return _allowed[_seat].has(owner_of(player))
+
+func submit(payload: Dictionary, player: int = 0) -> bool:
+	var owner: int = owner_of(player)
+	if not may_submit(owner): return false
 	var command: Dictionary = payload.duplicate(true)
 	command.tick = _last_sent + 1
-	command.player = _seat
+	command.player = owner
 	command.sequence = _sequence
 	var size: int = Wire.encode(command).to_utf8_buffer().size() + 1
 	if _queue_bytes + size > Wire.MAX_FRAME_BYTES - FRAME_RESERVE_BYTES: return false
@@ -139,10 +154,14 @@ func record(tick: int, issued: Array[Dictionary]) -> void:
 	for entry: Dictionary in issued:
 		var command: Dictionary = entry.command
 		_command_log.append(command)
-		if command.player != _seat: continue
-		_latency.append(now - _submit_times[command.sequence])
+		if not _allowed[_seat].has(command.player): continue
+		var own: bool = command.player == _seat
+		if own: _latency.append(now - _submit_times[command.sequence])
 		_submit_times.erase(command.sequence)
-		if not entry.ok: _rejections.append({"tick": tick, "sequence": command.sequence, "error": entry.error})
+		if entry.ok: continue
+		var refusal: Dictionary = {"tick": tick, "sequence": command.sequence, "error": entry.error}
+		if own: _rejections.append(refusal)
+		else: _bot_rejections.append(refusal.merged({"player": command.player}))
 
 func advance(sim: Simulation) -> bool:
 	if sim.match_over(): return false
@@ -187,6 +206,23 @@ func finish_tick(tick: int, state: Variant, digest: String = "") -> void:
 func wants_snapshot(tick: int) -> bool:
 	return tick % _hash_interval == 0
 
+func bot_rejections() -> Array[Dictionary]:
+	return _bot_rejections
+
+func seat_ids() -> Array[int]:
+	return _seats.duplicate()
+
+func bots() -> Array[int]:
+	var found: Array[int] = []
+	for s in _seats:
+		for player: int in _allowed[s]:
+			if not _seats.has(player): found.append(player)
+	found.sort()
+	return found
+
+func allowed(seat: int) -> Array:
+	return _allowed.get(seat, []).duplicate()
+
 func rejections() -> Array[Dictionary]:
 	return _rejections
 
@@ -197,6 +233,10 @@ func set_relay_lost() -> void:
 	if _ended(): return
 	_end("ended_relay", "connection to relay lost")
 
+func set_send_refused() -> void:
+	if _ended(): return
+	_end("ended_send", "frame send refused")
+
 func set_protocol_error(reason: String) -> void:
 	if _ended(): return
 	_end("ended_protocol", reason)
@@ -205,7 +245,7 @@ func left_before_start() -> bool:
 	return left_seat() != 0 and _left[left_seat()] < _delay
 
 func opponent_left() -> bool:
-	return _status == "ended_left" and not left_before_start() and _seats.size() == 2
+	return _status == "ended_left" and not left_before_start() and _seats.size() == 2 and bots().is_empty()
 
 func left_seat() -> int:
 	if _ended_by != 0: return _ended_by
@@ -263,7 +303,7 @@ func _receive_tick(message: Dictionary) -> void:
 		_end("ended_protocol", "tick out of order")
 		return
 	for command: Dictionary in message.commands:
-		if command.get("player") != s or command.get("tick") != message.tick:
+		if not _allowed[s].has(command.get("player")) or command.get("tick") != message.tick:
 			_end("ended_protocol", "bad command stamp")
 			return
 	if _packets[s].size() >= MAX_QUEUED_TICKS:
@@ -299,4 +339,4 @@ func _counts(s: int, tick: int) -> bool:
 	return not _left.has(s) or tick <= _left[s]
 
 func _defeated(s: int, tick: int, survivors: Variant) -> bool:
-	return tick == _left[s] + 1 and _left[s] >= _delay and survivors is Array and not (survivors as Array).has(s)
+	return tick == _left[s] + 1 and _left[s] >= _delay and survivors is Array and not _allowed[s].any(func(player: int) -> bool: return (survivors as Array).has(player))

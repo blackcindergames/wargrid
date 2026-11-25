@@ -17,6 +17,8 @@ signal opened
 const LEAVE_QUESTION := "Leave the match? Your opponent wins and the room closes."
 const QUIT_QUESTION := "Quit the game? Your opponent wins and the room closes."
 var confirm_leave: bool = false
+var leave_question: String = LEAVE_QUESTION
+var quit_question: String = QUIT_QUESTION
 var _menu: Control
 var _confirm: Control
 var _settings: Control
@@ -49,14 +51,15 @@ func _init(web: bool = OS.has_feature("web")) -> void:
 	_resume = _button(buttons, "Resume", resume_requested.emit)
 	_button(buttons, "Settings", func() -> void: _show(_settings, _settings.find_child("Back", true, false)))
 	_button(buttons, "Controls", func() -> void: _show(_controls, _controls.find_child("Back", true, false)))
-	_button(buttons, "Leave match", _ask.bind(LEAVE_QUESTION, "Leave", leave_requested.emit))
+	_button(buttons, "Leave match", func() -> void: _ask(leave_question, "Leave", leave_requested.emit))
 	# The browser tab cannot be closed by the game.
-	if not web: _button(buttons, "Quit", _ask.bind(QUIT_QUESTION, "Quit", quit_requested.emit))
+	if not web: _button(buttons, "Quit", func() -> void: _ask(quit_question, "Quit", quit_requested.emit))
 	var box: VBoxContainer = _column()
 	_confirm = _panel(center, "Confirm", box)
 	_question = _label("", &"HudSmallLabel")
 	_question.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_question.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# One line, the box widening to fit: the owner found a wrapped question hard to read (2v2 match, 2026-11-24).
+	_question.autowrap_mode = TextServer.AUTOWRAP_OFF
 	box.add_child(_question)
 	_confirm_button = _button(box, "", func() -> void: _on_confirm.call())
 	_cancel = _button(box, "Cancel", _show_main)
@@ -97,6 +100,7 @@ static func controls(web: bool = OS.has_feature("web"), mac: bool = OS.has_featu
 			_key_row("attack_move", HudModel.ORDER_KEYS.attack_move, "Attack move: armed units fight their way to the spot you click"),
 			_key_row("stop", HudModel.ORDER_KEYS.stop, "Stop"),
 			_key_row("unload", HudModel.ORDER_KEYS.unload, "Unload"),
+			_key_row("ping", HudModel.PING_KEY, "Team matches: ping for your teammate, then click the spot; Alt+click pings at once"),
 			["", "Click or right-click", "Cancel the unit in production (on NOW PRODUCING)", []],
 			["", "Top-right production icons", "Click: select its building · Double-click: go there", []]]],
 		["Groups", [

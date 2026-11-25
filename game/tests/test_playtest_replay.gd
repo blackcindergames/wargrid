@@ -21,7 +21,7 @@ class OracleClient extends Client:
 		pass
 
 func cases() -> Array[Callable]:
-	return [test_recorder_logs_accepted_commands, test_bot_through_recorder_keeps_memory, test_log_lines_format, test_offline_scene_replays_to_same_digest, test_replay_names_first_differing_row, test_offline_record_tick_hashes, test_restart_starts_new_record, test_oracle_factions_arg, test_old_record_replays_as_ai, test_oracle_controller_arg, test_oracle_state_rows, test_oracle_ring_log]
+	return [test_recorder_logs_accepted_commands, test_bot_through_recorder_keeps_memory, test_log_lines_format, test_offline_scene_replays_to_same_digest, test_replay_names_first_differing_row, test_offline_record_tick_hashes, test_restart_starts_new_record, test_oracle_factions_arg, test_old_record_replays_as_ai, test_oracle_controller_arg, test_oracle_bots_arg, test_offline_record_names_teams, test_oracle_state_rows, test_oracle_ring_log]
 
 func _stop(sim, sequence: int, tick: int = 0) -> Dictionary:
 	var builder: int = sim.snapshot().entities.filter(func(unit: Dictionary) -> bool: return unit.owner == 1)[0].id
@@ -265,6 +265,38 @@ func test_oracle_controller_arg(runner) -> bool:
 		runner.check(client._controller_error() == "", "RP10 --controller %s passes" % value)
 	client._args = {"controller": "bot"}
 	runner.check(client._controller_error().contains("'bot'"), "RP10 an unknown --controller is refused and named, got '%s'" % client._controller_error())
+	client.free()
+	return true
+
+func test_offline_record_names_teams(runner) -> bool:
+	var before := [SkirmishMain.factions, SkirmishMain.map_path, SkirmishMain.starts, SkirmishMain.match_seed]
+	var main = await _scene(runner, {1: "frc", 2: "china"}, "dry_wells", 7)
+	_step_main(main, 5)
+	var record: Dictionary = main.playtest_match()
+	runner.check(record.get("teams") == [1, 2] and record.get("bots") == [], "RP12 an offline record names its teams and no bots, got %s %s" % [record.get("teams"), record.get("bots")])
+	main.free()
+	SkirmishMain.factions = before[0]
+	SkirmishMain.map_path = before[1]
+	SkirmishMain.starts = before[2]
+	SkirmishMain.match_seed = before[3]
+	return true
+
+func test_oracle_bots_arg(runner) -> bool:
+	var client = _replay(PackedStringArray(), {"map": "broken_crown", "seed": "7", "bots": "3:china,4:frc", "oracle-ticks": "1"})
+	var players: Array = client._sim.snapshot().players
+	runner.check(players.size() == 4 and players.map(func(player: Dictionary) -> int: return player.team) == [1, 1, 2, 2], "RP11 --bots adds two bot players on team 2, got %s" % [players.map(func(player: Dictionary) -> int: return player.team)])
+	runner.check(players.size() == 4 and players[2].faction == "china" and players[3].faction == "frc", "RP11 --bots presets the bot factions")
+	runner.check(players.size() == 4 and players.all(func(player: Dictionary) -> bool: return player.controller == "human"), "RP11 every seat of a team oracle is human")
+	runner.check(client._sim.snapshot().match.status != "ongoing", "RP11 the match waits for the two seats' faction choices")
+	client.free()
+	client = OracleClient.new()
+	client._args = {"bots": "3:china,4:frc"}
+	runner.check(client._bots_error() == "", "RP11 well-formed --bots passes")
+	for bad: String in ["3:nope,4:frc", "3china", "3:china,", "x:china", "0:china", "-3:china", "1:china", "2:china", "3:china,3:frc", "4:china", "4:china,3:frc"]:
+		client._args = {"bots": bad}
+		runner.check(client._bots_error() != "", "RP11 --bots '%s' is refused" % bad)
+	client._args = {"bots": "3:china", "factions": "frc,china"}
+	runner.check(client._bots_error() != "", "RP11 --bots with --factions is refused")
 	client.free()
 	return true
 

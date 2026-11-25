@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: run_netplay.sh match|rematch|kill|left-mid|left-mid-pump|trio-play-on|trio-left-first|trio-result|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole
+# usage: run_netplay.sh match|rematch|kill|left-mid|left-mid-pump|trio-play-on|trio-left-first|trio-result|team|team-guest-defeated|team-guest-quits|team-host-leaves|team-defeated-host-leaves|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole
 scenario=$1
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 out=${NETPLAY_OUT:-$(mktemp -d)}
@@ -144,6 +144,36 @@ trio_checks() { # NAME... (clients that reach tick 300)
   ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
 }
 
+# Host runs the two bots through the real driver (--pump); both clients fix the map seed so the starts and the pin hold.
+start_team() { # EXTRA_SEAT1 -- EXTRA_SEAT2
+  start_pair "--map broken_crown --seed 7 --bots 3:china,4:frc --pump --seat-script opponent $1" "--map broken_crown --seed 7 --seat-script opponent $2"
+}
+
+team_checks() { # NAME...
+  for name in "$@"; do
+    grep -q '^NETCLIENT MAP broken_crown SEED 7 STARTS [^,]*,[^,]*,[^,]*,[^,]*$' "$out/$name.log" || fail "$name: no four-start MAP line for seed 7"
+  done
+  ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC"
+  ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
+  grep -q '"player":3' "$out/s2.cmd" || fail "s2 received no order of bot player 3 from the host"
+  ! grep -q '^NETCLIENT VICTORY left$' "$out"/s?.log || fail "a leave was announced as a victory in a match with bots"
+}
+
+# bot_order_after NAME TICK: the log holds an order of bot player 3 or 4 in a frame after TICK
+bot_order_after() {
+  ${PYTHON:-python3} - "$out/$1.cmd" "$2" <<'PY'
+import json
+import sys
+
+frames = [json.loads(line) for line in open(sys.argv[1])]
+sys.exit(0 if any(f["tick"] > int(sys.argv[2]) and any(c["player"] in (3, 4) for c in f["commands"]) for f in frames) else 1)
+PY
+}
+
+end_reason_has() { # NAME TEXT
+  case "$(end_line "$1")" in *"$2") ;; *) fail "$1 reason: $(end_line "$1")" ;; esac
+}
+
 wait_exit() { # PID SECONDS
   i=0; limit=$(($2 * 5))
   while kill -0 "$1" 2>/dev/null; do
@@ -159,6 +189,7 @@ expect_end() { # NAME STATUS
   case "$line" in "NETCLIENT END $2 TICK "*) ;; *) fail "$1: expected END $2, got '$line'" ;; esac
 }
 end_tick() { end_line "$1" | awk '{print $5}'; }
+end_winner() { end_line "$1" | awk '{print $7}'; }
 same_hashes() { ${PYTHON:-python3} "$repo_root/tools/compare_replays.py" --interval 30 --rows 0 "$@" >/dev/null || fail "hash logs differ: $*"; }
 
 oracle() {
@@ -167,8 +198,16 @@ oracle() {
   expect_end oracle match_over
 }
 
+team_oracle() {
+  # shellcheck disable=SC2086
+  $client -- --netclient --replay-log "$out/s1.cmd" --map broken_crown --seed 7 --bots 3:china,4:frc --oracle-ticks 6000 --hash-log "$out/oracle.tsv" >"$out/oracle.log" 2>&1 || fail "oracle failed"
+  expect_end oracle oracle_overrun
+}
+
 [ -z "$remote" ] || [ "$scenario" = match ] || fail "WARGRID_RELAY_URL supports only match"
 match_wait=${WARGRID_MATCH_WAIT:-180}
+# Moves with every simulation tune that changes a 2v2 match; re-read it from the oracle line, never edit it to pass.
+TEAM_PIN=3f515e4b795fc678
 
 case $scenario in
   match|proxy-clean|proxy-burst)
@@ -184,6 +223,7 @@ case $scenario in
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
     [ "$(end_tick s1)" = 9746 ] || fail "terminal tick $(end_tick s1), pinned 9746"
+    [ "$(end_winner s1)" = 1 ] && [ "$(end_winner s2)" = 1 ] || fail "winners $(end_winner s1) / $(end_winner s2), pinned 1"
     oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
     [ -n "$remote" ] || ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     [ "$scenario" = match ] || proxies_accepted
@@ -202,6 +242,7 @@ case $scenario in
     expect_end s1 match_over; expect_end s2 match_over
     [ "$(end_tick s1)" = "$(end_tick s2)" ] || fail "terminal ticks differ"
     [ "$(end_tick s1)" = 9746 ] || fail "second match terminal tick $(end_tick s1), pinned 9746"
+    [ "$(end_winner s1)" = 1 ] && [ "$(end_winner s2)" = 1 ] || fail "second match winners $(end_winner s1) / $(end_winner s2), pinned 1"
     for name in s1 s2; do
       [ "$(grep -c '^NETCLIENT MAP' "$out/$name.log")" = 2 ] || fail "$name: expected two MAP lines"
       [ "$(grep -c '^NETCLIENT OVER TICK 9746$' "$out/$name.log")" = 1 ] || fail "$name: expected one OVER TICK 9746"
@@ -271,6 +312,52 @@ case $scenario in
     same_hashes "$out/s1.tsv" "$out/s3.tsv"
     grep -q '^NETPLAY LATENCY' "$out/s1.log" || fail "s1: no NETPLAY LATENCY line, so the pump did not run"
     trio_checks s1 s2 s3 ;;
+  team)
+    start_relay; start_team "--stop-at-tick 6000" "--stop-at-tick 6000"
+    wait_exit "$pid1" "$match_wait"; wait_exit "$pid2" "$match_wait"
+    expect_end s1 stopped; expect_end s2 stopped
+    [ "$(end_tick s1)" = 6000 ] && [ "$(end_tick s2)" = 6000 ] || fail "stop ticks $(end_tick s1) / $(end_tick s2), expected 6000"
+    team_checks s1 s2
+    grep -q '"player":4' "$out/s1.cmd" || fail "s1.cmd holds no command of bot player 4"
+    team_oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
+    digest=$(sed -n 's/^ORACLE FINAL 6000 //p' "$out/oracle.log")
+    [ "$digest" = "$TEAM_PIN" ] || fail "tick 6000 digest $digest, pinned $TEAM_PIN"
+    echo "team tick 6000 digest $digest" ;;
+  team-guest-defeated)
+    start_relay; start_team "--stop-at-tick 900 --defeat 2@300" "--stop-at-tick 320 --defeat 2@300"
+    wait_exit "$pid1" 120; wait_exit "$pid2" 120
+    expect_end s1 stopped; expect_end s2 stopped
+    [ "$(end_tick s1)" = 900 ] || fail "s1 ended at $(end_tick s1), expected 900"
+    [ "$(end_tick s2)" = 320 ] || fail "s2 ended at $(end_tick s2), expected 320"
+    for name in s1 s2; do grep -q '^NETCLIENT DEFEAT 2 AT 300$' "$out/$name.log" || fail "$name: no DEFEAT 2 AT 300"; done
+    team_checks s1 s2
+    bot_order_after s1 324 || fail "s1.cmd holds no bot order after the guest's leave"
+    same_prefix "$out/s1.tsv" "$out/s2.tsv" ;;
+  team-guest-quits)
+    start_relay; start_team "" "--stop-at-tick 300"
+    wait_exit "$pid1" 120; wait_exit "$pid2" 120
+    expect_end s1 ended_left; expect_end s2 stopped
+    end_reason_has s1 "player 2 disconnected"
+    between "s1 end tick" "$(end_tick s1)" 300 310
+    team_checks s1 s2
+    same_prefix "$out/s1.tsv" "$out/s2.tsv" ;;
+  team-host-leaves)
+    start_relay; start_team "--stop-at-tick 300" ""
+    wait_exit "$pid1" 120; wait_exit "$pid2" 120
+    expect_end s1 stopped; expect_end s2 ended_left
+    end_reason_has s2 "player 1 disconnected"
+    between "s2 end tick" "$(end_tick s2)" 300 310
+    team_checks s1 s2
+    same_prefix "$out/s1.tsv" "$out/s2.tsv" ;;
+  team-defeated-host-leaves)
+    start_relay; start_team "--stop-at-tick 320 --defeat 1@300" "--defeat 1@300"
+    wait_exit "$pid1" 120; wait_exit "$pid2" 120
+    expect_end s1 stopped; expect_end s2 ended_left
+    end_reason_has s2 "player 1 disconnected"
+    between "s2 end tick" "$(end_tick s2)" 320 330
+    for name in s1 s2; do grep -q '^NETCLIENT DEFEAT 1 AT 300$' "$out/$name.log" || fail "$name: no DEFEAT 1 AT 300"; done
+    team_checks s1 s2
+    same_prefix "$out/s1.tsv" "$out/s2.tsv" ;;
   stall)
     start_relay; start_pair "" "--stall-at-tick 300 --stall-seconds 3"
     wait_exit "$pid1" 180; wait_exit "$pid2" 180

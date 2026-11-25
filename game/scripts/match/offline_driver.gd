@@ -158,8 +158,14 @@ func closes_placement_on_click() -> bool:
 func confirm_leave() -> bool:
 	return false
 
-func opponent_left() -> bool:
-	return false
+func leave_heading() -> String:
+	return ""
+
+func leave_question() -> String:
+	return ""
+
+func quit_question() -> String:
+	return ""
 
 func rematch_pending() -> bool:
 	return false
@@ -175,6 +181,18 @@ func can_play_again() -> bool:
 
 func play_again() -> void:
 	pass
+
+func teammate() -> int:
+	return 0
+
+func can_ping() -> bool:
+	return false
+
+func take_pings() -> Array[Dictionary]:
+	return []
+
+func bot_players() -> Array[int]:
+	return BOTS
 
 func take_rematch() -> int:
 	return -1
@@ -195,7 +213,7 @@ func detach() -> void:
 	pass
 
 func match_header() -> Dictionary:
-	return {"mode": "offline", "factions": [_factions[1], _factions[2]]}
+	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "teams": [1, 2], "bots": []}
 
 func match_log() -> Dictionary:
 	var played: Dictionary = pump.record()

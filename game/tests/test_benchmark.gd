@@ -22,7 +22,7 @@ class SlowHud extends Hud:
 		super(view, selection, view_player, seat)
 
 func cases() -> Array[Callable]:
-	return [test_statistics, test_fixtures, test_progression, test_rendered_probe_ticks, test_snapshot_size_ceiling, test_combat_fixtures, test_transports_fixture, test_defences_fixture, test_skirmish3v3_fixture, test_combat_work_ceiling, test_volley_retaliation_work, test_horde_render_layout, test_horde_render_500_counts, test_workload_asserts_pure, test_settled_matches_snapshot_predicate, test_gate_values, test_draw_call_ceiling, test_cpu_frame_pairs_draw_with_its_tick, test_web_run_is_report_only, test_interpolation_arg, test_benchmark_runs_without_interpolation, test_units_reported_are_units_run, test_horde_camera_follows_army_when_zoomed, test_worst_tick, test_stats_mean, test_over_budget_line, test_late_game_layout, test_hud_flag_runs_one_layout, test_hud_layout_in_the_window, test_hud_update_sits_inside_the_timed_tick, test_window_mismatch_fails]
+	return [test_statistics, test_fixtures, test_progression, test_rendered_probe_ticks, test_snapshot_size_ceiling, test_combat_fixtures, test_transports_fixture, test_defences_fixture, test_skirmish3v3_fixture, test_combat_work_ceiling, test_volley_retaliation_work, test_horde_render_layout, test_horde_render_500_counts, test_workload_asserts_pure, test_settled_matches_snapshot_predicate, test_gate_values, test_draw_call_ceiling, test_cpu_frame_pairs_draw_with_its_tick, test_web_run_is_report_only, test_interpolation_arg, test_benchmark_runs_without_interpolation, test_units_reported_are_units_run, test_horde_camera_follows_army_when_zoomed, test_worst_tick, test_stats_mean, test_over_budget_line, test_late_game_layout, test_team2v2_workload, test_team2v2_layout_selected, test_team2v2_layout_in_the_window, test_team2v2_failure, test_hud_flag_runs_one_layout, test_hud_layout_in_the_window, test_hud_update_sits_inside_the_timed_tick, test_window_mismatch_fails]
 
 func test_statistics(runner) -> bool:
 	runner.check(Stats.summary(PackedFloat64Array()) == {"n": 0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0}, "BM1 empty")
@@ -426,13 +426,67 @@ func test_late_game_layout(runner) -> bool:
 	runner.check(shots > 0, "BM22 shots land inside 60 ticks")
 	return true
 
+func test_team2v2_workload(runner) -> bool:
+	var sim: RefCounted = CombatWorkload.create("late_game_2v2")
+	var view: Dictionary = sim.view_state()
+	var teams := {}
+	for player: Dictionary in view.players: teams[player.team] = teams.get(player.team, 0) + 1
+	runner.check(view.players.size() == 4 and teams == {1: 2, 2: 2}, "BT1 four seats on two teams of two, got %s" % teams)
+	runner.check(sim.snapshot().map.size == [194, 187], "BT1 the match is on Ashfall")
+	var units := {}
+	for unit: Dictionary in sim.snapshot().entities:
+		if not unit.kind.ends_with("_builder"): units[unit.owner] = units.get(unit.owner, 0) + 1
+	runner.check(units == {1: 35, 2: 35, 4: 35, 5: 35}, "BT1 seats 1, 2, 4 and 5 start with 35 army units each, got %s" % units)
+	var shots: int = 0
+	for tick in range(60):
+		TeamMatch.step(sim, TeamMatch.SEATS_2V2)
+		shots += sim.combat_events().filter(func(event: Dictionary) -> bool: return event.type == "shot").size()
+	runner.check(shots > 0, "BT1 shots land inside 60 ticks")
+	return true
+
+func test_team2v2_layout_selected(runner) -> bool:
+	var bench = MovementBenchmark.new()
+	runner.check(bench._layouts_from(["--layout=team2v2"]) == ["team2v2"], "BT2 --layout=team2v2 runs it alone")
+	runner.check(MovementBenchmark.passed_line(["open", "dense", "ashfall", "horde", "team2v2"] as Array[String]) == "RENDERED BENCHMARK PASSED 4", "BT2 the gated count leaves out team2v2, which has no budget")
+	runner.check(MovementBenchmark.passed_line(["team2v2"] as Array[String]) == "", "BT2 team2v2 alone prints no gated line")
+	bench.free()
+	return true
+
+func test_team2v2_layout_in_the_window(runner) -> bool:
+	var probe = Probe.instantiate()
+	probe._sequence = ["team2v2"] as Array[String]
+	probe._quit_on_failure = false
+	runner.root.add_child(probe)
+	probe.set_physics_process(false)
+	runner.check(probe._simulation.tick() == 0, "BT3 fixture: the layout starts before any tick")
+	probe._sample_started = Time.get_ticks_usec()
+	probe._team_tick()
+	probe._team_orders = 0
+	for i in 319: probe._team_tick()
+	runner.check(probe.last_failure == "", "BT3 the layout ticks without failing, got '%s'" % probe.last_failure)
+	runner.check(probe.get_node("HUD/Status").text.begins_with("team2v2") and probe._tick_times.size() == 320, "BT3 every tick is timed")
+	runner.check(probe._team_orders > 0, "BT3 the bots' first decisions, after the scripted tick-1 orders, are counted, got %d" % probe._team_orders)
+	runner.check(probe.get_node("Camera2D").position == MovementBenchmark.team_camera(probe._simulation.view_state().units), "BT3 the camera follows the units each tick")
+	probe._team_orders = 0
+	probe._finish_team()
+	runner.check(probe.last_failure.contains("no orders"), "BT3 a window without bot orders fails, got '%s'" % probe.last_failure)
+	probe.free()
+	return true
+
+func test_team2v2_failure(runner) -> bool:
+	runner.check(MovementBenchmark.team_failure(3, 10, 2) == "", "BT4 orders, shots and both teams alive pass")
+	runner.check(MovementBenchmark.team_failure(0, 10, 2).contains("no orders"), "BT4 no bot orders fail")
+	runner.check(MovementBenchmark.team_failure(3, 0, 2).contains("no shots"), "BT4 no shots fail")
+	runner.check(MovementBenchmark.team_failure(3, 10, 1).contains("team"), "BT4 a wiped-out team fails")
+	return true
+
 func test_hud_flag_runs_one_layout(runner) -> bool:
 	var bench = MovementBenchmark.new()
 	runner.check(bench._layouts_from(["--hud"]) == ["hud_select"], "BH1 --hud runs only hud_select")
 	runner.check(bench._hud_from(["--hud"]) and not bench._hud_from([]), "BH1 the flag is read from the args")
 	runner.check(not bench._report_only_from(["--hud"]) and not bench._report_only_from(["--hud", "--expect-window=2560x1080"]), "BH1 --hud alone, with or without --expect-window, is not report-only")
 	runner.check(bench._report_only_from(["--hud", "--zoom=1.0"]), "BH1 --hud with another option is report-only")
-	runner.check(bench._layouts_from([]) == ["open", "dense", "ashfall", "horde"], "BH1 without the flag the four standard layouts")
+	runner.check(bench._layouts_from([]) == ["open", "dense", "ashfall", "horde", "team2v2"], "BH1 without the flag the four standard layouts and team2v2")
 	runner.check(bench._layouts_from(["--layout=dense"]) == ["dense"] and bench._layouts_from(["--units=500"]) == ["horde"], "BH1 the other options still pick their layouts")
 	bench.free()
 	return true

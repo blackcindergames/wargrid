@@ -55,6 +55,9 @@ func is_open() -> bool:
 func closed() -> bool:
 	return _called and (_refused or _peer.get_ready_state() == WebSocketPeer.STATE_CLOSED)
 
+func refused() -> bool:
+	return _refused
+
 func close() -> void:
 	if _called: _peer.close()
 

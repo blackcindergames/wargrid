@@ -10,7 +10,7 @@ const Definitions = preload("res://scripts/simulation/economy_definitions.gd")
 const SkirmishScene = preload("res://scenes/skirmish.tscn")
 
 func cases() -> Array[Callable]:
-	return [test_second_base_attack_within_30s_is_silent, test_building_lost_cooldown_30s, test_low_power_cooldown_120s, test_insufficient_funds_cooldown_30s, test_line_expires_after_5s, test_one_line_at_a_time_by_priority, test_waiting_line_not_queued_twice, test_triggers_from_snapshots, test_unit_ready_not_fired_by_spawns, test_rubble_is_not_base, test_unit_attack_is_not_base_attack, test_frc_never_low_power, test_announcer_follows_local_seat, test_match_end_lines, test_online_start_says_nothing, test_restart_starts_silent, test_restart_resets_tick_guard, test_match_end_drops_queued_lines, test_funds_line_from_results_and_rejections, test_submit_without_funds_announces, test_blocked_presses_click_each_voice_once, test_allied_base_hit_has_its_own_line, test_allied_line_cooldown, test_defences_count_holes_do_not, test_own_and_allied_hit_in_one_tick, test_last_attack_for_space, test_alert_text, test_alert_text_follows_the_newest_tick, test_hit_on_a_site_gone_from_both_views]
+	return [test_second_base_attack_within_30s_is_silent, test_building_lost_cooldown_30s, test_low_power_cooldown_120s, test_insufficient_funds_cooldown_30s, test_line_expires_after_5s, test_one_line_at_a_time_by_priority, test_waiting_line_not_queued_twice, test_triggers_from_snapshots, test_unit_ready_not_fired_by_spawns, test_rubble_is_not_base, test_unit_attack_is_not_base_attack, test_frc_never_low_power, test_announcer_follows_local_seat, test_match_end_lines, test_online_start_says_nothing, test_restart_starts_silent, test_restart_resets_tick_guard, test_match_end_drops_queued_lines, test_funds_line_from_results_and_rejections, test_submit_without_funds_announces, test_blocked_presses_click_each_voice_once, test_allied_base_hit_has_its_own_line, test_allied_line_cooldown, test_defences_count_holes_do_not, test_own_and_allied_hit_in_one_tick, test_last_attack_for_space, test_alert_text, test_alert_text_follows_the_newest_tick, test_hit_on_a_site_gone_from_both_views, test_ping_tone_through_announcer_cooldown]
 
 func _starts(announcer, line: String, tick: int) -> bool:
 	announcer.request(line, tick)
@@ -445,4 +445,18 @@ func test_hit_on_a_site_gone_from_both_views(runner) -> bool:
 	_step(quiet, 2, [hole_shot])
 	quiet.update(_allied_state(3, []))
 	runner.check(_lines(quiet, 3).is_empty() and quiet.take_alert().is_empty() and quiet.last_attack() == null, "AL8 a rebuild hole, gone, says nothing")
+	return true
+
+func test_ping_tone_through_announcer_cooldown(runner) -> bool:
+	var cooldown: int = Announcer.COOLDOWN_TICKS.get("ping", 0)
+	var announcer = Announcer.new()
+	runner.check(cooldown > 0, "PT1 the ping tone has a cooldown, got %d" % cooldown)
+	runner.check(_starts(announcer, "ping", 100), "PT1 a team ping starts its tone")
+	runner.check(not _starts(announcer, "ping", 100 + cooldown - 1), "PT1 a second ping inside the cooldown stays quiet")
+	runner.check(_starts(announcer, "ping", 100 + cooldown), "PT1 a ping after the cooldown is heard")
+	var both = Announcer.new()
+	for line: String in ["ping", "allied_base_under_attack", "base_under_attack"]: both.request(line, 0)
+	var order: Array = [both.next(0, false), both.next(1, false), both.next(2, false)]
+	runner.check(order == ["base_under_attack", "allied_base_under_attack", "ping"], "PT1 the tone waits below both base alarms, got %s" % [order])
+	runner.check(ResourceLoader.exists(Announcer.path("ping")), "PT1 the tone's wav ships at %s" % Announcer.path("ping"))
 	return true

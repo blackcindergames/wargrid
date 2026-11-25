@@ -7,11 +7,16 @@ const Wire = preload("res://scripts/net/wire.gd")
 const TimingStats = preload("res://scripts/debug/timing_stats.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const ResultPanel = preload("res://scripts/match/result_panel.gd")
+const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const CATCH_UP_STEPS: int = 2
 const MAX_CATCH_UP_CREDIT: int = 4
 const DESYNC_DIR: String = "user://desync"
 const LATENCY_FILE: String = "user://netplay-latency.txt"
 const TOO_MANY_ORDERS: String = "Too many orders at once; wait a moment"
+const START_LINE_TICKS: int = 150
+const HOST_LEFT: String = "The host left. The match is over."
+const RELAY_LOST: String = "Connection to relay lost"
 
 var pump: SimPump
 var first_note: SimPump.Note
@@ -32,6 +37,7 @@ var _credit: int = 0
 var _rejections_seen: int = 0
 var _log_seen: int = 0
 var _answers: Array[Dictionary] = []
+var _pings: Array[Dictionary] = []
 var _preview_request: Dictionary = {}
 var _preview_answer: Dictionary = {}
 var _seat: int
@@ -40,6 +46,7 @@ var _friend_again: bool = false
 var _rematch_seed: int = -1
 var _taken: Array[int] = []
 var _next_tick: int = 0
+var _start_tick: int = -1
 
 func _init(transport: RefCounted, lockstep: RefCounted, faction: String, seat: int) -> void:
 	_transport = transport
@@ -61,7 +68,7 @@ func _on_session(message: Dictionary) -> bool:
 	_phase = "playing"
 	return true
 
-func create(map_path: String, starts: Array[int], _factions: Dictionary, match_seed: int) -> void:
+func create(map_path: String, starts: Array[int], factions: Dictionary, match_seed: int) -> void:
 	_map_path = map_path
 	_starts = starts
 	_seed = match_seed
@@ -70,7 +77,11 @@ func create(map_path: String, starts: Array[int], _factions: Dictionary, match_s
 	_rejections_seen = 0
 	_log_seen = 0
 	_credit = 0
-	adopt(Skirmish.create(true, "human", {}, map_path, starts))
+	var bots: Array[int] = _lockstep.bots()
+	var bot_factions := {}
+	for bot: int in bots:
+		if factions.has(bot): bot_factions[bot] = factions[bot]
+	adopt(Skirmish.create(true, "human", bot_factions, map_path, starts, _lockstep.seat_ids().size() + bots.size(), teams()))
 
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
@@ -80,7 +91,9 @@ func adopt(value: Simulation) -> void:
 	_last = first_note
 	_next_tick = first_note.tick
 	_taken = []
+	_start_tick = -1
 	_answers = []
+	_pings = []
 	_preview_request = {}
 	_preview_answer = {}
 
@@ -109,6 +122,7 @@ func leave() -> void:
 
 func step() -> void:
 	for text: Variant in _transport.poll(): _lockstep.receive(text)
+	if not _finished and _transport.refused(): _lockstep.set_send_refused()
 	if not _finished and (_transport.closed() or _transport.silent(Time.get_ticks_usec())): _lockstep.set_relay_lost()
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
 	for i in CATCH_UP_STEPS:
@@ -127,6 +141,8 @@ func step() -> void:
 func _tick_job(commands: Array[Dictionary]) -> SimPump.Job:
 	var job := SimPump.Job.new()
 	job.commands = commands
+	job.bots.assign(_lockstep.allowed(_seat).filter(func(player: int) -> bool: return player != _seat))
+	job.plan_bots = true
 	job.preview = _preview_request
 	job.want_digest = _lockstep.wants_snapshot(_next_tick + 1)
 	return job
@@ -138,6 +154,8 @@ func drain() -> Array[SimPump.Note]:
 		if not note.preview.is_empty(): _preview_answer = note.preview
 		_finish_job(note)
 	if not notes.is_empty(): _last = notes[-1]
+	_pings.append_array(_new_pings(notes))
+	if _start_tick < 0 and teammate() != 0 and current().view.players.all(func(player: Dictionary) -> bool: return player.has("faction")): _start_tick = current().tick
 	_answers.append_array(_new_answers())
 	_settle()
 	return notes
@@ -153,6 +171,7 @@ func _finish_job(note: SimPump.Note) -> void:
 		_lockstep.set_protocol_error("note at tick %d for taken tick %d" % [note.tick, tick])
 		return
 	_lockstep.record(tick, note.issued)
+	for command: Dictionary in note.bot_commands: _lockstep.submit(command, command.player)
 	_lockstep.finish_tick(note.tick, note.snapshot if not note.digest.is_empty() else null, note.digest)
 
 func _settle() -> void:
@@ -208,6 +227,29 @@ func _new_answers() -> Array[Dictionary]:
 	for sequence: Variant in errors: answers.append({"command": {}, "ok": false, "error": errors[sequence]})
 	return answers
 
+# Accepted team pings: the result rows say which were applied, the command log holds their targets (plan T2-8); read before _new_answers moves the cursor.
+func _new_pings(notes: Array[SimPump.Note]) -> Array[Dictionary]:
+	var applied: Dictionary = {}
+	for note: SimPump.Note in notes:
+		for result: Dictionary in note.results:
+			if result.ok: applied[[result.player, result.sequence]] = true
+	var pings: Array[Dictionary] = []
+	var played: Array = _lockstep.command_log()
+	for i in range(_log_seen, played.size()):
+		var command: Dictionary = played[i]
+		if command.type == "ping" and (command.player == _seat or command.player == teammate()) and applied.has([command.player, command.sequence]):
+			pings.append({"player": command.player, "target": Vector2(command.target[0], command.target[1]), "tick": command.tick})
+	return pings
+
+# Not teammate() itself: the leave lines and result rows still name a teammate who left.
+func can_ping() -> bool:
+	return teammate() != 0 and _lockstep.left_seat() != teammate()
+
+func take_pings() -> Array[Dictionary]:
+	var pings: Array[Dictionary] = _pings
+	_pings = []
+	return pings
+
 func submit(payload: Dictionary) -> Dictionary:
 	if _lockstep.submit(payload): return {"ok": true, "error": ""}
 	# The screen reads refusals from take_answers, not from this return.
@@ -226,8 +268,21 @@ func confirm_leave() -> bool:
 func can_restart() -> bool:
 	return false
 
-func opponent_left() -> bool:
-	return _lockstep.opponent_left()
+func leave_heading() -> String:
+	if _lockstep.opponent_left(): return "Victory"
+	return ResultPanel.MATCH_ENDED if teammate() != 0 and _lockstep.status() == "ended_left" and not _lockstep.left_before_start() else ""
+
+func leave_question() -> String:
+	return _team_question("Leave the match?", "Leaving")
+
+func quit_question() -> String:
+	return _team_question("Quit the game?", "Quitting")
+
+func _team_question(ask: String, doing: String) -> String:
+	if teammate() == 0: return ""
+	if _lockstep.left_seat() == teammate(): return ask + " Your friend already left."
+	if _lockstep.allowed(_seat).size() > 1: return "%s You run the bots. %s ends the match for your friend." % [ask, doing]
+	return ask + (" The match ends for your friend too." if _last.survivors.has(_seat) else " Your friend plays on against the bots.")
 
 func rematch_pending() -> bool:
 	return _phase == "again"
@@ -236,8 +291,8 @@ func friend_wants_rematch() -> bool:
 	return _friend_again
 
 func rematch_line() -> String:
-	if opponent_left(): return "Your opponent left"
-	if _lockstep.left_seat() != 0: return "Your friend left"
+	var left: int = _lockstep.left_seat()
+	if left != 0: return HOST_LEFT if left == 1 and teammate() != 0 and leave_heading() == ResultPanel.MATCH_ENDED else "%s left the match" % ResultPanel.player_name(left, _faction(left))
 	if _phase == "done": return "The room closed"
 	if _friend_again: return "Your friend wants a rematch"
 	return "Waiting for your friend…" if _phase == "again" else ""
@@ -249,6 +304,18 @@ func play_again() -> void:
 	if _phase != "over": return
 	_transport.send_text(Wire.encode({"type": "again"}))
 	_phase = "again"
+
+func teammate() -> int:
+	if _lockstep.bots().is_empty(): return 0
+	for seat: int in _lockstep.seat_ids():
+		if seat != _seat: return seat
+	return 0
+
+func bot_players() -> Array[int]:
+	return _lockstep.bots()
+
+func teams() -> Array[int]:
+	return MatchSettings.teams(_lockstep.seat_ids().size(), _lockstep.bots().size())
 
 func take_rematch() -> int:
 	var match_seed: int = _rematch_seed
@@ -263,8 +330,9 @@ func over() -> bool:
 	return _finished
 
 func match_header() -> Dictionary:
-	var seats: Array = current().view.players.map(func(player: Dictionary) -> String: return player.get("faction", ""))
-	return {"mode": "online", "factions": seats}
+	var players: Array = current().view.players
+	var bots: Array = players.filter(func(player: Dictionary) -> bool: return bot_players().has(player.id)).map(func(player: Dictionary) -> Dictionary: return {"player": player.id, "faction": player.get("faction", "")})
+	return {"mode": "online", "factions": players.map(func(player: Dictionary) -> String: return player.get("faction", "")), "teams": teams(), "bots": bots}
 
 func match_log() -> Dictionary:
 	return match_header().merged({"commands": Lockstep.log_lines(_lockstep.command_log()), "end": (_lockstep.status() + " " + _lockstep.end_reason()).strip_edges()})
@@ -327,12 +395,29 @@ func _ms(microseconds: PackedInt64Array) -> PackedFloat64Array:
 	for value in microseconds: out.append(float(value) / 1000.0)
 	return out
 
+# After the start a leave's line is the result panel's, so it shows once.
 func notice() -> String:
 	if _left: return "" # leave() ends the lockstep through set_relay_lost, which is no relay loss
 	match _lockstep.status():
-		"waiting": return "Waiting for player %d" % _lockstep.waiting_for()[0]
-		"ended_left": return "Opponent left before the start (a different map or version, or their game tab was hidden)" if _lockstep.left_before_start() else "Player %d disconnected" % _lockstep.left_seat()
-		"ended_relay": return "Connection to relay lost" if _lockstep.end_reason() == "connection to relay lost" else "Relay: " + _lockstep.end_reason()
+		"waiting": return "Waiting for your teammate…" if teammate() != 0 else "Waiting for player %d" % _lockstep.waiting_for()[0]
+		"ended_left": return "Opponent left before the start (a different map or version, or their game tab was hidden)" if _lockstep.left_before_start() else ""
+		"ended_relay": return RELAY_LOST if _lockstep.end_reason() == "connection to relay lost" else "Relay: " + _lockstep.end_reason()
+		"ended_send": return RELAY_LOST
 		"ended_desync": return ("Desync — report downloaded as %s" if web else "Desync — report saved to %s") % _report_path
 		"ended_protocol": return "Match stopped: game error. Please report it."
+	if teammate() == 0: return ""
+	var out: bool = not _last.over and not _last.survivors.has(_seat)
+	if out and _lockstep.allowed(_seat).size() == 1: return "You are out. Your teammate plays on: watch, or leave from the menu (Esc)."
+	# The host runs the bots, so its leave would end the friend's match.
+	if out and _lockstep.left_seat() != teammate(): return "You are out. Keep this window open: it runs the bots for your teammate."
+	return _start_line()
+
+func _start_line() -> String:
+	if _start_tick < 0 or current().tick >= _start_tick + START_LINE_TICKS: return ""
+	var tags := PackedStringArray(bot_players().map(func(bot: int) -> String: return Registry.faction(_faction(bot)).get("short_name", "?")))
+	return "You and %s vs %d bots (%s)" % [ResultPanel.player_name(teammate(), _faction(teammate())), tags.size(), ", ".join(tags)]
+
+func _faction(player: int) -> String:
+	for row: Dictionary in current().view.players:
+		if row.id == player: return row.get("faction", "")
 	return ""

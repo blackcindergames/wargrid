@@ -8,7 +8,7 @@ const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const Production = preload("res://scripts/simulation/production.gd")
 
 static func create(layout: String, per_side: int = 150) -> Simulation:
-	assert(layout == "open" or layout == "dense" or layout == "contact" or layout == "skirmish3v3" or layout == "transports" or layout == "defences" or layout == "docks" or layout == "hordes300" or layout == "horde_render" or layout == "horde_render_500" or layout == "ramp" or layout == "frc" or layout == "late_game_3v3")
+	assert(layout == "open" or layout == "dense" or layout == "contact" or layout == "skirmish3v3" or layout == "transports" or layout == "defences" or layout == "docks" or layout == "hordes300" or layout == "horde_render" or layout == "horde_render_500" or layout == "ramp" or layout == "frc" or layout == "late_game_3v3" or layout == "late_game_2v2")
 	if layout == "skirmish3v3": return _skirmish3v3()
 	if layout == "transports": return _transports()
 	if layout == "defences": return _defences()
@@ -18,7 +18,8 @@ static func create(layout: String, per_side: int = 150) -> Simulation:
 	if layout == "horde_render_500": return _horde_render(25, 16)
 	if layout == "ramp": return _ramp()
 	if layout == "frc": return _frc()
-	if layout == "late_game_3v3": return _late_game_3v3()
+	if layout == "late_game_3v3": return _late_game(TeamMatch.SEATS)
+	if layout == "late_game_2v2": return _late_game(TeamMatch.SEATS_2V2)
 	var solids: Array[Vector2i] = []
 	if layout == "dense":
 		for x: int in [26, 34, 42]:
@@ -292,31 +293,31 @@ static func create_large() -> Simulation:
 const LATE_ARMY: Array[Array] = [["rifle_infantry", 12], ["rocket_infantry", 8], ["light_vehicle", 8], ["tank", 7]]
 const LATE_BASE: Array[String] = ["power_plant", "supply_center", "barracks", "factory", "defence"]
 
-# Six seats on Ashfall with built bases and 35 units each, in 5-row blocks either side of the midpoint between the teams so contact starts at once.
-static func _late_game_3v3() -> Simulation:
-	var sim: Simulation = TeamMatch.create()
+# Ashfall seats with built bases and 35 units each, in 5-row blocks either side of the midpoint between the teams so contact starts at once.
+static func _late_game(seats: Array[Dictionary]) -> Simulation:
+	var sim: Simulation = TeamMatch.create(seats)
 	var map: Dictionary = MapData.load(TeamMatch.MAP_PATH)
 	var builders := {}
 	for unit: Dictionary in sim.snapshot().entities: builders[unit.owner] = unit.id
-	var centroids: Array[Vector2] = [_team_centroid(map, 1), _team_centroid(map, 2)]
+	var centroids: Array[Vector2] = [_team_centroid(map, 1, seats), _team_centroid(map, 2, seats)]
 	var middle: Vector2 = (centroids[0] + centroids[1]) / 2.0
 	var armies := {}
 	var slots := {1: 0, 2: 0}
-	for entry: Dictionary in TeamMatch.SEATS:
+	for entry: Dictionary in seats:
 		_late_base(sim, entry, MapData.start_cell(map, entry.seat), builders[entry.seat])
 		armies[entry.seat] = _late_army(sim, entry, middle, slots[entry.team])
 		slots[entry.team] += 1
 	var total: int = 0
-	for entry: Dictionary in TeamMatch.SEATS:
+	for entry: Dictionary in seats:
 		total += armies[entry.seat].size()
-		_late_attack(sim, entry, map, armies[entry.seat])
-	assert(total == 210, "army %d mid %s" % [total, middle])
+		_late_attack(sim, entry, map, armies[entry.seat], seats)
+	assert(total == 35 * seats.size(), "army %d mid %s" % [total, middle])
 	return sim
 
-static func _team_centroid(map: Dictionary, team: int) -> Vector2:
+static func _team_centroid(map: Dictionary, team: int, seats: Array[Dictionary]) -> Vector2:
 	var sum := Vector2.ZERO
 	var count: int = 0
-	for entry: Dictionary in TeamMatch.SEATS:
+	for entry: Dictionary in seats:
 		if entry.team != team: continue
 		sum += Vector2(MapData.start_cell(map, entry.seat)) + Vector2(0.5, 0.5)
 		count += 1
@@ -356,10 +357,10 @@ static func _late_army(sim: Simulation, entry: Dictionary, middle: Vector2, slot
 		ids.append(id)
 	return ids
 
-static func _late_attack(sim: Simulation, entry: Dictionary, map: Dictionary, ids: Array[int]) -> void:
+static func _late_attack(sim: Simulation, entry: Dictionary, map: Dictionary, ids: Array[int], seats: Array[Dictionary]) -> void:
 	var start: Vector2 = Vector2(MapData.start_cell(map, entry.seat))
 	var best: Vector2 = Vector2.INF
-	for other: Dictionary in TeamMatch.SEATS:
+	for other: Dictionary in seats:
 		if other.team == entry.team: continue
 		var target: Vector2 = Vector2(MapData.start_cell(map, other.seat)) + Vector2(0.5, 0.5)
 		if start.distance_squared_to(target) < start.distance_squared_to(best): best = target
