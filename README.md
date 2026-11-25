@@ -50,7 +50,7 @@ Early development; the latest build is on the [Releases](https://github.com/pdst
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**18 of 47 parts done**
+**18 of 48 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -74,6 +74,7 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | A short Esc menu | Done |
 | ⏭ | Team up against bots | Next |
 | 📋 | A lobby for every match | Planned |
+| 📋 | Know what beats what | Planned |
 | 📋 | First new units | Planned |
 | 📋 | Hear the whole battlefield | Planned |
 | 📋 | Know why an order failed | Planned |
