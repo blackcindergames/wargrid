@@ -1751,3 +1751,14 @@ The owner questions from the SB5 planning run (research dossier, private) for th
 - **SB6 arms (Q11):** the physics-cap arm is dropped; SB6 compares the worker against inline.
 - **Input after an online end (Q12):** blocking input after an online match ends, as Zero Hour does, rides on P2.3a2 with its end wording.
 - **SB6 go-rule limits (Q9, Q10):** set at the SB6 plan, with SB5a's measurements in hand.
+
+## Lobby prototype answers (user, 2026-11-24)
+
+The owner wrote an HTML lobby prototype (private) that improves the launcher now and leaves room for later lobby features. Answers before its War Room round:
+
+- **Placement:** a new package, P20 A lobby for every match, right after P7 part 2 and ahead of P15; Skirmish and Host game share one slot page; P11 later adds ready-up and humans on both sides into the same layout.
+- **Features that do not exist:** stay hidden, as the [new launcher](#new-launcher-user-2026-11-13) rule has it; the layout reserves room where each goes (Quick play, public games, larger formats, match settings, bot levels), so adding one later does not redesign the page.
+- **Start flow:** online, the friend lands in the slot list and the host presses Start match; no ready badges until P11; no relay or protocol change.
+- **No match format row:** the map decides how many slots there are (one per start), as in Zero Hour; fewer players than starts stays allowed, for example a 1v1 with a friend on a 4-start map; never more players than starts, so a 2v2 never runs on a 2-start map; the format shows only as a label worked out from the teams (director and player-experience reviewer, both recommended; user, 2026-11-24).
+- **Round first:** a blocking War Room round built from the prototype (the look is the question): Play page (mode cards against today's mode row, reopening the P2.1 "no mode-card start screen" rule), slot list layout, slot colours (player colours, decided after the P7 part 2 match, against team colours), invite placement, guest view, map and faction pickers. Added after an engine and modern-RTS idea sweep (user, 2026-11-24): start pick on the map preview and a colour per slot with clash handling (both already planned for P11; the round shows where they go so the layout reserves room), a Random faction, and the host closing any single start (OpenRA). Out: a launcher results page (the in-match result panel stays), lobby chat, spectators; remembering the last setup and Play again exist already (P2.1, P2.2).
+
