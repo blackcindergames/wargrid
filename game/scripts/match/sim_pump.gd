@@ -9,6 +9,7 @@ const Combat = preload("res://scripts/simulation/combat.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const CommandRecorder = preload("res://scripts/playtest/command_recorder.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
+const PumpLogger = preload("res://scripts/match/pump_logger.gd")
 
 const MAX_QUEUED: int = 3
 const STALL_FRAMES: int = 90
@@ -103,6 +104,8 @@ static var _latched: bool = false
 static var _forced: String = ""
 # Pumps whose thread is started and not joined, abandoned ones included; the reference keeps a running pump alive.
 static var _threads: Array[RefCounted] = []
+# Installed once, on main, before the first worker starts; Godot has no lock around its logger list, so it is never removed.
+static var _logger: PumpLogger
 
 func _init(sim: Simulation) -> void:
 	_sim = sim
@@ -115,7 +118,7 @@ func start() -> Note:
 	var job := Job.new()
 	job.step = false
 	_current = Slot.new()
-	var note: Note = _note_for(job, _current)
+	var note: Note = _run_owned(job, _current)
 	if note == null: return _failed_start()
 	var map: Dictionary = _sim.map_data()
 	if not map.is_empty():
@@ -135,7 +138,7 @@ func post(job: Job) -> bool:
 	if _stopped or not _failure.is_empty(): return false
 	if _mode == "worker": return _post_queued(job)
 	var slot := Slot.new()
-	var note: Note = _note_for(job, slot)
+	var note: Note = _run_owned(job, slot)
 	if note == null:
 		_fail("post")
 		return false
@@ -167,7 +170,7 @@ func previous() -> Slot:
 
 func query(job: Job) -> Note:
 	if not _failure.is_empty(): return null
-	var note: Note = _query_worker(job) if _thread != null else _note_for(job, null)
+	var note: Note = _query_worker(job) if _thread != null else _run_owned(job, null)
 	if note == null and _failure.is_empty(): _fail("query")
 	return note
 
@@ -208,7 +211,10 @@ static func reset_process_latch_for_test() -> void:
 	_latched = false
 
 func _fail(kind: String) -> void:
-	_set_failure("%s job returned no note after tick %d" % [kind, _current.tick])
+	match kind:
+		"fault": _set_failure("fault: a job logged an error at tick %d" % (_current.tick + 1))
+		"owner thread": _set_failure("owner thread: a job ran off its thread at tick %d" % (_current.tick + 1))
+		_: _set_failure("%s job returned no note after tick %d" % [kind, _current.tick])
 
 func _set_failure(reason: String) -> void:
 	_latched = true
@@ -290,6 +296,7 @@ static func pump_counts() -> Dictionary: return {}
 
 func _spawn() -> void:
 	assert(OS.has_feature("threads") and not Profiler.enabled, "a worker needs threads and no profiler")
+	_install_logger()
 	_thread = Thread.new()
 	_thread.start(_run_worker)
 	_threads.append(self)
@@ -300,6 +307,11 @@ func _spawn() -> void:
 		running = _started.try_wait()
 	_note_wait(began)
 	if not running: _abandon("stall: worker did not start")
+
+static func _install_logger() -> void:
+	if _logger != null or not OS.is_debug_build(): return
+	_logger = PumpLogger.new()
+	OS.add_logger(_logger)
 
 static func _reap_abandoned() -> void:
 	for pump: RefCounted in _threads.duplicate(): pump.call("_reap")
@@ -330,15 +342,15 @@ func _run_next() -> bool:
 	if entry is Query: return _answer(entry)
 	var job: Job = entry
 	var slot := Slot.new()
-	var note: Note = _note_for(job, slot)
+	var note: Note = _run_owned(job, slot)
 	if note != null: _wait_gate("before_publish")
 	return _publish(note, slot)
 
 func _answer(asked: Query) -> bool:
-	asked.note = _note_for(asked.job, null)
+	asked.note = _run_owned(asked.job, null)
 	_mutex.lock()
 	if asked.note == null:
-		_marker = "query"
+		if _marker.is_empty(): _marker = "query"
 		_unpublished -= _drop_waiting()
 		_exited = true
 	_mutex.unlock()
@@ -357,7 +369,7 @@ func _drop_waiting() -> int:
 func _publish(note: Note, slot: Slot) -> bool:
 	_mutex.lock()
 	if note == null:
-		_marker = "post"
+		if _marker.is_empty(): _marker = "post"
 		_unpublished -= _drop_waiting() + 1
 		_exited = true
 		_mutex.unlock()
@@ -471,7 +483,28 @@ func stop() -> void:
 	else: _abandon("stall: stop waited %d ms" % WAIT_MSEC)
 
 func live() -> Simulation:
+	assert(not busy() and not _abandoned, "live() while a worker may own the simulation")
 	return _sim
+
+# The one place a job runs: on its owner thread, and a worker's job must log no error; either failure becomes a marker, not a note.
+func _run_owned(job: Job, slot: Slot) -> Note:
+	var id: int = OS.get_thread_caller_id()
+	if id != _owner_id:
+		push_error("sim pump job ran on thread %d, owner is %d" % [id, _owner_id])
+		_set_marker("owner thread")
+		return null
+	var watched: bool = _thread != null and _logger != null
+	var before: int = _logger.count_for(id) if watched else 0
+	var note: Note = _note_for(job, slot)
+	if watched and note != null and _logger.count_for(id) > before:
+		_set_marker("fault")
+		return null
+	return note
+
+func _set_marker(cause: String) -> void:
+	_mutex.lock()
+	if _marker.is_empty(): _marker = cause
+	_mutex.unlock()
 
 func _note_for(job: Job, slot: Slot) -> Note:
 	return run_job(_sim, _recorder, job, slot)
