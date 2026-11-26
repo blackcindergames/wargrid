@@ -528,7 +528,7 @@ selection_enabled = true
 
 [node name="Legal" type="Label" parent="Pages/Credits/Body"]
 layout_mode = 2
-text = "© 2026 Philipp Stuber; Ashfall, Dry Wells and Broken Crown maps © 2025 Electronic Arts Inc., modified. Free software under the GNU GPL, with no warranty. License and source: github.com/pdstuber/wargrid"
+text = "© 2026 Philipp Stuber; Ashfall, Dry Wells and Broken Crown maps © 2025 Electronic Arts Inc., modified. Free software under the GNU GPL, with no warranty. License and source: github.com/blackcindergames/wargrid"
 theme_type_variation = &"Hint"
 autowrap_mode = 3
 

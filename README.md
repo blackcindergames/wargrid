@@ -10,12 +10,12 @@
 <p align="center">
   <a href="https://wargrid.pdstuber.dev"><b>Play in the browser</b></a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/pdstuber/wargrid/releases">Download for Linux, Windows and macOS</a>
+  <a href="https://github.com/blackcindergames/wargrid/releases">Download for Linux, Windows and macOS</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/pdstuber/wargrid/actions/workflows/ci.yml"><img src="https://github.com/pdstuber/wargrid/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
-  <a href="https://github.com/pdstuber/wargrid/releases"><img src="https://img.shields.io/github/v/release/pdstuber/wargrid" alt="Latest release"></a>
+  <a href="https://github.com/blackcindergames/wargrid/actions/workflows/ci.yml"><img src="https://github.com/blackcindergames/wargrid/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="https://github.com/blackcindergames/wargrid/releases"><img src="https://img.shields.io/github/v/release/blackcindergames/wargrid" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
 </p>
 
@@ -39,13 +39,13 @@ Wargrid is an isometric RTS written in Godot 4 and typed GDScript. Its design fo
 ## Play
 
 - **In the browser:** https://wargrid.pdstuber.dev (verified in Safari; Chrome and Firefox untested).
-- **Desktop:** Linux, Windows and macOS zips on the [Releases](https://github.com/pdstuber/wargrid/releases) page. Builds are unsigned: on macOS 15 and later open System Settings > Privacy & Security > Open Anyway after the first blocked start (or run `xattr -dr com.apple.quarantine Wargrid.app` once); on Windows, SmartScreen needs More info, Run anyway.
+- **Desktop:** Linux, Windows and macOS zips on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Builds are unsigned: on macOS 15 and later open System Settings > Privacy & Security > Open Anyway after the first blocked start (or run `xattr -dr com.apple.quarantine Wargrid.app` once); on Windows, SmartScreen needs More info, Run anyway.
 - **Online with a friend:** one player clicks *Create match* and shares the match code; the other enters it and clicks *Join*. The host chooses the map; the other player's game checks it. Both need the same version.
 - **From source:** Godot 4.7.2, see [setup and commands](docs/development.md#setup-and-commands).
 
 ## Status
 
-Early development; the latest build is on the [Releases](https://github.com/pdstuber/wargrid/releases) page. Playable today: three factions, skirmish against a bot and online 1v1 on Dry Wells, Broken Crown or Ashfall. The long-term target is 3v3 online, friends against bots; scope and milestones are in the [blueprint](docs/blueprint.md).
+Early development; the latest build is on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Playable today: three factions, skirmish against a bot and online 1v1 on Dry Wells, Broken Crown or Ashfall. The long-term target is 3v3 online, friends against bots; scope and milestones are in the [blueprint](docs/blueprint.md).
 
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 

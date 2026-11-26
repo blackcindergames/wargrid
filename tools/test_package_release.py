@@ -6,7 +6,7 @@ from pathlib import Path
 
 from package_release import package
 
-SOURCE = "https://github.com/pdstuber/wargrid/tree/v0.7.0"
+SOURCE = "https://github.com/blackcindergames/wargrid/tree/v0.7.0"
 
 
 def _mode(info: zipfile.ZipInfo) -> int:

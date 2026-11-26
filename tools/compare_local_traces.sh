@@ -5,7 +5,7 @@
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 work=$(mktemp -d) || exit 1
 trap 'rm -rf "$work"' EXIT HUP INT TERM
-gh run download "$1" --repo pdstuber/wargrid -n replay-linux -n replay-windows -n netplay-linux -n netplay-windows -D "$work/ci" || exit 1
+gh run download "$1" --repo blackcindergames/wargrid -n replay-linux -n replay-windows -n netplay-linux -n netplay-windows -D "$work/ci" || exit 1
 WARGRID_REPLAY_TRACE="$work/replay-local.tsv" WARGRID_ECONOMY_REPLAY_TRACE="$work/economy-local.tsv" WARGRID_COMBAT_REPLAY_TRACE="$work/combat-local.tsv" WARGRID_TEAM_REPLAY_TRACE="$work/team-local.tsv" \
 	sh "$repo_root/tools/run_tests.sh" >"$work/tests.log" 2>&1 || { tail -20 "$work/tests.log"; exit 1; }
 for scenario in replay economy combat; do
