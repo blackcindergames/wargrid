@@ -1,6 +1,6 @@
 extends RefCounted
 
-const WARGRID_LINE: String = "Wargrid © 2026 Philipp Stuber. Free software under the GNU GPL v3 or later, with no warranty. License and source: github.com/pdstuber/wargrid"
+const WARGRID_LINE: String = "Wargrid © 2026 Philipp Stuber. Free software under the GNU GPL v3 or later, with no warranty. License and source: github.com/blackcindergames/wargrid"
 const PUBLIC_SANS_LINE: String = "Public Sans 2.001, github.com/uswds/public-sans, SIL Open Font License 1.1."
 const MACLEOD_HEADING: String = "Attribution text requested by Kevin MacLeod"
 const LICENSED_HEADING: String = "Licensed music and sound effects"

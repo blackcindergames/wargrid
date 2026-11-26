@@ -20,7 +20,7 @@ func test_branding_settings(runner) -> bool:
 		runner.check(config.get_value(options[preset], "application/icon_interpolation", -1) == 0, "LG2 %s scales the icon nearest-neighbour" % preset)
 	runner.check(config.get_value(options["Windows Desktop"], "application/modify_resources", false) == true, "LG2 Windows exe carries the icon")
 	var head: String = config.get_value(options["Web"], "html/head_include", "")
-	runner.check("og:image" in head and "https://wargrid.pdstuber.dev/og.png" in head, "LG2 web page has the preview image tag")
+	runner.check("og:image" in head and "https://wargrid.blackcindergames.com/og.png" in head, "LG2 web page has the preview image tag")
 	return true
 
 func test_icon_is_master_times_16(runner) -> bool:

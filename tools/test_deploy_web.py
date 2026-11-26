@@ -73,7 +73,7 @@ class DeployWebTest(unittest.TestCase):
         fly = [c for c in self.calls() if c.startswith("fly ")]
         self.assertEqual(len(fly), 1)
         self.assertIn(" -a wargrid-web ", fly[0])
-        self.assertIn("https://wargrid.pdstuber.dev/health", self.calls()[-1])
+        self.assertIn("https://wargrid.blackcindergames.com/health", self.calls()[-1])
 
     def test_test_refuses_a_release_version(self) -> None:
         self.assert_refused(self.run_script("0.6.0", "test"), '"0.6.0"')

@@ -120,6 +120,9 @@ func test_sidebar_switches_pages(runner) -> bool:
 	runner.check(_visible_pages(launcher) == ["Waiting"] and launcher.get_node("Sidebar/Nav/Play").button_pressed, "L5 Waiting shows alone and presses Play")
 	var version: Label = launcher.get_node_or_null("Sidebar/Version")
 	runner.check(version != null and str(ProjectSettings.get_setting("application/config/version")) in version.text, "L6 the sidebar shows the version")
+	for link: Array in [["Impressum", "https://blackcindergames.com/impressum/"], ["Privacy", "https://blackcindergames.com/privacy/"]]:
+		var button: LinkButton = launcher.get_node_or_null("Sidebar/Legal/Links/" + link[0])
+		runner.check(button != null and button.text == link[0] and button.uri == link[1] and button.is_visible_in_tree(), "L6b the sidebar links %s to %s" % link)
 	launcher.free()
 	return true
 
@@ -940,8 +943,10 @@ func test_round4_minors(runner) -> bool:
 	var theme: Theme = _launcher_theme()
 	for type: String in ["LineEdit"]:
 		runner.check(_font_path(theme.get_font("font", type)) == SEMIBOLD and theme.get_color("font_color", type) == Color.WHITE, "M1 %s text is SemiBold and white like .in" % type)
-	for state: String in ["focus_color", "pressed_color", "hover_pressed_color"]:
-		runner.check(theme.get_color("font_" + state, "FooterLink") == MUTED, "M2 FooterLink font_%s stays muted like its normal state" % state)
+	for link_type: String in ["FooterLink", "SidebarLink"]:
+		for state: String in ["focus_color", "pressed_color", "hover_pressed_color"]:
+			runner.check(theme.get_color("font_" + state, link_type) == MUTED, "M2 %s font_%s stays muted like its normal state" % [link_type, state])
+		runner.check(theme.get_stylebox("focus", link_type) == theme.get_stylebox("focus", "FooterLink"), "M2 %s focus uses the launcher focus ring" % link_type)
 	runner.check(theme.get_color("font_focus_color", "FooterLink") == theme.get_color("font_color", "FooterLink"), "M2 FooterLink focus text matches its normal text")
 	var line := Color("#808080")
 	for pair: Array in [["Button", "normal"], ["OptionButton", "normal"], ["LineEdit", "normal"], ["Tag", "normal"]]:

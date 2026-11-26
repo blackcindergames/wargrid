@@ -8,3 +8,10 @@ Cache-Control = "no-cache"
 Strict-Transport-Security = "max-age=31536000"
 X-Content-Type-Options = "nosniff"
 Referrer-Policy = "strict-origin-when-cross-origin"
+
+# The first address stays as a redirect so old links keep working.
+[[advanced.redirects]]
+host = "wargrid.pdstuber.dev"
+source = "/{**}"
+destination = "https://wargrid.blackcindergames.com/$1"
+kind = 301

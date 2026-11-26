@@ -103,7 +103,7 @@ func test_godot_license(runner) -> bool:
 
 func test_wargrid_line(runner) -> bool:
 	var panel := _panel(_credits())
-	runner.check("Wargrid © 2026 Philipp Stuber. Free software under the GNU GPL v3 or later, with no warranty." in panel and "github.com/pdstuber/wargrid" in panel, "CR7 Wargrid GPL line")
+	runner.check("Wargrid © 2026 Philipp Stuber. Free software under the GNU GPL v3 or later, with no warranty." in panel and "github.com/blackcindergames/wargrid" in panel, "CR7 Wargrid GPL line")
 	return true
 
 func test_third_party_components(runner) -> bool:

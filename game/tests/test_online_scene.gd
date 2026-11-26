@@ -761,7 +761,7 @@ func test_launcher_sections(runner) -> bool:
 		await runner.process_frame
 		runner.check(launcher.get_node("Pages/Settings/Body/Audio").get_global_rect().encloses(launcher.get_node("Pages/Settings/Body/Audio/Volume").get_global_rect()), "N5 Volume inside the audio column at %s" % size)
 		var legal: String = launcher.get_node("Pages/Credits/Body/Legal").text
-		for part in ["Electronic Arts", "GNU GPL", "no warranty", "github.com/pdstuber/wargrid"]:
+		for part in ["Electronic Arts", "GNU GPL", "no warranty", "github.com/blackcindergames/wargrid"]:
 			runner.check(part in legal, "N5 launcher legal notice names %s" % part)
 		launcher.free()
 		port.free()
