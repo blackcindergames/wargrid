@@ -566,3 +566,391 @@ Plan cites are `6ae89cd`; the right column is the base (HEAD `07f0c59`), filled 
 | `test_skirmish_scene.gd` OD1 recorder :1169, `test_sb3_match_log_equals_recorder` recorder :1479; `test_lockstep.gd` L19 `finish_tick` :607 | OD1 `recorder()` :1169, `test_sb3_match_log_equals_recorder` :1471 (`recorder()` :1479); `test_lockstep.gd` L19 `finish_tick` :607; as at `6ae89cd` |
 | `run_profile.gd` `_run` :22-47, `_team_match` :129-147; marker `run_benchmark.sh:31`, `run_profile.sh:17`, `perf_record.py:37`, `test_perf_charts.py:50` | `_run` :22, `_team_match` :129; marker `PROFILE COMPLETE 10` at `run_benchmark.sh:31`, `run_profile.sh:17`, `perf_record.py:37`, `test_perf_charts.py:50`; as at `6ae89cd` |
 | `relay/room.go` `forward` :254-262, `refuse` :362-365, `onOver` :367-379, `onAgain` :405-420, `rematch` :427-430 | `forward` :254, `refuse` :362, `onOver` :367, `onAgain` :406, `rematch` :427; `relay/` unchanged since `6ae89cd` |
+
+## SB5a
+
+Plan: [sim boundary SB5a](../superpowers/plans/2026-11-22-sim-boundary-sb5a.md), revision `5a0aba1c` (`git log -1 --format=%h main -- docs/superpowers/plans/2026-11-22-sim-boundary-sb5a.md`; the revision the run builds from). Branch `sim-boundary-sb5a` (worktree `~/projects/wargrid-wt-sb5a`) from `main` `e150751a`. From Task 1 on this section is the resume record; the night's rulings, per-task `uptime` and token totals stay in the night ledger (`~/projects/wargrid-overnight-work/sb5a-night/ledger.md`, private). Logs `L` = `~/projects/wargrid-overnight-work/sb5a-night/logs` (outside the repository; every log below is named by tag in it). The resume record and the task table are overwritten at each checkpoint; evidence rows, lists and the line map are append-only.
+
+```text
+Resume record (updated 2026-11-26 night, Task 1 done: base, counts, lists and line map written, uncommitted)
+Branch / base commit / working-tree state: sim-boundary-sb5a (worktree ~/projects/wargrid-wt-sb5a) / <base> = e150751a3bb6552154148f1089d4052e31d87565 (main = origin/main on 2026-11-26; P7 part 2 squash c6030abe and tag p7-2-team-online-tip = b0c95732 are in it; the plan's own base 608267eb and P2.3b squash aa00b2cf are replaced, see "Base") / HEAD = <base>; only this file changed
+Last green task / next incomplete task: Task 1 (docs only; check_public before the commit) / Task 2 (switch, mode, F3 word)
+Changed paths since last commit: docs/reference/sim-boundary-verification.md
+Last command / cases / checks / failures / exit / marker: SUITE(base) on a clean tree at e150751a: CASES 1682 CHECKS 159998 FAILURES 0, exit 0, TESTS PASSED 159998; NET(base, match) and NET(base, rematch) terminal tick 9746, NETPLAY PASSED; run_team_match.sh TEAM MATCH won tick=40182 winner=2 units_peak=314; CHECKS(base) CHECKS PASSED 5
+Known red case or blocker: none
+Approved decisions, pre-authorizations used, deferred gates: local commits per task on this branch only, never push or merge (night handoff, user, 2026-11-26); the Deck window of Task 13 (Q6) and the night settings (Q7) approved by starting the run; Task 16's push, CI, PERF_LABEL benchmark, /ponytail-review, gate reviews and the rendered rerun stay the owner's (Q8)
+Usage so far (python3 tools/session_usage.py <session files>): in the night ledger
+Next exact action: coordinator checks the guard (`git diff <base> --stat -- <untouched paths>` empty), runs check_public, commits Task 1; Task 2 reads the agent map's Performance entry first
+```
+
+| Task | What | Status |
+|---|---|---|
+| 1 | Base, counts, lists, line map (this section) | written, uncommitted |
+| 2 | Switch, mode, F3 word | pending |
+| 3 | The queue | pending |
+| 4 | `query` and `record` through the worker | pending |
+| 5 | Stop, exit, restart; runner hunk | pending |
+| 6 | Fault flag and fault processes | pending |
+| 7 | Drivers: room, failure, online end, riders | pending |
+| 8 | Lock proof, free-running run | pending |
+| 9 | Scene suite under the switch, CI steps | pending |
+| 10 | Loopback with one worker client | pending |
+| 11 | Digests on four loads | pending |
+| 12 | Match bench and `worker_ab.py` | pending |
+| 13 | Waiting-line test, Deck rider | pending |
+| 14 | Re-check on the base (not a merge) | pending |
+| 15 | Docs | pending |
+| 16 | Local gate checks | pending |
+
+### Base (Task 1 Step 1)
+
+- `<base>` = `e150751a` (`git rev-parse HEAD`, `main` and `origin/main` equal after `git fetch origin main` at the start; `main` had not moved). The plan's own base `608267eb` (2026-11-24) and P2.3b's squash `aa00b2cf` are recorded here only as the tree the plan's cites were taken at (night ledger Ruling: P7 merged before the run, base = `e150751a`, cost if wrong: none, the difference to the handoff's base would have been docs only).
+- `git diff e150751a HEAD --stat -- game tools relay protocol .github web` is empty (exit 0); the worktree was clean before and after every run below (`git status --short` empty).
+- P7 part 2 is on the base: squash `c6030abe` (`git log --oneline -1 --grep 'P7 part 2' main` is `103428e4 STATUS: P7 part 2 merged`), tag `p7-2-team-online-tip` = `b0c95732`; all of T2-1 to T2-9 are merged (the pings, T2-8, included, with the owner's beacon `d0dac5cb`). So the plan's "If P7 part 2 is on `main` before the run starts" branch applies: Tasks 1 to 16 build from this `main`, Task 14 is a re-check, not a merge.
+- Code-bearing commits between `608267eb` and `e150751a` (`git log --oneline 608267eb..e150751a`): P7 squash `c6030abe`, pings `d0dac5cb`, releases and version bumps `9da76b23`, `b3475518`, `d2443ea0`, `35ea3b4e` (`project.godot`, `export_presets.cfg`, release workflow), relay host move `14f5ad20`, `f27e50d3`, `986d2a7a` (`join_link.gd`, `credits.gd`, `release.yml`, `deploy_web.sh`, `compare_local_traces.sh`, their tests), and the P20 round `7d0160f0`/`e150751a` (`launcher.tscn`, `launcher_theme.tres`, docs). `game/export_presets.cfg` is not edited by SB5a.
+- Handoff permissions retaken from the night settings in force (not the plan's 2026-11-22 list): suite, lint, warnings, python, shell, team match, netplay (`NETPLAY_OUT=` under the night logs, with and without `WARGRID_SIM_THREAD=1`), conformance and checks scripts; `WARGRID_TEST_ONLY=`, `WARGRID_REPLAY_TRACE=` and the `WARGRID_SIM_THREAD=1` forms of `run_tests.sh`; `run_pump_faults.sh`, `run_worker_digests.sh`, `worker_ab.py` and its test, `export_build.sh`; `ssh`/`scp` to the Deck by its literal login; `godot:*`; git `status`, `diff`, `log`, `add`, `add -N`, `commit`, `rev-parse`, `show`, `fetch origin main`, `stash push --include-untracked -m park-t*`. `run_benchmark.sh`, `PERF_LABEL=` and `agy` are in the allow list and stay out of this run. `git merge`, `push`, `tag`, `reset`, `gh`, `fly` and `deploy_web.sh` are not in it.
+- Start state: `uptime` 1.49 1.96 2.58 at 20:17 (before the first run), 3.39 2.60 2.76 at 20:19 (suite shards running), 2.14 2.33 2.60 at 20:23 (after the last run); nothing was red, so no rerun was owed; `pgrep -fl godot` was empty before the first run and after the last.
+
+### Evidence ledger (Task 1 Step 2)
+
+Every row ran on a clean tree at `e150751a` in `~/projects/wargrid-wt-sb5a`; exit codes are the commands' own.
+
+| Check | Tag / log (in `L`) | Result |
+|---|---|---|
+| `SUITE(base)` | `base-suite.log`, traces `replay-base.tsv`, `economy-base.tsv`, `combat-base.tsv`, `team-base.tsv` | exit 0, `CASES 1682 CHECKS 159998 FAILURES 0`, `TESTS PASSED 159998` |
+| `ONLY(base, test_sim_pump)` | `base-only-test_sim_pump.log` | exit 0, CASES 47 CHECKS 192 |
+| `ONLY(base, test_online_scene)` | `base-only-test_online_scene.log` | exit 0, CASES 112 CHECKS 3545 |
+| `ONLY(base, test_skirmish_scene)` | `base-only-test_skirmish_scene.log` | exit 0, CASES 82 CHECKS 947 |
+| `ONLY(base, test_base_scene)` | `base-only-test_base_scene.log` | exit 0, CASES 29 CHECKS 198 |
+| `NET(base, match)` | `base-np-match.log`, `base-np-match/` | exit 0, terminal tick 9746, `NETPLAY PASSED match 17.6 s` |
+| `NET(base, rematch)` | `base-np-rematch.log`, `base-np-rematch/` | exit 0, terminal tick 9746, `NETPLAY PASSED rematch 25.2 s` |
+| `sh tools/run_team_match.sh` | `base-team-match.log` | exit 0, `TEAM MATCH won tick=40182 winner=2 units_peak=314`, `TEAM PATHS PASS capped_ticks=1128 max_cells=650 ceiling=804 max_queue=208 max_decisions=1` |
+| `CHECKS(base)` | `base-checks.log` | exit 0, `CHECKS PASSED 5` |
+
+The base is green; the traces and `base-np-*` directories are the baselines that `TRACES(<tag>)` and `NETEQ(<tag>)` compare against. IC1, IC2, OD1, S3 and RB8 are inside the suite.
+
+### Base counts (Task 1)
+
+Plan numbers are the plan's, taken at `608267eb`.
+
+| Count | Command | Base `e150751a` | Plan (`608267eb`) |
+|---|---|---|---|
+| Suites in `run_tests.gd` | `rg -o 'preload\("res://tests/' game/tests/run_tests.gd` | 83 | not stated |
+| `test_sim_pump` cases | `cases()` length | 47 (38 plus P7 part 2's nine) | not stated |
+| `test_online_scene` / `test_skirmish_scene` / `test_base_scene` cases | `ONLY` | 112 / 82 / 29 | not stated |
+| Drive-site hits | the plan's `rg -n "_physics_process\(\|driver\.step\(\)\|pump\.post\(\|BaseScene\.publish\|\.publish\(main\|\.drain\(\)" game/tests` | 226 (84 `BaseScene.publish`, 78 in `test_sim_pump.gd`, 37 direct, 24 `set_physics_process` toggles, 3 in the helpers `tick` and `publish`) | 217 |
+| Profiler cases | `rg -n 'Profiler.enabled = true' game/tests` | 13, 10 in the scene suites | 13 / 10 |
+| Driver and pump constructors | `rg -n "OnlineDriver.new\|OfflineDriver.new\|SimPump.new" game/tests` | 24 (P7 adds `test_sim_pump.gd:1121,1143,1144`) | 21 |
+| `static var` in the simulation | `rg -n "^static var" game/scripts/simulation` | 9 | 9 |
+| Profiler statics | `game/scripts/debug/profiler.gd:6-11` | 6 | 6 |
+| `PUMP_COUNTS` | `tools/test_sim_boundary.py:101-105`, scan excludes `:95-` (`simulation/`, `debug/`, `lab/`, `headless_client.gd`) | offline 10, online 9 | 10 / 9 |
+| Catch-up rule | `online_driver.gd:12-13` | `CATCH_UP_STEPS` 2, `MAX_CATCH_UP_CREDIT` 4 | same |
+| Frozen-cache member writes | `rg -n '\]\.[a-z_]+\[[^]]+\] *[-+*/]?=' game/scripts/simulation` | 0 hits (exit 1) | none expected |
+| `OS.*` in `game/scripts/simulation`, `sim_pump.gd`, `command_recorder.gd`, `profiler.gd` | `rg -n "OS\." ...` | 0 | 0 |
+| Netplay terminal tick | `NET(base, match)`, `NET(base, rematch)` | 9746, 9746 | 9746 pin |
+| Team match | `run_team_match.sh` | `won tick=40182 winner=2 units_peak=314` | not stated |
+
+### Lists (Task 1 Step 3)
+
+#### Drive sites
+
+Marks: **settle** = settle after post (the wait lives in `BaseScene.tick` and `BaseScene.publish`, so no site edit, allowed edit 1); **multi** = multi-physics on purpose, inline under the switch (allowed edit 2); **sync** = a refusal that happens at `post` in both modes, stays as is.
+
+| Group | Sites | Mark |
+|---|---|---|
+| `BaseScene.tick` (`test_base_scene.gd:71`) and `BaseScene.publish` (`:84-85`), plus about 190 `BaseScene.tick(`/`tick(main)`/`helper.tick(` calls (`_run(main, n)` in `test_online_scene.gd:104` loops it; about 180 `_run(` calls) | one physics callback, a wait for an idle pump, one drain | settle (Task 9 puts the wait into the helper) |
+| `BaseScene.publish(main)` | 84 hits, below | settle |
+| `set_physics_process(...)` | 24 hits, below | not a drive site (a toggle); `test_benchmark.gd:528` turns it on for the `movement_benchmark` probe, which steps a `Simulation` directly and has no pump |
+| direct sites | 37 hits, below | per row |
+| `test_sim_pump.gd` | 78 hits in 47 cases, grouped below | per group |
+
+`BaseScene.publish(main)` sites by suite (method :line), all **settle**:
+
+| Suite | Count | Methods |
+|---|---|---|
+| `test_camera_keys.gd` | 9 methods | test_h_glides_to_the_headquarters :55; test_h_lands_above_the_dock :127; test_zoom_mid_glide_keeps_the_landing :143; test_h_again_returns_to_where_you_were :160; test_arrival_ring :197; test_h_centres_on_the_headquarters :235; test_h_without_one :256,264; test_space_prefers_own_and_survives_the_target :332; _space_after_a_kill_in_the_shot_step :348 |
+| `test_card_keys.gd` | 2 methods | test_lone_builder_card :78; test_blocked_cell_same_tick :356,365 |
+| `test_control_groups.gd` | 3 methods | test_dead_and_contained_drop :176,181,197; test_recall_disarms_and_closes :290,294; test_save_line :339 |
+| `test_hud.gd` | 23 methods | test_side_effects_live_in_the_screen :85; _select_new_builder :320; test_hover_previews_the_purchase :505; test_strip_skips_refused_purchases :694; test_esc_attack_move_layer :923; test_esc_as_the_builder_dies :1067; _prerequisites :1275; _crosshair :1596; _add_hq :1716; test_now_holds_under_pointer :1838; test_unit_glyphs :1987; test_rematch_forgets_cancels :2305; test_accidental_cancels_and_next_clicks :2470; test_unload_row_above_the_orders :2697,2702; test_card_by_selection :2752; test_blocked_cells :2951,2962; test_blocked_press_equals_key :3005,3007; _factory_card_clear :3167; test_counter_line_on_the_cell_card :3351; _offline_label :3636; test_rows_hold_under_the_pointer :3912,3927,3930,3941,3943; test_rows_let_go_when_the_pointer_leaves_the_window :3959; test_local_hints_on_the_line :4431 |
+| `test_online_scene.gd` | 3 methods | test_sb4_publish_is_not_a_tick :2060; test_view_player_after_the_online_seat :2385; test_match_starts_with_builder_selected :2463,2466 |
+| `test_playtest_overlay.gd` | 1 methods | test_world_click_releases_field :998 |
+| `test_production_strip.gd` | 2 methods | _world :109; test_strip_click_needs_orders_and_an_own_producer :520 |
+| `test_scene.gd` | 1 methods | _double_fixture :319 |
+| `test_skirmish_scene.gd` | 17 methods | test_combat_context_input :134; test_match_hud_and_restart :161; test_hud_build_line :289; test_enemy_selection_read_only :318; test_rally_input_and_marker :347; test_selection_prunes_dead :395; test_order_marks_own_only :406; test_hud_font_size_is_shared :802; test_enter_unload_scene :873; test_right_click_pile_in_launcher_flow :909,914; test_frc_laborer_right_click_pile :935,943; test_one_snapshot_per_refresh :959; test_sb1_pick_of_unit_dead_since_shown :1407; test_click_results :2059,2071; test_entering_the_hud_clears_hover :2231; test_drag_across_a_panel :2256,2274; test_view_player_changes_display_reads_only :2374,2379,2396,2400,2405,2408 |
+| `test_view_caps.gd` | 1 methods | test_bars_take_no_clicks :167 |
+
+`set_physics_process` toggles (not sites): `test_announcer.gd` `_scene` :227; `test_audio_settings.gd` `_match_music` :156, `test_mute_key_in_match` :307; `test_base_scene.gd` `setup` :64; `test_benchmark.gd` `test_team2v2_layout_in_the_window` :460, `test_hud_layout_in_the_window` :515, :528; `test_online_scene.gd` `_online` :89; `test_order_voice.gd` `_scene` :101; `test_pause_menu.gd` `_scene` :72, `_online` :84, `test_online_leave_text_and_focus` :217; `test_perf_overlay.gd` `_scene` :47; `test_playtest_overlay.gd` `_scene` :80, `_online` :91, `test_ph_header_builds_no_log` :1071; `test_playtest_replay.gd` `_scene` :74; `test_scene.gd` `setup` :35, `test_driver` :189; `test_skirmish_scene.gd` `_setup` :43, `test_result_panel_layout` :441, `test_enter_in_text_field_keeps_match` :636, `test_freeze_card_copy_and_layout` :1890; `test_view_caps.gd` `_match` :39.
+
+Direct sites (37):
+
+| Site | Method | Mark |
+|---|---|---|
+| `test_graphics_settings.gd:146` | `test_auto_pick_samples_tick_and_draw_time` | settle (asserts main-side timing only; the settle keeps a pump from running into `free()`) |
+| `test_base_scene.gd:626-627` | `test_f33_red_ghost_refused_after_a_two_step_frame` | multi (two callbacks, one drain) |
+| `test_base_scene.gd:647` | `test_preview_once_per_physics_step` | multi (four callbacks, one drain; counts previews) |
+| `test_online_scene.gd:1929` | `test_sb3_online_two_notes` | multi (one callback takes two ticks, one drain collects both) |
+| `test_online_scene.gd:2042` | `test_sb4_three_callbacks_one_drain` | multi |
+| `test_online_scene.gd:2060` | `test_sb4_publish_is_not_a_tick` | settle (a `BaseScene.publish`) |
+| `test_online_scene.gd:2123` | `test_sb4_no_send_after_end` | multi (three callbacks, one drain) |
+| `test_online_scene.gd:2144,2148,2149` | `test_sb4_foreign_note_ends_match` | multi (a raw `post` between two callbacks) |
+| `test_online_scene.gd:2210` | `test_sb4_step_after_close_takes_no_tick` | settle (after `close_match` nothing is posted) |
+| `test_online_scene.gd:2270,2273` | `test_ph_receive_ends_lockstep_with_undrained_job` | multi (the first job stays undrained on purpose) |
+| `test_online_scene.gd:2320,2321` | `test_ph_preview_on_last_job_of_catch_up` | multi (a two-job callback and one `driver.drain()` asking for both notes) |
+| `test_online_scene.gd:2336,2337` | `test_f33_online_red_ghost_refused_after_two_callbacks` | multi |
+| `test_online_scene.gd:2355,2356` | `test_ph_preview_on_single_job_when_next_tick_waits` | settle |
+| `test_online_scene.gd:2365,2366` | `test_ph_preview_on_steady_step` | settle |
+| `test_playtest_overlay.gd:1084` | `_pump_refuses` (callers `test_ph_every_exit_stops_pump_before_record` :1100, :1111, :1118) | sync (`post` after `stop` is refused at once) |
+| `test_skirmish_scene.gd:1205,1206` | `test_offline_driver_stamps_like_the_scene` | settle |
+| `test_skirmish_scene.gd:1229,1230` | `test_offline_driver_no_tick_hash_rows_after_the_end` (59 steps, one drain) | multi |
+| `test_skirmish_scene.gd:1235,1236,1240,1241` | same method, the single steps after it | settle |
+| `test_skirmish_scene.gd:1250` | `test_offline_driver_bot_memory_on_simulation` (a step, no drain) | settle |
+| `test_skirmish_scene.gd:1614` | `test_sb3_restart_drops_old_notes` (a job in flight at `_restart`) | multi |
+| `test_skirmish_scene.gd:1659,1660` | `test_sb3_process_drains` (two callbacks, `_process` drains) | multi |
+| `test_skirmish_scene.gd:1676` | `test_sb3_refusal_waits_in_queue` | settle |
+| `test_skirmish_scene.gd:1718,1722` | `test_sb3_record_reads_live_without_queue` (a posted, undrained job is in `record()`) | multi |
+
+The 13 **multi** methods are the allowed-edit-2 list beside the ten Profiler cases: `test_base_scene.gd` `test_f33_red_ghost_refused_after_a_two_step_frame`, `test_preview_once_per_physics_step`; `test_online_scene.gd` `test_sb3_online_two_notes`, `test_sb4_three_callbacks_one_drain`, `test_sb4_no_send_after_end`, `test_sb4_foreign_note_ends_match`, `test_ph_receive_ends_lockstep_with_undrained_job`, `test_ph_preview_on_last_job_of_catch_up`, `test_f33_online_red_ghost_refused_after_two_callbacks`; `test_skirmish_scene.gd` `test_offline_driver_no_tick_hash_rows_after_the_end`, `test_sb3_restart_drops_old_notes`, `test_sb3_process_drains`, `test_sb3_record_reads_live_without_queue`. A callback that takes two ticks (catch-up, `CATCH_UP_STEPS` 2) and is drained through `BaseScene.tick` is not **multi**: the idle wait covers both jobs, so it is **settle**; the cases that rely on it are `test_online_scene.gd` `test_create_resets_catch_up_credit`, `test_catch_up_is_bounded`, `test_two_tick_frame_keeps_earlier_results`, `test_sb2_preview_after_catch_up`, `test_sb4_take_ahead_past_end` and `test_sb4_leave_on_end_tick_catch_up` (both through `_end_in_catch_up`), `test_sb4_no_waiting_after_end`. They are named so Task 9 can move any that goes red into the inline list (a static list cannot see every callback that takes two ticks; `WSUITE` is the check).
+
+Free-running scenes (physics runs by itself during `await`; no helper steps them): `test_scene.gd` `test_driver` :182-189 (asserts `tick > before` after one physics frame: **settle** needed before the assertion); the scenes a launcher starts and then reads, which read `pump.live()` while a worker may run, so they need a settle before the read: `test_launcher.gd` `_start_through_wire` :1476, `test_guest_start_matches_host` :1696; `test_online_scene.gd` `test_launcher_faction_rows` :903, `test_plays_dry_wells_from_each_seat` :938, `test_online_start_saves_picks` :964, `test_joiner_refuses_other_map` :1043 and :1047, `test_both_seats_share_map_and_starts` :1146; `test_view_caps.gd` `_match` :37 (physics off at :39). Other suites instantiate scenes without turning physics off (`test_graphics_settings.gd` 7, `test_audio_settings.gd` 4, `test_launcher.gd` 20, `test_playtest.gd` 3, `test_join_link.gd` 2, `test_playtest_overlay.gd` `_open_launcher` :593): none reads a tick or `live()` (checked with `rg`), their pumps are stopped by `_exit_tree` (Task 5) or the runner. `test_benchmark.gd` `Probe` cases have no pump.
+
+#### Profiler cases (10 in the scene suites, inline under the switch)
+
+`test_base_scene.gd` `test_one_snapshot_per_refresh` :464 and `test_ticks_take_no_snapshot` :479; `test_online_scene.gd` `test_sb1_online_snapshot_per_hash_tick` :637 (the plan's :626); `test_skirmish_scene.gd` `test_one_snapshot_per_refresh` :961, `test_sb1_idle_offline_ticks_take_no_snapshot` :1216, `test_sb1_submit_takes_no_snapshot` :1261, `test_sb1_economy_input_reads_shown` :1338, `test_sb1_combat_input_reads_shown` :1367, `test_sb3_over_stops_refreshing` :1642, `test_sb3_one_view_per_tick` :1691. `test_one_snapshot_per_refresh` occurs in two suites, so each entry is suite plus method. The other three sites are `test_combat.gd:1601,1668` and `test_profiler.gd:22` (direct simulation, no pump).
+
+#### Deliberate-failure uses
+
+- `game/tests/failing_pump.gd` (`fail_next`, returns null from `_note_for`): `test_sim_pump.gd` `test_ph_null_job_fails_pump` (:234; three `NullJobPump.new` at :235, :260, :267) and, in `test_skirmish_scene.gd`, `_frozen_arena` (:1757, `FailingPump.new` :1762) with its callers `test_no_refusal_over_a_card` (:1535-1537), `test_freeze_card_on_a_failed_pump` (:1807-1812), `test_freeze_leave_reaches_the_launcher` (:1845-1850), `test_failure_first_met_while_leaving` (:1870-1873), `test_freeze_card_copy_and_layout` (:1893-1894), `test_freeze_card_keeps_the_focus` (:1953-1961), `test_freeze_flush_keeps_the_queue` (:1989-1991), `test_drag_box_ends_with_the_match` (:2470-2481), `_start_waits_for_orders` (:2534, run from :2524), and `test_hud.gd` `_crosshair` (:1562, :1618-1621; the helper runs from :1531).
+- **Synchronous-failure cases** (stay inline under the switch, each gets a worker counterpart; first line `SimPump.force_mode_for_test("inline")`): `test_sim_pump.gd` `test_ph_null_job_fails_pump` (:234-274; the plan's `:232-272`) and every `FailingPump` case above (they assert at the post or the next tick that `fail_next` fails the pump, and the freeze-card cases already count on the process latch, `test_freeze_card_copy_and_layout` :1882). Refusals that are synchronous in both modes and need no change: post after `stop` (`test_sb3_job0_starts` :343, `_pump_refuses` and its three callers in `test_playtest_overlay.gd`), `PH a failed pump refuses every later post` (inside `test_ph_null_job_fails_pump`).
+
+#### `test_sim_pump.gd`: 47 cases in the groups of allowed edit 3
+
+Every `post(); drain()[0]` and `pump.live()` read at once needs the group's wait; cases that post more than three jobs before a drain or a query (`test_sb4_ring_query` posts 40) need a drain or wait between posts once `MAX_QUEUED` is 3.
+
+- **(a) pump-only, no query, Task 3 (15):** `test_sb3_pump_digests_equal_direct` :108, `test_sb3_two_notes_one_drain` :153, `test_sb3_slot_invariant` :194, `test_ph_fresh_slot_per_job` :218, `test_sb3_sequence_stamp` :276, `test_sb3_refusal_one_tick_later` :292, `test_sb3_preview_answer` :308, `test_sb3_job0_starts` :343, `test_sb3_freeze_rejects_late_insert` :365 (writes registry statics: only with idle or no workers), `test_sb3_freeze_covers_match` :409 (builds two more pumps), `test_ph_sequence_stamp_only_on_request` :712, `test_ph_nested_cache_freeze` :848 (registry statics), `test_pal_note_carries_survivors` :873, `test_pump_bot_first_wave_at_5400` :1017 (P7), `test_plan_bots_leaves_sim_untouched` :1077 (P7).
+- **(b) query and record, Task 4 (6, plus the synchronous case):** `test_sb3_query_leaves_slots` :325, `test_sb4_ring_query` :686, `test_th_pump_tick_hash_on_request` :701, `test_ph_record_returns_command_log` :725, `test_pump_bot_lines_on_request` :1035 (P7; `post` then `drain()[0]`, then a query), `test_planned_bot_commands_not_in_pump_record` :1091 (P7; `record()` after 100 jobs). `test_ph_null_job_fails_pump` :234 is also here (queries on a failed pump) and stays inline.
+- **(c) driver cases, Task 7 (14):** `test_sb4_two_drivers_loopback` :526, `test_sb4_two_drivers_match_end` :552, `test_ph_pair_drivers_send_legal_frames` :738 (`_frames` takes two ticks in one callback), `test_ph_driver_matches_advance_peer` :807, `test_pal_three_drivers_play_on` :926, `test_pal_driver_quiet_defers_verdict` :947, `test_pal_played_on_catches_up` :972, `test_trio_leave_has_no_match_ended_heading` :990 (P7), `test_pal_driver_play_on_then_end_closes_room` :1000, `test_setup_plans_no_bot_orders` :1120 (P7; a pump half and a `_quad_drivers` half), `test_host_submits_bot_commands_after_human` :1154 (P7), `test_bot_refusal_not_in_driver_answers` :1173 (P7), `test_guest_runs_no_bot` :1188 (P7), `test_bot_refused_submit_recovers_next_decision` :1206 (P7). Drivers built by `_pair_drivers` :477, `_trio_drivers` :890, `_quad_drivers` :1136.
+- **No pump, not converted (11):** `test_sb3_ring_off_same_digest` :452, `test_sb4_take_record_equals_advance` :624, `test_sb4_quiet_take_keeps_status` :648, `test_sb4_finish_tick_uses_given_digest` :669, `test_ph_finish_tick_refuses_after_end` :746, `test_ph_start_after_end_sends_nothing` :755, `test_ph_finish_tick_refuses_out_of_order` :764, `test_ph_take_checks_next_tick` :778 (all lockstep or simulation only), `test_pal_survivors_query` :860, `test_shot_carries_its_building_target` :1057 (static `SimPump.run_job`), `test_planner_drops_invalid_bot_order` :1105 (P7; `SimPump.PlanRecorder` on a simulation).
+- 15 + 7 + 14 + 11 = 47. P7 part 2's nine cases (`git diff c6030abe^ c6030abe`): `test_trio_leave_has_no_match_ended_heading`, `test_plan_bots_leaves_sim_untouched`, `test_planned_bot_commands_not_in_pump_record`, `test_planner_drops_invalid_bot_order`, `test_setup_plans_no_bot_orders`, `test_host_submits_bot_commands_after_human`, `test_bot_refusal_not_in_driver_answers`, `test_guest_runs_no_bot`, `test_bot_refused_submit_recovers_next_decision`; the two host-bot cases at :1017 and :1035 are older (they ask for `bots`, not `plan_bots`). A P7 host-bot case red under the switch stays a stop.
+
+#### Constructors of drivers and pumps under `game/tests` (24)
+
+Marks: **helper** = stopped by its helper; **runner** = stopped by the runner (`SimPump.stop_live_for_test()`, allowed edit 5; the "left to the runner" list); **explicit** = the case calls `stop()` itself.
+
+| Site | Case or helper | Mark |
+|---|---|---|
+| `test_sim_pump.gd:89` | `_pump()` | helper (`_pump(mode)` and the loop helpers stop it) |
+| `:136` | `_battle_pump()` | helper |
+| `:344` | `test_sb3_job0_starts` | runner |
+| `:350` | `test_sb3_job0_starts` (`fixture`) | explicit (`fixture.stop()` :351) |
+| `:421`, `:428` | `test_sb3_freeze_covers_match` (`fight`, `team`) | runner |
+| `:482`, `:483` | `_pair_drivers()` | helper (`_unpair` breaks the reference cycle only; Task 7 makes it stop both drivers) |
+| `:687`, `:702` | `test_sb4_ring_query`, `test_th_pump_tick_hash_on_request` | runner |
+| `:811` | `test_ph_driver_matches_advance_peer` | runner |
+| `:879`, `:887` | `test_pal_note_carries_survivors` | runner |
+| `:895` | `_trio_drivers()` | helper (as `_pair_drivers`) |
+| `:1019` | `test_pump_bot_first_wave_at_5400` | runner |
+| `:1121` | `test_setup_plans_no_bot_orders` (P7) | runner |
+| `:1143`, `:1144` | `_quad_drivers()` (P7) | helper |
+| `test_skirmish_scene.gd:1193`, `:1227`, `:1247`, `:1255` | `test_offline_driver_stamps_like_the_scene`, `..._no_tick_hash_rows_after_the_end`, `..._bot_memory_on_simulation`, `test_sb1_submit_takes_no_snapshot` | runner |
+| `test_skirmish.gd:720` | `test_desync_report_names_map_seed_starts` (`create`, no `start`) | runner |
+| `test_perf_overlay.gd:165` | `test_bot_line_offline_only` (no `create`: no pump) | none needed |
+
+Drivers a scene builds (`OnlineScene`, `Skirmish.instantiate()`, a launcher start) are stopped by `_exit_tree` (Task 5) or `close_match`.
+
+#### Static variables in the simulation (9) and the statics `run_job` reaches outside it
+
+Classification as in Ownership "Two pumps at once". "Miss fill" is a write that runs only when a key is missing; `start()` warms every registered kind first (`_warm_and_freeze`, `sim_pump.gd:145-152`: `Registry.freeze_caches()`, then `Skirmish.freeze_map()`), and `test_sb3_freeze_covers_match` (`test_sim_pump.gd:409`) pins that no cache grows over a 900-tick bot match, a 150-tick battle of every armed kind and 300 team-match ticks.
+
+| Static | Declared | Class | Write sites | Mark |
+|---|---|---|---|---|
+| `_extra` | `definitions.gd:15` | test registry (not in `_named_caches`) | `:57` `add_test_kind`, `:61` `clear_test_kinds` | before the freeze (tests only; test resets never run while a worker is active) |
+| `_unit_cache` | `:16` | named cache, recursively frozen | `:69` miss fill, `:152` `_reset` | before the freeze; the fill is dead after warm-up |
+| `_building_cache` | `:17` | named cache | `:76` miss fill, `:153` `_reset` | before the freeze; dead after warm-up |
+| `_profile_cache` | `:18` | named cache | `:83` miss fill, `:154` `_reset` | before the freeze; dead after warm-up |
+| `radius_cache` | `:19` | named cache | `combat_definitions.gd:25` miss fill, `definitions.gd:155` `_reset` | before the freeze; dead after warm-up |
+| `reach_cache` | `:20` | named cache | `combat.gd:84` miss fill, `definitions.gd:156` `_reset` | before the freeze; dead after warm-up |
+| `air_kinds` | `:21` | derived lookup, not in `_named_caches` | `:157` `_reset` only (`_air_kinds()`) | before the freeze; read-only from `run_job` |
+| `_skirmish_map` | `skirmish.gd:33` | outer dictionary frozen | `:75` miss fill in `_default_map()`; frozen by `freeze_map` `:68-69` | before the freeze (`start()` fills it; `_slot` `:80` and `:615` only read it) |
+| `last_cells_examined` | `destination_allocation.gd:3` | shared diagnostic | `:23` reset, `:72` increment (inside allocation, reachable from `run_job` after the freeze) | reachable after the freeze: the allowed allocation diagnostic, read by `test_allocation.gd:54` |
+
+Statics outside `game/scripts/simulation` that `run_job` reaches: `debug/profiler.gd:6-11` (`enabled`, `slow`, `_current`, `_calls`, `_series`, `_ticks`), written by `end` (`:16-22`) and `end_tick` (`:23-34`) only while `enabled`, and by `reset` (`:35-40`), which tests and `movement_benchmark.gd:261-262,287` call. They are reachable from `run_job` after the freeze but off in production; worker mode asserts `not Profiler.enabled` at `start()` (Ownership, Profiler) and the ten Profiler cases run inline. `playtest/command_recorder.gd` has no static (fields `_sim`, `_commands`), and neither does `PlanRecorder` (`sim_pump.gd:25-29`, P7). `debug/timing_stats.gd` is reached only by `Profiler.report`. No static write was found that is reachable from `run_job` after warm-up other than the allocation diagnostic and the Profiler (off), so no stop.
+
+#### Writes into frozen cache members (Decided 11)
+
+`rg -n '\]\.[a-z_]+\[[^]]+\] *[-+*/]?=' game/scripts/simulation` has no hit (exit 1), so no `cache[key].field[i] = v` writer exists and the Decided 11 stop does not fire. Broader reading of every `Registry.<cache>[...] =` and `_<cache>[...] =` write (`rg -n "_cache\[|_extra\[" game/scripts/simulation`): only the top-level miss fills in the table above (`definitions.gd:57,69,76,83`, `combat_definitions.gd:25`, `combat.gd:84`); each is "not a cache member write" (it inserts a new key into the named cache) and dead after warm-up. They are the places where a kind missing from the warm-up would write into a frozen dictionary: Task 3's freeze change and the Task 3 Step 0 probe cover them.
+
+#### Pump boundary check and the catch-up rule
+
+`PUMP_COUNTS` (`tools/test_sim_boundary.py:101-105`): `offline_driver.gd` 10 and `online_driver.gd` 9, recounted with the check's own regex over the base files (10 and 9; P7 added none); `game/scripts/debug/` is excluded at `:95` (`SCAN_EXCLUDED`). Catch-up rule: `CATCH_UP_STEPS = 2` (`online_driver.gd:12`), `MAX_CATCH_UP_CREDIT = 4` (`:13`), credit gained at `:127`, loop at `:128`; the loop stops at `_last.over or _stopped` (`:129`).
+
+#### Engine calls reachable from `run_job`
+
+Scan: `rg -n "FileAccess|ResourceLoader|DisplayServer|OS\.|Time\.|print\(|printerr|push_warning|push_error|JavaScriptBridge|Engine\."` over `game/scripts/simulation`, `game/scripts/match/sim_pump.gd`, `game/scripts/playtest/command_recorder.gd` and `game/scripts/debug/profiler.gd`; the call graph from `run_job` leaves `game/scripts/simulation` only into `debug/profiler.gd` (preloaded by `state_hash.gd`, `skirmish.gd`, `simulation.gd`, `grid_navigation.gd`, `combat.gd`), `debug/timing_stats.gd` and `playtest/command_recorder.gd`.
+
+| Call | Site | Mark |
+|---|---|---|
+| `FileAccess.open` | `simulation/map_data.gd:8-13` (`MapData.load`) | needs the event loop on Web; reached from `run_job` only through `Skirmish._default_map()` (`skirmish.gd:74-76`) behind an empty-cache check that `start()` has already satisfied (`sim_pump.gd:145-152`); `Skirmish.create` (`:91`) loads on main |
+| `push_error` | `map_data.gd:10,13`, `skirmish.gd:94` | worker-side console output only on a bad map or starts, both on main in `create`; not reached from `run_job` |
+| `Time.get_ticks_usec` | `debug/profiler.gd:14,18` | serviced during the main thread's spin (a clock read, no event loop), and only while `Profiler.enabled` |
+| `OS.*`, `DisplayServer`, `ResourceLoader`, `print`, `printerr`, `push_warning`, `JavaScriptBridge` | none in the scanned files | none: an `OS.*` call reachable from `run_job` would be a stop, and there is none |
+| `Engine.print_error_messages` | `test_relay_transport.gd:85,89,98,100,106,108` (three off/on pairs; no production site, no site in `.github`, `tools` or `game/scripts`) | the logger's blind spot (Failure channel), tests only |
+
+#### Pump hardening review P3s (triage)
+
+Sources: `~/projects/wargrid-overnight-work/pump-hardening/logs/` (`t2` to `t12-review.md`, `t13-docs-review.md`, `gate-*.md`; the gate Opus report's P3-1 to P3-11 re-judge the per-task ones; main ones in the run's `morning-summary.md:55`). Marks: **fixed** = already fixed on the base; **Task N** = in SB5a, inside a named hunk or SB5a file and no new contract; **out, to X** = not in SB5a. Nothing here widens the scope; the one new owner-list entry is marked.
+
+| Item | Mark |
+|---|---|
+| gate-opus P3-1, gate-silent-failure P3-1, gate-grok P3-2, gate-PX P3-2: online quit or window close, a callback left in that frame turns the stopped pump into `ended_protocol` | **fixed**: `step` breaks on `_stopped` before taking (`online_driver.gd:129`); Task 7 keeps it in worker mode (`_stopped` mirrors the pump) |
+| gate-opus P3-2: online `record().commands` differs from the playtest log and is built for nothing | out, to SB5b (the online `CommandRecorder` duplicate, Owner answers 10) |
+| gate-opus P3-3: scene clients freeze the caches, the headless client does not | out, **owner list (new)**: freezing in `headless_client.gd` or at registry load touches `game/scripts/net/` or `simulation/`, both untouched paths |
+| gate-opus P3-4, t2 P3-1, t2 P3-2, gate-grok P3-1: null results at `start`, `record`, `flush`, `_report`; `start` does not fail the pump | Task 3 and Task 4 (null-to-failed where the worker's result is filed; five readers, Failure channel) |
+| gate-opus P3-5, t5 P3-2: `_exit_tree` does not stop the pump | Task 5 |
+| gate-opus P3-6, t4 P3-2: `playtest_match` runs two full `record()` queries | out, no package (exits only) |
+| gate-opus P3-7, t10 P3-4: a cache without a warmer aborts the warm-up before the freeze in release builds | out (an unrun change only; the suite catches it) |
+| gate-opus P3-8, t11 P3-1 and P3-2: static pump check misses `["pump"]`, `get(&"pump")`, a leaking getter | out (text checks cannot close it) |
+| gate-opus P3-9, t7 note: "no existing case sends an illegal frame" not established | out (a one-off print of `refusals` per case would settle it) |
+| gate-opus P3-10, t3 P3-1 to P3-3, t4 P3-1, t8 P3-3, t9 P3-1 and P3-2: tests that pass under one plausible regression | out (cheap single checks such as `live().tick() > 6` and the command-log count; none hides a live bug) |
+| gate-opus P3-11, t13 P3s: docs contradicting code (guide 04 "answered once per callback", guide 13 slot-rotation and exit-order sentences, spec `drain` "swaps") | Task 15 (a re-read found the guide 04 and `packages.md` phrases already gone; guide 13 and the spec line are re-read there) |
+| gate-silent-failure P3-2, gate-PX P3-1 and P3-3: end reasons read as jargon, nothing logs them, the filed card does not say why | out, to P2.3a2's wording table (Owner answers 11) |
+| gate-silent-failure P3-3, P3-6, pr-test-analyzer 7, t12 P3-1 to P3-3, P3-6: `run_lockstep.gd`, `run_profile.gd` loop bound (the loop is bounded by `TEAM_TICK_CAP` on the tick only, `run_profile.gd:175`), renamed zone reads 0 ms, note count | out (For the owner; `game/benchmarks/` is an untouched path) |
+| gate-silent-failure P3-4, t10 P3-3: `_freeze` skips packed arrays and objects without a word; the comment says only "lazy insert" | Task 3 (Decided 11 puts packed arrays into `_freeze`; the comment follows) |
+| gate-silent-failure P3-5: offline `flush()` empties the queue before a query that can fail | out (`flush` is test-only and already handles null, Failure channel) |
+| gate-silent-failure P3-7, t7 P3-1 to P3-5, pr-test-analyzer 4: `PairTransport` and `relay_frame_order.gd` looser than `relay/room.go` | out |
+| gate-grok P3-2 (`step()` after `stop()` consumes a tick) | **fixed** (`online_driver.gd:129`) |
+| pr-test-analyzer 1, 2, 3, 5, 9 (test tightening, `LogSpy`, `_replayed_digest`, reference-case gaps, private-state coupling) | out |
+| pr-test-analyzer 6, t11 P3-3 and P3-4 (`test_sim_boundary.py` gaps) | out; Task 3 adds only the `_run_owned` check |
+| pr-test-analyzer 8, t10 P3-2 (the `_freeze` Array branch is untested and unreachable) | Task 3 (the packed-array change adds the branch and its test) |
+| t10 P3-1 (cycles in `_freeze`), t10 P3-5 and P3-6, t11 P3-5, t8 P3-1, t4 P3-4 | out (views stay flat; mutation-method wording) |
+| t4 P3-5 (`sim-interface.md:62` still documents `recorder()`) | **fixed** (`sim-interface.md:69` says `recorder()` is gone) |
+| t8 P3-2 (a preview can be answered on a match that is already over, unchanged) | out |
+| t5 P3-1, P3-3, P3-4, t6 notes, t7 notes, t9 P3-3 to P3-5, t12 P3-4, P3-5 | out (coverage notes; `pump.start()` freezing the shared caches for the process is what Ownership "Two pumps at once" already states) |
+
+#### Owner list from Task 1
+
+- Freeze the caches in the headless client or at registry load (gate-opus P3-3); not an SB5a change, it needs a simulation or net edit.
+- Nothing else from the lists above widens the scope.
+
+### Spike evidence (Task 1 Step 4)
+
+Re-pointed only. Spike tree `~/projects/wargrid-overnight-work/lowend-deck/followup-2026-11-20/tree-worker` (`8d56eb25`, local branch `spike-worker-threads`); `worker_ab.py` and `worker_ab_fixtures.py` in `~/projects/wargrid-overnight-work/worker-threads/logs/`; the Deck patch Task 12 ports by hand, `~/projects/wargrid-overnight-work/deck-main-2026-11-22/harness-main.patch`. The existing-data check (One page) was re-run with `cmp` on the spike's logs: `t2-{skirmish3v3,team,hordes300,late}-{inline,worker}.digest` are byte-equal on all four loads (7 lines each) and `t5-{skirmish3v3,team}-{inline,worker}.digest` are equal. Both come from the spike's own driver, not `SimPump`; the open check `docs/reference/worker-thread-spike-verification.md:62` is run on `SimPump` by Task 11.
+
+### P7 part 2 and "After P2.3b" on the base (Task 1 Step 5)
+
+P7 part 2: branch tip `b0c95732` (tag `p7-2-team-online-tip`), merged as squash `c6030abe`; T2-1 to T2-9 are all merged, including T2-8 (pings) and T2-9 (docs); `d0dac5cb` (the owner's ping beacon, `presentation/ping_marks.gd`) is on top. P7's T2-8 ping lines are part of the base, not a conflict: `ping_armed` (`orders.gd:36`), `orders._set_ping` (`reset()` calls it at `:112`), the `ping` command, `online_driver.gd` `_pings` (`:40`, cleared at `:96`), `_new_pings` (`:231-242`, called from `drain` at `:157`), `can_ping`/`take_pings` (`:245-251`; offline `:188-191`), `match_screen.gd` `_take_pings` (`:265`, from `_drain_notes` at `:391`) and `_exit_tree`'s `orders._set_ping(false)` (`:176`). SB5a's `_exit_tree` and `drain` hunks keep them.
+
+Files P7 changed against the plan's "Beside P7 part 2" list (`git diff --stat 608267eb e150751a -- game tools .github web`): every file in the plan's lists changed as described (`lockstep.gd` `allowed`/`submit(payload, player)`/stamp checks, `sim_pump.gd` `plan_bots` and `PlanRecorder`, `online_driver.gd`, `offline_driver.gd`, `match_screen.gd`, `run_netplay.sh` `team*` scenarios, `ci.yml` :156, `test_sim_pump.gd`, `test_online_scene.gd`). Beyond the plan's list P7 and the later commits also touched `orders.gd`, `hud.gd`, `hud_model.gd`, `pause_menu.gd`, `announcer.gd`, `world_view.gd`, `palette.gd`, `world_batch.gd`, `result_panel.gd`, `playtest/focus_cards.gd`, `seat_sim.gd`, `relay_transport.gd`, `headless_client.gd`, `simulation.gd`, `skirmish.gd`, `factions.gd`, `match_settings.gd`, `launcher*`, `team_match.gd`, `movement_benchmark.gd`, `combat_workload.gd`; none of them is a file or hunk SB5a edits (all are on the untouched-paths list or in the guard). No conflict outside SB5a's named hunks.
+
+Re-check of the "After P2.3b" items on `e150751a` (cites in the line map below):
+
+- Files SB5a never edits: present, untouched by this task; the guard `git diff <base> --stat -- game/scripts/net game/scripts/simulation game/scripts/launcher.gd game/scripts/match/orders.gd game/scripts/match/hud.gd game/scripts/match/hud_model.gd game/scripts/match/production_strip.gd game/scripts/match/mouse_pan.gd game/scripts/match/result_panel.gd game/scripts/match_settings.gd game/scripts/presentation ':!game/scripts/presentation/perf_overlay.gd' web game/export_presets.cfg game/benchmarks/run_profile.gd relay protocol` is empty at the end of Task 1.
+- Preview on every job: offline `step` attaches `job.preview = _preview_request` (`offline_driver.gd:59-73`, same lines) and on a refused post calls `_read_failure()`; online `_tick_job` (`online_driver.gd:141-149`) sets `plan_bots`, `preview` and `want_digest`, and `drain` (`:151-160`) keeps the last answered preview. Pins `test_base_scene.gd:620-649` (unchanged lines) and `test_ph_preview_on_last_job_of_catch_up` (now `test_online_scene.gd:2315`, `previews == 2`).
+- `orders.reset()` (`orders.gd:102-118`) clears selection, groups, production, the pending build, attack-move and the ping, and sets `_start_pending = true` (`:118`). `takes_orders()` (`:74-75`) is `not shown_over() and not frozen() and not holds_match()`: it still omits `driver.over()`, so the first-failure reset runs offline only. `_clear_placement()` (`:578-584`) clears the kind, the standing preview request and the drawn cells; `_show` calls it only while a kind is set (`match_screen.gd:582-586`).
+- Screen exit and pause: `_exit_tree` (`match_screen.gd:173-178`) drops the mouse pan, disarms attack-move and ping (`:176`), detaches (`:177`) and releases `ViewCaps` (`:178`). Offline stepping is skipped while the Esc menu is open: `_step_frame` returns on `menu_open() and driver.pauses_sim()` (`:373`; the plan's text said only "menu open"); `_process` still drains (`:404-409`). P16's answer delivery (`:246-261`) and `PresentationClock.stepped` in `_drain_notes` (`:382-395`) are as the plan states. The Esc menu's Settings and Controls pages are at `pause_menu.gd:52-67`.
+- `docs/reference/sim-interface.md:76` (the plan's `:73`) still says "on the last tick job"; Task 15 fixes it.
+- Tests changed since `83d00e8`: the list in the plan stands; the drive-site and F3 lists above are taken on the base. The F3 test lives in `test_perf_overlay.gd`.
+- Main-thread-only code stays off the worker audit's stop list (glyph texture cache, HUD key labels, `pause_menu.gd` feature queries, music and sound cues, palette and team colours): none is reachable from `run_job` (the call-graph scan above).
+
+Offline `BOTS` (`offline_driver.gd:7`) and `job.bots = BOTS` in `step` (`:64`) are as the plan cites; P7's `bot_players()` returning `BOTS`, `teams`/`bots` in `match_header` and the leave and quit questions (`leave_heading` :161, `leave_question` :164, `quit_question` :167, `rematch_line` :176) are the lines Task 12's `bots` hunk sits beside; any other edit to them is a stop. The 1v1 online leave text is `"%s left the match" % ResultPanel.player_name(left, _faction(left))` (`online_driver.gd:293-296`, for example `"P2 USA left the match"`); `test_sb5a_online_failure_ends_and_closes` asserts that text, not "Your opponent left".
+
+### Line map (Task 1 Step 6)
+
+Plan cites are `608267eb` unless the plan names another tree. 59 cited lines or ranges read the same text at the same line on `e150751a` (checked by comparing the cited lines in both trees) and are not repeated. The table lists every cite that moved. A function name is the stable anchor.
+
+| File | Plan | Base | Anchor at the base | Plan line |
+|---|---|---|---|---|
+| `match/match_screen.gd` | :286 | :321 | `func _input(event: InputEvent) -> void:` | 41 |
+| `match/match_screen.gd` | :514 | :553 | `func _unhandled_input(event: InputEvent) -> void:` | 41 |
+| `match/match_screen.gd` | :587 | :627 | `func _select_kind(kind: String, shift: bool) -> void` | 41 |
+| `match/match_screen.gd` | :595 | :635 | `func _hud_selection() -> Dictionary:` | 41 |
+| `match/online_driver.gd` | :127-132 | :141-146 | `func _tick_job(commands: Array[Dictionary]) -> SimPu` | 42 |
+| `match/online_driver.gd` | :134-140 | :150-156 | `# The last drained note's preview answer wins, as th` | 42 |
+| `tests/test_online_scene.gd` | :2249 | :2315 | `func test_ph_preview_on_last_job_of_catch_up(runner)` | 42 |
+| `docs/reference/sim-interface.md` | :73 | :76 | `- `preview_build(player, builder_id, kind, origin) -` | 42,420 |
+| `match/orders.gd` | :98-114 | :102-118 | `func reset() -> void:` | 43 |
+| `match/orders.gd` | :113 | :118 | `_start_pending = true` | 43 |
+| `match/orders.gd` | :72-73 | :74-75 | `func takes_orders() -> bool:` | 43 |
+| `match/orders.gd` | :530-536 | :578-584 | `func _clear_placement() -> void:` | 43 |
+| `match/match_screen.gd` | :543-547 | :582-586 | `func _show(state: Dictionary, fresh: bool = true) ->` | 43 |
+| `match/match_screen.gd` | :163-167 | :173-177 | `func _exit_tree() -> void:` | 44,159,330 |
+| `presentation/pause_menu.gd` | :50-65 | :52-67 | `_button(buttons, "Settings", func() -> void: _show(_` | 44,437 |
+| `match/match_screen.gd` | :336-337 | :372-373 | `func _step_frame() -> void:` | 44 |
+| `match/match_screen.gd` | :367-372 | :404-409 | `func _process(delta: float) -> void:` | 44 |
+| `match/match_screen.gd` | :233-248 | :246-261 | `func _take_answers() -> void:` | 44 |
+| `match/match_screen.gd` | :346-359 | :382-395 | `func _drain_notes() -> bool:` | 44 |
+| `match/match_screen.gd` | :163 | :173 | `func _exit_tree() -> void:` | 53 |
+| `match/match_screen.gd` | :346 | :382 | `func _drain_notes() -> bool:` | 53 |
+| `match/match_screen.gd` | :154-157 | :164-167 | `if driver.has_method("net_line"): _perf.extra = driv` | 53,298 |
+| `match/match_screen.gd` | :681 | :731 | `func _restart_world() -> void:` | 53 |
+| `tests/test_sim_pump.gd` | :232-272 | :234-274 | `func test_ph_null_job_fails_pump(runner) -> bool:` | 66 |
+| `match/online_driver.gd` | :113 | :127 | `_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)` | 110 |
+| `match/online_driver.gd` | :118 | :132 | `_credit -= 1` | 110 |
+| `net/lockstep.gd` | :196-202 | :232-238 | `func set_relay_lost() -> void:` | 110 |
+| `match/online_driver.gd` | :111-112 | :124-125 | `for text: Variant in _transport.poll(): _lockstep.re` | 110 |
+| `match/online_driver.gd` | :150 | :168 | `if note.over and note.tick <= tick: return` | 112 |
+| `match/online_driver.gd` | :151-154 | :169-172 | `if note.tick != tick + 1:` | 112 |
+| `tests/test_online_scene.gd` | :2067 | :2133 | `func test_sb4_foreign_note_ends_match(runner) -> boo` | 112 |
+| `tests/test_online_scene.gd` | :147 | :158 | `var left: Dictionary = await _online(runner, 2)` | 112 |
+| `tests/test_online_scene.gd` | :1986 | :2052 | `func test_sb4_publish_is_not_a_tick(runner) -> bool:` | 112 |
+| `tests/test_online_scene.gd` | :1969 | :2035 | `func test_sb4_three_callbacks_one_drain(runner) -> b` | 112 |
+| `match/match_screen.gd` | :211-229 | :224-242 | `func playtest_match() -> Dictionary:` | 113 |
+| `match/online_driver.gd` | :269-270 | :337-338 | `func match_log() -> Dictionary:` | 113 |
+| `match/online_driver.gd` | :170-171 | :189-190 | `func record() -> Dictionary:` | 113 |
+| `match/online_driver.gd` | :112 | :126 | `if not _finished and (_transport.closed() or _transp` | 113 |
+| `match/online_driver.gd` | :79-81 | :90-92 | `first_note = pump.start()` | 114 |
+| `match/sim_pump.gd` | :69 | :76 | `for player: Dictionary in _current.view.players: not` | 114,332 |
+| `match/match_screen.gd` | :195 | :206 | `var size: Array = driver.current().view.map.size` | 114 |
+| `simulation/simulation.gd` | :831 | :834 | `var rows: RefCounted = ViewRows.from_units(units)` | 137 |
+| `match/orders.gd` | :538-544 | :586-592 | `func _update_preview(plane: Vector2) -> void:` | 137 |
+| `match/sim_pump.gd` | :146-150 | :153-157 | `static func _attach_targets(events: Array[Dictionary` | 137 |
+| `match/sim_pump.gd` | :138-143 | :145-150 | `func _warm_and_freeze() -> void:` | 140 |
+| `match/match_screen.gd` | :514-523 | :553-562 | `func _unhandled_input(event: InputEvent) -> void:` | 165 |
+| `net/lockstep.gd` | :160-161 | :179-180 | `func finish_tick(tick: int, state: Variant, digest: ` | 165 |
+| `match/match_screen.gd` | :536-547 | :575-586 | `func input_over() -> bool:` | 165 |
+| `net/headless_client.gd` | :182-198 | :195-211 | `func _pump_steps(limit: int) -> void:` | 183 |
+| `net/headless_client.gd` | :223-234 | :236-247 | `func _run_script() -> void:` | 183 |
+| `tests/test_online_scene.gd` | :626 | :637 | `Profiler.enabled = true` | 283 |
+| `tests/test_sim_pump.gd` | :106 | :108 | `func test_sb3_pump_digests_equal_direct(runner) -> b` | 315 |
+| `match/sim_pump.gd` | :98-101 | :105-108 | `func query(job: Job) -> Note:` | 321,323 |
+| `match/sim_pump.gd` | :103-112 | :110-119 | `func record() -> Dictionary:` | 321 |
+| `match/sim_pump.gd` | :61-70 | :68-77 | `func start() -> Note:` | 330 |
+| `match/sim_pump.gd` | :123-124 | :130-131 | `func stop() -> void:` | 330 |
+| `net/lockstep.gd` | :161 | :180 | `if _ended(): return` | 333 |
+| `match/online_driver.gd` | :120-122 | :134-136 | `if not pump.post(_tick_job(commands)):` | 339 |
+| `tests/test_online_scene.gd` | :40-66 | :44-70 | `class FakeTransport extends RefCounted:` | 347 |
+| `tests/test_sim_pump.gd` | :26-43 | :26-43 | `class PairTransport extends RefCounted:` | 347 |
+| `match/match_screen.gd` | :337 | :373 | `if menu_open() and driver.pauses_sim(): return` | 347 |
+| `match/online_driver.gd` | :94 | :107 | `_lockstep.start(note.snapshot, note.digest)` | 347 |
+| `tools/run_netplay.sh` | :164-167 | :195-198 | `oracle() {` | 373 |
+| `presentation/world_view.gd` | :456-481 | :462-487 | `for i in _order:` | 388 |
+| `net/lockstep.gd` | :110-126 | :125-141 | `func take(tick: int, quiet: bool = false, survivors:` | 405 |
+| `match/online_driver.gd` | :135-143 | :151-159 | `func drain() -> Array[SimPump.Note]:` | 405 |
+| `match/online_driver.gd` | :123 | :137 | `_taken.append(_next_tick)` | 414 |
+| `presentation/pause_menu.gd` | :202-222 | :206-226 | `func _settings_body() -> VBoxContainer:` | 437 |
+
+Cites that need more than a number:
+
+| Plan cite | Base |
+|---|---|
+| `match_screen.gd` `_header` :219 (`_header(mode, match_factions)`) | `:232`, now `_header(played: Dictionary)` with `teams` and `bots` (P7 T2-5); the `sim` field goes beside them |
+| `lockstep.gd` `submit` :66-77 (608267eb); :79-92 (a7920931) | `:79-91`, `submit(payload, player = 0)`; the a7920931 cite holds |
+| `lockstep.gd` `finish_tick` check :160-164 (608267eb); :179-183 (a7920931) | `:179-183` (the check is `:181`); the a7920931 cite holds |
+| `online_driver.gd` `create` :64-76 | `:71-84` (P7 four-seat `create`; `adopt` `:86`, `start` `:100`, `stop` `:109`, `leave` `:116`, `step` `:123`, `_tick_job` `:141`, `drain` `:151`, `_finish_job` `:163`, `record` `:189`, `_report` `:366`, `notice` `:399`) |
+| `online_driver.gd` `_finish` :272 | `:340` |
+| `online_driver.gd` `rematch_line` :269-271 (a7920931) | `:293-296`, the merged text |
+| `debug/team_match.gd` `create` :13 | `:16`, `create(entries = SEATS)`; `step` `:26` |
+| `.github/workflows/ci.yml` :156 | `:156`, the same line; the scenario list now also has `team team-guest-defeated team-guest-quits team-host-leaves team-defeated-host-leaves` and `trio-play-on trio-left-first trio-result` (P7 T2-5) |
+| `.github/workflows/ci.yml` :57-60, :69-72 | same lines |
+| `tools/run_netplay.sh` :98-101, :164-167 | `:98-101` unchanged; the plan's :164-167 reads at `:195-198` (P7's team oracle) |
+| `sim_pump.gd` (all cites) | the file grew by the P7 `PlanRecorder` (:25-29) and `Job.plan_bots` (:15): `Job` :12-23, `Note` :31, `Slot` :51, `_init` :64, `start` :68-77, `post` :79-88, `drain` :90-97, `current` :99, `previous` :102, `query` :105-108, `record` :110-119, `failure` :121, `_fail` :124, `busy` :127, `stop` :130-131, `live` :133, `_note_for` :136, `_warm_reach` :139, `_warmers` :142, `_warm_and_freeze` :145-152, `_attach_targets` :153-157, `run_job` :159-193 |
+| Cites into the private spike, harness and research files (`worker_driver.gd:16,161-164`, `worker_ab.py:173-174,206,210`, `ow/...`, `morning-summary.md:55`, `sb5-threads-2026-11-25.md:3263-3277`) | historical measurements keep their original tree |
+| `tools/run_tests.sh:57-60` in Task 9 Step 3 | a typo for `ci.yml:57-60` (Decided 10 cites the workflow; `run_tests.sh` has 55 lines); the plan text keeps it, Task 9 reads `ci.yml` |
+
+### Findings for later tasks (Task 1)
+
+1. Pump API at the base is the inline pump only (`sim_pump.gd` 193 lines): no `has_room`, `mode`, `queue_stats`, `failure()` on the drivers beyond `_read_failure()`; Task 2 onward adds them, so the plan's names have no collision.
+2. Two existing top-level writes into the named caches (`combat_definitions.gd:25` radius, `combat.gd:84` reach) are miss fills, not member writes; see "Writes into frozen cache members". Task 3's `_freeze` change and probe should state them in the ledger.
+3. `drain` in `online_driver.gd` already carries P7's `_pings.append_array(_new_pings(notes))` (`:157`); Task 7's `drain` hunk (failure read and end) goes around it.
+4. The offline `step` already reads the failure on a refused post (`_read_failure()`), as Failure channel "Callers" expects.
+5. Task 12's harness patch calls `TeamMatch.create()` and `TeamMatch.step(sim)`; P7 gave both an `entries` parameter with the old `SEATS` default (`debug/team_match.gd:16,26`, plus `SEATS_2V2`), so the calls still compile and mean the 3v3 load.
+6. The plan's example `test_two_tick_frame_keeps_earlier_results` is not a multi-callback case (it drives `tick` and a catch-up of two ticks per callback); it is marked settle, with the other catch-up cases, not inline.
