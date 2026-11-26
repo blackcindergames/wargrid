@@ -37,10 +37,23 @@ class Tagged extends RefCounted:
 # Posts a semaphore once a job has run, so a case waits for the worker's progress instead of reading live().
 class RanPump extends "res://tests/failing_pump.gd":
 	var ran := Semaphore.new()
+	# Gate points to pause at, in order; the worker re-points the gate itself, so main never writes it while the worker runs. Unarmed: the plain gate.
+	var points: Array[String] = []
+	var armed: bool = false
+	var arrived := Semaphore.new()
 	func _note_for(job: Job, slot: Slot) -> Note:
 		var note: Note = super(job, slot)
 		ran.post()
 		return note
+	func _wait_gate(where: String) -> void:
+		if not armed:
+			super(where)
+			return
+		if _gate == null or points.is_empty() or points[0] != where: return
+		points.pop_front()
+		_gate_where = where
+		arrived.post()
+		super(where)
 
 # The thread that ran each job, read after the pump is idle.
 class IdPump extends "res://scripts/match/sim_pump.gd":
@@ -134,7 +147,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays, test_sb5a_full_pump_leaves_next_tick_in_lockstep, test_sb5a_preview_waits_for_room, test_sb5a_two_notes_one_frame_pair_in_order, test_sb5a_hash_tick_note_carries_digest, test_sb5a_failure_between_room_and_post, test_sb5a_online_failure_ends_and_closes, test_sb5a_relay_loss_and_pump_failure_same_frame, test_sb5a_online_start_null_query, test_sb5a_job_zero_null_ends_online_match, test_sb5a_pairing_rejects_foreign_note, test_sb5a_notice_waiting_empty, test_sb5a_play_on_leave_with_jobs_in_flight, test_sb5a_ring_may_trail_desync_tick, test_sb5a_report_survives_failed_query, test_sb5a_suspend_is_no_stall]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays, test_sb5a_full_pump_leaves_next_tick_in_lockstep, test_sb5a_preview_waits_for_room, test_sb5a_two_notes_one_frame_pair_in_order, test_sb5a_hash_tick_note_carries_digest, test_sb5a_failure_between_room_and_post, test_sb5a_online_failure_ends_and_closes, test_sb5a_relay_loss_and_pump_failure_same_frame, test_sb5a_online_start_null_query, test_sb5a_job_zero_null_ends_online_match, test_sb5a_pairing_rejects_foreign_note, test_sb5a_notice_waiting_empty, test_sb5a_play_on_leave_with_jobs_in_flight, test_sb5a_ring_may_trail_desync_tick, test_sb5a_report_survives_failed_query, test_sb5a_suspend_is_no_stall, test_sb5a_lock_guards_publish, test_sb5a_publish_orders, test_sb5a_stop_and_post_same_frame, test_sb5a_free_running_equals_inline]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -2643,4 +2656,214 @@ func test_sb5a_suspend_is_no_stall(runner) -> bool:
 	var notes: Array = _drain(pump)
 	runner.check(notes.size() == 1 and pump.failure().is_empty(), "SB5A a note finished while the app was suspended is drained, no stall, got %d notes '%s'" % [notes.size(), pump.failure()])
 	pump.stop()
+	return true
+
+const LOCK_HOLD_MS: int = 150
+
+# Runs on a helper thread and touches only the gate: after main's signal it holds the gate for LOCK_HOLD_MS, then posts it and returns the usec stamp taken just before the post.
+func _release_after(gate: Semaphore, called: Semaphore) -> int:
+	var end: int = Time.get_ticks_msec() + 10000
+	while not called.try_wait() and Time.get_ticks_msec() < end: OS.delay_usec(500)
+	OS.delay_msec(LOCK_HOLD_MS)
+	var stamp: int = Time.get_ticks_usec()
+	gate.post()
+	return stamp
+
+func _await_arrival(pump, limit_ms: int = 1500) -> bool:
+	var end: int = Time.get_ticks_msec() + limit_ms
+	var arrived: bool = pump.arrived.try_wait()
+	while not arrived and Time.get_ticks_msec() < end:
+		OS.delay_usec(200)
+		arrived = pump.arrived.try_wait()
+	return arrived
+
+# A worker pump whose first job has run and is paused at the first gate point, which it has told us (inside_publish: holding the lock).
+func _paused_pump(gate: Semaphore, points: Array[String]):
+	var pump = _ran_pump()
+	pump.points.assign(points)
+	pump.armed = true
+	pump.gate_publish_for_test(gate, points[0])
+	pump.post(_job())
+	_await_arrival(pump)
+	return pump
+
+func test_sb5a_lock_guards_publish(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	var gate := Semaphore.new()
+	var pump = _paused_pump(gate, ["inside_publish"])
+	var called := Semaphore.new()
+	var releaser := Thread.new()
+	releaser.start(_release_after.bind(gate, called))
+	called.post()
+	var began: int = Time.get_ticks_usec()
+	var notes: Array = pump.drain()
+	var returned: int = Time.get_ticks_usec()
+	var stamp: int = releaser.wait_to_finish()
+	runner.check(began < stamp and returned >= stamp, "SB5A drain waited for the publish lock until the gate was released (returned %d us before the release)" % (stamp - returned))
+	runner.check(notes.size() == 1 and notes[0].tick == 1 and pump.current().tick == notes[0].tick, "SB5A drain saw the note and its slot together, got %d notes, slot tick %d" % [notes.size(), pump.current().tick])
+	_stop_built()
+	return true
+
+func _call_on(pump, action: String) -> Variant:
+	match action:
+		"post": return pump.post(_job())
+		"drain": return pump.drain()
+		"has_room": return pump.has_room()
+		"busy": return pump.busy()
+		"query": return pump.query(_digest_job())
+		"stop":
+			pump.stop()
+			return true
+	return null
+
+# One main-side call against a paused worker. Steps that wait run beside a helper that releases the gate LOCK_HOLD_MS after the signal; the others check the job is still unpublished and release the gate themselves.
+func _order_step(runner, pump, gate: Semaphore, action: String, where: String, label: String, ticks: Array) -> void:
+	var waits: bool = where == "inside_publish" or action in ["query", "stop"]
+	var tag: String = "SB5A %s: %s@%s" % [label, action, where]
+	var called := Semaphore.new()
+	var releaser := Thread.new()
+	if waits: releaser.start(_release_after.bind(gate, called))
+	called.post()
+	var began: int = Time.get_ticks_usec()
+	var value = _call_on(pump, action)
+	var returned: int = Time.get_ticks_usec()
+	if waits:
+		var stamp: int = releaser.wait_to_finish()
+		runner.check(began < stamp and returned >= stamp, "%s waits for the release" % tag)
+	else:
+		pump._mutex.lock()
+		var pending: int = pump._unpublished
+		var queued: int = pump._notes.size()
+		pump._mutex.unlock()
+		runner.check(pending >= 1 and queued == 0, "%s returns with the job still unpublished (pending %d, notes %d)" % [tag, pending, queued])
+		gate.post()
+	if action == "post": runner.check(value == true, "%s: the post is accepted" % tag)
+	if action == "query": runner.check(value != null, "%s: the query is answered" % tag)
+	if action == "has_room": runner.check(value == true, "%s: there is room" % tag)
+	if action == "busy": runner.check(value != waits, "%s: busy says %s, got %s" % [tag, not waits, value])
+	if action == "drain":
+		runner.check(value.size() == (1 if waits else 0), "%s: a drain takes the note only after the publish (%d)" % [tag, value.size()])
+		ticks.append_array(value.map(func(note) -> int: return note.tick))
+
+# steps: [call, gate point] per pause; a second step runs while the same job is paused again, inside the lock.
+func _sb5a_publish_order(runner, steps: Array) -> void:
+	var gate := Semaphore.new()
+	var points: Array[String] = []
+	for step: Array in steps: points.append(step[1])
+	var pump = _paused_pump(gate, points)
+	var label: String = " -> ".join(steps.map(func(step: Array) -> String: return "%s@%s" % step))
+	var ticks: Array = []
+	for i in steps.size():
+		if i > 0: runner.check(_await_arrival(pump), "SB5A %s: the worker reached its second pause" % label)
+		_order_step(runner, pump, gate, steps[i][0], steps[i][1], label, ticks)
+	runner.check(_idle(pump), "SB5A %s: the pump goes idle" % label)
+	ticks.append_array(pump.drain().map(func(note) -> int: return note.tick))
+	pump._mutex.lock()
+	var pending: int = pump._unpublished
+	pump._mutex.unlock()
+	var contiguous: bool = not ticks.is_empty() and ticks == range(1, ticks.size() + 1)
+	runner.check(contiguous and pump.current().tick == ticks.back() and pending == 0 and pump.failure().is_empty(), "SB5A %s: notes in tick order, READY equals the last note, nothing unpublished (ticks %s, slot %d, pending %d, '%s')" % [label, ticks, pump.current().tick, pending, pump.failure()])
+	_stop_built()
+
+func test_sb5a_publish_orders(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	for action: String in ["post", "drain", "has_room", "busy", "query", "stop"]:
+		for where: String in ["before_publish", "inside_publish"]: _sb5a_publish_order(runner, [[action, where]])
+	for pair: Array in [["drain", "drain"], ["has_room", "post"], ["busy", "query"], ["post", "stop"], ["drain", "has_room"], ["has_room", "busy"]]:
+		_sb5a_publish_order(runner, [[pair[0], "before_publish"], [pair[1], "inside_publish"]])
+	return true
+
+func test_sb5a_stop_and_post_same_frame(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	var threads: int = SimPump.live_workers()
+	var gate := Semaphore.new()
+	var pump = _ran_pump()
+	pump.gate_publish_for_test(gate, "before_publish")
+	runner.check(pump.post(_job()), "SB5A the running job is accepted")
+	runner.check(_await_ran(pump), "SB5A the running job ran")
+	runner.check(pump.post(_job()), "SB5A the waiting job is accepted")
+	var called := Semaphore.new()
+	var releaser := Thread.new()
+	releaser.start(_release_after.bind(gate, called))
+	called.post()
+	pump.stop()
+	var late: bool = pump.post(_job())
+	releaser.wait_to_finish()
+	runner.check(not late, "SB5A a post after stop is refused")
+	runner.check(not pump.ran.try_wait() and SimPump.live_workers() == threads, "SB5A the waiting job never ran and the worker exited, live %d" % [SimPump.live_workers() - threads])
+	var notes: Array = pump.drain()
+	runner.check(notes.size() == 1 and notes[0].tick == 1 and pump.drain().is_empty(), "SB5A the finished job is drained once, got %d" % notes.size())
+	_stop_built()
+	return true
+
+# Moves at two ticks, so the notes carry issued results.
+func _free_job(index: int, unit: int):
+	var job = _job([_move(unit)] if index == 5 or index == 400 else [], [2])
+	job.want_digest = (index + 1) % DIGEST_EVERY == 0
+	return job
+
+func _slot_projection(slot) -> Dictionary:
+	var projection: Dictionary = {"tick": slot.tick}
+	for key: String in slot.view:
+		if key != "units": projection[key] = slot.view[key]
+	for column in VIEW_COLUMNS: projection["units." + column] = slot.view.units.get(column)
+	return projection
+
+func _note_projection(note) -> Dictionary:
+	var projection: Dictionary = {"tick": note.tick, "over": note.over, "digest": note.digest}
+	for field in ["events", "results", "issued", "bot_commands", "stats", "survivors", "starts", "preview"]: projection[field] = note.get(field)
+	return projection
+
+# Per tick: the hash of the note and of the slot an inline pump publishes.
+func _inline_reference(unit: int) -> Dictionary:
+	var pump = _pump("inline")
+	var baseline: Dictionary = {"notes": {}, "views": {0: hash(_slot_projection(pump.current()))}, "digest": ""}
+	for i in MATCH_TICKS:
+		pump.post(_free_job(i, unit))
+		var note = pump.drain()[0]
+		baseline.notes[note.tick] = hash(_note_projection(note))
+		baseline.views[note.tick] = hash(_slot_projection(pump.current()))
+	baseline.digest = StateHash.digest(pump.live().snapshot())
+	return baseline
+
+func _view_mismatch(slot, baseline: Dictionary) -> String:
+	if slot == null: return ""
+	var held: int = hash(_slot_projection(slot))
+	if held == baseline.views.get(slot.tick, 0): return ""
+	return "view at tick %d: worker %d, inline %d" % [slot.tick, held, baseline.views.get(slot.tick, 0)]
+
+func test_sb5a_free_running_equals_inline(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	var unit: int = _own_unit(_sim())
+	var baseline: Dictionary = _inline_reference(unit)
+	var pump = _pump("worker")
+	var posted: int = 0
+	var seen: int = 0
+	var drains: int = 0
+	var widest: int = 0
+	var mismatch: String = ""
+	var end: int = Time.get_ticks_msec() + 60000
+	while seen < MATCH_TICKS and mismatch.is_empty() and Time.get_ticks_msec() < end:
+		if posted < MATCH_TICKS and pump.has_room() and pump.post(_free_job(posted, unit)): posted += 1
+		var began: int = Time.get_ticks_usec()
+		var notes: Array = pump.drain()
+		widest = maxi(widest, Time.get_ticks_usec() - began)
+		drains += 1
+		for note in notes:
+			seen += 1
+			var held: int = hash(_note_projection(note))
+			if note.tick != seen or held != baseline.notes.get(note.tick, 0):
+				mismatch = "note at tick %d (expected %d): issued %s, bot commands %s, worker %d, inline %d" % [note.tick, seen, note.issued, note.bot_commands, held, baseline.notes.get(note.tick, 0)]
+				break
+		if mismatch.is_empty() and not notes.is_empty():
+			if pump.current().tick != notes.back().tick: mismatch = "READY at tick %d after a drain whose last note is tick %d" % [pump.current().tick, notes.back().tick]
+			else: mismatch = _view_mismatch(pump.current(), baseline) + _view_mismatch(pump.previous(), baseline)
+	runner.check(mismatch.is_empty() and seen == MATCH_TICKS, "SB5A a free-running worker equals the inline run at every tick, first mismatch: %s (%d of %d notes)" % [mismatch, seen, MATCH_TICKS])
+	var stats: Dictionary = pump.queue_stats()
+	runner.check(pump.mode() == "worker" and stats.get("depth_max", 0) >= 2 and drains > seen, "SB5A the run was a free-running worker: mode %s, queue depth %s, %d drains for %d notes" % [pump.mode(), stats.get("depth_max"), drains, seen])
+	var idle: bool = _idle(pump)
+	runner.check(idle, "SB5A the worker goes idle after the last note")
+	if idle: runner.check(StateHash.digest(pump.live().snapshot()) == baseline.digest and pump.failure().is_empty(), "SB5A the free-running worker ends on the inline digest, '%s'" % pump.failure())
+	print("SB5A free run: %d notes in %d drains, drain longest call %d us (lock wait included)" % [seen, drains, widest])
+	_stop_built()
 	return true
