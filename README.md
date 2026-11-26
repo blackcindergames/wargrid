@@ -45,7 +45,7 @@ Wargrid is an isometric RTS written in Godot 4 and typed GDScript. It is inspire
 
 ## Status
 
-Early development; the latest build is on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Playable today: three factions, skirmish against a bot and online 1v1 on Dry Wells, Broken Crown or Ashfall. The long-term target is 3v3 online, friends against bots; scope and milestones are in the [blueprint](docs/blueprint.md). Not accepting outside contributions.
+Early development; the latest build is on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Playable today: three factions, skirmish against a bot and online 1v1 on Dry Wells, Broken Crown or Ashfall. The long-term target is 3v3 online, friends against bots; scope and milestones are in the [blueprint](docs/blueprint.md). Not accepting outside contributions; bug reports are welcome as issues.
 
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
