@@ -36,7 +36,7 @@ func test_code_accepts_only_relay_codes(runner) -> bool:
 func test_relay_accepts_only_wss(runner) -> bool:
 	for good: String in [EXP_RELAY, "wss://wargrid-relay-exp.fly.dev/ws"]:
 		runner.check(JoinLink.relay(good) == good, "JL3 accepts %s" % good)
-	for bad: String in ["ws://x.example/ws", "https://x.example/ws", "javascript:alert(1)", "wss://", "wss:///ws", "wss://x.example/ws extra", "wss://relay.pdstuber.dev@evil.example/ws", "wss://" + "a".repeat(260)]:
+	for bad: String in ["ws://x.example/ws", "https://x.example/ws", "javascript:alert(1)", "wss://", "wss:///ws", "wss://x.example/ws extra", "wss://relay.wargrid.blackcindergames.com@evil.example/ws", "wss://" + "a".repeat(260)]:
 		runner.check(JoinLink.relay(bad) == "", "JL3 rejects '%s'" % bad.left(40))
 	return true
 
