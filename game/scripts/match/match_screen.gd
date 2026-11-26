@@ -161,6 +161,7 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	music.play_match(rng, MusicPlayer.GAP_SECONDS)
+	_perf.mode = driver.sim_mode()
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
 	if driver.has_method("bot_line"):
 		_perf.extra = driver.bot_line
@@ -230,7 +231,7 @@ func playtest_header() -> Dictionary:
 	return _header(played)
 
 func _header(played: Dictionary) -> Dictionary:
-	return {"mode": played.mode, "map": _map_id(), "seed": match_seed, "factions": played.factions, "teams": played.teams, "bots": played.bots, "seat": local_player, "controller": "human", "build": PlaytestSettings.build_id()}
+	return {"mode": played.mode, "map": _map_id(), "seed": match_seed, "factions": played.factions, "teams": played.teams, "bots": played.bots, "seat": local_player, "controller": "human", "sim": driver.sim_mode(), "build": PlaytestSettings.build_id()}
 
 func _map_id() -> String:
 	return map_path.get_file().get_basename()
@@ -732,6 +733,7 @@ func _restart_world() -> void:
 	view_player = local_player
 	_playtest.begin_match()
 	_create_world()
+	_perf.mode = driver.sim_mode()
 	_clock = PresentationClock.new()
 	_sound.director.reset()
 	_sound._unit_voice.stop()

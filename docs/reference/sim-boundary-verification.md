@@ -572,21 +572,21 @@ Plan cites are `6ae89cd`; the right column is the base (HEAD `07f0c59`), filled 
 Plan: [sim boundary SB5a](../superpowers/plans/2026-11-22-sim-boundary-sb5a.md), revision `5a0aba1c` (`git log -1 --format=%h main -- docs/superpowers/plans/2026-11-22-sim-boundary-sb5a.md`; the revision the run builds from). Branch `sim-boundary-sb5a` (worktree `~/projects/wargrid-wt-sb5a`) from `main` `e150751a`. From Task 1 on this section is the resume record; the night's rulings, per-task `uptime` and token totals stay in the night ledger (`~/projects/wargrid-overnight-work/sb5a-night/ledger.md`, private). Logs `L` = `~/projects/wargrid-overnight-work/sb5a-night/logs` (outside the repository; every log below is named by tag in it). The resume record and the task table are overwritten at each checkpoint; evidence rows, lists and the line map are append-only.
 
 ```text
-Resume record (updated 2026-11-26 night, Task 1 done: base, counts, lists and line map written, uncommitted)
+Resume record (updated 2026-11-26 night, Task 2 implemented: switch, mode, F3 word; uncommitted on top of Task 1 commit 323246b3)
 Branch / base commit / working-tree state: sim-boundary-sb5a (worktree ~/projects/wargrid-wt-sb5a) / <base> = e150751a3bb6552154148f1089d4052e31d87565 (main = origin/main on 2026-11-26; P7 part 2 squash c6030abe and tag p7-2-team-online-tip = b0c95732 are in it; the plan's own base 608267eb and P2.3b squash aa00b2cf are replaced, see "Base") / HEAD = <base>; only this file changed
-Last green task / next incomplete task: Task 1 (docs only; check_public before the commit) / Task 2 (switch, mode, F3 word)
-Changed paths since last commit: docs/reference/sim-boundary-verification.md
-Last command / cases / checks / failures / exit / marker: SUITE(base) on a clean tree at e150751a: CASES 1682 CHECKS 159998 FAILURES 0, exit 0, TESTS PASSED 159998; NET(base, match) and NET(base, rematch) terminal tick 9746, NETPLAY PASSED; run_team_match.sh TEAM MATCH won tick=40182 winner=2 units_peak=314; CHECKS(base) CHECKS PASSED 5
+Last green task / next incomplete task: Task 2 (switch, mode, F3 word; the coordinator reviews and commits) / Task 3 (the queue)
+Changed paths since last commit: game/scripts/match/sim_pump.gd, offline_driver.gd, online_driver.gd, match_screen.gd, game/scripts/presentation/perf_overlay.gd, tools/test_sim_boundary.py, game/tests/test_sim_pump.gd, test_perf_overlay.gd, test_skirmish_scene.gd, test_online_scene.gd, this file
+Last command / cases / checks / failures / exit / marker: SUITE(t2f) on the Task 2 tree after the review fixes: CASES 1686 CHECKS 160015 FAILURES 0, exit 0, TESTS PASSED 160015; TRACES(t2f) REPLAYS MATCHED 1200 x3 and 100 (team); lint, warnings exit 0; CHECKS(t2f) CHECKS PASSED 5; test_sb5a_ CASES 4 CHECKS 17 FAILURES 0 with and without the switch; mutations red and reverted (worker_wanted ignores the latch; `_restart_world` F3 line removed)
 Known red case or blocker: none
 Approved decisions, pre-authorizations used, deferred gates: local commits per task on this branch only, never push or merge (night handoff, user, 2026-11-26); the Deck window of Task 13 (Q6) and the night settings (Q7) approved by starting the run; Task 16's push, CI, PERF_LABEL benchmark, /ponytail-review, gate reviews and the rendered rerun stay the owner's (Q8)
 Usage so far (python3 tools/session_usage.py <session files>): in the night ledger
-Next exact action: coordinator checks the guard (`git diff <base> --stat -- <untouched paths>` empty), runs check_public, commits Task 1; Task 2 reads the agent map's Performance entry first
+Next exact action: coordinator checks the guard, dispatches the Task 2 review, commits Task 2 (check_public first); then Task 3 (A: Steps 0-2, B: Steps 3-6)
 ```
 
 | Task | What | Status |
 |---|---|---|
-| 1 | Base, counts, lists, line map (this section) | written, uncommitted |
-| 2 | Switch, mode, F3 word | pending |
+| 1 | Base, counts, lists, line map (this section) | committed 323246b3 |
+| 2 | Switch, mode, F3 word | implemented, awaiting review and commit |
 | 3 | The queue | pending |
 | 4 | `query` and `record` through the worker | pending |
 | 5 | Stop, exit, restart; runner hunk | pending |
@@ -954,3 +954,17 @@ Cites that need more than a number:
 4. The offline `step` already reads the failure on a refused post (`_read_failure()`), as Failure channel "Callers" expects.
 5. Task 12's harness patch calls `TeamMatch.create()` and `TeamMatch.step(sim)`; P7 gave both an `entries` parameter with the old `SEATS` default (`debug/team_match.gd:16,26`, plus `SEATS_2V2`), so the calls still compile and mean the 3v3 load.
 6. The plan's example `test_two_tick_frame_keeps_earlier_results` is not a multi-callback case (it drives `tick` and a catch-up of two ticks per callback); it is marked settle, with the other catch-up cases, not inline.
+
+### Task 2: the switch, the mode, and where it shows
+
+Built on the Task 1 commit; the pump still runs every job inline in both modes. Tree for every number: the working tree on top of `323246b3`.
+
+- `sim_pump.gd`: `static worker_wanted()` (`WARGRID_SIM_THREAD == "1"`, threads feature, latch not set), `static force_mode_for_test(mode)`, `static reset_process_latch_for_test()`, `mode()` fixed in `_init`. The latch is set by `_fail` (the first-failure setter that exists on the base), so a failing pump makes the next pump inline for the process. A forced mode wins over the latch.
+- Decided for you (reversible): `mode()` returns `"inline-fallback"` for a pump created with the switch on and the latch set; the plan has the drivers compute that word from `pump.mode()`, but the drivers cannot see the private latch without a further public pump member, and the Contract list allows none. `sim_mode()` is then `pump.mode()` in both drivers, and tasks that branch on the worker use `mode() == "worker"`. A forced-inline test pump says `"inline"`, as does a build without threads.
+- `offline_driver.gd`, `online_driver.gd`: `sim_mode()`; online `_report` adds `report["sim"]` (the bracket spelling, because `tools/test_sim_boundary.py` flags `.sim` as a live-simulation read). `PUMP_COUNTS` 10 to 11 (offline) and 9 to 10 (online): one `pump.mode()` each.
+- `match_screen.gd`: `_header` has `"sim": driver.sim_mode()` (playtest header and record); `_perf.mode = driver.sim_mode()` beside `_perf.extra` and after `_create_world()` in `_restart_world`.
+- `perf_overlay.gd` (text only, agent map Performance entry read: no drawing or budget affected): `var mode`, first line `FPS n | Sim: worker|inline|inline (fallback)`; empty `mode` leaves the line as before; `extra` unchanged below.
+- New cases (allowed edit 4): `test_sb5a_mode_from_switch` (`test_sim_pump.gd`), `test_sb5a_f3_shows_mode` (`test_perf_overlay.gd`), `test_sb5a_header_names_mode` (`test_skirmish_scene.gd`), `test_sb5a_online_header_and_report_name_mode` (`test_online_scene.gd`); test statics `latch_for_test()` and `mode_after_latch()` in `test_sim_pump.gd`. Red before the code (12 failed checks, no load errors), green after. The cases restore the environment variable, the latch and the forced mode.
+- Review fixes (one round): the F3 word after a restart is pinned (a stale overlay mode must read the new word after `_restart()`; red with the `_restart_world` line removed, restored), plus an overlay unit check for `inline-fallback`; the mode checks build unstarted pumps and `latch_for_test()` forces inline for its own pump and stops it, so Task 3's worker start never meets a Task 2 helper; `_init` takes its mode from `static _mode_for()`.
+- Constraints for Tasks 3 to 7: `_fail` writes the static `_latched` and must stay on the main thread (the worker queues a marker, main converts it; a worker-side `_fail` is a shared-static write, a stop condition); test code compares `mode() == "worker"`, never `== "inline"`; `mode()` has three values (`worker`, `inline`, `inline-fallback`), and Task 15 states them in `sim-interface.md` and restates Decided 5 as "the pump fixes it in `_init`; `sim_mode()` passes it through".
+

@@ -329,6 +329,9 @@ func take_rematch() -> int:
 func over() -> bool:
 	return _finished
 
+func sim_mode() -> String:
+	return pump.mode()
+
 func match_header() -> Dictionary:
 	var players: Array = current().view.players
 	var bots: Array = players.filter(func(player: Dictionary) -> bool: return bot_players().has(player.id)).map(func(player: Dictionary) -> Dictionary: return {"player": player.id, "faction": player.get("faction", "")})
@@ -370,6 +373,7 @@ func _report() -> Dictionary:
 	var report: Dictionary = _lockstep.desync_report()
 	report.hash_ring = pump.query(job).ring
 	report.merge(MatchSettings.report_fields(_map_path.get_file().get_basename(), _seed, _starts))
+	report["sim"] = sim_mode()
 	return report
 
 func net_line() -> String:

@@ -80,7 +80,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -1223,4 +1223,44 @@ func test_bot_refused_submit_recovers_next_decision(runner) -> bool:
 	for order: Dictionary in first:
 		runner.check(later.any(func(m: Dictionary) -> bool: return m.type == order.type and m.get("entity_ids", []) == order.get("entity_ids", [])), "PB6 the dropped %s for %s is sent at the bot's next decision" % [order.type, order.get("entity_ids", [])])
 	_unpair(pair)
+	return true
+
+static func latch_for_test() -> void:
+	var forced: String = SimPump._forced
+	SimPump.force_mode_for_test("inline")
+	var failing = NullJobPump.new(Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int]))
+	SimPump.force_mode_for_test(forced)
+	failing.start()
+	failing.fail_next = true
+	failing.query(SimPump.Job.new())
+	failing.stop()
+
+static func mode_after_latch() -> String:
+	return "inline-fallback" if OS.get_environment("WARGRID_SIM_THREAD") == "1" and OS.has_feature("threads") else "inline"
+
+func _mode() -> String:
+	return SimPump.new(_sim()).mode()
+
+func test_sb5a_mode_from_switch(runner) -> bool:
+	var saved: String = OS.get_environment("WARGRID_SIM_THREAD")
+	var threads: bool = OS.has_feature("threads")
+	SimPump.reset_process_latch_for_test()
+	SimPump.force_mode_for_test("worker")
+	runner.check(_mode() == "worker", "SB5A forced worker names worker")
+	SimPump.force_mode_for_test("inline")
+	runner.check(_mode() == "inline", "SB5A forced inline names inline")
+	SimPump.force_mode_for_test("")
+	OS.unset_environment("WARGRID_SIM_THREAD")
+	runner.check(not SimPump.worker_wanted() and _mode() == "inline", "SB5A switch off is inline")
+	OS.set_environment("WARGRID_SIM_THREAD", "1")
+	runner.check(SimPump.worker_wanted() == threads and _mode() == ("worker" if threads else "inline"), "SB5A switch on is worker where threads exist")
+	latch_for_test()
+	runner.check(not SimPump.worker_wanted() and _mode() == mode_after_latch(), "SB5A after a failure the next pump is inline (fallback), got %s" % _mode())
+	SimPump.force_mode_for_test("worker")
+	runner.check(_mode() == "worker", "SB5A a forced worker overrides the latch")
+	SimPump.force_mode_for_test("")
+	SimPump.reset_process_latch_for_test()
+	runner.check(SimPump.worker_wanted() == threads and _mode() == ("worker" if threads else "inline"), "SB5A a reset latch gives the worker back")
+	if saved.is_empty(): OS.unset_environment("WARGRID_SIM_THREAD")
+	else: OS.set_environment("WARGRID_SIM_THREAD", saved)
 	return true

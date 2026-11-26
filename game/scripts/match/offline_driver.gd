@@ -124,6 +124,9 @@ func record() -> Dictionary:
 func failure() -> String:
 	return _failure
 
+func sim_mode() -> String:
+	return pump.mode()
+
 func _read_failure() -> void:
 	var reason: String = pump.failure()
 	if reason.is_empty() or not _failure.is_empty(): return

@@ -10,9 +10,11 @@ const Lockstep = preload("res://scripts/net/lockstep.gd")
 
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
+const PumpTests = preload("res://tests/test_sim_pump.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 
 func cases() -> Array[Callable]:
-	return [test_summary_math, test_f3_toggles_hidden_default, test_layout_clear_of_hud, test_step_and_counts_shown, test_skirmish_wired, test_split_share_shown, test_f3_toggles_during_placement, test_bot_line_offline_only, test_bot_line_beside_playtest_panels]
+	return [test_summary_math, test_f3_toggles_hidden_default, test_layout_clear_of_hud, test_step_and_counts_shown, test_skirmish_wired, test_split_share_shown, test_f3_toggles_during_placement, test_bot_line_offline_only, test_bot_line_beside_playtest_panels, test_sb5a_f3_shows_mode]
 
 static func _initials(kind: String) -> String:
 	var text: String = ""
@@ -188,4 +190,29 @@ func test_bot_line_beside_playtest_panels(runner) -> bool:
 			runner.check(main.get_node(path).visible and not rect.intersects(main.get_node(path).get_global_rect()), "PO21 F3 clear of %s at %s, F3 %s, panel %s" % [path.get_file(), size, rect, main.get_node(path).get_global_rect()])
 		port.free()
 	overlays._end(saved)
+	return true
+
+func test_sb5a_f3_shows_mode(runner) -> bool:
+	var unit = Overlay.new()
+	unit.mode = "inline-fallback"
+	unit.refresh_text()
+	runner.check(unit.text.split("\n")[0].ends_with("Sim: inline (fallback)"), "PO21 the fallback mode reads inline (fallback), got '%s'" % unit.text)
+	unit.free()
+	var main = await _scene(runner, Skirmish)
+	var overlay: Label = main.get_node("HUD/PerfOverlay")
+	_f3(main)
+	var word: String = "worker" if SimPump.worker_wanted() else "inline"
+	runner.check(overlay.text.split("\n")[0].contains("Sim: " + word), "PO21 the first line names the mode '%s', got '%s'" % [word, overlay.text])
+	for i in 31: BaseScene.tick(main)
+	overlay.refresh_text()
+	runner.check(overlay.text.contains("\nBot 2 "), "PO21 the bot line stays below, got '%s'" % overlay.text)
+	main.free()
+	PumpTests.latch_for_test()
+	main = await _scene(runner, Skirmish)
+	overlay = main.get_node("HUD/PerfOverlay")
+	_f3(main)
+	var fallback: String = "Sim: inline (fallback)" if PumpTests.mode_after_latch() == "inline-fallback" else "Sim: inline"
+	runner.check(overlay.text.split("\n")[0].contains(fallback), "PO21 after a failure the first line says '%s', got '%s'" % [fallback, overlay.text])
+	SimPump.reset_process_latch_for_test()
+	main.free()
 	return true

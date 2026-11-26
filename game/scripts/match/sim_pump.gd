@@ -60,9 +60,15 @@ var _previous: Slot
 var _ready: Slot = null
 var _stopped: bool = false
 var _failure: String = ""
+var _mode: String
+
+# A failed pump turns every later pump inline for the rest of the process.
+static var _latched: bool = false
+static var _forced: String = ""
 
 func _init(sim: Simulation) -> void:
 	_sim = sim
+	_mode = _mode_for()
 	_recorder = CommandRecorder.new(sim)
 
 func start() -> Note:
@@ -121,7 +127,28 @@ func record() -> Dictionary:
 func failure() -> String:
 	return _failure
 
+func mode() -> String:
+	return _mode
+
+static func _switch_on() -> bool:
+	return OS.get_environment("WARGRID_SIM_THREAD") == "1" and OS.has_feature("threads")
+
+static func worker_wanted() -> bool:
+	return _switch_on() and not _latched
+
+static func _mode_for() -> String:
+	if not _forced.is_empty(): return _forced
+	if worker_wanted(): return "worker"
+	return "inline-fallback" if _switch_on() else "inline"
+
+static func force_mode_for_test(forced: String) -> void:
+	_forced = forced
+
+static func reset_process_latch_for_test() -> void:
+	_latched = false
+
 func _fail(kind: String) -> void:
+	_latched = true
 	if _failure.is_empty(): _failure = "%s job returned no note after tick %d" % [kind, _current.tick]
 
 func busy() -> bool:
