@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: What does your friend see after joining?
+why: >-
+  The guest picks only their own faction; the host owns the map, the bots and the start. The guest's
+  sidebar shows Join, the page the guest came in through.
+look: Whether the guest sees at once what they can change.
+rec: A
+recWhy: >-
+  plain text for what only the host changes leaves one control on the page, the guest's own faction,
+  so there is no doubt what to do; the map preview still shows where everyone starts. B keeps the
+  host's layout exactly, but a page of greyed buttons reads as broken, and a disabled Start match
+  suggests the guest is waiting on something they could fix.
+neutral: None of these
+options:
+  A:
+    name: Host settings as text, own faction editable
+    render: {state: guest, params: {guest: readonly}}
+    sees: Map name with "The host chooses the map", bot factions as plain text, no ••• menus; only your faction has a ▾.
+    notes: One control for the guest.
+  B:
+    name: Everything shown, disabled
+    render: {state: guest, params: {guest: disabled}}
+    sees: The host's map dropdown, bot faction buttons and ••• menus greyed; a greyed Start match.
+    notes: Same layout as the host's, greyed.

@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How do you see, and choose, where everyone starts?
+why: >-
+  Planned for P11; P20 reserves the room, and after this round you say whether P20 builds it. Drawn
+  on Ashfall (8 starts) in a 2v2, with one start closed by the host. OpenRA draws a marker per start
+  on its preview, coloured by the player there, a click takes a free one
+  (OpenRA `Widgets/Logic/Lobby/LobbyUtils.cs:238-292`), and a start column of letters in its rows
+  (`LobbyUtils.cs:654-669`). Zero Hour puts start buttons over its map
+  (GeneralsGameCode afc2a103f, `SkirmishGameOptionsMenu.cpp:559-760`). Today's game draws the starts
+  at random (StartSpots.assign takes chosen starts already).
+look: The map preview, then the rows; whether you can tell where your friend starts.
+rec: A
+recWhy: >-
+  markers in player colours answer "where am I, where is my ally" on the picture itself, and the same
+  markers give the host a place to close a single start (step 2). B makes you match letters between
+  two places. C is today's behaviour and the cheapest; pick it if P20 should not build start choice
+  at all, and the preview then only shows where starts are.
+neutral: None of these
+options:
+  A:
+    name: Click a start on the preview
+    render: {state: lobby, params: {spot: map, map: ashfall}}
+    sees: Each taken start a dot in its player's colour, free starts dashed rings, the closed one a ×; the hint says click a free start.
+    notes: OpenRA and Zero Hour style; also where a single start closes.
+  B:
+    name: A start letter per row
+    render: {state: lobby, params: {spot: letter, map: ashfall}}
+    sees: Letters A to H on the preview; each row has a letter chip, "–" for random.
+    notes: OpenRA's start column; chosen in the row.
+  C:
+    name: Random starts, preview only
+    render: {state: lobby, params: {spot: random, map: ashfall}}
+    sees: Every start a dashed ring; "Starts are drawn at random when the match begins."
+    notes: Today's behaviour; no choice.

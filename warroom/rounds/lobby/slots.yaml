@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How is the slot list laid out?
+why: >-
+  Drawn on the 2v2 with your friend joined. The prototype groups the rows under Team 1 and Team 2
+  headings. P7 part 2's waiting view groups them the same way (Your team, Enemy bots). Zero Hour and
+  OpenRA list the slots flat with a team column. Larger formats come later (Ashfall has 8 starts), so
+  the layout must take four rows a team. Claude's default: a joining friend lands on your team when
+  bots hold the other side, and on the other team when there are no bots (a 1v1); the host moves
+  anyone with the row's ••• menu (N shows it open on your friend's row).
+look: Whether you see who is with you at a glance, and room for a fourth row per team.
+controls:
+  state: [lobby, menu]
+rec: A
+recWhy: >-
+  team headings say who is with you without reading a chip, and they take four rows a team in one
+  column without crowding. B shows the two sides facing each other, but each row is half as wide and
+  the bot level has nowhere to go. C is the most compact and the
+  closest to Zero Hour, but the team is a small chip you must read on every row.
+neutral: None of these
+options:
+  A:
+    name: Grouped under team headings
+    render: {params: {slots: teams}}
+    sees: TEAM 1 (you, your friend) above TEAM 2 (two bots), each heading with its player count.
+    notes: The prototype's layout.
+  B:
+    name: Two team columns
+    render: {params: {slots: columns}}
+    sees: Team 1 left, Team 2 right, narrower rows with short faction names; no bot level room.
+    notes: Sides face each other; each row half as wide.
+  C:
+    name: Flat list with a team chip
+    render: {params: {slots: flat}}
+    sees: One list in seat order, a Team 1 or Team 2 chip on each row before the bot level room.
+    notes: Zero Hour and OpenRA style.

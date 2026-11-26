@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How does a slot show its colour?
+why: >-
+  Colours by player are decided (host blue, guest teal, from the P7 part 2 match). A colour pick per
+  slot is planned for P11, same rule as start pick: you say after the round whether P20 builds it.
+  OpenRA swaps a colour too close to a taken one for a free one and keeps the player's preferred
+  colour (OpenRA b70cab2b43, `OpenRA.Mods.Common/ServerTraits/LobbyCommands.cs:1234-1238`); here a taken
+  colour is struck out. C shows the pick open on your swatch.
+look: The swatches at the left of the rows and the markers on the preview.
+rec: A
+recWhy: >-
+  it is the decided default and matches the match itself, where each player has their own colour; the
+  swatch is also where a later colour pick opens, so A reserves C's room. B puts both bots in one red
+  and your friend in your blue, which no longer matches what you see in the match. C is A plus the
+  pick; it costs a popover and the clash rule.
+neutral: None of these
+options:
+  A:
+    name: Player colour swatch
+    render: {state: lobby, params: {colour: player}}
+    sees: A square in each player's colour at the row's left; the preview markers in the same colours.
+    notes: The decided default; one colour per player.
+  B:
+    name: Team colour on the heading only
+    render: {state: lobby, params: {colour: team}}
+    sees: TEAM 1 in blue and TEAM 2 in red, no swatches; the preview markers in team colours.
+    notes: Two colours on the page.
+  C:
+    name: Player swatch with a colour pick
+    render: {state: pick, params: {colour: player}}
+    sees: Your swatch open as eight colours, the three taken ones struck through; your blue framed.
+    notes: P11's pick drawn in A's place.

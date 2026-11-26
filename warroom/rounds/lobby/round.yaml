@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'P20 Lobby: Play page, slot list, starts, colours, invite, pickers'
+intro: >-
+  This round blocks P20's build; the pictures are drawn from the owner's lobby prototype (private) in
+  the game's colours (launcher_theme.tres, palette.gd), real maps, starts and emblems. Decided, not
+  asked (user, 2026-11-24, design answers "Lobby prototype answers"): P20 comes after P7 part 2;
+  features that do not exist stay hidden with room reserved (Y shows the reserved room as amber dashed
+  boxes, Y again hides it); online the friend lands in the slot list and the host presses Start match,
+  no ready badges; colours by player (host blue, guest teal) as the default; no match format row: the
+  map sets the slot count, one per start, the format is a read-only label worked out from the teams
+  ("2v2 · you and your friend vs 2 bots"); fewer players than starts is allowed, more never. Today's
+  game already plays fewer players than starts: a 1v1 on Ashfall uses 2 of its 8 starts
+  (MatchSettings.starts hands the seats to StartSpots.assign, which picks among all starts). Out: a
+  launcher results page, lobby chat, spectators. Reopened by this round: the P2.1 rule "no mode-card
+  start screen" (step 1). Claude's defaults, not asked: a map with fewer starts than the humans
+  present is greyed in the map picker ("Needs 3 players"; it cannot happen today, at most two humans
+  and every map has 2 starts or more); picking a map with fewer starts than humans plus bots asks
+  first and removes the extra bots (step 8, state N); the prototype's format buttons and its "Move to
+  team → Custom" coupling are gone; a joining friend lands on your team when bots hold the other side,
+  and the host moves players with the row's ••• menu (step 3, state N); leaving with a friend in asks
+  first (step 1, last state); the online lobby's way out is "Stop hosting". Start pick on the map (step 4) and a colour pick (step 5) are
+  planned for P11; the round shows where they go and you say after it whether P20 builds them. Open
+  for the build, not asked here: which team a bot added from "Add bot" joins (allied bots stay the
+  Later item Team up with a bot), and whether the host may change the map after the friend joined
+  without a protocol change (P11 lists it). Every picture is a host on Broken Crown at 1280 x 720
+  unless the step says otherwise; S switches to 1280 x 800 and 1920 x 1080 (the UI scales from 720 as
+  the game does). Each step changes one thing and draws the rest as Claude recommends. A neutral
+  answer records no winner, and the build waits for your note. Source: docs/images/lobby-round/.
+steps: [start, unused, slots, spot, colour, invite, guest, pickers]
+render:
+  page: docs/images/lobby-round/lobby.html
+  w: 1280
+  h: 720
+  hash: view={state}
+  pass:
+    size: size
+controls:
+  size: [1280x720, 1280x800, 1920x1080]
+  fit: true
+  extra:
+  - id: room
+    label: Reserved room
+    key: y
+    values:
+    - v: 'on'
+      label: Shown
+    - v: 'off'
+      label: Hidden

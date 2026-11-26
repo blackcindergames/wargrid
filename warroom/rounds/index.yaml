@@ -22,3 +22,5 @@
   title: 'P18 Esc menu: four buttons, a Settings page and a Controls page'
 - id: p7-2-team
   title: 'P7 part 2 Team online: Play page, waiting view, end panel, pings'
+- id: lobby
+  title: 'P20 Lobby: Play page, slot list, starts, colours, invite, pickers'

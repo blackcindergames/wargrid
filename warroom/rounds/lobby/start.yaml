@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: What does Play open on?
+why: >-
+  The prototype opens on mode cards (Skirmish, Host game, Quick play) with Join at the top right.
+  P2.1 ruled out a mode-card start screen (design answers, "New launcher"): the launcher opens straight
+  on a page you can start from. Today (0) P7 part 2 has a mode row, vs Bot or vs Friend, on the page
+  itself. Quick play and public games do not exist, so A keeps their room empty and C leaves it out.
+  N shows the next screen: the lobby after a card (A, C), or the row's Host game (B). With the row,
+  Host game opens the room at once, so the code appears; today that is Create match. N again shows
+  leaving it with your friend in: B asks "Switch to Skirmish?", A and C ask "Stop hosting?".
+look: How many clicks from launch to a match, and whether the page explains itself.
+controls:
+  state: [play, lobby, switch]
+rec: B
+recWhy: >-
+  the row keeps the launcher one click from a match (open, Start match) with the last setup
+  remembered, which P2.1 chose for good reason; the cards add a screen with two real choices today. A
+  becomes worth it once Quick play and public games exist, and nothing in B blocks moving to cards
+  then. C has the cards' extra click and no room for what comes later.
+neutral: None of these
+ref:
+  label: 'Today: the P7 part 2 Play page'
+  img: docs/images/p7/play-team.webp
+options:
+  A:
+    name: Mode cards, a column kept for Quick play
+    render: {params: {start: cards}}
+    sees: Skirmish and Host game cards, the third column and the area under them kept empty (Y marks them); Join with a code at the top right.
+    notes: The prototype's start screen; a click on a card opens its lobby.
+  B:
+    name: Today's mode row on the lobby page
+    render: {params: {start: row}}
+    sees: Play opens on the last setup (here Skirmish on Dry Wells); a Mode row switches to Host game; Join stays in the sidebar.
+    notes: No start screen, as P2.1 and P7 part 2.
+  C:
+    name: Two cards, no reserved column
+    render: {params: {start: two}}
+    sees: Two wide cards, Skirmish and Host game; adding Quick play later re-lays the row.
+    notes: The cards without what does not exist.
