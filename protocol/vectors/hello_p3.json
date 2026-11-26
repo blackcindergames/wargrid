@@ -1,0 +1,12 @@
+{
+ "text": "{\"type\":\"hello\",\"protocol\":3,\"build\":\"abc\",\"match\":\"\",\"settings\":{\"map\":\"dry_wells\"}}",
+ "message": {
+  "type": "hello",
+  "protocol": 3,
+  "build": "abc",
+  "match": "",
+  "settings": {
+   "map": "dry_wells"
+  }
+ }
+}

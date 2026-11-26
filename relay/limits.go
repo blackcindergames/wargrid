@@ -10,14 +10,16 @@ import (
 
 // Rates follow ioq3's connection limits (sv_main.c:363-561); the global join bucket is fixed, so the conformance suite paces itself.
 const (
-	maxConnsPerIP = 16
-	joinBurst     = 10
-	joinPeriod    = time.Second
-	globalBurst   = 20
-	globalPeriod  = 50 * time.Millisecond
-	unknownBurst  = 10
-	unknownPeriod = time.Second
-	tableSize     = 4096
+	maxConnsPerIP  = 16
+	joinBurst      = 10
+	joinPeriod     = time.Second
+	globalBurst    = 20
+	globalPeriod   = 50 * time.Millisecond
+	unknownBurst   = 10
+	unknownPeriod  = time.Second
+	tableSize      = 4096
+	settingsBurst  = 10
+	settingsPeriod = 500 * time.Millisecond
 )
 
 // limiter guards connection slots and joins per client address: a bounded table that refuses when full,
@@ -154,7 +156,10 @@ func (l *limiter) unknown() bool {
 
 // allow leaks elapsed/period units and keeps the remainder, then takes one unit if the burst has room.
 func (l *limiter) allow(b *bucket, burst int, period time.Duration) bool {
-	now := l.now()
+	return b.allow(l.now(), burst, period)
+}
+
+func (b *bucket) allow(now time.Time, burst int, period time.Duration) bool {
 	if b.last.IsZero() {
 		b.last = now
 	}

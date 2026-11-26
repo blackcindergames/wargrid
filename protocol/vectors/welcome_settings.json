@@ -1,0 +1,11 @@
+{
+ "text": "{\"type\":\"welcome\",\"seat\":2,\"match\":\"ABC234\",\"settings\":{\"map\":\"dry_wells\"}}",
+ "message": {
+  "type": "welcome",
+  "seat": 2,
+  "match": "ABC234",
+  "settings": {
+   "map": "dry_wells"
+  }
+ }
+}

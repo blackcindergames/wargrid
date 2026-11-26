@@ -1,0 +1,10 @@
+{
+ "text": "{\"type\":\"pick\",\"seat\":2,\"pick\":{\"faction\":\"usa\"}}",
+ "message": {
+  "type": "pick",
+  "seat": 2,
+  "pick": {
+   "faction": "usa"
+  }
+ }
+}

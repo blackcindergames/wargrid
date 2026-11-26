@@ -7,7 +7,7 @@ import (
 
 func TestConcurrentJoinsNeverOverfill(t *testing.T) {
 	g := &registry{rooms: map[string]*room{}, cfg: testConfig()}
-	first := g.create(&envelope{protocol: protocol, build: "b", settings: []byte("{}")}, &conn{sender: sender{write: func([]byte) {}, shut: func() {}}})
+	first := g.create(&envelope{protocol: protocol, build: "b", raw: []byte("{}")}, &conn{sender: sender{write: func([]byte) {}, shut: func() {}}})
 	code := first.seat.r.code
 	var wg sync.WaitGroup
 	var mu sync.Mutex
