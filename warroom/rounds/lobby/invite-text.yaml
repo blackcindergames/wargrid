@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How does the invite code explain itself to a first-time host?
+why: >-
+  Follow-up to step 6 (D, the code in the Mode row), after your ask for a slight explanation and a
+  player-experience pass (2026-11-26). Its findings: a copy icon alone is a step back from today's
+  yellow "Copy code" button, and while waiting the newcomer looks at the Open slot, 600 px from the
+  code. Not drawn, the same in every option: a click on Copy shows "Copied" with a check for 2 s; the
+  web build says "Send this link to your friend." (the code is a link there); the line hides once the
+  friend joined (N shows it), and later for a public room. No empty gap for Private or public: it is
+  added left of the line when it exists.
+look: Whether someone who never hosted knows what the code is, what to do with it, and that the box copies.
+controls:
+  state: [open, lobby]
+rec: A
+recWhy: >-
+  it tells the host to send the code and the friend where to enter it, the Copy label shows the box is
+  a button, and the Open slot repeats the code where a newcomer is looking while they wait. The cost is
+  the code twice on screen until the friend joins. B is the smallest change but its passive line never
+  says to send the code. C is tidiest but explains the least.
+neutral: None of these
+options:
+  A:
+    name: Line, Copy label, code in the Open slot
+    render: {params: {invite: toolbar, itext: full}}
+    sees: '"Send this code to your friend. They enter it under Join." beside the code; Copy on the box; the Open slot reads "Waiting for your friend · code K7Q2XD".'
+    notes: The reviewer's version.
+  B:
+    name: The earlier line plus a Copy label
+    render: {params: {invite: toolbar, itext: min}}
+    sees: '"Your friend types this code under Join." in muted text beside the code; Copy on the box.'
+    notes: Minimum change.
+  C:
+    name: An INVITE CODE label only
+    render: {params: {invite: toolbar, itext: label}}
+    sees: A small INVITE CODE label above the code box, Copy on the box, no line.
+    notes: Tidiest; says the least.

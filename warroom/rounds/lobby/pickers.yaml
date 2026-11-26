@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How do the map and faction pickers open?
+why: >-
+  N cycles the map picker, the faction picker and the confirm when a map is too small. The faction
+  picker gets Random, picked when the match starts (Tempest Rising added one in its 2026-04-29 patch).
+  The map list names each map's starts and what a change costs ("2 bots leave"). The confirm is a
+  dialog in both options (Claude's default), "Switch to Dry Wells?": only 2 players fit, so both bots
+  are removed and your friend moves to Team 2.
+look: Clicks to change a map or a faction, and whether the starts read before you choose.
+controls:
+  state: [map, faction, reduce]
+rec: B
+recWhy: >-
+  a dropdown changes a map or a faction in two clicks with no Select button, and the preview beside
+  it already shows the chosen map large; today's launcher uses dropdowns too. A shows small previews of
+  every map, which helps once there are more than three, and the faction cards carry the emblems
+  large. With three maps the dialog is a detour.
+neutral: None of these
+options:
+  A:
+    name: Dialogs
+    render: {params: {picker: dialog}}
+    sees: Choose map with three map cards and Select map; Choose your faction with four emblem cards, Random last.
+    notes: The prototype's dialogs.
+  B:
+    name: Inline dropdowns
+    render: {params: {picker: inline}}
+    sees: The map field opens a list with each map's starts; your faction opens a list with emblems, Random last.
+    notes: Two clicks, as today's launcher.

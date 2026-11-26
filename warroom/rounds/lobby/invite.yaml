@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Where does the invite code sit?
+why: >-
+  Drawn as the host waits for the friend, with two bots on the other team. Today's waiting view puts
+  the code with Copy above the slot list. Start match stays locked until the friend joins (Claude's
+  default: an open slot never starts empty). On the web build the code is a link and the button says
+  Copy link, as today. The open row's ••• menu puts a bot there or closes it if the friend never comes.
+  N shows the page after the friend joined. D added on your note (2026-11-26): the Mode row becomes a
+  toolbar, mode left, the room's controls right; Private or public is reserved room until public games
+  exist. Decided for you: no separate Invite button, since with no friend list it would copy the same
+  code as the copy icon.
+look: Where your eye goes first while you wait, and whether the code reads as the next step.
+controls:
+  state: [open, lobby]
+rec: D
+recWhy: >-
+  with the Mode row chosen in step 1, the code sits right of the Host game that created it, keeps one
+  height with the row, and has its neighbour ready for Private or public later. C still explains the
+  empty slot best, but its code leaves once the friend joined, and a second friend (P11) needs it
+  again. Earlier reason for C: the code sits where your friend will appear, so the empty slot explains itself and the code leaves
+  the page once it has done its job. A keeps the code at the top right after the friend joined, where
+  it no longer helps; B puts it beside a locked Start match, which reads as a second form to fill.
+neutral: None of these
+options:
+  A:
+    name: Top right
+    render: {params: {invite: top}}
+    sees: An INVITE CODE box with Copy code at the top right of the page; the open slot says "Waiting for your friend…".
+    notes: The prototype's place; stays after the friend joined.
+  B:
+    name: Footer beside Start
+    render: {params: {invite: footer}}
+    sees: '"Code K7Q2XD" with Copy code left of the locked Start match.'
+    notes: Next to the action it unlocks.
+  C:
+    name: Inside the open slot
+    render: {params: {invite: slot}}
+    sees: The open row reads "Send your friend the code", the code and Copy code at its right.
+    notes: Where your friend will appear; gone once they join.
+  D:
+    name: In the Mode row, as a toolbar
+    render: {params: {invite: toolbar}}
+    sees: Skirmish and Host game left; at the right a reserved Private or public box, then the code with a copy icon.
+    notes: Your note's option 4; stays after the friend joined.

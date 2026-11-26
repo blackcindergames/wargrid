@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How do the unused starts look?
+why: >-
+  The map sets the slots, one per start, so a 1v1 with your friend on Broken Crown leaves two starts
+  unused. Zero Hour lists every slot and marks the unused ones Closed, one click from a bot. OpenRA
+  keeps slots and starts apart and closes single starts on the map preview (OpenRA b70cab2b43,
+  `OpenRA.Mods.Common/ServerTraits/LobbyCommands.cs:1150`, `DisabledSpawnPoints`); here the host closes
+  any single start the same way, on the preview (step 4, Ashfall). N switches to the 2v2, where all
+  four starts play and both options look the same apart from B's count line.
+look: The rows under the teams, and how a long map (Ashfall, 8 starts) would grow.
+controls:
+  state: [s1v1, lobby]
+rec: B
+recWhy: >-
+  one line stays one line on every map, where A grows to six empty rows in a 1v1 on Ashfall and
+  pushes Start match toward the bottom of a 720 px screen; the count also tells a newcomer the map has
+  room. A is the Zero Hour look and puts Add bot next to each free start; pick it if you want every
+  start visible as a row. Risk for B: closing a single start lives only on the preview, so it needs
+  the start markers of step 4 (A).
+neutral: None of these
+options:
+  A:
+    name: Empty start rows, one click adds a bot
+    render: {params: {unused: rows}}
+    sees: Under the teams, an Empty starts group with a row per unused start, each with + Add bot and a ••• menu.
+    notes: Zero Hour style; one row per unused start.
+  B:
+    name: Rows hidden, one count line
+    render: {params: {unused: line}}
+    sees: '"2 of 4 starts used" under the teams with + Add bot at its right; the 2v2 shows "4 of 4 starts used" alone.'
+    notes: One line on every map; single starts close on the preview.

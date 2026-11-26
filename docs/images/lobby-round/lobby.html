@@ -1,0 +1,357 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid · Lobby study</title>
+<!-- P20 lobby round, from the owner's lobby prototype: views and variants as hash or query params; the defaults are the round's recommendations. -->
+<style>
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Regular.ttf)}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-SemiBold.ttf);font-weight:600}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Bold.ttf);font-weight:700}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-ExtraBold.ttf);font-weight:800}
+/* Surfaces from game/ui/launcher_theme.tres (the Hud* set: button, hover, disabled, well, line, text, muted, cyan, primary and its states, error); player colours from palette.gd OWNER_BASE. */
+:root{--bg:#121c24;--side:#0c141a;--panel:#223241;--hov:#26384a;--input:#0c141a;--line:#2e3f4b;--text:#eef3f5;--muted:#93a5b0;--dim:#808080;--cyan:#60e5ed;--amber:#f7c871;--shadow:#dcae58;--ink:#1a1408;--red:#f47b6c;--offbtn:#16212a}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:var(--text);font:400 14px/1.4 Public,sans-serif;overflow:hidden}
+main{position:relative;background:var(--bg);transform-origin:top left;overflow:hidden}
+.b{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);padding:9px 14px;border-radius:2px;font-weight:600;white-space:nowrap}
+.b.primary{background:var(--amber);color:var(--ink);border:0;border-bottom:4px solid var(--shadow);min-height:48px;padding:12px 26px;font-size:16px;font-weight:700}
+.b.primary.off{background:#34434d;color:#8799a4;border-color:#34434d}
+.b.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.b.small{padding:5px 10px;font-size:12px}
+.b.link{background:transparent;border:0;color:var(--cyan);padding:0;font-size:12px}
+.b.sel{background:var(--hov);border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.b.dis{opacity:.48}
+h1{margin:0;font-size:28px;letter-spacing:-.6px;line-height:1.15}
+h2{margin:0;font-size:18px}
+.muted{color:var(--muted)}.small{font-size:12px}
+.label{color:var(--muted);font-size:11px;letter-spacing:1.25px;font-weight:700;text-transform:uppercase}
+.shell{position:absolute;inset:0;display:grid;grid-template-columns:216px minmax(0,1fr)}
+aside{background:var(--side);padding:28px 14px 20px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:12px;padding:0 10px;font-size:22px;font-weight:800;letter-spacing:1px;margin-bottom:28px}
+.brand svg{width:26px}
+nav{display:grid;gap:2px}
+nav span{padding:11px 14px;color:var(--muted);font-weight:700}
+nav span.on{color:var(--text);background:var(--panel);box-shadow:inset 3px 0 var(--cyan)}
+nav hr{width:90%;border:0;border-top:1px solid var(--line);margin:8px auto}
+.build{margin-top:auto;border-top:1px solid var(--line);padding:14px 10px 0;display:grid;gap:6px}
+.build strong{font-size:13px;line-height:1.35}
+.page{position:relative;padding:32px 40px 0;display:flex;flex-direction:column;gap:18px;min-width:0;height:100%}
+.header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.header p{margin:6px 0 0;color:var(--muted);font-size:15px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.cards.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mode{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--panel);overflow:hidden;min-height:228px}
+.mode .art{height:118px;background:#1a2a36}
+.mode .art svg{width:100%;height:100%}
+.mode .copy{padding:14px 16px 16px;display:grid;gap:6px}
+.mode .copy strong{font-size:18px;display:flex;justify-content:space-between}
+.mode .copy p{margin:0;font-size:13px;color:var(--muted)}
+.seg{display:flex;gap:5px}
+.seg .b{justify-content:center;min-width:120px;color:var(--muted)}
+.seg .b.sel{color:var(--text)}
+.modebar{display:flex;align-items:center;gap:14px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:10px}
+.codefield{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:var(--input);padding:7px 12px}
+.codefield svg{width:16px;height:16px;color:var(--cyan)}
+.lobby{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(250px,1fr);gap:28px;align-items:start;min-height:0}
+.stack{display:grid;gap:10px;min-width:0;align-content:start}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.hint{font-size:12px;color:var(--muted);line-height:1.45}
+.team{display:grid;gap:5px}
+.team .label.tinted{color:var(--team)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.slot{display:grid;grid-template-columns:12px minmax(84px,1.2fr) minmax(84px,1fr) auto;gap:9px;align-items:center;border:1px solid var(--line);background:var(--panel);padding:7px 9px;min-height:50px}
+.cols .slot{grid-template-columns:12px minmax(60px,1fr) auto auto;gap:7px}
+.slot.open{background:transparent;border-style:dashed}
+.slot.closed{background:transparent;opacity:.7}
+.sw{width:12px;height:12px;background:var(--c);display:block}
+.sw.none{background:transparent}
+.slot .name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap}
+.fac{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 6px;border:1px solid transparent;white-space:nowrap}
+.fac.btn{border-color:var(--line);background:var(--input)}
+.fac .car{margin-left:auto;padding-left:8px;color:var(--muted)}
+.fac.dis{opacity:.48}
+.fac svg{width:18px;height:18px;flex:none}
+.right{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.reserve{display:inline-block;width:76px;height:24px}
+.dots{padding:3px 7px;color:var(--muted);font-weight:700;letter-spacing:1px}
+.chip{font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--line);padding:2px 6px;white-space:nowrap}
+.chip.start{min-width:22px;text-align:center;color:var(--text)}
+.mapbtn{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:var(--panel);padding:10px 12px;font-weight:600}
+.mapbtn.dd{background:var(--input)}
+.mapbtn.ro{background:transparent;border-color:transparent;padding-left:0}
+.mappanel{background:var(--panel);padding:10px}
+.mappanel svg.prev{display:block;width:100%;background:var(--side)}
+.mappanel h2{margin:8px 4px 4px;font-size:20px}
+.stat{display:flex;justify-content:space-between;padding:7px 4px;border-top:1px solid var(--line);color:var(--muted)}
+.stat b{color:var(--text)}
+.invite{display:flex;gap:14px;align-items:center;border:1px solid var(--line);padding:7px 12px;background:var(--panel)}
+.code{font-weight:800;font-size:18px;letter-spacing:3px}
+.invite .label{font-size:11px}
+.footer{margin-top:auto;border-top:1px solid var(--line);padding:14px 0 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.footer .status{display:grid;gap:4px;color:var(--muted)}
+.factions{display:flex;gap:10px;align-items:center}
+.room{outline:1px dashed var(--amber);outline-offset:-1px;position:relative;color:transparent}
+.room::after{content:attr(data-room);position:absolute;left:6px;top:4px;font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--amber);text-transform:uppercase;white-space:nowrap}
+.hideroom .room{outline:0}.hideroom .room::after{content:none}
+.overlay{position:absolute;inset:0;background:#070d12bd;display:flex;align-items:center;justify-content:center;z-index:10}
+.dialog{width:480px;background:var(--panel);border:1px solid #405563;padding:22px;display:grid;gap:16px;box-shadow:0 22px 80px #0008}
+.dialog.wide{width:760px}
+.dhead{display:flex;justify-content:space-between;align-items:center}
+.dhead h2{font-size:22px}
+.dfoot{display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.dfoot .primary{min-height:42px;font-size:14px;padding:9px 18px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.choice{display:grid;gap:6px;padding:9px;border:1px solid var(--line);background:var(--input)}
+.choice span{font-size:12px;color:var(--muted)}
+.choice.sel{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan);background:var(--hov)}
+.fchoice{text-align:center;justify-items:center;padding:16px 6px}
+.fchoice svg{width:56px;height:56px}
+.keep{border:1px solid var(--line);padding:12px;display:grid;gap:6px;background:var(--side)}
+.pop{position:absolute;z-index:5;background:var(--panel);border:1px solid #405563;box-shadow:0 12px 40px #0009;padding:4px;display:grid;gap:2px}
+.pop .it{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:13px;font-weight:600;white-space:nowrap}
+.pop .it.sel{background:var(--hov);box-shadow:inset 3px 0 var(--cyan)}
+.pop .it.dis{opacity:.45}
+.pop .it svg{width:18px;height:18px}
+.pop .it span{color:var(--muted);font-weight:400;font-size:12px;margin-left:auto;padding-left:14px}
+.swatches{grid-template-columns:repeat(4,26px);gap:6px;padding:10px}
+.swatches i{width:26px;height:26px;background:var(--c);display:block;position:relative}
+.swatches i.taken::after{content:'';position:absolute;inset:0;background:linear-gradient(45deg,transparent 44%,#eef3f5 44%,#eef3f5 56%,transparent 56%)}
+.swatches i.mine{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
+.swatches .cap{grid-column:1/-1;font-size:11px;color:var(--muted);white-space:nowrap}
+#mtab{position:fixed;left:0;top:0;z-index:99;background:#fff;color:#000;font:400 13px/17px Public;padding:6px 8px;white-space:pre}
+</style>
+<main></main>
+<script>
+const P=new URLSearchParams(location.hash.length>1?location.hash.slice(1):location.search);
+const opt=(k,d,allowed)=>{const v=P.get(k);return v!=null&&allowed.includes(v)?v:d};
+const view=opt('view','lobby',['play','lobby','open','s1v1','s2v2','skirmish','guest','map','faction','reduce','pick','menu','switch']);
+const size=opt('size','1280x720',['1280x720','1280x800','1920x1080']);
+const start=opt('start','row',['cards','row','two']);
+const unused=opt('unused','line',['rows','line']);
+const slots=opt('slots','teams',['teams','columns','flat']);
+const spot=opt('spot','map',['map','letter','random']);
+const colour=opt('colour','player',['player','team','pick']);
+const invite=opt('invite','slot',['top','footer','slot','toolbar']);
+const itext=opt('itext','label',['full','min','label']);
+const guestLook=opt('guest','readonly',['readonly','disabled']);
+const picker=opt('picker','inline',['dialog','inline']);
+const mapId=opt('map','broken_crown',['dry_wells','broken_crown','ashfall']);
+const room=opt('room','on',['on','off'])==='on';
+const VERSION='0.19.0-dev';
+// The game stretches canvas_items from 1280x720 with aspect "expand" (project.godot): UI scales by the smaller ratio, the rest of the window is extra room.
+const [WW,WH]=size.split('x').map(Number),GK=Math.min(WW/1280,WH/720),LW=Math.round(WW/GK),LH=Math.round(WH/GK);
+const main=document.querySelector('main');
+main.style.width=LW+'px';main.style.height=LH+'px';
+
+// game/data/maps/*.json: size, start cells and supply source origins.
+const MAPS={
+ dry_wells:{name:'Dry Wells',fill:'#8b7955',size:[81,108],starts:[[40,23],[40,84]],src:[[23,3],[54,99],[60,49],[61,50],[60,51],[19,55],[21,56],[20,57],[67,9],[8,93],[56,47],[25,58],[30,49],[28,49],[54,55],[51,57]]},
+ broken_crown:{name:'Broken Crown',fill:'#7b825f',size:[112,100],starts:[[18,17],[92,17],[92,81],[18,81]],src:[[2,3],[105,3],[57,31],[50,63],[105,92],[3,92],[57,90],[52,4]]},
+ ashfall:{name:'Ashfall',fill:'#75675c',size:[194,187],starts:[[21,127],[69,168],[127,164],[174,125],[177,65],[123,21],[70,21],[18,67]],src:[[184,4],[4,4],[3,177],[187,182],[54,5],[188,138],[110,181],[51,179],[4,138],[186,46],[137,4],[1,48]]}};
+// docs/images/launcher-mockups/emblem-*.svg
+const EMBLEM={usa:'<path d="M24 4 30 16H18Z"/><path d="M26 20H32L44 44 26 36Z"/><path d="M22 20H16L4 44 22 36Z"/>',
+ china:'<path d="M12 6H36L40 10V18H8V10Z"/><path d="M4 26 8 22H40L44 26V40H4Z"/>',
+ frc:'<path d="M6 10H14V34H28V42H6Z"/><path d="M18 6H42V22H34V14H18Z"/><path d="M32 30H42V42H32Z"/>',
+ random:'<text x="24" y="38" text-anchor="middle" font-size="36" font-weight="800" font-family="Public">?</text>'};
+const FACTION={usa:['United States','USA'],china:['China','China'],frc:['Free Resistance Coalition','FRC'],random:['Random','Random']};
+// palette.gd OWNER_BASE; the host blue and the guest teal as P7 part 2 decided (user, 2026-11-24).
+const COL=['#628ffa','#d6120c','#4ad49b','#f8e425','#0e92a7','#7242fe','#ec8600','#f79cef'];
+const HOST=COL[0],GUEST=COL[4],BOT3=COL[1],BOT4=COL[6];
+const TEAMCOL=[COL[0],COL[1]];
+const emblem=(f,c='currentColor')=>`<svg viewBox="0 0 48 48" fill="${c}" aria-hidden="true">${EMBLEM[f]}</svg>`;
+
+// Scenes: who sits where. start = start index on the map, -1 random.
+const you=(o={})=>({kind:'you',name:'You',meta:'Host',team:0,faction:'usa',c:HOST,start:0,...o});
+const friend=(o={})=>({kind:'human',name:'Your friend',meta:'Player',team:0,faction:'china',c:GUEST,start:3,...o});
+const bot=(f,c,st,o={})=>({kind:'bot',name:FACTION[f][1]+' bot',meta:'Computer player',team:1,faction:f,c,start:st,...o});
+function scene(){
+ const s={online:true,role:'host',map:mapId,slots:[you(),friend(),bot('china',BOT3,1),bot('frc',BOT4,2)],closed:[]};
+ if(view==='open')s.slots[1]={kind:'open',team:0};
+ if(view==='s1v1'){s.slots=[you(),friend({team:1,start:2})]}
+ if(view==='skirmish'||(view==='play'&&start==='row')){s.online=false;s.map=P.get('map')?mapId:'dry_wells';s.slots=[you({meta:'Player'}),bot('china',BOT3,1)]}
+ if(view==='guest'){s.role='guest';s.slots[0]=you({kind:'human',name:'Host',meta:'Sets up the match'});s.slots[1]=friend({kind:'you',name:'You',meta:'Player'})}
+ if(mapId==='ashfall'&&view==='lobby'){s.slots[1].start=7;s.slots[2].start=3;s.slots[3].start=4;s.closed=[5]}
+ return s;
+}
+const S=scene(), M=MAPS[S.map], host=S.role==='host';
+const players=S.slots.filter(x=>x.kind!=='open');
+const free=M.starts.length-S.slots.length-S.closed.length;
+
+function formatLabel(){
+ const t=[0,1].map(i=>S.slots.filter(p=>p.team===i));
+ const who=g=>g.map(p=>p.kind==='you'?'you':p.kind==='human'?(host?'your friend':'the host'):p.kind==='open'?'your friend (not joined yet)':null).filter(Boolean);
+ const side=g=>{const h=who(g),b=g.filter(p=>p.kind==='bot').length;return [...h,...(b?[b===1?'a bot':b+' bots']:[])].join(' and ')};
+ return t[0].length+'v'+t[1].length+' · '+side(t[0])+' vs '+side(t[1]);
+}
+
+// Isometric preview from the real map cells.
+function preview(m,markers,h=150){
+ const [w,d]=m.size,iso=([x,y])=>[x-y,(x+y)/2];
+ const minX=-d,maxX=w,maxY=(w+d)/2,pad=14,W=380,k=Math.min((W-2*pad)/(maxX-minX),(h-2*pad)/maxY);
+ const p=c=>{const [a,b]=iso(c);return [pad+(a-minX)*k+((W-2*pad)-(maxX-minX)*k)/2,pad+b*k+((h-2*pad)-maxY*k)/2]};
+ const poly=[[0,0],[w,0],[w,d],[0,d]].map(c=>p(c).join(',')).join(' ');
+ const src=m.src.map(c=>{const [x,y]=p(c);return `<path d="M${x} ${y-3}l4 3-4 3-4-3Z" fill="#f7c871" opacity=".75"/>`}).join('');
+ const mk=m.starts.map((c,i)=>{const [x,y]=p(c);const v=markers[i]||{kind:'free'};
+  if(v.kind==='player')return `<circle cx="${x}" cy="${y}" r="10" fill="${v.c}" stroke="#0c141a" stroke-width="2"/>`+(v.text?`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="11" font-weight="800" fill="#0c141a">${v.text}</text>`:'');
+  if(v.kind==='closed')return `<circle cx="${x}" cy="${y}" r="9" fill="#0c141a" stroke="#93a5b0" stroke-width="1.5"/><path d="M${x-4} ${y-4}l8 8m0-8-8 8" stroke="#93a5b0" stroke-width="2"/>`;
+  if(v.kind==='letter')return `<circle cx="${x}" cy="${y}" r="9" fill="#0c141a" stroke="#eef3f5" stroke-width="1.5"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="11" font-weight="800" fill="#eef3f5">${v.text}</text>`;
+  return `<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="#eef3f5" stroke-width="1.5" stroke-dasharray="3 2"/>`;}).join('');
+ return `<svg class="prev" viewBox="0 0 ${W} ${h}" role="img" aria-label="${m.name} preview"><polygon points="${poly}" fill="${m.fill}"/>${src}${mk}</svg>`;
+}
+const LETTER='ABCDEFGH';
+function markers(){
+ const out=[];
+ S.closed.forEach(i=>out[i]={kind:'closed'});
+ if(spot==='random'){M.starts.forEach((_,i)=>out[i]=out[i]||{kind:'free'});return out}
+ if(spot==='letter')M.starts.forEach((_,i)=>out[i]=out[i]||{kind:'letter',text:LETTER[i]});
+ players.forEach(p=>{if(p.start>=0)out[p.start]={kind:'player',c:colour==='team'?TEAMCOL[p.team]:p.c,text:spot==='letter'?LETTER[p.start]:''}});
+ return out;
+}
+
+const btn=(label,cls='')=>`<span class="b ${cls}">${label}</span>`;
+const roomBox=(label,style)=>`<div class="room" data-room="${label}" style="${style}"></div>`;
+function sidebar(){
+ const nav=(start==='row'?['Play','Join','|','Settings','Credits','Quit']:['Play','|','Settings','Credits','Quit'])
+  .map(n=>n==='|'?'<hr>':`<span class="${n===(view==='guest'&&start==='row'?'Join':'Play')?'on':''}">${n}</span>`).join('');
+ return `<aside><div class="brand"><svg viewBox="0 0 30 27" aria-hidden="true"><path fill="#628ffa" d="M0 9 15 0 30 9 15 18Z"/><path fill="#31586c" d="M0 9v9l15 9v-9Z"/><path fill="#29434f" d="M30 9v9l-15 9v-9Z"/></svg><span>WARGRID</span></div><nav>${nav}</nav>`+
+  `<div class="build"><span class="label">This build</span><strong>Team up against bots</strong><span class="muted small">v${VERSION}</span></div></aside>`;
+}
+function header(title,sub,actions=''){return `<div class="header"><div><h1>${title}</h1><p>${sub}</p></div><div class="factions">${actions}</div></div>`}
+function footer(status,actions,back){return `<div class="footer"><div class="status"><div>${status}</div>${back?`<span class="b ghost small" style="padding-left:0">‹ ${back}</span>`:''}</div><div class="factions">${actions}</div></div>`}
+function art(i){const a=[`<g transform="translate(150 60)"><path d="M-54 10-12-15 40 13-2 38Z" fill="#43738d"/><path d="M-54 10v12L-2 50V38ZM40 13v12L-2 50V38Z" fill="#2e4e60"/><path d="M-31-4-2-22 23-7-6 11Z" fill="#7ab7d6"/><path d="m-5-6 52-28" stroke="#9fcee5" stroke-width="9"/></g>`,`<g transform="translate(150 60)"><path d="m-75 0 38-23L1 0-37 23Z" fill="#628ffa"/><path d="M-75 0v13l38 23V23ZM1 0v13l-38 23V23Z" fill="#305a74"/><path d="m-1 0 38-23L75 0 37 23Z" fill="#0e92a7"/><path d="M-1 0v13l38 23V23ZM75 0v13L37 36V23Z" fill="#0a5d6a"/></g>`];
+ return `<svg viewBox="0 0 300 118" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M0 96 150 15 300 96M0 120 150 39 300 120" fill="none" stroke="#365160" opacity=".45"/>${a[i]}</svg>`}
+
+function playCards(){
+ const card=(t,d,i)=>`<div class="mode"><div class="art">${art(i)}</div><div class="copy"><strong>${t} <span style="color:var(--cyan)">›</span></strong><p>${d}</p></div></div>`;
+ const cards=card('Skirmish','Play against bots on this computer.',0)+card('Host game','Invite a friend with a code; add bots to fill the teams.',1)+(start==='cards'?roomBox('Quick play (later)','min-height:228px'):'');
+ return header('Play','Choose how you want to play.',btn('Join with a code'))+`<div class="cards ${start==='two'?'two':''}">${cards}</div>`+
+  (start==='cards'?roomBox('Public games (later)','flex:1;margin-bottom:24px'):'');
+}
+
+function facCell(p,editable,disabled){
+ const [full,short]=FACTION[p.faction];
+ const c=p.faction==='random'?'#93a5b0':'currentColor';
+ const label=slots==='columns'?short:short;
+ if(editable)return `<span class="fac btn" title="${full}">${emblem(p.faction,c)}${label}<span class="car">▾</span></span>`;
+ return `<span class="fac${disabled?' btn dis':''}" title="${full}">${emblem(p.faction,c)}${label}${disabled?'<span class="car">▾</span>':''}</span>`;
+}
+function slotRow(p,i){
+ const tint=colour==='team'?'none':'';
+ if(p.kind==='open'){
+  const inside=invite==='slot'&&host?`<div style="grid-column:2/-1;display:flex;align-items:center;gap:10px"><div><div class="name">Open</div><div class="meta">Send your friend the code</div></div><span class="code" style="margin-left:auto">K7Q2XD</span>${btn('Copy code','small')}${btn('•••','ghost dots')}</div>`:
+   `<div><div class="name">Open</div><div class="meta">${invite==='toolbar'&&itext==='full'?'Waiting for your friend · code K7Q2XD':'Waiting for your friend…'}</div></div><div></div><div class="right">${host?btn('•••','ghost dots'):''}</div>`;
+  return `<div class="slot open"><span class="sw none"></span>${inside}</div>`;
+ }
+ const self=p.kind==='you',hostView=host;
+ const editable=self||(hostView&&p.kind==='bot');
+ const disabled=!host&&!self&&guestLook==='disabled'&&p.kind==='bot';
+ const startChip=spot==='letter'?`<span class="chip start">${p.start>=0?LETTER[p.start]:'–'}</span>`:'';
+ const lvl=p.kind==='bot'?(room?roomBox('Bot level','display:inline-block;width:76px;height:24px'):'<span class="reserve"></span>'):'<span class="reserve"></span>';
+ const teamChip=slots==='flat'?`<span class="chip" style="${colour==='team'?'color:'+TEAMCOL[p.team]+';border-color:'+TEAMCOL[p.team]:''}">Team ${p.team+1}</span>`:'';
+ const menu=host&&!self?btn('•••','ghost dots'):(!host&&guestLook==='disabled'&&!self?btn('•••','ghost dots dis'):'<span style="width:31px"></span>');
+ const sw=colour==='team'?'':`<span class="sw" style="--c:${p.c}"></span>`;
+ const right=slots==='columns'?`${startChip}${menu}`:`${teamChip}${startChip}${lvl}${menu}`;
+ return `<div class="slot" data-slot="${i}">${sw||'<span class="sw none"></span>'}<div style="min-width:0"><div class="name">${p.name}</div><div class="meta">${p.meta}</div></div><div>${facCell(p,editable,disabled)}</div><div class="right">${right}</div></div>`;
+}
+function unusedRows(){
+ if(!host)return '';
+ if(unused==='line')return `<div class="hint" style="display:flex;justify-content:space-between;align-items:center;min-height:30px"><span>${players.length} of ${M.starts.length} starts used${S.slots.length>players.length?' · 1 kept for your friend':''}${S.closed.length?' · '+S.closed.length+' closed':''}</span>${free>0?btn('+ Add bot','small'):''}</div>`;
+ if(free<=0)return '';
+ let rows='';
+ for(let i=0;i<free;i++)rows+=`<div class="slot closed"><span class="sw none"></span><div><div class="name">Empty start</div><div class="meta">Nobody plays here</div></div><div>${btn('+ Add bot','ghost small')}</div><div class="right">${btn('•••','ghost dots')}</div></div>`;
+ return `<div class="team"><div class="head"><span class="label">Empty starts</span><span class="small muted">${free} start${free===1?'':'s'}</span></div>${rows}</div>`;
+}
+function slotList(){
+ const all=S.slots.map((p,i)=>[p,i]);
+ const team=t=>all.filter(([p])=>p.team===t);
+ const heading=t=>`<div class="head"><span class="label${colour==='team'?' tinted':''}">Team ${t+1}</span><span class="small muted">${team(t).filter(([p])=>p.kind!=='open').length} playing</span></div>`;
+ let body;
+ if(slots==='flat')body=`<div class="team">${all.map(([p,i])=>slotRow(p,i)).join('')}</div>`;
+ else{
+  const groups=[0,1].map(t=>`<div class="team" style="--team:${TEAMCOL[t]}">${heading(t)}${team(t).map(([p,i])=>slotRow(p,i)).join('')}</div>`).join('');
+  body=slots==='columns'?`<div class="cols">${groups}</div>`:groups;
+ }
+ return `<div class="head"><span class="label">Players</span><span class="small muted">${formatLabel()}</span></div>`+body+unusedRows()+
+  roomBox('Match settings (later)','height:34px');
+}
+function mapColumn(){
+ const ro=!host;
+ const field=ro?`<div class="mapbtn ro">${M.name}<span class="muted small">The host chooses the map</span></div>`:
+  (picker==='inline'?`<div class="mapbtn dd" data-map>${M.name}<span class="muted">▾</span></div>`:`<div class="mapbtn" data-map>${M.name}<span class="muted small">Change ›</span></div>`);
+ const fieldDis=!host&&guestLook==='disabled'?`<div class="mapbtn dd" style="opacity:.48">${M.name}<span class="muted">▾</span></div>`:field;
+ const help=spot==='map'?(!host?'The host places the starts.':free>0?'Click a free start to move there; right-click it to close it.':players.length<S.slots.length?'1 start kept for your friend.':'Every start is taken.'):spot==='random'?'Starts are drawn at random when the match begins.':'Letters match the start chips in the player rows.';
+ return `<div class="stack"><div class="label">Map</div>${fieldDis}<div class="mappanel">${preview(M,markers())}<div class="hint" style="padding:6px 4px 0">${help}</div><h2>${M.name}</h2><div class="stat"><span>Start positions</span><b>${M.starts.length}</b></div><div class="stat"><span>Supply sources</span><b>${M.src.length}</b></div></div></div>`;
+}
+function inviteTop(){return `<div class="invite"><div><div class="label">Invite code</div><div class="code">K7Q2XD</div></div>${btn('Copy code','link')}</div>`}
+function lobbyPage(){
+ const online=S.online, waiting=S.slots.some(p=>p.kind==='open');
+ const tools=online&&invite==='toolbar'?`<div class="tools">${room?roomBox('Private / public (later)','width:150px;height:38px'):''}${!waiting||itext==='label'?'':itext==='full'?'<span class="hint" style="color:var(--text);font-size:13px">Send this code to your friend. They enter it under Join.</span>':'<span class="hint">Your friend types this code under Join.</span>'}${itext==='label'?'<div style="display:grid;gap:3px"><span class="label" style="font-size:10px">Invite code</span>':''}<div class="codefield" title="Send this code to your friend. They enter it under Join."><span class="code">K7Q2XD</span><span style="display:flex;align-items:center;gap:5px;color:var(--cyan);font-size:12px;font-weight:600"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9"/><path d="M11 2H2v9"/></svg>Copy</span></div>${itext==='label'?'</div>':''}</div>`:'';
+ const modeRow=start==='row'&&host?`<div class="modebar"><span class="label">Mode</span><div class="seg">${btn('Skirmish',online?'':'sel')}${btn('Host game',online?'sel':'')}</div>${online&&waiting&&invite!=='toolbar'?'<span class="hint">Your friend joins with the code.</span>':''}${tools}</div>`:'';
+ const title=!host?'Joined game':start==='row'?'Play':online?'Host game':'Skirmish';
+ const sub=!online?'Play against bots on this computer.':host?(waiting?'Online · waiting for your friend':'Online · your friend is here'):'Online · the host sets up the match';
+ const top=online&&host&&invite==='top'?inviteTop():'';
+ const fInvite=online&&host&&invite==='footer'&&waiting?`<span class="small muted">Code</span><span class="code">K7Q2XD</span>${btn('Copy code','small')}`:'';
+ let status,actions;
+ if(!host){status='Waiting for the host to start.';actions=guestLook==='disabled'?btn('Start match','primary off'):''}
+ else if(waiting){status='Start match unlocks when your friend joins.';actions=fInvite+btn('Start match','primary off')}
+ else{status='Everyone is here. Start when you are ready.';actions=fInvite+btn('Start match','primary')}
+ const back=online?(host?'Stop hosting':'Leave'):(start==='row'?'':'Back to Play');
+ return header(title,sub,top)+modeRow+`<div class="lobby"><div class="stack">${slotList()}</div>${mapColumn()}</div>`+footer(status,actions,back);
+}
+
+function dialog(title,body,foot,wide){return `<div class="overlay"><section class="dialog ${wide?'wide':''}"><div class="dhead"><h2>${title}</h2>${btn('✕','ghost small')}</div>${body}${foot?`<div class="dfoot">${foot}</div>`:''}</section></div>`}
+function mapNote(id){const n=MAPS[id].starts.length,extra=players.length-n;return extra>0?`${n} starts · ${extra} bot${extra===1?'':'s'} leave`:`${n} starts`}
+function overlay(){
+ if(view==='reduce')return dialog('Switch to Dry Wells?',`<p class="muted" style="margin:0">Only 2 players fit on Dry Wells: you vs your friend. Both bots are removed.</p><div class="keep"><b>Stays</b><div class="small muted">You · Team 1</div><div class="small muted">Your friend · moves to Team 2</div><b style="color:var(--red)">Removed</b><div class="small muted">China bot · FRC bot</div></div>`,btn('Cancel','ghost')+btn('Switch map','primary'));
+ if(view==='switch')return start==='row'?dialog('Switch to Skirmish?',`<p class="muted" style="margin:0">Your friend leaves and the code stops working. Your bots and map stay.</p>`,btn('Cancel','ghost')+btn('Switch to Skirmish','primary')):dialog('Stop hosting?',`<p class="muted" style="margin:0">Your friend leaves and the code stops working.</p>`,btn('Cancel','ghost')+btn('Stop hosting','primary'));
+ if(view==='map'&&picker==='dialog')return dialog('Choose map',`<div class="grid3">${Object.keys(MAPS).map(id=>`<div class="choice ${id===S.map?'sel':''}">${preview(MAPS[id],[],110)}<strong>${MAPS[id].name}</strong><span>${mapNote(id)}</span></div>`).join('')}</div><p class="hint" style="margin:0">The map sets how many can play: one player per start. Fewer players than starts is fine.</p>`,btn('Cancel','ghost')+btn('Select map','primary'),true);
+ if(view==='faction'&&picker==='dialog')return dialog('Choose your faction',`<div class="grid4">${['usa','china','frc','random'].map(f=>`<div class="choice fchoice ${f==='usa'?'sel':''}">${emblem(f,f==='random'?'#93a5b0':'#eef3f5')}<strong>${FACTION[f][0]}</strong>${f==='random'?'<span>Picked when the match starts</span>':''}</div>`).join('')}</div>`,btn('Cancel','ghost'),true);
+ return '';
+}
+function popovers(){
+ if(view==='map'&&picker==='inline'){
+  const el=main.querySelector('[data-map]'),r=rel(el);
+  return `<div class="pop" style="left:${r.x}px;top:${r.y+r.h+2}px;width:${r.w}px">${Object.keys(MAPS).map(id=>`<div class="it ${id===S.map?'sel':''}">${MAPS[id].name}<span>${mapNote(id)}</span></div>`).join('')}</div>`;
+ }
+ if(view==='faction'&&picker==='inline'){
+  const el=main.querySelector('[data-slot="0"] .fac'),r=rel(el);
+  return `<div class="pop" style="left:${r.x}px;top:${r.y+r.h+2}px;min-width:200px">${['usa','china','frc','random'].map(f=>`<div class="it ${f==='usa'?'sel':''}">${emblem(f,f==='random'?'#93a5b0':'currentColor')}${FACTION[f][0]}${f==='random'?'<span>at the start</span>':''}</div>`).join('')}</div>`;
+ }
+ if(view==='menu'){
+  const el=main.querySelector('[data-slot="1"] .dots'),r=rel(el);
+  return `<div class="pop" style="left:${r.x+r.w-220}px;top:${r.y+r.h+2}px;width:220px"><div class="it">Move to Team 2</div><div class="it">Remove from the match</div></div>`;
+ }
+ if(view==='pick'){
+  const el=main.querySelector('[data-slot="0"] .sw'),r=rel(el);
+  const taken=players.filter(p=>p.kind!=='you').map(p=>p.c);
+  return `<div class="pop swatches" style="left:${r.x-6}px;top:${r.y+r.h+8}px">${COL.map(c=>`<i style="--c:${c}" class="${c===HOST?'mine':taken.includes(c)?'taken':''}"></i>`).join('')}<div class="cap">Struck through: another player has it</div></div>`;
+ }
+ return '';
+}
+const scaleK=()=>Math.min(innerWidth/LW,innerHeight/LH);
+function rel(el){const r=el.getBoundingClientRect(),m=main.getBoundingClientRect(),k=scaleK();return {x:(r.left-m.left)/k,y:(r.top-m.top)/k,w:r.width/k,h:r.height/k}}
+function measure(){
+ const page=main.querySelector('.page'),over=page.scrollHeight-page.clientHeight;
+ const K=Number(P.get('scale'))||GK;
+ const out=[['window',Math.round(LW*K)+'×'+Math.round(LH*K)+(K!==1?' (UI ×'+K+', '+LW+'×'+LH+' logical)':'')],
+  ['fits without scrolling',over<=0?'yes, '+(-over)+' px spare':'no, '+over+' px over',over<=0]];
+ const f=main.querySelector('.footer');
+ if(f)out.push(['footer top',Math.round(rel(f).y)+' px of '+LH]);
+ parent.postMessage({type:'wr:measure',rows:out},location.origin);
+ if(P.get('measure')==='1')(document.getElementById('mtab')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'mtab'}))).textContent=out.map(x=>x[0]+': '+x[1]).join('\n');
+}
+function render(){
+ main.style.transform='scale('+scaleK()+')';
+ const showCards=start!=='row'&&view==='play';
+ main.innerHTML=`<div class="shell ${room?'':'hideroom'}">${sidebar()}<div class="page">${showCards?playCards():lobbyPage()}</div></div>`+overlay();
+ main.insertAdjacentHTML('beforeend',popovers());
+ measure();
+}
+render();
+Promise.all(['400','600','700','800'].map(w=>document.fonts.load(w+' 14px Public'))).then(render);
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='wr:ask-measure')measure()});
+onresize=render;
+onhashchange=()=>location.reload();
+</script>
