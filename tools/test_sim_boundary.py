@@ -102,8 +102,10 @@ PUMP_COUNTS: dict[str, int] = {
     # +1: _read_failure() reads pump.failure() for the freeze card (P2.3a1 Task 8).
     # +1 each: sim_mode() reads pump.mode() (SB5a Task 2).
     # +1 each: create stops the old pump first; +2 online: _stop_pump reads failure() and drains (SB5a Task 5).
-    "game/scripts/match/offline_driver.gd": 12,
-    "game/scripts/match/online_driver.gd": 13,
+    # +1 each: step reads has_room() before it builds a job or takes a tick (SB5a Task 7).
+    # +3 online: step reads failure(), _end_on_failure() reads it, failure() passes it on (SB5a Task 7).
+    "game/scripts/match/offline_driver.gd": 13,
+    "game/scripts/match/online_driver.gd": 17,
 }
 
 
@@ -246,6 +248,14 @@ class SimBoundary(unittest.TestCase):
             impure_payload_fields(sample),
             ["Job.hook: Callable", "Job.loose: None", "Note.rows: Array[Node]", "Slot.owner: RefCounted"],
         )
+
+    def test_only_the_pump_defines_run_owned(self):
+        definers = [
+            p.relative_to(ROOT).as_posix()
+            for p in sorted((ROOT / "game").rglob("*.gd"))
+            if re.search(r"^\s*func\s+_run_owned\b", p.read_text(), re.M)
+        ]
+        self.assertEqual(definers, [PUMP_FILE])
 
     def test_scan_covers_scripts(self):
         rels = {p.relative_to(ROOT).as_posix() for p in scanned_files(ROOT)}

@@ -5,7 +5,7 @@ log_dir=$(mktemp -d) || exit 1
 trap 'rm -rf "$log_dir"' EXIT HUP INT TERM
 engine=${GODOT_BIN:-godot}
 bound=${2:-300}
-cases=${1:-"logged_error main_error_control wrong_thread fault_in_query stall_restart stall_leave stall_stop stall_query dead_thread next_match_inline"}
+cases=${1:-"logged_error main_error_control wrong_thread fault_in_query stall_restart stall_leave stall_stop stall_query dead_thread next_match_inline stall_offline stall_online"}
 "$engine" --headless --path "$repo_root/game" --import >"$log_dir/import.log" 2>&1 || { cat "$log_dir/import.log"; exit 1; }
 passed=0
 failed=0

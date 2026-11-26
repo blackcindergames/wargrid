@@ -60,6 +60,8 @@ func start() -> void:
 func step() -> void:
 	# A finished match would otherwise re-copy its last results every frame.
 	if over() and _queue.is_empty() and _preview_request.is_empty(): return
+	# Before the job is built: a full pump keeps the queue and the request for the next frame.
+	if not pump.has_room(): return
 	var job := SimPump.Job.new()
 	job.commands = _queue
 	job.bots = BOTS
@@ -75,6 +77,8 @@ func step() -> void:
 
 func drain() -> Array[SimPump.Note]:
 	var notes: Array[SimPump.Note] = pump.drain()
+	# A stall produces no note, so the failure is read before the empty return.
+	_read_failure()
 	if notes.is_empty(): return notes
 	# Flushed answers wait for the next job so a paused or idle drain does not hand them out early.
 	_answers.append_array(_flushed)

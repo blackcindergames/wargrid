@@ -148,6 +148,8 @@ func post(job: Job) -> bool:
 	return true
 
 func drain() -> Array[Note]:
+	# An abandoned worker's late note stays in the abandoned pump, which nothing reads again.
+	if _abandoned: return []
 	_mutex.lock()
 	var notes: Array[Note] = _notes
 	_notes = []

@@ -65,6 +65,7 @@ var _glide_seconds: float = GLIDE_MAX_SECONDS
 @onready var _view: Node2D = $WorldView
 @onready var _camera: Camera2D = $Camera2D
 var _perf: Label
+var _failure_cleared: bool = false
 var _clock := PresentationClock.new()
 var _pause: Control
 var _result_panel: Control
@@ -389,6 +390,7 @@ func _drain_notes() -> bool:
 		# A finished match re-reports its last results without a new tick.
 		if note.tick > last_tick: stepped_results.append_array(note.results)
 		last_tick = note.tick
+	_clear_on_first_failure()
 	_take_answers()
 	_take_pings()
 	# A stall frame (online, waiting for the peer) is not a step frame; counting it would inflate the split share.
@@ -397,6 +399,14 @@ func _drain_notes() -> bool:
 		_refresh()
 		return true
 	return false
+
+# Online keeps the selection as the player left it, as at every other online end.
+func _clear_on_first_failure() -> void:
+	if _failure_cleared or driver.failure().is_empty(): return
+	_failure_cleared = true
+	if not frozen(): return
+	if not orders._placement_kind.is_empty(): orders._clear_placement()
+	orders.reset()
 
 func _present_if_due() -> bool:
 	if not _clock.rendered(Engine.get_process_frames(), driver.current().tick): return false
@@ -734,6 +744,7 @@ func _restart_world() -> void:
 	view_player = local_player
 	_playtest.begin_match()
 	_create_world()
+	_failure_cleared = false
 	_perf.mode = driver.sim_mode()
 	_clock = PresentationClock.new()
 	_sound.director.reset()

@@ -79,6 +79,24 @@ class PairTransport extends RefCounted:
 	func close() -> void: pass
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
+# A close counts, and with tell_peer it reaches the peer as the relay's left frame after this seat's last tick.
+class RelayEnd extends PairTransport:
+	var seat: int = 0
+	var closes: int = 0
+	var tell_peer: bool = false
+	var gone: bool = false
+	func closed() -> bool: return gone
+	func close() -> void:
+		closes += 1
+		if tell_peer and closes == 1: peer.inbox.append(Wire.encode({"type": "left", "seat": seat, "after_tick": order._last}))
+
+# Records the preview request of every post, accepted or not.
+class PostSpy extends "res://scripts/match/sim_pump.gd":
+	var previews: Array[Dictionary] = []
+	func post(job: Job) -> bool:
+		previews.append(job.preview)
+		return super(job)
+
 # Forwards a seat's ticks to the other two seats, as the relay does.
 class TrioEnd extends RefCounted:
 	var patient: bool = false
@@ -116,7 +134,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays, test_sb5a_full_pump_leaves_next_tick_in_lockstep, test_sb5a_preview_waits_for_room, test_sb5a_two_notes_one_frame_pair_in_order, test_sb5a_hash_tick_note_carries_digest, test_sb5a_failure_between_room_and_post, test_sb5a_online_failure_ends_and_closes, test_sb5a_relay_loss_and_pump_failure_same_frame, test_sb5a_online_start_null_query, test_sb5a_job_zero_null_ends_online_match, test_sb5a_pairing_rejects_foreign_note, test_sb5a_notice_waiting_empty, test_sb5a_play_on_leave_with_jobs_in_flight, test_sb5a_ring_may_trail_desync_tick, test_sb5a_report_survives_failed_query, test_sb5a_suspend_is_no_stall]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -602,34 +620,42 @@ func test_sb3_ring_off_same_digest(runner) -> bool:
 	runner.check(rows.size() == 11 and zero_rows == 10 and not rows[10].ends_with("0000000000000000"), "SB3 ring off wrote nothing: ten zero rows, then one written (%d zero of %d)" % [zero_rows, rows.size()])
 	return true
 
-func _pair_drivers() -> Dictionary:
-	var a := PairTransport.new()
-	var b := PairTransport.new()
+func _pair_drivers(mode: String = "") -> Dictionary:
+	var a := RelayEnd.new()
+	var b := RelayEnd.new()
 	a.peer = b
 	b.peer = a
+	a.seat = 1
+	b.seat = 2
 	var one = OnlineDriver.new(a, Lockstep.new(1, [1, 2] as Array[int]), "usa", 1)
 	var two = OnlineDriver.new(b, Lockstep.new(2, [1, 2] as Array[int]), "china", 2)
+	SimPump.force_mode_for_test(mode)
 	for driver in [one, two]:
 		driver.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
 		driver.start()
+	SimPump.force_mode_for_test("")
 	return {"drivers": [one, two], "transports": [a, b]}
 
-# Breaks the transports' reference cycle.
+# Breaks the transports' reference cycle and stops both pumps.
 func _unpair(pair: Dictionary) -> void:
 	pair.transports[0].peer = null
+	for driver in pair.drivers: driver.stop()
+
+# One frame of a driver: step, wait for its worker, drain.
+func _cycle(driver) -> void:
+	driver.step()
+	_idle(driver.pump)
+	driver.drain()
 
 # Seat 2 lags so seat 1 sometimes takes two ticks in one callback.
 func _frames(drivers: Array, frames: int, lag: int) -> int:
 	var double_takes: int = 0
 	for frame in frames:
 		var before: int = drivers[0].current().tick
-		drivers[0].step()
-		drivers[0].drain()
+		_cycle(drivers[0])
 		if drivers[0].current().tick == before + 2: double_takes += 1
 		if lag > 0 and frame % lag != lag - 1: continue
-		for i in lag - 1 if lag > 0 else 1:
-			drivers[1].step()
-			drivers[1].drain()
+		for i in lag - 1 if lag > 0 else 1: _cycle(drivers[1])
 	return double_takes
 
 func _lines_to(lines: PackedStringArray, last_tick: int) -> Array:
@@ -652,7 +678,10 @@ func _ended_any(drivers: Array) -> bool:
 	return drivers.any(func(driver) -> bool: return driver._lockstep.status().begins_with("ended"))
 
 func test_sb4_two_drivers_loopback(runner) -> bool:
-	var pair: Dictionary = _pair_drivers()
+	return _each_mode(runner, _sb4_two_drivers_loopback)
+
+func _sb4_two_drivers_loopback(runner, mode: String) -> void:
+	var pair: Dictionary = _pair_drivers(mode)
 	var one = pair.drivers[0]
 	var two = pair.drivers[1]
 	_frames(pair.drivers, 20, 0)
@@ -675,18 +704,19 @@ func test_sb4_two_drivers_loopback(runner) -> bool:
 	runner.check(theirs.size() == 1 and theirs[0].ok, "SB4 seat 2 gets no refusal, got %s" % [theirs])
 	runner.check(not _ended_any(pair.drivers), "SB4 loopback never ends a lockstep")
 	_unpair(pair)
-	return true
 
 func test_sb4_two_drivers_match_end(runner) -> bool:
-	var pair: Dictionary = _pair_drivers()
+	return _each_mode(runner, _sb4_two_drivers_match_end)
+
+func _sb4_two_drivers_match_end(runner, mode: String) -> void:
+	var pair: Dictionary = _pair_drivers(mode)
 	var drivers: Array = pair.drivers
 	var seen: Array[bool] = [false, false]
 	var frames: int = 0
 	while not (drivers[0].over() and drivers[1].over()) and frames < 400:
 		frames += 1
 		for i in 2:
-			drivers[i].step()
-			drivers[i].drain()
+			_cycle(drivers[i])
 			if drivers[i].current().tick != 100 or seen[i]: continue
 			seen[i] = true
 			drivers[i].pump.live().remove_object(4)
@@ -700,7 +730,6 @@ func test_sb4_two_drivers_match_end(runner) -> bool:
 		runner.check(overs == 1, "SB4 each seat sends exactly one over, got %d" % overs)
 	runner.check(not _ended_any(drivers), "SB4 a normal end leaves no ended status")
 	_unpair(pair)
-	return true
 
 func _twin() -> Dictionary:
 	var now: Array[int] = [0]
@@ -872,12 +901,14 @@ func _ph_record_returns_command_log(runner, mode: String) -> void:
 	runner.check(not pump.has_method("recorder"), "PH recorder() is gone")
 
 func test_ph_pair_drivers_send_legal_frames(runner) -> bool:
-	var pair: Dictionary = _pair_drivers()
+	return _each_mode(runner, _ph_pair_drivers_send_legal_frames)
+
+func _ph_pair_drivers_send_legal_frames(runner, mode: String) -> void:
+	var pair: Dictionary = _pair_drivers(mode)
 	var double_takes: int = _frames(pair.drivers, 120, 3)
 	runner.check(double_takes > 0, "PH fixture: seat 1 takes two ticks in one callback, got %d" % double_takes)
 	runner.check(pair.transports[0].order.refusals.is_empty() and pair.transports[1].order.refusals.is_empty(), "PH both seats send only frames the relay accepts, got %s and %s" % [pair.transports[0].order.refusals, pair.transports[1].order.refusals])
 	_unpair(pair)
-	return true
 
 func test_ph_finish_tick_refuses_after_end(runner) -> bool:
 	var twin: Dictionary = _twin()
@@ -941,11 +972,16 @@ func _advance_peer_frame(peer: Dictionary, frame: int) -> void:
 		peer.order.accepts(Wire.encode({"type": "over"}))
 
 func test_ph_driver_matches_advance_peer(runner) -> bool:
+	return _each_mode(runner, _ph_driver_matches_advance_peer)
+
+func _ph_driver_matches_advance_peer(runner, mode: String) -> void:
 	var a := PairTransport.new()
 	var b := PairTransport.new()
 	a.peer = b
 	var driver = OnlineDriver.new(a, Lockstep.new(1, [1, 2] as Array[int]), "usa", 1)
+	SimPump.force_mode_for_test(mode)
 	driver.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
+	SimPump.force_mode_for_test("")
 	driver.start()
 	var ls = Lockstep.new(2, [1, 2] as Array[int])
 	var peer := {"ls": ls, "inbox": b, "order": RelayFrameOrder.new(), "removed": false, "over_sent": false,
@@ -959,8 +995,7 @@ func test_ph_driver_matches_advance_peer(runner) -> bool:
 	while not (driver.over() and peer.sim.match_over()) and frames < 400:
 		frames += 1
 		_advance_peer_frame(peer, frames)
-		driver.step()
-		driver.drain()
+		_cycle(driver)
 		if frames == 20:
 			driver.submit(_move(_own_unit(driver.pump.live())))
 			driver.submit(_move(999))
@@ -979,7 +1014,7 @@ func test_ph_driver_matches_advance_peer(runner) -> bool:
 	runner.check(a.order.refusals.is_empty() and peer.order.refusals.is_empty() and overs == 1 and peer.over_sent, "PH every frame of both sides is legal at the relay, got %s and %s" % [a.order.refusals, peer.order.refusals])
 	a.peer = null
 	ls.send = Callable()
-	return true
+	driver.stop()
 
 func test_ph_nested_cache_freeze(runner) -> bool:
 	return _each_mode(runner, _ph_nested_cache_freeze)
@@ -1027,24 +1062,29 @@ func _pal_note_carries_survivors(runner, mode: String) -> void:
 	runner.check(note.survivors == [1, 2, 3], "PAL the job's note carries the survivors after its step, got %s" % [note.survivors])
 	runner.check(_make(SeatFixture.sim(), mode).start().survivors == [1, 2, 3], "PAL a note from a job without a step carries survivors")
 
-func _trio_drivers() -> Dictionary:
+func _trio_drivers(mode: String = "") -> Dictionary:
 	var relay := TrioRelay.new()
 	var starts: Array[int] = MatchSettings.starts("broken_crown", 7, [1, 2, 3] as Array[int])
 	var drivers: Array = []
+	SimPump.force_mode_for_test(mode)
 	for seat in [1, 2, 3]:
 		var driver = OnlineDriver.new(relay.ends[seat - 1], Lockstep.new(seat, [1, 2, 3] as Array[int]), "usa", seat)
 		var sim: RefCounted = Skirmish.create(true, "human", {1: "usa", 2: "usa", 3: "usa"}, MatchSettings.map_path("broken_crown"), starts, 3)
 		SeatFixture.defeat(sim, 2)
 		driver.adopt(sim)
 		drivers.append(driver)
+	SimPump.force_mode_for_test("")
 	for driver in drivers: driver.start()
 	return {"drivers": drivers, "relay": relay}
 
+# Stops every pump and breaks the relay's reference cycle.
+func _trio_done(trio: Dictionary) -> void:
+	for driver in trio.drivers: driver.stop()
+	trio.relay.ends.clear()
+
 func _trio_frames(drivers: Array, frames: int) -> void:
 	for frame in frames:
-		for driver in drivers:
-			driver.step()
-			driver.drain()
+		for driver in drivers: _cycle(driver)
 
 func _trio_until(drivers: Array, tick: int, single: bool = false) -> bool:
 	for frame in 400:
@@ -1057,14 +1097,16 @@ func _trio_until(drivers: Array, tick: int, single: bool = false) -> bool:
 func _single(driver) -> void:
 	# The driver has no public cap; one tick per call lets a test stop exactly on a tick.
 	driver._credit = 0
-	driver.step()
-	driver.drain()
+	_cycle(driver)
 
 func _last_sent(trio: Dictionary, seat: int) -> int:
 	return trio.relay.ends[seat - 1].order._last
 
 func test_pal_three_drivers_play_on(runner) -> bool:
-	var trio: Dictionary = _trio_drivers()
+	return _each_mode(runner, _pal_three_drivers_play_on)
+
+func _pal_three_drivers_play_on(runner, mode: String) -> void:
+	var trio: Dictionary = _trio_drivers(mode)
 	var drivers: Array = trio.drivers
 	runner.check(_trio_until(drivers, 40), "PAL fixture: three drivers reach tick 40")
 	trio.relay.leave(2, _last_sent(trio, 2))
@@ -1081,11 +1123,13 @@ func test_pal_three_drivers_play_on(runner) -> bool:
 	_trio_frames([one], 60)
 	runner.check(one._lockstep.status() == "ended_left" and one._lockstep.left_seat() == 3 and one._lockstep.end_reason() == "player 3 disconnected", "PAL seat 3 leaving later ends the match, got %s seat %d" % [one._lockstep.status(), one._lockstep.left_seat()])
 	runner.check(trio.relay.ends.all(func(end) -> bool: return end.order.refusals.is_empty()), "PAL every frame is legal at the relay")
-	trio.relay.ends.clear()
-	return true
+	_trio_done(trio)
 
 func test_pal_driver_quiet_defers_verdict(runner) -> bool:
-	var trio: Dictionary = _trio_drivers()
+	return _each_mode(runner, _pal_driver_quiet_defers_verdict)
+
+func _pal_driver_quiet_defers_verdict(runner, mode: String) -> void:
+	var trio: Dictionary = _trio_drivers(mode)
 	var one = trio.drivers[0]
 	var three = trio.drivers[2]
 	runner.check(_trio_until(trio.drivers, 40), "PAL fixture: three drivers reach tick 40")
@@ -1099,18 +1143,19 @@ func test_pal_driver_quiet_defers_verdict(runner) -> bool:
 		_single(three)
 	runner.check(one.current().tick == a and _last_sent(trio, 3) > a, "PAL fixture: seat 1 waits at A %d (at %d), seat 3 sent past it" % [a, one.current().tick])
 	one._credit = 3
-	one.step()
-	one.drain()
+	_cycle(one)
 	runner.check(one.current().tick == a + 1, "PAL the call took A and only A, now at %d" % one.current().tick)
 	runner.check(one._lockstep.can_step(a + 1) and one._credit >= 1, "PAL the A + 1 packets were in hand with credit left (%d)" % one._credit)
 	runner.check(one._lockstep.status() == "running", "PAL a quiet take keeps the status, got %s" % one._lockstep.status())
 	_single(one)
 	runner.check(one._lockstep.status() == "running" and one.current().tick == a + 2, "PAL the next loud take plays on at A + 1, got %s at %d" % [one._lockstep.status(), one.current().tick])
-	trio.relay.ends.clear()
-	return true
+	_trio_done(trio)
 
 func test_pal_played_on_catches_up(runner) -> bool:
-	var trio: Dictionary = _trio_drivers()
+	return _each_mode(runner, _pal_played_on_catches_up)
+
+func _pal_played_on_catches_up(runner, mode: String) -> void:
+	var trio: Dictionary = _trio_drivers(mode)
 	var one = trio.drivers[0]
 	var three = trio.drivers[2]
 	runner.check(_trio_until(trio.drivers, 40), "PAL fixture: three drivers reach tick 40")
@@ -1121,24 +1166,27 @@ func test_pal_played_on_catches_up(runner) -> bool:
 	var t: int = one.current().tick
 	runner.check(one._lockstep.status() == "running" and one._lockstep.can_step(t) and one._lockstep.can_step(t + 1), "PAL fixture: seat 1 played on and holds packets %d and %d" % [t, t + 1])
 	one._credit = 3
-	one.step()
-	one.drain()
+	_cycle(one)
 	runner.check(one.current().tick == t + 2, "PAL a played-on match still catches up two ticks in one call, from %d to %d" % [t, one.current().tick])
-	trio.relay.ends.clear()
-	return true
+	_trio_done(trio)
 
 func test_trio_leave_has_no_match_ended_heading(runner) -> bool:
-	var trio: Dictionary = _trio_drivers()
+	return _each_mode(runner, _trio_leave_has_no_match_ended_heading)
+
+func _trio_leave_has_no_match_ended_heading(runner, mode: String) -> void:
+	var trio: Dictionary = _trio_drivers(mode)
 	var one = trio.drivers[0]
 	runner.check(_trio_until(trio.drivers, 40), "T26 fixture: three drivers reach tick 40")
 	trio.relay.leave(3, _last_sent(trio, 3))
 	_trio_frames([one, trio.drivers[1]], 60)
 	runner.check(one._lockstep.status() == "ended_left" and one.leave_heading() == "", "T26 Match ended is the 2v2 heading only, got %s '%s'" % [one._lockstep.status(), one.leave_heading()])
-	trio.relay.ends.clear()
-	return true
+	_trio_done(trio)
 
 func test_pal_driver_play_on_then_end_closes_room(runner) -> bool:
-	var trio: Dictionary = _trio_drivers()
+	return _each_mode(runner, _pal_driver_play_on_then_end_closes_room)
+
+func _pal_driver_play_on_then_end_closes_room(runner, mode: String) -> void:
+	var trio: Dictionary = _trio_drivers(mode)
 	var one = trio.drivers[0]
 	var rest: Array = [one, trio.drivers[2]]
 	runner.check(_trio_until(trio.drivers, 40), "PAL fixture: three drivers reach tick 40")
@@ -1151,8 +1199,7 @@ func test_pal_driver_play_on_then_end_closes_room(runner) -> bool:
 		for driver in rest: _single(driver)
 	runner.check(one.over() and one._phase == "done" and not one.can_play_again(), "PAL a played-on match that ends closes the room, phase %s" % one._phase)
 	runner.check(one.rematch_line() == "P2 USA left the match" and not one._lockstep.opponent_left() and one.notice() == "", "PAL the line says the friend left, not a relay loss, got '%s' notice '%s'" % [one.rematch_line(), one.notice()])
-	trio.relay.ends.clear()
-	return true
+	_trio_done(trio)
 
 func test_pump_bot_first_wave_at_5400(runner) -> bool:
 	return _each_mode(runner, _pump_bot_first_wave_at_5400)
@@ -1266,22 +1313,24 @@ func _quad_sim():
 
 # Guard: setup already refuses every non-faction order; this pins that no bot order is planned or sent then.
 func test_setup_plans_no_bot_orders(runner) -> bool:
-	var pump = SimPump.new(_quad_sim())
+	return _each_mode(runner, _setup_plans_no_bot_orders)
+
+func _setup_plans_no_bot_orders(runner, mode: String) -> void:
+	var pump = _make(_quad_sim(), mode)
 	pump.start()
 	var planned: int = 0
 	for i in 70:
 		pump.post(_planning([3, 4]))
-		planned += pump.drain()[0].bot_commands.size()
+		planned += _drain(pump)[0].bot_commands.size()
 	runner.check(pump.live().snapshot().match.status == "setup" and pump.live().tick() == 70, "PB2 fixture: the humans have not chosen, status %s" % pump.live().snapshot().match.status)
 	runner.check(planned == 0 and pump.live().last_sequence(3) == -1 and pump.live().last_sequence(4) == -1, "PB2 setup plans no order for players 3 and 4, planned %d" % planned)
-	var pair: Dictionary = _quad_drivers()
+	var pair: Dictionary = _quad_drivers(4, mode)
 	_trio_until(pair.drivers, 20, true)
 	var early: Array = pair.drivers[0]._lockstep.command_log().filter(func(m: Dictionary) -> bool: return m.player > 2)
 	runner.check(early.is_empty() and pair.drivers[0].current().view.match.status == "ongoing", "PB2 no frame holds a bot order while the match is in setup, got %s" % [early])
 	_unpair(pair)
-	return true
 
-func _quad_drivers(delay: int = 4) -> Dictionary:
+func _quad_drivers(delay: int = 4, mode: String = "") -> Dictionary:
 	var a := PairTransport.new()
 	var b := PairTransport.new()
 	a.peer = b
@@ -1291,16 +1340,21 @@ func _quad_drivers(delay: int = 4) -> Dictionary:
 	var one = OnlineDriver.new(a, Lockstep.new(1, seats, delay, 30, Time.get_ticks_usec, allowed), "usa", 1)
 	var two = OnlineDriver.new(b, Lockstep.new(2, seats, delay, 30, Time.get_ticks_usec, allowed), "china", 2)
 	var starts: Array[int] = MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2))
+	SimPump.force_mode_for_test(mode)
 	for driver in [one, two]:
 		driver.create(MatchSettings.map_path("broken_crown"), starts, {3: "china", 4: "frc"}, 7)
 		driver.start()
+	SimPump.force_mode_for_test("")
 	return {"drivers": [one, two], "transports": [a, b]}
 
 func _player_ticks(driver, player: int) -> Array:
 	return driver._lockstep.command_log().filter(func(m: Dictionary) -> bool: return m.player == player).map(func(m: Dictionary) -> int: return m.tick)
 
 func test_host_submits_bot_commands_after_human(runner) -> bool:
-	var pair: Dictionary = _quad_drivers()
+	return _each_mode(runner, _host_submits_bot_commands_after_human)
+
+func _host_submits_bot_commands_after_human(runner, mode: String) -> void:
+	var pair: Dictionary = _quad_drivers(4, mode)
 	var drivers: Array = pair.drivers
 	runner.check(_trio_until(drivers, 33, true), "PB3 fixture: both seats stand at tick 33")
 	var one = drivers[0]
@@ -1316,10 +1370,12 @@ func test_host_submits_bot_commands_after_human(runner) -> bool:
 	var common: int = mini(rows.size(), other.size())
 	runner.check(common >= 4 and rows.slice(0, common) == other.slice(0, common) and not _ended_any(drivers), "PB3 equal digests on %d rows, ended %s" % [common, one._lockstep.status()])
 	_unpair(pair)
-	return true
 
 func test_bot_refusal_not_in_driver_answers(runner) -> bool:
-	var pair: Dictionary = _quad_drivers()
+	return _each_mode(runner, _bot_refusal_not_in_driver_answers)
+
+func _bot_refusal_not_in_driver_answers(runner, mode: String) -> void:
+	var pair: Dictionary = _quad_drivers(4, mode)
 	var drivers: Array = pair.drivers
 	_trio_until(drivers, 33, true)
 	_single(drivers[0])
@@ -1331,34 +1387,38 @@ func test_bot_refusal_not_in_driver_answers(runner) -> bool:
 	runner.check(one.take_answers().is_empty() and one._lockstep.rejections().is_empty(), "PB4 the host's answers hold nothing of it")
 	runner.check(not _ended_any(drivers) and one._lockstep.hash_rows().slice(0, 2) == drivers[1]._lockstep.hash_rows().slice(0, 2), "PB4 neither seat ended, status %s" % one._lockstep.status())
 	_unpair(pair)
-	return true
 
 func test_guest_runs_no_bot(runner) -> bool:
-	var pair: Dictionary = _quad_drivers()
+	return _each_mode(runner, _guest_runs_no_bot)
+
+func _guest_runs_no_bot(runner, mode: String) -> void:
+	var pair: Dictionary = _quad_drivers(4, mode)
 	var one = pair.drivers[0]
 	var two = pair.drivers[1]
 	var host_job = one._tick_job([] as Array[Dictionary])
 	var guest_job = two._tick_job([] as Array[Dictionary])
 	runner.check(host_job.plan_bots and host_job.bots == [3, 4], "PB5 the host plans its two bots, got %s" % [host_job.bots])
 	runner.check(guest_job.bots.is_empty(), "PB5 the guest runs no bot, got %s" % [guest_job.bots])
-	var plain = _pair_drivers()
+	var plain = _pair_drivers(mode)
 	runner.check(plain.drivers[0]._tick_job([] as Array[Dictionary]).bots.is_empty(), "PB5 a 1v1 host runs no bot")
 	_unpair(plain)
 	_unpair(pair)
-	return true
 
 func _bot_orders(driver, player: int) -> Array:
 	return driver._lockstep.command_log().filter(func(m: Dictionary) -> bool: return m.player == player)
 
 # The same seed and orders without the full frame: its first bot orders are the ones the full frame dropped.
 func test_bot_refused_submit_recovers_next_decision(runner) -> bool:
-	var twin: Dictionary = _quad_drivers()
+	return _each_mode(runner, _bot_refused_submit_recovers_next_decision)
+
+func _bot_refused_submit_recovers_next_decision(runner, mode: String) -> void:
+	var twin: Dictionary = _quad_drivers(4, mode)
 	_trio_until(twin.drivers, 33, true)
 	_trio_frames(twin.drivers, 90)
 	var first: Array = _bot_orders(twin.drivers[0], 3)
 	first = first.filter(func(m: Dictionary) -> bool: return m.tick == first[0].tick) if not first.is_empty() else []
 	_unpair(twin)
-	var pair: Dictionary = _quad_drivers()
+	var pair: Dictionary = _quad_drivers(4, mode)
 	var drivers: Array = pair.drivers
 	_trio_until(drivers, 33, true)
 	var one = drivers[0]
@@ -1371,7 +1431,6 @@ func test_bot_refused_submit_recovers_next_decision(runner) -> bool:
 	for order: Dictionary in first:
 		runner.check(later.any(func(m: Dictionary) -> bool: return m.type == order.type and m.get("entity_ids", []) == order.get("entity_ids", [])), "PB6 the dropped %s for %s is sent at the bot's next decision" % [order.type, order.get("entity_ids", [])])
 	_unpair(pair)
-	return true
 
 static func latch_for_test() -> void:
 	var forced: String = SimPump._forced
@@ -2128,25 +2187,46 @@ func _restart_online(runner, mode: String) -> void:
 	driver.stop()
 
 # Seat 2's driver, fed by a scripted seat 1 that moves one of its units at move_tick; its faction exists from tick 5, so the move is written once the unit does.
-func _lone_online(mode: String, move_tick: int) -> Dictionary:
-	var transport := PairTransport.new()
-	transport.peer = PairTransport.new()
+func _lone_online(mode: String, move_tick: int, kind = SimPump, bad_hash_tick: int = -1) -> Dictionary:
+	var seat: Dictionary = _seat_two(mode, kind)
+	var driver = seat.driver
+	driver.start()
+	_seat_one_packets(seat.transport, 4, move_tick - 1, -1, -1)
+	_frames_to(driver, 8)
+	_seat_one_packets(seat.transport, move_tick, 60, move_tick, _first_mobile(driver.pump.live(), 1), bad_hash_tick)
+	return seat
+
+# Seat 2's driver before start(); a pump kind other than SimPump replaces the one create() made, zero_fails makes its job zero return null.
+func _seat_two(mode: String, kind = SimPump, zero_fails: bool = false) -> Dictionary:
+	var transport := RelayEnd.new()
+	transport.seat = 2
+	transport.peer = RelayEnd.new()
 	SimPump.force_mode_for_test(mode)
 	var driver = OnlineDriver.new(transport, Lockstep.new(2, [1, 2] as Array[int]), "china", 2)
 	driver.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
 	SimPump.force_mode_for_test("")
-	driver.start()
-	_seat_one_packets(transport, 4, move_tick - 1, -1, -1)
-	_frames_to(driver, 8)
-	_seat_one_packets(transport, move_tick, 60, move_tick, _first_mobile(driver.pump.live(), 1))
+	if kind != SimPump: _swap_pump(driver, mode, kind, zero_fails)
 	return {"driver": driver, "transport": transport}
 
-func _seat_one_packets(transport, from_tick: int, to_tick: int, move_tick: int, unit: int) -> void:
+func _swap_pump(driver, mode: String, kind, zero_fails: bool = false) -> void:
+	driver.pump.stop()
+	var pump = _make(driver.pump.live(), mode, kind)
+	if zero_fails: pump.fail_next = true
+	driver._last = pump.start()
+	driver.pump = pump
+
+# The pump holds every job unpublished (worker) or counts every undrained note (inline) until three are in.
+func _hold_pump(driver, mode: String) -> Semaphore:
+	driver.pump.cap_for_test(SimPump.MAX_QUEUED)
+	return _gate_worker(driver, mode)
+
+func _seat_one_packets(transport, from_tick: int, to_tick: int, move_tick: int, unit: int, bad_hash_tick: int = -1) -> void:
 	for tick in range(from_tick, to_tick + 1):
 		var commands: Array = []
 		if tick == 4: commands.append({"type": "choose_faction", "faction": "usa", "tick": 4, "player": 1, "sequence": 0})
 		if tick == move_tick: commands.append(_move(unit).merged({"tick": tick, "sequence": 1}))
-		transport.inbox.append(Wire.encode(Wire.tick_message(1, tick, commands, null)))
+		var hash_entry: Variant = {"tick": tick - 4, "value": "0000000000000000"} if tick == bad_hash_tick else null
+		transport.inbox.append(Wire.encode(Wire.tick_message(1, tick, commands, hash_entry)))
 
 func _first_mobile(sim, owner: int) -> int:
 	for entity in sim.snapshot().entities:
@@ -2254,3 +2334,313 @@ func _end_record(runner, mode: String, how: String) -> void:
 	runner.check(_replayed_digest(commands, record.tick) == record.digest, "SB5A the saved log replays to the record's end digest (%s)" % label)
 	driver.stop()
 	runner.check(SimPump.live_workers() == threads, "SB5A the end joined the worker (%s)" % label)
+
+func test_sb5a_full_pump_leaves_next_tick_in_lockstep(runner) -> bool:
+	return _each_mode(runner, _sb5a_full_pump_leaves_next_tick)
+
+func _sb5a_full_pump_leaves_next_tick(runner, mode: String) -> void:
+	var online: Dictionary = _lone_online(mode, 12)
+	var driver = online.driver
+	_frames_to(driver, 12)
+	var gate: Semaphore = _hold_pump(driver, mode)
+	driver._credit = 4
+	driver.step()
+	driver._credit = 3
+	driver.step()
+	runner.check(not driver.pump.has_room(), "SB5A fixture: three jobs fill the pump")
+	runner.check(driver.get("_next_tick") == 15 and driver.get("_taken") == [12, 13, 14], "SB5A a full pump leaves tick 15 in the lockstep, taken %s next %d" % [driver.get("_taken"), driver.get("_next_tick")])
+	runner.check(driver.failure().is_empty() and driver._lockstep.status() == "running" and not driver.over(), "SB5A a full pump is no failure and ends nothing, got '%s' status %s" % [driver.failure(), driver._lockstep.status()])
+	runner.check(driver._credit == 3 and driver._lockstep.can_step(15), "SB5A the credit is earned and not spent, and the lockstep still holds tick 15, credit %d" % driver._credit)
+	if gate != null: _release(gate, 4)
+	_idle(driver.pump)
+	driver.drain()
+	_take_one(driver)
+	_idle(driver.pump)
+	driver.drain()
+	runner.check(driver.get("_next_tick") == 16 and driver.current().tick == 16 and online.transport.order._last == 20, "SB5A the next frame takes tick 15 and pairs it as the note of tick 16, next %d shown %d sent %d" % [driver.get("_next_tick"), driver.current().tick, online.transport.order._last])
+	driver.stop()
+
+func test_sb5a_preview_waits_for_room(runner) -> bool:
+	return _each_mode(runner, _sb5a_preview_waits_for_room)
+
+func _sb5a_preview_waits_for_room(runner, mode: String) -> void:
+	var online: Dictionary = _lone_online(mode, 12, PostSpy)
+	var driver = online.driver
+	var spy = driver.pump
+	_frames_to(driver, 12)
+	var request := {"player": 2, "builder_id": _first_mobile(spy.live(), 2), "kind": "usa_power_plant", "origin": Vector2i(14, 14)}
+	driver.request_preview(request)
+	var gate: Semaphore = _hold_pump(driver, mode)
+	spy.previews.clear()
+	driver._credit = 4
+	driver.step()
+	driver._credit = 3
+	driver.step()
+	runner.check(spy.previews.size() == 3 and spy.previews.all(func(preview: Dictionary) -> bool: return preview == request), "SB5A every accepted job of the catch-up carries the request, and the frame that ran out of room builds none, got %d jobs" % spy.previews.size())
+	if gate != null: _release(gate, 4)
+	_idle(driver.pump)
+	driver.drain()
+	_take_one(driver)
+	runner.check(spy.previews.size() == 4 and spy.previews[3] == request and driver.get("_preview_request") == request, "SB5A the next frame's first job carries the kept request, got %d jobs" % spy.previews.size())
+	driver.stop()
+
+func test_sb5a_two_notes_one_frame_pair_in_order(runner) -> bool:
+	return _each_mode(runner, _sb5a_two_notes_one_frame)
+
+func _sb5a_two_notes_one_frame(runner, mode: String) -> void:
+	var online: Dictionary = _lone_online(mode, 12)
+	var driver = online.driver
+	_frames_to(driver, 12)
+	driver._credit = 4
+	driver.step()
+	_idle(driver.pump)
+	var notes: Array = driver.drain()
+	var inbox: PackedStringArray = online.transport.peer.inbox
+	var sent: Array = Array(inbox.slice(inbox.size() - 2)).map(func(text: String) -> int: return Wire.decode(text).message.tick)
+	runner.check(notes.map(func(note) -> int: return note.tick) == [13, 14], "SB5A two jobs of one frame come back in post order, got %s" % [notes.map(func(note) -> int: return note.tick)])
+	runner.check(notes.size() == 2 and notes[0].issued.any(func(entry: Dictionary) -> bool: return entry.command.type == "move") and notes[1].issued.is_empty(), "SB5A each note carries its own issued commands")
+	runner.check(sent == [17, 18] and driver.get("_taken").is_empty(), "SB5A the two frames go out as ticks 17 and 18, got %s" % [sent])
+	driver.stop()
+
+func test_sb5a_hash_tick_note_carries_digest(runner) -> bool:
+	return _each_mode(runner, _sb5a_hash_tick_note)
+
+func _sb5a_hash_tick_note(runner, mode: String) -> void:
+	var online: Dictionary = _lone_online(mode, 12)
+	var driver = online.driver
+	_frames_to(driver, 29)
+	driver._credit = 4
+	driver.step()
+	_idle(driver.pump)
+	var notes: Array = driver.drain()
+	var inbox: PackedStringArray = online.transport.peer.inbox
+	var frame: Dictionary = Wire.decode(inbox[inbox.size() - 2]).message
+	runner.check(notes.size() == 2 and notes[0].tick == 30 and not notes[0].digest.is_empty() and notes[1].digest.is_empty(), "SB5A fixture: ticks 30 and 31 in one drain, only tick 30 asked for a digest")
+	runner.check(frame.tick == 34 and frame.get("hash", {}).get("tick", -1) == 30 and frame.hash.value == notes[0].digest, "SB5A the frame names tick 30's own digest, got %s" % [frame.get("hash")])
+	runner.check(frame.get("hash", {}).get("value", "") != StateHash.digest(driver.pump.live().snapshot()) and driver._lockstep.hash_rows()[-1] == "30\t" + notes[0].digest, "SB5A the digest is not the shown tick's")
+	driver.stop()
+
+func test_sb5a_failure_between_room_and_post(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	var online: Dictionary = _lone_online("worker", 12, NullJobPump)
+	var driver = online.driver
+	_frames_to(driver, 12)
+	driver.pump.fail_next = true
+	_take_one(driver)
+	_idle(driver.pump)
+	runner.check(driver.pump.has_room() and driver.pump.failure().is_empty() and not driver.pump.busy(), "SB5A fixture: the marker is queued and main has not read it")
+	_take_one(driver)
+	var reason: String = driver._lockstep.end_reason()
+	runner.check(driver._lockstep.status() == "ended_protocol" and reason.begins_with("sim pump failed: post job returned no note"), "SB5A a marker met inside post ends the lockstep with the pump's reason, got %s '%s'" % [driver._lockstep.status(), reason])
+	runner.check(online.transport.closes == 1, "SB5A the transport closes in the frame of the failure, got %d closes" % online.transport.closes)
+	runner.check(not driver.failure().is_empty() and driver.failure() == driver.pump.failure(), "SB5A the driver reports the pump's failure, got '%s'" % driver.failure())
+	driver.stop()
+	return true
+
+func test_sb5a_online_failure_ends_and_closes(runner) -> bool:
+	return _each_mode(runner, _sb5a_online_failure_ends_and_closes)
+
+func _sb5a_online_failure_ends_and_closes(runner, mode: String) -> void:
+	var pair: Dictionary = _pair_drivers(mode)
+	var one = pair.drivers[0]
+	var two = pair.drivers[1]
+	for transport in pair.transports: transport.tell_peer = true
+	_frames(pair.drivers, 40, 0)
+	_swap_pump(one, mode, NullJobPump)
+	one.pump.fail_next = true
+	var frames: int = 0
+	while frames < 60 and not two._lockstep.status().begins_with("ended"):
+		frames += 1
+		_cycle(one)
+		_cycle(two)
+	var reason: String = one._lockstep.end_reason()
+	runner.check(one._lockstep.status() == "ended_protocol" and reason.begins_with("sim pump failed: "), "SB5A the failing seat ends with the pump's reason, got %s '%s'" % [one._lockstep.status(), reason])
+	runner.check(not one.failure().is_empty() and one.failure() == one.pump.failure() and one.over(), "SB5A the driver reports the failure and is over, got '%s'" % one.failure())
+	runner.check(pair.transports[0].closes >= 1, "SB5A the failing seat closes its transport")
+	runner.check(two._lockstep.status() == "ended_left" and two._lockstep.opponent_left() and two.rematch_line() == "P1 USA left the match", "SB5A the peer reads the relay's left frame, got %s '%s'" % [two._lockstep.status(), two.rematch_line()])
+	var overs: Array = []
+	for transport in pair.transports: overs.append_array(transport.others.filter(func(text: String) -> bool: return Wire.decode(text).message.type == "over"))
+	runner.check(overs.is_empty(), "SB5A no seat reports a result")
+	_unpair(pair)
+
+func test_sb5a_relay_loss_and_pump_failure_same_frame(runner) -> bool:
+	return _each_mode(runner, _sb5a_relay_loss_and_pump_failure)
+
+func _sb5a_relay_loss_and_pump_failure(runner, mode: String) -> void:
+	for first in ["relay", "failure"]:
+		var label: String = "%s seen first [%s]" % [first, mode]
+		var online: Dictionary = _lone_online(mode, 12, NullJobPump)
+		var driver = online.driver
+		_frames_to(driver, 12)
+		driver.pump.fail_next = true
+		driver.pump.post(SimPump.Job.new())
+		_idle(driver.pump)
+		if first == "relay":
+			online.transport.gone = true
+			driver.step()
+			driver.drain()
+		else:
+			driver.drain()
+			runner.check(driver._lockstep.end_reason().begins_with("sim pump failed: ") and online.transport.closes >= 1, "SB5A the failure read ends the match and closes in its own frame (%s)" % label)
+			online.transport.gone = true
+			driver.step()
+			driver.drain()
+		var expected: String = "connection to relay lost" if first == "relay" else "sim pump failed: "
+		runner.check(driver._lockstep.end_reason().begins_with(expected), "SB5A the first end stands, got '%s' (%s)" % [driver._lockstep.end_reason(), label])
+		runner.check(online.transport.closes >= 1 and not driver.failure().is_empty() and driver.failure() == driver.pump.failure(), "SB5A the transport is closed and the failure is known (%s)" % label)
+		driver.stop()
+
+func test_sb5a_online_start_null_query(runner) -> bool:
+	return _each_mode(runner, _sb5a_online_start_null_query)
+
+func _sb5a_online_start_null_query(runner, mode: String) -> void:
+	var seat: Dictionary = _seat_two(mode, NullJobPump)
+	var driver = seat.driver
+	driver.pump.fail_next = true
+	driver.start()
+	runner.check(driver._lockstep.status() == "ended_protocol" and driver._lockstep.end_reason().begins_with("sim pump failed: query job returned no note"), "SB5A a null startup query ends the match with the pump's reason, got %s '%s'" % [driver._lockstep.status(), driver._lockstep.end_reason()])
+	runner.check(seat.transport.order._last == 0 and seat.transport.peer.inbox.is_empty() and seat.transport.others.is_empty(), "SB5A no packet is sent before the end")
+	runner.check(not driver.failure().is_empty() and driver.failure() == driver.pump.failure(), "SB5A the driver reports the pump's failure, got '%s'" % driver.failure())
+	driver.stop()
+
+func test_sb5a_job_zero_null_ends_online_match(runner) -> bool:
+	return _each_mode(runner, _sb5a_job_zero_null_ends_online_match)
+
+func _sb5a_job_zero_null_ends_online_match(runner, mode: String) -> void:
+	var seat: Dictionary = _seat_two(mode, NullJobPump, true)
+	var driver = seat.driver
+	runner.check(driver.pump.failure().begins_with("start job returned no note") and driver.current().tick == 0, "SB5A fixture: job zero returned null and the pump is readable")
+	driver.start()
+	runner.check(driver._lockstep.status() == "ended_protocol" and driver._lockstep.end_reason().begins_with("sim pump failed: start job returned no note"), "SB5A a null job zero ends the online match before any packet, got %s '%s'" % [driver._lockstep.status(), driver._lockstep.end_reason()])
+	runner.check(seat.transport.order._last == 0 and seat.transport.peer.inbox.is_empty() and seat.transport.others.is_empty(), "SB5A no packet is sent")
+	driver.stop()
+
+func test_sb5a_pairing_rejects_foreign_note(runner) -> bool:
+	return _each_mode(runner, _sb5a_pairing_rejects_foreign_note)
+
+func _sb5a_pairing_rejects_foreign_note(runner, mode: String) -> void:
+	var online: Dictionary = _lone_online(mode, 12)
+	var driver = online.driver
+	_frames_to(driver, 12)
+	var logged: int = driver._lockstep.command_log().size()
+	var sent: int = online.transport.order._last
+	runner.check(driver.get("_taken").is_empty(), "SB5A fixture: nothing is taken")
+	driver.pump.post(SimPump.Job.new())
+	_idle(driver.pump)
+	driver.drain()
+	runner.check(driver._lockstep.status() == "ended_protocol", "SB5A a note that advanced with nothing taken ends the match, got %s" % driver._lockstep.status())
+	runner.check(driver._lockstep.command_log().size() == logged and online.transport.order._last == sent, "SB5A nothing is recorded or sent for it")
+	driver.stop()
+
+func test_sb5a_notice_waiting_empty(runner) -> bool:
+	var seat: Dictionary = _seat_two("inline")
+	var driver = seat.driver
+	driver.start()
+	_seat_one_packets(seat.transport, 4, 20, -1, -1)
+	_frames_to(driver, 40)
+	runner.check(driver._lockstep.status() == "waiting" and driver._lockstep.waiting_for() == [1], "SB5A fixture: the lockstep waits for seat 1")
+	driver._lockstep.receive(Wire.encode({"type": "left", "seat": 1, "after_tick": 20}))
+	runner.check(driver._lockstep.status() == "waiting" and driver._lockstep.waiting_for().is_empty(), "SB5A fixture: the leave leaves the status waiting and nobody to wait for")
+	runner.check(driver.notice() == "", "SB5A the notice names nobody and raises no error, got '%s'" % driver.notice())
+	driver.stop()
+	return true
+
+func test_sb5a_play_on_leave_with_jobs_in_flight(runner) -> bool:
+	for leaver in [2, 3]:
+		var results: Dictionary = {}
+		for mode in _modes(): results[mode] = _leave_in_flight(mode, leaver)
+		var inline: Dictionary = results.inline
+		runner.check(inline.status == ("running" if leaver == 2 else "ended_left") and inline.left == leaver, "SB5A the inline reference: seat %d leaving gives %s" % [leaver, inline])
+		for mode in results: runner.check(results[mode] == inline, "SB5A seat %d leaving with jobs in flight gives the inline result [%s], got %s against %s" % [leaver, mode, results[mode], inline])
+	return true
+
+# Seat one has three jobs taken and undrained when the leave's turn comes, so its verdict waits for the drain.
+func _leave_in_flight(mode: String, leaver: int) -> Dictionary:
+	var trio: Dictionary = _trio_drivers(mode)
+	var one = trio.drivers[0]
+	var other = trio.drivers[2] if leaver == 2 else trio.drivers[1]
+	var other_seat: int = 3 if leaver == 2 else 2
+	_trio_until(trio.drivers, 40)
+	var a: int = _last_sent(trio, leaver)
+	trio.relay.leave(leaver, a)
+	for guard in 30:
+		if one.current().tick >= a - 2: break
+		_single(one)
+	for guard in 30:
+		if _last_sent(trio, other_seat) > a + 1: break
+		_single(other)
+	var gate: Semaphore = _gate_worker(one, mode)
+	for i in 2:
+		one._credit = 4
+		one.step()
+	if gate != null: _release(gate, 4)
+	_idle(one.pump)
+	one.drain()
+	_single(one)
+	var result := {"status": one._lockstep.status(), "tick": one.current().tick, "left": one._lockstep.left_seat()}
+	_trio_done(trio)
+	return result
+
+func test_sb5a_ring_may_trail_desync_tick(runner) -> bool:
+	return _each_mode(runner, _sb5a_ring_may_trail_desync_tick)
+
+func _sb5a_ring_may_trail_desync_tick(runner, mode: String) -> void:
+	var online: Dictionary = _lone_online(mode, 12, SimPump, 34)
+	var driver = online.driver
+	var downloads: Array = []
+	driver.web = true
+	driver.download = func(buffer: PackedByteArray, _file_name: String, _mime: String) -> void: downloads.append(buffer)
+	for i in 60:
+		_take_one(driver)
+		_idle(driver.pump)
+		driver.drain()
+		if driver.over(): break
+	var report = JSON.parse_string(downloads[0].get_string_from_utf8()) if downloads.size() == 1 else null
+	runner.check(driver._lockstep.status() == "ended_desync" and report is Dictionary, "SB5A fixture: a wrong hash at tick 30 ends the match with one report")
+	if not report is Dictionary:
+		driver.stop()
+		return
+	var rows: Array = report.get("hash_ring", [])
+	runner.check(int(report.tick) == 30 and rows.any(func(row: String) -> bool: return row.begins_with("30\t")), "SB5A the report names tick 30 and its ring has that row, got tick %s" % report.tick)
+	runner.check(not rows.is_empty() and int(rows[-1].split("\t")[0]) > 30, "SB5A the ring may run past the desync tick, the rows are labelled")
+	var record: Dictionary = driver.record()
+	runner.check(_replayed_digest(_logged_commands(driver), record.tick) == record.digest, "SB5A the saved record's log replays to its end digest")
+	driver.stop()
+
+func test_sb5a_report_survives_failed_query(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	var online: Dictionary = _lone_online("worker", 12, NullJobPump, 34)
+	var driver = online.driver
+	var downloads: Array = []
+	driver.web = true
+	driver.download = func(buffer: PackedByteArray, _file_name: String, _mime: String) -> void: downloads.append(buffer)
+	_frames_to(driver, 34)
+	driver.pump.fail_next = true
+	driver.pump.post(SimPump.Job.new())
+	_idle(driver.pump)
+	_take_one(driver)
+	driver.drain()
+	var report = JSON.parse_string(downloads[0].get_string_from_utf8()) if downloads.size() == 1 else null
+	runner.check(driver._lockstep.status() == "ended_desync" and driver.pump.failure() != "" and report is Dictionary, "SB5A fixture: a pump marker and a desync meet in one drain, got %s '%s'" % [driver._lockstep.status(), driver.pump.failure()])
+	runner.check(report is Dictionary and report.has("hash_ring") and report.hash_ring.is_empty(), "SB5A the report of a failed query writes an empty ring")
+	driver.stop()
+	return true
+
+func test_sb5a_suspend_is_no_stall(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	var frames: Array[int] = [1000]
+	var now: Array[int] = [50000]
+	var gate := Semaphore.new()
+	var pump = _make(_sim(), "worker")
+	pump.frame_source = func() -> int: return frames[0]
+	pump.clock = func() -> int: return now[0]
+	pump.start()
+	pump.gate_publish_for_test(gate, "before_publish")
+	pump.post(_job())
+	frames[0] += 2 * SimPump.STALL_FRAMES
+	now[0] += 2 * SimPump.STALL_MSEC
+	gate.post()
+	var notes: Array = _drain(pump)
+	runner.check(notes.size() == 1 and pump.failure().is_empty(), "SB5A a note finished while the app was suspended is drained, no stall, got %d notes '%s'" % [notes.size(), pump.failure()])
+	pump.stop()
+	return true
