@@ -122,7 +122,7 @@ func test_sidebar_switches_pages(runner) -> bool:
 	runner.check(version != null and str(ProjectSettings.get_setting("application/config/version")) in version.text, "L6 the sidebar shows the version")
 	for link: Array in [["Impressum", "https://blackcindergames.com/impressum/"], ["Privacy", "https://blackcindergames.com/privacy/"]]:
 		var button: LinkButton = launcher.get_node_or_null("Sidebar/Legal/Links/" + link[0])
-		runner.check(button != null and button.text == link[0] and button.uri == link[1] and button.is_visible_in_tree(), "L6b the sidebar links %s to %s" % link)
+		runner.check(button != null and button.text == link[0] and button.uri == link[1] and button.theme_type_variation == &"SidebarLink" and button.is_visible_in_tree(), "L6b the sidebar links %s to %s" % link)
 	launcher.free()
 	return true
 
