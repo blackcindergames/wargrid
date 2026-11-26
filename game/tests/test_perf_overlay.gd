@@ -206,6 +206,7 @@ func test_sb5a_f3_shows_mode(runner) -> bool:
 	for i in 31: BaseScene.tick(main)
 	overlay.refresh_text()
 	runner.check(overlay.text.contains("\nBot 2 "), "PO21 the bot line stays below, got '%s'" % overlay.text)
+	main.driver.stop()
 	main.free()
 	PumpTests.latch_for_test()
 	main = await _scene(runner, Skirmish)

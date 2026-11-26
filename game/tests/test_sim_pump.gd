@@ -21,6 +21,24 @@ const MATCH_TICKS: int = 900
 const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
 const SeatFixture = preload("res://tests/seat_fixture.gd")
 const DIGEST_EVERY: int = 30
+const ViewRows = preload("res://scripts/simulation/view_rows.gd")
+const VIEW_COLUMNS: Array[String] = ["id", "owner", "kind", "hp", "max_hp", "target", "queue", "container", "x", "y", "heading_x", "heading_y", "order_x", "order_y", "status", "tier", "mode", "phase", "flags", "kinds", "modes", "phases"]
+
+# Names the mode on every check of a looped case, so a red line says which pump failed.
+class Tagged extends RefCounted:
+	var runner
+	var mode: String
+	func _init(target, tag: String) -> void:
+		runner = target
+		mode = tag
+	func check(condition: bool, message: String) -> void: runner.check(condition, "%s [%s]" % [message, mode])
+
+# The thread that ran each job, read after the pump is idle.
+class IdPump extends "res://scripts/match/sim_pump.gd":
+	var ids: Array[int] = []
+	func _note_for(job: Job, slot: Slot) -> Note:
+		ids.append(OS.get_thread_caller_id())
+		return super(job, slot)
 
 # The relay forwards ticks; over and again end at the relay.
 class PairTransport extends RefCounted:
@@ -80,15 +98,65 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
 
-func _pump():
-	var pump = SimPump.new(_sim())
+var _built: Array = []
+
+func _modes() -> Array[String]:
+	return ["inline", "worker"] if OS.has_feature("threads") else ["inline"]
+
+# A forced mode applies to this pump only, and the case's end stops it (_stop_built).
+func _make(sim, mode: String = "", kind = SimPump):
+	var saved: String = SimPump._forced
+	if not mode.is_empty(): SimPump.force_mode_for_test(mode)
+	var pump = kind.new(sim)
+	SimPump.force_mode_for_test(saved)
+	if not mode.is_empty(): _built.append(pump)
+	return pump
+
+func _pump(mode: String = ""):
+	var pump = _make(_sim(), mode)
 	pump.start()
 	return pump
+
+func _stop_built() -> void:
+	for pump in _built: pump.stop()
+	_built.clear()
+
+func _each_mode(runner, body: Callable) -> bool:
+	for mode in _modes():
+		body.call(Tagged.new(runner, mode), mode)
+		_stop_built()
+	return true
+
+func _idle(pump, limit_ms: int = 5000) -> bool:
+	var end: int = Time.get_ticks_msec() + limit_ms
+	while pump.busy() and Time.get_ticks_msec() < end: OS.delay_usec(200)
+	return not pump.busy()
+
+func _drain(pump) -> Array:
+	_idle(pump)
+	return pump.drain()
+
+func _collect(pump, count: int, limit_ms: int = 1500) -> Array:
+	var notes: Array = []
+	var end: int = Time.get_ticks_msec() + limit_ms
+	while notes.size() < count and Time.get_ticks_msec() < end:
+		notes.append_array(pump.drain())
+		OS.delay_usec(200)
+	return notes
+
+func _gated() -> Dictionary:
+	var pump = _pump("worker")
+	var gate := Semaphore.new()
+	pump.gate_publish_for_test(gate, "before_publish")
+	return {"pump": pump, "gate": gate}
+
+func _release(gate: Semaphore, count: int) -> void:
+	for i in count: gate.post()
 
 func _job(commands: Array = [], bots: Array = []):
 	var job = SimPump.Job.new()
@@ -106,9 +174,12 @@ func _move(id: int) -> Dictionary:
 	return {"type": "move", "player": 1, "entity_ids": [id], "target": [10.5, 10.5]}
 
 func test_sb3_pump_digests_equal_direct(runner) -> bool:
+	return _each_mode(runner, _sb3_pump_digests_equal_direct)
+
+func _sb3_pump_digests_equal_direct(runner, mode: String) -> void:
 	var direct = _sim()
 	var recorder = CommandRecorder.new(direct)
-	var pump = _pump()
+	var pump = _pump(mode)
 	var equal: int = 0
 	var bot_commands: int = 0
 	for i in MATCH_TICKS:
@@ -117,15 +188,14 @@ func test_sb3_pump_digests_equal_direct(runner) -> bool:
 		var job = _job([], [2])
 		job.want_digest = (i + 1) % DIGEST_EVERY == 0
 		pump.post(job)
-		var note = pump.drain()[0]
+		var note = _drain(pump)[0]
 		bot_commands += note.bot_commands.size()
 		if job.want_digest and note.digest == StateHash.digest(direct.snapshot()): equal += 1
 	runner.check(equal * DIGEST_EVERY == MATCH_TICKS, "SB3 pump digests equal a direct run every 30 ticks (%d)" % equal)
 	runner.check(StateHash.digest(pump.live().snapshot()) == StateHash.digest(direct.snapshot()) and pump.live().tick() == MATCH_TICKS, "SB3 pump digest equal at 900")
 	runner.check(bot_commands > 0, "SB3 bot commands reach the notes")
-	return true
 
-func _battle_pump():
+func _battle_pump(mode: String = ""):
 	var sim = Fixture.make_world()
 	sim.add_player(2, 0)
 	var own: Array = []
@@ -133,7 +203,7 @@ func _battle_pump():
 	for i in 8:
 		own.append(sim.spawn(1, Vector2(10.5, 8.5 + i), "china_tank"))
 		enemy.append(sim.spawn(2, Vector2(13.5, 8.5 + i), "china_tank"))
-	var pump = SimPump.new(sim)
+	var pump = _make(sim, mode)
 	pump.start()
 	return {"pump": pump, "own": own, "enemy": enemy, "builder": _own_unit(sim, "usa_builder")}
 
@@ -151,23 +221,26 @@ func _ticks(rows: Array) -> Array:
 	return ticks
 
 func test_sb3_two_notes_one_drain(runner) -> bool:
-	var pump = _pump()
+	return _each_mode(runner, _sb3_two_notes_one_drain)
+
+func _sb3_two_notes_one_drain(runner, mode: String) -> void:
+	var pump = _pump(mode)
 	runner.check(pump.current().tick == 0 and pump.previous() == null, "SB3 start fills CURRENT at tick 0")
 	pump.post(_job())
 	pump.post(_job())
-	var notes: Array = pump.drain()
+	var notes: Array = _drain(pump)
 	runner.check(notes.size() == 2 and notes[0].tick == 1 and notes[1].tick == 2, "SB3 two notes in tick order")
 	runner.check(pump.current().tick == 2 and pump.previous().tick == 0, "SB3 CURRENT is the last note, PREVIOUS the old CURRENT")
 	runner.check(notes[0].done and notes[1].done, "SB3 inline notes are done")
-	var battle: Dictionary = _battle_pump()
+	var battle: Dictionary = _battle_pump(mode)
 	pump = battle.pump
 	pump.post(_job([_attack(1, battle.own, battle.enemy[0]), _attack(2, battle.enemy, battle.own[0])]))
-	pump.drain()
+	_drain(pump)
 	var pairs: int = 0
 	for i in 60:
 		pump.post(_job([_halt(battle.builder)]))
 		pump.post(_job([_halt(battle.builder)]))
-		notes = pump.drain()
+		notes = _drain(pump)
 		if notes[0].events.is_empty() or notes[1].events.is_empty(): continue
 		var first: Array = _ticks(notes[0].events + notes[0].results)
 		var second: Array = _ticks(notes[1].events + notes[1].results)
@@ -186,13 +259,15 @@ func test_sb3_two_notes_one_drain(runner) -> bool:
 	var publish = _job()
 	publish.step = false
 	pump.post(publish)
-	var note = pump.drain()[0]
+	var note = _drain(pump)[0]
 	runner.check(not events.is_empty() and not results.is_empty() and note.events == events and note.results == results, "SB3 publish job carries the externally stepped tick's events and results")
 	runner.check(note.tick == pump.live().tick() and pump.current().tick == note.tick and pump.current().view.tick == note.tick, "SB3 publish job shows the externally stepped tick")
-	return true
 
 func test_sb3_slot_invariant(runner) -> bool:
-	var pump = _pump()
+	return _each_mode(runner, _sb3_slot_invariant)
+
+func _sb3_slot_invariant(runner, mode: String) -> void:
+	var pump = _pump(mode)
 	var seen: Array = [pump.current()]
 	var held: int = 0
 	var views: int = 0
@@ -202,7 +277,7 @@ func test_sb3_slot_invariant(runner) -> bool:
 		var shown_tick: int = shown.view.tick
 		pump.post(_job())
 		if is_same(pump.current(), shown) and shown.tick == shown_tick and shown.view.tick == shown_tick and (pump.previous() == null or pump.previous().view.tick == shown_tick - 1): kept += 1
-		var notes: Array = pump.drain()
+		var notes: Array = _drain(pump)
 		var current = pump.current()
 		var previous = pump.previous()
 		if current.tick == notes[-1].tick and not is_same(current, previous) and previous.tick == current.tick - 1: held += 1
@@ -213,25 +288,27 @@ func test_sb3_slot_invariant(runner) -> bool:
 	runner.check(views == 60, "SB3 every slot holds a fresh view of its own tick (%d)" % views)
 	runner.check(kept == 60, "SB3 a post leaves CURRENT and PREVIOUS untouched until the drain (%d)" % kept)
 	runner.check(seen.size() == 61, "PH every job publishes a new slot, answer 11 (%d)" % seen.size())
-	return true
 
 func test_ph_fresh_slot_per_job(runner) -> bool:
-	var pump = _pump()
+	return _each_mode(runner, _ph_fresh_slot_per_job)
+
+func _ph_fresh_slot_per_job(runner, mode: String) -> void:
+	var pump = _pump(mode)
 	var held = pump.current()
 	var kept_tick: int = held.tick
 	var kept_view: Dictionary = held.view
 	for i in 6:
 		pump.post(_job())
-		pump.drain()
+		_drain(pump)
 	runner.check(held.tick == kept_tick and is_same(held.view, kept_view) and held.view.tick == held.tick, "PH a held slot never changes after publishing")
 	var old = pump.current()
 	pump.post(_job())
 	pump.post(_job())
-	pump.drain()
+	_drain(pump)
 	runner.check(pump.current().tick == old.tick + 2 and is_same(pump.previous(), old), "PH two posts, one drain: current is the second job, previous the old current")
-	return true
 
 func test_ph_null_job_fails_pump(runner) -> bool:
+	SimPump.force_mode_for_test("inline")
 	var pump = NullJobPump.new(_sim())
 	pump.start()
 	runner.check(pump.failure() == "", "PH a healthy pump reports no failure")
@@ -274,10 +351,13 @@ func test_ph_null_job_fails_pump(runner) -> bool:
 	return true
 
 func test_sb3_sequence_stamp(runner) -> bool:
-	var pump = _pump()
+	return _each_mode(runner, _sb3_sequence_stamp)
+
+func _sb3_sequence_stamp(runner, mode: String) -> void:
+	var pump = _pump(mode)
 	var id: int = _own_unit(pump.live())
 	pump.post(_job([_move(id), _move(999999), {"type": "stop", "player": 1, "entity_ids": [id]}]))
-	var issued: Array = pump.drain()[0].issued
+	var issued: Array = _drain(pump)[0].issued
 	runner.check(issued.map(func(row) -> int: return row.command.sequence) == [0, 1, 1], "SB3 sequences stamped from the simulation")
 	runner.check(issued.map(func(row) -> bool: return row.ok) == [true, false, true], "SB3 refusal between two accepted commands")
 	runner.check(not issued[1].error.is_empty() and issued[0].command.tick == 0, "SB3 refusal carries its error, tick stamped at issue")
@@ -285,19 +365,20 @@ func test_sb3_sequence_stamp(runner) -> bool:
 	var explicit: Dictionary = _move(id)
 	explicit.sequence = 5
 	pump.post(_job([explicit]))
-	var kept: Dictionary = pump.drain()[0].issued[0]
+	var kept: Dictionary = _drain(pump)[0].issued[0]
 	runner.check(kept.ok and kept.command.sequence == 5 and pump.live().last_sequence(1) == 5 and not explicit.has("tick"), "SB3 explicit sequence kept, caller's command untouched")
-	return true
 
 func test_sb3_refusal_one_tick_later(runner) -> bool:
-	var pump = _pump()
+	return _each_mode(runner, _sb3_refusal_one_tick_later)
+
+func _sb3_refusal_one_tick_later(runner, mode: String) -> void:
+	var pump = _pump(mode)
 	pump.post(_job())
 	pump.post(_job([_move(999999)]))
-	var notes: Array = pump.drain()
+	var notes: Array = _drain(pump)
 	runner.check(notes[0].issued.is_empty(), "SB3 no answer before the issuing job")
 	runner.check(notes[1].issued.size() == 1 and not notes[1].issued[0].ok, "SB3 refusal in the issuing job's note")
 	runner.check(notes[1].issued[0].command.tick == notes[1].tick - 1, "SB3 refusal arrives with the next tick")
-	return true
 
 func _free_origin(sim, builder: int, kind: String) -> Vector2i:
 	for y in range(2, 40):
@@ -306,21 +387,23 @@ func _free_origin(sim, builder: int, kind: String) -> Vector2i:
 	return Vector2i(-1, -1)
 
 func test_sb3_preview_answer(runner) -> bool:
-	var pump = _pump()
+	return _each_mode(runner, _sb3_preview_answer)
+
+func _sb3_preview_answer(runner, mode: String) -> void:
+	var pump = _pump(mode)
 	var builder: int = _own_unit(pump.live(), "usa_builder")
 	var origin: Vector2i = _free_origin(pump.live(), builder, "usa_power_plant")
 	var job = _job([{"type": "build", "player": 1, "builder_id": builder, "building_kind": "usa_power_plant", "origin": [origin.x, origin.y]}])
 	job.preview = {"player": 1, "builder_id": builder, "kind": "usa_power_plant", "origin": origin}
 	pump.post(job)
-	var note = pump.drain()[0]
+	var note = _drain(pump)[0]
 	var preview: Dictionary = note.preview
 	var expected: Dictionary = pump.live().preview_build(1, builder, "usa_power_plant", origin)
 	runner.check(origin.x >= 0 and note.issued[0].ok and not expected.ok, "SB3 the job's build takes the previewed footprint")
 	runner.check(preview.keys() == ["kind", "origin", "ok", "error", "tick"], "SB3 preview answer shape")
 	runner.check(preview.kind == "usa_power_plant" and preview.origin == origin and preview.ok == expected.ok and preview.error == expected.error and preview.tick == 1, "SB3 preview answered after the step")
 	pump.post(_job())
-	runner.check(pump.drain()[0].preview == {}, "SB3 no preview, no answer")
-	return true
+	runner.check(_drain(pump)[0].preview == {}, "SB3 no preview, no answer")
 
 func test_sb3_query_leaves_slots(runner) -> bool:
 	var pump = _pump()
@@ -341,18 +424,20 @@ func test_sb3_query_leaves_slots(runner) -> bool:
 	return true
 
 func test_sb3_job0_starts(runner) -> bool:
-	var pump = SimPump.new(_sim())
+	return _each_mode(runner, _sb3_job0_starts)
+
+func _sb3_job0_starts(runner, mode: String) -> void:
+	var pump = _make(_sim(), mode)
 	var note = pump.start()
 	var map: Dictionary = pump.live().map_data()
 	runner.check(note.starts.size() == 2 and note.starts[1] == MapData.start_cell(map, 1) and note.starts[2] == MapData.start_cell(map, 2) and note.starts[1] != note.starts[2], "SB3 job 0 carries the start cells")
-	runner.check(pump.current().tick == 0 and note.tick == 0 and pump.drain().is_empty(), "SB3 job 0 fills CURRENT, not the queue")
+	runner.check(pump.current().tick == 0 and note.tick == 0 and _drain(pump).is_empty(), "SB3 job 0 fills CURRENT, not the queue")
 	runner.check(note.stats.size() == 2 and note.stats[0].player == 1, "SB3 notes carry match stats")
-	var fixture = SimPump.new(Fixture.make_world())
+	var fixture = _make(Fixture.make_world(), mode)
 	runner.check(fixture.start().starts == {} and fixture.current().tick == 0, "SB3 fixture world starts without start cells")
 	fixture.stop()
 	runner.check(not fixture.post(_job()), "SB3 post refused after stop")
 	runner.check(fixture.live().tick() == 0, "PH a post refused after stop steps nothing, got tick %d" % fixture.live().tick())
-	return true
 
 func _frozen_count() -> int:
 	return Registry.frozen_state().values().count(true)
@@ -363,7 +448,10 @@ func _rifle_row(weapon: String) -> Dictionary:
 	return row
 
 func test_sb3_freeze_rejects_late_insert(runner) -> bool:
-	_pump()
+	return _each_mode(runner, _sb3_freeze_rejects_late_insert)
+
+func _sb3_freeze_rejects_late_insert(runner, mode: String) -> void:
+	_pump(mode)
 	runner.check(_frozen_count() == 5 and Registry.radius_cache.is_read_only(), "SB3 start freezes each of the five caches (%s)" % Registry.frozen_state())
 	Registry.add_test_kind("sb3_probe", _rifle_row("rifle"))
 	runner.check(_frozen_count() == 0 and Registry.cache_keys().values().all(func(keys: Array) -> bool: return keys.is_empty()), "SB3 add_test_kind leaves all five caches writable and empty (%s)" % Registry.cache_keys())
@@ -372,9 +460,8 @@ func test_sb3_freeze_rejects_late_insert(runner) -> bool:
 	runner.check(is_equal_approx(Combat.reach_of("sb3_probe"), 6.9), "SB3 re-adding a test kind with another weapon drops the cached reach")
 	Registry.clear_test_kinds()
 	runner.check(_frozen_count() == 0 and Registry.cache_keys().values().all(func(keys: Array) -> bool: return keys.is_empty()), "SB3 clear_test_kinds leaves all five caches writable and empty (%s)" % Registry.cache_keys())
-	_pump()
+	_pump(mode)
 	runner.check(_frozen_count() == 5, "SB3 start freezes again after a reset")
-	return true
 
 func _fighters() -> Array:
 	return Registry.units().filter(func(id: String) -> bool: return not CombatDefinitions.weapon(CombatDefinitions.profile(id).get("weapon", "")).is_empty())
@@ -407,7 +494,10 @@ func _unwarmed(used: Dictionary, warm: Dictionary) -> Array:
 	return unwarmed
 
 func test_sb3_freeze_covers_match(runner) -> bool:
-	var pump = _pump()
+	return _each_mode(runner, _sb3_freeze_covers_match)
+
+func _sb3_freeze_covers_match(runner, mode: String) -> void:
+	var pump = _pump(mode)
 	var warm: Dictionary = Registry.cache_keys()
 	var missing: Array = _missing_warm()
 	runner.check(missing.is_empty(), "SB3 warm-up fills every registered kind in each applicable cache (missing %s)" % [missing.slice(0, 5)])
@@ -415,23 +505,23 @@ func test_sb3_freeze_covers_match(runner) -> bool:
 	var bots: Array = [2]
 	for i in MATCH_TICKS:
 		pump.post(_job([], bots))
-		pump.drain()
+		_drain(pump)
 	runner.check(Registry.cache_keys() == warm_keys, "SB3 no cache grows during a 900-tick bot match")
 	var battle: Dictionary = _battle_world()
-	var fight = SimPump.new(battle.sim)
+	var fight = _make(battle.sim, mode)
 	fight.start()
 	fight.post(_job(battle.commands))
 	for i in 150:
 		fight.post(_job())
-		fight.drain()
+		_drain(fight)
 	runner.check(Registry.cache_keys() == warm_keys, "SB3 no cache grows during a 150-tick battle of every armed kind")
-	var team = SimPump.new(TeamMatch.create())
+	var team = _make(TeamMatch.create(), mode)
 	team.start()
 	var seats: Array = []
 	for entry in TeamMatch.SEATS: seats.append(entry.seat)
 	for i in 300:
 		team.post(_job([], seats))
-		team.drain()
+		_drain(team)
 	runner.check(Registry.cache_keys() == warm_keys, "SB3 no cache grows during 300 team-match ticks")
 	runner.check(Skirmish.map_frozen(), "SB3 skirmish map is read-only")
 	Registry.clear_test_kinds()
@@ -447,7 +537,6 @@ func test_sb3_freeze_covers_match(runner) -> bool:
 	for i in 300: TeamMatch.step(team_direct)
 	var unwarmed: Array = _unwarmed(Registry.cache_keys(), warm)
 	runner.check(unwarmed.is_empty() and _frozen_count() == 0, "SB3 every key an unfrozen match inserts was warmed (unwarmed %s)" % [unwarmed.slice(0, 5)])
-	return true
 
 func test_sb3_ring_off_same_digest(runner) -> bool:
 	var on = _sim()
@@ -710,17 +799,19 @@ func test_th_pump_tick_hash_on_request(runner) -> bool:
 	return true
 
 func test_ph_sequence_stamp_only_on_request(runner) -> bool:
-	var pump = _pump()
+	return _each_mode(runner, _ph_sequence_stamp_only_on_request)
+
+func _ph_sequence_stamp_only_on_request(runner, mode: String) -> void:
+	var pump = _pump(mode)
 	var id: int = _own_unit(pump.live())
 	var bare = SimPump.Job.new()
 	bare.commands.assign([_move(id)])
 	pump.post(bare)
-	var issued: Array = pump.drain()[0].issued
+	var issued: Array = _drain(pump)[0].issued
 	runner.check(not issued[0].ok and issued[0].error == "Missing field: sequence" and pump.live().last_sequence(1) == -1, "PH without the flag a missing sequence is refused, got %s" % [issued[0]])
 	pump.post(_job([_move(id)]))
-	issued = pump.drain()[0].issued
+	issued = _drain(pump)[0].issued
 	runner.check(issued[0].ok and issued[0].command.sequence == 0, "PH with the flag it is stamped, got %s" % [issued[0]])
-	return true
 
 func test_ph_record_returns_command_log(runner) -> bool:
 	var pump = _pump()
@@ -846,7 +937,10 @@ func test_ph_driver_matches_advance_peer(runner) -> bool:
 	return true
 
 func test_ph_nested_cache_freeze(runner) -> bool:
-	_pump()
+	return _each_mode(runner, _ph_nested_cache_freeze)
+
+func _ph_nested_cache_freeze(runner, mode: String) -> void:
+	_pump(mode)
 	var views: Array = []
 	for id: String in Registry.units() + Registry.buildings():
 		for view: Dictionary in [Registry.unit_view(id), Registry.building_view(id), Registry.profile_view(id)]:
@@ -855,7 +949,6 @@ func test_ph_nested_cache_freeze(runner) -> bool:
 	Registry.add_test_kind("ph_probe", _rifle_row("rifle"))
 	runner.check(not Registry.unit_view("ph_probe").is_read_only(), "PH a test kind resets to writable caches")
 	Registry.clear_test_kinds()
-	return true
 
 func test_pal_survivors_query(runner) -> bool:
 	var sim := SeatFixture.sim()
@@ -871,21 +964,23 @@ func test_pal_survivors_query(runner) -> bool:
 	return true
 
 func test_pal_note_carries_survivors(runner) -> bool:
+	return _each_mode(runner, _pal_note_carries_survivors)
+
+func _pal_note_carries_survivors(runner, mode: String) -> void:
 	var seats: Array[Dictionary] = []
 	for seat in [1, 2, 3]:
 		seats.append({"seat": seat, "team": seat, "controller": "human", "credits": Skirmish.START_CREDITS, "defer": true})
 	var sim: RefCounted = MapData.create(MapData.load("res://data/maps/broken_crown.json"), seats)
 	sim.begin_setup([1, 2, 3] as Array[int])
-	var pump = SimPump.new(sim)
+	var pump = _make(sim, mode)
 	var first = pump.start()
 	runner.check(first.survivors == [1, 2, 3], "PAL a setup sim counts every seat as a survivor, got %s" % [first.survivors])
 	var job = SimPump.Job.new()
 	for seat in [1, 2, 3]: job.commands.append({"type": "choose_faction", "faction": "usa", "player": seat, "tick": 0, "sequence": 0})
 	pump.post(job)
-	var note = pump.drain()[0]
+	var note = _drain(pump)[0]
 	runner.check(note.survivors == [1, 2, 3], "PAL the job's note carries the survivors after its step, got %s" % [note.survivors])
-	runner.check(SimPump.new(SeatFixture.sim()).start().survivors == [1, 2, 3], "PAL a note from a job without a step carries survivors")
-	return true
+	runner.check(_make(SeatFixture.sim(), mode).start().survivors == [1, 2, 3], "PAL a note from a job without a step carries survivors")
 
 func _trio_drivers() -> Dictionary:
 	var relay := TrioRelay.new()
@@ -1015,8 +1110,11 @@ func test_pal_driver_play_on_then_end_closes_room(runner) -> bool:
 	return true
 
 func test_pump_bot_first_wave_at_5400(runner) -> bool:
+	return _each_mode(runner, _pump_bot_first_wave_at_5400)
+
+func _pump_bot_first_wave_at_5400(runner, mode: String) -> void:
 	var sim = _sim()
-	var pump = SimPump.new(sim)
+	var pump = _make(sim, mode)
 	var rally: Vector2 = Vector2(pump.start().starts[2]) + Vector2(0.5, 0.5)
 	var tanks: Array = []
 	for i in 40:
@@ -1027,10 +1125,9 @@ func test_pump_bot_first_wave_at_5400(runner) -> bool:
 	var attacks: Array = []
 	for i in Skirmish.FIRST_WAVE_TICK + Skirmish.DECISION_TICKS + 70:
 		pump.post(_job([], [2]))
-		for command: Dictionary in pump.drain()[0].bot_commands:
+		for command: Dictionary in _drain(pump)[0].bot_commands:
 			if command.type == "attack": attacks.append(command.tick)
 	runner.check(not attacks.is_empty() and attacks[0] == Skirmish.next_decision(Skirmish.FIRST_WAVE_TICK - 1, 2), "7-14 the offline bot's first wave leaves at the first decision from tick 5400, got %s" % [attacks.slice(0, 3)])
-	return true
 
 func test_pump_bot_lines_on_request(runner) -> bool:
 	var plain = _pump()
@@ -1075,18 +1172,20 @@ func _planning(bots: Array = [2]):
 	return job
 
 func test_plan_bots_leaves_sim_untouched(runner) -> bool:
-	var planned = _pump()
-	var quiet = _pump()
+	return _each_mode(runner, _plan_bots_leaves_sim_untouched)
+
+func _plan_bots_leaves_sim_untouched(runner, mode: String) -> void:
+	var planned = _pump(mode)
+	var quiet = _pump(mode)
 	var commands: int = 0
 	for i in 100:
 		planned.post(_planning())
 		quiet.post(_job())
-		commands += planned.drain()[0].bot_commands.size()
-		quiet.drain()
+		commands += _drain(planned)[0].bot_commands.size()
+		_drain(quiet)
 	runner.check(commands > 0, "PB1 the bot planned orders (%d)" % commands)
 	runner.check(planned.live().last_sequence(2) == -1 and planned.live().snapshot().pending_commands.is_empty(), "PB1 none reached the sim, last sequence %d" % planned.live().last_sequence(2))
 	runner.check(planned.live().tick_hash() == quiet.live().tick_hash() and StateHash.digest(planned.live().snapshot()) == StateHash.digest(quiet.live().snapshot()), "PB1 planning leaves the hash and the digest of a sim without the bot")
-	return true
 
 func test_planned_bot_commands_not_in_pump_record(runner) -> bool:
 	var pump = _pump()
@@ -1263,4 +1362,329 @@ func test_sb5a_mode_from_switch(runner) -> bool:
 	runner.check(SimPump.worker_wanted() == threads and _mode() == ("worker" if threads else "inline"), "SB5A a reset latch gives the worker back")
 	if saved.is_empty(): OS.unset_environment("WARGRID_SIM_THREAD")
 	else: OS.set_environment("WARGRID_SIM_THREAD", saved)
+	return true
+
+func test_sb5a_null_job_marker_fails_pump(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var pump = _make(_sim(), "worker", NullJobPump)
+	pump.start()
+	runner.check(pump.mode() == "worker" and SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	runner.check(pump.failure() == "" and pump.post(_job([_move(_own_unit(pump.live()))])), "SB5A a good job before the null job is accepted")
+	_idle(pump)
+	pump.fail_next = true
+	runner.check(pump.post(_job()), "SB5A the null job's post is accepted, its failure comes back as a marker")
+	_idle(pump)
+	pump.fail_next = false
+	var notes: Array = pump.drain()
+	var reason: String = pump.failure()
+	runner.check(reason.begins_with("post job returned no note after tick"), "SB5A the marker names the failure at the next drain, got '%s'" % reason)
+	runner.check(notes.size() == 1 and notes[0].tick == 1 and pump.current().tick == 1, "SB5A notes filed before the marker drain, the null job publishes nothing")
+	runner.check(not pump.busy() and pump.has_room(), "SB5A a failed pump is not busy and reports room")
+	runner.check(not pump.post(_job()) and pump.drain().is_empty() and pump.failure() == reason, "SB5A later posts are refused and the first reason stays")
+	pump.stop()
+	runner.check(SimPump.live_workers() == threads, "SB5A stop joins the worker of a failed pump")
+	var held = _make(_sim(), "worker", NullJobPump)
+	held.start()
+	var gate := Semaphore.new()
+	held.gate_publish_for_test(gate, "before_publish")
+	held.post(_job())
+	var end: int = Time.get_ticks_msec() + 1500
+	while held.live().tick() < 1 and Time.get_ticks_msec() < end: OS.delay_usec(200)
+	held.fail_next = true
+	held.post(_job())
+	held.post(_job())
+	gate.post()
+	runner.check(_idle(held) and held.failure() == "", "SB5A a marker with a job waiting drops it and leaves the count at 0")
+	runner.check(held.drain().size() == 1 and held.failure().begins_with("post job returned no note after tick 1"), "SB5A the marker with a waiting job fails the pump at the next drain, got '%s'" % held.failure())
+	held.stop()
+	runner.check(held.live().tick() == 1 and SimPump.live_workers() == threads, "SB5A the waiting job never ran and stop joins")
+	SimPump.reset_process_latch_for_test()
+	return true
+
+func test_sb5a_idle_is_no_stall(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var frames: Array[int] = [1000]
+	var now: Array[int] = [50000]
+	var pump = _make(_sim(), "worker")
+	pump.frame_source = func() -> int: return frames[0]
+	pump.clock = func() -> int: return now[0]
+	pump.start()
+	runner.check(SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	frames[0] += 200
+	now[0] += 10000
+	runner.check(pump.drain().is_empty() and pump.failure() == "", "SB5A an idle pump never stalls, got '%s'" % pump.failure())
+	pump.post(_job())
+	var notes: Array = _drain(pump)
+	runner.check(notes.size() == 1 and notes[0].tick == 1 and pump.failure() == "", "SB5A a post after the idle time runs, got '%s'" % pump.failure())
+	frames[0] += 200
+	now[0] += 10000
+	runner.check(pump.drain().is_empty() and pump.failure() == "", "SB5A an idle pump after a drain never stalls, got '%s'" % pump.failure())
+	pump.stop()
+	return true
+
+func test_sb5a_abandoned_worker_takes_no_more_jobs(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var frames: Array[int] = [1000]
+	var now: Array[int] = [50000]
+	var gate := Semaphore.new()
+	var pump = _make(_sim(), "worker", IdPump)
+	pump.frame_source = func() -> int: return frames[0]
+	pump.clock = func() -> int: return now[0]
+	pump.start()
+	pump.gate_publish_for_test(gate, "before_publish")
+	for i in 3: pump.post(_job())
+	frames[0] += SimPump.STALL_FRAMES
+	now[0] += SimPump.STALL_MSEC
+	pump.drain()
+	runner.check(pump.failure().begins_with("stall: job at tick 1"), "SB5A a job over the stall limit fails the pump, got '%s'" % pump.failure())
+	_release(gate, 3)
+	var end: int = Time.get_ticks_msec() + 1500
+	while not pump._exited and Time.get_ticks_msec() < end: OS.delay_usec(200)
+	runner.check(pump._exited and pump.ids.size() == 2, "SB5A the abandoned worker ends its running job and takes no other (%s)" % [pump.ids])
+	runner.check(SimPump.live_workers() == threads + 1, "SB5A an abandoned pump stays counted until it is reaped")
+	_make(_sim(), "inline").start()
+	runner.check(SimPump.live_workers() == threads, "SB5A the next pump's start joins the abandoned worker that exited")
+	pump.stop()
+	SimPump.reset_process_latch_for_test()
+	return true
+
+func test_sb5a_post_refused_when_full(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var gated: Dictionary = _gated()
+	var pump = gated.pump
+	runner.check(SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	var accepted: int = 0
+	for i in 3:
+		if pump.post(_job()): accepted += 1
+	runner.check(accepted == 3 and pump.busy() and not pump.has_room(), "SB5A three posts fill the queue while the first job waits at the gate (%d)" % accepted)
+	runner.check(not pump.post(_job()) and pump.failure() == "", "SB5A the fourth post is refused without a failure")
+	_release(gated.gate, 3)
+	var notes: Array = _collect(pump, 3)
+	runner.check(notes.size() == 3 and notes.map(func(note) -> int: return note.tick) == [1, 2, 3], "SB5A the three accepted jobs drain in order, got %s" % [notes.map(func(note) -> int: return note.tick)])
+	runner.check(_idle(pump) and pump.has_room() and pump.failure() == "", "SB5A room returns once the jobs are published")
+	_release(gated.gate, 1)
+	runner.check(pump.post(_job()) and _drain(pump).size() == 1, "SB5A a post after the queue emptied is accepted")
+	_release(gated.gate, 3)
+	pump.stop()
+	return true
+
+func test_sb5a_empty_drain_keeps_slots(runner) -> bool:
+	return _each_mode(runner, _sb5a_empty_drain_keeps_slots)
+
+func _sb5a_empty_drain_keeps_slots(runner, mode: String) -> void:
+	var threads: int = SimPump.live_workers()
+	var pump = _pump(mode)
+	runner.check((mode != "worker") or SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	var current = pump.current()
+	runner.check(pump.drain().is_empty() and is_same(pump.current(), current) and pump.previous() == null, "SB5A an empty drain at the start keeps the slots")
+	pump.post(_job())
+	var notes: Array = _drain(pump)
+	var shown = pump.current()
+	var kept = pump.previous()
+	runner.check(notes.size() == 1 and shown.tick == 1 and is_same(kept, current), "SB5A one post rotates the slots once")
+	for i in 3:
+		runner.check(pump.drain().is_empty() and is_same(pump.current(), shown) and is_same(pump.previous(), kept), "SB5A empty drain %d keeps both slots" % i)
+
+func test_sb5a_drain_at_publish_boundary(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var gated: Dictionary = _gated()
+	var pump = gated.pump
+	runner.check(SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	pump.post(_job())
+	pump.post(_job())
+	var start = pump.current()
+	var early: Array = pump.drain()
+	runner.check(early.is_empty() and pump.busy() and is_same(pump.current(), start) and pump.previous() == null, "SB5A a drain before any publish takes nothing, and the gated job still counts as unpublished")
+	_release(gated.gate, 1)
+	var first: Array = _collect(pump, 1)
+	var one = pump.current()
+	runner.check(first.size() == 1 and first[0].tick == 1 and one.tick == 1 and is_same(pump.previous(), start) and pump.busy(), "SB5A a drain after one publish takes that note, the second job is still unpublished")
+	_release(gated.gate, 1)
+	var second: Array = _collect(pump, 1)
+	runner.check(second.size() == 1 and second[0].tick == 2 and pump.current().tick == 2 and is_same(pump.previous(), one), "SB5A a drain after the second publish takes that note once")
+	runner.check(_idle(pump) and pump.drain().is_empty(), "SB5A nothing is left after both notes drained")
+	_release(gated.gate, 2)
+	pump.stop()
+	return true
+
+func _siege_pump(mode: String) -> Dictionary:
+	var sim = Fixture.make_world()
+	sim.add_player(2, 0)
+	var barracks: int = Fixture.add_completed(sim, 1, "usa_barracks", Vector2i(10, 10))
+	sim.spawn(2, Vector2(8.5, 11.5), "usa_tank")
+	var pump = _make(sim, mode)
+	pump.start()
+	return {"pump": pump, "barracks": barracks}
+
+# The first note whose shot carries a building row, or null.
+func _shot_note(pump) -> Variant:
+	for i in 120:
+		pump.post(_job())
+		for note in _drain(pump):
+			for event: Dictionary in note.events:
+				if event.type == "shot" and event.get("target_building", {}).has("id"): return note
+	return null
+
+func _held_projection(note, slot) -> Dictionary:
+	var projection: Dictionary = {}
+	for key: String in slot.view:
+		if key == "units": continue
+		projection["view." + key] = slot.view[key].duplicate(true) if slot.view[key] is Array or slot.view[key] is Dictionary else slot.view[key]
+	for column in VIEW_COLUMNS: projection["units." + column] = slot.view.units.get(column).duplicate()
+	for field in ["events", "results", "issued", "bot_commands", "stats", "survivors", "starts", "preview"]: projection["note." + field] = note.get(field).duplicate(true)
+	projection["note.tick"] = note.tick
+	projection["slot.tick"] = slot.tick
+	return projection
+
+func test_sb5a_held_view_never_changes(runner) -> bool:
+	return _each_mode(runner, _sb5a_held_view_never_changes)
+
+func _sb5a_held_view_never_changes(runner, mode: String) -> void:
+	var threads: int = SimPump.live_workers()
+	var siege: Dictionary = _siege_pump(mode)
+	var pump = siege.pump
+	runner.check((mode != "worker") or SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	var note = _shot_note(pump)
+	runner.check(note != null, "SB5A fixture: a shot at a building reaches a note")
+	if note == null: return
+	var slot = pump.current()
+	var before: Dictionary = _held_projection(note, slot)
+	var moved: int = 0
+	for i in 60:
+		if pump.has_room() and pump.post(_job()): moved += 1
+		if _held_projection(note, slot) != before: runner.check(false, "SB5A the held note and view changed while job %d ran" % i)
+		pump.drain()
+	_drain(pump)
+	runner.check(moved > 0 and _held_projection(note, slot) == before and slot.view.tick == slot.tick, "SB5A the held note and view are unchanged after %d later jobs" % moved)
+	runner.check(not before["note.events"].is_empty() and before["units.container"].size() == slot.view.units.size(), "SB5A the projection covered the shot row and the container column")
+
+func test_sb5a_queue_stats_counts(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var frames: Array[int] = [10]
+	var gated: Dictionary = _gated()
+	var pump = gated.pump
+	pump.frame_source = func() -> int: return frames[0]
+	runner.check(SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	var fresh: Dictionary = pump.queue_stats()
+	runner.check(fresh.get("queue_cap", -1) == SimPump.MAX_QUEUED and fresh.get("posts_attempted", -1) == 0 and fresh.get("room_refusals", -1) == 0 and fresh.get("depth_max", -1) == 0, "SB5A a fresh pump counts nothing and names its cap, got %s" % [fresh])
+	for i in 3: pump.post(_job())
+	runner.check(not pump.has_room() and not pump.has_room(), "SB5A two refusals in frame 10")
+	frames[0] += 1
+	runner.check(not pump.has_room(), "SB5A a refusal in frame 11")
+	frames[0] += 1
+	runner.check(not pump.has_room(), "SB5A a refusal in frame 12")
+	frames[0] += 1
+	_release(gated.gate, 3)
+	_collect(pump, 3)
+	runner.check(_idle(pump) and pump.has_room(), "SB5A room in frame 13 is no refusal")
+	var stats: Dictionary = pump.queue_stats()
+	runner.check(stats.get("room_refusals", -1) == 4 and stats.get("posts_attempted", -1) == 7, "SB5A three accepted posts and four refusals, got %s" % [stats])
+	runner.check(stats.get("refusal_streak_max", -1) == 3, "SB5A the refusals ran over three frames in a row, got %s" % [stats.get("refusal_streak_max")])
+	runner.check(stats.get("depth_max", -1) == 3 and is_equal_approx(stats.get("depth_at_cap_share", -1.0), 1.0 / 3.0) and stats.get("queue_cap", -1) == SimPump.MAX_QUEUED, "SB5A depth 3 reached once in three accepted posts, got %s" % [stats])
+	var stopped = _pump("worker")
+	stopped.stop()
+	runner.check(stopped.has_room() and not stopped.post(_job()) and stopped.queue_stats().get("room_refusals", -1) == 0, "SB5A a stopped pump's refusal is no room refusal")
+	var failing = _make(_sim(), "worker", NullJobPump)
+	failing.start()
+	failing.fail_next = true
+	failing.post(_job())
+	_idle(failing)
+	failing.drain()
+	runner.check(not failing.failure().is_empty() and not failing.post(_job()) and failing.queue_stats().get("room_refusals", -1) == 0, "SB5A a failed pump's refusal is no room refusal")
+	pump.reset_queue_stats()
+	var zero: Dictionary = pump.queue_stats()
+	runner.check(zero.get("posts_attempted", -1) == 0 and zero.get("room_refusals", -1) == 0 and zero.get("refusal_streak_max", -1) == 0 and zero.get("depth_max", -1) == 0 and zero.get("depth_at_cap_share", -1.0) == 0.0 and zero.get("queue_cap", -1) == SimPump.MAX_QUEUED, "SB5A reset_queue_stats zeroes the counts and keeps the cap, got %s" % [zero])
+	_release(gated.gate, 3)
+	_stop_built()
+	SimPump.reset_process_latch_for_test()
+	return true
+
+func test_sb5a_undrained_notes_bounded(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var pump = _pump("worker")
+	runner.check(SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	var accepted: int = 0
+	var biggest: int = 0
+	var ticks: Array = []
+	for frame in 40:
+		for step in 8:
+			for take in 2:
+				if pump.has_room() and pump.post(_job()): accepted += 1
+		var notes: Array = pump.drain()
+		biggest = maxi(biggest, notes.size())
+		ticks.append_array(notes.map(func(note) -> int: return note.tick))
+	ticks.append_array(_drain(pump).map(func(note) -> int: return note.tick))
+	var sequence: Array = range(1, accepted + 1)
+	runner.check(accepted > 0 and ticks == sequence, "SB5A every accepted job drains once, in order (%d accepted, %d drained)" % [accepted, ticks.size()])
+	runner.check(biggest > 0 and biggest <= 16, "SB5A no drain holds more than 2 posts x 8 physics steps (%d)" % biggest)
+	var stats: Dictionary = pump.queue_stats()
+	runner.check(stats.get("depth_max", 0) >= 1 and stats.get("depth_max", 0) <= SimPump.MAX_QUEUED, "SB5A the unpublished count never passed the cap, got %s" % [stats.get("depth_max")])
+	pump.stop()
+	return true
+
+func test_sb5a_worker_runs_off_main(runner) -> bool:
+	return _each_mode(runner, _sb5a_worker_runs_off_main)
+
+func _sb5a_worker_runs_off_main(runner, mode: String) -> void:
+	var main_id: int = OS.get_thread_caller_id()
+	var pump = _make(_sim(), mode, IdPump)
+	pump.start()
+	for i in 5:
+		pump.post(_job())
+		_drain(pump)
+	var ids: Array[int] = pump.ids
+	runner.check(ids.size() == 6 and ids[0] == main_id, "SB5A job zero runs on the caller (%s)" % [ids])
+	var later: Array = ids.slice(1)
+	if mode == "worker": runner.check(later.all(func(id: int) -> bool: return id != main_id) and later.all(func(id: int) -> bool: return id == later[0]), "SB5A later jobs run on one other thread (%s)" % [ids])
+	else: runner.check(later.all(func(id: int) -> bool: return id == main_id), "SB5A inline jobs run on the caller (%s)" % [ids])
+
+func _packed(type: int) -> bool:
+	return type >= TYPE_PACKED_BYTE_ARRAY and type < TYPE_MAX
+
+func _foreign(value, path: String, found: Array, seen: Dictionary) -> void:
+	match typeof(value):
+		TYPE_CALLABLE, TYPE_SIGNAL: found.append(path)
+		TYPE_DICTIONARY:
+			for key in value:
+				_foreign(key, path + ".<key>", found, seen)
+				_foreign(value[key], "%s.%s" % [path, key], found, seen)
+		TYPE_ARRAY:
+			for i in value.size(): _foreign(value[i], "%s[%d]" % [path, i], found, seen)
+		TYPE_OBJECT: _foreign_object(value, path, found, seen)
+
+func _foreign_object(value: Object, path: String, found: Array, seen: Dictionary) -> void:
+	var rows: bool = value.get_script() == ViewRows
+	if not rows and not (value is SimPump.Note or value is SimPump.Slot):
+		found.append(path)
+		return
+	seen["rows" if rows else "owner"] = seen.get("rows" if rows else "owner", 0) + 1
+	for property: Dictionary in value.get_property_list():
+		if not property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE: continue
+		if rows and not _packed(property.type): found.append("%s.%s" % [path, property.name])
+		else: _foreign(value.get(property.name), "%s.%s" % [path, property.name], found, seen)
+
+func test_sb5a_payload_is_values(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var siege: Dictionary = _siege_pump("worker")
+	var pump = siege.pump
+	runner.check(SimPump.live_workers() == threads + 1, "SB5A a worker pump keeps its own thread")
+	var shot = _shot_note(pump)
+	runner.check(shot != null, "SB5A fixture: a shot at a building reaches a note")
+	var job = _job([{"type": "stop", "player": 1, "entity_ids": [siege.barracks]}])
+	job.want_digest = true
+	job.want_ring = true
+	job.want_tick_hash = true
+	job.want_log = true
+	job.want_bot_lines = true
+	job.bots.assign([1])
+	job.preview = {"player": 1, "builder_id": siege.barracks, "kind": "usa_power_plant", "origin": Vector2i(30, 30)}
+	pump.post(job)
+	var note = _drain(pump)[0]
+	var found: Array = []
+	var seen: Dictionary = {}
+	_foreign(note, "note", found, seen)
+	_foreign(pump.current(), "slot", found, seen)
+	runner.check(found.is_empty(), "SB5A a published note and slot hold values only, found %s" % [found.slice(0, 5)])
+	runner.check(seen.get("rows", 0) == 1 and seen.get("owner", 0) == 2 and not note.preview.is_empty() and not note.snapshot.is_empty(), "SB5A the walk reached the note, the slot, the per-job rows and the preview and snapshot payloads (%s)" % [seen])
+	pump.stop()
 	return true

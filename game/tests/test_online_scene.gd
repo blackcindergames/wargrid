@@ -2855,6 +2855,7 @@ func test_sb5a_online_header_and_report_name_mode(runner) -> bool:
 	_run(main, 40)
 	var report = JSON.parse_string(downloads[0].get_string_from_utf8()) if downloads.size() == 1 else null
 	runner.check(report is Dictionary and report.get("sim") == word, "SB5A the desync report names '%s', got %s" % [word, report.get("sim") if report is Dictionary else null])
+	main.driver.stop()
 	main.free()
 	PumpTests.latch_for_test()
 	var fallen: Dictionary = await _online(runner, 2)

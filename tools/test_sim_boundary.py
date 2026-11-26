@@ -120,6 +120,30 @@ def pump_accesses(path, text):
 
 
 SCREEN = "game/scripts/match/match_screen.gd"
+PAYLOAD_CLASSES = ("Job", "Note", "Slot")
+PURE_TYPE = re.compile(
+    r"(?:int|float|bool|String|Dictionary|Array(?:\[(?:int|float|bool|String|Dictionary)\])?|Packed\w+Array)"
+)
+FIELD = re.compile(r"^\t+var\s+(\w+)\s*(?::\s*([\w\[\]]+))?")
+
+
+def impure_payload_fields(text):
+    """Fields of the pump's Job, Note and Slot whose declared type is not plain data (they cross threads)."""
+    found = []
+    current = ""
+    seen = set()
+    for line in text.splitlines():
+        header = re.match(r"^class\s+(\w+)", line)
+        if header:
+            current = header.group(1)
+            seen.add(current)
+        elif line and not line[0].isspace() and not line.startswith("@"):
+            current = ""
+        field = FIELD.match(line) if current in PAYLOAD_CLASSES else None
+        if field and not (field.group(2) and PURE_TYPE.fullmatch(field.group(2))):
+            found.append(f"{current}.{field.group(1)}: {field.group(2)}")
+    assert seen >= set(PAYLOAD_CLASSES), f"classes not found: {set(PAYLOAD_CLASSES) - seen}"
+    return found
 
 
 class SimBoundary(unittest.TestCase):
@@ -205,6 +229,22 @@ class SimBoundary(unittest.TestCase):
     def test_pump_counts_files_exist(self):
         for rel in PUMP_COUNTS:
             self.assertTrue((ROOT / rel).is_file(), f"{rel} is gone: remove it from PUMP_COUNTS")
+
+    def test_payload_fields_are_plain_data(self):
+        text = (ROOT / PUMP_FILE).read_text()
+        self.assertEqual(impure_payload_fields(text), [])
+
+    def test_payload_flags_impure_fields(self):
+        sample = (
+            "class Job:\n\tvar a: int = 0\n\tvar hook: Callable\n\tvar loose = 1\n"
+            "class Note:\n\tvar rows: Array[Node] = []\n\tvar ring: PackedStringArray\n\tvar view: Dictionary = {}\n"
+            "class Slot:\n\tvar owner: RefCounted\n"
+            "class Other:\n\tvar free: Node\n"
+        )
+        self.assertEqual(
+            impure_payload_fields(sample),
+            ["Job.hook: Callable", "Job.loose: None", "Note.rows: Array[Node]", "Slot.owner: RefCounted"],
+        )
 
     def test_scan_covers_scripts(self):
         rels = {p.relative_to(ROOT).as_posix() for p in scanned_files(ROOT)}

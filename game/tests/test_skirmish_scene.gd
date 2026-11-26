@@ -1761,6 +1761,7 @@ func _frozen_arena(main) -> Dictionary:
 	var ids := {"infantry": sim.spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry"), "tank": sim.spawn(1, Vector2(11.5, 10.5), "usa_tank"), "builder": sim.spawn(1, Vector2(12.5, 12.5), "usa_builder"), "enemy": sim.spawn(2, Vector2(15.5, 10.5), "usa_tank")}
 	sim.start_match([1, 2] as Array[int])
 	main.driver.adopt(sim)
+	SimPump.force_mode_for_test("inline")
 	var pump = FailingPump.new(main.driver.pump.live())
 	main.driver.pump.stop()
 	main.driver._last = pump.start()
