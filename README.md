@@ -3,7 +3,7 @@
 <p align="center"><img src="game/icon.png" width="128" alt="Wargrid emblem: a navy shield with an isometric desert grid tile and blue and red chevrons"></p>
 
 <p align="center">
-  <b>A free, open-source real-time strategy game in the spirit of Command &amp; Conquer: Generals – Zero Hour.</b><br>
+  <b>A free, open-source isometric real-time strategy game with three factions.</b><br>
   Build a base, secure your supplies and outfight a bot or a friend, in the browser or on the desktop.
 </p>
 
@@ -25,7 +25,7 @@
 
 *USA against China on Dry Wells, both sides played by the skirmish bot, four seconds after the armies first met (3:41 of game time, tick 6630). Captured by a script, so it is redone whenever the look changes.*
 
-Wargrid is an isometric RTS written in Godot 4 and typed GDScript. Its design follows Zero Hour (factions, base building, supply economy, combat feel and pacing); the code is Wargrid's own and leaves out the original's known bugs and slow paths. Not affiliated with or endorsed by Electronic Arts, see [License](#license).
+Wargrid is an isometric RTS written in Godot 4 and typed GDScript. It is inspired by Command & Conquer: Generals – Zero Hour (factions, base building, supply economy, combat feel and pacing); the code is Wargrid's own and leaves out the original's known bugs and slow paths. Not affiliated with or endorsed by Electronic Arts, see [License](#license).
 
 ## What's in it
 
@@ -45,7 +45,7 @@ Wargrid is an isometric RTS written in Godot 4 and typed GDScript. Its design fo
 
 ## Status
 
-Early development; the latest build is on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Playable today: three factions, skirmish against a bot and online 1v1 on Dry Wells, Broken Crown or Ashfall. The long-term target is 3v3 online, friends against bots; scope and milestones are in the [blueprint](docs/blueprint.md).
+Early development; the latest build is on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Playable today: three factions, skirmish against a bot and online 1v1 on Dry Wells, Broken Crown or Ashfall. The long-term target is 3v3 online, friends against bots; scope and milestones are in the [blueprint](docs/blueprint.md). Not accepting outside contributions.
 
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
