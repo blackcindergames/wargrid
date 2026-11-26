@@ -1838,6 +1838,15 @@ After the look round the owner reopened hosting: the code should appear when Hos
 - **Theme split for now (user, 2026-11-26):** the navy look lives in `game/ui/launcher_theme.tres` on the launcher scene only; the project theme is `game/ui/game_theme.tres` (the match keeps its look). The two rejoin into one theme when One look from menu to match takes its match half.
 - **Later, not P20:** Play again returning both players to the lobby with the same code (P9 or after the friend evening).
 
+## Lobby after the friend match (user, 2026-11-26)
+
+The owner and a friend played slice 1 on the production relay (owner on the web test build, friend on a Windows export of the same commit); the lobby "worked, nothing to fix", the match "plays real well".
+
+- **Start pick (slice 2):** each player places their own start on the map preview; the friend's choice rides on the existing protocol 3 `pick` message and the host folds it into the settings, so no new relay message is needed.
+- **Order:** slice 2, the owner's look, then one hardening pass and the merge.
+- **In-match findings** (F57 to F61 in the [findings list](../STATUS.md#findings-list)) stay out of P20 and go to their packages.
+- **No start countdown:** a friend's last-second faction switch is P11's ready-up, the OpenRA way (P11 row).
+
 ## Battlefield art round (user, 2026-11-26)
 
 War Room round `battlefield-art` (`warroom/rounds/battlefield-art/`, pictures in `docs/images/map-art/source/` and `docs/images/art-direction-study/`), advisory input to Map life; no package started.

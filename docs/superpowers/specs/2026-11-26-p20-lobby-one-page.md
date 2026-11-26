@@ -24,6 +24,6 @@ Mode cards (remembered for when Quick play and public games exist), Quick play, 
 
 [Lobby build answers](../../reference/design-answers-2026-11-08.md#lobby-build-answers-user-2026-11-26), [lobby look after the first bot match](../../reference/design-answers-2026-11-08.md#lobby-look-after-the-first-bot-match-user-2026-11-26), [lobby look round](../../reference/design-answers-2026-11-08.md#lobby-look-round-user-2026-11-26) and [live room in P20](../../reference/design-answers-2026-11-08.md#live-room-in-p20-user-2026-11-26) (user, 2026-11-26): + Add bot adds an enemy bot (offline 1 against several bots; no team move); protocol 3 live room on the relay (host-only `settings`, `joined`, `start_request`, `welcome` with settings), served beside protocol 2; hold C and the lock at Get invite code retire.
 
-## Open for the second slice
+## Answered for the second slice
 
-- Start pick online: the host's chosen starts travel in the live room's settings; a guest taking their own start still needs a guest-to-host message, which protocol 3 does not have. Ask the owner before the build whether P20 ships the host placing every start and the guest's own pick waits for P11.
+[Lobby after the friend match](../../reference/design-answers-2026-11-08.md#lobby-after-the-friend-match-user-2026-11-26) (user, 2026-11-26): each player places their own start on the preview; the friend's choice rides on the protocol 3 `pick` message, the host folds it into the settings.
