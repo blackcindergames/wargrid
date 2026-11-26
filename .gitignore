@@ -10,4 +10,5 @@ relay/relay.exe
 web/site/
 tools/.venv/
 game/build_commit.txt
+game/build_commit.txt.tmp
 game/audio/licensed/

@@ -40,7 +40,7 @@ Wargrid is an isometric RTS written in Godot 4 and typed GDScript. It is inspire
 
 - **In the browser:** https://wargrid.blackcindergames.com (verified in Safari; Chrome and Firefox untested).
 - **Desktop:** Linux, Windows and macOS zips on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Builds are unsigned: on macOS 15 and later open System Settings > Privacy & Security > Open Anyway after the first blocked start (or run `xattr -dr com.apple.quarantine Wargrid.app` once); on Windows, SmartScreen needs More info, Run anyway.
-- **Online with a friend:** one player clicks *Create match* and shares the match code; the other enters it and clicks *Join*. The host chooses the map; the other player's game checks it. Both need the same version.
+- **Online with a friend:** one player picks *Host game* and shares the code that appears; the other enters it under *Join game*. The host can keep changing the map and the bots, and the friend sees each change. Once the friend is in, the host clicks *Start match*. Both need the same version.
 - **From source:** Godot 4.7.2, see [setup and commands](docs/development.md#setup-and-commands).
 
 ## Status

@@ -35,9 +35,13 @@ static var _team: Dictionary = {}
 
 # By player, so both windows agree: the host (1) blue, the guest (2) teal; the first two bots red and orange.
 static func set_team_colours(bots: Array[int]) -> void:
-	_team = {1: [OWNER_BASE[0], OWNER_BRIGHT[0]], 2: [OWNER_BASE[4], OWNER_BRIGHT[6]]}
-	for i in mini(bots.size(), BOT_SLOTS.size()): _team[bots[i]] = [OWNER_BASE[BOT_SLOTS[i][0]], OWNER_BRIGHT[BOT_SLOTS[i][1]]]
+	_team = team_colours(bots)
 	colour_version += 1
+
+static func team_colours(bots: Array[int]) -> Dictionary:
+	var team: Dictionary = {1: [OWNER_BASE[0], OWNER_BRIGHT[0]], 2: [OWNER_BASE[4], OWNER_BRIGHT[6]]}
+	for i in mini(bots.size(), BOT_SLOTS.size()): team[bots[i]] = [OWNER_BASE[BOT_SLOTS[i][0]], OWNER_BRIGHT[BOT_SLOTS[i][1]]]
+	return team
 
 static func clear_team_colours() -> void:
 	_team = {}

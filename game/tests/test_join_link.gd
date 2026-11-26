@@ -49,13 +49,31 @@ func test_code_from_pasted_text(runner) -> bool:
 		"my code is QRS234 ok": "QRS234",
 		"thanks, code QRS234": "QRS234",
 		"please join QRS234": "QRS234",
+		"k7q 2xd": "K7Q2XD",
+		"K7Q-2XD": "K7Q2XD",
+		" k7q-2xd ": "K7Q2XD",
+		"K7Q  2XD": "",
+		"K7Q-2XD-": "K7Q2XD",
 		"hello": "",
 		"ABC2345": "",
 		"ABCI34": "",
+		"thanks k7q 4mx": "K7Q4MX",
+		"use the code K7Q4MX": "K7Q4MX",
+		"hey man QRS234": "QRS234",
+		"the new code is K7Q-4MX": "K7Q4MX",
+		"join please: K7Q-4MX": "K7Q4MX",
+		"K7Q\u00a04MX": "K7Q4MX",
+		"K7Q\u20134MX": "K7Q4MX",
+		"K7Q\u20144MX": "K7Q4MX",
+		"K7Q\u20104MX": "K7Q4MX",
 	}
 	for text: String in wanted:
 		runner.check(JoinLink.code_from(text) == wanted[text], "JL4 '%s' -> '%s', got '%s'" % [text.left(40), wanted[text], JoinLink.code_from(text)])
 	runner.check(JoinLink.code_from("x".repeat(2049 - 11) + "code=ABC234").is_empty(), "JL4 2049 characters are ignored")
+	for text: String in ["ABCI34", "k7q 2x0", " K7Q-2XO ", "1bc234"]:
+		runner.check(JoinLink.lookalike(text), "JL5 '%s' is a code with letters codes never use" % text)
+	for text: String in ["hello", "K7Q2XD", "ABC2345", "thanks", "an invite", "follow me", "code 1BC234", "please follow me", "K7Q  2X0"]:
+		runner.check(not JoinLink.lookalike(text), "JL5 '%s' is not a lookalike code" % text)
 	return true
 
 func test_link_carries_relay_only_when_not_default(runner) -> bool:
@@ -131,7 +149,7 @@ func test_paste_cannot_reach_release_relay(runner) -> bool:
 	runner.root.add_child(launcher)
 	await runner.process_frame
 	await runner.process_frame
-	var relay: LineEdit = launcher.get_node("Pages/Play/Body/Advanced/RelayUrl")
+	var relay: LineEdit = launcher.get_node("Pages/Settings/Body/Playtest/Online/RelayUrl")
 	runner.check(not PasteShim.insert(relay, "wss://evil.example/ws"), "PS4 the hidden relay field refuses a paste")
 	runner.check(relay.text == JoinLink.DEFAULT_RELAY, "PS4 the relay stays the default, got '%s'" % relay.text)
 	launcher.free()
@@ -142,7 +160,7 @@ func test_shim_only_on_web(runner) -> bool:
 	runner.root.add_child(launcher)
 	await runner.process_frame
 	await runner.process_frame
-	runner.check(launcher.get_node("Pages/Join/Body/Code").is_in_group("join_code"), "PS5 the join field is in group join_code")
+	runner.check(launcher.get_node("Pages/Play/JoinCard/Card/Box/Code").is_in_group("join_code"), "PS5 the join field is in group join_code")
 	runner.check(not runner.root.has_node("PasteShim"), "PS5 no shim off web")
 	launcher.free()
 	return true

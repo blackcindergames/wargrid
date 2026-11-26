@@ -153,7 +153,7 @@ jobs:
           chmod +x "$WARGRID_NETFAULT_BIN"
           exe="build/game/${{ matrix.platform }}/Wargrid${{ matrix.platform == 'windows' && '.console.exe' || '.x86_64' }}"
           export WARGRID_CLIENT="$root/$exe --headless"
-          for scenario in match rematch left-mid left-mid-pump trio-play-on trio-left-first trio-result team team-guest-defeated team-guest-quits team-host-leaves team-defeated-host-leaves perturb relay-down maps map-mismatch kill stall spike version proxy-clean proxy-burst proxy-reset proxy-blackhole; do
+          for scenario in match rematch left-mid left-mid-pump trio-play-on trio-left-first trio-result team team-guest-defeated team-guest-quits team-host-leaves team-defeated-host-leaves perturb relay-down maps map-mismatch kill stall spike version proxy-clean proxy-burst proxy-reset proxy-blackhole lobby lobby-left lobby-host-leaves; do
             NETPLAY_OUT="$root/netplay/$scenario" sh tools/run_netplay.sh $scenario 2>&1 | tee -a netplay.log
           done
           cp netplay/match/s1.tsv netplay-${{ matrix.platform }}.tsv

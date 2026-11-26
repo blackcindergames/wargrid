@@ -25,7 +25,7 @@ const Wire = preload("res://scripts/net/wire.gd")
 const SeatFixture = preload("res://tests/seat_fixture.gd")
 const LOW: String = "LOW POWER · DEFENCES OFF"
 const MINUS: String = "\u2212"
-const THEME_PATH: String = "res://ui/launcher_theme.tres"
+const THEME_PATH: String = "res://ui/game_theme.tres"
 const TOKENS: Dictionary = {"bg": "#121c24", "btn": "#223241", "panel2": "#26384a", "quiet": "#16212a", "well": "#0c141a", "line": "#2e3f4b", "text": "#eef3f5", "muted": "#93a5b0", "sel": "#60e5ed", "amber": "#f7c871", "warn": "#f47b6c"}
 const TYPE_SCALE: Array[int] = [12, 13, 14, 16, 24, 30]
 const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]
@@ -119,7 +119,7 @@ func _theme() -> Theme:
 	return ThemeDB.get_project_theme()
 
 func test_theme_tokens(runner) -> bool:
-	runner.check(ProjectSettings.get_setting("gui/theme/custom") == THEME_PATH, "TH1 the project theme setting is the launcher theme, got %s" % ProjectSettings.get_setting("gui/theme/custom"))
+	runner.check(ProjectSettings.get_setting("gui/theme/custom") == THEME_PATH, "TH1 the project theme setting is the game theme, got %s" % ProjectSettings.get_setting("gui/theme/custom"))
 	var theme: Theme = _theme()
 	runner.check(theme != null and theme.resource_path == THEME_PATH, "TH1 the project theme is %s" % THEME_PATH)
 	if theme == null: return true

@@ -1,0 +1,301 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid · Lobby look study</title>
+<!-- P20 lobby-look round, derived from ../lobby-round/lobby.html: states and variants as hash or query params; the defaults are the round's recommendations. -->
+<style>
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Regular.ttf)}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-SemiBold.ttf);font-weight:600}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Bold.ttf);font-weight:700}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-ExtraBold.ttf);font-weight:800}
+/* Surfaces from game/ui/launcher_theme.tres (the Hud* set), player colours from palette.gd OWNER_BASE, as lobby.html; no text under 12 px. */
+:root{--bg:#121c24;--side:#0c141a;--panel:#223241;--hov:#26384a;--input:#0c141a;--line:#2e3f4b;--text:#eef3f5;--muted:#93a5b0;--cyan:#60e5ed;--amber:#f7c871;--shadow:#dcae58;--ink:#1a1408;--red:#f47b6c;--act:40px}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:var(--text);font:400 14px/1.4 Public,sans-serif;overflow:hidden}
+main{position:relative;background:var(--bg);transform-origin:top left;overflow:hidden}
+.b{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--panel);padding:9px 14px;border-radius:2px;font-weight:600;white-space:nowrap}
+.b.primary{background:var(--amber);color:var(--ink);border:0;border-bottom:4px solid var(--shadow);min-height:48px;padding:12px 26px;font-size:16px;font-weight:700}
+.b.primary.off{background:#34434d;color:#8799a4;border-color:#34434d}
+.b.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.b.small{padding:5px 10px;font-size:12px}
+.b.sel{background:var(--hov);border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.b.dis{opacity:.48}
+.b.ring{outline:2px solid var(--cyan);outline-offset:3px}
+h1{margin:0;font-size:28px;letter-spacing:-.6px;line-height:1.15}
+h2{margin:0;font-size:18px}
+.muted{color:var(--muted)}.small{font-size:12px}
+.label{color:var(--muted);font-size:12px;letter-spacing:1.2px;font-weight:700;text-transform:uppercase}
+.shell{position:absolute;inset:0;display:grid;grid-template-columns:216px minmax(0,1fr)}
+aside{background:var(--side);padding:28px 14px 20px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:12px;padding:0 10px;font-size:22px;font-weight:800;letter-spacing:1px;margin-bottom:28px}
+.brand svg{width:26px}
+nav{display:grid;gap:2px}
+nav span{padding:11px 14px;color:var(--muted);font-weight:700}
+nav span.on{color:var(--text);background:var(--panel);box-shadow:inset 3px 0 var(--cyan)}
+nav hr{width:90%;border:0;border-top:1px solid var(--line);margin:8px auto}
+.legal{margin-top:auto;border-top:1px solid var(--line);padding:14px 10px 0;display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.page{position:relative;padding:32px 40px 0;display:flex;flex-direction:column;gap:18px;min-width:0;height:100%}
+.header p{margin:6px 0 0;color:var(--muted);font-size:15px}
+.seg{display:flex;gap:5px}
+.seg .b{min-width:120px;color:var(--muted)}
+.seg .b.sel{color:var(--text)}
+.modebar{display:flex;align-items:center;gap:14px;min-height:44px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:12px}
+.lobby{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(250px,1fr);gap:28px;align-items:start;min-height:0}
+.stack{display:grid;gap:10px;min-width:0;align-content:start}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.hint{font-size:12px;color:var(--muted);line-height:1.45}
+.err{font-size:13px;color:var(--red);line-height:1.45}
+.team{display:grid;gap:5px}
+.slot{position:relative;display:grid;grid-template-columns:12px minmax(0,1fr) 196px var(--act);gap:10px;align-items:center;border:1px solid var(--line);background:var(--panel);padding:4px 5px 4px 10px;min-height:50px}
+.slot.open{background:transparent;border-style:dashed}
+.sw{width:12px;height:12px;background:var(--c);display:block}
+.sw.none{background:transparent}
+.slot .name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .meta{font-size:12px;color:var(--muted);margin-top:1px;white-space:nowrap}
+.dd,.ft{display:flex;align-items:center;font-size:13px;font-weight:600;padding:7px 10px;border:1px solid transparent;white-space:nowrap}
+.dd{border-color:var(--line);background:var(--input)}
+.dd .car{margin-left:auto;padding-left:8px;color:var(--muted)}
+.act{display:flex;justify-content:flex-end}
+.countline{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:30px}
+.x{position:relative;width:40px;height:40px;display:grid;place-items:center;color:var(--muted);border-radius:2px}
+.x svg.i{width:16px;height:16px}
+.x.hover{background:#34495c;color:var(--text)}
+.x.press{background:#3f5870;color:var(--text)}
+.x.focus{outline:2px solid var(--cyan);outline-offset:-2px;color:var(--text)}
+.rm-red .x.hover{background:#3b2a2d;color:#f0a093}
+.rm-red .x.press{background:#4d2e2e;color:#f8b9ad}
+.rm-ghost .x{color:transparent}
+.rm-ghost .slot.rowhover .x,.rm-ghost .x.focus{color:var(--muted)}
+.rm-ghost .x.hover,.rm-ghost .x.press{color:var(--text)}
+.rm-text{--act:96px}
+.rm-text .x{width:auto;display:flex;gap:6px;padding:0 10px;font-size:13px;font-weight:600}
+.rm-text .x svg.i{width:14px;height:14px}
+.tip{position:absolute;top:calc(100% + 6px);right:0;background:var(--side);border:1px solid #405563;color:var(--text);padding:5px 9px;font-size:12px;font-weight:400;white-space:nowrap;z-index:4;box-shadow:0 6px 20px #0008}
+.cur{position:absolute;left:20px;top:20px;width:14px;height:20px;z-index:5;pointer-events:none}
+.mapbtn{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);background:var(--input);padding:10px 12px;font-weight:600}
+.mapbtn.ro{background:transparent;border-color:transparent;padding-left:0}
+.mappanel{background:var(--panel);padding:10px}
+.mappanel svg.prev{display:block;width:100%;background:var(--side)}
+.mappanel h2{margin:8px 4px 4px;font-size:20px}
+.stat{display:flex;justify-content:space-between;padding:7px 4px;border-top:1px solid var(--line);color:var(--muted)}
+.stat b{color:var(--text)}
+.ph{display:grid;place-items:center;border:1px dashed var(--line);color:var(--muted);font-size:13px;text-align:center;padding:16px}
+.ghostrows{display:grid;gap:5px;opacity:.35}
+.ghostrows div{height:50px;border:1px dashed var(--line)}
+.code{font-weight:800;font-size:18px;letter-spacing:3px}
+.ibox{display:flex;align-items:stretch;border:1px solid var(--line);background:var(--input);height:42px}
+.ibox .ilab{align-self:center;padding:0 12px 0 14px;color:var(--muted);font-size:13px;white-space:nowrap}
+.ibox .code{align-self:center;padding:0 16px 0 2px}
+.ibox.big{height:46px}
+.ibox.big .code{font-size:22px;letter-spacing:4px;padding:0 18px 0 16px}
+.iseg{display:flex;align-items:center;gap:6px;padding:0 16px;background:var(--panel);border-left:1px solid var(--line);color:var(--cyan);font-weight:700;font-size:13px;white-space:nowrap}
+.iseg svg,.codefield svg{width:15px;height:15px}
+.istack{display:grid;gap:4px}
+.codefield{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:var(--input);padding:7px 12px}
+.codefield .cp{display:flex;align-items:center;gap:5px;color:var(--cyan);font-size:12px;font-weight:600}
+.field{display:flex;align-items:center;height:42px;padding:0 12px;border:1px solid var(--line);background:var(--input)}
+.field.focus{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.field.bad{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
+.field.dis{opacity:.55}
+.ibox .field{height:auto;border:0;box-shadow:none;background:transparent;padding:0 14px 0 2px;width:150px}
+.ibox.focus{border-color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.ibox.bad{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
+.ibox.dis{opacity:.55}
+.phtext{color:var(--muted);font-size:13px}
+.caret{display:inline-block;width:2px;height:20px;background:var(--cyan);margin-right:6px}
+.jentry{display:grid;gap:6px;margin-bottom:6px}
+.jentry .field{width:240px}
+.jwrap{flex:1;display:grid;place-items:center;min-height:0}
+.jcard{width:420px;background:var(--panel);border:1px solid var(--line);padding:22px;display:grid;gap:8px}
+.jcard h2{margin-bottom:6px}
+.jcard .label{margin-top:6px}
+.jcard .b.primary{width:100%;margin-top:10px}
+.footer{margin-top:auto;border-top:1px solid var(--line);padding:14px 0 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:81px}
+.footer .status{display:grid;gap:4px;color:var(--muted)}
+.footer .acts{display:flex;gap:10px;align-items:center}
+#mtab{position:fixed;left:0;top:0;z-index:99;background:#fff;color:#000;font:400 13px/17px Public;padding:6px 8px;white-space:pre}
+</style>
+<main></main>
+<script>
+const P=new URLSearchParams(location.hash.length>1?location.hash.slice(1):location.search);
+const opt=(k,d,allowed)=>{const v=P.get(k);return v!=null&&allowed.includes(v)?v:d};
+// Step 1 states (rest..focus), step 2 (before..friend), step 3 (entry..joined).
+const view=opt('view','rest',['rest','hover','press','focus','before','copied','later','friend','entry','link','connecting','error','full','joined']);
+const size=opt('size','1280x720',['1280x720','1280x800','1920x1080']);
+const remove=opt('remove','x',['x','red','ghost','text']);
+const box=opt('box','icon',['owner','icon','big','field']);
+const entry=opt('entry','card',['row','body','card']);
+const VERSION='0.19.0-dev';
+// The game stretches canvas_items from 1280x720 with aspect "expand" (project.godot): UI scales by the smaller ratio.
+const [WW,WH]=size.split('x').map(Number),GK=Math.min(WW/1280,WH/720),LW=Math.round(WW/GK),LH=Math.round(WH/GK);
+const main=document.querySelector('main');
+main.style.width=LW+'px';main.style.height=LH+'px';
+
+const JOINING=['entry','link','connecting','error','full'].includes(view);
+const GUEST=view==='joined';
+const LOCKED=['copied','later','friend'].includes(view);
+const FRIEND_IN=view==='friend';
+
+// game/data/maps/broken_crown.json: size, start cells and supply source origins.
+const M={name:'Broken Crown',fill:'#7b825f',size:[112,100],starts:[[18,17],[92,17],[92,81],[18,81]],src:[[2,3],[105,3],[57,31],[50,63],[105,92],[3,92],[57,90],[52,4]]};
+// palette.gd OWNER_BASE; host blue and guest teal (user, 2026-11-24).
+const COL=['#628ffa','#d6120c','#4ad49b','#f8e425','#0e92a7','#7242fe','#ec8600','#f79cef'];
+const HOST=COL[0],GUEST_C=COL[4];
+
+function slots(){
+ const bots=[{kind:'bot',name:'Bot 1',meta:'Computer player',team:1,faction:'China',c:COL[1],start:1},{kind:'bot',name:'Bot 2',meta:'Computer player',team:1,faction:'Random',c:COL[6],start:2}];
+ if(GUEST)return [{kind:'human',name:'Host',meta:'Sets up the match',team:0,faction:'United States',c:HOST,start:0},{kind:'you',name:'You',meta:'Player',team:0,faction:'China',c:GUEST_C,start:3},...bots];
+ const friend=FRIEND_IN?{kind:'human',name:'Your friend',meta:'Player',team:0,faction:'China',c:GUEST_C,start:3}:{kind:'open',team:0};
+ return [{kind:'you',name:'You',meta:'Host',team:0,faction:'United States',c:HOST,start:0},friend,...bots];
+}
+const S=slots();
+
+function preview(markers,h=150){
+ const [w,d]=M.size,iso=([x,y])=>[x-y,(x+y)/2];
+ const minX=-d,maxX=w,maxY=(w+d)/2,pad=14,W=380,k=Math.min((W-2*pad)/(maxX-minX),(h-2*pad)/maxY);
+ const p=c=>{const [a,b]=iso(c);return [pad+(a-minX)*k+((W-2*pad)-(maxX-minX)*k)/2,pad+b*k+((h-2*pad)-maxY*k)/2]};
+ const poly=[[0,0],[w,0],[w,d],[0,d]].map(c=>p(c).join(',')).join(' ');
+ const src=M.src.map(c=>{const [x,y]=p(c);return `<path d="M${x} ${y-3}l4 3-4 3-4-3Z" fill="#f7c871" opacity=".75"/>`}).join('');
+ const mk=M.starts.map((c,i)=>{const [x,y]=p(c);const col=markers[i];
+  return col?`<circle cx="${x}" cy="${y}" r="10" fill="${col}" stroke="#0c141a" stroke-width="2"/>`:`<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="#eef3f5" stroke-width="1.5" stroke-dasharray="3 2"/>`}).join('');
+ return `<svg class="prev" viewBox="0 0 ${W} ${h}" role="img" aria-label="${M.name} preview"><polygon points="${poly}" fill="${M.fill}"/>${src}${mk}</svg>`;
+}
+
+const btn=(label,cls='')=>`<span class="b ${cls}">${label}</span>`;
+const ICON={
+ x:'<svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3 13 13M13 3 3 13"/></svg>',
+ minus:'<svg class="i" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M5 8h6"/></svg>',
+ copy:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9"/><path d="M11 2H2v9"/></svg>',
+ check:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m2.5 8.5 3.5 3.5 7.5-8"/></svg>',
+ cursor:'<svg class="cur" viewBox="0 0 14 20" aria-hidden="true"><path d="M1 1v15l4-4 3 7 3-1.4-3-6.6h5.5Z" fill="#fff" stroke="#000" stroke-width="1.2"/></svg>'};
+
+function removeCtl(first){
+ const st=first?{hover:'hover',press:'press',focus:'focus'}[view]||'':'';
+ const body=remove==='text'?`${ICON.minus}Remove`:ICON.x;
+ return `<span class="x ${st}" title="Remove bot">${body}${st==='hover'?'<span class="tip">Remove bot</span>':''}${st==='hover'||st==='press'?ICON.cursor:''}</span>`;
+}
+function row(p,first){
+ if(p.kind==='open')return `<div class="slot open"><span class="sw none"></span><div><div class="name">Open</div><div class="meta">${LOCKED?'Waiting for your friend…':'Your friend joins with the code'}</div></div><div></div><div class="act"></div></div>`;
+ const editable=p.kind==='you'||(!GUEST&&!LOCKED&&p.kind==='bot');
+ const fac=editable?`<span class="dd">${p.faction}<span class="car">▾</span></span>`:`<span class="ft">${p.faction}</span>`;
+ const removable=p.kind==='bot'&&!GUEST&&!LOCKED;
+ const hovered=removable&&first&&(view==='hover'||view==='press');
+ return `<div class="slot${hovered?' rowhover':''}"><span class="sw" style="--c:${p.c}"></span><div style="min-width:0"><div class="name">${p.name}</div><div class="meta">${p.meta}</div></div>${fac}<div class="act">${removable?removeCtl(first):''}</div></div>`;
+}
+function formatLabel(){
+ const t=[0,1].map(i=>S.filter(p=>p.team===i));
+ const who=p=>p.kind==='you'?'you':p.kind==='human'?(GUEST?'the host':'your friend'):p.kind==='open'?'your friend (not joined yet)':null;
+ const side=g=>{const h=g.map(who).filter(Boolean),b=g.filter(p=>p.kind==='bot').length;return [...h,...(b?[b+' bots']:[])].join(' and ')};
+ return t[0].length+'v'+t[1].length+' · '+side(t[0])+' vs '+side(t[1]);
+}
+function slotList(){
+ const firstBot=S.findIndex(p=>p.kind==='bot');
+ const team=t=>`<div class="team"><div class="head"><span class="label">Team ${t+1}</span><span class="small muted">${S.filter(p=>p.team===t&&p.kind!=='open').length} playing</span></div>${S.map((p,i)=>p.team===t?row(p,i===firstBot):'').join('')}</div>`;
+ const limit='3 of 4 start positions used · 1 kept for your friend · a bigger map fits more bots';
+ const count=GUEST?'':LOCKED?'<div class="hint countline">Map and bots are fixed while the code is open. Stop hosting to change them.</div>':
+  `<div class="hint countline"><span>${limit}</span><span class="b small dis" title="${limit}">+ Add enemy bot</span></div>`;
+ return `<div class="head"><span class="label">Players</span><span class="small muted">${formatLabel()}</span></div>${team(0)}${team(1)}${count}`;
+}
+function mapColumn(){
+ const field=GUEST?`<div class="mapbtn ro">${M.name}<span class="muted small">The host chooses the map</span></div>`:
+  LOCKED?`<div class="mapbtn ro">${M.name}</div>`:`<div class="mapbtn">${M.name}<span class="muted">▾</span></div>`;
+ const marks=[];S.forEach(p=>{if(p.kind!=='open')marks[p.start]=p.c});
+ const help=GUEST?'The host places the starts.':'';
+ return `<div class="stack"><div class="label">Map</div>${field}<div class="mappanel">${preview(marks)}${help?`<div class="hint" style="padding:6px 4px 0">${help}</div>`:''}<h2>${M.name}</h2><div class="stat"><span>Start positions</span><b>${M.starts.length}</b></div><div class="stat"><span>Supply sources</span><b>${M.src.length}</b></div></div></div>`;
+}
+
+// Step 2: the code box once the press opened the room.
+const TIP='Send this code to your friend. They enter it under Join game.';
+function inviteBox(){
+ const copied=view==='copied';
+ const seg=t=>`<span class="iseg">${t}</span>`;
+ if(box==='owner')return `<div class="ibox" title="${TIP}"><span class="ilab">Invite code</span><span class="code">K7Q2XD</span>${seg(copied?'Copied':'Copy code')}</div>`;
+ const lab=copied?ICON.check+'Copied':ICON.copy+'Copy code';
+ if(box==='icon')return `<div class="ibox" title="${TIP}"><span class="ilab">Invite code</span><span class="code">K7Q2XD</span>${seg(lab)}</div>`;
+ if(box==='big')return `<div class="istack"><span class="label">Invite code</span><div class="ibox big" title="${TIP}"><span class="code">K7Q2XD</span>${seg(copied?ICON.check+'Copied':'Copy code')}</div></div>`;
+ return `<div class="istack"><span class="label">Invite code</span><div class="codefield" title="${TIP}"><span class="code">K7Q2XD</span><span class="cp">${copied?ICON.check+'Copied':ICON.copy+'Copy'}</span></div></div>`;
+}
+function hostTools(){
+ if(LOCKED)return inviteBox();
+ return `<span class="hint">Map and bots are fixed once you have the code.</span>${btn('Copy invite code')}`;
+}
+
+// Step 3: the code entry and its messages.
+const TYPED={entry:'',link:'K7Q2XD',connecting:'K7Q2XD',error:'K7Q2X8',full:'K7Q2XD'}[view]||'';
+const fieldState={entry:'focus',error:'bad',full:'bad',connecting:'dis'}[view]||'';
+// The relay says "unknown match" also for expired or crashed rooms, "match full" also for a started game.
+const ERROR={error:'No open game with code K7Q2X8. Check the code, or ask your friend for a new one.',full:'That game is full or has already started. Ask your friend to host a new one.'}[view]||'';
+const LINE={entry:'Enter the code your friend sent you.',link:'Filled in from your friend’s link.',connecting:'Connecting… 3 s'}[view]||'';
+function fieldInner(){return (view==='entry'?'<i class="caret"></i>':'')+(TYPED?`<span class="code">${TYPED}</span>`:'<span class="phtext">6 letters and digits</span>')}
+function lineHtml(){return ERROR?`<div class="err">${ERROR}</div>`:`<div class="hint">${LINE}</div>`}
+function joinButton(cls=''){
+ if(view==='connecting')return btn('Cancel','ghost')+btn('Join match','primary off '+cls);
+ return btn('Join match','primary '+cls+(view==='entry'?' off':'')+(view==='link'?' ring':''));
+}
+function joinTools(){
+ if(GUEST)return `<div class="ibox" title="${TIP}"><span class="ilab">Invite code</span><span class="code">K7Q2XD</span></div>`;
+ if(entry!=='row')return '';
+ return `<div class="ibox ${fieldState}"><span class="ilab">Invite code</span><span class="field">${fieldInner()}</span></div>`;
+}
+function youRow(){return row({kind:'you',name:'You',meta:'Player',team:0,faction:'United States',c:'transparent'},false)}
+function joinBody(){
+ if(entry==='card')return `<div class="jwrap"><div class="jcard"><h2>Join a friend’s game</h2><div class="label">Invite code</div><span class="field ${fieldState}">${fieldInner()}</span>${lineHtml()}<div class="label">Your faction</div><span class="dd">United States<span class="car">▾</span></span><div class="acts" style="display:flex;gap:10px">${joinButton()}</div></div></div>`;
+ const top=entry==='body'?`<div class="jentry"><div class="label">Invite code</div><span class="field ${fieldState}">${fieldInner()}</span>${lineHtml()}</div>`:'';
+ const left=`<div class="stack">${top}<div class="head"><span class="label">Players</span></div>${youRow()}<div class="ghostrows"><div></div><div></div><div></div></div><div class="hint">The host’s teams and bots appear here when you join.</div></div>`;
+ const right=`<div class="stack"><div class="label">Map</div><div class="ph" style="height:250px">The host’s map appears here when you join.</div></div>`;
+ return `<div class="lobby">${left}${right}</div>`;
+}
+
+function sidebar(){
+ const nav=['Play','|','Settings','Credits','Quit'].map(n=>n==='|'?'<hr>':`<span class="${n==='Play'?'on':''}">${n}</span>`).join('');
+ return `<aside><div class="brand"><svg viewBox="0 0 30 27" aria-hidden="true"><path fill="#628ffa" d="M0 9 15 0 30 9 15 18Z"/><path fill="#31586c" d="M0 9v9l15 9v-9Z"/><path fill="#29434f" d="M30 9v9l-15 9v-9Z"/></svg><span>WARGRID</span></div><nav>${nav}</nav>`+
+  `<div class="legal"><span>Impressum · Privacy</span><span>v${VERSION}</span></div></aside>`;
+}
+function footer(status,acts,back){return `<div class="footer"><div class="status"><div>${status}</div>${back?`<span class="b ghost small" style="padding-left:0;justify-self:start">‹ ${back}</span>`:''}</div><div class="acts">${acts}</div></div>`}
+function page(){
+ const join=JOINING||GUEST;
+  const sub=GUEST?'Joined your friend’s game · the host sets up the match':'Play against bots or connect with a friend.';
+ // While hosting or joined, the other modes wait until you stop or leave.
+ const busy=LOCKED||GUEST,why=GUEST?'Leave first':'Stop hosting first';
+ const mode=(n,on)=>on?btn(n,'sel'):busy?`<span class="b dis" title="${why}">${n}</span>`:btn(n);
+ const modes=mode('Skirmish',false)+mode('Host game',!join)+mode('Join game',join);
+ const modebar=`<div class="modebar"><span class="label">Mode</span><div class="seg">${modes}</div><div class="tools">${join?joinTools():hostTools()}</div></div>`;
+ const head=`<div class="header"><h1>Play</h1><p>${sub}</p></div>`;
+ if(JOINING){
+  if(entry==='card')return head+modebar+joinBody();
+  const status=entry==='row'?(ERROR?`<span class="err">${ERROR}</span>`:LINE):'';
+  return head+modebar+joinBody()+footer(status,joinButton());
+ }
+ const body=`<div class="lobby"><div class="stack">${slotList()}</div>${mapColumn()}</div>`;
+ if(GUEST)return head+modebar+body+footer('Waiting for the host to start · code closes in 12:31','','Leave');
+ if(FRIEND_IN)return head+modebar+body+footer('Everyone is here. Start when you are ready · code closes in 11:02',btn('Start match','primary'),'Stop hosting');
+ if(LOCKED)return head+modebar+body+footer(`Start match unlocks when your friend joins · code closes in ${view==='copied'?'14:58':'12:40'}`,btn('Start match','primary off'),'Stop hosting');
+ return head+modebar+body+footer('Copy the invite code and send it to your friend.',btn('Start match','primary off'),'');
+}
+
+const scaleK=()=>Math.min(innerWidth/LW,innerHeight/LH);
+function measure(){
+ const pg=main.querySelector('.page'),over=pg.scrollHeight-pg.clientHeight;
+ const bar=main.querySelector('.modebar'),wide=bar.scrollWidth-bar.clientWidth;
+ const K=Number(P.get('scale'))||GK,k=scaleK();
+ const xs=[...main.querySelectorAll('.slot .dd,.slot .ft')].map(e=>Math.round(e.getBoundingClientRect().left/k));
+ const cut=[...main.querySelectorAll('.page *')].filter(e=>e.children.length===0&&e.scrollWidth>e.clientWidth+1&&getComputedStyle(e).overflow!=='visible').length;
+ const out=[['window',Math.round(LW*K)+'×'+Math.round(LH*K)+(K!==1?' (UI ×'+K+', '+LW+'×'+LH+' logical)':'')],
+  ['fits without scrolling',over<=0?'yes, '+(-over)+' px spare':'no, '+over+' px over',over<=0],
+  ['Mode row fits',wide<=0?'yes':'no, '+wide+' px over',wide<=0],
+  ['text cut off',cut?cut+' elements':'none',cut===0]];
+ if(xs.length)out.push(['faction column',new Set(xs).size===1?'aligned on '+xs.length+' rows':'not aligned: '+xs.join(', '),new Set(xs).size===1]);
+ parent.postMessage({type:'wr:measure',rows:out},location.origin);
+ if(P.get('measure')==='1'){const t=document.getElementById('mtab')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'mtab'}));t.textContent=out.map(x=>x[0]+': '+x[1]).join('\n');t.style.background=out.some(x=>x[2]===false)?'#f00':'#fff'}
+}
+function render(){
+ main.style.transform='scale('+scaleK()+')';
+ main.innerHTML=`<div class="shell rm-${remove}">${sidebar()}<div class="page">${page()}</div></div>`;
+ measure();
+}
+render();
+Promise.all(['400','600','700','800'].map(w=>document.fonts.load(w+' 14px Public'))).then(render);
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='wr:ask-measure')measure()});
+onresize=render;
+onhashchange=()=>location.reload();
+</script>

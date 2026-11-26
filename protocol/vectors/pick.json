@@ -1,0 +1,9 @@
+{
+ "text": "{\"type\":\"pick\",\"pick\":{\"faction\":\"usa\"}}",
+ "message": {
+  "type": "pick",
+  "pick": {
+   "faction": "usa"
+  }
+ }
+}

@@ -5,6 +5,7 @@ const PING_INTERVAL_USEC: int = 1_000_000
 const BUFFER_BYTES: int = 1 << 17
 const SILENCE_USEC: int = 5_000_000
 const LOBBY_EXPIRY_SEC: int = 900 # mirrors relay WARGRID_LOBBY_MS
+const LOBBY_CAP_SEC: int = 3600 # mirrors relay WARGRID_LOBBY_CAP_MS
 
 var _peer := WebSocketPeer.new()
 var _clock: Callable

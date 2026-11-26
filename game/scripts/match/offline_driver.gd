@@ -4,7 +4,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
-const BOTS: Array[int] = [2]
+const MatchSettings = preload("res://scripts/match_settings.gd")
 const FREEZE_NOTICE := "Match stopped"
 const HASH_EVERY: int = 30
 const BOT_LINES_EVERY: int = 30
@@ -17,6 +17,7 @@ var show_bots: bool = false:
 var first_note: SimPump.Note
 var _player: int
 var _factions: Dictionary = {}
+var _bots: Array[int] = [2]
 var _queue: Array[Dictionary] = []
 var _flushed: Array[Dictionary] = []
 var _answers: Array[Dictionary] = []
@@ -35,7 +36,8 @@ func _init(player: int) -> void:
 
 func create(map_path: String, starts: Array[int], factions: Dictionary, _match_seed: int) -> void:
 	_factions = factions
-	adopt(Skirmish.create(true, "human", factions, map_path, starts))
+	_bots.assign(_seats().filter(func(seat: int) -> bool: return seat > 1))
+	adopt(Skirmish.create(true, "human", factions, map_path, starts, factions.size(), teams()))
 
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
@@ -61,7 +63,7 @@ func step() -> void:
 	if over() and _queue.is_empty() and _preview_request.is_empty(): return
 	var job := SimPump.Job.new()
 	job.commands = _queue
-	job.bots = BOTS
+	job.bots = _bots
 	job.preview = _preview_request
 	job.stamp_sequence = true
 	job.want_tick_hash = (_next_tick + 1) % HASH_EVERY == 0
@@ -192,7 +194,10 @@ func take_pings() -> Array[Dictionary]:
 	return []
 
 func bot_players() -> Array[int]:
-	return BOTS
+	return _bots
+
+func teams() -> Array[int]:
+	return MatchSettings.teams(1, _bots.size())
 
 func take_rematch() -> int:
 	return -1
@@ -212,8 +217,14 @@ func stop() -> void:
 func detach() -> void:
 	pass
 
+func _seats() -> Array:
+	var seats: Array = _factions.keys()
+	seats.sort()
+	return seats
+
 func match_header() -> Dictionary:
-	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "teams": [1, 2], "bots": []}
+	var factions: Array = _seats().map(func(seat: int) -> String: return _factions[seat])
+	return {"mode": "offline", "factions": factions, "teams": teams(), "bots": []}
 
 func match_log() -> Dictionary:
 	var played: Dictionary = pump.record()

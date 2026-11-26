@@ -35,7 +35,7 @@ func bindSeat(c *conn, s *seat) {
 }
 
 func testConfig() config {
-	return config{seats: 2, hello: 5 * time.Second, silence: time.Minute, lobby: time.Minute}
+	return config{seats: 2, hello: 5 * time.Second, silence: time.Minute, lobby: time.Minute, lobbyCap: time.Hour}
 }
 
 func seated(t *testing.T, g *registry, match string, write func([]byte)) (*conn, *atomic.Bool) {
@@ -49,7 +49,7 @@ func seatedWith(t *testing.T, g *registry, match string, write func([]byte), set
 	c.dl.set = set
 	e := &envelope{protocol: protocol, build: "b", match: match}
 	if match == "" {
-		e.settings = []byte("{}")
+		e.raw = []byte("{}")
 	}
 	res := g.join(e, c)
 	if res.seat == nil {

@@ -11,6 +11,7 @@ const ScriptedHuman = preload("res://scripts/simulation/scripted_human.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
+const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const UNCAPPED_STEPS: int = 64
 const CAPPED_STEPS: int = 2
 const CLOSE_WAIT_MSEC: int = 1000
@@ -21,6 +22,12 @@ var _transport: RefCounted
 var _lockstep: RefCounted
 var _driver: OnlineDriver
 var _hooked_tick: int = -1
+var _present: int = 1
+var _joins: int = 0
+var _asked: bool = false
+var _picked: Dictionary = {}
+var _pending_code: String = ""
+var _pongs_before: int = 0
 var _sim: Simulation
 var _seat: int = 0
 var _hello_sent: bool = false
@@ -43,6 +50,7 @@ func _ready() -> void:
 	if arg_error == "": arg_error = _defeat_error()
 	if arg_error == "": arg_error = _controller_error()
 	if arg_error == "": arg_error = _bots_error()
+	if arg_error == "": arg_error = _lobby_error()
 	if arg_error != "":
 		printerr(arg_error)
 		get_tree().quit(2)
@@ -75,14 +83,20 @@ func _physics_process(_delta: float) -> void:
 	if _lockstep != null and not _ending and not _args.has("uncapped"): _run_steps(CAPPED_STEPS)
 
 func _pre_start() -> void:
+	# Two pongs: a periodic ping sent before the change may answer first; frames on one socket stay in order.
+	if _pending_code != "" and _transport.rtt_samples().size() > _pongs_before + 1:
+		_write_code(_pending_code)
+		_pending_code = ""
 	if _transport.closed():
 		_finish("ended_relay", "connection to relay lost")
 	elif _transport.is_open() and not _hello_sent:
 		_hello_sent = true
-		var build: String = _args.get("build", str(ProjectSettings.get_setting("application/config/version")))
-		var hello: Dictionary = {"type": "hello", "protocol": Wire.PROTOCOL, "build": build, "match": "" if _args.get("match", "new") == "new" else _args["match"]}
-		if _args.get("match", "new") == "new": hello["settings"] = MatchSettings.for_map(_map_id(), _bots_arg())
-		_transport.send_text(Wire.encode(hello))
+		_transport.send_text(Wire.encode(_hello()))
+
+func _hello() -> Dictionary:
+	var hello: Dictionary = {"type": "hello", "protocol": Wire.PROTOCOL, "build": _args.get("build", PlaytestSettings.hello_build()), "match": "" if _args.get("match", "new") == "new" else _args["match"]}
+	if _args.get("match", "new") == "new": hello["settings"] = MatchSettings.for_map(_map_id(), _bots_arg())
+	return hello
 
 func _receive(frames: PackedStringArray) -> void:
 	for text in frames:
@@ -97,6 +111,10 @@ func _receive(frames: PackedStringArray) -> void:
 		var message: Dictionary = decoded.message
 		match message.type:
 			"welcome": _welcome(message)
+			"joined": _seat_change(message.seat, 1)
+			"left": _seat_change(message.seat, -1)
+			"settings": _room_map(message.settings)
+			"pick": _take_pick(message)
 			"start": _start(message)
 			"error": _finish("ended_relay", message.reason)
 			_: _finish("ended_protocol", "unexpected " + message.type)
@@ -108,12 +126,61 @@ func _welcome(message: Dictionary) -> void:
 		print("RELAY WELCOME ", Time.get_ticks_msec() - _connect_msec)
 		_finish("probed", "")
 		return
-	if _args.has("code-file"):
-		var temp: String = str(_args["code-file"]) + ".tmp"
-		var file := FileAccess.open(temp, FileAccess.WRITE)
-		file.store_string(message.match)
-		file.close()
-		DirAccess.rename_absolute(temp, _args["code-file"])
+	if _seat == 1 and _lobby_maps().size() > 0:
+		_send_settings(_lobby_maps()[0])
+		# The code file waits for a pong after the change, so a friend started on that file joins after the relay read it.
+		_pending_code = message.match
+		_pongs_before = _transport.rtt_samples().size()
+		_transport.send_text(Wire.encode({"type": "ping", "t": Time.get_ticks_usec()}))
+	else:
+		_write_code(message.match)
+	if _seat > 1:
+		_room_map(message.get("settings", {}))
+		_transport.send_text(Wire.encode({"type": "pick", "pick": {"faction": _args.get("faction", Skirmish.default_faction())}}))
+		if _args.has("leave-on-welcome"): _finish("left", "")
+
+func _write_code(match_code: String) -> void:
+	if not _args.has("code-file"): return
+	var temp: String = str(_args["code-file"]) + ".tmp"
+	var file := FileAccess.open(temp, FileAccess.WRITE)
+	file.store_string(match_code)
+	file.close()
+	DirAccess.rename_absolute(temp, _args["code-file"])
+
+# --lobby-maps A[,B]: the host sends map A after its welcome and B just before it asks to start.
+func _lobby_maps() -> PackedStringArray:
+	return str(_args.get("lobby-maps", "")).split(",", false)
+
+func _send_settings(id: String) -> void:
+	_transport.send_text(Wire.encode({"type": "settings", "settings": MatchSettings.for_map(id, _bots_arg())}))
+	print("NETCLIENT SENT MAP ", id)
+
+func _room_map(settings: Dictionary) -> void:
+	print("NETCLIENT ROOM MAP ", settings.get("map", "-"))
+
+func _seat_change(seat: int, step: int) -> void:
+	print("NETCLIENT ", "JOINED" if step > 0 else "LEFT", " SEAT ", seat)
+	if _seat != 1: return
+	_present += step
+	if step > 0: _joins += 1
+	else:
+		_asked = false # the relay ignored an ask sent before the room was full
+		_picked.erase(seat)
+	_try_start()
+
+func _take_pick(message: Dictionary) -> void:
+	print("NETCLIENT PICK SEAT ", message.get("seat", 0), " ", message.pick.get("faction", "-"))
+	_picked[int(message.get("seat", 0))] = message.pick.get("faction")
+	_try_start()
+
+# The host asks to start once --seats seats are in, --joins friends have joined in all and every guest's pick arrived:
+# the relay refuses a pick after the start, and each guest sends one on its welcome.
+func _try_start() -> void:
+	var seats: int = _int_arg_or("seats", 2)
+	if _asked or _present < seats or _joins < _int_arg_or("joins", seats - 1) or _picked.size() < _present - 1: return
+	_asked = true
+	if _lobby_maps().size() > 1: _send_settings(_lobby_maps()[1])
+	_transport.send_text(Wire.encode({"type": "start_request"}))
 
 func _map_id() -> String:
 	return _args.get("map", MatchSettings.TEST_MAP)
@@ -170,11 +237,15 @@ func _bots_arg() -> Array[Dictionary]:
 
 func _oracle_sim() -> Simulation:
 	var id: String = _map_id()
+	var match_seed: int = int(_args.get("seed", "0"))
 	var bots: Dictionary = _bot_factions(_bots_arg())
-	var chosen: Array[int] = MatchSettings.starts(id, int(_args.get("seed", "0")), MatchSettings.teams(2, bots.size()))
-	if not _args.has("factions"): return _match_sim(id, chosen, 2, bots)
+	if not _args.has("factions"): return _match_sim(id, MatchSettings.starts(id, match_seed, MatchSettings.teams(2, bots.size())), 2, bots)
+	# An offline record lists every seat: you, then the bots on team 2.
 	var names: PackedStringArray = str(_args["factions"]).split(",")
-	return Skirmish.create(true, str(_args.get("controller", "ai")), {1: names[0], 2: names[1]}, MatchSettings.map_path(id), chosen)
+	var factions: Dictionary = {}
+	for i in names.size(): factions[i + 1] = names[i]
+	var teams: Array[int] = MatchSettings.teams(1, names.size() - 1)
+	return Skirmish.create(true, str(_args.get("controller", "ai")), factions, MatchSettings.map_path(id), MatchSettings.starts(id, match_seed, teams), names.size(), teams)
 
 func _run_steps(limit: int) -> void:
 	if _driver != null:
@@ -381,13 +452,16 @@ func _factions_error() -> String:
 	if not _args.has("factions"): return ""
 	var names: PackedStringArray = str(_args["factions"]).split(",")
 	var known: String = ", ".join(Registry.Factions.FACTIONS.keys())
-	if names.size() != 2: return "--factions needs two entries A,B; expected each of: %s" % known
+	if names.size() < 2: return "--factions needs two or more entries A,B[,C...]; expected each of: %s" % known
 	for entry in names:
 		if Registry.faction(entry).is_empty(): return "Unknown --factions entry '%s'; expected one of: %s" % [entry, known]
 	return ""
 
 func _int_arg(key: String) -> int:
-	return int(_args[key]) if _args.has(key) else -1
+	return _int_arg_or(key, -1)
+
+func _int_arg_or(key: String, fallback: int) -> int:
+	return int(_args[key]) if _args.has(key) else fallback
 
 func _now_ms() -> int:
 	return int(Time.get_unix_time_from_system() * 1000.0)
@@ -414,6 +488,13 @@ func _bots_error() -> String:
 		if parts[0].to_int() != 3 + seen.size(): return "Bad --bots player '%s'; bots are players 3, 4, ... in order, each once" % parts[0]
 		seen.append(parts[0].to_int())
 		if Registry.faction(parts[1]).is_empty(): return "Unknown --bots faction '%s'; expected one of: %s" % [parts[1], known]
+	return ""
+
+func _lobby_error() -> String:
+	for key: String in ["seats", "joins"]:
+		if _args.has(key) and (not str(_args[key]).is_valid_int() or int(_args[key]) < 1): return "Bad --%s '%s'; expected a whole number above 0" % [key, _args[key]]
+	for id: String in _lobby_maps():
+		if not FileAccess.file_exists(MatchSettings.map_path(id)): return "Unknown --lobby-maps map '%s'" % id
 	return ""
 
 func _defeat_error() -> String:

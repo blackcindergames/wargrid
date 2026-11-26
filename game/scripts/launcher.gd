@@ -22,42 +22,115 @@ const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const Palette = preload("res://scripts/presentation/palette.gd")
 const OFFLINE_SCENE: String = "res://scenes/skirmish.tscn"
 const HEADLESS_FLAGS: Array[String] = ["--netclient", "--relay", "--replay-log", "--probe-relay"]
-const PAGES: Array[String] = ["Play", "Join", "Settings", "Credits", "Waiting"]
-const NAV_PAGES: Array[String] = ["Play", "Join", "Settings", "Credits"]
+const DashedPanel = preload("res://scripts/presentation/dashed_panel.gd")
+const PAGES: Array[String] = ["Play", "Settings", "Credits"]
 const SHELL: Array[String] = ["SidebarBg", "ContentBg", "Sidebar", "Pages"]
-const OWNS: Array[String] = ["Pages/Play/Body/Own", "Pages/Join/Body/Own"]
-const FOLDS: Array[String] = ["Pages/Play/Body/Advanced", "Pages/Join/Body/Advanced"]
-const BOT_ONLY: Array[String] = ["Body/BotLabel", "Body/Spacer2", "Body/Bot", "Body/Spacer3", "Footer/Start"]
-const FRIEND_ONLY: Array[String] = ["Body/Versus", "Body/Spacer5", "Body/OpenSlot", "Body/Spacer4", "Footer/Create"]
-const TEAM_ONLY: Array[String] = ["Body/TeamBots", "Body/MapHidden"]
-const TEAM_BOTS: Array[String] = ["Pages/Play/Body/TeamBots/Bot3", "Pages/Play/Body/TeamBots/Bot4"]
-# The team mode is vs Friend with 2 bots as opponents (user, 2026-11-24, after the 2v2 match).
-const MODES: Dictionary = {"Opponent/BotToggle": ["bot"], "Opponent/FriendToggle": ["friend", "team"], "Versus/NoneToggle": ["friend"], "Versus/BotsToggle": ["team"]}
-const WAITING_BOTS: Array[String] = ["Three", "Four"]
-const TEAM_STARTS := 4
+const PLAYERS := "Pages/Play/Body/Players"
+const TEAMS := PLAYERS + "/Teams/List"
+# Rows the team list shows before it scrolls: the most that leave the footer on a 720 px high window.
+const ROWS_SHOWN := 5
+const MAP_COLUMN := "Pages/Play/Body/MapColumn"
+const ONLINE := "Pages/Settings/Body/Playtest/Online"
+const RELAY_FIELD := ONLINE + "/RelayUrl"
+const MODE_BAR := "Pages/Play/ModeBar"
+const JOIN := "Pages/Play/JoinCard/Card/Box"
+const MODES: Dictionary = {"skirmish": "Skirmish", "host": "Host", "join": "Join"}
+const RANDOM := LauncherSettings.RANDOM
+# Fits "Free Resistance Coalition" at 13 px with the arrow; every row reserves it, so the columns line up.
+const FACTION_WIDTH := 224.0
+const ACTION_WIDTH := 40.0
+const REMOVE_ICON = preload("res://ui/remove_x.svg")
+const COPY_ICON = preload("res://ui/copy.svg")
+const CHECK_ICON = preload("res://ui/check.svg")
 # Page content is 960 px wide: leaves room for the 170 px button, the gap and the strip padding.
 const STATUS_WIDTH := 700.0
-const FRIEND_HINT := "You get a link to send to your friend."
-const CANCELLED := "Match cancelled"
-const DID_NOT_JOIN := "Your friend did not join in time"
-const PLAY_SUBTITLE := "Set up a match against a bot or a friend."
-const TEAM_SUBTITLE := "Team up with a friend against two bots."
-const MAP_HIDDEN := "%s has %d start positions; team matches need %d."
-const VERSION_MISMATCH := "Your friend’s game is a different version from yours (v%s)."
+const HOST_CANCELLED := "Hosting cancelled"
+const JOIN_CANCELLED := "Join cancelled"
+const HOSTING_STOPPED := "Hosting stopped. The code no longer works."
+const DID_NOT_JOIN := "Your friend did not join in time." + NEW_CODE
+const SKIRMISH_SUBTITLE := "Play against bots on this computer."
+const HOST_SUBTITLE := "Invite a friend with a code; add bots to fill the teams."
+const JOIN_SUBTITLE := "Play with a friend who is hosting."
+const GUEST_SUBTITLE := "Joined your friend’s game · the host sets up the match"
+const STOP_FIRST := "Stop hosting first"
+const LEAVE_FIRST := "Leave first"
+const NEED_CODE := "Enter the 6-character invite code."
+const FROM_LINK := "Filled in from your friend’s link."
+# The relay also says "unknown match" for an expired or crashed room, and "match full" for a started one.
+const NO_GAME := "No open game with code %s. Check the code, or ask your friend for a new one."
+const GAME_FULL := "That game is full or has already started. Ask your friend to host a new one."
+const BIGGER_MAP := "a bigger map fits more bots"
+const ONLINE_BOTS := "online games take up to %d bots"
+const NO_BOT := "Add a bot to play against."
+const FRIEND_WAIT := "Start match unlocks when your friend joins"
+const READY := "Everyone is here. Start when you are ready"
+const WAITING_FOR_HOST := "Waiting for the host to start"
+const STARTING := "Starting…"
+const CLOCK := " · room closes in %d:%02d"
+# The clock shows only when it matters, so the footer does not tick for 15 minutes.
+const CLOCK_FROM_SEC := 180
+const ROOM_CLOSED := "The room closed: nothing changed for 15 minutes."
+const ROOM_GONE := "The room closed after an hour."
+const NEW_CODE := " Press Try again for a new code."
+const ROOM_CLOSED_HOST := ROOM_CLOSED + NEW_CODE
+const LEFT_GAME := "You left the game"
+const UNREACHABLE := "Can't reach the relay (%s). Check your connection and try again."
+const CUE_MSEC := 5000
+# Under the relay's settings refill of 2/s with margin, so a steady sender never drains its burst of 10 (relay/limits.go).
+const SETTINGS_GAP_MSEC := 750
+# The tested 2v2 layout; Palette.team_colours colours only two bots.
+const HOST_BOTS := 2
+const PICKS_AT_START := "Picks at start"
+const FRIEND_JOINED := "Your friend joined"
+const FRIEND_LEFT := "Your friend left"
+const MAP_CHANGED := "Host changed the map to %s"
+const BOT_ADDED := "Host added a bot"
+const BOT_REMOVED := "Host removed a bot"
+const BOT_FACTION := "Host changed a bot's faction"
+const SETUP_CHANGED := "Host changed the setup"
+const HOST_PICKED := "Host picked %s"
+const HOST_GONE := "The host stopped hosting. Ask them for a new code."
+const INVITE_TIP := "Send this code to your friend. They enter it under Join game."
+const INVITE_TIP_WEB := "Send this link to your friend."
+const VERSION_MISMATCH := "Your game is v%s; your friend’s is different. Both of you need the same version."
+const OLD_RELAY := "The relay runs a different version. Try again later, or update Wargrid."
+const RELAY_BUSY := "The relay is busy. Try again in a minute."
+const RELAY_REFUSED := "The relay refused the connection (%s)."
+const LOOKALIKE := "Codes never use O, 0, I or 1. Check the code with your friend."
+const TEAM_JOINED := " · you are on the host’s team now"
+const TEAM_SPLIT := " · you play against the host now"
+const MAP_TOO_SMALL := "This map has %d starts; your setup needs %d."
+var mode: String = "skirmish"
+# Bot factions in seat order; Random stays Random until the match starts.
+var lobby_bots: Array[String] = []
+var _own_pick: String = Registry.Factions.DEFAULT_FACTION
+var _confirm: ConfirmationDialog
 var _transport: RefCounted
 var _clock: Callable = Time.get_ticks_usec
 var _connect_msec: int = 0
-var _welcome_msec: int = -1
+var _room_msec: int = 0
+var _created_msec: int = 0
+var _sent_msec: int = 0
 var _match: String = ""
 var _seat: int = 0
 var _code: String = ""
 var _hello_sent: bool = false
+# The room's setup: what the host last sent, or what the guest last received.
 var _settings: Dictionary = {}
+# Random bots roll here, outside the simulation, so both windows seat the same faction.
+var _roll: Callable = func() -> String: return _resolve(RANDOM)
+var _dirty: bool = false
+var _friend: bool = false
+var _asked: bool = false
+var _cue: String = ""
+var _cue_msec: int = 0
+# Display only: the guests' picks by seat as the host heard them; factions still go in-band at the start.
+var _picks: Dictionary = {}
+var _pick_dirty: bool = false
+var _pick_msec: int = 0
+var _sent_pick: String = ""
 var _lockstep: RefCounted
 var current_page: String = "Play"
-var opponent: String = "bot"
-# The player's map; the team path may not list it.
-var _map_pick: String = MatchSettings.PLAY_MAPS.keys()[0]
 var _origin: String = "Play"
 var _play_error: bool = false
 static var code_applied: bool = false
@@ -67,6 +140,7 @@ var quit: Callable
 var download: Callable = JavaScriptBridge.download_buffer
 var focus_cards: Array[Dictionary] = FocusCards.load_cards()
 var page: String = _page_value("location.origin + location.pathname")
+var log_error: Callable = func(line: String) -> void: push_error(line)
 var search: String = _page_value("location.search")
 
 func _enter_tree() -> void:
@@ -78,7 +152,7 @@ func _ready() -> void:
 		if flag in OS.get_cmdline_user_args():
 			get_tree().change_scene_to_file.call_deferred("res://scenes/net_headless.tscn")
 			return
-	_fill_factions()
+	_add_confirm()
 	_fill_maps()
 	_apply_picks()
 	_add_audio()
@@ -91,27 +165,32 @@ func _ready() -> void:
 	$Sidebar/Nav/Quit.pressed.connect(func() -> void:
 		_close_sitting()
 		quit.call())
-	$Pages/Play/Footer/Start.pressed.connect(func() -> void:
-		_offline_setup()
-		get_tree().change_scene_to_file(OFFLINE_SCENE))
+	$Pages/Play/Footer/Start.pressed.connect(_on_start)
 	_connect_play_controls()
-	$Pages/Play/Footer/Create.pressed.connect(func() -> void:
-		_origin = "Play"
-		_connect(""))
-	$Pages/Join/Footer/Join.pressed.connect(_join)
-	$Pages/Join/Body/Code.text_submitted.connect(func(_text: String) -> void: _join())
-	$Pages/Waiting/Body/Left/Invite/Copy.pressed.connect(func() -> void: DisplayServer.clipboard_set(_copy_text()))
-	for path: String in ["Waiting/Footer/Cancel", "Play/Footer/CancelConnect", "Join/Footer/CancelConnect"]:
-		get_node("Pages/" + path).pressed.connect(_cancel)
-	for page_name in NAV_PAGES:
+	_connect_join_card()
+	$Pages/Play/Footer/CancelConnect.pressed.connect(_cancel)
+	$Pages/Play/Footer/TryAgain.pressed.connect(_host)
+	get_node(ONLINE).visible = prerelease
+	get_node(RELAY_FIELD).text_changed.connect(_save_relay)
+	for page_name in PAGES:
 		get_node("Sidebar/Nav/" + page_name).toggled.connect(func(on: bool) -> void:
-			if on and _nav_of(current_page) != page_name: show_page(page_name))
-	$Sidebar/Version.text = "v" + str(ProjectSettings.get_setting("application/config/version"))
+			if on and current_page != page_name: show_page(page_name))
+	$Sidebar/Version.text = "v" + _build()
+	get_node(JOIN + "/Code").max_length = JoinLink.MAX_INPUT
 	set_process(false)
 	show_page("Play")
-	set_opponent("bot")
+	set_mode("skirmish")
 	_apply_page()
 	_install_paste_shim()
+
+func _add_confirm() -> void:
+	_confirm = ConfirmationDialog.new()
+	_confirm.name = "Confirm"
+	_confirm.dialog_text = "Your friend leaves and the code stops working. Your bots and map stay."
+	_confirm.title = "Stop hosting?"
+	_confirm.ok_button_text = "Stop hosting"
+	_confirm.confirmed.connect(_stop_hosting)
+	add_child(_confirm)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and not web: _close_sitting() # web files at the next launcher open instead
@@ -122,8 +201,8 @@ func _close_sitting() -> void:
 func _install_paste_shim() -> void:
 	if not OS.has_feature("web"):
 		return
-	PasteShim.adopt($Pages/Join/Body/Code)
-	for fold in FOLDS: PasteShim.adopt(get_node(fold + "/RelayUrl"))
+	PasteShim.adopt(get_node(JOIN + "/Code"))
+	PasteShim.adopt(get_node(RELAY_FIELD))
 	if not get_tree().root.has_node("PasteShim"):
 		get_tree().root.add_child.call_deferred(PasteShim.new())
 
@@ -135,54 +214,308 @@ func _copy_text() -> String:
 
 func _apply_page() -> void:
 	var query: Dictionary = JoinLink.parse(search)
-	_set_relay(JoinLink.DEFAULT_RELAY)
-	$Pages/Join/Body/Advanced.visible = prerelease
-	var opens_join: bool = not code_applied and not JoinLink.code(query.get("code", "")).is_empty()
-	if not code_applied: $Pages/Join/Body/Code.text = JoinLink.code(query.get("code", ""))
+	_set_relay(LauncherSettings.relay() if prerelease else JoinLink.DEFAULT_RELAY)
+	var link_code: String = "" if code_applied else JoinLink.code(query.get("code", ""))
 	code_applied = true # a stale link must not refill the field after "back to menu"
-	if opens_join: show_page("Join")
+	if not link_code.is_empty():
+		get_node(JOIN + "/Code").text = link_code
+		set_mode("join")
+		_show_message(FROM_LINK)
 	var relay: String = JoinLink.relay(query.get("relay", "")) if prerelease else ""
-	if not relay.is_empty():
-		_set_relay(relay)
-		_set_advanced(true)
-	$Pages/Waiting/Body/Left/InviteLabel.text = "Invite link" if not page.is_empty() else "Match code"
-	$Pages/Waiting/Body/Left/Invite/Copy.text = "Copy link" if not page.is_empty() else "Copy code"
+	# A link's relay holds for this session only; the saved one comes back next start.
+	if not relay.is_empty(): _set_relay(relay)
+	# A friend's code link means the default relay unless it names another; a saved test relay must not hijack it.
+	elif not link_code.is_empty(): _set_relay(JoinLink.DEFAULT_RELAY)
+	for path: String in ["/Invite/Box", "/Invite/Box/Copy"]: get_node(MODE_BAR + path).tooltip_text = INVITE_TIP_WEB if not page.is_empty() else INVITE_TIP
 
-func _set_advanced(open: bool) -> void:
-	for fold in FOLDS:
-		get_node(fold + "/Toggle").set_pressed_no_signal(open)
-		get_node(fold + "/RelayUrl").visible = open
-		get_node(fold + "/RelayHelp").visible = open
+func _save_relay(text: String) -> void:
+	if prerelease: LauncherSettings.save_relay(text.strip_edges())
 
 func _set_relay(url: String) -> void:
-	for fold in FOLDS:
-		var field: LineEdit = get_node(fold + "/RelayUrl")
-		if field.text != url: field.text = url
+	get_node(RELAY_FIELD).text = url
 
 func _relay_url() -> String:
-	return $Pages/Play/Body/Advanced/RelayUrl.text.strip_edges()
+	var url: String = get_node(RELAY_FIELD).text.strip_edges()
+	return url if not url.is_empty() else JoinLink.DEFAULT_RELAY
 
-func set_opponent(kind: String) -> void:
-	opponent = kind
-	var bot: bool = kind == "bot"
-	for toggle: String in MODES: get_node("Pages/Play/Body/" + toggle).set_pressed_no_signal(kind in MODES[toggle])
-	for path in BOT_ONLY: get_node("Pages/Play/" + path).visible = bot
-	for path in FRIEND_ONLY: get_node("Pages/Play/" + path).visible = not bot
-	for path in TEAM_ONLY: get_node("Pages/Play/" + path).visible = kind == "team"
-	# The muted line takes Spacer1's cell, right under the map info; the fold then pairs with the bot rows so 720 px fits.
-	$Pages/Play/Body/Spacer1.visible = kind != "team"
-	$Pages/Play/Subtitle.text = TEAM_SUBTITLE if kind == "team" else PLAY_SUBTITLE
-	$Pages/Play/Body/Advanced.visible = prerelease and not bot
-	_fill_maps()
+func set_mode(kind: String) -> void:
+	mode = kind
+	_fit_bots()
 	_play_error = false
+	if kind == "join": _show_message("")
 	_refresh_play()
 	if current_page == "Play" and is_inside_tree(): _focus_primary()
 
+# Host game keeps a start for the friend; Skirmish never opens without an enemy.
+func _fit_bots() -> void:
+	lobby_bots.resize(mini(lobby_bots.size(), maxi(0, _bot_cap())))
+	if mode == "skirmish" and lobby_bots.is_empty(): lobby_bots.append(LauncherSettings.load_picks().bots[0])
+
+func _bot_cap() -> int:
+	var starts: int = _start_count(_map_id())
+	return mini(HOST_BOTS, starts - 2) if mode == "host" else starts - 1
+
+func _is_guest() -> bool:
+	return _seat > 1
+
+func _friend_in() -> bool:
+	return _seat == 1 and _friend
+
+func _used() -> int:
+	return 1 + lobby_bots.size() + (1 if _friend_in() else 0)
+
+func _kept() -> int:
+	return 1 if mode == "host" and not _friend_in() else 0
+
+func _shown_map() -> String:
+	return _settings.map if _is_guest() else _map_id()
+
 func _refresh_play() -> void:
-	$Pages/Play/Body/MapInfo.text = _map_info(_map_id())
-	var map_hidden: bool = opponent == "team" and _map_id() != _map_pick
-	$Pages/Play/Body/MapHidden.text = MAP_HIDDEN % [MatchSettings.PLAY_MAPS[_map_pick], _start_count(_map_pick), TEAM_STARTS] if map_hidden else ""
-	if not _play_error: _show_status($Pages/Play/Footer/Status, _summary() if opponent == "bot" else FRIEND_HINT)
+	var guest: bool = _is_guest()
+	var joining: bool = mode == "join" and not guest
+	$Pages/Play/Subtitle.text = GUEST_SUBTITLE if guest else {"skirmish": SKIRMISH_SUBTITLE, "host": HOST_SUBTITLE, "join": JOIN_SUBTITLE}[mode]
+	_refresh_mode_bar(guest)
+	for path: String in ["Body", "Divider", "Footer"]: get_node("Pages/Play/" + path).visible = not joining
+	$Pages/Play/JoinCard.visible = joining
+	# The card centres across the whole content area, so the page spans it while joining.
+	$Pages/Play.size_flags_horizontal = Control.SIZE_FILL if joining else Control.SIZE_SHRINK_BEGIN
+	_build_rows()
+	var id: String = _shown_map()
+	$Pages/Play/Body/Players/Count.visible = not guest
+	_refresh_count(_start_count(id))
+	$Pages/Play/Body/Players/Cue.visible = not _cue.is_empty()
+	$Pages/Play/Body/Players/Cue.text = _cue
+	$Pages/Play/Body/MapColumn/Map.visible = not guest
+	$Pages/Play/Body/MapColumn/Map.disabled = _asked
+	$Pages/Play/Body/MapColumn/MapName.visible = guest
+	$Pages/Play/Body/MapColumn/MapName.text = MatchSettings.PLAY_MAPS.get(id, id)
+	$Pages/Play/Body/MapColumn/MapHint.visible = guest or mode == "host"
+	$Pages/Play/Body/MapColumn/Preview.show_map(_map_data(id))
+	$Pages/Play/Body/MapColumn/MapInfo.text = _map_info(id)
+	_grey_maps()
+	_refresh_footer(guest)
+
+# The count line names what greys + Add enemy bot, and the button's tooltip says the same.
+func _refresh_count(starts: int) -> void:
+	var full: bool = lobby_bots.size() >= _bot_cap()
+	var line: String = "%d of %d starts used" % [_used(), starts]
+	if _kept() > 0: line += " · 1 kept for your friend"
+	if full: line += " · " + (ONLINE_BOTS % HOST_BOTS if mode == "host" and HOST_BOTS < starts - 2 else BIGGER_MAP)
+	var add: Button = $Pages/Play/Body/Players/Count/AddBot
+	$Pages/Play/Body/Players/Count/Line.text = line
+	add.disabled = full or _asked
+	add.tooltip_text = line if full else ""
+
+func _refresh_mode_bar(guest: bool) -> void:
+	var why: String = "" if _transport == null else (STOP_FIRST if _origin == "Play" else LEAVE_FIRST)
+	for kind: String in MODES:
+		var button: Button = get_node(MODE_BAR + "/" + MODES[kind])
+		button.set_pressed_no_signal(mode == kind)
+		button.disabled = not why.is_empty() and mode != kind
+		button.tooltip_text = why if button.disabled else ""
+	get_node(MODE_BAR + "/Invite").visible = not _code.is_empty()
+	get_node(MODE_BAR + "/Invite/Box/Copy").visible = not guest
+	get_node(MODE_BAR + "/Invite/Box/Code").text = _code.left(3) + " " + _code.right(3) if not _code.is_empty() else ""
+
+func _refresh_footer(guest: bool) -> void:
+	var start: Button = $Pages/Play/Footer/Start
+	start.visible = not guest
+	start.disabled = lobby_bots.is_empty() if mode == "skirmish" else not _friend_in() or _asked
+	$Pages/Play/Footer/CancelConnect.visible = _transport != null and _origin == "Play" and _code.is_empty()
+	$Pages/Play/Footer/TryAgain.visible = mode == "host" and _transport == null
+	$Pages/Play/Footer/Leave.visible = guest or (mode == "host" and not _code.is_empty())
+	$Pages/Play/Footer/Leave.text = "Leave" if guest else "Stop hosting"
+	var text: String = _play_status(guest)
+	if not _play_error and not text.is_empty(): _show_status($Pages/Play/Footer/Status, text)
+
+# Empty while connecting: the ticking line owns the footer then.
+func _play_status(guest: bool) -> String:
+	if guest: return WAITING_FOR_HOST if _room_msec < 0 else _timed(WAITING_FOR_HOST, _room_deadline(), _now_msec())
+	if mode == "join": return ""
+	if mode == "skirmish": return _summary() if not lobby_bots.is_empty() else NO_BOT
+	if _code.is_empty(): return ""
+	if _asked: return STARTING
+	return _timed(READY if _friend_in() else FRIEND_WAIT, _room_deadline(), _now_msec())
+
+func _grey_maps() -> void:
+	var map: OptionButton = $Pages/Play/Body/MapColumn/Map
+	var need: int = _used() + _kept()
+	for index in map.item_count:
+		var starts: int = _start_count(map.get_item_metadata(index))
+		map.set_item_disabled(index, starts < need)
+		map.set_item_tooltip(index, MAP_TOO_SMALL % [starts, need] if starts < need else "")
+
+func _build_rows() -> void:
+	for team: int in [1, 2]:
+		for row: Node in get_node(TEAMS + "/Team%d" % team).get_children():
+			if row.name == "Head": continue
+			row.get_parent().remove_child(row)
+			row.queue_free()
+	var entries: Array[Dictionary] = _guest_entries() if _is_guest() else _lobby_entries()
+	for team: int in [1, 2]: get_node(TEAMS + "/Team%d" % team).visible = entries.any(func(entry: Dictionary) -> bool: return entry.team == team)
+	for entry: Dictionary in entries: get_node(TEAMS + "/Team%d" % entry.team).add_child(_make_row(entry))
+	_fit_teams(entries.size())
+
+func _fit_teams(rows: int) -> void:
+	var list: Control = get_node(TEAMS)
+	var height: float = list.get_combined_minimum_size().y
+	var row: Control = get_node(TEAMS + "/Team1").get_child(1)
+	if rows > ROWS_SHOWN: height -= (rows - ROWS_SHOWN) * (row.get_combined_minimum_size().y + get_node(TEAMS + "/Team1").get_theme_constant("separation"))
+	get_node(PLAYERS + "/Teams").custom_minimum_size.y = height
+
+func _lobby_entries() -> Array[Dictionary]:
+	var host: bool = mode == "host"
+	var entries: Array[Dictionary] = [{"name": "You", "title": "You", "meta": "Host" if host else "", "player": 1, "team": 1, "own": true}]
+	if host:
+		var friend: Dictionary = {"name": "Friend", "player": 2, "team": 1 if not lobby_bots.is_empty() else 2}
+		if _friend_in(): friend.merge({"title": "Your friend", "meta": "Player", "text": _faction_name(_picks[2]) if _picks.has(2) else PICKS_AT_START})
+		else: friend.merge({"title": "Open", "meta": "Waiting for your friend…" if not _code.is_empty() else "Your friend joins with the code", "open": true})
+		entries.append(friend)
+	for i in lobby_bots.size():
+		entries.append({"name": "Bot%d" % (i + 1), "title": "Bot %d" % (i + 1), "meta": "Computer player", "player": (3 if host else 2) + i, "team": 2, "bot": i})
+	return entries
+
+func _guest_entries() -> Array[Dictionary]:
+	var bots: Array = _settings.get("bots", [])
+	var teams: Array[int] = MatchSettings.teams(2, bots.size())
+	var entries: Array[Dictionary] = []
+	var host_pick: String = _host_pick(_settings)
+	entries.append({"name": "Host", "title": "Host", "meta": "Sets up the match", "player": 1, "team": teams[0], "text": PICKS_AT_START if host_pick.is_empty() else _faction_name(host_pick)})
+	entries.append({"name": "You", "title": "You", "meta": "", "player": _seat, "team": teams[1], "own": true})
+	for i in bots.size():
+		entries.append({"name": "Bot%d" % (i + 1), "title": "Bot %d" % (i + 1), "meta": "Computer player", "player": int(bots[i].player), "team": teams[2 + i], "text": _faction_name(RANDOM if bots[i].get("random", false) else bots[i].faction)})
+	return entries
+
+func _make_row(entry: Dictionary) -> PanelContainer:
+	var open: bool = entry.get("open", false)
+	var panel: PanelContainer = _dashed() if open else PanelContainer.new()
+	panel.name = entry.name
+	panel.theme_type_variation = &"OpenSlot" if open else &"PlayerRow"
+	var row := HBoxContainer.new()
+	row.name = "Row"
+	row.add_theme_constant_override("separation", 10)
+	# Text-only rows match the height of rows that hold a dropdown.
+	row.custom_minimum_size.y = ACTION_WIDTH
+	panel.add_child(row)
+	var swatch := ColorRect.new()
+	swatch.name = "Swatch"
+	swatch.custom_minimum_size = Vector2(12, 12)
+	swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	swatch.color = Color.TRANSPARENT if open else _hue(entry.player)
+	swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(swatch)
+	row.add_child(_who(entry.title, entry.meta))
+	if entry.get("own", false): row.add_child(_own_row_selector())
+	elif entry.has("bot"): row.add_child(_bot_selector(entry.bot))
+	elif entry.has("text"): row.add_child(_text_cell(entry.text))
+	row.add_child(_remove_button(entry.bot) if entry.has("bot") else _action_space())
+	return panel
+
+func _dashed() -> PanelContainer:
+	var dashed: DashedPanel = DashedPanel.new()
+	dashed.color = get_theme_color(&"line", &"Tokens")
+	return dashed
+
+func _who(title: String, meta: String) -> VBoxContainer:
+	var who := VBoxContainer.new()
+	who.name = "Who"
+	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	who.add_theme_constant_override("separation", 0)
+	for part: Array in [["Name", title, &"PanelTitle"], ["Meta", meta, &"Hint"]]:
+		var label := Label.new()
+		label.name = part[0]
+		label.text = part[1]
+		label.theme_type_variation = part[2]
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label.visible = not label.text.is_empty()
+		who.add_child(label)
+	return who
+
+func _text_cell(text: String) -> Label:
+	var label := Label.new()
+	label.name = "Faction"
+	label.text = text
+	label.custom_minimum_size.x = FACTION_WIDTH
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+func _own_row_selector() -> OptionButton:
+	var selector: OptionButton = _faction_selector(_own_pick)
+	selector.tooltip_text = "Your faction"
+	selector.item_selected.connect(func(index: int) -> void:
+		_play_error = false
+		_set_own(selector.get_item_metadata(index))
+		_focus_primary())
+	return selector
+
+func _bot_selector(index: int) -> OptionButton:
+	var selector: OptionButton = _faction_selector(lobby_bots[index])
+	selector.tooltip_text = "This bot's faction"
+	selector.disabled = _asked
+	selector.item_selected.connect(func(item: int) -> void:
+		if _asked: return
+		lobby_bots[index] = selector.get_item_metadata(item)
+		_dirty = true
+		_play_error = false
+		_refresh_footer(false)
+		_focus_primary())
+	return selector
+
+func _remove_button(index: int) -> Button:
+	var button := Button.new()
+	button.name = "Remove"
+	button.theme_type_variation = &"RemoveButton"
+	button.icon = REMOVE_ICON
+	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	button.custom_minimum_size = Vector2(ACTION_WIDTH, ACTION_WIDTH)
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	button.tooltip_text = "Remove bot"
+	button.disabled = _asked
+	button.pressed.connect(_remove_bot.bind(index))
+	return button
+
+func _action_space() -> Control:
+	var space := Control.new()
+	space.name = "Action"
+	space.custom_minimum_size = Vector2(ACTION_WIDTH, 0)
+	space.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return space
+
+func _add_bot() -> void:
+	if _asked or lobby_bots.size() >= _bot_cap(): return
+	lobby_bots.append(RANDOM)
+	_changed()
+
+func _remove_bot(index: int) -> void:
+	if _asked or index >= lobby_bots.size(): return
+	lobby_bots.remove_at(index)
+	_changed()
+
+func _changed() -> void:
+	_dirty = true
+	_play_error = false
+	_refresh_play()
+	_focus_primary()
+
+# The hues the match will draw, so Neon players see the same colours here.
+func _hue(player: int) -> Color:
+	var neon: bool = GraphicsSettings.load_neon()
+	var online: bool = mode == "host" or _is_guest()
+	var team: Dictionary = Palette.team_colours(_bot_players()) if online and not _bot_players().is_empty() else {}
+	if team.has(player): return team[player][1 if neon else 0]
+	return (Palette.OWNER_BRIGHT if neon else Palette.OWNER_BASE)[player - 1]
+
+func _bot_players() -> Array[int]:
+	if _is_guest(): return MatchSettings.bot_players(_settings)
+	var first: int = 3 if mode == "host" else 2
+	var players: Array[int] = []
+	for i in lobby_bots.size(): players.append(first + i)
+	return players
+
+func _own_selector() -> OptionButton:
+	var row: Node = get_node(PLAYERS).find_child("You", true, false)
+	return row.get_node("Row/Faction") if row != null else null
 
 func _map_data(id: String) -> Dictionary:
 	return JSON.parse_string(FileAccess.get_file_as_string(MatchSettings.map_path(id)))
@@ -195,42 +528,73 @@ func _map_info(id: String) -> String:
 	return "%d start positions · %d supply sources" % [data.starts.size(), data.sources.size()]
 
 func _summary() -> String:
-	return "%s · %s vs %s bot" % [MatchSettings.PLAY_MAPS[_map_id()], Registry.faction(_faction($Pages/Play/Body/Own)).display_name, Registry.faction(_faction($Pages/Play/Body/Bot)).display_name]
+	var against: String = "%s bot" % _faction_name(lobby_bots[0]) if lobby_bots.size() == 1 else "%d bots" % lobby_bots.size()
+	return "%s · %s vs %s" % [MatchSettings.PLAY_MAPS[_map_id()], _faction_name(_own_pick), against]
 
 func _connect_play_controls() -> void:
-	$Pages/Play/Body/Opponent/BotToggle.pressed.connect(set_opponent.bind("bot"))
-	$Pages/Play/Body/Opponent/FriendToggle.pressed.connect(func() -> void: set_opponent("friend" if opponent == "bot" else opponent))
-	$Pages/Play/Body/Versus/NoneToggle.pressed.connect(set_opponent.bind("friend"))
-	$Pages/Play/Body/Versus/BotsToggle.pressed.connect(set_opponent.bind("team"))
-	for path in OWNS:
-		var selector: OptionButton = get_node(path)
-		var on_play: bool = path.begins_with("Pages/Play")
-		selector.item_selected.connect(func(index: int) -> void:
-			if on_play: _play_error = false
-			_set_own(selector.get_item_metadata(index))
-			_focus_primary())
-	$Pages/Play/Body/Map.item_selected.connect(func(_index: int) -> void: _map_pick = _map_id())
-	for selector: OptionButton in [$Pages/Play/Body/Bot, $Pages/Play/Body/Map, get_node(TEAM_BOTS[0]), get_node(TEAM_BOTS[1])]:
-		selector.item_selected.connect(func(_index: int) -> void:
-			_play_error = false
-			_refresh_play()
-			_focus_primary())
-	for fold in FOLDS:
-		get_node(fold + "/Toggle").toggled.connect(_set_advanced)
-		get_node(fold + "/RelayUrl").text_changed.connect(_set_relay)
+	for kind: String in MODES:
+		get_node(MODE_BAR + "/" + MODES[kind]).pressed.connect(func() -> void:
+			if _transport != null:
+				_refresh_play()
+				return
+			set_mode(kind)
+			if kind == "host": _host())
+	get_node(MODE_BAR + "/Invite/Box/Copy").pressed.connect(_copy)
+	get_node(MODE_BAR + "/Invite/CopyReset").timeout.connect(_copy_reset)
+	_copy_reset()
+	$Pages/Play/Body/Players/Count/AddBot.pressed.connect(_add_bot)
+	$Pages/Play/Footer/Leave.pressed.connect(func() -> void:
+		if not _is_guest(): _ask_stop()
+		elif _transport != null: _refuse(LEFT_GAME))
+	$Pages/Play/Body/MapColumn/Map.item_selected.connect(func(_index: int) -> void: _changed())
+
+func _connect_join_card() -> void:
+	get_node(JOIN + "/Buttons/Join").pressed.connect(_join)
+	get_node(JOIN + "/Code").text_submitted.connect(func(_text: String) -> void: _join())
+	get_node(JOIN + "/Buttons/Cancel").pressed.connect(func() -> void:
+		if _transport != null: _cancel()
+		else: set_mode("skirmish"))
+
+func _host() -> void:
+	_origin = "Play"
+	_play_error = false
+	_connect("")
+
+func _copy() -> void:
+	DisplayServer.clipboard_set(_copy_text())
+	_show_copy("Copied", CHECK_ICON)
+	get_node(MODE_BAR + "/Invite/CopyReset").start()
+
+func _copy_reset() -> void:
+	_show_copy("Copy code" if page.is_empty() else "Copy link", COPY_ICON)
+
+func _show_copy(text: String, icon: Texture2D) -> void:
+	var copy: Button = get_node(MODE_BAR + "/Invite/Box/Copy")
+	copy.text = text
+	copy.icon = icon
+
+# With a friend in, leaving drops them, so it asks first.
+func _ask_stop() -> void:
+	_refresh_play()
+	if _friend_in(): _confirm.popup_centered()
+	else: _stop_hosting()
+
+func _stop_hosting() -> void:
+	if _transport != null: _refuse(HOSTING_STOPPED)
 
 func _apply_picks() -> void:
 	var picks: Dictionary = LauncherSettings.load_picks()
-	_select_id($Pages/Play/Body/Bot, picks.bot_faction)
-	_select_id($Pages/Play/Body/Map, picks.map)
-	_map_pick = picks.map
-	var bots: Array[String] = LauncherSettings.load_team_bots()
-	for i in TEAM_BOTS.size(): _select_id(get_node(TEAM_BOTS[i]), bots[i])
+	_select_id($Pages/Play/Body/MapColumn/Map, picks.map)
+	lobby_bots.assign(picks.bots)
 	_set_own(picks.faction)
 
 func _set_own(id: String) -> void:
-	for path in OWNS: _select_id(get_node(path), id)
-	_refresh_play()
+	_own_pick = id
+	if _seat == 1: _dirty = true
+	if _is_guest(): _pick_dirty = true
+	var own: OptionButton = _own_selector()
+	if own != null: _select_id(own, id)
+	if not _play_error: _refresh_footer(_is_guest())
 
 func _select_id(selector: OptionButton, id: String) -> void:
 	for index in selector.item_count:
@@ -239,43 +603,64 @@ func _select_id(selector: OptionButton, id: String) -> void:
 func show_page(page_name: String) -> void:
 	current_page = page_name
 	for each in PAGES: get_node("Pages/" + each).visible = each == page_name
-	get_node("Sidebar/Nav/" + _nav_of(page_name)).button_pressed = true
+	get_node("Sidebar/Nav/" + page_name).button_pressed = true
 	if page_name == "Credits": _fill_credits()
 	if is_inside_tree(): _focus_primary()
 
 # Enter only reaches a focused control, so each page focuses the one action it is for.
 func _focus_primary() -> void:
-	match current_page:
-		"Play": get_node("Pages/Play/Footer/" + ("Start" if opponent == "bot" else "Create")).grab_focus()
-		"Join": _focus_join()
-		"Waiting": $Pages/Waiting/Body/Left/Invite/Copy.grab_focus()
+	if current_page == "Play": _play_focus().grab_focus()
 
-func _focus_join() -> void:
-	var code: LineEdit = $Pages/Join/Body/Code
-	if not code.text.is_empty():
-		$Pages/Join/Footer/Join.grab_focus()
-		return
-	code.grab_focus()
+func _play_focus() -> Control:
+	if _is_guest(): return _own_selector()
+	if mode == "join": return _join_focus()
+	if mode == "skirmish" or _friend_in(): return $Pages/Play/Footer/Start
+	if not _code.is_empty(): return get_node(MODE_BAR + "/Invite/Box/Copy")
+	return $Pages/Play/Footer/CancelConnect if _transport != null else $Pages/Play/Footer/TryAgain
+
+func _join_focus() -> Control:
+	var code: LineEdit = get_node(JOIN + "/Code")
+	if _transport != null: return get_node(JOIN + "/Buttons/Cancel")
+	if not code.text.is_empty(): return get_node(JOIN + "/Buttons/Join")
 	code.caret_column = code.text.length()
-
-static func _nav_of(page_name: String) -> String:
-	return "Play" if page_name == "Waiting" else page_name
+	return code
 
 func _fill_credits() -> void:
 	var text: RichTextLabel = $Pages/Credits/Body/Text
 	if text.text.is_empty():
 		text.text = Credits.text(FileAccess.get_file_as_string("res://audio/CREDITS.md"), FileAccess.get_file_as_string("res://data/maps/NOTICE.md"), Engine.get_license_text(), Engine.get_copyright_info(), Engine.get_license_info(), FileAccess.get_file_as_string("res://fonts/PublicSans-OFL.txt"))
 
+# The footer's buttons take their share of the line, so a status that would push them off wraps instead.
+func _status_budget(label: Label) -> float:
+	var budget: float = STATUS_WIDTH
+	if label.get_parent() != $Pages/Play/Footer: return budget
+	for button: Button in [$Pages/Play/Footer/Leave, $Pages/Play/Footer/CancelConnect, $Pages/Play/Footer/TryAgain]:
+		if button.visible: budget -= button.custom_minimum_size.x + $Pages/Play/Footer.get_theme_constant("separation")
+	return budget
+
 func _show_status(label: Label, text: String, error: bool = false) -> void:
 	label.text = text
 	label.theme_type_variation = &"FooterError" if error else &"FooterStatus"
 	var width: float = label.get_theme_font(&"font").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.get_theme_font_size(&"font_size")).x
-	var wide: bool = width > STATUS_WIDTH
+	var wide: bool = width > _status_budget(label)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if wide else TextServer.AUTOWRAP_OFF
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL if wide else Control.SIZE_SHRINK_BEGIN
 
+# Joining speaks under the code field, where the card's eye is; hosting and the guest view use the footer.
 func _status_label() -> Label:
-	return get_node("Pages/%s/Footer/Status" % _origin)
+	return get_node(JOIN + "/Message") if _on_card() else $Pages/Play/Footer/Status
+
+func _on_card() -> bool:
+	return _origin == "Join" and not _is_guest()
+
+func _show_message(text: String, error: bool = false) -> void:
+	var message: Label = get_node(JOIN + "/Message")
+	message.text = text
+	message.theme_type_variation = &"JoinError" if error else &"Hint"
+
+func _show_origin(text: String, error: bool = false) -> void:
+	if _on_card(): _show_message(text, error)
+	else: _show_status($Pages/Play/Footer/Status, text, error)
 
 func _set_shell_visible(shown: bool) -> void:
 	for each in SHELL: get_node(each).visible = shown
@@ -292,16 +677,15 @@ func _add_playtest() -> void:
 	if focus_cards.is_empty(): return
 	var panel := FocusCardView.new(focus_cards, PlaytestSession.open_count, _close_sitting, web)
 	add_child(panel)
-	var builds: Array[Button] = [$Pages/Play/ThisBuild, $Pages/Join/ThisBuild]
+	var build: Button = $Pages/Play/ThisBuild
 	var show_panel := func(open: bool) -> void:
-		for build: Button in builds: build.text = "This build: " + FocusCards.card(FocusCards.shown(), focus_cards).title
+		build.text = "This build: " + FocusCards.card(FocusCards.shown(), focus_cards).title
 		panel.visible = open
 		_set_shell_visible(not open)
 	show_panel.call(false)
-	for build: Button in builds:
-		build.visible = toggle.button_pressed
-		build.pressed.connect(show_panel.bind(true))
-		toggle.toggled.connect(build.set_visible)
+	build.visible = toggle.button_pressed
+	build.pressed.connect(show_panel.bind(true))
+	toggle.toggled.connect(build.set_visible)
 	panel.get_node("Box/Close").pressed.connect(show_panel.bind(false))
 
 func _add_fullscreen() -> void:
@@ -390,55 +774,86 @@ func _add_audio() -> void:
 	for title: String in ["MusicLabel", "EffectsLabel", "VoiceLabel", "MuteLabel"]: sliders.get_node(title).custom_minimum_size.x = 104.0
 	$Pages/Settings/Body/Audio.add_child(sliders)
 
-func _fill_factions() -> void:
-	var ids: Array = Registry.Factions.FACTIONS.keys()
+static func _faction_ids() -> Array[String]:
+	var ids: Array[String] = []
+	ids.assign(Registry.Factions.FACTIONS.keys())
 	ids.sort()
-	for selector: OptionButton in [$Pages/Play/Body/Own, $Pages/Join/Body/Own, $Pages/Play/Body/Bot, get_node(TEAM_BOTS[0]), get_node(TEAM_BOTS[1])]:
-		for id: String in ids:
-			selector.add_item(Registry.faction(id).display_name)
-			selector.set_item_metadata(selector.item_count - 1, id)
-		selector.select(maxi(ids.find(Registry.Factions.DEFAULT_FACTION), 0))
+	ids.append(RANDOM)
+	return ids
 
-func _faction(selector: OptionButton) -> String:
-	return selector.get_item_metadata(selector.selected)
+func _faction_selector(id: String) -> OptionButton:
+	var selector := OptionButton.new()
+	selector.name = "Faction"
+	selector.fit_to_longest_item = false
+	selector.custom_minimum_size.x = FACTION_WIDTH
+	selector.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for each: String in _faction_ids():
+		selector.add_item(_faction_name(each))
+		selector.set_item_metadata(selector.item_count - 1, each)
+	_select_id(selector, id)
+	return selector
+
+static func _faction_name(id: String) -> String:
+	return "Random" if id == RANDOM else Registry.faction(id).display_name
+
+# Random is resolved per match start, outside the simulation, so randi is fine here.
+static func _resolve(id: String) -> String:
+	if id != RANDOM: return id
+	var ids: Array[String] = _faction_ids()
+	ids.erase(RANDOM)
+	return ids[randi() % ids.size()]
 
 func _fill_maps() -> void:
-	var selector: OptionButton = $Pages/Play/Body/Map
-	# Only the full list shows the player's own pick as selected.
-	if selector.item_count == MatchSettings.PLAY_MAPS.size(): _map_pick = _map_id()
+	var selector: OptionButton = $Pages/Play/Body/MapColumn/Map
 	selector.clear()
 	for id: String in MatchSettings.PLAY_MAPS:
-		if opponent == "team" and _start_count(id) < TEAM_STARTS: continue
 		selector.add_item(MatchSettings.PLAY_MAPS[id])
 		selector.set_item_metadata(selector.item_count - 1, id)
-	_select_id(selector, _map_pick)
 
 func _map_id() -> String:
-	var selector: OptionButton = $Pages/Play/Body/Map
+	var selector: OptionButton = $Pages/Play/Body/MapColumn/Map
 	return selector.get_item_metadata(selector.selected)
 
-func _offline_setup() -> void:
+func _offline_setup() -> bool:
 	var id: String = _map_id()
-	LauncherSettings.save_picks({"faction": _faction($Pages/Play/Body/Own), "bot_faction": _faction($Pages/Play/Body/Bot), "map": id})
-	SkirmishMain.factions = {1: _faction($Pages/Play/Body/Own), 2: _faction($Pages/Play/Body/Bot)}
+	if lobby_bots.size() + 1 > _start_count(id):
+		log_error.call("Offline start refused: %d bots do not fit the %d starts of %s" % [lobby_bots.size(), _start_count(id), id])
+		return false
+	LauncherSettings.save_picks(_lobby_picks(id).merged({"faction": _own_pick}))
+	SkirmishMain.factions = {1: _resolve(_own_pick)}
+	for i in lobby_bots.size(): SkirmishMain.factions[i + 2] = _resolve(lobby_bots[i])
 	SkirmishMain.map_path = MatchSettings.map_path(id)
 	SkirmishMain.match_seed = randi()
-	SkirmishMain.starts = MatchSettings.starts(id, SkirmishMain.match_seed)
+	SkirmishMain.starts = MatchSettings.starts(id, SkirmishMain.match_seed, MatchSettings.teams(1, lobby_bots.size()))
+	return true
+
+# A host's 1v1 has no bots; the next Skirmish keeps the last bots instead of opening empty.
+func _lobby_picks(id: String) -> Dictionary:
+	var picks: Dictionary = {"map": id}
+	if not lobby_bots.is_empty(): picks["bots"] = lobby_bots.duplicate()
+	return picks
+
+func _on_start() -> void:
+	if mode == "skirmish":
+		if _offline_setup(): get_tree().change_scene_to_file(OFFLINE_SCENE)
+	elif _friend_in() and not _asked:
+		_send_setup(true)
+		_asked = true
+		_transport.send_text(Wire.encode({"type": "start_request"}))
+		_refresh_play()
 
 func _join() -> void:
 	if _transport != null: return
 	_origin = "Join"
-	var code: String = JoinLink.code($Pages/Join/Body/Code.text.strip_edges())
-	if code.is_empty(): _show_status($Pages/Join/Footer/Status, "Enter the 6-character match code", true)
+	var code: String = JoinLink.code_from(get_node(JOIN + "/Code").text)
+	if code.is_empty(): _show_message(LOOKALIKE if JoinLink.lookalike(get_node(JOIN + "/Code").text) else NEED_CODE, true)
 	else: _connect(code)
 
 func _cancel() -> void:
-	if _transport == null: return
-	_transport.close()
-	_fail(CANCELLED)
+	if _transport != null: _refuse(HOST_CANCELLED if _origin == "Play" else JOIN_CANCELLED)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and _transport != null and current_page != "Waiting":
+	if event.is_action_pressed("ui_cancel") and current_page == "Play" and _transport != null and _code.is_empty():
 		_cancel()
 		get_viewport().set_input_as_handled()
 
@@ -447,38 +862,41 @@ func _now_msec() -> int:
 
 func _show_connecting(now_msec: int) -> void:
 	var text := "Connecting… %d s" % floori(maxi(0, now_msec - _connect_msec) / 1000.0)
-	var label: Label = _status_label()
-	if label.text != text: _show_status(label, text)
+	if _status_label().text != text: _show_origin(text)
 
-func _show_countdown(now_msec: int) -> void:
-	var left: int = maxi(0, RelayTransport.LOBBY_EXPIRY_SEC - floori(maxi(0, now_msec - _welcome_msec) / 1000.0))
-	var text := "Match code [b][color=#ffffff]%s[/color][/b] · closes in %d:%02d" % [_code, floori(left / 60.0), left % 60]
-	if $Pages/Waiting/Footer/Status.text != text: $Pages/Waiting/Footer/Status.text = text
+func _timed(text: String, deadline_msec: int, now_msec: int) -> String:
+	var left: int = maxi(0, ceili((deadline_msec - now_msec) / 1000.0))
+	return text if left > CLOCK_FROM_SEC else text + CLOCK % [floori(left / 60.0), left % 60]
+
+# relay/room.go extendLobby: 15 minutes from the last settings, never past an hour from the room's creation.
+func _room_deadline() -> int:
+	return mini(_room_msec + RelayTransport.LOBBY_EXPIRY_SEC * 1000, _created_msec + RelayTransport.LOBBY_CAP_SEC * 1000)
+
+func _capped() -> bool:
+	return _room_msec >= 0 and _room_msec + RelayTransport.LOBBY_EXPIRY_SEC * 1000 > _created_msec + RelayTransport.LOBBY_CAP_SEC * 1000
 
 func _connect(code: String) -> void:
 	_match = code
-	_settings = {}
+	_reset_room()
 	_hello_sent = false
-	_welcome_msec = -1
 	_connect_msec = _now_msec()
 	_transport = RelayTransport.new(_clock)
 	var error: Error = _transport.connect_to(_relay_url())
 	if error != OK:
-		_fail("Cannot connect to relay")
+		_fail(UNREACHABLE % _relay_url())
 		return
-	_show_connecting(_connect_msec)
 	_set_busy(true)
+	_show_connecting(_connect_msec)
 	set_process(true)
 
 func _set_busy(busy: bool) -> void:
-	for path: String in ["Play", "Join"]: get_node("Pages/%s/Footer/CancelConnect" % path).visible = busy
-	for button_name: String in NAV_PAGES + ["Quit"]: _lock(get_node("Sidebar/Nav/" + button_name), busy)
-	for path: String in ["Play/Footer/Start", "Play/Footer/Create", "Play/Body/Advanced/RelayUrl", "Join/Body/Advanced/RelayUrl", "Join/Body/Code", "Join/Footer/Join", "Play/Body/Own", "Join/Body/Own", "Play/Body/Bot", "Play/Body/Map", "Play/Body/Opponent/BotToggle", "Play/Body/Opponent/FriendToggle", "Play/Body/Versus/NoneToggle", "Play/Body/Versus/BotsToggle", "Play/Body/TeamBots/Bot3", "Play/Body/TeamBots/Bot4"]:
-		var control: Control = get_node("Pages/" + path)
-		if control is BaseButton: _lock(control, busy)
-		else: control.editable = not busy
-	# The pressed Create or Join turns disabled, so focus would sit on a dead button.
-	get_node("Pages/%s/Footer/%s" % [_origin, "CancelConnect" if busy else ("Join" if _origin == "Join" else "Create")]).grab_focus()
+	# Settings and Credits stay open while a room is; quitting would drop the friend unasked.
+	_lock(get_node("Sidebar/Nav/Quit"), busy)
+	_lock(get_node(JOIN + "/Buttons/Join"), busy)
+	for path: String in [RELAY_FIELD, JOIN + "/Code"]: get_node(path).editable = not busy
+	_refresh_play()
+	# The pressed Join game turns disabled; busy, the focus goes to Cancel.
+	_focus_primary()
 
 # Godot draws a disabled button in its disabled style even when pressed; the selected item must stay grey.
 func _lock(button: BaseButton, busy: bool) -> void:
@@ -486,133 +904,273 @@ func _lock(button: BaseButton, busy: bool) -> void:
 	if busy and button.button_pressed: button.add_theme_stylebox_override("disabled", button.get_theme_stylebox("pressed"))
 	else: button.remove_theme_stylebox_override("disabled")
 
+func _reset_room() -> void:
+	_lockstep = null
+	_settings = {}
+	_code = ""
+	_seat = 0
+	_dirty = false
+	_friend = false
+	_asked = false
+	_cue = ""
+	_picks.clear()
+	_pick_dirty = false
+	_sent_pick = ""
+	get_node(MODE_BAR + "/Invite/CopyReset").stop()
+	_copy_reset()
+
+# Stopping or cancelling goes back to Skirmish; a failed room stays on Host game with the reason and Try again.
 func _fail(reason: String) -> void:
-	_show_status(_status_label(), reason, reason != CANCELLED)
-	_play_error = _origin == "Play"
 	_transport = null
-	if current_page == "Waiting": show_page(_origin)
+	_reset_room()
+	_confirm.hide()
+	var chosen: bool = reason in [HOST_CANCELLED, JOIN_CANCELLED, HOSTING_STOPPED, LEFT_GAME]
+	if mode == "host" and chosen: set_mode("skirmish")
+	_play_error = _origin == "Play"
+	if current_page != "Play": show_page("Play")
 	_set_busy(false)
+	_show_origin(reason, not chosen)
+	if _on_card() and not chosen: _select_code()
 	set_process(false)
+
+# After a failed join the code is ready to retype or paste over.
+func _select_code() -> void:
+	var code: LineEdit = get_node(JOIN + "/Code")
+	code.grab_focus()
+	code.select_all()
 
 func _process(_delta: float) -> void:
 	if _transport == null: return
 	var frames: PackedStringArray = _transport.poll()
-	if _transport.is_open() and not _hello_sent:
-		_hello_sent = true
-		var hello: Dictionary = {"type": "hello", "protocol": Wire.PROTOCOL, "build": str(ProjectSettings.get_setting("application/config/version")), "match": _match}
-		if _match.is_empty():
-			_settings = MatchSettings.for_map(_map_id(), _team_bots())
-			hello["settings"] = _settings
-		_transport.send_text(Wire.encode(hello))
+	if _transport.is_open() and not _hello_sent: _send_hello()
 	for text in frames:
 		if _lockstep != null: _lockstep.receive(text)
 		elif not _handle(text): return
-	if _transport.closed() or _transport.silent(int(_clock.call())): _fail("Connection to relay lost")
-	elif _transport != null: _show_ticking()
+	if _lockstep != null: return
+	if _transport.closed() or _transport.silent(int(_clock.call())): _fail("Connection to relay lost" if _seat != 0 else UNREACHABLE % _relay_url())
+	else:
+		_send_setup()
+		_send_pick()
+		_show_ticking()
+
+func _send_hello() -> void:
+	_hello_sent = true
+	var hello: Dictionary = {"type": "hello", "protocol": Wire.PROTOCOL, "build": _build(), "match": _match}
+	if _match.is_empty():
+		_settings = _snapshot()
+		_sent_msec = _now_msec()
+		_dirty = false
+		hello["settings"] = _settings
+	_transport.send_text(Wire.encode(hello))
+
+# The latest snapshot wins; force is Start match, which leaves no change behind and re-rolls Random bots.
+func _send_setup(force: bool = false) -> void:
+	if _seat != 1 or _asked: return
+	if not force and (not _dirty or _now_msec() - _sent_msec < SETTINGS_GAP_MSEC): return
+	_dirty = false
+	var snapshot: Dictionary = _snapshot(force)
+	if snapshot == _settings: return
+	_settings = snapshot
+	_sent_msec = _now_msec()
+	_room_msec = _sent_msec # relay/room.go extendLobby restarts the expiry on each settings
+	_transport.send_text(Wire.encode({"type": "settings", "settings": snapshot}))
+
+func _snapshot(reroll: bool = false) -> Dictionary:
+	var settings: Dictionary = MatchSettings.for_map(_map_id(), _bot_rows(reroll))
+	var players: Array = [{"player": 1, "faction": _own_pick}]
+	for seat: int in _picks: players.append({"player": seat, "faction": _picks[seat]})
+	settings["players"] = players
+	return settings
+
+func _send_pick(force: bool = false) -> void:
+	if not _pick_dirty or not _is_guest(): return
+	if not force and _now_msec() - _pick_msec < SETTINGS_GAP_MSEC: return
+	_pick_dirty = false
+	if _own_pick == _sent_pick: return
+	_sent_pick = _own_pick
+	_pick_msec = _now_msec()
+	_transport.send_text(Wire.encode({"type": "pick", "pick": {"faction": _own_pick}}))
+
+func _take_pick(message: Dictionary) -> void:
+	var faction: Variant = message.pick.get("faction")
+	if not message.has("seat") or not (faction is String and (Registry.Factions.FACTIONS.has(faction) or faction == RANDOM)): return
+	_picks[int(message.seat)] = faction
+	_dirty = true
+	_refresh_live()
+
+static func _host_pick(settings: Dictionary) -> String:
+	for row: Variant in settings.get("players", []):
+		if row is Dictionary and row.get("player") == 1 and row.get("faction") is String: return row.faction
+	return ""
+
+func _show_status_if_changed(label: Label, text: String) -> void:
+	if label.text != text: _show_status(label, text)
 
 func _show_ticking() -> void:
-	if _welcome_msec < 0: _show_connecting(_now_msec())
-	elif current_page == "Waiting": _show_countdown(_now_msec())
+	if _cue in [FRIEND_JOINED, FRIEND_LEFT] and _now_msec() - _cue_msec >= CUE_MSEC:
+		_cue = ""
+		$Pages/Play/Body/Players/Cue.visible = false
+	if _seat == 0: _show_connecting(_now_msec())
+	else: _show_status_if_changed($Pages/Play/Footer/Status, _play_status(_is_guest()))
 
 func _handle(text: String) -> bool:
 	var decoded: Dictionary = Wire.decode(text)
-	if not decoded.ok:
-		_transport.close()
-		_fail("Protocol error: " + decoded.error)
-		return false
+	if not decoded.ok: return _refuse("Protocol error: " + decoded.error)
 	var message: Dictionary = decoded.message
 	match message.type:
-		"welcome":
-			_seat = message.seat
-			_code = message.match
-			_transport.patient = true
-			_welcome_msec = _now_msec()
-			if _seat == 1:
-				_fill_waiting()
-				show_page("Waiting")
-			else:
-				_show_status(_status_label(), "Joined match %s" % message.match)
+		"welcome": return _welcome(message)
+		"joined": _set_friend(true, FRIEND_JOINED)
+		"left":
+			if message.seat == 1: return _refuse(HOST_GONE)
+			_picks.erase(message.seat)
+			_dirty = true
+			_set_friend(false, FRIEND_LEFT)
+		"pick" when _seat == 1: _take_pick(message)
+		"settings" when _is_guest(): return _take_settings(message.settings)
 		"start": return _start(message)
-		"error":
-			_transport.close()
-			_fail(_relay_reason(message.reason))
-			return false
-		_:
-			_transport.close()
-			_fail("Protocol error: unexpected " + message.type)
-			return false
+		"error": return _refuse(_relay_reason(message.reason))
+		_: return _refuse("Protocol error: unexpected " + message.type)
 	return true
+
+func _refuse(reason: String) -> bool:
+	_transport.close()
+	_fail(reason)
+	return false
+
+func _welcome(message: Dictionary) -> bool:
+	_seat = message.seat
+	_code = message.match
+	_transport.patient = true
+	_room_msec = _now_msec()
+	# The guest's welcome comes after the room's creation, so its cap is an upper bound.
+	_created_msec = _room_msec
+	if _is_guest():
+		if not _take_settings(message.get("settings", {})): return false
+		_pick_dirty = true
+		_send_pick(true)
+	_refresh_play()
+	_focus_primary()
+	return true
+
+func _set_friend(present: bool, cue: String) -> void:
+	if _seat != 1: return
+	_friend = present
+	# The relay ignores a start_request sent before the room is full, so a leave lets the host ask again.
+	if not present: _asked = false
+	_cue = cue
+	_cue_msec = _now_msec()
+	_refresh_live()
+	if present: _hand_start()
+
+# The friend arriving moves the focus to Start match unless the player is busy elsewhere, and asks for the window.
+func _hand_start() -> void:
+	var focused: Control = get_viewport().gui_get_focus_owner()
+	var idle: bool = focused == null or focused == get_node(MODE_BAR + "/Invite/Box/Copy") or focused.get_parent() == get_node(MODE_BAR)
+	if idle and current_page == "Play": $Pages/Play/Footer/Start.grab_focus()
+	_request_attention()
+
+func _request_attention() -> void:
+	if DisplayServer.get_name() != "headless": DisplayServer.window_request_attention()
+
+func _take_settings(settings: Dictionary) -> bool:
+	var reason: String = MatchSettings.refusal(settings)
+	if not reason.is_empty(): return _refuse(reason)
+	var first: bool = _settings.is_empty()
+	var line: String = "" if first else _change_line(_settings, settings)
+	if not line.is_empty(): _cue = line
+	_settings = settings
+	# The relay's expiry runs from the room's creation or last settings, not from this join, so no clock until a change.
+	_room_msec = -1 if first else _now_msec()
+	if not first: _refresh_live()
+	return true
+
+# A live change waits for an open dropdown list and moves the focus only when the player has lost it.
+func _refresh_live() -> void:
+	var open: PopupMenu = _open_list()
+	if open != null:
+		if not open.popup_hide.is_connected(_refresh_live): open.popup_hide.connect(_refresh_live, CONNECT_ONE_SHOT | CONNECT_DEFERRED)
+		return
+	_refresh_play()
+	var focused: Control = get_viewport().gui_get_focus_owner()
+	if focused == null or focused.is_queued_for_deletion(): _focus_primary()
+
+func _open_list() -> PopupMenu:
+	for selector: Node in get_node(PLAYERS).find_children("Faction", "OptionButton", true, false):
+		if (selector as OptionButton).get_popup().visible: return (selector as OptionButton).get_popup()
+	return null
+
+# One change is named; several at once read as one line.
+static func _change_line(before: Dictionary, after: Dictionary) -> String:
+	var changes: Array[String] = []
+	if before.get("map") != after.get("map"): changes.append(MAP_CHANGED % MatchSettings.PLAY_MAPS.get(after.map, after.map))
+	var old_bots: Array = before.get("bots", [])
+	var new_bots: Array = after.get("bots", [])
+	var faction := func(row: Dictionary) -> String: return RANDOM if row.get("random", false) else row.faction
+	var team_line: String = "" if old_bots.is_empty() == new_bots.is_empty() else (TEAM_SPLIT if new_bots.is_empty() else TEAM_JOINED)
+	var picked: String = _host_pick(after)
+	if picked != _host_pick(before) and not picked.is_empty(): changes.append(HOST_PICKED % _faction_name(picked))
+	if new_bots.size() > old_bots.size(): changes.append(BOT_ADDED)
+	elif new_bots.size() < old_bots.size(): changes.append(BOT_REMOVED)
+	elif old_bots.map(faction) != new_bots.map(faction): changes.append(BOT_FACTION)
+	if changes.is_empty(): return ""
+	return (SETUP_CHANGED if changes.size() > 1 else changes[0]) + team_line
 
 func _relay_reason(reason: String) -> String:
 	match reason:
-		"lobby expired": return DID_NOT_JOIN
-		"build mismatch": return VERSION_MISMATCH % ProjectSettings.get_setting("application/config/version")
-	return reason
+		"lobby expired":
+			var closed: String = ROOM_GONE if _capped() else ROOM_CLOSED
+			if _is_guest(): return closed
+			return closed + NEW_CODE if _friend_in() else DID_NOT_JOIN
+		"host left": return HOST_GONE
+		"build mismatch": return VERSION_MISMATCH % _build()
+		"unknown match": return NO_GAME % _match
+		"match full": return GAME_FULL
+		"protocol mismatch": return OLD_RELAY
+		"relay busy", "too many connections", "too many joins": return RELAY_BUSY
+	return RELAY_REFUSED % reason
 
-func _team_bots() -> Array:
-	var bots: Array = []
-	if opponent != "team": return bots
-	# Bot players follow the two relay seats.
-	for i in TEAM_BOTS.size(): bots.append({"player": 3 + i, "faction": _faction(get_node(TEAM_BOTS[i]))})
-	return bots
+# Test builds send version and commit, so two different test builds never share a room.
+func _build() -> String:
+	return PlaytestSettings.hello_build() if prerelease else str(ProjectSettings.get_setting("application/config/version"))
 
-func _fill_waiting() -> void:
-	var body: Control = $Pages/Waiting/Body
-	var own: OptionButton = $Pages/Play/Body/Own
-	var id: String = _map_id()
-	body.get_node("Left/Invite/Link").text = _copy_text()
-	body.get_node("Left/CodeHint").text = "Or tell them the code: [b][color=#ffffff]%s[/color][/b]" % _code
-	body.get_node("Left/One/Row/Faction").text = own.get_item_text(own.selected)
-	body.get_node("Right/Map/Box/Name").text = MatchSettings.PLAY_MAPS[id]
-	body.get_node("Right/Map/Box/Info").text = _map_info(id)
-	_fill_waiting_bots(body.get_node("Left"))
-	_show_countdown(_welcome_msec)
-
-func _fill_waiting_bots(left: Control) -> void:
-	var bots: Array = _settings.get("bots", [])
-	left.get_node("PlayersLabel").text = "Players" if bots.is_empty() else "Your team"
-	left.get_node("BotsLabel").visible = not bots.is_empty()
-	left.get_node("One").remove_theme_stylebox_override("panel")
-	# The hues the match will draw, so Neon players see the same colours here.
-	var neon: bool = GraphicsSettings.load_neon()
-	var hues: Array[Color] = Palette.OWNER_BRIGHT if neon else Palette.OWNER_BASE
-	if not bots.is_empty(): _paint_edge(left.get_node("One"), hues[0])
-	for i in WAITING_BOTS.size():
-		var row: Control = left.get_node(WAITING_BOTS[i])
-		row.visible = i < bots.size()
-		if not row.visible: continue
-		row.get_node("Row/Who").text = Registry.faction(bots[i].faction).display_name + " (bot)"
-		_paint_edge(row, hues[Palette.BOT_SLOTS[i][1 if neon else 0]])
-
-func _paint_edge(row: Control, colour: Color) -> void:
-	var style: StyleBoxFlat = row.get_theme_stylebox("panel").duplicate()
-	style.border_color = colour
-	row.add_theme_stylebox_override("panel", style)
+# Bot players follow the two relay seats; a Random bot keeps its roll until it changes or reroll is asked, and is marked so the guest reads Random.
+func _bot_rows(reroll: bool = false) -> Array:
+	var sent: Array = _settings.get("bots", [])
+	var rows: Array = []
+	for i in lobby_bots.size():
+		var row: Dictionary = {"player": 3 + i, "faction": lobby_bots[i]}
+		if lobby_bots[i] == RANDOM:
+			var kept: bool = not reroll and i < sent.size() and sent[i].get("random", false)
+			row.faction = sent[i].faction if kept else _roll.call()
+			row["random"] = true
+		rows.append(row)
+	return rows
 
 func _start(message: Dictionary) -> bool:
 	var reason: String = MatchSettings.refusal(message.settings, message.seats.size())
-	if not reason.is_empty():
-		_transport.close()
-		_fail(reason)
-		return false
+	if not reason.is_empty(): return _refuse(reason)
 	_lockstep = Lockstep.for_start(_seat, message)
-	var id: String = message.settings.map
-	var bots: Array[int] = MatchSettings.bot_players(message.settings)
+	_open_match(message)
+	return true
+
+func _open_match(start: Dictionary) -> void:
+	if _is_guest(): _request_attention()
+	var settings: Dictionary = start.settings
+	var id: String = settings.map
+	var bots: Array[int] = MatchSettings.bot_players(settings)
 	# Wire numbers arrive as floats; integer keys, or the bots never get their factions.
 	var factions: Dictionary = {}
-	for i in bots.size(): factions[bots[i]] = message.settings.bots[i].faction
-	var picks: Dictionary = {"faction": _faction($Pages/Play/Body/Own)}
-	if _seat == 1: picks["map"] = id
-	if _seat == 1 and bots.size() == LauncherSettings.TEAM_BOT_KEYS.size():
-		for i in bots.size(): picks[LauncherSettings.TEAM_BOT_KEYS[i]] = factions[bots[i]]
+	for i in bots.size(): factions[bots[i]] = settings.bots[i].faction
+	var picks: Dictionary = {"faction": _own_pick}
+	if _seat == 1: picks.merge(_lobby_picks(id))
 	LauncherSettings.save_picks(picks)
 	SkirmishMain.factions = factions
 	SkirmishMain.map_path = MatchSettings.map_path(id)
-	SkirmishMain.match_seed = message.seed
-	SkirmishMain.starts = MatchSettings.starts(id, message.seed, MatchSettings.teams(message.seats.size(), bots.size()))
+	SkirmishMain.match_seed = start.seed
+	SkirmishMain.starts = MatchSettings.starts(id, start.seed, MatchSettings.teams(start.seats.size(), bots.size()))
+	set_process(false)
 	var game: Node = OnlineScene.instantiate()
-	game.setup(_transport, _lockstep, _seat, _faction($Pages/Play/Body/Own))
+	game.setup(_transport, _lockstep, _seat, _resolve(_own_pick))
 	get_tree().root.add_child(game)
 	get_tree().current_scene = game
 	queue_free()
-	return true

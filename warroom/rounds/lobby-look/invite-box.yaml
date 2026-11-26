@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How does the invite code box look after the press?
+why: >-
+  Drawn on Host game with two bots. Before the press (first state) the Mode row's right end holds
+  "Copy invite code" with "Map and bots are fixed once you have the code." beside it; the same in
+  every option. The press opens the room, copies the code and shows the box with "Copied" for 2 s
+  (second state); the setup turns to text with one line saying why, and the other modes grey out
+  ("Stop hosting first"). Then Copy code (third), and the
+  box stays after your friend joined (fourth). The box's tooltip stays "Send this code to your
+  friend. They enter it under Join game." (the earlier round's answer). D is that earlier answer, the
+  lobby round's code field, for comparison.
+look: Whether the code is the first thing you read in the box, and whether its right part reads as a button.
+controls:
+  state: [before, copied, later, friend]
+rec: B
+recWhy: >-
+  it keeps your box's shape exactly and adds what the earlier round decided, a check on "Copied";
+  the copy icon lets the segment read as a button before you read its label. A is your box as drawn,
+  with "Copied" as plain text. C reads best from across the room, but the label above makes the Mode
+  row taller than the mode buttons. D is smaller and lighter; the code does not read as a box of its own.
+neutral: None of these
+ref:
+  label: 'Today: the slice-1 invite'
+  img: docs/images/lobby-look-round/today-invite.webp
+options:
+  A:
+    name: Your joined box, as drawn
+    render: {params: {box: owner}}
+    sees: 'One box: dark well, muted "Invite code", bold K7Q2XD, a lighter Copy code segment with its own left border, cyan text; "Copied" as text.'
+    notes: Your picture, exactly.
+  B:
+    name: Your box with a copy icon and a check
+    render: {params: {box: icon}}
+    sees: The same box; the segment has a copy icon before Copy code, and a check before Copied.
+    notes: Adds the earlier round's check.
+  C:
+    name: Larger code, label above the box
+    render: {params: {box: big}}
+    sees: INVITE CODE as a small label above; inside the box a 22 px code with wider spacing and the Copy code segment.
+    notes: The code reads largest; the Mode row grows taller.
+  D:
+    name: The lobby round's code field
+    render: {params: {box: field}}
+    sees: INVITE CODE above a dark field with the code and a small cyan copy icon with Copy; Copied with a check.
+    notes: The earlier answer, for comparison.

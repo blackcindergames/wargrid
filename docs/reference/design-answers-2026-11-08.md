@@ -1802,6 +1802,42 @@ War Room round `lobby` (`warroom/rounds/lobby/`, pictures in `docs/images/lobby-
 - **Defaults stated in the round, kept:** a joining friend lands on the host's team when bots hold the other side and on the other team in a 1v1; the host moves players with the row's ••• menu; leaving with a friend in asks first ("Switch to Skirmish?"); the online way out is "Stop hosting"; Start match stays locked while the open slot waits; a map with fewer starts than players asks first ("Switch to Dry Wells?") and removes the extra bots; maps with fewer starts than the humans present are greyed in the picker.
 - **Open for the build:** which team a bot added with + Add bot joins (allied bots stay the Later item Team up with a bot); whether changing the map after the friend joined needs a protocol message (P11 lists it).
 
+## Lobby build answers (user, 2026-11-26)
+
+The one page's "Open for the build", answered before P20's first slice after a player-experience pass, the game director and three research passes (reference engines, web; private).
+
+- **Hold before Start match (C):** the relay starts a room the moment it fills (`relay/room.go`), so the launcher keeps the lobby open after the relay's `start`; the host's Start match opens the match and the guest's window follows when the host's first lockstep frame arrives. No relay or protocol change. The signal works for any seat count, but friends arriving one by one and per-match seat counts still need relay protocol 3 or P11's lobby service, which replaces the signal and keeps the screens (confirmed, user, 2026-11-26). A headless two-client test with a late host start runs first; if it fails, fall back to holding in the faction step with lockstep running.
+- **Lock (at Get invite code):** choosing Host game only switches the page; the code slot shows "Get invite code", which opens the room and locks map, teams and bots (they turn to text with one line saying why); each player's own faction stays open until Start match. P11 unlocks; there any host change clears everyone's ready (OpenRA, 0 A.D., Warzone 2100 and s25client all do this).
+- **+ Add bot (side without humans):** offline matches become 1 against several bots in this slice. No team move for bots in P20: the button says it adds an enemy bot and the bot row's ••• menu removes it; a night spike sizes Team up with a bot, since the bots already pick friend and foe by team.
+
+## Lobby look after the first bot match (user, 2026-11-26)
+
+The owner played a bot match on slice 1 ("the rest looks fine") and asked for changes; a UI/UX pass, the player-experience reviewer, the game director and a research pass (private) answered first.
+
+- **Look:** the launcher moves to the prototype's navy and cyan look with the War Room picture's density (`docs/images/lobby-round/lobby.html` CSS) in P20. This replaces the P2.1 rule "the minimal set keeps today's grey" for the launcher and pulls the launcher half of One look from menu to match into P20. Faction emblems stay out (none exist yet).
+- **Invite:** one press, "Copy invite code", opens the room, locks the setup and copies the code; a line before the press says the map and bots are fixed once there is a code. A web check of the clipboard after the relay round trip comes first; the visible Copy label is the fallback. The box takes the shape of the owner's joined box (muted "Invite code", bold code, a "Copy code" segment); the exact look is picked in a War Room round with a few variants.
+- **Remove a bot:** an X replaces the ••• menu (one click, no confirm, tooltip "Remove bot"); its hover look is picked in the same round. Every row reserves the action column, so the faction dropdowns line up.
+- **Join:** the sidebar's Join page goes; Join game becomes the third mode in the Mode row (Skirmish, Host game, Join game). The round shows it.
+- **Decided by Claude, not asked:** the count line names the limit when + Add enemy bot is greyed (a bigger map fits more bots; 1 kept for your friend; online games take up to 2 bots), with the same text as the button's tooltip.
+
+## Lobby look round (user, 2026-11-26)
+
+War Room round `lobby-look` (`warroom/rounds/lobby-look/`, pictures in `docs/images/lobby-look-round/`), blocking, after a player-experience pass; all three picks are the recommendation.
+
+- **Remove (A):** a grey X that brightens on hover, in the action column every row reserves; tooltip "Remove bot", one click, no confirm.
+- **Invite box (B):** the owner's joined box ("Invite code", bold code, "Copy code" segment) with a copy icon, turning into "Copied" with a check.
+- **Join game (C):** a centred card, no slot list until joined. Owner's note: the card does not ask for the faction; the player picks it on the next screen (the joined guest view). The owner's reference for the card (private) is a small dialog: "Join a game", "Enter the invite code from your friend.", an "Invite code" field, Cancel and Join game.
+
+## Live room in P20 (user, 2026-11-26)
+
+After the look round the owner reopened hosting: the code should appear when Host game is clicked, may be shared by voice or chat (Copy is optional), and re-creating rooms on a settings change is rejected. An architect pass, a research pass (Steam, Photon, Unity, PlayFab, Epic lobbies; OpenRA and 0 A.D. code), the game director and the player-experience reviewer agreed on the standard lobby pattern (private).
+
+- **Live room (design 1, protocol 3):** reverses "no relay or protocol change in P20" and the lock at Get invite code (Lobby build answers). Host game opens the room at once and the code stays until Stop hosting; the relay stores the host's settings (host-only `settings` message, forwarded to the other seats; `welcome` carries the current settings; a `joined` message tells seats already in the room); the room starts on the host's `start_request`, not when it fills; a guest leaving before start frees the seat for the same code; the host leaving closes the room; each settings change restarts the idle expiry up to a cap. Hold C retires. The relay serves protocol 2 and 3 rooms side by side. P11 keeps ready-up, humans on both sides and colour pick; its backend choice stays open (option A keeps all of this, option B removes about 90 relay lines).
+- **Friend's view:** updates live with one line naming each change; the friend's faction pick survives setup changes; both views say who can start.
+- **Factions visible both ways (user, 2026-11-26, owner's look):** each player sees the other's faction live before Start match: the host's pick rides in the settings snapshot; the friend's pick reaches the host through a guest-to-host message in protocol 3 (added before the relay deploy), and the host folds it into the snapshot so the match start carries every faction. Random shows as Random.
+- **Theme split for now (user, 2026-11-26):** the navy look lives in `game/ui/launcher_theme.tres` on the launcher scene only; the project theme is `game/ui/game_theme.tres` (the match keeps its look). The two rejoin into one theme when One look from menu to match takes its match half.
+- **Later, not P20:** Play again returning both players to the lobby with the same code (P9 or after the friend evening).
+
 ## Battlefield art round (user, 2026-11-26)
 
 War Room round `battlefield-art` (`warroom/rounds/battlefield-art/`, pictures in `docs/images/map-art/source/` and `docs/images/art-direction-study/`), advisory input to Map life; no package started.

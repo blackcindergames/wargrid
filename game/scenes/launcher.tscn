@@ -1,41 +1,44 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/launcher.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/advanced_fold.tscn" id="3"]
-[ext_resource type="Script" path="res://scripts/presentation/dashed_panel.gd" id="4"]
+[ext_resource type="Theme" path="res://ui/launcher_theme.tres" id="theme"]
+[ext_resource type="Script" path="res://scripts/presentation/map_preview.gd" id="5"]
 
 [sub_resource type="ButtonGroup" id="nav"]
+
+[sub_resource type="StyleBoxEmpty" id="flush"]
 
 [node name="Launcher" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+theme = ExtResource("theme")
 script = ExtResource("1")
 
 [node name="SidebarBg" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 9
 anchor_bottom = 1.0
-offset_right = 232.0
+offset_right = 216.0
 mouse_filter = 2
-color = Color(0.165, 0.165, 0.165, 1)
+color = Color(0.0470588, 0.0784314, 0.101961, 1)
 
 [node name="ContentBg" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 232.0
+offset_left = 216.0
 mouse_filter = 2
-color = Color(0.29, 0.29, 0.29, 1)
+color = Color(0.0705882, 0.109804, 0.141176, 1)
 
 [node name="Sidebar" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 9
 anchor_bottom = 1.0
-offset_left = 16.0
-offset_right = 216.0
+offset_left = 14.0
+offset_right = 202.0
 
 [node name="Logo" type="Label" parent="Sidebar"]
 layout_mode = 2
@@ -45,7 +48,7 @@ theme_type_variation = &"Logo"
 [node name="Nav" type="VBoxContainer" parent="Sidebar"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 2
 
 [node name="Play" type="Button" parent="Sidebar/Nav"]
 layout_mode = 2
@@ -55,14 +58,6 @@ button_group = SubResource("nav")
 text = "Play"
 alignment = 0
 button_pressed = true
-
-[node name="Join" type="Button" parent="Sidebar/Nav"]
-layout_mode = 2
-theme_type_variation = &"NavButton"
-toggle_mode = true
-button_group = SubResource("nav")
-text = "Join"
-alignment = 0
 
 [node name="Divider" type="HSeparator" parent="Sidebar/Nav"]
 layout_mode = 2
@@ -121,10 +116,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 232.0
-theme_override_constants/margin_left = 44
-theme_override_constants/margin_top = 36
-theme_override_constants/margin_right = 44
+offset_left = 216.0
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 40
 theme_override_constants/margin_bottom = 10
 
 [node name="Play" type="VBoxContainer" parent="Pages"]
@@ -138,170 +133,260 @@ theme_type_variation = &"PageTitle"
 
 [node name="Subtitle" type="Label" parent="Pages/Play"]
 layout_mode = 2
-text = "Set up a match against a bot or a friend."
+text = "Play against bots on this computer."
 theme_type_variation = &"Subtitle"
 
-[node name="Body" type="GridContainer" parent="Pages/Play"]
+[node name="ModeBar" type="HBoxContainer" parent="Pages/Play"]
 layout_mode = 2
-size_flags_vertical = 3
-size_flags_horizontal = 0
-columns = 2
-theme_override_constants/h_separation = 36
-theme_override_constants/v_separation = 8
+custom_minimum_size = Vector2(0, 44)
+theme_override_constants/separation = 5
 
-[node name="OwnLabel" type="Label" parent="Pages/Play/Body"]
+[node name="ModeLabel" type="Label" parent="Pages/Play/ModeBar"]
 layout_mode = 2
+custom_minimum_size = Vector2(54, 0)
+size_flags_vertical = 4
 theme_type_variation = &"FieldLabel"
-text = "You"
+theme_override_styles/normal = SubResource("flush")
+text = "Mode"
+uppercase = true
+vertical_alignment = 1
 mouse_filter = 2
 
-[node name="MapLabel" type="Label" parent="Pages/Play/Body"]
+[node name="Skirmish" type="Button" parent="Pages/Play/ModeBar"]
+layout_mode = 2
+size_flags_vertical = 4
+custom_minimum_size = Vector2(120, 0)
+theme_type_variation = &"ToggleButton"
+toggle_mode = true
+text = "Skirmish"
+
+[node name="Host" type="Button" parent="Pages/Play/ModeBar"]
+layout_mode = 2
+size_flags_vertical = 4
+custom_minimum_size = Vector2(120, 0)
+theme_type_variation = &"ToggleButton"
+toggle_mode = true
+text = "Host game"
+
+[node name="Join" type="Button" parent="Pages/Play/ModeBar"]
+layout_mode = 2
+size_flags_vertical = 4
+custom_minimum_size = Vector2(120, 0)
+theme_type_variation = &"ToggleButton"
+toggle_mode = true
+text = "Join game"
+
+[node name="Fill" type="Control" parent="Pages/Play/ModeBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Invite" type="PanelContainer" parent="Pages/Play/ModeBar"]
+layout_mode = 2
+size_flags_vertical = 4
+custom_minimum_size = Vector2(0, 42)
+theme_type_variation = &"InviteBox"
+visible = false
+
+[node name="Box" type="HBoxContainer" parent="Pages/Play/ModeBar/Invite"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Label" type="Label" parent="Pages/Play/ModeBar/Invite/Box"]
+layout_mode = 2
+theme_type_variation = &"InviteLabel"
+text = "Invite code"
+vertical_alignment = 1
+mouse_filter = 2
+
+[node name="Code" type="Label" parent="Pages/Play/ModeBar/Invite/Box"]
+layout_mode = 2
+theme_type_variation = &"InviteCode"
+vertical_alignment = 1
+mouse_filter = 2
+
+[node name="Copy" type="Button" parent="Pages/Play/ModeBar/Invite/Box"]
+layout_mode = 2
+custom_minimum_size = Vector2(124, 0)
+theme_type_variation = &"InviteCopy"
+text = "Copy code"
+
+[node name="CopyReset" type="Timer" parent="Pages/Play/ModeBar/Invite"]
+wait_time = 2.0
+one_shot = true
+
+[node name="Body" type="HBoxContainer" parent="Pages/Play"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 28
+
+[node name="Players" type="VBoxContainer" parent="Pages/Play/Body"]
+layout_mode = 2
+custom_minimum_size = Vector2(544, 0)
+theme_override_constants/separation = 8
+
+[node name="Teams" type="ScrollContainer" parent="Pages/Play/Body/Players"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+follow_focus = true
+
+[node name="List" type="VBoxContainer" parent="Pages/Play/Body/Players/Teams"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Team1" type="VBoxContainer" parent="Pages/Play/Body/Players/Teams/List"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Head" type="Label" parent="Pages/Play/Body/Players/Teams/List/Team1"]
+layout_mode = 2
+theme_type_variation = &"FieldLabel"
+text = "Team 1"
+uppercase = true
+mouse_filter = 2
+
+[node name="Team2" type="VBoxContainer" parent="Pages/Play/Body/Players/Teams/List"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Head" type="Label" parent="Pages/Play/Body/Players/Teams/List/Team2"]
+layout_mode = 2
+theme_type_variation = &"FieldLabel"
+text = "Team 2"
+uppercase = true
+mouse_filter = 2
+
+[node name="Count" type="HBoxContainer" parent="Pages/Play/Body/Players"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Line" type="Label" parent="Pages/Play/Body/Players/Count"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Hint"
+vertical_alignment = 1
+mouse_filter = 2
+autowrap_mode = 3
+
+[node name="AddBot" type="Button" parent="Pages/Play/Body/Players/Count"]
+layout_mode = 2
+text = "+ Add enemy bot"
+
+[node name="Cue" type="Label" parent="Pages/Play/Body/Players"]
+layout_mode = 2
+theme_type_variation = &"Hint"
+mouse_filter = 2
+autowrap_mode = 3
+visible = false
+
+[node name="MapColumn" type="VBoxContainer" parent="Pages/Play/Body"]
+layout_mode = 2
+custom_minimum_size = Vector2(380, 0)
+theme_override_constants/separation = 8
+
+[node name="MapLabel" type="Label" parent="Pages/Play/Body/MapColumn"]
 layout_mode = 2
 theme_type_variation = &"FieldLabel"
 text = "Map"
 mouse_filter = 2
+uppercase = true
 
-[node name="Own" type="OptionButton" parent="Pages/Play/Body"]
+[node name="Map" type="OptionButton" parent="Pages/Play/Body/MapColumn"]
 layout_mode = 2
-custom_minimum_size = Vector2(544, 0)
-tooltip_text = "Your faction"
+tooltip_text = "The map sets how many can play: one player per start"
 
-[node name="Map" type="OptionButton" parent="Pages/Play/Body"]
+[node name="MapName" type="Label" parent="Pages/Play/Body/MapColumn"]
 layout_mode = 2
-custom_minimum_size = Vector2(380, 0)
-tooltip_text = "Map for a bot match and Create match; Join plays the host's map"
-
-[node name="OpponentLabel" type="Label" parent="Pages/Play/Body"]
-layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "Mode"
-mouse_filter = 2
-
-[node name="MapInfo" type="Label" parent="Pages/Play/Body"]
-layout_mode = 2
-size_flags_vertical = 0
-theme_type_variation = &"Hint"
-
-[node name="Opponent" type="HBoxContainer" parent="Pages/Play/Body"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="BotToggle" type="Button" parent="Pages/Play/Body/Opponent"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"ToggleButton"
-toggle_mode = true
-text = "vs Bot"
-
-[node name="FriendToggle" type="Button" parent="Pages/Play/Body/Opponent"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"ToggleButton"
-toggle_mode = true
-text = "vs Friend"
-
-[node name="Spacer1" type="Control" parent="Pages/Play/Body"]
-layout_mode = 2
-
-[node name="MapHidden" type="Label" parent="Pages/Play/Body"]
-layout_mode = 2
-size_flags_vertical = 0
-theme_type_variation = &"Hint"
-mouse_filter = 2
-visible = false
-
-[node name="Versus" type="HBoxContainer" parent="Pages/Play/Body"]
-layout_mode = 2
-theme_override_constants/separation = 6
-visible = false
-
-[node name="Label" type="Label" parent="Pages/Play/Body/Versus"]
-layout_mode = 2
-custom_minimum_size = Vector2(96, 0)
-theme_type_variation = &"FieldLabel"
-text = "Opponents"
+custom_minimum_size = Vector2(0, 40)
+theme_type_variation = &"PanelTitle"
 vertical_alignment = 1
 mouse_filter = 2
-
-[node name="NoneToggle" type="Button" parent="Pages/Play/Body/Versus"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"ToggleButton"
-toggle_mode = true
-text = "none"
-
-[node name="BotsToggle" type="Button" parent="Pages/Play/Body/Versus"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"ToggleButton"
-toggle_mode = true
-text = "2 bots"
-
-[node name="Spacer5" type="Control" parent="Pages/Play/Body"]
-layout_mode = 2
 visible = false
 
-[node name="BotLabel" type="Label" parent="Pages/Play/Body"]
+[node name="Preview" type="Control" parent="Pages/Play/Body/MapColumn"]
 layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "Bot"
+custom_minimum_size = Vector2(380, 130)
+mouse_filter = 2
+script = ExtResource("5")
+
+[node name="MapInfo" type="Label" parent="Pages/Play/Body/MapColumn"]
+layout_mode = 2
+theme_type_variation = &"Hint"
 mouse_filter = 2
 
-[node name="Spacer2" type="Control" parent="Pages/Play/Body"]
+[node name="MapHint" type="Label" parent="Pages/Play/Body/MapColumn"]
 layout_mode = 2
-
-[node name="Bot" type="OptionButton" parent="Pages/Play/Body"]
-layout_mode = 2
-tooltip_text = "Opponent faction (bot match only)"
-
-[node name="Spacer3" type="Control" parent="Pages/Play/Body"]
-layout_mode = 2
-
-[node name="OpenSlot" type="PanelContainer" parent="Pages/Play/Body"]
-layout_mode = 2
-visible = false
-script = ExtResource("4")
-theme_type_variation = &"OpenSlotGap"
-
-[node name="Row" type="HBoxContainer" parent="Pages/Play/Body/OpenSlot"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Title" type="Label" parent="Pages/Play/Body/OpenSlot/Row"]
-layout_mode = 2
-text = "Open slot"
-
-[node name="Hint" type="Label" parent="Pages/Play/Body/OpenSlot/Row"]
-layout_mode = 2
-text = "Your friend picks their own faction."
 theme_type_variation = &"Hint"
-
-[node name="Spacer4" type="Control" parent="Pages/Play/Body"]
-layout_mode = 2
+text = "Starts are drawn when the match begins."
+mouse_filter = 2
 visible = false
 
-[node name="TeamBots" type="VBoxContainer" parent="Pages/Play/Body"]
+[node name="JoinCard" type="MarginContainer" parent="Pages/Play"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_top = 44
+visible = false
+
+[node name="Card" type="PanelContainer" parent="Pages/Play/JoinCard"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+custom_minimum_size = Vector2(420, 0)
+theme_type_variation = &"JoinCard"
+
+[node name="Box" type="VBoxContainer" parent="Pages/Play/JoinCard/Card"]
 layout_mode = 2
 theme_override_constants/separation = 8
-visible = false
 
-[node name="Label" type="Label" parent="Pages/Play/Body/TeamBots"]
+[node name="Title" type="Label" parent="Pages/Play/JoinCard/Card/Box"]
+layout_mode = 2
+theme_type_variation = &"CardTitle"
+text = "Join a game"
+
+[node name="Hint" type="Label" parent="Pages/Play/JoinCard/Card/Box"]
+layout_mode = 2
+theme_type_variation = &"Subtitle"
+text = "Enter the invite code from your friend."
+autowrap_mode = 3
+
+[node name="CodeLabel" type="Label" parent="Pages/Play/JoinCard/Card/Box"]
 layout_mode = 2
 theme_type_variation = &"FieldLabel"
-text = "Enemy bots"
+theme_override_styles/normal = SubResource("flush")
+text = "Invite code"
+uppercase = true
 mouse_filter = 2
 
-[node name="Bot3" type="OptionButton" parent="Pages/Play/Body/TeamBots"]
+[node name="Code" type="LineEdit" parent="Pages/Play/JoinCard/Card/Box" groups=["join_code"]]
 layout_mode = 2
-tooltip_text = "First enemy bot's faction"
+custom_minimum_size = Vector2(0, 42)
+theme_type_variation = &"CodeField"
+placeholder_text = "6 letters and digits"
+max_length = 64
 
-[node name="Bot4" type="OptionButton" parent="Pages/Play/Body/TeamBots"]
+[node name="Message" type="Label" parent="Pages/Play/JoinCard/Card/Box"]
 layout_mode = 2
-tooltip_text = "Second enemy bot's faction"
+custom_minimum_size = Vector2(0, 18)
+theme_type_variation = &"Hint"
+autowrap_mode = 3
 
-[node name="Advanced" parent="Pages/Play/Body" instance=ExtResource("3")]
+[node name="Buttons" type="HBoxContainer" parent="Pages/Play/JoinCard/Card/Box"]
 layout_mode = 2
-visible = false
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="Cancel" type="Button" parent="Pages/Play/JoinCard/Card/Box/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+theme_type_variation = &"GhostButton"
+text = "Cancel"
+
+[node name="Join" type="Button" parent="Pages/Play/JoinCard/Card/Box/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(170, 48)
+theme_type_variation = &"PrimaryButton"
+text = "Join game"
 
 [node name="ThisBuild" type="Button" parent="Pages/Play"]
 layout_mode = 2
@@ -330,6 +415,13 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.01
 
+[node name="Leave" type="Button" parent="Pages/Play/Footer"]
+layout_mode = 2
+size_flags_vertical = 4
+custom_minimum_size = Vector2(140, 46)
+text = "Stop hosting"
+visible = false
+
 [node name="CancelConnect" type="Button" parent="Pages/Play/Footer"]
 layout_mode = 2
 size_flags_vertical = 4
@@ -337,138 +429,19 @@ custom_minimum_size = Vector2(140, 46)
 text = "Cancel"
 visible = false
 
-[node name="Start" type="Button" parent="Pages/Play/Footer"]
-layout_mode = 2
-size_flags_vertical = 4
-custom_minimum_size = Vector2(170, 52)
-theme_type_variation = &"PrimaryButton"
-text = "Start match"
-
-[node name="Create" type="Button" parent="Pages/Play/Footer"]
-layout_mode = 2
-size_flags_vertical = 4
-custom_minimum_size = Vector2(170, 52)
-theme_type_variation = &"PrimaryButton"
-text = "Create match"
-visible = false
-
-[node name="Join" type="VBoxContainer" parent="Pages"]
-layout_mode = 2
-size_flags_horizontal = 0
-visible = false
-
-[node name="Title" type="Label" parent="Pages/Join"]
-layout_mode = 2
-text = "Join a match"
-theme_type_variation = &"PageTitle"
-
-[node name="Subtitle" type="Label" parent="Pages/Join"]
-layout_mode = 2
-text = "Enter the code your friend sent you."
-theme_type_variation = &"Subtitle"
-
-[node name="Body" type="GridContainer" parent="Pages/Join"]
-layout_mode = 2
-size_flags_vertical = 3
-size_flags_horizontal = 0
-columns = 2
-theme_override_constants/h_separation = 36
-theme_override_constants/v_separation = 8
-
-[node name="CodeLabel" type="Label" parent="Pages/Join/Body"]
-layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "Match code"
-mouse_filter = 2
-
-[node name="MapLabel" type="Label" parent="Pages/Join/Body"]
-layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "Map"
-mouse_filter = 2
-
-[node name="Code" type="LineEdit" parent="Pages/Join/Body" groups=["join_code"]]
-layout_mode = 2
-custom_minimum_size = Vector2(544, 50)
-theme_override_font_sizes/font_size = 16
-placeholder_text = "Match code"
-max_length = 6
-
-[node name="MapHint" type="Label" parent="Pages/Join/Body"]
-layout_mode = 2
-text = "The host chooses the map."
-theme_type_variation = &"Hint"
-custom_minimum_size = Vector2(380, 0)
-size_flags_vertical = 0
-
-[node name="CodeHint" type="Label" parent="Pages/Join/Body"]
-layout_mode = 2
-text = "Opened a join link? The code is already filled in."
-theme_type_variation = &"Hint"
-
-[node name="Spacer1" type="Control" parent="Pages/Join/Body"]
-layout_mode = 2
-
-[node name="OwnLabel" type="Label" parent="Pages/Join/Body"]
-layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "You"
-mouse_filter = 2
-
-[node name="Spacer2" type="Control" parent="Pages/Join/Body"]
-layout_mode = 2
-
-[node name="Own" type="OptionButton" parent="Pages/Join/Body"]
-layout_mode = 2
-custom_minimum_size = Vector2(544, 0)
-tooltip_text = "Your faction"
-
-[node name="Spacer3" type="Control" parent="Pages/Join/Body"]
-layout_mode = 2
-
-[node name="Advanced" parent="Pages/Join/Body" instance=ExtResource("3")]
-layout_mode = 2
-
-[node name="ThisBuild" type="Button" parent="Pages/Join"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 32)
-size_flags_horizontal = 0
-theme_type_variation = &"FooterLink"
-visible = false
-
-[node name="Divider" type="HSeparator" parent="Pages/Join"]
-layout_mode = 2
-
-[node name="Footer" type="HBoxContainer" parent="Pages/Join"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 88)
-theme_override_constants/separation = 16
-
-[node name="Status" type="Label" parent="Pages/Join/Footer"]
-layout_mode = 2
-size_flags_vertical = 4
-custom_minimum_size = Vector2(0, 24)
-theme_type_variation = &"FooterStatus"
-max_lines_visible = 3
-
-[node name="Fill" type="Control" parent="Pages/Join/Footer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_stretch_ratio = 0.01
-
-[node name="CancelConnect" type="Button" parent="Pages/Join/Footer"]
+[node name="TryAgain" type="Button" parent="Pages/Play/Footer"]
 layout_mode = 2
 size_flags_vertical = 4
 custom_minimum_size = Vector2(140, 46)
-text = "Cancel"
+text = "Try again"
 visible = false
 
-[node name="Join" type="Button" parent="Pages/Join/Footer"]
+[node name="Start" type="Button" parent="Pages/Play/Footer"]
 layout_mode = 2
 size_flags_vertical = 4
-custom_minimum_size = Vector2(170, 52)
+custom_minimum_size = Vector2(170, 48)
 theme_type_variation = &"PrimaryButton"
-text = "Join match"
+text = "Start match"
 
 [node name="Settings" type="VBoxContainer" parent="Pages"]
 layout_mode = 2
@@ -500,6 +473,7 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_type_variation = &"FieldLabel"
 text = "Audio"
+uppercase = true
 
 [node name="Playtest" type="VBoxContainer" parent="Pages/Settings/Body"]
 layout_mode = 2
@@ -510,12 +484,34 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_type_variation = &"FieldLabel"
 text = "Playtest"
+uppercase = true
 
 [node name="PlaytestHint" type="Label" parent="Pages/Settings/Body/Playtest"]
 layout_mode = 2
 text = "A checklist during the match and a short form after it."
 theme_type_variation = &"Hint"
 autowrap_mode = 3
+
+[node name="Online" type="VBoxContainer" parent="Pages/Settings/Body/Playtest"]
+layout_mode = 2
+theme_override_constants/separation = 8
+visible = false
+
+[node name="OnlineHeader" type="Label" parent="Pages/Settings/Body/Playtest/Online"]
+layout_mode = 2
+theme_type_variation = &"FieldLabel"
+text = "Online"
+uppercase = true
+
+[node name="RelayHelp" type="Label" parent="Pages/Settings/Body/Playtest/Online"]
+layout_mode = 2
+text = "Relay server: matches players online. Test builds only; leave it unless you are trying another relay."
+autowrap_mode = 3
+theme_type_variation = &"Hint"
+
+[node name="RelayUrl" type="LineEdit" parent="Pages/Settings/Body/Playtest/Online"]
+layout_mode = 2
+placeholder_text = "Relay URL"
 
 [node name="Credits" type="VBoxContainer" parent="Pages"]
 layout_mode = 2
@@ -553,208 +549,3 @@ layout_mode = 2
 text = "© 2026 Philipp Stuber; Ashfall, Dry Wells and Broken Crown maps © 2025 Electronic Arts Inc., modified. Free software under the GNU GPL, with no warranty. License and source: github.com/blackcindergames/wargrid"
 theme_type_variation = &"Hint"
 autowrap_mode = 3
-
-[node name="Waiting" type="VBoxContainer" parent="Pages"]
-layout_mode = 2
-size_flags_horizontal = 0
-visible = false
-
-[node name="Title" type="Label" parent="Pages/Waiting"]
-layout_mode = 2
-text = "Waiting for your friend"
-theme_type_variation = &"PageTitle"
-
-[node name="Subtitle" type="Label" parent="Pages/Waiting"]
-layout_mode = 2
-text = "The match starts as soon as they join."
-theme_type_variation = &"Subtitle"
-
-[node name="Body" type="HBoxContainer" parent="Pages/Waiting"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_constants/separation = 36
-
-[node name="Left" type="VBoxContainer" parent="Pages/Waiting/Body"]
-layout_mode = 2
-custom_minimum_size = Vector2(544, 0)
-theme_override_constants/separation = 8
-
-[node name="InviteLabel" type="Label" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "Match code"
-
-[node name="Invite" type="HBoxContainer" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Link" type="LineEdit" parent="Pages/Waiting/Body/Left/Invite"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_uneditable_color = Color(0.92, 0.92, 0.92, 1)
-editable = false
-
-[node name="Copy" type="Button" parent="Pages/Waiting/Body/Left/Invite"]
-layout_mode = 2
-theme_type_variation = &"PrimaryButton"
-text = "Copy code"
-
-[node name="CodeHint" type="RichTextLabel" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-theme_type_variation = &"HintRich"
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="PlayersLabel" type="Label" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "Players"
-
-[node name="One" type="PanelContainer" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-theme_type_variation = &"PlayerRow"
-
-[node name="Row" type="HBoxContainer" parent="Pages/Waiting/Body/Left/One"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Seat" type="Label" parent="Pages/Waiting/Body/Left/One/Row"]
-layout_mode = 2
-text = "1"
-
-[node name="Who" type="Label" parent="Pages/Waiting/Body/Left/One/Row"]
-layout_mode = 2
-text = "You"
-
-[node name="Faction" type="Label" parent="Pages/Waiting/Body/Left/One/Row"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"Hint"
-
-[node name="Badge" type="Label" parent="Pages/Waiting/Body/Left/One/Row"]
-layout_mode = 2
-text = "READY"
-theme_type_variation = &"Hint"
-
-[node name="Two" type="PanelContainer" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-script = ExtResource("4")
-theme_type_variation = &"OpenSlot"
-
-[node name="Row" type="HBoxContainer" parent="Pages/Waiting/Body/Left/Two"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Seat" type="Label" parent="Pages/Waiting/Body/Left/Two/Row"]
-layout_mode = 2
-text = "2"
-
-[node name="Who" type="Label" parent="Pages/Waiting/Body/Left/Two/Row"]
-layout_mode = 2
-text = "Open"
-
-[node name="Hint" type="Label" parent="Pages/Waiting/Body/Left/Two/Row"]
-layout_mode = 2
-text = "waiting for your friend…"
-theme_type_variation = &"Hint"
-
-[node name="BotsLabel" type="Label" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "Enemy bots"
-visible = false
-
-[node name="Three" type="PanelContainer" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-theme_type_variation = &"PlayerRow"
-visible = false
-
-[node name="Row" type="HBoxContainer" parent="Pages/Waiting/Body/Left/Three"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Seat" type="Label" parent="Pages/Waiting/Body/Left/Three/Row"]
-layout_mode = 2
-text = "3"
-
-[node name="Who" type="Label" parent="Pages/Waiting/Body/Left/Three/Row"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Badge" type="Label" parent="Pages/Waiting/Body/Left/Three/Row"]
-layout_mode = 2
-text = "READY"
-theme_type_variation = &"Hint"
-
-[node name="Four" type="PanelContainer" parent="Pages/Waiting/Body/Left"]
-layout_mode = 2
-theme_type_variation = &"PlayerRow"
-visible = false
-
-[node name="Row" type="HBoxContainer" parent="Pages/Waiting/Body/Left/Four"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="Seat" type="Label" parent="Pages/Waiting/Body/Left/Four/Row"]
-layout_mode = 2
-text = "4"
-
-[node name="Who" type="Label" parent="Pages/Waiting/Body/Left/Four/Row"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="Badge" type="Label" parent="Pages/Waiting/Body/Left/Four/Row"]
-layout_mode = 2
-text = "READY"
-theme_type_variation = &"Hint"
-
-[node name="Right" type="VBoxContainer" parent="Pages/Waiting/Body"]
-layout_mode = 2
-custom_minimum_size = Vector2(380, 0)
-theme_override_constants/separation = 8
-
-[node name="MapLabel" type="Label" parent="Pages/Waiting/Body/Right"]
-layout_mode = 2
-theme_type_variation = &"FieldLabel"
-text = "Map"
-
-[node name="Map" type="PanelContainer" parent="Pages/Waiting/Body/Right"]
-layout_mode = 2
-theme_type_variation = &"MapPanel"
-
-[node name="Box" type="VBoxContainer" parent="Pages/Waiting/Body/Right/Map"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="Name" type="Label" parent="Pages/Waiting/Body/Right/Map/Box"]
-layout_mode = 2
-theme_type_variation = &"PanelTitle"
-
-[node name="Info" type="Label" parent="Pages/Waiting/Body/Right/Map/Box"]
-layout_mode = 2
-theme_type_variation = &"Hint"
-
-[node name="Divider" type="HSeparator" parent="Pages/Waiting"]
-layout_mode = 2
-
-[node name="Footer" type="HBoxContainer" parent="Pages/Waiting"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 88)
-theme_override_constants/separation = 16
-
-[node name="Status" type="RichTextLabel" parent="Pages/Waiting/Footer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-custom_minimum_size = Vector2(0, 24)
-theme_type_variation = &"FooterRich"
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-
-[node name="Cancel" type="Button" parent="Pages/Waiting/Footer"]
-layout_mode = 2
-size_flags_vertical = 4
-custom_minimum_size = Vector2(140, 46)
-text = "Cancel match"

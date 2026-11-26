@@ -1,0 +1,10 @@
+{
+ "text": "{\"type\":\"settings\",\"settings\":{\"map\":\"dry_wells\",\"map_hash\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}}",
+ "message": {
+  "type": "settings",
+  "settings": {
+   "map": "dry_wells",
+   "map_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+ }
+}
