@@ -58,6 +58,14 @@ class Slot:
 	var tick: int = 0
 	var view: Dictionary = {}
 
+# A queue entry for query(): the reply semaphore lives here, never on Job.
+class Query extends RefCounted:
+	var job: Job
+	var note: Note
+	var reply := Semaphore.new()
+	func _init(asked: Job) -> void:
+		job = asked
+
 var _sim: Simulation
 var _recorder: CommandRecorder
 var _notes: Array[Note] = []
@@ -75,7 +83,7 @@ var _work := Semaphore.new()
 var _started := Semaphore.new()
 var _thread: Thread
 # The queue, counts and flags below are shared with the worker, under _mutex.
-var _queue: Array[Job] = []
+var _queue: Array[RefCounted] = []
 var _unpublished: int = 0
 var _quit: bool = false
 var _exited: bool = false
@@ -149,8 +157,9 @@ func previous() -> Slot:
 	return _previous
 
 func query(job: Job) -> Note:
-	var note: Note = _note_for(job, null)
-	if note == null: _fail("query")
+	if not _failure.is_empty(): return null
+	var note: Note = _query_worker(job) if _thread != null else _note_for(job, null)
+	if note == null and _failure.is_empty(): _fail("query")
 	return note
 
 func record() -> Dictionary:
@@ -161,8 +170,10 @@ func record() -> Dictionary:
 		job.want_log = true
 		var note: Note = query(job)
 		if note != null: return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match, "commands": note.log}
-	# A failed simulation cannot be trusted for a digest, so the record keeps what was last shown.
-	return {"tick": _current.tick, "digest": "", "match": _current.view.match, "commands": _recorder.commands().duplicate(true)}
+	# A failed simulation cannot be trusted for a digest, so the record keeps what was last shown; a living worker may still write the log.
+	var commands: Array[Dictionary] = []
+	if _thread == null or _worker_gone(): commands.assign(_recorder.commands().duplicate(true))
+	return {"tick": _current.tick, "digest": "", "match": _current.view.match, "commands": commands}
 
 func failure() -> String:
 	return _failure
@@ -305,19 +316,40 @@ func _run_next() -> bool:
 		_exited = _quit
 		_mutex.unlock()
 		return not _exited
-	var job: Job = _queue.pop_front()
+	var entry: RefCounted = _queue.pop_front()
 	_mutex.unlock()
+	if entry is Query: return _answer(entry)
+	var job: Job = entry
 	var slot := Slot.new()
 	var note: Note = _note_for(job, slot)
 	if note != null: _wait_gate("before_publish")
 	return _publish(note, slot)
 
+func _answer(asked: Query) -> bool:
+	asked.note = _note_for(asked.job, null)
+	_mutex.lock()
+	if asked.note == null:
+		_marker = "query"
+		_unpublished -= _drop_waiting()
+		_exited = true
+	_mutex.unlock()
+	asked.reply.post()
+	return asked.note != null
+
+# Under the lock: forgets the waiting entries, answers any query among them with null, returns how many jobs it dropped.
+func _drop_waiting() -> int:
+	var dropped: int = 0
+	for entry: RefCounted in _queue:
+		if entry is Query: (entry as Query).reply.post()
+		else: dropped += 1
+	_queue.clear()
+	return dropped
+
 func _publish(note: Note, slot: Slot) -> bool:
 	_mutex.lock()
 	if note == null:
 		_marker = "post"
-		_unpublished -= _queue.size() + 1
-		_queue.clear()
+		_unpublished -= _drop_waiting() + 1
 		_exited = true
 		_mutex.unlock()
 		return false
@@ -350,6 +382,35 @@ func _post_queued(job: Job) -> bool:
 	if depth == _cap(): _stats.cap_hits += 1
 	if depth == 1: _set_stall_clock()
 	return true
+
+# Main blocks here, so the worker is the only other thread and the queue holds at most this one query.
+func _query_worker(job: Job) -> Note:
+	var asked := Query.new(job)
+	_mutex.lock()
+	var marker: String = _marker
+	if marker.is_empty(): _queue.append(asked)
+	_mutex.unlock()
+	if not marker.is_empty():
+		_fail(marker)
+		return null
+	_work.post()
+	var began: int = Time.get_ticks_msec()
+	var answered: bool = asked.reply.try_wait()
+	while not answered and Time.get_ticks_msec() - began < WAIT_MSEC:
+		OS.delay_usec(200)
+		answered = asked.reply.try_wait()
+	_note_wait(began)
+	if not answered:
+		_abandon("stall: query waited %d ms" % WAIT_MSEC)
+		return null
+	if asked.note == null and not _read_marker().is_empty(): _fail(_read_marker())
+	return asked.note
+
+func _read_marker() -> String:
+	_mutex.lock()
+	var marker: String = _marker
+	_mutex.unlock()
+	return marker
 
 func _set_stall_clock() -> void:
 	_stall_frame = frame_source.call()
@@ -391,8 +452,7 @@ func stop() -> void:
 	if _thread == null or _abandoned: return
 	_mutex.lock()
 	_quit = true
-	_unpublished -= _queue.size()
-	_queue.clear()
+	_unpublished -= _drop_waiting()
 	_mutex.unlock()
 	_work.post()
 	var began: int = Time.get_ticks_msec()
