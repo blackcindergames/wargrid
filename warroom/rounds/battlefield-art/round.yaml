@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=../round.schema.json
+title: Battlefield art studies
+intro: >-
+  First compare two grounds under the units and buildings picked in the map-art rounds.
+  Then choose a reference for a future study from five drawings of a fictional battlefield.
+  The Map life backlog already calls for flat atmospheric decoration. P13 More maps owns the
+  map imports. These answers are input to that work. Starting a package takes a separate decision.
+steps: [ground, inspiration]

@@ -1801,3 +1801,10 @@ War Room round `lobby` (`warroom/rounds/lobby/`, pictures in `docs/images/lobby-
 - **Pickers (B):** inline dropdowns for map and faction; Random last in the faction list, picked when the match starts.
 - **Defaults stated in the round, kept:** a joining friend lands on the host's team when bots hold the other side and on the other team in a 1v1; the host moves players with the row's ••• menu; leaving with a friend in asks first ("Switch to Skirmish?"); the online way out is "Stop hosting"; Start match stays locked while the open slot waits; a map with fewer starts than players asks first ("Switch to Dry Wells?") and removes the extra bots; maps with fewer starts than the humans present are greyed in the picker.
 - **Open for the build:** which team a bot added with + Add bot joins (allied bots stay the Later item Team up with a bot); whether changing the map after the friend joined needs a protocol message (P11 lists it).
+
+## Battlefield art round (user, 2026-11-26)
+
+War Room round `battlefield-art` (`warroom/rounds/battlefield-art/`, pictures in `docs/images/map-art/source/` and `docs/images/art-direction-study/`), advisory input to Map life; no package started.
+
+- **Ground (A, cell shading):** the game keeps today's per-cell shades. The owner first picked B (broad warm and cool patches, `paintGroundWash` in `pics.js`), then flipped A and B in an uncommitted Art Lab slice at zoom 0.5 on sand and dark ground with the picked firm cliff: "infantry still visible, but the patches look strange; keep cell shading." The slice was dropped.
+- **Inspiration (E, hybrid):** illustrated ground that fades around armies and bases, colour kept at the edges, as the preferred study only; no note, so no detail is routed to a package. It is unproven in game, and the rejected patches were the same kind of wash; an in-game flip of the fade alone comes before any build.

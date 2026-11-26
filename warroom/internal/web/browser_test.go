@@ -26,6 +26,18 @@ func TestFlipKeepsEveryFrameDocument(t *testing.T) {
 	s.wantFramesKept(t, 6)
 }
 
+func TestBattlefieldArtDrawsEachOptionBeforeFlipping(t *testing.T) {
+	s := newSite(t, siteOpts{})
+	for step, count := range []int{2, 5} {
+		s.open(t, fmt.Sprintf("/r/battlefield-art/%d", step+1))
+		eventually(t, "all battlefield options have distinct painted canvases", func() bool {
+			return eval(t, s.Page, fmt.Sprintf(`new Set(Array.from(document.querySelectorAll('iframe'),
+				f => f.contentDocument?.querySelector('canvas')).filter(c => c?.getContext('2d')
+				.getImageData(0, 0, 1, 1).data[3]).map(c => c.toDataURL())).size === %d`, count)) == true
+		})
+	}
+}
+
 func TestStageControlReloadsTheFramesWithTheNewHash(t *testing.T) {
 	s := newSite(t, siteOpts{})
 	s.open(t, "/r/demo-controls/4")

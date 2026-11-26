@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Which ground would you try under Wargrid’s armies?
+look: Use True 100% at start zoom. Find the infantry, supply piles and cliff edge. Flip A/B, then try dark ground.
+why: >-
+  Both pictures use the same round-six map-art drawing, including planned faction bodies and supply shapes.
+  The second adds broad areas of warm and cool colour underneath the decoration. A patch that reads like
+  a blocked cell or hides an infantry figure counts against it.
+rec: B
+recWhy: >-
+  Broad patches could break up the repeated cell pattern while leaving the cliffs and owner colours intact.
+  A match would have to confirm that players still read open ground at a glance.
+neutral: Try a different treatment
+ref:
+  label: In-game reference · Dry Wells, different match
+  img: docs/images/skirmish.webp
+controls:
+  ground: true
+  zoom: ['0.5', '1', '2']
+  fit: true
+  cvd: true
+render:
+  page: docs/images/map-art/source/round6.html
+  w: 1280
+  h: 720
+  hash: pic={state}
+  pass: {ground: ground, zoom: zoom}
+options:
+  A:
+    name: Cell shading
+    notes: Slight variation in each diamond of sand.
+    render: {state: ground-cells}
+  B:
+    name: Broad patches
+    notes: Muted warm and cool shapes across several cells.
+    render: {state: ground-wash}
