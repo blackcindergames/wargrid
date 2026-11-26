@@ -134,6 +134,7 @@ const slots=opt('slots','teams',['teams','columns','flat']);
 const spot=opt('spot','map',['map','letter','random']);
 const colour=opt('colour','player',['player','team','pick']);
 const invite=opt('invite','slot',['top','footer','slot','toolbar']);
+const itext=opt('itext','label',['full','min','label']);
 const guestLook=opt('guest','readonly',['readonly','disabled']);
 const picker=opt('picker','inline',['dialog','inline']);
 const mapId=opt('map','broken_crown',['dry_wells','broken_crown','ashfall']);
@@ -240,7 +241,7 @@ function slotRow(p,i){
  const tint=colour==='team'?'none':'';
  if(p.kind==='open'){
   const inside=invite==='slot'&&host?`<div style="grid-column:2/-1;display:flex;align-items:center;gap:10px"><div><div class="name">Open</div><div class="meta">Send your friend the code</div></div><span class="code" style="margin-left:auto">K7Q2XD</span>${btn('Copy code','small')}${btn('•••','ghost dots')}</div>`:
-   `<div><div class="name">Open</div><div class="meta">Waiting for your friend…</div></div><div></div><div class="right">${host?btn('•••','ghost dots'):''}</div>`;
+   `<div><div class="name">Open</div><div class="meta">${invite==='toolbar'&&itext==='full'?'Waiting for your friend · code K7Q2XD':'Waiting for your friend…'}</div></div><div></div><div class="right">${host?btn('•••','ghost dots'):''}</div>`;
   return `<div class="slot open"><span class="sw none"></span>${inside}</div>`;
  }
  const self=p.kind==='you',hostView=host;
@@ -280,13 +281,13 @@ function mapColumn(){
  const field=ro?`<div class="mapbtn ro">${M.name}<span class="muted small">The host chooses the map</span></div>`:
   (picker==='inline'?`<div class="mapbtn dd" data-map>${M.name}<span class="muted">▾</span></div>`:`<div class="mapbtn" data-map>${M.name}<span class="muted small">Change ›</span></div>`);
  const fieldDis=!host&&guestLook==='disabled'?`<div class="mapbtn dd" style="opacity:.48">${M.name}<span class="muted">▾</span></div>`:field;
- const help=spot==='map'?(!host?'The host places the starts.':free>0?'Click a free start to move there; right-click it to close it.':'Every start is taken.'):spot==='random'?'Starts are drawn at random when the match begins.':'Letters match the start chips in the player rows.';
+ const help=spot==='map'?(!host?'The host places the starts.':free>0?'Click a free start to move there; right-click it to close it.':players.length<S.slots.length?'1 start kept for your friend.':'Every start is taken.'):spot==='random'?'Starts are drawn at random when the match begins.':'Letters match the start chips in the player rows.';
  return `<div class="stack"><div class="label">Map</div>${fieldDis}<div class="mappanel">${preview(M,markers())}<div class="hint" style="padding:6px 4px 0">${help}</div><h2>${M.name}</h2><div class="stat"><span>Start positions</span><b>${M.starts.length}</b></div><div class="stat"><span>Supply sources</span><b>${M.src.length}</b></div></div></div>`;
 }
 function inviteTop(){return `<div class="invite"><div><div class="label">Invite code</div><div class="code">K7Q2XD</div></div>${btn('Copy code','link')}</div>`}
 function lobbyPage(){
  const online=S.online, waiting=S.slots.some(p=>p.kind==='open');
- const tools=online&&invite==='toolbar'?`<div class="tools">${waiting?'<span class="hint">Your friend types this code under Join.</span>':''}${roomBox('Private / public (later)','width:150px;height:38px')}<div class="codefield" title="Copy code"><span class="code">K7Q2XD</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9"/><path d="M11 2H2v9"/></svg></div></div>`:'';
+ const tools=online&&invite==='toolbar'?`<div class="tools">${room?roomBox('Private / public (later)','width:150px;height:38px'):''}${!waiting||itext==='label'?'':itext==='full'?'<span class="hint" style="color:var(--text);font-size:13px">Send this code to your friend. They enter it under Join.</span>':'<span class="hint">Your friend types this code under Join.</span>'}${itext==='label'?'<div style="display:grid;gap:3px"><span class="label" style="font-size:10px">Invite code</span>':''}<div class="codefield" title="Send this code to your friend. They enter it under Join."><span class="code">K7Q2XD</span><span style="display:flex;align-items:center;gap:5px;color:var(--cyan);font-size:12px;font-weight:600"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9"/><path d="M11 2H2v9"/></svg>Copy</span></div>${itext==='label'?'</div>':''}</div>`:'';
  const modeRow=start==='row'&&host?`<div class="modebar"><span class="label">Mode</span><div class="seg">${btn('Skirmish',online?'':'sel')}${btn('Host game',online?'sel':'')}</div>${online&&waiting&&invite!=='toolbar'?'<span class="hint">Your friend joins with the code.</span>':''}${tools}</div>`:'';
  const title=!host?'Joined game':start==='row'?'Play':online?'Host game':'Skirmish';
  const sub=!online?'Play against bots on this computer.':host?(waiting?'Online · waiting for your friend':'Online · your friend is here'):'Online · the host sets up the match';

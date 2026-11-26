@@ -26,7 +26,7 @@ intro: >-
   unless the step says otherwise; S switches to 1280 x 800 and 1920 x 1080 (the UI scales from 720 as
   the game does). Each step changes one thing and draws the rest as Claude recommends. A neutral
   answer records no winner, and the build waits for your note. Source: docs/images/lobby-round/.
-steps: [start, unused, slots, spot, colour, invite, guest, pickers]
+steps: [start, unused, slots, spot, colour, invite, guest, pickers, invite-text]
 render:
   page: docs/images/lobby-round/lobby.html
   w: 1280

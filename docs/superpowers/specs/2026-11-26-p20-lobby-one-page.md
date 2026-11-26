@@ -4,7 +4,7 @@ Package row: [packages](../../packages.md#day-lane). Answers: [lobby prototype a
 
 ## What the player will notice
 
-Play opens on one lobby page for both Skirmish and Host game: a Mode row, players grouped under Team 1 and Team 2, each row with its colour swatch and faction dropdown (Random last), the map dropdown and a preview with a marker per start. You click a free start to take it; the host closes a single start the same way. Hosting puts a code with a copy icon at the right of the Mode row ("Your friend types this code under Join."); the friend appears in the list, and the host presses Start match. A line under the teams counts the starts ("2 of 4 starts used") with + Add bot. The guest sees the host's settings as text and changes only their own faction.
+Play opens on one lobby page for both Skirmish and Host game: a Mode row, players grouped under Team 1 and Team 2, each row with its colour swatch and faction dropdown (Random last), the map dropdown and a preview with a marker per start. You click a free start to take it; the host closes a single start the same way. Hosting puts the code under a small INVITE CODE label at the right of the Mode row, with Copy ("Copied" for 2 s) and a tooltip saying what to do with it; the friend appears in the list, and the host presses Start match. A line under the teams counts the starts ("2 of 4 starts used") with + Add bot. The guest sees the host's settings as text and changes only their own faction.
 
 ## What would refute it
 
