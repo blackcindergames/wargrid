@@ -127,7 +127,8 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_RELAY }}
         run: |
           flyctl deploy "$PWD/relay" -c "$PWD/relay/fly.toml" -a wargrid-relay --ha=false
-          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors https://relay.pdstuber.dev/health
+          curl -fsS --retry 10 --retry-delay 6 --retry-all-errors https://relay.wargrid.blackcindergames.com/health
+          curl -fsS https://relay.pdstuber.dev/health
       - name: Deploy web
         if: env.PRERELEASE == 'false'
         env:

@@ -744,7 +744,7 @@ func test_launcher_sections(runner) -> bool:
 		var relay: LineEdit = play.get_node_or_null("Body/Advanced/RelayUrl")
 		if advanced != null and relay != null:
 			runner.check(not advanced.button_pressed and not relay.visible and advanced.text == "Advanced settings" and not advanced.flat, "N20 Advanced starts closed, as a visible button, at %s" % size)
-			runner.check(relay.text == "wss://relay.pdstuber.dev/ws", "N20 closed fold keeps the default relay URL at %s" % size)
+			runner.check(relay.text == "wss://relay.wargrid.blackcindergames.com/ws", "N20 closed fold keeps the default relay URL at %s" % size)
 			advanced.button_pressed = true
 			runner.check(relay.visible and advanced.button_pressed, "N20 opening Advanced shows the relay field at %s" % size)
 			runner.check(advanced.text.to_utf8_buffer().size() == advanced.text.length(), "N20 toggle text is plain ASCII, the default font has no arrow glyphs, at %s" % size)

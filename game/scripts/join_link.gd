@@ -1,6 +1,6 @@
 extends RefCounted
 
-const DEFAULT_RELAY := "wss://relay.pdstuber.dev/ws"
+const DEFAULT_RELAY := "wss://relay.wargrid.blackcindergames.com/ws"
 const ALPHABET := "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const MAX_INPUT := 2048
 const MAX_RELAY := 256
