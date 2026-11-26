@@ -89,6 +89,28 @@ theme_type_variation = &"NavButton"
 text = "Quit"
 alignment = 0
 
+[node name="Legal" type="MarginContainer" parent="Sidebar"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+
+[node name="Links" type="HBoxContainer" parent="Sidebar/Legal"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Impressum" type="LinkButton" parent="Sidebar/Legal/Links"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 32)
+theme_type_variation = &"SidebarLink"
+text = "Impressum"
+uri = "https://blackcindergames.com/impressum/"
+
+[node name="Privacy" type="LinkButton" parent="Sidebar/Legal/Links"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 32)
+theme_type_variation = &"SidebarLink"
+text = "Privacy"
+uri = "https://blackcindergames.com/privacy/"
+
 [node name="Version" type="Label" parent="Sidebar"]
 layout_mode = 2
 text = "v"
