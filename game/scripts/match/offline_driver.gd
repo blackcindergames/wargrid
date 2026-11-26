@@ -35,6 +35,7 @@ func _init(player: int) -> void:
 
 func create(map_path: String, starts: Array[int], factions: Dictionary, _match_seed: int) -> void:
 	_factions = factions
+	if pump != null: pump.stop()
 	adopt(Skirmish.create(true, "human", factions, map_path, starts))
 
 func adopt(value: Simulation) -> void:

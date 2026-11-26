@@ -13,6 +13,7 @@ const CombatDefinitions = preload("res://scripts/simulation/combat_definitions.g
 const Combat = preload("res://scripts/simulation/combat.gd")
 const TeamMatch = preload("res://scripts/debug/team_match.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
+const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const Wire = preload("res://scripts/net/wire.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
@@ -47,6 +48,15 @@ class IdPump extends "res://scripts/match/sim_pump.gd":
 	func _note_for(job: Job, slot: Slot) -> Note:
 		ids.append(OS.get_thread_caller_id())
 		return super(job, slot)
+
+# Says whether the caches were still empty when stop() was called, which is before the next simulation is built.
+class StopSpy extends "res://scripts/match/sim_pump.gd":
+	var caches_empty_at_stop: bool = false
+	var _seen: bool = false
+	func stop() -> void:
+		if not _seen: caches_empty_at_stop = Registry.cache_keys().values().all(func(keys: Array) -> bool: return keys.is_empty())
+		_seen = true
+		super()
 
 # The relay forwards ticks; over and again end at the relay.
 class PairTransport extends RefCounted:
@@ -106,7 +116,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -1949,3 +1959,298 @@ func test_sb5a_query_behind_a_failing_job_answers_null(runner) -> bool:
 	pump.stop()
 	SimPump.reset_process_latch_for_test()
 	return true
+
+func test_sb5a_stop_idle_worker(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	var fresh = _pump("worker")
+	var used = _pump("worker")
+	used.post(_job())
+	_drain(used)
+	runner.check(SimPump.live_workers() == threads + 2, "SB5A fixture: two worker pumps, one of them has run a job")
+	for pump in [fresh, used]:
+		var began: int = Time.get_ticks_msec()
+		pump.stop()
+		var waited: int = Time.get_ticks_msec() - began
+		runner.check(pump.failure() == "" and waited < 1000, "SB5A stop wakes an idle worker and joins it at once, no stall (%d ms)" % waited)
+	runner.check(SimPump.live_workers() == threads, "SB5A both idle workers are joined")
+	return true
+
+func test_sb5a_stop_with_job_in_flight(runner) -> bool:
+	for waiting in [0, 2]: _stop_in_flight(runner, waiting)
+	return true
+
+func _stop_in_flight(runner, waiting: int) -> void:
+	var threads: int = SimPump.live_workers()
+	var pump = _ran_pump()
+	var gate := Semaphore.new()
+	pump.gate_publish_for_test(gate, "before_publish")
+	pump.post(_job([_move(_first_mobile(pump.live(), 1))]))
+	runner.check(_await_ran(pump), "SB5A fixture: the running job has run and waits at the gate (%d waiting)" % waiting)
+	for i in waiting: pump.post(_job())
+	var releaser := Thread.new()
+	releaser.start(_release_later.bind(gate, 1, 150))
+	var began: int = Time.get_ticks_msec()
+	pump.stop()
+	var waited: int = Time.get_ticks_msec() - began
+	releaser.wait_to_finish()
+	runner.check(waited >= 100 and waited < SimPump.WAIT_MSEC and pump.failure() == "" and SimPump.live_workers() == threads, "SB5A stop waits for the running job and joins (%d ms, %d waiting)" % [waited, waiting])
+	runner.check(not pump.busy() and pump.has_room(), "SB5A a stopped pump owes no jobs, so its count is back at 0 (%d waiting)" % waiting)
+	runner.check(pump.live().tick() == 1 and pump.drain().size() == 1, "SB5A the running job finished and published, the %d waiting ones never ran, got tick %d" % [waiting, pump.live().tick()])
+	var later = pump.query(_digest_job())
+	runner.check(later != null and later.tick == 1 and pump.failure() == "", "SB5A a query after stop runs inline on the joined simulation")
+	var record: Dictionary = pump.record()
+	runner.check(record.tick == 1 and record.commands.size() == 1 and _replayed_digest(record.commands, record.tick, _sim()) == record.digest, "SB5A the record's log replays to its digest at tick %d" % record.tick)
+
+func _replayed_digest(commands: Array, end_tick: int, sim = null) -> String:
+	if sim == null: sim = Skirmish.create(true, "human", {}, Skirmish.MAP_PATH, [] as Array[int])
+	for tick in end_tick:
+		for command in commands:
+			if command.tick == tick: sim.issue_command(command)
+		sim.step()
+	return StateHash.digest(sim.snapshot())
+
+func test_sb5a_stop_is_idempotent(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	for mode in _modes():
+		var pump = _pump(mode)
+		pump.post(_job())
+		_drain(pump)
+		pump.stop()
+		pump.stop()
+		runner.check(SimPump.live_workers() == threads and pump.failure() == "" and not pump.post(_job()), "SB5A stopping twice joins once and leaves no failure [%s]" % mode)
+		_built.clear()
+	var failing = _make(_sim(), "worker", NullJobPump)
+	failing.start()
+	failing.fail_next = true
+	failing.post(_job())
+	_idle(failing)
+	failing.drain()
+	var reason: String = failing.failure()
+	failing.stop()
+	failing.stop()
+	runner.check(not reason.is_empty() and failing.failure() == reason and SimPump.live_workers() == threads, "SB5A stopping a failed pump twice joins its exited worker and keeps the reason, got '%s'" % failing.failure())
+	_built.clear()
+	SimPump.new(_sim()).stop()
+	SimPump.reset_process_latch_for_test()
+	return true
+
+func test_sb5a_job_zero_null_fails_pump(runner) -> bool:
+	var done: bool = _each_mode(runner, _sb5a_job_zero_null_fails_pump)
+	SimPump.reset_process_latch_for_test()
+	return done
+
+func _sb5a_job_zero_null_fails_pump(runner, mode: String) -> void:
+	var threads: int = SimPump.live_workers()
+	var sim = _sim()
+	var pump = _make(sim, mode, NullJobPump)
+	pump.fail_next = true
+	var note = pump.start()
+	runner.check(pump.failure() == "start job returned no note after tick 0", "SB5A a null job zero fails the pump with the null-result cause, got '%s'" % pump.failure())
+	runner.check(note != null and note.tick == sim.tick() and note.starts.is_empty(), "SB5A start still returns a readable note at the simulation's tick")
+	runner.check(pump.current().tick == sim.tick() and pump.current().view.players.size() == 2 and pump.current().view.has("map"), "SB5A current() is readable at once")
+	runner.check(SimPump.live_workers() == threads and not pump.busy() and pump.has_room() and not pump.post(_job()), "SB5A no worker was spawned and later posts are refused")
+
+func _offline_driver() -> RefCounted:
+	return OfflineDriver.new(1)
+
+func _online_driver() -> RefCounted:
+	var transport := PairTransport.new()
+	transport.peer = PairTransport.new()
+	var seats: Array[int] = [1, 2]
+	return OnlineDriver.new(transport, Lockstep.new(2, seats, 4, 30, Time.get_ticks_usec, {1: [1, 3, 4]}), "china", 2)
+
+# Bot seats give the online world factions, so building it fills the caches; the arguments are read before the caches are cleared.
+func _world_args(kind: String) -> Array:
+	if kind == "offline": return [Skirmish.MAP_PATH, [] as Array[int], FACTIONS, 7]
+	return [MatchSettings.map_path("broken_crown"), MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 2)), {3: "china", 4: "frc"}, 7]
+
+func test_sb5a_create_stops_old_pump_first(runner) -> bool:
+	runner.check(_caches_fill_on_create(), "SB5A fixture: building a world after clear_test_kinds fills the caches")
+	for kind in ["offline", "online"]:
+		for mode in _modes():
+			var driver = _offline_driver() if kind == "offline" else _online_driver()
+			var args: Array = _world_args(kind)
+			var spy = _make(_sim(), "inline", StopSpy)
+			spy.start()
+			driver.pump = spy
+			Registry.clear_test_kinds()
+			SimPump.force_mode_for_test(mode)
+			driver.callv("create", args)
+			SimPump.force_mode_for_test("")
+			runner.check(spy.caches_empty_at_stop and not is_same(driver.pump, spy), "SB5A the %s create stops the old pump before the new simulation is built [%s]" % [kind, mode])
+			driver.stop()
+			_stop_built()
+	return true
+
+func _caches_fill_on_create() -> bool:
+	Registry.clear_test_kinds()
+	_sim()
+	var filled: bool = not Registry.cache_keys().values().all(func(keys: Array) -> bool: return keys.is_empty())
+	Registry.clear_test_kinds()
+	return filled
+
+func test_sb5a_restart_drops_old_notes(runner) -> bool:
+	for mode in _modes():
+		_restart_offline(runner, mode)
+		_restart_online(runner, mode)
+	return true
+
+func _restart_offline(runner, mode: String) -> void:
+	var threads: int = SimPump.live_workers()
+	var driver = _offline_driver()
+	SimPump.force_mode_for_test(mode)
+	driver.create(Skirmish.MAP_PATH, [] as Array[int], FACTIONS, 0)
+	var old = driver.pump
+	for i in 3:
+		driver.step()
+		_idle(old)
+	runner.check(old.live().tick() == 3, "SB5A fixture: three offline notes wait undrained [%s]" % mode)
+	driver.create(Skirmish.MAP_PATH, [] as Array[int], FACTIONS, 0)
+	SimPump.force_mode_for_test("")
+	runner.check(not is_same(driver.pump, old) and driver.drain().is_empty() and driver.current().tick == 0, "SB5A an offline restart reaches none of the old notes [%s]" % mode)
+	runner.check(SimPump.live_workers() == threads + (1 if mode == "worker" else 0), "SB5A the old offline worker was joined at the restart [%s]" % mode)
+	driver.stop()
+
+func _restart_online(runner, mode: String) -> void:
+	var threads: int = SimPump.live_workers()
+	var online: Dictionary = _lone_online(mode, 12)
+	var driver = online.driver
+	_frames_to(driver, 12)
+	for i in 3:
+		_take_one(driver)
+		_idle(driver.pump)
+	var logged: int = driver._lockstep.command_log().size()
+	SimPump.force_mode_for_test(mode)
+	driver.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
+	SimPump.force_mode_for_test("")
+	runner.check(driver.drain().is_empty() and driver.current().tick == 0 and driver._lockstep.command_log().size() == logged, "SB5A an online rematch reaches none of the old notes and logs none of their commands [%s]" % mode)
+	runner.check(SimPump.live_workers() == threads + (1 if mode == "worker" else 0), "SB5A the old online worker was joined at the rematch [%s]" % mode)
+	driver.stop()
+
+# Seat 2's driver, fed by a scripted seat 1 that moves one of its units at move_tick; its faction exists from tick 5, so the move is written once the unit does.
+func _lone_online(mode: String, move_tick: int) -> Dictionary:
+	var transport := PairTransport.new()
+	transport.peer = PairTransport.new()
+	SimPump.force_mode_for_test(mode)
+	var driver = OnlineDriver.new(transport, Lockstep.new(2, [1, 2] as Array[int]), "china", 2)
+	driver.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
+	SimPump.force_mode_for_test("")
+	driver.start()
+	_seat_one_packets(transport, 4, move_tick - 1, -1, -1)
+	_frames_to(driver, 8)
+	_seat_one_packets(transport, move_tick, 60, move_tick, _first_mobile(driver.pump.live(), 1))
+	return {"driver": driver, "transport": transport}
+
+func _seat_one_packets(transport, from_tick: int, to_tick: int, move_tick: int, unit: int) -> void:
+	for tick in range(from_tick, to_tick + 1):
+		var commands: Array = []
+		if tick == 4: commands.append({"type": "choose_faction", "faction": "usa", "tick": 4, "player": 1, "sequence": 0})
+		if tick == move_tick: commands.append(_move(unit).merged({"tick": tick, "sequence": 1}))
+		transport.inbox.append(Wire.encode(Wire.tick_message(1, tick, commands, null)))
+
+func _first_mobile(sim, owner: int) -> int:
+	for entity in sim.snapshot().entities:
+		if entity.owner == owner and Registry.units().has(entity.kind): return entity.id
+	return -1
+
+# One tick per call, so a case knows how many jobs it has posted.
+func _take_one(driver) -> void:
+	driver._credit = 0
+	driver.step()
+
+func _frames_to(driver, tick: int) -> void:
+	var frames: int = 0
+	while driver.get("_next_tick") < tick and frames < 200:
+		frames += 1
+		_take_one(driver)
+		_idle(driver.pump)
+		driver.drain()
+
+func _logged_commands(driver) -> Array:
+	var commands: Array = []
+	for line in driver.match_log().commands: commands.append_array(Wire.decode(line).message.commands)
+	return commands
+
+# The worker has popped the gated job (it runs it to the gate), so a stop cannot drop it as a waiting one.
+func _await_popped(driver, mode: String) -> bool:
+	if mode != "worker": return true
+	var pump = driver.pump
+	var end: int = Time.get_ticks_msec() + 5000
+	while Time.get_ticks_msec() < end:
+		pump._mutex.lock()
+		var popped: bool = pump._queue.is_empty()
+		pump._mutex.unlock()
+		if popped: return true
+		OS.delay_usec(200)
+	return false
+
+func _gate_worker(driver, mode: String) -> Semaphore:
+	if mode != "worker": return null
+	var gate := Semaphore.new()
+	driver.pump.gate_publish_for_test(gate, "before_publish")
+	return gate
+
+func _release_in_background(gate: Semaphore) -> Thread:
+	if gate == null: return null
+	var releaser := Thread.new()
+	releaser.start(_release_later.bind(gate, 3, 150))
+	return releaser
+
+func _join_releaser(releaser: Thread) -> void:
+	if releaser != null: releaser.wait_to_finish()
+
+func test_sb5a_leave_record_replays(runner) -> bool:
+	for mode in _modes(): _leave_record(runner, mode)
+	return true
+
+func _leave_record(runner, mode: String) -> void:
+	var threads: int = SimPump.live_workers()
+	var online: Dictionary = _lone_online(mode, 12)
+	var driver = online.driver
+	_frames_to(driver, 12)
+	_take_one(driver)
+	_idle(driver.pump)
+	var gate: Semaphore = _gate_worker(driver, mode)
+	_take_one(driver)
+	runner.check(_await_popped(driver, mode), "SB5A fixture: the worker holds the gated job [%s]" % mode)
+	_take_one(driver)
+	var peer: int = online.transport.peer.inbox.size()
+	var others: int = online.transport.others.size()
+	driver.leave()
+	var releaser: Thread = _release_in_background(gate)
+	driver.stop()
+	_join_releaser(releaser)
+	var record: Dictionary = driver.record()
+	var commands: Array = _logged_commands(driver)
+	runner.check(commands.any(func(command: Dictionary) -> bool: return command.type == "move" and command.tick == 12), "SB5A the leave's saved log holds the move of the completed, undrained job [%s]" % mode)
+	runner.check(record.tick == (14 if mode == "worker" else 15), "SB5A the record ends at the last completed job, the waiting one never ran, got tick %d [%s]" % [record.tick, mode])
+	runner.check(_replayed_digest(commands, record.tick) == record.digest, "SB5A the saved log replays to the record's end digest [%s]" % mode)
+	runner.check(online.transport.peer.inbox.size() == peer and online.transport.others.size() == others, "SB5A no frame is sent after the leave [%s]" % mode)
+	runner.check(SimPump.live_workers() == threads, "SB5A the leave joined the worker [%s]" % mode)
+
+func test_sb5a_end_record_replays(runner) -> bool:
+	for mode in _modes():
+		for how in ["relay", "protocol"]: _end_record(runner, mode, how)
+	return true
+
+func _end_record(runner, mode: String, how: String) -> void:
+	var threads: int = SimPump.live_workers()
+	var online: Dictionary = _lone_online(mode, 12)
+	var driver = online.driver
+	_frames_to(driver, 12)
+	var gate: Semaphore = _gate_worker(driver, mode)
+	_take_one(driver)
+	runner.check(_await_popped(driver, mode), "SB5A fixture: the worker holds the job at the end (%s end, %s)" % [how, mode])
+	if how == "relay": driver._lockstep.set_relay_lost()
+	else: driver._lockstep.set_protocol_error("probe")
+	var releaser: Thread = _release_in_background(gate)
+	driver.drain()
+	_join_releaser(releaser)
+	var label: String = "%s end, %s" % [how, mode]
+	var record: Dictionary = driver.record()
+	var commands: Array = _logged_commands(driver)
+	runner.check(driver.over() and driver._lockstep.status().begins_with("ended"), "SB5A fixture: the %s ended the lockstep and the driver" % label)
+	runner.check(commands.any(func(command: Dictionary) -> bool: return command.type == "move" and command.tick == 12) and record.tick == 13, "SB5A the log holds the move of the job that was still running at the end, record tick %d (%s)" % [record.tick, label])
+	runner.check(_replayed_digest(commands, record.tick) == record.digest, "SB5A the saved log replays to the record's end digest (%s)" % label)
+	driver.stop()
+	runner.check(SimPump.live_workers() == threads, "SB5A the end joined the worker (%s)" % label)

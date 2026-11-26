@@ -175,6 +175,7 @@ func _exit_tree() -> void:
 	mouse_pan.drop()
 	orders._set_attack_move(false)
 	orders._set_ping(false)
+	driver.stop()
 	driver.detach()
 	ViewCaps.release(get_tree().root)
 

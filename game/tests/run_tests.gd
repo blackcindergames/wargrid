@@ -3,6 +3,7 @@ class_name WargridTestRunner
 extends SceneTree
 
 const AudioSettings = preload("res://scripts/presentation/audio_settings.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 const SUITES = [preload("res://tests/test_combat.gd"), preload("res://tests/test_combat_navigation.gd"), preload("res://tests/test_group_speed.gd"), preload("res://tests/test_base_scene.gd"), preload("res://tests/test_supply.gd"), preload("res://tests/test_production.gd"), preload("res://tests/test_construction.gd"), preload("res://tests/test_economy.gd"), preload("res://tests/test_simulation.gd"), preload("res://tests/test_isometric.gd"), preload("res://tests/test_navigation.gd"), preload("res://tests/test_movement.gd"), preload("res://tests/test_view.gd"), preload("res://tests/test_scene.gd"), preload("res://tests/test_replay.gd"), preload("res://tests/test_skirmish.gd"), preload("res://tests/test_skirmish_match.gd"), preload("res://tests/test_skirmish_scene.gd"), preload("res://tests/test_groups.gd"), preload("res://tests/test_repath.gd"), preload("res://tests/test_benchmark.gd"), preload("res://tests/test_state_hash.gd"), preload("res://tests/test_wire.gd"), preload("res://tests/test_lockstep.gd"), preload("res://tests/test_relay_transport.gd"), preload("res://tests/test_online_scene.gd"), preload("res://tests/test_profiler.gd"), preload("res://tests/test_map.gd"), preload("res://tests/test_teams.gd"), preload("res://tests/test_team_match.gd"), preload("res://tests/test_locomotion.gd"), preload("res://tests/test_allocation.gd"), preload("res://tests/test_navigation_incremental.gd"), preload("res://tests/test_factions.gd"), preload("res://tests/test_containers.gd"), preload("res://tests/test_defences.gd"), preload("res://tests/test_skirmish_waves.gd"), preload("res://tests/test_bot_rules.gd"), preload("res://tests/test_horde.gd"), preload("res://tests/test_ramp.gd"), preload("res://tests/test_perf_overlay.gd"), preload("res://tests/test_pause_menu.gd"), preload("res://tests/test_runner.gd"), preload("res://tests/test_logo.gd"), preload("res://tests/test_rebuild_holes.gd"), preload("res://tests/test_salvage.gd"), preload("res://tests/test_tunnels.gd"), preload("res://tests/test_supply_parity.gd"), preload("res://tests/test_sound.gd"), preload("res://tests/test_announcer.gd"), preload("res://tests/test_audio_settings.gd"), preload("res://tests/test_start_spots.gd"), preload("res://tests/test_match_settings.gd"), preload("res://tests/test_credits.gd"), preload("res://tests/test_shapes.gd"), preload("res://tests/test_shape_audit.gd"), preload("res://tests/test_world_batch.gd"), preload("res://tests/test_visual.gd"), preload("res://tests/test_graphics_settings.gd"), preload("res://tests/test_art_lab.gd"), preload("res://tests/test_presentation_clock.gd"), preload("res://tests/test_view_rows.gd"), preload("res://tests/test_playtest_replay.gd"), preload("res://tests/test_playtest.gd"), preload("res://tests/test_playtest_overlay.gd"), preload("res://tests/test_income_openings.gd"), preload("res://tests/test_dock_lock.gd"), preload("res://tests/test_order_voice.gd"), preload("res://tests/test_join_link.gd"), preload("res://tests/test_launcher.gd"), preload("res://tests/test_match_stats.gd"), preload("res://tests/test_sim_pump.gd"), preload("res://tests/test_selection_lab.gd"), preload("res://tests/test_lab_panel.gd"), preload("res://tests/test_hud.gd"), preload("res://tests/test_production_strip.gd"), preload("res://tests/test_card_keys.gd"), preload("res://tests/test_control_groups.gd"), preload("res://tests/test_camera_keys.gd"), preload("res://tests/test_edge_scroll.gd"), preload("res://tests/test_mouse_pan.gd"), preload("res://tests/test_view_caps.gd"), preload("res://tests/test_definitions_lint.gd")]
 var checks: int = 0
 var failures: int = 0
@@ -20,6 +21,25 @@ func check(condition: bool, message: String) -> void:
 	if not condition:
 		failures += 1
 		print("FAIL: ", message)
+
+# Cases whose pumps the runner stops by design (Task 1's "runner" marks).
+const LEFT_TO_RUNNER: Array[String] = ["test_sb3_job0_starts", "test_sb3_freeze_covers_match", "test_sb4_ring_query", "test_th_pump_tick_hash_on_request", "test_ph_driver_matches_advance_peer", "test_pal_note_carries_survivors", "test_pump_bot_first_wave_at_5400", "test_setup_plans_no_bot_orders", "test_offline_driver_stamps_like_the_scene", "test_offline_driver_no_tick_hash_rows_after_the_end", "test_offline_driver_bot_memory_on_simulation", "test_sb1_submit_takes_no_snapshot", "test_desync_report_names_map_seed_starts"]
+
+static func leaked_worker_line(case_name: String, stopped: int) -> String:
+	if stopped == 0 or LEFT_TO_RUNNER.has(case_name): return ""
+	return "FAIL: live sim worker after " + case_name
+
+# A pump left running, the latch and a forced mode must not reach the next case; under the switch a leak fails the run.
+func _after_case(case_name: String) -> String:
+	var leak: String = leaked_worker_line(case_name, SimPump.stop_live_for_test())
+	SimPump.reset_process_latch_for_test()
+	SimPump.force_mode_for_test("")
+	if not switch_on() or leak.is_empty(): return ""
+	failures += 1
+	return leak
+
+static func switch_on() -> bool:
+	return OS.get_environment("WARGRID_SIM_THREAD") == "1"
 
 static func shard(count: int, args: PackedStringArray, costs: PackedFloat64Array = PackedFloat64Array()) -> Array[int]:
 	var index: int = 0
@@ -109,6 +129,8 @@ func _run() -> void:
 		var before: int = checks
 		var started: int = Time.get_ticks_msec()
 		var completed: Variant = await test.call(self)
+		var leak: String = _after_case(test.get_method())
+		if not leak.is_empty(): print(leak)
 		if stats:
 			print(stat_line(test.get_method(), Time.get_ticks_msec() - started, checks - before))
 		if completed is not bool or completed != true or checks == before:
@@ -119,6 +141,7 @@ func _run() -> void:
 		print("FAIL: zero tests/checks")
 	remove_dir(PlaytestSession.dir)
 	await create_timer(0.5).timeout # the audio thread frees stopped playbacks asynchronously; quitting sooner leaks them
+	if switch_on(): print("SIM PUMPS LIVE ", SimPump.live_workers())
 	print("CASES ", case_count, " CHECKS ", checks, " FAILURES ", failures)
 	if failures == 0:
 		print("TESTS PASSED ", checks)

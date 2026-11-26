@@ -101,8 +101,9 @@ PUMP_FILE = "game/scripts/match/sim_pump.gd"
 PUMP_COUNTS: dict[str, int] = {
     # +1: _read_failure() reads pump.failure() for the freeze card (P2.3a1 Task 8).
     # +1 each: sim_mode() reads pump.mode() (SB5a Task 2).
-    "game/scripts/match/offline_driver.gd": 11,
-    "game/scripts/match/online_driver.gd": 10,
+    # +1 each: create stops the old pump first; +2 online: _stop_pump reads failure() and drains (SB5a Task 5).
+    "game/scripts/match/offline_driver.gd": 12,
+    "game/scripts/match/online_driver.gd": 13,
 }
 
 

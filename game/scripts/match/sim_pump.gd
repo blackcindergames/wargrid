@@ -116,10 +116,19 @@ func start() -> Note:
 	job.step = false
 	_current = Slot.new()
 	var note: Note = _note_for(job, _current)
+	if note == null: return _failed_start()
 	var map: Dictionary = _sim.map_data()
 	if not map.is_empty():
 		for player: Dictionary in _current.view.players: note.starts[player.id] = MapData.start_cell(map, player.id)
 	if _mode == "worker": _spawn()
+	return note
+
+func _failed_start() -> Note:
+	_current.tick = _sim.tick()
+	_current.view = _sim.view_state()
+	_fail("start")
+	var note := Note.new()
+	note.tick = _current.tick
 	return note
 
 func post(job: Job) -> bool:

@@ -77,6 +77,7 @@ func create(map_path: String, starts: Array[int], factions: Dictionary, match_se
 	_rejections_seen = 0
 	_log_seen = 0
 	_credit = 0
+	if pump != null: pump.stop()
 	var bots: Array[int] = _lockstep.bots()
 	var bot_factions := {}
 	for bot: int in bots:
@@ -108,7 +109,17 @@ func start() -> void:
 
 func stop() -> void:
 	_stopped = true
+	_stop_pump()
+
+# A stopped pump's completed notes still reach the log, so a saved record's log and end digest meet.
+func _stop_pump() -> void:
 	pump.stop()
+	if not pump.failure().is_empty(): return
+	for note: SimPump.Note in pump.drain():
+		var tick: int = _paired_tick(note)
+		if tick < 0: continue
+		_lockstep.record(tick, note.issued)
+		_last = note
 
 func detach() -> void:
 	if _lockstep != null: _lockstep.send = Callable()
@@ -160,16 +171,21 @@ func drain() -> Array[SimPump.Note]:
 	_settle()
 	return notes
 
-func _finish_job(note: SimPump.Note) -> void:
+func _paired_tick(note: SimPump.Note) -> int:
 	# Publish jobs (tests) are not ticks.
-	if _taken.is_empty(): return
+	if _taken.is_empty(): return -1
 	var tick: int = _taken.pop_front()
 	# Taken past the end: the sim did not move.
-	if note.over and note.tick <= tick: return
+	if note.over and note.tick <= tick: return -1
 	if note.tick != tick + 1:
 		# Pairing is by post order; a foreign job in between would record and send the wrong tick.
 		_lockstep.set_protocol_error("note at tick %d for taken tick %d" % [note.tick, tick])
-		return
+		return -1
+	return tick
+
+func _finish_job(note: SimPump.Note) -> void:
+	var tick: int = _paired_tick(note)
+	if tick < 0: return
 	_lockstep.record(tick, note.issued)
 	for command: Dictionary in note.bot_commands: _lockstep.submit(command, command.player)
 	_lockstep.finish_tick(note.tick, note.snapshot if not note.digest.is_empty() else null, note.digest)
@@ -342,6 +358,7 @@ func match_log() -> Dictionary:
 
 func _finish() -> void:
 	_finished = true
+	if _ended(): _stop_pump()
 	if _lockstep.status() == "ended_desync": _report_path = _write_report()
 	_write_latency()
 	if not _ended():
