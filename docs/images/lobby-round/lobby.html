@@ -49,6 +49,9 @@ nav hr{width:90%;border:0;border-top:1px solid var(--line);margin:8px auto}
 .seg .b{justify-content:center;min-width:120px;color:var(--muted)}
 .seg .b.sel{color:var(--text)}
 .modebar{display:flex;align-items:center;gap:14px}
+.tools{margin-left:auto;display:flex;align-items:center;gap:10px}
+.codefield{display:flex;align-items:center;gap:12px;border:1px solid var(--line);background:var(--input);padding:7px 12px}
+.codefield svg{width:16px;height:16px;color:var(--cyan)}
 .lobby{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(250px,1fr);gap:28px;align-items:start;min-height:0}
 .stack{display:grid;gap:10px;min-width:0;align-content:start}
 .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
@@ -130,7 +133,7 @@ const unused=opt('unused','line',['rows','line']);
 const slots=opt('slots','teams',['teams','columns','flat']);
 const spot=opt('spot','map',['map','letter','random']);
 const colour=opt('colour','player',['player','team','pick']);
-const invite=opt('invite','slot',['top','footer','slot']);
+const invite=opt('invite','slot',['top','footer','slot','toolbar']);
 const guestLook=opt('guest','readonly',['readonly','disabled']);
 const picker=opt('picker','inline',['dialog','inline']);
 const mapId=opt('map','broken_crown',['dry_wells','broken_crown','ashfall']);
@@ -283,7 +286,8 @@ function mapColumn(){
 function inviteTop(){return `<div class="invite"><div><div class="label">Invite code</div><div class="code">K7Q2XD</div></div>${btn('Copy code','link')}</div>`}
 function lobbyPage(){
  const online=S.online, waiting=S.slots.some(p=>p.kind==='open');
- const modeRow=start==='row'&&host?`<div class="modebar"><span class="label">Mode</span><div class="seg">${btn('Skirmish',online?'':'sel')}${btn('Host game',online?'sel':'')}</div>${online&&waiting?'<span class="hint">Your friend joins with the code.</span>':''}</div>`:'';
+ const tools=online&&invite==='toolbar'?`<div class="tools">${waiting?'<span class="hint">Your friend types this code under Join.</span>':''}${roomBox('Private / public (later)','width:150px;height:38px')}<div class="codefield" title="Copy code"><span class="code">K7Q2XD</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9"/><path d="M11 2H2v9"/></svg></div></div>`:'';
+ const modeRow=start==='row'&&host?`<div class="modebar"><span class="label">Mode</span><div class="seg">${btn('Skirmish',online?'':'sel')}${btn('Host game',online?'sel':'')}</div>${online&&waiting&&invite!=='toolbar'?'<span class="hint">Your friend joins with the code.</span>':''}${tools}</div>`:'';
  const title=!host?'Joined game':start==='row'?'Play':online?'Host game':'Skirmish';
  const sub=!online?'Play against bots on this computer.':host?(waiting?'Online · waiting for your friend':'Online · your friend is here'):'Online · the host sets up the match';
  const top=online&&host&&invite==='top'?inviteTop():'';
