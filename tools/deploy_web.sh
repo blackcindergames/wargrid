@@ -4,7 +4,7 @@ version=$(sed -n 's/^config\/version="\(.*\)"$/\1/p' "$repo_root/game/project.go
 refuse() { echo "deploy_web: $1 needs $2, config/version is \"$version\"" >&2; exit 1; }
 # The relay only pairs equal build strings, so a -dev version keeps test players out of production rooms.
 case "$1" in
-	'') app=wargrid-web health=https://wargrid.pdstuber.dev/health
+	'') app=wargrid-web health=https://wargrid.blackcindergames.com/health
 		case "$version" in '' | *-*) refuse production "a release version" ;; esac ;;
 	test) app=wargrid-web-test health=https://wargrid-web-test.fly.dev/health
 		case "$version" in *-*) ;; *) refuse test "a prerelease version such as 0.7.0-dev" ;; esac ;;

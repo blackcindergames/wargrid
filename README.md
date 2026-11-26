@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://wargrid.pdstuber.dev"><b>Play in the browser</b></a>
+  <a href="https://wargrid.blackcindergames.com"><b>Play in the browser</b></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/blackcindergames/wargrid/releases">Download for Linux, Windows and macOS</a>
 </p>
@@ -38,7 +38,7 @@ Wargrid is an isometric RTS written in Godot 4 and typed GDScript. It is inspire
 
 ## Play
 
-- **In the browser:** https://wargrid.pdstuber.dev (verified in Safari; Chrome and Firefox untested).
+- **In the browser:** https://wargrid.blackcindergames.com (verified in Safari; Chrome and Firefox untested).
 - **Desktop:** Linux, Windows and macOS zips on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Builds are unsigned: on macOS 15 and later open System Settings > Privacy & Security > Open Anyway after the first blocked start (or run `xattr -dr com.apple.quarantine Wargrid.app` once); on Windows, SmartScreen needs More info, Run anyway.
 - **Online with a friend:** one player clicks *Create match* and shares the match code; the other enters it and clicks *Join*. The host chooses the map; the other player's game checks it. Both need the same version.
 - **From source:** Godot 4.7.2, see [setup and commands](docs/development.md#setup-and-commands).
