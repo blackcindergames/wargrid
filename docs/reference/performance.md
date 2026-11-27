@@ -7,41 +7,41 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 218% | ➖ same | 2026-11-27 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 217% | 🔻 1% better (busy host) | 2026-11-27 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame** | 🔴 Over | ██████████▶ 188% | 🆕 first run | 2026-11-22 |
-| **3v3 match, bots and simulation (real 3v3)** | 🔴 Over | ██████████▶ 179% | ➖ same | 2026-11-27 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 165% | 🔺 2% worse | 2026-11-27 |
-| **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 148% | ➖ same | 2026-11-27 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 147% | ➖ same | 2026-11-27 |
-| **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 127% | ➖ same | 2026-11-27 |
+| **3v3 match, bots and simulation (real 3v3)** | 🔴 Over | ██████████▶ 178% | ➖ same (busy host) | 2026-11-27 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 162% | 🔻 2% better (busy host) | 2026-11-27 |
+| **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 147% | 🔻 1% better (busy host) | 2026-11-27 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 146% | 🔻 1% better (busy host) | 2026-11-27 |
+| **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 126% | ➖ same (busy host) | 2026-11-27 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 1% worse (busy host) | 2026-11-27 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 2% worse | 2026-11-27 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔻 1% better | 2026-11-27 |
 | Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 6% worse | 2026-11-27 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-27 |
-| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 2% worse | 2026-11-27 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔻 1% better | 2026-11-27 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 1% worse | 2026-11-27 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 1% worse (busy host) | 2026-11-27 |
+| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 1% worse (busy host) | 2026-11-27 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same (busy host) | 2026-11-27 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 3% worse (busy host) | 2026-11-27 |
 
 Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 44% of budget (Sim boundary SB5a, 2026-11-27), 2% slower than auto c6030abe (worst vs worst); run-to-run spread up to 50%
-- movement p99: 25% of budget (Sim boundary SB5a, 2026-11-27), 1% faster than auto c6030abe (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 74% of budget (Sim boundary SB5a, 2026-11-27), 1% faster than auto c6030abe (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 58% of budget (Sim boundary SB5a, 2026-11-27), 1% faster than auto c6030abe (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 165% of budget, exceeded (Sim boundary SB5a, 2026-11-27), 2% slower than auto c6030abe (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 147% of budget, exceeded (Sim boundary SB5a, 2026-11-27), unchanged vs auto c6030abe (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 218% of budget, exceeded (Sim boundary SB5a, 2026-11-27), unchanged vs auto c6030abe (worst vs worst); run-to-run spread not measured
+- movement p95: 44% of budget (auto 9e6ee156, 2026-11-27), 1% slower than Sim boundary SB5a (worst vs worst); run-to-run spread up to 50%, busy host (load 3.2)
+- movement p99: 25% of budget (auto 9e6ee156, 2026-11-27), unchanged vs Sim boundary SB5a (worst vs worst); run-to-run spread up to 50%, busy host (load 3.2)
+- combat gated p95: 74% of budget (auto 9e6ee156, 2026-11-27), 1% slower than Sim boundary SB5a (worst vs worst); run-to-run spread up to 58%, busy host (load 3.2)
+- combat gated p99: 59% of budget (auto 9e6ee156, 2026-11-27), 1% slower than Sim boundary SB5a (worst vs worst); run-to-run spread up to 58%, busy host (load 3.2)
+- combat stress p95: 162% of budget, exceeded (auto 9e6ee156, 2026-11-27), 2% faster than Sim boundary SB5a (worst vs worst); run-to-run spread up to 41%, busy host (load 3.2)
+- plumbing, movement layouts: 146% of budget, exceeded (auto 9e6ee156, 2026-11-27), 1% faster than Sim boundary SB5a (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- plumbing, horde: 217% of budget, exceeded (auto 9e6ee156, 2026-11-27), 1% faster than Sim boundary SB5a (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
 - rendered tick-frame p95: 72% of budget (Sim boundary SB5a, 2026-11-27), 6% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured
 - Ashfall tick-frame p95: 74% of budget (Sim boundary SB5a, 2026-11-27), 2% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured
-- lockstep p99: 11% of budget (Sim boundary SB5a, 2026-11-27), 1% slower than auto c6030abe (worst vs worst); run-to-run spread not measured
+- lockstep p99: 11% of budget (auto 9e6ee156, 2026-11-27), 3% slower than Sim boundary SB5a (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
-- 3v3 upkeep: 127% of budget, exceeded (Sim boundary SB5a, 2026-11-27), unchanged vs auto c6030abe (worst vs worst); run-to-run spread not measured
-- 3v3 sim p95: 148% of budget, exceeded (Sim boundary SB5a, 2026-11-27), unchanged vs auto c6030abe (worst vs worst); run-to-run spread not measured
-- 3v3 bots + sim p95: 179% of budget, exceeded (Sim boundary SB5a, 2026-11-27), unchanged vs auto c6030abe (worst vs worst); run-to-run spread not measured
+- 3v3 upkeep: 126% of budget, exceeded (auto 9e6ee156, 2026-11-27), unchanged vs Sim boundary SB5a (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- 3v3 sim p95: 147% of budget, exceeded (auto 9e6ee156, 2026-11-27), 1% faster than Sim boundary SB5a (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- 3v3 bots + sim p95: 178% of budget, exceeded (auto 9e6ee156, 2026-11-27), unchanged vs Sim boundary SB5a (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)
