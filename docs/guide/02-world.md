@@ -140,7 +140,7 @@ flowchart TD
     linkStyle default stroke:#9aa4b2,stroke-width:2px
 ```
 
-The launcher calls `MatchSettings.starts(id, seed, teams, settings)`; the settings carry the starts the players took in the lobby and the closed ones, and closed starts leave the map before the rule runs. Offline the seed is `randi()`; online it is the match seed the relay announces in `start`, so every peer computes the same answer.
+The launcher calls `MatchSettings.starts(id, seed, teams, settings)`; the settings carry the starts the players took in the lobby and the ones the host gave its bots; the rule places the rest. Offline the seed is `randi()`; online it is the match seed the relay announces in `start`, so every peer computes the same answer.
 
 `StartSpots.assign` follows Zero Hour's rule ([converted maps plan](../superpowers/plans/2026-11-08-converted-maps-playable.md), header, with the EA source lines), with one change: allies start together. Slots are placed in order:
 
@@ -205,4 +205,4 @@ Distances are straight lines between start cells; ties go to the lowest index. W
 - Next: [3. Entities](03-entities.md) puts units and buildings on this grid; [6. Movement](06-movement.md) walks routes over it.
 
 ---
-Checked against the P20 slice 2 fix round 1 working tree over `2d5bf56d` (branch `p20-lobby`, 2026-11-27) for the start rule and its settings; the rest against `60b6674`. Files: `game/scripts/simulation/map_data.gd`, `game/scripts/simulation/start_spots.gd`, `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/simulation/definitions/definitions.gd`, `game/scripts/presentation/isometric.gd`, `game/scripts/presentation/terrain_view.gd`, `game/scripts/presentation/world_view.gd`, `game/scripts/match_settings.gd`, `game/scripts/launcher.gd`, `game/scripts/match/match_screen.gd`, `game/scripts/match/orders.gd`, `tools/zh_map/convert.py`, `tools/zh_map/refpack.py`, `game/data/maps/NOTICE.md`, `game/data/maps/dry_wells.json`
+Checked against the P20 follow-up working tree over `cc627f39` (branch `p20-followup`, 2026-11-27) for bot start placement; the P20 slice 2 fix round 1 working tree over `2d5bf56d` (branch `p20-lobby`, 2026-11-27) for the start rule and its settings; the rest against `60b6674`. Files: `game/scripts/simulation/map_data.gd`, `game/scripts/simulation/start_spots.gd`, `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/simulation/definitions/definitions.gd`, `game/scripts/presentation/isometric.gd`, `game/scripts/presentation/terrain_view.gd`, `game/scripts/presentation/world_view.gd`, `game/scripts/match_settings.gd`, `game/scripts/launcher.gd`, `game/scripts/match/match_screen.gd`, `game/scripts/match/orders.gd`, `tools/zh_map/convert.py`, `tools/zh_map/refpack.py`, `game/data/maps/NOTICE.md`, `game/data/maps/dry_wells.json`

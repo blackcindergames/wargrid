@@ -43,7 +43,7 @@ const JUMP_NEAR_PX: float = 24.0
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
 static var map_path: String = Skirmish.MAP_PATH
 static var starts: Array[int] = []
-# The chosen and closed starts the match began with, so a rematch keeps them.
+# The chosen starts of players and bots the match began with, so a rematch keeps them.
 static var placement: Dictionary = {}
 static var match_seed: int = 0
 var driver: RefCounted

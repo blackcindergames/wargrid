@@ -684,13 +684,13 @@ func test_notices_reach_the_hud_while_processing(runner) -> bool:
 const LAUNCHER_PAGE_PATHS: Dictionary = {
 	"Play:skirmish": ["Title", "Subtitle", "ModeBar/Skirmish", "ModeBar/Host", "ModeBar/Join", "Body/Players", "Body/MapColumn/MapLabel", "Body/MapColumn/Map", "Body/MapColumn/Preview", "Body/MapColumn/MapInfo", "ThisBuild", "Footer/Status", "Footer/Start"],
 	"Play:host": ["Title", "Subtitle", "ModeBar/Skirmish", "ModeBar/Host", "ModeBar/Join", "Body/Players", "Body/MapColumn/MapLabel", "Body/MapColumn/Map", "Body/MapColumn/Preview", "Body/MapColumn/MapInfo", "ThisBuild", "Footer/Status", "Footer/Start"],
-	"Play:join": ["Title", "Subtitle", "ModeBar/Skirmish", "ModeBar/Host", "ModeBar/Join", "JoinCard/Card/Box/Title", "JoinCard/Card/Box/Hint", "JoinCard/Card/Box/CodeLabel", "JoinCard/Card/Box/Code", "JoinCard/Card/Box/Buttons/Cancel", "JoinCard/Card/Box/Buttons/Join", "ThisBuild"],
+	"Play:join": ["Title", "Subtitle", "ModeBar/Skirmish", "ModeBar/Host", "ModeBar/Join", "JoinPage/Title", "JoinPage/Hint", "JoinPage/CodeLabel", "JoinPage/Row/Code", "JoinPage/Row/Join", "JoinPage/Note", "ThisBuild"],
 	"Settings": ["Title", "Subtitle", "Body/Audio/AudioHeader", "Body/Audio/Volume/MusicLabel", "Body/Audio/Volume/Music", "Body/Audio/Volume/MusicValue", "Body/Audio/Volume/EffectsLabel", "Body/Audio/Volume/Effects", "Body/Audio/Volume/EffectsValue", "Body/Audio/Volume/VoiceLabel", "Body/Audio/Volume/Voice", "Body/Audio/Volume/VoiceValue", "Body/Audio/Volume/MuteLabel", "Body/Audio/Volume/Mute", "Body/Audio/DisplayHeader", "Body/Audio/Fullscreen", "Body/Playtest/GraphicsHeader", "Body/Playtest/Quality", "Body/Playtest/Neon", "Body/Playtest/Smooth", "Body/Playtest/Destinations", "Body/Playtest/PlaytestHeader", "Body/Playtest/PlaytestSwitch", "Body/Playtest/PlaytestHint", "Body/Playtest/Online/OnlineHeader", "Body/Playtest/Online/RelayHelp", "Body/Playtest/Online/RelayUrl"],
 	"Credits": ["Title", "Subtitle", "Body/Text", "Body/Legal"],
 }
 const LAUNCHER_NAV_ORDER: Array[String] = ["Play", "Divider", "Settings", "Credits"]
 const PAGE_TITLES: Dictionary = {"Play": "Play", "Settings": "Settings", "Credits": "Credits"}
-const JOIN_CARD := "Pages/Play/JoinCard/Card/Box"
+const JOIN_CARD := "Pages/Play/JoinPage"
 const ONLINE := "Pages/Settings/Body/Playtest/Online"
 
 func _force_visible(launcher: Node) -> void:
@@ -1049,7 +1049,7 @@ func test_joiner_refuses_other_map(runner) -> bool:
 	runner.check(not launcher._handle(Wire.encode(message)), "N13 the joiner refuses a different map before the simulation exists")
 	runner.check(runner.root.get_tree().current_scene == scene_before and transport.close_calls == 1, "N13 no online scene, transport closed once")
 	runner.check(launcher.get_node(JOIN_CARD + "/Message").text == "Your copy of Ashfall differs from the host's", "N13 the reason is shown under the join code")
-	runner.check(not launcher.get_node(JOIN_CARD + "/Buttons/Join").disabled, "N13 Join game usable again")
+	runner.check(not launcher.get_node(JOIN_CARD + "/Row/Join").disabled, "N13 Join game usable again")
 	launcher._process(0.0)
 	launcher.free()
 	SkirmishMain.map_path = before_path
@@ -1102,7 +1102,7 @@ func test_cancel_and_copy_while_waiting(runner) -> bool:
 		invite.get_node("Box/Copy").pressed.emit()
 		runner.check(DisplayServer.clipboard_get() == "ABC234", "N18 Copy puts the match code on the clipboard")
 	leave.pressed.emit()
-	var enabled: bool = not launcher.get_node(JOIN_CARD + "/Buttons/Join").disabled and launcher.get_node("Pages/Play/Body/MapColumn/Map").visible and launcher._own_selector() is OptionButton
+	var enabled: bool = not launcher.get_node(JOIN_CARD + "/Row/Join").disabled and launcher.get_node("Pages/Play/Body/MapColumn/Map").visible and launcher._own_selector() is OptionButton
 	runner.check(transport.close_calls == 1 and not invite.visible and enabled, "N17 Stop hosting restores the launcher")
 	runner.check(launcher.get_node("Pages/Play/Footer/Status").text == LauncherScript.HOSTING_STOPPED and not launcher.is_processing(), "N17 Stop hosting says so and stops polling")
 	launcher._transport = FakeTransport.new()
@@ -1459,7 +1459,7 @@ func _page_case(runner, prerelease: bool, search: String, label: String) -> Dict
 	var launcher = await _launcher(runner, runner.root, prerelease, search)
 	var pages: Control = launcher.get_node("Pages")
 	runner.check(launcher._transport == null and not launcher.is_processing(), "N22 page address never connects: %s" % label)
-	var result := {"code": pages.get_node("Play/JoinCard/Card/Box/Code").text, "relay": launcher.get_node(ONLINE + "/RelayUrl").text, "relay_visible": launcher.get_node(ONLINE).visible}
+	var result := {"code": pages.get_node("Play/JoinPage/Row/Code").text, "relay": launcher.get_node(ONLINE + "/RelayUrl").text, "relay_visible": launcher.get_node(ONLINE).visible}
 	launcher.free()
 	return result
 
@@ -1480,8 +1480,8 @@ func test_launcher_prefills_from_page(runner) -> bool:
 	var first = await _launcher(runner, runner.root, true, both)
 	var back = await _launcher(runner, runner.root, true, both, "", false)
 	var back_pages: Control = back.get_node("Pages")
-	runner.check(first.get_node(JOIN_CARD + "/Code").text == "ABC234" and first.mode == "join", "N22 the first visit takes the code into Join game")
-	runner.check(back_pages.get_node("Play/JoinCard/Card/Box/Code").text == "" and back.mode == "skirmish" and back.get_node(ONLINE + "/RelayUrl").text == "wss://x.example/ws", "N22 a return to the launcher drops the code and keeps the relay")
+	runner.check(first.get_node(JOIN_CARD + "/Row/Code").text == "ABC234" and first.mode == "join", "N22 the first visit takes the code into Join game")
+	runner.check(back_pages.get_node("Play/JoinPage/Row/Code").text == "" and back.mode == "skirmish" and back.get_node(ONLINE + "/RelayUrl").text == "wss://x.example/ws", "N22 a return to the launcher drops the code and keeps the relay")
 	first.free()
 	back.free()
 	AudioSettings.path = saved_settings

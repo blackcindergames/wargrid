@@ -34,13 +34,13 @@ const PANEL := Color("#223241")
 const WELL := Color("#0c141a")
 const TEXT := Color("#eef3f5")
 const LINE := Color("#2e3f4b")
-const JOIN := "Pages/Play/JoinCard/Card/Box"
+const JOIN := "Pages/Play/JoinPage"
 const SIZES: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1920, 1080), Vector2i(2576, 1145)]
 # canvas_items + expand lays a window out at 720 logical px high; 2576x1145 becomes roundi(720 * 2576 / 1145) wide
 const STRETCHED: Array[Array] = [[Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(2576, 1145), Vector2i(1620, 720)]]
 
 func cases() -> Array[Callable]:
-	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_picks_bot_list_and_old_files, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_launcher_effective_sizes, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_offline_setup_seats_extra_bots, test_relay_in_settings, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_takes_a_pasted_line, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits, test_mode_row_two_modes, test_team_mode_shows_bot_rows, test_team_bot_factions_remembered, test_team_hello_carries_bots, test_team_changes_while_connecting, test_waiting_lists_bot_slots, test_waiting_edges_neon, test_start_sets_bot_factions_and_teams, test_version_mismatch_plain_line, test_team_layout_hud_sizes, test_guest_start_matches_host, test_lobby_one_click_bot_match, test_lobby_add_bot_up_to_starts, test_lobby_host_caps_bots, test_lobby_remove_bot, test_lobby_random_faction, test_lobby_code_at_host_game, test_lobby_settings_coalesced, test_lobby_friend_joins_and_leaves, test_lobby_start_request_when_full, test_lobby_guest_live_view, test_lobby_guest_change_lines, test_lobby_host_left, test_lobby_stop_hosting, test_lobby_countdown_resets, test_lobby_hour_cap, test_lobby_expiry_texts, test_lobby_changes_wait_for_open_lists, test_lobby_picks_both_ways, test_relay_reasons, test_prerelease_build_in_hello, test_join_lookalike_letters, test_lobby_guest_team_move_line, test_lobby_small_px, test_lobby_guest_random_resolved, test_lobby_copy_turns_copied, test_launcher_theme_stays_in_the_launcher, test_lobby_layout_sizes, test_join_card_placement, test_lobby_look_lines_up, test_start_pick_offline, test_start_pick_host_folds_guest, test_start_pick_guest_view, test_start_pick_guest_repicks, test_start_pick_closed_fits_hosting, test_start_pick_rejoin_adopts_nothing, test_start_pick_closed_count_line, test_start_pick_close_promise, test_start_pick_hover, test_every_mode_leaves, test_start_pick_ask_follows_the_room, test_host_trusts_only_the_guest_seat, test_own_faction_before_welcome]
+	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_picks_bot_list_and_old_files, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_launcher_effective_sizes, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_offline_setup_seats_extra_bots, test_relay_in_settings, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_takes_a_pasted_line, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits, test_mode_row_two_modes, test_team_mode_shows_bot_rows, test_team_bot_factions_remembered, test_team_hello_carries_bots, test_team_changes_while_connecting, test_waiting_lists_bot_slots, test_waiting_edges_neon, test_start_sets_bot_factions_and_teams, test_version_mismatch_plain_line, test_team_layout_hud_sizes, test_guest_start_matches_host, test_lobby_one_click_bot_match, test_lobby_add_bot_up_to_starts, test_lobby_host_caps_bots, test_lobby_remove_bot, test_lobby_random_faction, test_lobby_code_at_host_game, test_lobby_settings_coalesced, test_lobby_friend_joins_and_leaves, test_lobby_start_request_when_full, test_lobby_guest_live_view, test_lobby_guest_change_lines, test_lobby_host_left, test_lobby_stop_hosting, test_lobby_countdown_resets, test_lobby_hour_cap, test_lobby_expiry_texts, test_lobby_changes_wait_for_open_lists, test_lobby_picks_both_ways, test_relay_reasons, test_prerelease_build_in_hello, test_join_lookalike_letters, test_lobby_guest_team_move_line, test_lobby_small_px, test_lobby_guest_random_resolved, test_lobby_copy_turns_copied, test_launcher_theme_stays_in_the_launcher, test_lobby_layout_sizes, test_join_card_placement, test_lobby_look_lines_up, test_start_pick_offline, test_start_pick_host_folds_guest, test_start_pick_guest_view, test_start_pick_guest_repicks, test_start_pick_bots_stay_in_skirmish, test_start_pick_host_removes_bot, test_start_pick_rejoin_adopts_nothing, test_start_pick_offline_refuses_overflow, test_start_pick_hint, test_start_pick_hover, test_every_mode_leaves, test_start_pick_ask_follows_the_room, test_host_trusts_only_the_guest_seat, test_own_faction_before_welcome]
 
 func _picked(selector: OptionButton) -> String:
 	return selector.get_item_metadata(selector.selected)
@@ -403,8 +403,8 @@ func _join_with(launcher, code: String) -> void:
 	launcher.show_page("Play")
 	launcher.set_mode("join")
 	launcher._set_relay(LOOPBACK)
-	launcher.get_node(JOIN + "/Code").text = code
-	launcher.get_node(JOIN + "/Buttons/Join").pressed.emit()
+	launcher.get_node(JOIN + "/Row/Code").text = code
+	launcher.get_node(JOIN + "/Row/Join").pressed.emit()
 	launcher.set_process(false)
 
 func _message(launcher) -> Label:
@@ -433,8 +433,8 @@ func test_link_opens_join(runner) -> bool:
 	first.search = "?code=ABC234"
 	runner.root.add_child(first)
 	await runner.process_frame
-	runner.check(first.current_page == "Play" and first.mode == "join" and first.get_node(JOIN + "/Code").text == "ABC234" and first._transport == null, "L10a a join link opens Join game with the code and no connection, got %s %s" % [first.current_page, first.mode])
-	runner.check(first.get_node("Pages/Play/JoinCard").visible and _message(first).text == LauncherScript.FROM_LINK and _focused(first) == first.get_node(JOIN + "/Buttons/Join"), "L10a the card says where the code came from and Join game has the focus")
+	runner.check(first.current_page == "Play" and first.mode == "join" and first.get_node(JOIN + "/Row/Code").text == "ABC234" and first._transport == null, "L10a a join link opens Join game with the code and no connection, got %s %s" % [first.current_page, first.mode])
+	runner.check(first.get_node("Pages/Play/JoinPage").visible and _message(first).text == LauncherScript.FROM_LINK and _focused(first) == first.get_node(JOIN + "/Row/Join"), "L10a the card says where the code came from and Join game has the focus")
 	first.free()
 	var again = Launcher.instantiate()
 	again.search = "?code=ABC234"
@@ -522,7 +522,7 @@ func test_join_error_footer(runner) -> bool:
 		launcher._transport = OnlineTests.FakeTransport.new()
 		launcher._handle(Wire.encode({"type": "error", "reason": reason[0]}))
 		runner.check(_message(launcher).text == reason[1] and _message(launcher).theme_type_variation == &"JoinError", "L14 the relay's '%s' reads '%s', got '%s'" % [reason[0], reason[1], _message(launcher).text])
-		var field: LineEdit = launcher.get_node(JOIN + "/Code")
+		var field: LineEdit = launcher.get_node(JOIN + "/Row/Code")
 		runner.check(_focused(launcher) == field and field.get_selected_text() == "ABC234", "L14 a failed join focuses the code with all of it selected, got %s '%s'" % [_focused(launcher), field.get_selected_text()])
 	launcher.free()
 	return true
@@ -823,7 +823,7 @@ func test_vertical_rhythm(runner) -> bool:
 	AudioSettings.path = scratch_for("rhythm")
 	var built: Array = _port_with_launcher(runner, Vector2i(1280, 720), Vector2i(1280, 720))
 	var launcher = built[1]
-	var rows: Array = [["skirmish", "Body/Players/Teams/List/Team1/Head", "Body/Players/Teams/List/Team1/You", "Body/Players/Teams/List/Team2/Head", 16.0, 26.0], ["skirmish", "Body/MapColumn/MapLabel", "Body/MapColumn/Map", "Body/MapColumn/Preview", 10.0, 14.0], ["join", "JoinCard/Card/Box/CodeLabel", "JoinCard/Card/Box/Code", "JoinCard/Card/Box/Message", 6.0, 10.0]]
+	var rows: Array = [["skirmish", "Body/Players/Teams/List/Team1/Head", "Body/Players/Teams/List/Team1/You", "Body/Players/Teams/List/Team2/Head", 16.0, 26.0], ["skirmish", "Body/MapColumn/MapLabel", "Body/MapColumn/Map", "Body/MapColumn/Preview", 10.0, 14.0], ["join", "JoinPage/CodeLabel", "JoinPage/Row/Code", "JoinPage/Message", 6.0, 10.0]]
 	for row: Array in rows:
 		await _settle(runner, launcher, "Play", row[0])
 		var label: Control = launcher.get_node_or_null("Pages/Play/" + row[1])
@@ -965,7 +965,7 @@ func test_launcher_effective_sizes(runner) -> bool:
 	launcher.set_mode("join")
 	await runner.process_frame
 	await runner.process_frame
-	var code: LineEdit = launcher.get_node(JOIN + "/Code")
+	var code: LineEdit = launcher.get_node(JOIN + "/Row/Code")
 	var code_size: int = code.get_theme_font_size("font_size")
 	var code_style: StyleBox = code.get_theme_stylebox("normal")
 	var text_height: float = code.get_theme_font("font").get_height(code_size)
@@ -1132,7 +1132,7 @@ func test_enter_submits_join_code(runner) -> bool:
 	_restore(saved)
 	launcher.set_mode("join")
 	launcher._set_relay(LOOPBACK)
-	var code: LineEdit = launcher.get_node(JOIN + "/Code")
+	var code: LineEdit = launcher.get_node(JOIN + "/Row/Code")
 	code.text = ""
 	code.text_submitted.emit("")
 	launcher.set_process(false)
@@ -1193,11 +1193,11 @@ func test_connecting_elapsed_and_cancel(runner) -> bool:
 	_join_with(launcher, "ABC234")
 	var join_transport := OnlineTests.FakeTransport.new()
 	launcher._transport = join_transport
-	var card_cancel: Button = launcher.get_node(JOIN + "/Buttons/Cancel")
-	runner.check(_focused(launcher) == card_cancel and not card_cancel.disabled and launcher.get_node(JOIN + "/Buttons/Join").disabled, "L20 joining moves the focus to the card's Cancel and locks Join game")
+	var card_cancel: Button = launcher.get_node(JOIN + "/Row/Cancel")
+	runner.check(_focused(launcher) == card_cancel and not card_cancel.disabled and launcher.get_node(JOIN + "/Row/Join").disabled, "L20 joining moves the focus to the card's Cancel and locks Join game")
 	launcher._show_connecting(launcher._connect_msec + 3200)
 	runner.check(_message(launcher).text == "Connecting… 3 s", "L20 the card counts the seconds under the field, got '%s'" % _message(launcher).text)
-	launcher.get_node(JOIN + "/Code").text = "XYZ234"
+	launcher.get_node(JOIN + "/Row/Code").text = "XYZ234"
 	launcher._join()
 	runner.check(launcher._transport == join_transport, "L20 a second Join while connecting keeps the first connection")
 	launcher._unhandled_input(_esc())
@@ -1207,8 +1207,7 @@ func test_connecting_elapsed_and_cancel(runner) -> bool:
 	launcher._transport = join_transport
 	card_cancel.pressed.emit()
 	runner.check(join_transport.close_calls == 1 and launcher.mode == "join", "L20 the card's Cancel while connecting cancels the connection and stays")
-	card_cancel.pressed.emit()
-	runner.check(launcher.mode == "skirmish", "L20 the card's Cancel when idle returns to Skirmish")
+	runner.check(not card_cancel.visible, "L20 the page's Cancel hides once idle")
 	var host = _host(launcher)
 	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
 	launcher._unhandled_input(_esc())
@@ -1338,12 +1337,12 @@ func test_default_focus(runner) -> bool:
 	runner.check(_focused(launcher) == play.get_node("Footer/CancelConnect"), "L24 Host game moves focus to Cancel while connecting, got %s" % _focused(launcher))
 	launcher._cancel()
 	runner.check(_focused(launcher) == play.get_node("Footer/Start"), "L24 back on Skirmish the focus is on Start, got %s" % _focused(launcher))
-	launcher.get_node(JOIN + "/Code").text = ""
+	launcher.get_node(JOIN + "/Row/Code").text = ""
 	play.get_node("ModeBar/Join").pressed.emit()
-	runner.check(_focused(launcher) == launcher.get_node(JOIN + "/Code"), "L24 Join game with an empty code focuses the code field, got %s" % _focused(launcher))
-	launcher.get_node(JOIN + "/Code").text = "ABC234"
+	runner.check(_focused(launcher) == launcher.get_node(JOIN + "/Row/Code"), "L24 Join game with an empty code focuses the code field, got %s" % _focused(launcher))
+	launcher.get_node(JOIN + "/Row/Code").text = "ABC234"
 	launcher.set_mode("join")
-	runner.check(_focused(launcher) == launcher.get_node(JOIN + "/Buttons/Join"), "L24 Join game with a code focuses Join game, got %s" % _focused(launcher))
+	runner.check(_focused(launcher) == launcher.get_node(JOIN + "/Row/Join"), "L24 Join game with a code focuses Join game, got %s" % _focused(launcher))
 	_host(launcher)
 	launcher._handle('{"type":"welcome","seat":1,"match":"ABC234"}')
 	runner.check(launcher.current_page == "Play" and _focused(launcher) == launcher.get_node("Pages/Play/ModeBar/Invite/Box/Copy"), "L24 the code arriving focuses Copy, got %s" % _focused(launcher))
@@ -1541,9 +1540,9 @@ func test_mode_row_two_modes(runner) -> bool:
 	runner.check(launcher.mode == "host" and bar.get_node("Host").button_pressed and is_same(launcher._transport, transport), "M7 pressing Host game again keeps it and its room")
 	launcher._cancel()
 	bar.get_node("Join").pressed.emit()
-	var shown: Array = [launcher.get_node("Pages/Play/JoinCard").visible, launcher.get_node("Pages/Play/Body").visible, launcher.get_node("Pages/Play/Footer").visible]
-	runner.check(launcher.mode == "join" and bar.get_node("Join").button_pressed and not bar.get_node("Host").button_pressed and shown == [true, false, false] and launcher.get_node("Pages/Play/Subtitle").text == LauncherScript.JOIN_SUBTITLE, "M7 Join game shows the card alone, got %s" % [shown])
-	runner.check(launcher.get_node(JOIN + "/Title").text == "Join a game" and launcher.get_node(JOIN + "/Hint").text == "Enter the invite code from your friend." and launcher.get_node(JOIN + "/CodeLabel").text == "Invite code" and launcher.get_node(JOIN + "/Buttons/Cancel").text == "Cancel" and launcher.get_node(JOIN + "/Buttons/Join").text == "Join game", "M7 the card reads like the owner's dialog")
+	var shown: Array = [launcher.get_node("Pages/Play/JoinPage").visible, launcher.get_node("Pages/Play/Body").visible, launcher.get_node("Pages/Play/Footer").visible]
+	runner.check(launcher.mode == "join" and bar.get_node("Join").button_pressed and not bar.get_node("Host").button_pressed and shown == [true, false, false] and launcher.get_node("Pages/Play/Subtitle").text == LauncherScript.JOIN_SUBTITLE, "M7 Join game shows its page alone, got %s" % [shown])
+	runner.check(launcher.get_node(JOIN + "/Title").text == "Join a friend's game" and launcher.get_node(JOIN + "/Hint").text == "Enter the invite code from your friend." and launcher.get_node(JOIN + "/CodeLabel").text == "Invite code" and launcher.get_node(JOIN + "/Row/Join").text == "Join game" and launcher.get_node(JOIN + "/Note").text == "You'll choose your faction after joining the lobby.", "M7 the page reads like the owner's picture")
 	await runner.process_frame
 	await runner.process_frame
 	var widths: Array = ["Skirmish", "Host", "Join"].map(func(each: String) -> float: return bar.get_node(each).size.x)
@@ -1755,8 +1754,8 @@ func test_team_layout_hud_sizes(runner) -> bool:
 			await _settle(runner, launcher, "Play", mode)
 			_layout_ok(runner, launcher, launcher.get_node("Pages/Play"), "Play %s at %s" % [mode, size])
 		var status: Label = await _version_footer(runner, launcher, false)
-		var card: Rect2 = launcher.get_node("Pages/Play/JoinCard/Card").get_global_rect()
-		runner.check(card.grow(0.5).encloses(status.get_global_rect()) and status.get_line_count() <= 2, "M17 the version line fits the card under the field at %s, got %s lines" % [size, status.get_line_count()])
+		var card: Rect2 = launcher.get_node("Pages/Play/JoinPage").get_global_rect()
+		runner.check(card.grow(0.5).encloses(status.get_global_rect()) and status.get_line_count() <= 2, "M17 the version line fits the page under the field at %s, got %s lines" % [size, status.get_line_count()])
 		_layout_ok(runner, launcher, launcher.get_node("Pages/Play"), "Join game version line at %s" % size)
 		built[1].free()
 		built[0].free()
@@ -2109,7 +2108,7 @@ func test_lobby_guest_live_view(runner) -> bool:
 	runner.check(launcher.get_node(MAP_COLUMN + "/MapHint").text == LauncherScript.HINT_PICK and launcher.get_node("Pages/Play/Footer/Status").text == "Waiting for the host to start" and not launcher.get_node("Pages/Play/Footer/Start").visible, "LL7 guest lines say the host starts, no clock before a change; no Start, got '%s'" % launcher.get_node("Pages/Play/Footer/Status").text)
 	runner.check(launcher.get_node(MODE_BAR + "/Join").button_pressed and _mode_locks(launcher) == [[false, ""], [false, ""], [false, ""]], "LL7 the mode row stays on Join game with the other modes as ways out, got %s" % [_mode_locks(launcher)])
 	runner.check(launcher.get_node(MODE_BAR + "/Invite").visible and launcher.get_node(MODE_BAR + "/Invite/Box/Code").text == "ABC 234" and not launcher.get_node(MODE_BAR + "/Invite/Box/Copy").visible, "LL7 the guest reads Invite code ABC234 in the host's box, without Copy")
-	runner.check(not launcher.get_node("Pages/Play/JoinCard").visible and not launcher.get_node(PLAYERS + "/Count").visible and launcher.get_node("Pages/Play/Footer/Leave").visible and transport.patient, "LL7 the card gives way to the lobby; no count line; Leave shows; patient")
+	runner.check(not launcher.get_node("Pages/Play/JoinPage").visible and not launcher.get_node(PLAYERS + "/Count").visible and launcher.get_node("Pages/Play/Footer/Leave").visible and transport.patient, "LL7 the card gives way to the lobby; no count line; Leave shows; patient")
 	_pick(launcher._own_selector(), "frc")
 	launcher._handle(Wire.encode({"type": "settings", "settings": _team_settings("ashfall", ["china", "frc"])}))
 	runner.check(launcher.get_node(MAP_COLUMN + "/MapName").text == "Ashfall" and _cue(launcher).visible and _cue(launcher).text == "Host changed the map to Ashfall", "LL7 a change re-renders at once and names itself, got '%s'" % _cue(launcher).text)
@@ -2151,7 +2150,7 @@ func test_lobby_guest_change_lines(runner) -> bool:
 	launcher._handle(Wire.encode({"type": "settings", "settings": _team_settings("broken_crown", [])}))
 	runner.check(_rows(launcher, 1) == ["Host"] and _rows(launcher, 2) == ["You"], "LL17 a 1v1 setup puts the guest on Team 2, got %s %s" % [_rows(launcher, 1), _rows(launcher, 2)])
 	launcher._handle(Wire.encode({"type": "settings", "settings": {"map": "atlantis", "map_hash": "x"}}))
-	runner.check(launcher._transport == null and transport.close_calls == 1 and launcher.get_node("Pages/Play/JoinCard").visible and _message(launcher).text == MatchSettings.NOT_IN_BUILD, "LL17 a setup this build cannot play ends the join with the reason, got '%s'" % _message(launcher).text)
+	runner.check(launcher._transport == null and transport.close_calls == 1 and launcher.get_node("Pages/Play/JoinPage").visible and _message(launcher).text == MatchSettings.NOT_IN_BUILD, "LL17 a setup this build cannot play ends the join with the reason, got '%s'" % _message(launcher).text)
 	launcher.free()
 	return true
 
@@ -2161,11 +2160,11 @@ func test_lobby_host_left(runner) -> bool:
 	_restore(saved)
 	_lobby_guest(guest, MatchSettings.for_map("dry_wells"))
 	guest._handle('{"type":"error","reason":"host left"}')
-	runner.check(guest._transport == null and guest.mode == "join" and guest.get_node("Pages/Play/JoinCard").visible and _message(guest).text == LauncherScript.HOST_GONE, "LL9 the host leaving sends the guest back to the Join game card, got %s '%s'" % [guest.mode, _message(guest).text])
+	runner.check(guest._transport == null and guest.mode == "join" and guest.get_node("Pages/Play/JoinPage").visible and _message(guest).text == LauncherScript.HOST_GONE, "LL9 the host leaving sends the guest back to the Join game card, got %s '%s'" % [guest.mode, _message(guest).text])
 	var transport = _lobby_guest(guest, MatchSettings.for_map("dry_wells"))
 	transport.frames.append('{"type":"left","seat":1,"after_tick":3}')
 	guest._process(0.0)
-	runner.check(guest._transport == null and guest.get_node("Pages/Play/JoinCard").visible and _message(guest).text == LauncherScript.HOST_GONE, "LL9 a left for seat 1 reads the same, got '%s'" % _message(guest).text)
+	runner.check(guest._transport == null and guest.get_node("Pages/Play/JoinPage").visible and _message(guest).text == LauncherScript.HOST_GONE, "LL9 a left for seat 1 reads the same, got '%s'" % _message(guest).text)
 	_lobby_guest(guest, MatchSettings.for_map("dry_wells"))
 	guest.get_node("Pages/Play/Footer/Leave").pressed.emit()
 	runner.check(guest._transport == null and _message(guest).text == "You left the game" and _message(guest).theme_type_variation == &"Hint", "LL9 the guest's own Leave reads 'You left the game', got '%s'" % _message(guest).text)
@@ -2296,7 +2295,7 @@ func test_lobby_expiry_texts(runner) -> bool:
 	runner.check(status.text == LauncherScript.ROOM_CLOSED_HOST, "LL13 expiry with the friend in reads '%s', got '%s'" % [LauncherScript.ROOM_CLOSED_HOST, status.text])
 	_lobby_guest(launcher, MatchSettings.for_map("dry_wells"))
 	launcher._handle('{"type":"error","reason":"lobby expired"}')
-	runner.check(launcher.get_node("Pages/Play/JoinCard").visible and _message(launcher).text == LauncherScript.ROOM_CLOSED, "LL13 the guest's expiry reads '%s', got '%s'" % [LauncherScript.ROOM_CLOSED, _message(launcher).text])
+	runner.check(launcher.get_node("Pages/Play/JoinPage").visible and _message(launcher).text == LauncherScript.ROOM_CLOSED, "LL13 the guest's expiry reads '%s', got '%s'" % [LauncherScript.ROOM_CLOSED, _message(launcher).text])
 	launcher.free()
 	return true
 
@@ -2553,22 +2552,25 @@ func test_lobby_copy_turns_copied(runner) -> bool:
 
 const LARGE_WINDOW := [Vector2i(2030, 1680), Vector2i(1280, 1059)]
 
-# The card sits a fixed gap under the Mode row, centred across the content area, at every window.
+# Inline, as in the owner's picture: where the other modes' body starts, in the picture's order, field and Join game on one row.
 func test_join_card_placement(runner) -> bool:
 	var saved: String = AudioSettings.path
 	AudioSettings.path = scratch_for("join-card")
 	for pair: Array in BaseScene.HUD_SIZES.slice(0, 3) + [LARGE_WINDOW]:
 		var built: Array = _port_with_launcher(runner, pair[0], pair[1])
 		var launcher = built[1]
+		await _settle(runner, launcher, "Play", "skirmish")
+		var body: Rect2 = launcher.get_node("Pages/Play/Body").get_global_rect()
 		await _settle(runner, launcher, "Play", "join")
-		var card: Rect2 = launcher.get_node("Pages/Play/JoinCard/Card").get_global_rect()
-		var bar: Rect2 = launcher.get_node(MODE_BAR).get_global_rect()
-		var pages: Control = launcher.get_node("Pages")
-		var area: Rect2 = pages.get_global_rect()
-		var middle: float = area.position.x + (pages.get_theme_constant("margin_left") + area.size.x - pages.get_theme_constant("margin_right")) / 2.0
-		var gap: float = card.position.y - bar.end.y
-		runner.check(absf(gap - 48.0) <= 2.0, "JC1 the card sits 48 px under the Mode row at %s, got %s" % [pair[0], gap])
-		runner.check(absf(card.get_center().x - middle) <= 2.0, "JC1 the card is centred across the content area at %s, got %s vs %s" % [pair[0], card.get_center().x, middle])
+		var rect := func(path: String) -> Rect2: return launcher.get_node(JOIN + "/" + path).get_global_rect()
+		var order: Array = ["Rule", "Title", "Hint", "CodeLabel", "Row", "Message", "Note"].map(func(path: String) -> float: return rect.call(path).position.y)
+		var sorted: Array = order.duplicate()
+		sorted.sort()
+		runner.check(absf(rect.call("Rule").position.y - body.position.y) <= 1.0 and rect.call("Title").position.y - rect.call("Rule").get_center().y >= 20.0 and absf(rect.call("Title").position.x - body.position.x) <= 1.0, "JC1 a rule starts where the other modes' body does and the title sits clear below it at %s, got %s vs %s" % [pair[0], rect.call("Title").position, body.position])
+		runner.check(order == sorted and absf(rect.call("Row/Code").position.x - body.position.x) <= 1.0, "JC1 title, help, label, field row, message and faction note run top to bottom, left-aligned, at %s, got %s" % [pair[0], order])
+		runner.check(absf(rect.call("Row/Code").get_center().y - rect.call("Row/Join").get_center().y) <= 1.0 and rect.call("Row/Join").position.x > rect.call("Row/Code").end.x, "JC1 the field and Join game share one row at %s" % [pair[0]])
+		runner.check(launcher.get_node(JOIN).find_children("*", "PanelContainer").is_empty() and not launcher.get_node(JOIN + "/Row/Cancel").visible, "JC1 no card is drawn and Cancel shows only while joining at %s" % [pair[0]])
+		_layout_ok(runner, launcher, launcher.get_node("Pages/Play"), "join page at %s" % pair[0])
 		built[1].free()
 		built[0].free()
 	_restore(saved)
@@ -2596,8 +2598,8 @@ func test_lobby_layout_sizes(runner) -> bool:
 			match state:
 				"skirmish picked":
 					_click_start(launcher, 1)
-					_click_start(launcher, 3, true)
-				"guest picked": _lobby_guest(launcher, _team_settings("broken_crown", ["china"]).merged({"chosen": [{"player": 1, "start": 1}, {"player": 2, "start": 3}], "closed": [4]}))
+					_click_start(launcher, 3)
+				"guest picked": _lobby_guest(launcher, _team_settings("broken_crown", ["china"]).merged({"chosen": [{"player": 1, "start": 1}, {"player": 2, "start": 3}, {"player": 3, "start": 4}]}))
 				"skirmish 3 bots":
 					launcher._add_bot()
 					launcher._add_bot()
@@ -2644,13 +2646,13 @@ func test_lobby_layout_sizes(runner) -> bool:
 			var play: Control = launcher.get_node("Pages/Play")
 			var joining: bool = state.begins_with("join")
 			_layout_ok(runner, launcher, play, label)
-			for path: String in ["Pages/Play/Body/Players", "Pages/Play/Body/MapColumn", PLAYERS + "/Teams/List/Team1", PLAYERS + "/Teams/List/Team2", MODE_BAR, JOIN, JOIN + "/Buttons"]:
+			for path: String in ["Pages/Play/Body/Players", "Pages/Play/Body/MapColumn", PLAYERS + "/Teams/List/Team1", PLAYERS + "/Teams/List/Team2", MODE_BAR, JOIN, JOIN + "/Row"]:
 				var node: Control = launcher.get_node(path)
 				if node.is_visible_in_tree(): _overlap_free(runner, node, label)
 			var view: Rect2 = launcher.get_viewport().get_visible_rect()
 			var content: Rect2 = launcher.get_node("Pages").get_global_rect().grow(0.5)
 			var wanted: Array[String] = ["Pages/Play/Footer/Status"]
-			if joining: wanted.assign([JOIN + "/Code", JOIN + "/Buttons/Join", JOIN + "/Buttons/Cancel", JOIN + "/Message"])
+			if joining: wanted.assign([JOIN + "/Row/Code", JOIN + "/Row/Join", JOIN + "/Message", JOIN + "/Note"] + ([JOIN + "/Row/Cancel"] if launcher._transport != null else []))
 			if not joining and not state.begins_with("guest"): wanted.append("Pages/Play/Footer/Start")
 			if state == "host connecting": wanted.append("Pages/Play/Footer/CancelConnect")
 			if state in ["host waiting", "friend in", "friend left", "host crown full", "host ashfall full", "guest view", "guest change"]: wanted.append(MODE_BAR + "/Invite")
@@ -2754,10 +2756,9 @@ func test_lobby_look_lines_up(runner) -> bool:
 		launcher.set_mode("join")
 		await runner.process_frame
 		await runner.process_frame
-		var card: Rect2 = launcher.get_node("Pages/Play/JoinCard/Card").get_global_rect()
-		var space: Rect2 = launcher.get_node("Pages/Play/JoinCard").get_global_rect()
-		runner.check(absf(card.get_center().x - space.get_center().x) < 1.0 and space.position.y >= bar.get_global_rect().end.y, "LK3 the Join game card is centred under the Mode row at %s, got %s in %s" % [size, card, space])
-		_layout_ok(runner, launcher, launcher.get_node("Pages/Play"), "join card at %s" % size)
+		var page: Rect2 = launcher.get_node("Pages/Play/JoinPage").get_global_rect()
+		runner.check(absf(page.position.x - bar.get_global_rect().position.x) < 1.0 and page.position.y >= bar.get_global_rect().end.y, "LK3 the Join game page starts under the Mode row, left-aligned, at %s, got %s" % [size, page])
+		_layout_ok(runner, launcher, launcher.get_node("Pages/Play"), "join page at %s" % size)
 		built[1].free()
 		built[0].free()
 	_restore(saved)
@@ -2773,9 +2774,9 @@ func _click_start(launcher, seat: int, right: bool = false, double: bool = false
 	click.position = preview.point_of(seat)
 	preview._gui_input(click)
 
-func _marks(launcher) -> Array:
+func _marks(launcher) -> Dictionary:
 	var preview: Control = launcher.get_node(MAP_COLUMN + "/Preview")
-	return [preview._colours, preview._closed]
+	return preview._colours
 
 func _pending(launcher) -> Dictionary:
 	return launcher.get_node(MAP_COLUMN + "/Preview")._asking
@@ -2792,32 +2793,36 @@ func test_start_pick_offline(runner) -> bool:
 	var saved: String = AudioSettings.path
 	var launcher = await _launcher_with(runner, "start-pick-offline", {"map": "broken_crown", "bots": ["china"]})
 	_restore(saved)
-	runner.check(launcher.get_node(MAP_COLUMN + "/MapHint").text == "Click a free start to take it, or let the game place you. Right-click one to close it." and _tip(launcher, 3) == "Free start: click to start here, right-click to close it", "SP1 the hint says picking is optional; hint and tooltip say right-click closes, got '%s'" % launcher.get_node(MAP_COLUMN + "/MapHint").text)
+	runner.check(launcher.get_node(MAP_COLUMN + "/MapHint").text == LauncherScript.HINT_BOTS and _tip(launcher, 3) == LauncherScript.TIP_FREE, "SP1 the hint says you, then each bot, take free starts, got '%s'" % launcher.get_node(MAP_COLUMN + "/MapHint").text)
 	_click_start(launcher, 3)
 	_click_start(launcher, 3, false, true)
-	runner.check(launcher._spots == {1: 3} and _marks(launcher)[0] == {3: launcher._hue(1)} and _tip(launcher, 3) == LauncherScript.TIP_YOURS, "SP1 a click takes the start in your row's colour and a double-click does not give it back, got %s" % [_marks(launcher)])
+	runner.check(launcher._spots == {1: 3} and _marks(launcher) == {3: launcher._hue(1)} and _tip(launcher, 3) == LauncherScript.TIP_YOURS and _tip(launcher, 2) == "Free start: click to place Bot 1 here", "SP1 a click takes the start in your row's colour, a double-click does not give it back, the next tooltip names the bot, got %s" % [_marks(launcher)])
 	_click_start(launcher, 3)
-	runner.check(launcher._spots.is_empty() and _marks(launcher)[0].is_empty(), "SP1 a second click gives it back")
+	runner.check(launcher._spots.is_empty() and _marks(launcher).is_empty(), "SP1 a second click gives it back")
 	_click_start(launcher, 2)
-	_click_start(launcher, 4, true)
-	runner.check(launcher._closed == ([4] as Array[int]) and _marks(launcher)[1] == ([4] as Array[int]) and _tip(launcher, 4) == LauncherScript.TIP_CLOSED and _count_line(launcher) == "2 of 4 starts used · 1 closed", "SP1 a right-click closes a free start and the count names it, got '%s'" % _count_line(launcher))
-	_click_start(launcher, 2, true)
 	_click_start(launcher, 4)
-	runner.check(launcher._spots == {1: 2} and launcher._closed == ([4] as Array[int]), "SP1 your own start does not close and a closed start cannot be taken")
+	runner.check(launcher._spots == {1: 2, 2: 4} and _marks(launcher) == {2: launcher._hue(1), 4: launcher._hue(2)} and _tip(launcher, 4) == "Bot 1's start: click to let the game place it", "SP1 the next free start goes to the bot without one, in its colour, got %s" % [launcher._spots])
+	_click_start(launcher, 1)
+	runner.check(launcher._spots == {1: 1, 2: 4}, "SP1 with everyone placed a free start moves you, got %s" % [launcher._spots])
+	_click_start(launcher, 4, true)
+	runner.check(launcher._spots == {1: 1, 2: 4}, "SP1 a right-click changes nothing")
+	_click_start(launcher, 4)
+	runner.check(launcher._spots == {1: 1} and _tip(launcher, 4) == "Free start: click to place Bot 1 here", "SP1 clicking the bot's start lets the game place it")
+	_click_start(launcher, 4)
 	launcher._add_bot()
-	runner.check(launcher.lobby_bots.size() == 2 and _add_bot(launcher).disabled, "SP1 the closed start counts against the bot cap")
-	_click_start(launcher, 1, true)
-	runner.check(launcher._closed == ([4] as Array[int]), "SP1 the last free start for a bot does not close")
+	_click_start(launcher, 2)
+	runner.check(launcher._spots == {1: 1, 2: 4, 3: 2}, "SP1 the second bot takes the next free start, got %s" % [launcher._spots])
+	launcher._remove_bot(0)
+	runner.check(launcher._spots == {1: 1, 2: 2}, "SP1 removing a bot keeps the later bot's start, got %s" % [launcher._spots])
+	launcher._add_bot()
+	_click_start(launcher, 4)
 	AudioSettings.path = scratch_for("start-pick-offline-picks")
 	var set_up: bool = launcher._offline_setup()
 	_restore(saved)
-	runner.check(set_up and SkirmishMain.starts[0] == 2 and not SkirmishMain.starts.has(4) and SkirmishMain.starts.size() == 3, "SP1 the match starts you on 2 and nobody on the closed 4, got %s" % [SkirmishMain.starts])
+	runner.check(set_up and SkirmishMain.starts == ([1, 2, 4] as Array[int]), "SP1 the match starts you and both bots where placed, got %s" % [SkirmishMain.starts])
 	runner.check(MatchSettings.starts("broken_crown", SkirmishMain.match_seed, MatchSettings.teams(1, 2), SkirmishMain.placement) == SkirmishMain.starts, "SP1 a rematch keeps the picks, got %s" % [SkirmishMain.placement])
-	_click_start(launcher, 4, true)
-	runner.check(launcher._closed.is_empty(), "SP1 a right-click opens a closed start again")
-	_click_start(launcher, 1, true)
 	_pick(launcher.get_node(MAP_COLUMN + "/Map"), "ashfall")
-	runner.check(launcher._spots.is_empty() and launcher._closed.is_empty() and _marks(launcher) == [{}, []], "SP1 a map change clears picks and closed starts")
+	runner.check(launcher._spots.is_empty() and _marks(launcher).is_empty(), "SP1 a map change clears the picks")
 	launcher.free()
 	OnlineTests._restore_statics(before)
 	return true
@@ -2838,37 +2843,36 @@ func test_start_pick_host_folds_guest(runner) -> bool:
 		launcher._handle(bad)
 		runner.check(launcher._spots == {1: 1} and launcher._transport == transport, "SP2 a bad start is ignored and the room stays: %s" % bad)
 	launcher._handle('{"type":"pick","seat":2,"pick":{"faction":"china","map":"broken_crown","start":3}}')
-	runner.check(launcher._spots == {1: 1, 2: 3} and _marks(launcher)[0] == {1: launcher._hue(1), 3: launcher._hue(2)}, "SP2 the guest's start shows in their colour, got %s" % [_marks(launcher)])
+	runner.check(launcher._spots == {1: 1, 2: 3} and _marks(launcher) == {1: launcher._hue(1), 3: launcher._hue(2)}, "SP2 the guest's start shows in their colour, got %s" % [_marks(launcher)])
 	runner.check(_tip(launcher, 3) == "Your friend's start" and _tip(launcher, 1) == "Your start: click again to let the game place you", "SP2 the host's tooltips name the friend's start and its own, got '%s' '%s'" % [_tip(launcher, 3), _tip(launcher, 1)])
 	launcher._handle('{"type":"pick","seat":2,"pick":{"faction":"china","map":"ashfall","start":2}}')
 	runner.check(launcher._spots == {1: 1, 2: 3}, "SP2 a pick made on another map moves no start")
 	_click_start(launcher, 3)
-	_click_start(launcher, 4, true)
-	_click_start(launcher, 2, true)
-	runner.check(launcher._spots == {1: 1, 2: 3} and launcher._closed == ([4] as Array[int]), "SP2 the host cannot take the guest's start and closes only while the friend and the bot fit, got %s" % [launcher._closed])
+	_click_start(launcher, 4)
+	runner.check(launcher._spots == {1: 1, 2: 3, 3: 4}, "SP2 the host cannot take the guest's start and places the bot, got %s" % [launcher._spots])
 	clock.usec += 1_000_000
 	launcher._process(0.0)
 	var sent: Array[Dictionary] = _sent(transport, "settings")
-	runner.check(_chosen(sent[-1].settings) == [[1, 1], [2, 3]] and MatchSettings.closed_starts(sent[-1].settings) == ([4] as Array[int]) and MatchSettings.refusal(Wire.decode(Wire.encode(sent[-1])).message.settings, 2).is_empty(), "SP2 the host folds the guest's start into valid settings, got %s" % [sent[-1].settings])
+	runner.check(_chosen(sent[-1].settings) == [[1, 1], [2, 3], [3, 4]] and MatchSettings.refusal(Wire.decode(Wire.encode(sent[-1])).message.settings, 2).is_empty(), "SP2 the host folds the guest's start into valid settings, got %s" % [sent[-1].settings])
 	launcher._handle('{"type":"pick","seat":2,"pick":{"faction":"china","map":"broken_crown","start":4}}')
-	runner.check(launcher._spots == {1: 1, 2: 3}, "SP2 a closed start is refused")
+	runner.check(launcher._spots == {1: 1, 2: 3, 3: 4}, "SP2 the bot's start is refused")
 	launcher._handle('{"type":"pick","seat":2,"pick":{"faction":"china"}}')
-	runner.check(launcher._spots == {1: 1}, "SP2 a pick without a start gives the guest's start back")
+	runner.check(launcher._spots == {1: 1, 3: 4}, "SP2 a pick without a start gives the guest's start back")
 	launcher._handle('{"type":"pick","seat":2,"pick":{"faction":"china","map":"broken_crown","start":2}}')
 	launcher._handle('{"type":"left","seat":2,"after_tick":3}')
-	runner.check(launcher._spots == {1: 1}, "SP2 a leave frees the guest's start")
+	runner.check(launcher._spots == {1: 1, 3: 4}, "SP2 a leave frees the guest's start")
 	_friend_joins(launcher)
 	launcher._handle('{"type":"pick","seat":2,"pick":{"faction":"china","map":"broken_crown","start":2}}')
-	runner.check(launcher.lobby_bots.size() == 1 and launcher._bot_cap() == 1, "SP2 fixture: one bot, capped by the closed start")
+	runner.check(launcher.lobby_bots.size() == 1, "SP2 fixture: one bot")
 	launcher.get_node("Pages/Play/Footer/Start").pressed.emit()
 	launcher._handle('{"type":"pick","seat":2,"pick":{"faction":"china","map":"broken_crown","start":3}}')
 	_click_start(launcher, 3)
-	runner.check(launcher._spots == {1: 1, 2: 2}, "SP2 after Start match no start changes")
+	runner.check(launcher._spots == {1: 1, 2: 2, 3: 4}, "SP2 after Start match no start changes")
 	AudioSettings.path = scratch_for("start-pick-host-picks")
 	var settings: Dictionary = launcher._settings
 	var got: Array = await _start_through_wire(runner, launcher, {"type": "start", "seats": [1, 2], "delay": 4, "seed": 7, "settings": settings})
 	_restore(saved)
-	runner.check(got[1] == ([1, 2, 3] as Array[int]) and got[1] == MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 1), Wire.decode(Wire.encode({"type": "settings", "settings": settings})).message.settings), "SP2 the host's match seats both picks and the bot on the open start, got %s" % [got[1]])
+	runner.check(got[1] == ([1, 2, 4] as Array[int]) and got[1] == MatchSettings.starts("broken_crown", 7, MatchSettings.teams(2, 1), Wire.decode(Wire.encode({"type": "settings", "settings": settings})).message.settings), "SP2 the host's match seats both picks and the placed bot, got %s" % [got[1]])
 	OnlineTests._restore_statics(before)
 	return true
 
@@ -2879,40 +2883,45 @@ func test_start_pick_guest_view(runner) -> bool:
 	var guest = await _launcher_with(runner, "start-pick-guest", {"faction": "usa"})
 	_restore(saved)
 	guest._clock = clock.now
-	var room: Dictionary = _team_settings("broken_crown", ["china"]).merged({"chosen": [{"player": 1, "start": 2}], "closed": [4]})
+	var room: Dictionary = _team_settings("broken_crown", ["china"]).merged({"chosen": [{"player": 1, "start": 2}, {"player": 3, "start": 4}]})
 	var transport = _lobby_guest(guest, room)
-	runner.check(guest.get_node(MAP_COLUMN + "/MapHint").text == LauncherScript.HINT_PICK and _marks(guest) == [{2: guest._hue(1)}, [4]], "SP3 the guest sees the host's start and the closed one, got %s" % [_marks(guest)])
-	runner.check([_tip(guest, 1), _tip(guest, 2), _tip(guest, 4)] == ["Free start: click to start here", "Host's start", "Closed by the host"], "SP3 the guest's tooltips name free, the host's and closed starts, got %s" % [[_tip(guest, 1), _tip(guest, 2), _tip(guest, 4)]])
+	runner.check(guest.get_node(MAP_COLUMN + "/MapHint").text == LauncherScript.HINT_PICK and _marks(guest) == {2: guest._hue(1), 4: guest._hue(3)}, "SP3 the guest sees the host's start and the bot's, got %s" % [_marks(guest)])
+	runner.check([_tip(guest, 1), _tip(guest, 2), _tip(guest, 4)] == ["Free start: click to start here", "Host's start", "Bot 1's start"], "SP3 the guest's tooltips name free, the host's and the bot's starts, got %s" % [[_tip(guest, 1), _tip(guest, 2), _tip(guest, 4)]])
 	for click: Array in [[2, false], [4, false], [1, true]]: _click_start(guest, click[0], click[1])
 	clock.usec += 1_000_000
 	guest._process(0.0)
-	runner.check(_sent(transport, "pick").size() == 1, "SP3 a taken or closed start, or a right-click, sends nothing")
+	runner.check(_sent(transport, "pick").size() == 1, "SP3 the host's or a bot's start, or a right-click, sends nothing")
 	_click_start(guest, 1)
 	clock.usec += 1_000_000
 	guest._process(0.0)
 	var picks: Array[Dictionary] = _sent(transport, "pick")
-	runner.check(picks.size() == 2 and picks[1].pick == {"faction": "usa", "start": 1.0, "map": "broken_crown"} and _marks(guest)[0] == {2: guest._hue(1)}, "SP3 a click asks the host for the start on this map, got %s" % [picks])
+	runner.check(picks.size() == 2 and picks[1].pick == {"faction": "usa", "start": 1.0, "map": "broken_crown"} and _marks(guest) == {2: guest._hue(1), 4: guest._hue(3)}, "SP3 a click asks the host for the start on this map, got %s" % [picks])
 	runner.check(_pending(guest) == {1: guest._hue(2)} and _tip(guest, 1) == "Your start: click again to let the game place you", "SP3 the asked-for start shows at once as a ring in the guest's colour, got %s" % [_pending(guest)])
-	var taken: Dictionary = room.merged({"chosen": [{"player": 1, "start": 2}, {"player": 2, "start": 1}]}, true)
+	var taken: Dictionary = room.merged({"chosen": [{"player": 1, "start": 2}, {"player": 2, "start": 1}, {"player": 3, "start": 4}]}, true)
 	guest._handle(Wire.encode({"type": "settings", "settings": taken}))
-	runner.check(_marks(guest)[0] == {2: guest._hue(1), 1: guest._hue(2)} and _pending(guest).is_empty() and _tip(guest, 1) == LauncherScript.TIP_YOURS and _cue(guest).text.is_empty(), "SP3 the settings place the guest's marker in its colour, without a cue for its own pick")
+	runner.check(_marks(guest) == {2: guest._hue(1), 1: guest._hue(2), 4: guest._hue(3)} and _pending(guest).is_empty() and _tip(guest, 1) == LauncherScript.TIP_YOURS and _cue(guest).text.is_empty(), "SP3 the settings place the guest's marker in its colour, without a cue for its own pick")
 	_click_start(guest, 1)
 	clock.usec += 1_000_000
 	guest._process(0.0)
-	runner.check(_sent(transport, "pick")[-1].pick == {"faction": "usa"} and _marks(guest)[0] == {2: guest._hue(1)} and _pending(guest).is_empty(), "SP3 a click on the own marker gives it back, and the marker goes at once, got %s" % [_marks(guest)])
+	runner.check(_sent(transport, "pick")[-1].pick == {"faction": "usa"} and _marks(guest) == {2: guest._hue(1), 4: guest._hue(3)} and _pending(guest).is_empty(), "SP3 a click on the own marker gives it back, and the marker goes at once, got %s" % [_marks(guest)])
 	_click_start(guest, 3)
 	clock.usec += 1_000_000
 	guest._process(0.0)
-	guest._handle(Wire.encode({"type": "settings", "settings": room.merged({"chosen": [{"player": 1, "start": 3}]}, true)}))
-	runner.check(_marks(guest)[0] == {3: guest._hue(1)} and _pending(guest).is_empty() and guest._own_start == 0 and _cue(guest).text == "Host moved their start", "SP3 a clash refused by the host puts the guest back where the settings say, got %s %s '%s'" % [_marks(guest), _pending(guest), _cue(guest).text])
-	var lone: Dictionary = MatchSettings.for_map("broken_crown").merged({"chosen": [{"player": 1, "start": 3}]})
+	guest._handle(Wire.encode({"type": "settings", "settings": room.merged({"chosen": [{"player": 1, "start": 3}, {"player": 3, "start": 4}]}, true)}))
+	runner.check(_marks(guest) == {3: guest._hue(1), 4: guest._hue(3)} and _pending(guest).is_empty() and guest._own_start == 0 and _cue(guest).text == "Host moved their start", "SP3 a clash refused by the host puts the guest back where the settings say, got %s %s '%s'" % [_marks(guest), _pending(guest), _cue(guest).text])
 	var cues: Array[String] = []
-	for closed: Array in [[4], [4, 1], [4], [1]]:
-		guest._handle(Wire.encode({"type": "settings", "settings": lone.merged({"closed": closed})}))
+	for chosen: Array in [[{"player": 1, "start": 3}], [{"player": 1, "start": 3}, {"player": 3, "start": 4}], [{"player": 1, "start": 1}, {"player": 3, "start": 2}]]:
+		guest._handle(Wire.encode({"type": "settings", "settings": room.merged({"chosen": chosen}, true)}))
 		cues.append(_cue(guest).text)
-	runner.check(cues.slice(1) == ["Host closed a start", "Host opened a start", "Host changed the setup"], "SP3 closing and opening name themselves, both at once read as several changes, got %s" % [cues])
-	guest._handle(Wire.encode({"type": "settings", "settings": room.merged({"closed": [1, 2]}, true)}))
-	runner.check(guest._transport == null, "SP3 settings with too many closed starts are refused like other bad settings")
+	guest._handle(Wire.encode({"type": "settings", "settings": room.merged({"chosen": [{"player": 1, "start": 1}]}, true)}))
+	cues.append(_cue(guest).text)
+	var two: Dictionary = _team_settings("broken_crown", ["china", "frc"])
+	guest._handle(Wire.encode({"type": "settings", "settings": two.merged({"chosen": [{"player": 1, "start": 1}, {"player": 4, "start": 4}]})}))
+	guest._handle(Wire.encode({"type": "settings", "settings": _team_settings("broken_crown", ["frc"]).merged({"chosen": [{"player": 1, "start": 1}, {"player": 3, "start": 4}]})}))
+	cues.append(_cue(guest).text)
+	runner.check(cues.slice(1) == ["Host placed Bot 1", "Host changed the setup", "Bot 1's start is open again", LauncherScript.BOT_REMOVED], "SP3 placing and clearing a bot name themselves, a removal that renumbers bots reads as the removal, got %s" % [cues])
+	guest._handle(Wire.encode({"type": "settings", "settings": room.merged({"chosen": [{"player": 4, "start": 1}]}, true)}))
+	runner.check(guest._transport == null, "SP3 settings placing a player that does not exist are refused like other bad settings")
 	OnlineTests._restore_statics(before)
 	guest.free()
 	return true
@@ -2956,18 +2965,38 @@ func test_start_pick_guest_repicks(runner) -> bool:
 	OnlineTests._restore_statics(before)
 	return true
 
-func test_start_pick_closed_fits_hosting(runner) -> bool:
+func test_start_pick_bots_stay_in_skirmish(runner) -> bool:
 	var saved: String = AudioSettings.path
-	var launcher = await _launcher_with(runner, "start-pick-closed-host", {"map": "dry_wells", "bots": ["china"]})
+	var launcher = await _launcher_with(runner, "start-pick-bot-host", {"map": "dry_wells", "bots": ["china"]})
 	_restore(saved)
-	launcher._remove_bot(0)
-	_click_start(launcher, 2, true)
-	runner.check(launcher._closed == ([2] as Array[int]), "SP5 fixture: Skirmish without a bot closes start 2")
+	_click_start(launcher, 1)
+	_click_start(launcher, 2)
+	runner.check(launcher._spots == {1: 1, 2: 2}, "SP5 fixture: Skirmish places you and the bot")
 	var transport = _host_team(launcher, [])
 	var settings: Dictionary = Wire.decode(Wire.encode({"type": "settings", "settings": _hello(transport).get("settings", {})})).message.settings
-	runner.check(MatchSettings.refusal(settings, 2).is_empty(), "SP5 Host game never sends settings a guest refuses, got '%s' for %s" % [MatchSettings.refusal(settings, 2), settings])
+	runner.check(launcher._spots == {1: 1} and MatchSettings.refusal(settings, 2).is_empty(), "SP5 Host game keeps your start, drops the Skirmish bot's and sends settings a guest accepts, got %s" % [settings])
 	launcher._transport = null
 	launcher.free()
+	return true
+
+func test_start_pick_host_removes_bot(runner) -> bool:
+	var before: Array = OnlineTests._statics()
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "start-pick-host-remove", {"map": "broken_crown", "bots": ["china"]})
+	_restore(saved)
+	_lobby_host(launcher)
+	_friend_joins(launcher)
+	launcher._handle('{"type":"pick","seat":2,"pick":{"faction":"china","map":"broken_crown","start":3}}')
+	launcher._add_bot()
+	_click_start(launcher, 1)
+	_click_start(launcher, 2)
+	_click_start(launcher, 4)
+	runner.check(launcher._spots == {1: 1, 2: 3, 3: 2, 4: 4}, "SP11 fixture: you, the friend and both bots placed, got %s" % [launcher._spots])
+	launcher._remove_bot(0)
+	runner.check(launcher._spots == {1: 1, 2: 3, 3: 4}, "SP11 removing the first bot keeps the friend's start and moves the second bot's down, got %s" % [launcher._spots])
+	launcher._transport = null
+	launcher.free()
+	OnlineTests._restore_statics(before)
 	return true
 
 func test_start_pick_rejoin_adopts_nothing(runner) -> bool:
@@ -2982,29 +3011,28 @@ func test_start_pick_rejoin_adopts_nothing(runner) -> bool:
 	guest.free()
 	return true
 
-func test_start_pick_closed_count_line(runner) -> bool:
+func test_start_pick_offline_refuses_overflow(runner) -> bool:
 	var saved: String = AudioSettings.path
-	var launcher = await _launcher_with(runner, "start-pick-reopen", {"map": "broken_crown", "bots": ["china"]})
+	var launcher = await _launcher_with(runner, "start-pick-overflow", {"map": "broken_crown", "bots": ["china"]})
 	_restore(saved)
-	_click_start(launcher, 4, true)
 	launcher._add_bot()
-	runner.check(_add_bot(launcher).disabled and _count_line(launcher) == "3 of 4 starts used · 1 closed · " + LauncherScript.REOPEN, "SP7 when a closed start holds back a bot, the count line says to open it, got '%s'" % _count_line(launcher))
+	launcher._add_bot()
 	launcher.lobby_bots.append("usa")
-	AudioSettings.path = scratch_for("start-pick-reopen-picks")
+	AudioSettings.path = scratch_for("start-pick-overflow-picks")
 	var errors: Array[String] = []
 	launcher.log_error = func(line: String) -> void: errors.append(line)
-	runner.check(not launcher._offline_setup() and errors.size() == 1, "SP7 the offline start counts closed starts too, got %s" % [errors])
+	runner.check(not launcher._offline_setup() and errors.size() == 1, "SP7 the offline start refuses more bots than starts, got %s" % [errors])
 	_restore(saved)
 	launcher.free()
 	return true
 
-func test_start_pick_close_promise(runner) -> bool:
+func test_start_pick_hint(runner) -> bool:
 	var saved: String = AudioSettings.path
 	var launcher = await _launcher_with(runner, "start-pick-promise", {"map": "dry_wells", "bots": ["china"]})
 	_restore(saved)
-	runner.check(launcher.get_node(MAP_COLUMN + "/MapHint").text == LauncherScript.HINT_PICK and _tip(launcher, 1) == LauncherScript.TIP_FREE, "SP8 Dry Wells with a bot promises no right-click close, got '%s' '%s'" % [launcher.get_node(MAP_COLUMN + "/MapHint").text, _tip(launcher, 1)])
+	runner.check(launcher.get_node(MAP_COLUMN + "/MapHint").text == LauncherScript.HINT_BOTS and _tip(launcher, 1) == LauncherScript.TIP_FREE, "SP8 Skirmish with a bot hints that bots are placed too, got '%s' '%s'" % [launcher.get_node(MAP_COLUMN + "/MapHint").text, _tip(launcher, 1)])
 	_host_team(launcher, [])
-	runner.check(launcher.get_node(MAP_COLUMN + "/MapHint").text == LauncherScript.HINT_PICK and _tip(launcher, 2) == LauncherScript.TIP_FREE, "SP8 Host game on Dry Wells keeps the second start for the friend, so no close either")
+	runner.check(launcher.get_node(MAP_COLUMN + "/MapHint").text == LauncherScript.HINT_PICK and _tip(launcher, 2) == LauncherScript.TIP_FREE, "SP8 Host game without bots hints only your own start")
 	launcher._transport = null
 	launcher.free()
 	return true
@@ -3024,6 +3052,9 @@ func test_start_pick_hover(runner) -> bool:
 	preview._hovered = 3
 	preview.notification(Control.NOTIFICATION_MOUSE_EXIT)
 	runner.check(preview._hovered == 0, "SP9 leaving the preview clears the light")
+	runner.check(preview.ring(2) == launcher._hue(1), "SP9 before you have a start, a free start lights in your colour")
+	_click_start(launcher, 1)
+	runner.check(preview.ring(2) == launcher._hue(2) and preview.ring(1) == preview.LIGHT, "SP9 then a free start lights in Bot 1's colour, your own start in plain light")
 	launcher.free()
 	return true
 
@@ -3041,7 +3072,7 @@ func test_every_mode_leaves(runner) -> bool:
 	_mode(launcher, "join")
 	runner.check(confirm.visible and confirm.title == "Stop hosting?" and transport.close_calls == 0 and launcher.mode == "host", "ML1 with a friend in, Join game asks Stop hosting? first")
 	confirm.confirmed.emit()
-	runner.check(transport.close_calls == 1 and launcher.mode == "join" and launcher.get_node("Pages/Play/JoinCard").visible, "ML1 confirming stops hosting and opens the Join game card")
+	runner.check(transport.close_calls == 1 and launcher.mode == "join" and launcher.get_node("Pages/Play/JoinPage").visible, "ML1 confirming stops hosting and opens the Join game card")
 	transport = _lobby_host(launcher)
 	_mode(launcher, "join")
 	runner.check(not confirm.visible and transport.close_calls == 1 and launcher.mode == "join", "ML1 without a friend Join game stops hosting at once")
@@ -3085,13 +3116,13 @@ func test_start_pick_ask_follows_the_room(runner) -> bool:
 	var last: Dictionary = _sent(transport, "pick")[-1].pick
 	runner.check(not last.has("start"), "SP10 a start asked for on Broken Crown never goes out stamped with the host's new map, got %s" % [last])
 	guest._handle(Wire.encode({"type": "settings", "settings": crown}))
-	for room: Dictionary in [crown.merged({"chosen": [{"player": 1, "start": 3}]}), crown.merged({"closed": [3]})]:
+	for room: Dictionary in [crown.merged({"chosen": [{"player": 1, "start": 3}]}), crown.merged({"chosen": [{"player": 3, "start": 3}]})]:
 		clock.usec += 1_000_000
 		guest._process(0.0)
 		guest._handle(Wire.encode({"type": "settings", "settings": crown}))
 		_click_start(guest, 3)
 		guest._handle(Wire.encode({"type": "settings", "settings": room}))
-		runner.check(guest._own_start == 0 and _pending(guest).is_empty(), "SP10 an ask still waiting gives way when the settings show the start taken or closed, %s, got %s" % [room.get("chosen", room.get("closed")), _pending(guest)])
+		runner.check(guest._own_start == 0 and _pending(guest).is_empty(), "SP10 an ask still waiting gives way when the settings show the start taken by the host or a bot, %s, got %s" % [room.chosen, _pending(guest)])
 	guest._transport = null
 	guest.free()
 	return true

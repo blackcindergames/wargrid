@@ -320,35 +320,29 @@ layout_mode = 2
 theme_type_variation = &"Hint"
 mouse_filter = 2
 
-[node name="JoinCard" type="MarginContainer" parent="Pages/Play"]
+[node name="JoinPage" type="VBoxContainer" parent="Pages/Play"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/margin_top = 44
+custom_minimum_size = Vector2(580, 0)
+theme_override_constants/separation = 8
 visible = false
 
-[node name="Card" type="PanelContainer" parent="Pages/Play/JoinCard"]
+[node name="Rule" type="HSeparator" parent="Pages/Play/JoinPage"]
 layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 0
-custom_minimum_size = Vector2(420, 0)
-theme_type_variation = &"JoinCard"
+custom_minimum_size = Vector2(0, 40)
 
-[node name="Box" type="VBoxContainer" parent="Pages/Play/JoinCard/Card"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="Title" type="Label" parent="Pages/Play/JoinCard/Card/Box"]
+[node name="Title" type="Label" parent="Pages/Play/JoinPage"]
 layout_mode = 2
 theme_type_variation = &"CardTitle"
-text = "Join a game"
+text = "Join a friend's game"
 
-[node name="Hint" type="Label" parent="Pages/Play/JoinCard/Card/Box"]
+[node name="Hint" type="Label" parent="Pages/Play/JoinPage"]
 layout_mode = 2
 theme_type_variation = &"Subtitle"
 text = "Enter the invite code from your friend."
 autowrap_mode = 3
 
-[node name="CodeLabel" type="Label" parent="Pages/Play/JoinCard/Card/Box"]
+[node name="CodeLabel" type="Label" parent="Pages/Play/JoinPage"]
 layout_mode = 2
 theme_type_variation = &"FieldLabel"
 theme_override_styles/normal = SubResource("flush")
@@ -356,35 +350,41 @@ text = "Invite code"
 uppercase = true
 mouse_filter = 2
 
-[node name="Code" type="LineEdit" parent="Pages/Play/JoinCard/Card/Box" groups=["join_code"]]
+[node name="Row" type="HBoxContainer" parent="Pages/Play/JoinPage"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 42)
+theme_override_constants/separation = 10
+
+[node name="Code" type="LineEdit" parent="Pages/Play/JoinPage/Row" groups=["join_code"]]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 48)
 theme_type_variation = &"CodeField"
 placeholder_text = "6 letters and digits"
 max_length = 64
 
-[node name="Message" type="Label" parent="Pages/Play/JoinCard/Card/Box"]
+[node name="Join" type="Button" parent="Pages/Play/JoinPage/Row"]
+layout_mode = 2
+custom_minimum_size = Vector2(170, 48)
+theme_type_variation = &"PrimaryButton"
+text = "Join game"
+
+[node name="Cancel" type="Button" parent="Pages/Play/JoinPage/Row"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 48)
+theme_type_variation = &"GhostButton"
+text = "Cancel"
+visible = false
+
+[node name="Message" type="Label" parent="Pages/Play/JoinPage"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 18)
 theme_type_variation = &"Hint"
 autowrap_mode = 3
 
-[node name="Buttons" type="HBoxContainer" parent="Pages/Play/JoinCard/Card/Box"]
+[node name="Note" type="Label" parent="Pages/Play/JoinPage"]
 layout_mode = 2
-theme_override_constants/separation = 10
-alignment = 2
-
-[node name="Cancel" type="Button" parent="Pages/Play/JoinCard/Card/Box/Buttons"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 48)
-theme_type_variation = &"GhostButton"
-text = "Cancel"
-
-[node name="Join" type="Button" parent="Pages/Play/JoinCard/Card/Box/Buttons"]
-layout_mode = 2
-custom_minimum_size = Vector2(170, 48)
-theme_type_variation = &"PrimaryButton"
-text = "Join game"
+theme_type_variation = &"Hint"
+text = "You'll choose your faction after joining the lobby."
+autowrap_mode = 3
 
 [node name="ThisBuild" type="Button" parent="Pages/Play"]
 layout_mode = 2
