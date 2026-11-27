@@ -145,6 +145,8 @@ jobs:
       - name: Install pinned export templates
         run: '"$PYTHON" tools/install_export_templates.py "$TEMPLATES_SHA256" "$GODOT_VERSION"'
       - name: Export test build and game
+        env:
+          WARGRID_SYNTH_AUDIO: "1"
         run: |
           "$GODOT_BIN" --headless --path game --import
           sh tools/export_build.sh "${{ matrix.test_preset }}" "build/test/${{ matrix.platform }}/WargridTests${{ matrix.platform == 'windows' && '.exe' || '' }}"

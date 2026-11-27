@@ -14,7 +14,7 @@ for scenario in replay economy combat; do
 done
 printf 'team: '
 python3 "$repo_root/tools/compare_replays.py" --interval 200 --rows 100 "$work/ci/replay-linux/team-linux.tsv" "$work/ci/replay-windows/team-windows.tsv" "$work/team-local.tsv" || exit 1
-sh "$repo_root/tools/export_build.sh" macOS "$work/Wargrid.app" >"$work/export.log" 2>&1 || { tail -20 "$work/export.log"; exit 1; }
+WARGRID_SYNTH_AUDIO=1 sh "$repo_root/tools/export_build.sh" macOS "$work/Wargrid.app" >"$work/export.log" 2>&1 || { tail -20 "$work/export.log"; exit 1; }
 NETPLAY_OUT="$work/netplay" \
 	WARGRID_CLIENT="$work/Wargrid.app/Contents/MacOS/Wargrid --headless" sh "$repo_root/tools/run_netplay.sh" match >"$work/netplay.log" 2>&1 || { tail -20 "$work/netplay.log"; exit 1; }
 printf 'netplay: '

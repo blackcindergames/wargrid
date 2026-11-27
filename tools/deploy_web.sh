@@ -11,7 +11,7 @@ case "$1" in
 	*) echo "usage: sh tools/deploy_web.sh [test]" >&2; exit 1 ;;
 esac
 rm -rf "$repo_root/web/site" || exit 1
-sh "$repo_root/tools/export_build.sh" Web "$repo_root/web/site/index.html" || exit 1
+WARGRID_SYNTH_AUDIO= sh "$repo_root/tools/export_build.sh" Web "$repo_root/web/site/index.html" || exit 1
 cp "$repo_root/LICENSE" "$repo_root/game/data/maps/NOTICE.md" "$repo_root/game/audio/CREDITS.md" "$repo_root/game/fonts/PublicSans-OFL.txt" "$repo_root/web/site/" || exit 1
 "${GODOT_BIN:-godot}" --headless --script "$repo_root/tools/godot_licenses.gd" -- "$repo_root/web/site/GODOT_LICENSES.txt" || exit 1
 fly deploy "$repo_root/web" -c "$repo_root/web/fly.toml" -a "$app" --dockerfile "$repo_root/web/Dockerfile" --ha=false || exit 1
