@@ -36,7 +36,7 @@ class HookPump extends "res://scripts/match/sim_pump.gd":
 # A worker thread that returns at once, with a job still unpublished.
 class DeadPump extends "res://scripts/match/sim_pump.gd":
 	func _run_worker() -> void:
-		_owner_id = OS.get_thread_caller_id()
+		_worker_id = OS.get_thread_caller_id()
 		_started.post()
 
 var _case: String = ""

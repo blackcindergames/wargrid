@@ -91,7 +91,17 @@ var _quit: bool = false
 var _exited: bool = false
 var _marker: String = ""
 var _owner_id: int = OS.get_thread_caller_id()
+var _worker_id: int = 0
 var _abandoned: bool = false
+var _released: bool = false
+var _keeps_log: bool
+var web: bool = OS.has_feature("web")
+var _starting: bool = false
+var _start_frame: int = 0
+var _start_msec: int = 0
+var _start_frames: int = 0
+var _start_ms: int = 0
+var _hold_frames: int = 0
 var _cap_test: int = 0
 var _gate: Semaphore
 var _gate_where: String = ""
@@ -114,16 +124,20 @@ static var _threads: Array[RefCounted] = []
 static var _logger: PumpLogger
 
 # requested: null follows the environment switch; a bool is the stored setting, captured on main once per pump.
-func _init(sim: Simulation, requested: Variant = null) -> void:
+# keeps_log false (online) drops the recorder's log after each job; Lockstep.command_log() is the online log.
+func _init(sim: Simulation, requested: Variant = null, keeps_log: bool = true) -> void:
 	_sim = sim
 	_mode = _mode_for(requested)
+	_keeps_log = keeps_log
 	_recorder = CommandRecorder.new(sim)
 
-func start() -> Note:
+# with_digest: job zero also carries the tick-0 snapshot and digest (online start).
+func start(with_digest: bool = false) -> Note:
 	_reap_abandoned()
 	_warm_and_freeze()
 	var job := Job.new()
 	job.step = false
+	job.want_digest = with_digest
 	_current = Slot.new()
 	var note: Note = _run_owned(job, _current)
 	if note == null: return _failed_start()
@@ -142,7 +156,7 @@ func _failed_start() -> Note:
 	return note
 
 func post(job: Job) -> bool:
-	if _stopped or not _failure.is_empty(): return false
+	if _stopped or _starting or not _failure.is_empty(): return false
 	if _mode == "worker": return _post_queued(job)
 	var slot := Slot.new()
 	var note: Note = _run_owned(job, slot)
@@ -155,6 +169,7 @@ func post(job: Job) -> bool:
 	return true
 
 func drain() -> Array[Note]:
+	_poll_start()
 	# An abandoned worker's late note stays in the abandoned pump, which nothing reads again.
 	if _abandoned: return []
 	_mutex.lock()
@@ -182,7 +197,7 @@ func previous() -> Slot:
 
 func query(job: Job) -> Note:
 	if not _failure.is_empty(): return null
-	var note: Note = _query_worker(job) if _thread != null else _run_owned(job, null)
+	var note: Note = _query_worker(job) if _worker_owns() else _run_owned(job, null)
 	if note == null and _failure.is_empty(): _fail("query")
 	return note
 
@@ -253,7 +268,9 @@ func busy() -> bool:
 	return pending > 0
 
 func has_room() -> bool:
+	_poll_start()
 	if _stopped or not _failure.is_empty(): return true
+	if _starting: return false
 	var room: bool = _room()
 	if not room: _count_refusal()
 	return room
@@ -282,6 +299,8 @@ func queue_stats() -> Dictionary:
 		"depth_max": _stats.depth_max,
 		"depth_at_cap_share": float(_stats.cap_hits) / accepted if accepted > 0 else 0.0,
 		"queue_cap": _cap(),
+		"start_frames": _start_frames,
+		"start_ms": _start_ms,
 		"main_wait_count": _stats.wait_count,
 		"main_wait_total_ms": _stats.wait_total,
 		"main_wait_max_ms": _stats.wait_max,
@@ -297,6 +316,9 @@ func reset_queue_stats() -> void:
 
 func cap_for_test(cap: int) -> void:
 	_cap_test = cap
+
+func hold_start_for_test(frames: int) -> void:
+	_hold_frames = frames
 
 func gate_publish_for_test(gate: Semaphore, where: String) -> void:
 	_mutex.lock()
@@ -326,13 +348,37 @@ func _spawn() -> void:
 		_set_failure("worker thread could not start")
 		return
 	_threads.append(self)
+	# A Web pthread only starts once the page returns to the event loop, so the handshake is polled across frames.
+	if web:
+		_starting = true
+		_start_frame = frame_source.call()
+		_start_msec = clock.call()
+		return
 	var began: int = Time.get_ticks_msec()
 	var running: bool = _started.try_wait()
 	while not running and Time.get_ticks_msec() - began < WAIT_MSEC:
 		OS.delay_usec(200)
 		running = _started.try_wait()
 	_note_wait(began)
-	if not running: _abandon("stall: worker did not start")
+	_start_ms = Time.get_ticks_msec() - began
+	if running: _owner_id = _worker_id
+	else: _abandon("stall: worker did not start")
+
+# Main owns the simulation until the worker has said it runs.
+func _worker_owns() -> bool:
+	return _thread != null and not _starting
+
+func _poll_start() -> void:
+	if not _starting or _stopped: return
+	var frames: int = int(frame_source.call()) - _start_frame
+	var waited: int = int(clock.call()) - _start_msec
+	var running: bool = frames > _hold_frames and _started.try_wait()
+	if not running and waited < WAIT_MSEC: return
+	_starting = false
+	_start_frames = frames
+	_start_ms = waited
+	if running: _owner_id = _worker_id
+	else: _abandon("stall: worker did not start")
 
 func _start_thread() -> Error:
 	return _thread.start(_run_worker)
@@ -346,7 +392,7 @@ static func _reap_abandoned() -> void:
 	for pump: RefCounted in _threads.duplicate(): pump.call("_reap")
 
 func _reap() -> void:
-	if _abandoned and _worker_gone(): _join()
+	if (_abandoned or _released) and _worker_gone(): _join()
 
 func _stamp_drained(read: Array[Dictionary]) -> void:
 	var now: int = Time.get_ticks_usec()
@@ -361,7 +407,7 @@ func _note_wait(began: int) -> void:
 	_stats.wait_max = maxi(_stats.wait_max, waited)
 
 func _run_worker() -> void:
-	_owner_id = OS.get_thread_caller_id()
+	_worker_id = OS.get_thread_caller_id()
 	_started.post()
 	while _run_next(): pass
 
@@ -514,7 +560,10 @@ func _join() -> void:
 
 func stop() -> void:
 	_stopped = true
-	if _thread == null or _abandoned: return
+	if _thread == null or _abandoned or _released: return
+	if _starting:
+		_release()
+		return
 	_mutex.lock()
 	_quit = true
 	_unpublished -= _drop_waiting()
@@ -528,6 +577,14 @@ func stop() -> void:
 		var marker: String = _read_marker()
 		if not marker.is_empty(): _fail(marker)
 	else: _abandon("stall: stop waited %d ms" % WAIT_MSEC)
+
+# The worker never ran a job, so this is no stall: it ends itself once it starts, and the next start() joins it.
+func _release() -> void:
+	_mutex.lock()
+	_quit = true
+	_mutex.unlock()
+	_work.post()
+	_released = true
 
 func live() -> Simulation:
 	assert(not busy() and not _abandoned, "live() while a worker may own the simulation")
@@ -555,7 +612,9 @@ func _set_marker(cause: String) -> void:
 	_mutex.unlock()
 
 func _note_for(job: Job, slot: Slot) -> Note:
-	return run_job(_sim, _recorder, job, slot, _timing)
+	var note: Note = run_job(_sim, _recorder, job, slot, _timing)
+	if not _keeps_log: _recorder.commands().clear()
+	return note
 
 static func _warm_reach(id: String) -> void:
 	if not CombatDefinitions.weapon(CombatDefinitions.profile(id).get("weapon", "")).is_empty(): Combat.reach_of(id)

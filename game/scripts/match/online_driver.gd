@@ -91,8 +91,8 @@ func create(map_path: String, starts: Array[int], factions: Dictionary, match_se
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
 	_stopped = false
-	pump = SimPump.new(value, SimSettings.request())
-	first_note = pump.start()
+	pump = SimPump.new(value, SimSettings.request(), false)
+	first_note = pump.start(true)
 	_last = first_note
 	_next_tick = first_note.tick
 	_taken = []
@@ -106,14 +106,9 @@ func adopt(value: Simulation) -> void:
 func start() -> void:
 	_lockstep.send = _transport.send_text
 	_lockstep.submit({"type": "choose_faction", "faction": _own_faction})
-	var job := SimPump.Job.new()
-	job.step = false
-	job.want_digest = true
-	var note: SimPump.Note = pump.query(job)
-	if note == null:
-		_end_on_failure()
-		return
-	_lockstep.start(note.snapshot, note.digest)
+	if _end_on_failure(): return
+	_lockstep.start(first_note.snapshot, first_note.digest)
+	first_note.snapshot = {}
 
 func stop() -> void:
 	_stopped = true
