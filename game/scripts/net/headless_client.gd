@@ -139,7 +139,7 @@ func _welcome(message: Dictionary) -> void:
 	if _seat > 1:
 		_room_map(message.get("settings", {}))
 		var pick: Dictionary = {"faction": _args.get("faction", Skirmish.default_faction())}
-		if _args.has("start"): pick["start"] = _int_arg("start")
+		if _args.has("start"): pick.merge({"start": _int_arg("start"), "map": message.get("settings", {}).get("map")})
 		_transport.send_text(Wire.encode({"type": "pick", "pick": pick}))
 		if _args.has("leave-on-welcome"): _finish("left", "")
 

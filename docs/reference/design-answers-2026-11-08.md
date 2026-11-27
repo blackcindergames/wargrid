@@ -1847,6 +1847,8 @@ The owner and a friend played slice 1 on the production relay (owner on the web 
 - **In-match findings** (F57 to F61 in the [findings list](../STATUS.md#findings-list)) stay out of P20 and go to their packages.
 - **No start countdown:** a friend's last-second faction switch is P11's ready-up, the OpenRA way (P11 row).
 - **Allies start together (user, 2026-11-27):** an unpicked player is placed next to a teammate who picked a start; Zero Hour sends them to the farthest free start (GeneralsGameCode 967a361d7, GeneralsMD GameLogic.cpp:946-975).
+- **Every mode leaves (user, 2026-11-27):** while hosting or joined, any other mode in the Mode row asks before it stops hosting or leaves, then switches.
+- **Predicted starts later (user, 2026-11-27):** showing where bots and unpicked players will start once someone picks waits for the owner's look at slice 2.
 - **Skirmish while hosting (user, 2026-11-27):** a Skirmish click in the Mode row opens the "Stop hosting?" question instead of a disabled button with a "Stop hosting first" tooltip; the friend expected Skirmish to leave hosting. Built in slice 2.
 
 ## Battlefield art round (user, 2026-11-26)
