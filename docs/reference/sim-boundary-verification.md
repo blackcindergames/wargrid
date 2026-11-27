@@ -1192,6 +1192,8 @@ Tree: the working tree on top of `86d4eb36`, docs only (no production or test fi
 #### Gate review fixes (2026-11-27)
 
 - Online `stop()` and `_exit_tree` now record undrained notes in inline mode too (intended: one code path for both modes).
+- Gate (2026-11-27): CI run 45951625510 on `6232fc25` red on Linux only (a timing-dependent drain bound in `test_sb5a_undrained_notes_bounded`, removed); after the fix round (`stop()` reads the failure marker, the worker stops on the owner marker, timing rows not reused after stop, bench window from the first tick, checked thread start, worker-mode asserts in two equivalence tests) CI green on `3aa4137a` and on `df8ea484` (with the `/ponytail-review` cuts, -31 lines); `compare_local_traces.sh 45958161455`: combat 1200, team 100, netplay 325 matched. `PERF_LABEL="Sim boundary SB5a"` benchmark on `6232fc25`: 26 rows, the stress over-budget rows as on `main`'s 2026-11-25 row; rendered rerun on `3aa4137a`: `RENDERED BENCHMARK PASSED 4`, recorded. Local on `df8ea484`'s tree: suite 1757 cases (inline and worker), FAULTS 12, DIGESTS 4, CHECKS 5, conformance 69, netplay passed.
+- Deck team baseline at tick 10200: not run (Deck unreachable 2026-11-27); web exports and the job script are ready (private overnight folder). Owed before SB6.
 
 #### Open for the owner (reported, not decided)
 
