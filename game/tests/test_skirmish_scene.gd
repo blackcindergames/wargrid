@@ -32,10 +32,12 @@ const FREEZE_PARTS: Array[String] = ["HUD/ResultPanel/Center/Card/Box/Outcome/Ma
 const FailingPump = preload("res://tests/failing_pump.gd")
 const ViewTests = preload("res://tests/test_view.gd")
 const OverlayTests = preload("res://tests/test_playtest_overlay.gd")
+const PumpTests = preload("res://tests/test_sim_pump.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 var freeze_sessions: String = "user://test-freeze-playtests-%d" % OS.get_process_id()
 
 func cases() -> Array[Callable]:
-	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_offline_driver_no_tick_hash_rows_after_the_end, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue, test_hover_equals_click, test_click_results, test_shift_toggles_on_the_map, test_hud_blocks_the_map, test_entering_the_hud_clears_hover, test_drag_across_a_panel, test_card_takes_a_click_after_a_drag, test_releases_on_a_panel_are_the_huds, test_view_player_changes_display_reads_only, test_slab_buttons_take_no_focus, test_drag_box_ends_with_the_match, test_match_starts_with_builder_selected, test_offline_bot_row_marked]
+	return [test_skirmish_ready_and_tick, test_combat_context_input, test_match_hud_and_restart, test_combat_view, test_hud_layout_and_focus, test_hud_build_line, test_enemy_selection_read_only, test_rally_input_and_marker, test_supply_pile_labels, test_attack_move_hint_and_rejection, test_selection_prunes_dead, test_order_marks_own_only, test_health_bar_clear_of_boxes, test_result_panel_layout, test_result_stats_from_sim, test_result_panel_focus, test_result_panel_keys, test_enter_in_text_field_keeps_match, test_change_setup_leaves, test_result_panel_unit, test_play_again_routes_by_driver, test_silent_keys_explain, test_hud_strings_use_display_names, test_hud_font_size_is_shared, test_defence_attack_scene, test_enter_unload_scene, test_right_click_pile_gathers, test_right_click_pile_in_launcher_flow, test_frc_laborer_right_click_pile, test_one_snapshot_per_refresh, test_refresh_waits_for_next_frame, test_auto_pick_samples_present_time, test_hud_summaries_are_pinned, test_input_script_offline, test_offline_driver_stamps_like_the_scene, test_sb1_submit_takes_no_snapshot, test_sb1_economy_input_reads_shown, test_sb1_combat_input_reads_shown, test_sb1_pick_of_unit_dead_since_shown, test_sb1_result_uses_shown_team, test_sb1_setup_shown_allows_input, test_sb1_idle_offline_ticks_take_no_snapshot, test_offline_driver_bot_memory_on_simulation, test_offline_driver_no_tick_hash_rows_after_the_end, test_orders_turn_input_into_payloads, test_hud_reads_only_state_and_orders, test_sb2_refusal_next_step, test_sb2_refusal_survives_accepted_result, test_one_line_one_beep_per_drain, test_due_failure_beeps_once, test_no_refusal_over_a_card, test_sb2_restart_drops_held_answer, test_sb2_answer_waits_for_unpause, test_sb3_submit_queues, test_sb3_match_log_equals_recorder, test_sb3_restart_drops_old_notes, test_sb3_paused_posts_nothing, test_sb3_over_stops_refreshing, test_sb3_process_drains, test_sb3_refusal_waits_in_queue, test_sb3_one_view_per_tick, test_sb3_record_reads_live_without_queue, test_ph_refused_post_keeps_queue_and_preview, test_freeze_card_on_a_failed_pump, test_freeze_leave_reaches_the_launcher, test_failure_first_met_while_leaving, test_freeze_card_copy_and_layout, test_freeze_card_keeps_the_focus, test_freeze_flush_keeps_the_queue, test_hover_equals_click, test_click_results, test_shift_toggles_on_the_map, test_hud_blocks_the_map, test_entering_the_hud_clears_hover, test_drag_across_a_panel, test_card_takes_a_click_after_a_drag, test_releases_on_a_panel_are_the_huds, test_view_player_changes_display_reads_only, test_slab_buttons_take_no_focus, test_drag_box_ends_with_the_match, test_match_starts_with_builder_selected, test_offline_bot_row_marked, test_sb5a_header_names_mode, test_sb5a_offline_log_equals_inline_in_worker_mode, test_sb5a_exit_tree_stops_worker, test_sb5a_offline_waits_for_room, test_sb5a_job_zero_null_ends_match, test_sb5a_failure_clears_pending_build, test_sb5a_pause_posts_nothing]
 
 func _setup(runner):
 	var main = Scene.instantiate()
@@ -1203,6 +1205,7 @@ func test_offline_driver_stamps_like_the_scene(runner) -> bool:
 	var stamps: Array = queued.map(func(command: Dictionary) -> Array: return [command.tick, command.player, command.sequence])
 	runner.check(first.ok and refused.ok and second.ok and stamps == [[tick, 1, 0], [tick, 1, 1]] and driver.record().commands.size() == 2, "OD1 offline driver stamps tick, player and sequence like main._submit")
 	driver.step()
+	BaseScene.settle(driver)
 	driver.drain()
 	var answers: Array = driver.take_answers().map(func(answer: Dictionary) -> Array: return [answer.command.type, answer.command.sequence, answer.ok, not answer.error.is_empty()])
 	runner.check(answers == [["stop", 0, true, false], ["attack", 1, false, true], ["stop", 1, true, false]], "OD1 the next step answers all three in order, got %s" % [answers])
@@ -1248,6 +1251,7 @@ func test_offline_driver_bot_memory_on_simulation(runner) -> bool:
 	driver.adopt(Skirmish.create())
 	while driver.pump.live().tick() < Skirmish.next_decision(Skirmish.FIRST_WAVE_TICK, 2): driver.pump.live().step()
 	driver.step()
+	BaseScene.settle(driver)
 	runner.check(driver.pump.live().has_meta(Skirmish.BOT_META) and not driver.has_meta(Skirmish.BOT_META), "OD2 bot memory lives on the simulation, not the driver")
 	return true
 
@@ -1674,6 +1678,7 @@ func test_sb3_refusal_waits_in_queue(runner) -> bool:
 	var queued: Array = main.driver.queued()
 	runner.check(queued.size() == 1 and queued[0].type == "move" and queued[0].target == [-5.0, -5.0] and not queued[0].has("sequence") and main.hud.refusal.is_empty() and _error_cues(main) == 0, "SB3 a refusable order waits unissued in the queue, got %s" % [queued])
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	runner.check(main.hud.refusal.is_empty() and _error_cues(main) == 0, "SB3 the refusal stays silent until the drain, got '%s'" % main.hud.refusal)
 	main._drain_notes()
 	var errors: int = _error_cues(main)
@@ -1759,6 +1764,7 @@ func _frozen_arena(main) -> Dictionary:
 	var ids := {"infantry": sim.spawn(1, Vector2(10.5, 10.5), "usa_rifle_infantry"), "tank": sim.spawn(1, Vector2(11.5, 10.5), "usa_tank"), "builder": sim.spawn(1, Vector2(12.5, 12.5), "usa_builder"), "enemy": sim.spawn(2, Vector2(15.5, 10.5), "usa_tank")}
 	sim.start_match([1, 2] as Array[int])
 	main.driver.adopt(sim)
+	SimPump.force_mode_for_test("inline")
 	var pump = FailingPump.new(main.driver.pump.live())
 	main.driver.pump.stop()
 	main.driver._last = pump.start()
@@ -2555,4 +2561,164 @@ func test_offline_bot_row_marked(runner) -> bool:
 	runner.check(cells.size() == 12, "T26 offline keeps one row per player and no group rows, got %d cells" % cells.size())
 	if cells.size() == 12: runner.check(cells[4].text.begins_with("P1 ") and cells[4].text.ends_with(" (you)") and cells[8].text.begins_with("P2 ") and cells[8].text.ends_with(" (bot)"), "T26 the offline bot row is marked, got '%s' and '%s'" % [cells[4].text, cells[8].text])
 	main.free()
+	return true
+
+func test_sb5a_header_names_mode(runner) -> bool:
+	var main = await _setup(runner)
+	var word: String = "worker" if SimPump.worker_wanted() else "inline"
+	runner.check(main.playtest_header().get("sim") == word and main.playtest_match().get("sim") == word, "SB5A the header and the record name '%s', got %s" % [word, main.playtest_header().get("sim")])
+	PumpTests.latch_for_test()
+	var overlay: Label = main.get_node("HUD/PerfOverlay")
+	overlay.mode = "stale"
+	main._restart()
+	var expected: String = PumpTests.mode_after_latch()
+	runner.check(main.playtest_header().get("sim") == expected, "SB5A a restart after a failure names '%s', got %s" % [expected, main.playtest_header().get("sim")])
+	overlay.refresh_text()
+	var shown: String = "Sim: " + expected.replace("-fallback", " (fallback)")
+	runner.check(overlay.text.split("\n")[0].ends_with(shown), "SB5A a restart refreshes the F3 word to '%s', got '%s'" % [shown, overlay.text])
+	SimPump.reset_process_latch_for_test()
+	main.free()
+	return true
+
+func _played_offline(mode: String) -> Dictionary:
+	SimPump.force_mode_for_test(mode)
+	var driver = OfflineDriver.new(1)
+	driver.create(Skirmish.MAP_PATH, [] as Array[int], {1: "usa", 2: "china"}, 0)
+	SimPump.force_mode_for_test("")
+	var unit: int = driver.pump.live().snapshot().entities.filter(func(entity: Dictionary) -> bool: return entity.owner == 1)[0].id
+	for i in 200:
+		if i % 40 == 5: driver.submit({"type": "move", "entity_ids": [unit], "target": [10.5 + i % 7, 10.5]})
+		if i % 40 == 6: driver.flush()
+		driver.step()
+		var end: int = Time.get_ticks_msec() + 5000
+		while driver.pump.busy() and Time.get_ticks_msec() < end: OS.delay_usec(200)
+		driver.drain()
+	var played: Dictionary = {"log": driver.match_log(), "record": driver.record(), "mode": driver.sim_mode()}
+	driver.stop()
+	return played
+
+func test_sb5a_offline_log_equals_inline_in_worker_mode(runner) -> bool:
+	var inline: Dictionary = _played_offline("inline")
+	var worker: Dictionary = _played_offline("worker")
+	runner.check(inline.mode == "inline" and worker.mode == "worker", "SB5A the two offline runs used the two pump modes, got %s and %s" % [inline.mode, worker.mode])
+	runner.check(inline.log.commands.size() > 5 and var_to_str(worker.log) == var_to_str(inline.log), "SB5A the offline match log through a worker pump equals the inline log (%d lines)" % inline.log.commands.size())
+	runner.check(worker.record.digest != "" and worker.record.digest == inline.record.digest and worker.record.tick == inline.record.tick and inline.record.tick == 200, "SB5A the offline record digest equals the inline one at tick %d" % worker.record.tick)
+	return true
+
+func test_sb5a_exit_tree_stops_worker(runner) -> bool:
+	var threads: int = SimPump.live_workers()
+	SimPump.force_mode_for_test("worker")
+	var main = await _setup(runner)
+	SimPump.force_mode_for_test("")
+	var orders = main.orders
+	orders._set_attack_move(true)
+	runner.check(main.driver.sim_mode() == "worker" and SimPump.live_workers() == threads + 1, "SB5A fixture: the screen runs a worker pump")
+	main.free()
+	runner.check(SimPump.live_workers() == threads, "SB5A freeing the screen stops and joins the worker")
+	runner.check(not orders._attack_move_mode, "SB5A the screen's other exit cleanup still runs")
+	return true
+
+func _scene_modes() -> Array[String]:
+	return ["inline", "worker"] if OS.has_feature("threads") else ["inline"]
+
+func _settle_pump(pump) -> void:
+	var end: int = Time.get_ticks_msec() + 5000
+	while pump.busy() and Time.get_ticks_msec() < end: OS.delay_usec(200)
+
+func test_sb5a_offline_waits_for_room(runner) -> bool:
+	for mode in _scene_modes():
+		SimPump.force_mode_for_test(mode)
+		var driver = OfflineDriver.new(1)
+		driver.create(Skirmish.MAP_PATH, [] as Array[int], {1: "usa", 2: "china"}, 0)
+		SimPump.force_mode_for_test("")
+		driver.pump.cap_for_test(SimPump.MAX_QUEUED)
+		var unit: int = driver.pump.live().snapshot().entities.filter(func(entity: Dictionary) -> bool: return entity.owner == 1)[0].id
+		var gate := Semaphore.new()
+		if mode == "worker": driver.pump.gate_publish_for_test(gate, "before_publish")
+		for i in SimPump.MAX_QUEUED: driver.step()
+		runner.check(not driver.pump.has_room(), "SB5A fixture: three jobs fill the pump [%s]" % mode)
+		var request := {"player": 1, "builder_id": unit, "kind": "usa_power_plant", "origin": Vector2i(14, 14)}
+		driver.submit({"type": "stop", "entity_ids": [unit]})
+		driver.request_preview(request)
+		driver.step()
+		runner.check(driver.get("_next_tick") == SimPump.MAX_QUEUED and driver.queued().size() == 1 and driver.get("_preview_request") == request, "SB5A a full pump keeps the queue, the request and the tick, got tick %d queued %d [%s]" % [driver.get("_next_tick"), driver.queued().size(), mode])
+		runner.check(driver.failure().is_empty(), "SB5A waiting for room is no failure [%s]" % mode)
+		runner.check(driver.pump.queue_stats().room_refusals == 2, "SB5A the full pump is asked for room, not offered a job, got %d refusals [%s]" % [driver.pump.queue_stats().room_refusals, mode])
+		if mode == "worker":
+			for i in 4: gate.post()
+		_settle_pump(driver.pump)
+		driver.drain()
+		driver.step()
+		_settle_pump(driver.pump)
+		driver.drain()
+		runner.check(driver.get("_next_tick") == SimPump.MAX_QUEUED + 1 and driver.queued().is_empty() and driver.take_answers().any(func(entry: Dictionary) -> bool: return entry.command.type == "stop"), "SB5A the next frame posts the kept order and request together, got tick %d queued %d [%s]" % [driver.get("_next_tick"), driver.queued().size(), mode])
+		driver.stop()
+	return true
+
+func _frozen_at_start(main) -> Array[String]:
+	SimPump.force_mode_for_test("inline")
+	var pump = FailingPump.new(main.driver.pump.live())
+	SimPump.force_mode_for_test("")
+	main.driver.pump.stop()
+	pump.fail_next = true
+	main.driver._last = pump.start()
+	main.driver.pump = pump
+	var logs: Array[String] = []
+	main.driver.log_error = func(line: String) -> void: logs.append(line)
+	return logs
+
+func test_sb5a_job_zero_null_ends_match(runner) -> bool:
+	var main = await _setup(runner)
+	var logs: Array[String] = _frozen_at_start(main)
+	runner.check(main.driver.pump.failure().begins_with("start job returned no note") and main.driver.failure().is_empty(), "SB5A fixture: job zero failed the pump, and the driver has read nothing")
+	main._pause.open()
+	runner.check(main.menu_open(), "SB5A fixture: the pause menu holds the match, so no step posts")
+	BaseScene.tick(main)
+	runner.check(main.driver.failure().begins_with("start job returned no note") and main.frozen(), "SB5A the first drain reads the failure and the freeze card shows, got '%s'" % main.driver.failure())
+	runner.check(logs.size() == 1 and logs[0] == "SIM PUMP FAILED " + main.driver.failure(), "SB5A the failure is logged once, got %s" % [logs])
+	main.free()
+	return true
+
+func test_sb5a_failure_clears_pending_build(runner) -> bool:
+	var main = await _setup(runner)
+	var world: Dictionary = _frozen_arena(main)
+	main.orders.selected_ids.assign([world.ids.builder])
+	main._reshow()
+	main.orders._enter_placement("usa_power_plant")
+	main.orders._awaiting_build = "usa_power_plant"
+	var request := {"player": 1, "builder_id": world.ids.builder, "kind": "usa_power_plant", "origin": Vector2i(14, 14)}
+	main.driver.request_preview(request)
+	runner.check(not main.orders._placement_kind.is_empty() and main.driver.get("_preview_request") == request, "SB5A fixture: a placement is armed with a standing request")
+	world.pump.fail_next = true
+	BaseScene.tick(main)
+	runner.check(main.frozen(), "SB5A fixture: the pump failed")
+	runner.check(main.orders._placement_kind.is_empty() and main.driver.get("_preview_request").is_empty() and main.get_node("WorldView")._preview_cells.is_empty(), "SB5A the ghost, its cells and the standing request are gone")
+	runner.check(main.orders._awaiting_build.is_empty() and main.orders.selected_ids.is_empty(), "SB5A the pending build and the selection are cleared, got '%s' %s" % [main.orders._awaiting_build, main.orders.selected_ids])
+	for i in 2: BaseScene.tick(main)
+	runner.check(main.orders.selected_ids.is_empty(), "SB5A the start builder is not selected again under the card, got %s" % [main.orders.selected_ids])
+	main.free()
+	return true
+
+# The gate holds the job on purpose, so the settle of BaseScene.tick would only time out.
+func _gated_tick(main) -> void:
+	main._physics_process(1.0 / 30.0)
+	main._drain_notes()
+
+func test_sb5a_pause_posts_nothing(runner) -> bool:
+	for mode in _scene_modes():
+		SimPump.force_mode_for_test(mode)
+		var main = await _setup(runner)
+		SimPump.force_mode_for_test("")
+		var gate := Semaphore.new()
+		if mode == "worker": main.driver.pump.gate_publish_for_test(gate, "before_publish")
+		_gated_tick(main)
+		var posted: int = main.driver.pump.queue_stats().posts_attempted
+		main._pause.open()
+		for i in 4: _gated_tick(main)
+		if mode == "worker": gate.post()
+		_settle_pump(main.driver.pump)
+		BaseScene.tick(main)
+		runner.check(posted == 1 and main.driver.pump.queue_stats().posts_attempted == 1, "SB5A an open menu posts nothing, got %d then %d [%s]" % [posted, main.driver.pump.queue_stats().posts_attempted, mode])
+		runner.check(main.driver.current().tick == 1 and not main.driver.pump.busy(), "SB5A the job in flight still drains under the menu, tick %d [%s]" % [main.driver.current().tick, mode])
+		main.free()
 	return true

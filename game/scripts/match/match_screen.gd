@@ -65,6 +65,7 @@ var _glide_seconds: float = GLIDE_MAX_SECONDS
 @onready var _view: Node2D = $WorldView
 @onready var _camera: Camera2D = $Camera2D
 var _perf: Label
+var _failure_cleared: bool = false
 var _clock := PresentationClock.new()
 var _pause: Control
 var _result_panel: Control
@@ -161,6 +162,7 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	music.play_match(rng, MusicPlayer.GAP_SECONDS)
+	_perf.mode = driver.sim_mode()
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
 	if driver.has_method("bot_line"):
 		_perf.extra = driver.bot_line
@@ -174,6 +176,7 @@ func _exit_tree() -> void:
 	mouse_pan.drop()
 	orders._set_attack_move(false)
 	orders._set_ping(false)
+	driver.stop()
 	driver.detach()
 	ViewCaps.release(get_tree().root)
 
@@ -230,7 +233,7 @@ func playtest_header() -> Dictionary:
 	return _header(played)
 
 func _header(played: Dictionary) -> Dictionary:
-	return {"mode": played.mode, "map": _map_id(), "seed": match_seed, "factions": played.factions, "teams": played.teams, "bots": played.bots, "seat": local_player, "controller": "human", "build": PlaytestSettings.build_id()}
+	return {"mode": played.mode, "map": _map_id(), "seed": match_seed, "factions": played.factions, "teams": played.teams, "bots": played.bots, "seat": local_player, "controller": "human", "sim": driver.sim_mode(), "build": PlaytestSettings.build_id()}
 
 func _map_id() -> String:
 	return map_path.get_file().get_basename()
@@ -387,6 +390,7 @@ func _drain_notes() -> bool:
 		# A finished match re-reports its last results without a new tick.
 		if note.tick > last_tick: stepped_results.append_array(note.results)
 		last_tick = note.tick
+	_clear_on_first_failure()
 	_take_answers()
 	_take_pings()
 	# A stall frame (online, waiting for the peer) is not a step frame; counting it would inflate the split share.
@@ -395,6 +399,14 @@ func _drain_notes() -> bool:
 		_refresh()
 		return true
 	return false
+
+# Online keeps the selection as the player left it, as at every other online end.
+func _clear_on_first_failure() -> void:
+	if _failure_cleared or driver.failure().is_empty(): return
+	_failure_cleared = true
+	if not frozen(): return
+	if not orders._placement_kind.is_empty(): orders._clear_placement()
+	orders.reset()
 
 func _present_if_due() -> bool:
 	if not _clock.rendered(Engine.get_process_frames(), driver.current().tick): return false
@@ -732,6 +744,8 @@ func _restart_world() -> void:
 	view_player = local_player
 	_playtest.begin_match()
 	_create_world()
+	_failure_cleared = false
+	_perf.mode = driver.sim_mode()
 	_clock = PresentationClock.new()
 	_sound.director.reset()
 	_sound._unit_voice.stop()

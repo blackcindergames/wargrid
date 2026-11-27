@@ -47,6 +47,7 @@ var _rematch_seed: int = -1
 var _taken: Array[int] = []
 var _next_tick: int = 0
 var _start_tick: int = -1
+var _failure_ended: bool = false
 
 func _init(transport: RefCounted, lockstep: RefCounted, faction: String, seat: int) -> void:
 	_transport = transport
@@ -77,6 +78,7 @@ func create(map_path: String, starts: Array[int], factions: Dictionary, match_se
 	_rejections_seen = 0
 	_log_seen = 0
 	_credit = 0
+	if pump != null: pump.stop()
 	var bots: Array[int] = _lockstep.bots()
 	var bot_factions := {}
 	for bot: int in bots:
@@ -92,6 +94,7 @@ func adopt(value: Simulation) -> void:
 	_next_tick = first_note.tick
 	_taken = []
 	_start_tick = -1
+	_failure_ended = false
 	_answers = []
 	_pings = []
 	_preview_request = {}
@@ -104,11 +107,24 @@ func start() -> void:
 	job.step = false
 	job.want_digest = true
 	var note: SimPump.Note = pump.query(job)
+	if note == null:
+		_end_on_failure()
+		return
 	_lockstep.start(note.snapshot, note.digest)
 
 func stop() -> void:
 	_stopped = true
+	_stop_pump()
+
+# A stopped pump's completed notes still reach the log, so a saved record's log and end digest meet.
+func _stop_pump() -> void:
 	pump.stop()
+	if not pump.failure().is_empty(): return
+	for note: SimPump.Note in pump.drain():
+		var tick: int = _paired_tick(note)
+		if tick < 0: continue
+		_lockstep.record(tick, note.issued)
+		_last = note
 
 func detach() -> void:
 	if _lockstep != null: _lockstep.send = Callable()
@@ -126,17 +142,29 @@ func step() -> void:
 	if not _finished and (_transport.closed() or _transport.silent(Time.get_ticks_usec())): _lockstep.set_relay_lost()
 	_credit = mini(_credit + 1, MAX_CATCH_UP_CREDIT)
 	for i in CATCH_UP_STEPS:
-		if _credit < 1 or _last.over or _stopped: break
+		if _credit < 1 or _last.over or _stopped or not pump.failure().is_empty(): break
+		# Before take: a full pump leaves the tick's packets in the lockstep for the next frame.
+		if not pump.has_room(): break
 		var commands: Variant = _lockstep.take(_next_tick, not _taken.is_empty(), _last.survivors if _last.tick == _next_tick else null)
 		if commands == null: break
 		_credit -= 1
 		# The tick's packets are already consumed, so a refused job cannot be retried.
 		if not pump.post(_tick_job(commands)):
-			_lockstep.set_protocol_error("sim pump refused tick %d" % _next_tick)
+			if not _end_on_failure(): _lockstep.set_protocol_error("sim pump refused tick %d" % _next_tick)
 			break
 		_taken.append(_next_tick)
 		_next_tick += 1
 	if _phase == "playing" and _lockstep.received_any(): _transport.patient = false
+
+# The lockstep keeps its first end; the transport closes in the frame the failure is seen.
+func _end_on_failure() -> bool:
+	var reason: String = pump.failure()
+	if reason.is_empty(): return false
+	if not _failure_ended:
+		_failure_ended = true
+		_lockstep.set_protocol_error("sim pump failed: " + reason)
+		_transport.close()
+	return true
 
 func _tick_job(commands: Array[Dictionary]) -> SimPump.Job:
 	var job := SimPump.Job.new()
@@ -153,23 +181,31 @@ func drain() -> Array[SimPump.Note]:
 	for note: SimPump.Note in notes:
 		if not note.preview.is_empty(): _preview_answer = note.preview
 		_finish_job(note)
-	if not notes.is_empty(): _last = notes[-1]
+		_last = note
+	_end_on_failure()
 	_pings.append_array(_new_pings(notes))
 	if _start_tick < 0 and teammate() != 0 and current().view.players.all(func(player: Dictionary) -> bool: return player.has("faction")): _start_tick = current().tick
 	_answers.append_array(_new_answers())
 	_settle()
 	return notes
 
-func _finish_job(note: SimPump.Note) -> void:
-	# Publish jobs (tests) are not ticks.
-	if _taken.is_empty(): return
+func _paired_tick(note: SimPump.Note) -> int:
+	if _taken.is_empty():
+		# A same-tick note is a publish (tests); one that advanced has no taken tick to explain it.
+		if note.tick > _last.tick: _lockstep.set_protocol_error("note at tick %d with nothing taken" % note.tick)
+		return -1
 	var tick: int = _taken.pop_front()
 	# Taken past the end: the sim did not move.
-	if note.over and note.tick <= tick: return
+	if note.over and note.tick <= tick: return -1
 	if note.tick != tick + 1:
 		# Pairing is by post order; a foreign job in between would record and send the wrong tick.
 		_lockstep.set_protocol_error("note at tick %d for taken tick %d" % [note.tick, tick])
-		return
+		return -1
+	return tick
+
+func _finish_job(note: SimPump.Note) -> void:
+	var tick: int = _paired_tick(note)
+	if tick < 0: return
 	_lockstep.record(tick, note.issued)
 	for command: Dictionary in note.bot_commands: _lockstep.submit(command, command.player)
 	_lockstep.finish_tick(note.tick, note.snapshot if not note.digest.is_empty() else null, note.digest)
@@ -329,6 +365,12 @@ func take_rematch() -> int:
 func over() -> bool:
 	return _finished
 
+func sim_mode() -> String:
+	return pump.mode()
+
+func failure() -> String:
+	return pump.failure()
+
 func match_header() -> Dictionary:
 	var players: Array = current().view.players
 	var bots: Array = players.filter(func(player: Dictionary) -> bool: return bot_players().has(player.id)).map(func(player: Dictionary) -> Dictionary: return {"player": player.id, "faction": player.get("faction", "")})
@@ -339,6 +381,7 @@ func match_log() -> Dictionary:
 
 func _finish() -> void:
 	_finished = true
+	if _ended(): _stop_pump()
 	if _lockstep.status() == "ended_desync": _report_path = _write_report()
 	_write_latency()
 	if not _ended():
@@ -368,8 +411,10 @@ func _report() -> Dictionary:
 	job.step = false
 	job.want_ring = true
 	var report: Dictionary = _lockstep.desync_report()
-	report.hash_ring = pump.query(job).ring
+	var ring_note: SimPump.Note = pump.query(job)
+	report.hash_ring = ring_note.ring if ring_note != null else []
 	report.merge(MatchSettings.report_fields(_map_path.get_file().get_basename(), _seed, _starts))
+	report["sim"] = sim_mode()
 	return report
 
 func net_line() -> String:
@@ -399,7 +444,9 @@ func _ms(microseconds: PackedInt64Array) -> PackedFloat64Array:
 func notice() -> String:
 	if _left: return "" # leave() ends the lockstep through set_relay_lost, which is no relay loss
 	match _lockstep.status():
-		"waiting": return "Waiting for your teammate…" if teammate() != 0 else "Waiting for player %d" % _lockstep.waiting_for()[0]
+		"waiting":
+			if _lockstep.waiting_for().is_empty(): return ""
+			return "Waiting for your teammate…" if teammate() != 0 else "Waiting for player %d" % _lockstep.waiting_for()[0]
 		"ended_left": return "Opponent left before the start (a different map or version, or their game tab was hidden)" if _lockstep.left_before_start() else ""
 		"ended_relay": return RELAY_LOST if _lockstep.end_reason() == "connection to relay lost" else "Relay: " + _lockstep.end_reason()
 		"ended_send": return RELAY_LOST

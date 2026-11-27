@@ -24,6 +24,9 @@ const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Profiler = preload("res://scripts/debug/profiler.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const FailingPump = preload("res://tests/failing_pump.gd")
+const PumpTests = preload("res://tests/test_sim_pump.gd")
+const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const ReplayTests = preload("res://tests/test_playtest_replay.gd")
 const PEER_TICKS: int = 60
@@ -72,7 +75,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array([40000])
 
 func cases() -> Array[Callable]:
-	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_joiner_counts_bots_from_the_seat_count, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_space_never_leaves_the_result_card, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_online_builder_lost_in_the_click_step, test_online_builder_lost_in_the_drained_tick,test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_refused_cancel_marks_nothing, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_f33_online_red_ghost_refused_after_two_callbacks, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected, test_four_seat_create_teams, test_default_create_with_teams_unchanged, test_2v2_rematch_keeps_bots_teams_and_allowed, test_2v2_create_sets_player_colours, test_right_click_teammate_moves, test_online_2v2_record_replays, test_host_left_panel, test_teammate_quit_panel, test_leave_line_once, test_one_v_one_leave_line_under_victory, test_ended_send_status_and_line, test_rows_mark_bot_and_teammate_grouped, test_stall_line_teammate, test_start_line_five_seconds, test_defeated_guest_notice, test_2v2_end_texts_layout]
+	return [test_seat_two_controls_player_two, test_status_lines_and_layout, test_rejection_line, test_funds_rejection_is_announced, test_blocked_press_sounds_while_waiting, test_overlay_net_line, test_match_end_sends_over_and_keeps_socket, test_abnormal_end_closes_without_rematch, test_play_again_sends_once, test_friend_again_before_own_end, test_friend_left_after_end, test_accept_rematch_ends_with_the_friend, test_panel_follows_again_while_processing, test_leave_ends_the_phase, test_room_closed_after_end, test_room_gone_on_the_ending_frame, test_abnormal_end_after_friend_again, test_create_resets_catch_up_credit, test_rematch_builds_new_match, test_rematch_start_after_quit_stays_stopped, test_start_while_playing_is_protocol_error, test_patient_holds_on_result_panel, test_start_then_left_same_batch, test_patient_until_first_peer_tick, test_runs_at_tick_rate, test_catch_up_is_bounded, test_two_tick_frame_keeps_earlier_results, test_sb1_online_snapshot_per_hash_tick, test_stall_frames_are_not_step_frames, test_notices_reach_the_hud_while_processing, test_launcher_sections, test_launcher_faction_rows, test_plays_dry_wells_from_each_seat, test_offline_uses_chosen_map, test_online_start_saves_picks, test_restart_keeps_map_and_starts, test_restart_drops_old_stepped_results, test_joiner_refuses_other_map, test_joiner_counts_bots_from_the_seat_count, test_old_relay_mismatch_is_shown, test_cancel_and_copy_while_waiting, test_start_without_settings_is_a_protocol_error, test_both_seats_share_map_and_starts, test_host_told_opponent_left_before_start, test_opponent_left_mid_match, test_leave_panel_focus_after_pause, test_leave_panel_yields_focus, test_back_to_menu_once, test_space_never_leaves_the_result_card, test_pause_leave_mid_match_with_the_helper_on, test_back_to_menu_after_the_review_files_the_match, test_credits_panel_layout, test_online_playtest_record, test_launcher_release_hides_relay, test_launcher_prefills_from_page, test_launcher_relay_help, test_copy_link_on_web, test_launcher_reads_no_page_off_web, test_input_script_online, test_sb2_online_placement_closes_and_reopens, test_hint_outlives_an_earlier_order, test_sb2_online_refusal_keeps_new_gesture, test_sb2_online_refusal_after_a_later_gesture, test_online_builder_lost_in_the_click_step, test_online_builder_lost_in_the_drained_tick,test_sb2_online_preview_waits_for_step, test_sb2_preview_after_catch_up, test_sb2_rematch_drops_pending_preview, test_sb3_online_two_notes, test_too_many_orders_note, test_refused_cancel_marks_nothing, test_sb4_take_ahead_past_end, test_sb4_leave_on_end_tick_catch_up, test_sb4_no_waiting_after_end, test_sb4_three_callbacks_one_drain, test_sb4_publish_is_not_a_tick, test_sb4_rematch_starts_from_new_pump, test_sb4_desync_report_ring, test_sb4_no_send_after_end, test_sb4_foreign_note_ends_match, test_sb4_refused_post_ends_match, test_sb4_protocol_end_after_win_logs_once, test_sb4_step_after_close_takes_no_tick, test_ph_peer_command_without_sequence_refused, test_ph_fake_relay_frame_order, test_ph_receive_ends_lockstep_with_undrained_job, test_ph_frame_order_through_end_and_rematch, test_ph_preview_on_last_job_of_catch_up, test_f33_online_red_ghost_refused_after_two_callbacks, test_ph_preview_on_single_job_when_next_tick_waits, test_ph_preview_on_steady_step, test_view_player_after_the_online_seat, test_pal_two_seat_create_unchanged, test_pal_three_seat_create, test_pal_three_seat_starts, test_match_starts_with_builder_selected, test_four_seat_create_teams, test_default_create_with_teams_unchanged, test_2v2_rematch_keeps_bots_teams_and_allowed, test_2v2_create_sets_player_colours, test_right_click_teammate_moves, test_online_2v2_record_replays, test_host_left_panel, test_teammate_quit_panel, test_leave_line_once, test_one_v_one_leave_line_under_victory, test_ended_send_status_and_line, test_rows_mark_bot_and_teammate_grouped, test_stall_line_teammate, test_start_line_five_seconds, test_defeated_guest_notice, test_2v2_end_texts_layout, test_sb5a_online_header_and_report_name_mode, test_sb5a_online_start_digest_equals_inline_in_worker_mode, test_sb5a_online_failure_keeps_selection, test_sb5a_worker_peer_against_inline_peer, test_sb5a_catch_up_bound_per_frame, test_sb5a_waiting_line_after_drain]
 
 func _online(runner, seat: int, with_bots: bool = false, parent: Node = null) -> Dictionary:
 	var transport := FakeTransport.new()
@@ -1005,6 +1008,7 @@ func test_restart_keeps_map_and_starts(runner) -> bool:
 	var main = load(LauncherScript.OFFLINE_SCENE).instantiate()
 	runner.root.add_child(main)
 	await runner.process_frame
+	BaseScene.settle(main)
 	var old_sim = main.driver.pump.live()
 	main._restart()
 	runner.check(not is_same(old_sim, main.driver.pump.live()), "N12 Restart builds a new simulation")
@@ -1927,6 +1931,7 @@ func test_sb3_online_two_notes(runner) -> bool:
 	main._visuals = visuals
 	main._view.set_visuals(visuals)
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	main._drain_notes()
 	var ticks: Array[int] = director.collected_ticks().slice(before)
 	runner.check(ticks == [5, 6] and main.driver.current().tick == 6, "SB3 one drain collects both catch-up ticks in order, got %s and tick %d" % [ticks, main.driver.current().tick])
@@ -2318,6 +2323,7 @@ func test_ph_preview_on_last_job_of_catch_up(runner) -> bool:
 	var tick: int = _preview_fixture(online)
 	_peer_packets(online.transport, 2, 9, PEER_TICKS)
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	var previews: int = notes.filter(func(note: SimPump.Note) -> bool: return not note.preview.is_empty()).size()
 	runner.check(notes.size() == 2 and previews == 2, "PH a two-tick step call asks for the preview on both jobs, got %d notes and %d previews at tick %d" % [notes.size(), previews, tick])
@@ -2353,6 +2359,7 @@ func test_ph_preview_on_single_job_when_next_tick_waits(runner) -> bool:
 	var tick: int = _preview_fixture(online)
 	_peer_packets(online.transport, 2, tick, tick)
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	runner.check(notes.size() == 1 and not notes[0].preview.is_empty(), "PH a one-tick step call carries the preview, got %d notes" % notes.size())
 	main.free()
@@ -2363,6 +2370,7 @@ func test_ph_preview_on_steady_step(runner) -> bool:
 	var main = online.main
 	_preview_fixture(online, PEER_TICKS)
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	runner.check(notes.size() == 1 and not notes[0].preview.is_empty(), "PH a steady one-credit step call carries the preview, got %d notes" % notes.size())
 	main.free()
@@ -2839,4 +2847,240 @@ func test_2v2_end_texts_layout(runner) -> bool:
 			_panel_fits(runner, main, end[0], end[1], "%s '%s' at %s" % [end[0], end[1], size])
 		port.queue_free()
 	_restore_statics(before)
+	return true
+
+func test_sb5a_online_header_and_report_name_mode(runner) -> bool:
+	var online: Dictionary = await _online(runner, 2)
+	var main = online.main
+	var word: String = "worker" if SimPump.worker_wanted() else "inline"
+	runner.check(main.playtest_header().get("sim") == word and main.driver.sim_mode() == word, "SB5A the online header names '%s', got %s" % [word, main.playtest_header().get("sim")])
+	var downloads: Array = []
+	main.driver.web = true
+	main.driver.download = func(buffer: PackedByteArray, _file_name: String, _mime: String) -> void: downloads.append(buffer)
+	_peer_packets(online.transport, 1, 4, 33)
+	online.transport.frames.append(Wire.encode(Wire.tick_message(1, 34, [], {"tick": 30, "value": "0000000000000000"})))
+	_run(main, 40)
+	var report = JSON.parse_string(downloads[0].get_string_from_utf8()) if downloads.size() == 1 else null
+	runner.check(report is Dictionary and report.get("sim") == word, "SB5A the desync report names '%s', got %s" % [word, report.get("sim") if report is Dictionary else null])
+	main.driver.stop()
+	main.free()
+	PumpTests.latch_for_test()
+	var fallen: Dictionary = await _online(runner, 2)
+	var expected: String = PumpTests.mode_after_latch()
+	runner.check(fallen.main.playtest_header().get("sim") == expected, "SB5A a match after a failure names '%s', got %s" % [expected, fallen.main.playtest_header().get("sim")])
+	SimPump.reset_process_latch_for_test()
+	fallen.main.free()
+	return true
+
+func _started_online(runner, mode: String) -> Dictionary:
+	SimPump.force_mode_for_test(mode)
+	var online: Dictionary = await _online(runner, 2)
+	SimPump.force_mode_for_test("")
+	var sent: Array = online.transport.sent.duplicate()
+	var driver_mode: String = online.main.driver.sim_mode()
+	online.main.driver.stop()
+	online.main.free()
+	return {"sent": sent, "mode": driver_mode}
+
+func test_sb5a_online_start_digest_equals_inline_in_worker_mode(runner) -> bool:
+	var inline: Dictionary = await _started_online(runner, "inline")
+	var worker: Dictionary = await _started_online(runner, "worker")
+	var hashed: Array = inline.sent.filter(func(text: String) -> bool: return Wire.decode(text).message.has("hash"))
+	var value: String = Wire.decode(hashed[0]).message.hash.value if not hashed.is_empty() else ""
+	runner.check(inline.mode == "inline" and worker.mode == "worker", "SB5A the two online starts used the two pump modes, got %s and %s" % [inline.mode, worker.mode])
+	runner.check(value.length() == 16 and worker.sent == inline.sent, "SB5A the first frames of an online start through a worker pump equal the inline ones, startup digest '%s'" % value)
+	return true
+
+func test_sb5a_online_failure_keeps_selection(runner) -> bool:
+	SimPump.force_mode_for_test("inline")
+	var online: Dictionary = await _online(runner, 2)
+	SimPump.force_mode_for_test("")
+	var main = online.main
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, 12)
+	var army: Array[int] = []
+	for at: Vector2 in [Vector2(20.5, 20.5), Vector2(21.5, 20.5)]: army.append(main.driver.pump.live().spawn(2, at, "usa_rifle_infantry"))
+	_run(main, 1)
+	main.orders.selected_ids.assign(army)
+	main._reshow()
+	runner.check(main.orders.selected_ids == army, "SB5A fixture: the army group of seat 2 is selected, got %s" % [main.orders.selected_ids])
+	SimPump.force_mode_for_test("inline")
+	var pump = FailingPump.new(main.driver.pump.live())
+	SimPump.force_mode_for_test("")
+	main.driver.pump.stop()
+	main.driver._last = pump.start()
+	main.driver.pump = pump
+	pump.fail_next = true
+	_run(main, 2)
+	runner.check(not main.driver.failure().is_empty() and main.driver.over(), "SB5A fixture: the pump failed and the online match is over, got '%s'" % main.driver.failure())
+	runner.check(main.orders.selected_ids == army, "SB5A the army group is still selected after the failure, got %s" % [main.orders.selected_ids])
+	_run(main, 2)
+	main._reshow()
+	runner.check(main.orders.selected_ids == army, "SB5A and after the next refresh, got %s" % [main.orders.selected_ids])
+	main.free()
+	return true
+
+func _mixed_pair() -> Dictionary:
+	var ends: Array = [PumpTests.RelayEnd.new(), PumpTests.RelayEnd.new()]
+	ends[0].peer = ends[1]
+	ends[1].peer = ends[0]
+	var drivers: Array = []
+	for i in 2:
+		ends[i].seat = i + 1
+		ends[i].tell_peer = true
+		drivers.append(OnlineDriver.new(ends[i], Lockstep.new(i + 1, [1, 2] as Array[int]), ["usa", "china"][i], i + 1))
+		SimPump.force_mode_for_test("worker" if i == 0 else "inline")
+		drivers[i].create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
+		drivers[i].start()
+	SimPump.force_mode_for_test("")
+	return {"drivers": drivers, "transports": ends}
+
+func _same_peers(runner, helper, pair: Dictionary, label: String, min_rows: int, min_lines: int) -> void:
+	var worker = pair.drivers[0]
+	var inline = pair.drivers[1]
+	var rows: PackedStringArray = worker._lockstep.hash_rows()
+	var other: PackedStringArray = inline._lockstep.hash_rows()
+	var common: int = mini(rows.size(), other.size())
+	runner.check(common >= min_rows and rows.slice(0, common) == other.slice(0, common), "SB5A %s: %d hash rows equal, at least %d" % [label, common, min_rows])
+	var last: int = mini(worker.current().tick, inline.current().tick) - 1
+	var lines: Array = helper._lines_to(worker.match_log().commands, last)
+	runner.check(lines.size() >= min_lines and lines == helper._lines_to(inline.match_log().commands, last), "SB5A %s: command logs equal up to tick %d (%d lines)" % [label, last, lines.size()])
+
+func test_sb5a_worker_peer_against_inline_peer(runner) -> bool:
+	var helper = PumpTests.new()
+	if not helper._modes().has("worker"):
+		runner.check(true, "SB5A no threads on this build: the worker peer is not built")
+		return true
+	var pair: Dictionary = _mixed_pair()
+	runner.check(pair.drivers[0].sim_mode() == "worker" and pair.drivers[1].sim_mode() == "inline", "SB5A fixture: seat 1 worker, seat 2 inline, got %s and %s" % [pair.drivers[0].sim_mode(), pair.drivers[1].sim_mode()])
+	helper._frames(pair.drivers, 20, 0)
+	pair.drivers[0].submit(helper._move(helper._own_unit(pair.drivers[0].pump.live())))
+	pair.drivers[0].submit(helper._move(999))
+	pair.drivers[1].submit(helper._move(helper._own_unit(pair.drivers[1].pump.live(), "", 2)))
+	var double_takes: int = helper._frames(pair.drivers, 360, 3)
+	runner.check(double_takes > 0, "SB5A fixture: the worker seat takes two ticks in one callback on some frames, got %d" % double_takes)
+	_same_peers(runner, helper, pair, "orders", 8, 2)
+	var answers: Array[Dictionary] = pair.drivers[0].take_answers()
+	runner.check(answers.size() == 2 and answers.filter(func(answer: Dictionary) -> bool: return not answer.ok and int(answer.command.entity_ids[0]) == 999).size() == 1 and answers.filter(func(answer: Dictionary) -> bool: return answer.ok).size() == 1, "SB5A the worker seat gets one refusal, the missing entity 999, got %s" % [answers])
+	var theirs: Array[Dictionary] = pair.drivers[1].take_answers()
+	runner.check(theirs.size() == 1 and theirs[0].ok, "SB5A the inline seat gets no refusal, got %s" % [theirs])
+	runner.check(not pair.drivers.any(func(driver) -> bool: return driver._lockstep.status().begins_with("ended")), "SB5A the loopback never ends a lockstep")
+	helper._unpair(pair)
+	var ending: Dictionary = _mixed_pair()
+	var drivers: Array = ending.drivers
+	var seen: Array[bool] = [false, false]
+	var frames: int = 0
+	while not (drivers[0].over() and drivers[1].over()) and frames < 400:
+		frames += 1
+		for i in 2:
+			helper._cycle(drivers[i])
+			if drivers[i].current().tick != 100 or seen[i]: continue
+			seen[i] = true
+			drivers[i].pump.live().remove_object(4)
+			drivers[i].pump.live().remove_object(6)
+	runner.check(seen[0] and seen[1] and drivers[0].over() and drivers[1].over(), "SB5A both seats end the match (%d frames)" % frames)
+	var records: Array = [drivers[0].record(), drivers[1].record()]
+	runner.check(records[0].tick == records[1].tick and records[0].digest == records[1].digest, "SB5A both seats end on the same tick and digest, got %s" % [records])
+	_same_peers(runner, helper, ending, "match end", 3, 1)
+	runner.check(drivers[0]._lockstep.status() == "running" and drivers[1]._lockstep.status() == "running", "SB5A a normal end leaves both lockstep running, got %s and %s" % [drivers[0]._lockstep.status(), drivers[1]._lockstep.status()])
+	helper._unpair(ending)
+	return true
+
+# The pump is settled before each drain, so a slow worker cannot hide the per-frame bound.
+func _frame_script(runner, mode: String, steps: Array, frames: int) -> Array[int]:
+	SimPump.force_mode_for_test(mode)
+	var online: Dictionary = await _online(runner, 2)
+	SimPump.force_mode_for_test("")
+	var main = online.main
+	_run(main, 10)
+	var sent_to: int = 3
+	var taken: Array[int] = []
+	for frame in frames:
+		var before: int = main.driver.current().tick
+		_peer_packets(online.transport, 1, sent_to + 1, before + 20)
+		sent_to = before + 20
+		for i in steps[frame % steps.size()]: main._physics_process(1.0 / 30.0)
+		BaseScene.settle(main)
+		main._drain_notes()
+		taken.append(main.driver.current().tick - before)
+	main.driver.stop()
+	main.free()
+	return taken
+
+const CATCH_UP_FPS: Array = [[10, [3], [3, 3, 3, 3, 3, 3, 3, 3, 3, 3]], [6, [5], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5]], [4, [7, 8], [5, 5, 5, 5, 5, 5, 5, 5, 5, 5]]]
+
+func test_sb5a_catch_up_bound_per_frame(runner) -> bool:
+	var modes: Array[String] = []
+	modes.assign(PumpTests.new()._modes())
+	if not SimPump.worker_wanted(): modes.append("")
+	for mode in modes:
+		var label: String = mode if not mode.is_empty() else "default"
+		for row: Array in CATCH_UP_FPS:
+			var taken: Array[int] = await _frame_script(runner, mode, row[1], 12)
+			runner.check(taken.all(func(count: int) -> bool: return count <= 5), "SB5A at most 5 ticks per rendered frame at %d fps in %s mode, got %s" % [row[0], label, taken])
+			if mode != "worker": runner.check(taken.slice(2) == row[2], "SB5A %s mode takes the same ticks per frame at %d fps with the switch on or off, got %s" % [label, row[0], taken])
+			if mode != "worker" and row[0] == 6: runner.check(taken.slice(2, 8).reduce(func(sum: int, count: int) -> int: return sum + count, 0) == 30, "SB5A %s mode at 6 fps keeps pace, 30 ticks per 6 rendered frames, got %s" % [label, taken])
+	await _record_pace(runner, modes)
+	return true
+
+# Printed for the ledger only; no assertion, the pace floor is a record.
+func _record_pace(runner, modes: Array[String]) -> void:
+	for mode in modes:
+		if mode.is_empty(): continue
+		var line: String = "CATCH-UP PACE %s" % mode
+		for fps: int in [30, 20, 15, 12, 10, 9, 8, 7, 6, 5, 4]:
+			var steps: Array = []
+			var carry: float = 0.0
+			for frame in 12:
+				carry += 30.0 / fps
+				steps.append(int(carry))
+				carry -= int(carry)
+			var taken: Array[int] = await _frame_script(runner, mode, steps, 12)
+			line += " %d:%.1f" % [fps, float(taken.slice(2).reduce(func(sum: int, count: int) -> int: return sum + count, 0)) * fps / 10.0]
+		print(line)
+
+const WAITING_LINE: String = "Waiting for player 1"
+const HOLD_FRAMES: int = 30
+
+func _shows_line(main) -> bool:
+	main._refresh()
+	return BaseScene.hud_text(main).contains(WAITING_LINE)
+
+# Only a non-quiet take sets the status, so a tick still in flight keeps the line off for the whole hold.
+func _hold_then_drain(runner, mode: String) -> void:
+	SimPump.force_mode_for_test(mode)
+	var online: Dictionary = await _online(runner, 2)
+	SimPump.force_mode_for_test("")
+	var main = online.main
+	var lockstep = online.lockstep
+	_peer_packets(online.transport, 1, 4, PEER_TICKS)
+	_run(main, PEER_TICKS + 20)
+	runner.check(lockstep.status() == "waiting" and _shows_line(main), "SB5A %s: the line shows while nothing is in flight and the peer is late, got '%s'" % [mode, lockstep.status()])
+	var gate := Semaphore.new()
+	if mode == "worker": main.driver.pump.gate_publish_for_test(gate, "before_publish")
+	_peer_packets(online.transport, 1, PEER_TICKS + 1, PEER_TICKS + 1)
+	main._physics_process(1.0 / 30.0)
+	var taken: int = main.driver.get("_next_tick")
+	var early: int = 0
+	for i in HOLD_FRAMES:
+		main._physics_process(1.0 / 30.0)
+		if lockstep.status() != "running" or _shows_line(main): early += 1
+	runner.check(taken == PEER_TICKS + 2 and main.driver.get("_next_tick") == taken and early == 0, "SB5A %s: the tick is in flight through a 1 s hold and the line never shows, took to %d, early %d" % [mode, main.driver.get("_next_tick"), early])
+	if mode == "worker":
+		runner.check(main.driver.pump.busy(), "SB5A worker: the held tick is still unpublished")
+		gate.post()
+		BaseScene.settle(main)
+	main._physics_process(1.0 / 30.0)
+	runner.check(lockstep.status() == "running" and not _shows_line(main), "SB5A %s: a finished but undrained job shows no line after one more take" % mode)
+	main._drain_notes()
+	runner.check(lockstep.status() == "running" and not BaseScene.hud_text(main).contains(WAITING_LINE), "SB5A %s: the drain itself shows no line, the take after it decides" % mode)
+	main._physics_process(1.0 / 30.0)
+	runner.check(lockstep.status() == "waiting", "SB5A %s: the first take after the drain is no longer quiet, got '%s'" % [mode, lockstep.status()])
+	main._drain_notes()
+	runner.check(BaseScene.hud_text(main).contains(WAITING_LINE), "SB5A %s: the line shows on the first refresh after that take" % mode)
+	main.driver.stop()
+	main.free()
+
+func test_sb5a_waiting_line_after_drain(runner) -> bool:
+	for mode in PumpTests.new()._modes(): await _hold_then_drain(runner, mode)
 	return true

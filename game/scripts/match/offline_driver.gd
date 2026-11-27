@@ -10,6 +10,8 @@ const HASH_EVERY: int = 30
 const BOT_LINES_EVERY: int = 30
 
 var pump: SimPump
+var bots: Array[int] = BOTS
+var digest_every: int = 0
 var show_bots: bool = false:
 	set(value):
 		show_bots = value
@@ -35,6 +37,7 @@ func _init(player: int) -> void:
 
 func create(map_path: String, starts: Array[int], factions: Dictionary, _match_seed: int) -> void:
 	_factions = factions
+	if pump != null: pump.stop()
 	adopt(Skirmish.create(true, "human", factions, map_path, starts))
 
 func adopt(value: Simulation) -> void:
@@ -59,12 +62,15 @@ func start() -> void:
 func step() -> void:
 	# A finished match would otherwise re-copy its last results every frame.
 	if over() and _queue.is_empty() and _preview_request.is_empty(): return
+	# Before the job is built: a full pump keeps the queue and the request for the next frame.
+	if not pump.has_room(): return
 	var job := SimPump.Job.new()
 	job.commands = _queue
-	job.bots = BOTS
+	job.bots = bots
 	job.preview = _preview_request
 	job.stamp_sequence = true
 	job.want_tick_hash = (_next_tick + 1) % HASH_EVERY == 0
+	job.want_digest = digest_every > 0 and (_next_tick + 1) % digest_every == 0
 	job.want_bot_lines = show_bots and (_next_tick + 1) % BOT_LINES_EVERY == 0
 	if not pump.post(job):
 		_read_failure()
@@ -74,6 +80,8 @@ func step() -> void:
 
 func drain() -> Array[SimPump.Note]:
 	var notes: Array[SimPump.Note] = pump.drain()
+	# A stall produces no note, so the failure is read before the empty return.
+	_read_failure()
 	if notes.is_empty(): return notes
 	# Flushed answers wait for the next job so a paused or idle drain does not hand them out early.
 	_answers.append_array(_flushed)
@@ -123,6 +131,9 @@ func record() -> Dictionary:
 
 func failure() -> String:
 	return _failure
+
+func sim_mode() -> String:
+	return pump.mode()
 
 func _read_failure() -> void:
 	var reason: String = pump.failure()
@@ -192,7 +203,7 @@ func take_pings() -> Array[Dictionary]:
 	return []
 
 func bot_players() -> Array[int]:
-	return BOTS
+	return bots
 
 func take_rematch() -> int:
 	return -1

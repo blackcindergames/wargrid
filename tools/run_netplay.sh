@@ -1,6 +1,8 @@
 #!/bin/sh
 # usage: run_netplay.sh match|rematch|kill|left-mid|left-mid-pump|trio-play-on|trio-left-first|trio-result|team|team-guest-defeated|team-guest-quits|team-host-leaves|team-defeated-host-leaves|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole
 scenario=$1
+# Headless clients and the oracle stay inline whatever the caller exports (SB5a Decided 9).
+unset WARGRID_SIM_THREAD
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
 out=${NETPLAY_OUT:-$(mktemp -d)}
 mkdir -p "$out" || exit 1
@@ -94,9 +96,12 @@ same_prefix() {
   same_hashes "$out/prefix-1.tsv" "$out/prefix-2.tsv"
 }
 
+client_mode() { echo "NETPLAY CLIENT SIM_THREAD=${WARGRID_SIM_THREAD-}"; }
+
 # start_client NAME ARGS...: logs to $out/NAME.log, pid in $pid
 start_client() {
   name=$1; shift
+  client_mode
   # shellcheck disable=SC2086
   $client -- --netclient --relay "$url" --uncapped --hash-log "$out/$name.tsv" --command-log "$out/$name.cmd" --report-dir "$out" "$@" >"$out/$name.log" 2>&1 &
   pid=$!
@@ -193,12 +198,14 @@ end_winner() { end_line "$1" | awk '{print $7}'; }
 same_hashes() { ${PYTHON:-python3} "$repo_root/tools/compare_replays.py" --interval 30 --rows 0 "$@" >/dev/null || fail "hash logs differ: $*"; }
 
 oracle() {
+  client_mode
   # shellcheck disable=SC2086
   $client -- --netclient --replay-log "$out/s1.cmd" --hash-log "$out/oracle.tsv" >"$out/oracle.log" 2>&1 || fail "oracle failed"
   expect_end oracle match_over
 }
 
 team_oracle() {
+  client_mode
   # shellcheck disable=SC2086
   $client -- --netclient --replay-log "$out/s1.cmd" --map broken_crown --seed 7 --bots 3:china,4:frc --oracle-ticks 6000 --hash-log "$out/oracle.tsv" >"$out/oracle.log" 2>&1 || fail "oracle failed"
   expect_end oracle oracle_overrun

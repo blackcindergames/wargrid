@@ -100,8 +100,12 @@ PUMP_ACCESS = re.compile(r"\.pump\b(?:\s*\.\s*\w+)?|\bpump\s*\.\s*\w+|\bget\(\s*
 PUMP_FILE = "game/scripts/match/sim_pump.gd"
 PUMP_COUNTS: dict[str, int] = {
     # +1: _read_failure() reads pump.failure() for the freeze card (P2.3a1 Task 8).
-    "game/scripts/match/offline_driver.gd": 10,
-    "game/scripts/match/online_driver.gd": 9,
+    # +1 each: sim_mode() reads pump.mode() (SB5a Task 2).
+    # +1 each: create stops the old pump first; +2 online: _stop_pump reads failure() and drains (SB5a Task 5).
+    # +1 each: step reads has_room() before it builds a job or takes a tick (SB5a Task 7).
+    # +3 online: step reads failure(), _end_on_failure() reads it, failure() passes it on (SB5a Task 7).
+    "game/scripts/match/offline_driver.gd": 13,
+    "game/scripts/match/online_driver.gd": 17,
 }
 
 
@@ -119,6 +123,30 @@ def pump_accesses(path, text):
 
 
 SCREEN = "game/scripts/match/match_screen.gd"
+PAYLOAD_CLASSES = ("Job", "Note", "Slot")
+PURE_TYPE = re.compile(
+    r"(?:int|float|bool|String|Dictionary|Array(?:\[(?:int|float|bool|String|Dictionary)\])?|Packed\w+Array)"
+)
+FIELD = re.compile(r"^\t+var\s+(\w+)\s*(?::\s*([\w\[\]]+))?")
+
+
+def impure_payload_fields(text):
+    """Fields of the pump's Job, Note and Slot whose declared type is not plain data (they cross threads)."""
+    found = []
+    current = ""
+    seen = set()
+    for line in text.splitlines():
+        header = re.match(r"^class\s+(\w+)", line)
+        if header:
+            current = header.group(1)
+            seen.add(current)
+        elif line and not line[0].isspace() and not line.startswith("@"):
+            current = ""
+        field = FIELD.match(line) if current in PAYLOAD_CLASSES else None
+        if field and not (field.group(2) and PURE_TYPE.fullmatch(field.group(2))):
+            found.append(f"{current}.{field.group(1)}: {field.group(2)}")
+    assert seen >= set(PAYLOAD_CLASSES), f"classes not found: {set(PAYLOAD_CLASSES) - seen}"
+    return found
 
 
 class SimBoundary(unittest.TestCase):
@@ -204,6 +232,30 @@ class SimBoundary(unittest.TestCase):
     def test_pump_counts_files_exist(self):
         for rel in PUMP_COUNTS:
             self.assertTrue((ROOT / rel).is_file(), f"{rel} is gone: remove it from PUMP_COUNTS")
+
+    def test_payload_fields_are_plain_data(self):
+        text = (ROOT / PUMP_FILE).read_text()
+        self.assertEqual(impure_payload_fields(text), [])
+
+    def test_payload_flags_impure_fields(self):
+        sample = (
+            "class Job:\n\tvar a: int = 0\n\tvar hook: Callable\n\tvar loose = 1\n"
+            "class Note:\n\tvar rows: Array[Node] = []\n\tvar ring: PackedStringArray\n\tvar view: Dictionary = {}\n"
+            "class Slot:\n\tvar owner: RefCounted\n"
+            "class Other:\n\tvar free: Node\n"
+        )
+        self.assertEqual(
+            impure_payload_fields(sample),
+            ["Job.hook: Callable", "Job.loose: None", "Note.rows: Array[Node]", "Slot.owner: RefCounted"],
+        )
+
+    def test_only_the_pump_defines_run_owned(self):
+        definers = [
+            p.relative_to(ROOT).as_posix()
+            for p in sorted((ROOT / "game").rglob("*.gd"))
+            if re.search(r"^\s*func\s+_run_owned\b", p.read_text(), re.M)
+        ]
+        self.assertEqual(definers, [PUMP_FILE])
 
     def test_scan_covers_scripts(self):
         rels = {p.relative_to(ROOT).as_posix() for p in scanned_files(ROOT)}

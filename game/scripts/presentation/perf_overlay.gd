@@ -4,6 +4,7 @@ const TimingStats = preload("res://scripts/debug/timing_stats.gd")
 const WINDOW: int = 120
 const REFRESH_SECONDS: float = 0.25
 var extra: Callable = Callable()
+var mode: String = ""
 var _frames := PackedFloat64Array()
 var _steps := PackedFloat64Array()
 var _frame_count: int = 0
@@ -55,11 +56,14 @@ func _process(delta: float) -> void:
 func refresh_text() -> void:
 	var frame: Dictionary = _summary(_frames, _frame_count)
 	var step: Dictionary = _summary(_steps, _step_count)
-	var lines: String = "FPS %d\nFrame %.1f / p95 %.1f / max %.1f ms\nSim step %.2f / p95 %.2f ms\nUnits %d | Buildings %d | Tick %d | split %d%%" % [
-		Engine.get_frames_per_second(), frame.last, frame.p95, frame.max, step.last, step.p95, _units, _buildings, _tick, roundi(split_share * 100.0)]
+	var lines: String = "FPS %d%s\nFrame %.1f / p95 %.1f / max %.1f ms\nSim step %.2f / p95 %.2f ms\nUnits %d | Buildings %d | Tick %d | split %d%%" % [
+		Engine.get_frames_per_second(), _mode_text(), frame.last, frame.p95, frame.max, step.last, step.p95, _units, _buildings, _tick, roundi(split_share * 100.0)]
 	var more: String = str(extra.call()) if extra.is_valid() else ""
 	if not more.is_empty(): lines += "\n" + more
 	text = lines
+
+func _mode_text() -> String:
+	return "" if mode.is_empty() else " | Sim: " + mode.replace("-fallback", " (fallback)")
 
 static func _summary(ring: PackedFloat64Array, count: int) -> Dictionary:
 	var n: int = mini(count, WINDOW)

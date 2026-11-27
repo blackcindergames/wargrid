@@ -70,6 +70,20 @@ jobs:
         run: |
           set -o pipefail
           sh tools/run_tests.sh 2>&1 | tee test-results.log
+      - name: Test with the simulation on a worker thread
+        env: # the inline traces above stay intact
+          WARGRID_SIM_THREAD: "1"
+          WARGRID_REPLAY_TRACE: ""
+          WARGRID_ECONOMY_REPLAY_TRACE: ""
+          WARGRID_COMBAT_REPLAY_TRACE: ""
+          WARGRID_TEAM_REPLAY_TRACE: ""
+        run: |
+          set -o pipefail
+          sh tools/run_tests.sh 2>&1 | tee test-results-worker.log
+      - name: Pump fault processes
+        run: |
+          set -o pipefail
+          sh tools/run_pump_faults.sh 2>&1 | tee pump-faults.log
       - name: GDScript warnings as errors
         if: matrix.platform == 'linux' # static check, same result on every platform
         run: sh tools/run_warnings.sh
@@ -86,7 +100,10 @@ jobs:
         if: failure()
         with:
           name: test-results-${{ matrix.platform }}
-          path: test-results.log
+          path: |
+            test-results.log
+            test-results-worker.log
+            pump-faults.log
   godot-export:
     name: Godot / Exported build (${{ matrix.platform }})
     strategy:

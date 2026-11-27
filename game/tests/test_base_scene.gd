@@ -69,7 +69,19 @@ func setup(runner):
 # Never `_process`: it pans, draws and auto-picks quality.
 static func tick(main) -> void:
 	main._physics_process(1.0 / 30.0)
+	settle(main)
 	main._drain_notes()
+
+# Under the worker switch a posted job finishes off-thread: wait (bounded) until nothing is unpublished, so a drain sees every note.
+# Takes a screen or a bare driver.
+static func settle(main) -> void:
+	var driver = main.get("driver")
+	var pump = (driver if driver != null else main).get("pump")
+	if pump == null: return
+	var deadline: int = Time.get_ticks_msec() + 5000
+	while pump.busy() and Time.get_ticks_msec() < deadline:
+		OS.delay_usec(100)
+	if pump.busy(): push_error("settle: pump still busy after 5 s")
 
 static func hud_text(main: Node) -> String:
 	var lines: PackedStringArray = []
@@ -82,6 +94,7 @@ static func publish(main) -> void:
 	var job := SimPump.Job.new()
 	job.step = false
 	main.driver.pump.post(job)
+	settle(main)
 	main.driver.drain()
 	main._refresh()
 
