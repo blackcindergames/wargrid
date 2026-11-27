@@ -1877,3 +1877,4 @@ The owner's look at the merged slice 2 on the web test. Checked against Zero Hou
 - Rematch keeping picks was not tested; the owner expects it to work.
 - **Fill rule shown by the hint only** (user, 2026-11-27): the preview draws only placed starts; "The game places the rest" stands for the rule, because the seed decides it at the start.
 - **A click on a placed start only clears it** (user, 2026-11-27), without Zero Hour's hand-over to the next player without a start.
+- **Gate review follow-ups** (user, 2026-11-27): a free start's hover ring takes the colour of whoever a click would place, and the guest's cues name the bot; the map hint stays short, and switching Skirmish and Host game keeps dropping bot placements.
