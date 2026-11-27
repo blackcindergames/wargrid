@@ -10,6 +10,8 @@ const HASH_EVERY: int = 30
 const BOT_LINES_EVERY: int = 30
 
 var pump: SimPump
+var bots: Array[int] = BOTS
+var digest_every: int = 0
 var show_bots: bool = false:
 	set(value):
 		show_bots = value
@@ -64,10 +66,11 @@ func step() -> void:
 	if not pump.has_room(): return
 	var job := SimPump.Job.new()
 	job.commands = _queue
-	job.bots = BOTS
+	job.bots = bots
 	job.preview = _preview_request
 	job.stamp_sequence = true
 	job.want_tick_hash = (_next_tick + 1) % HASH_EVERY == 0
+	job.want_digest = digest_every > 0 and (_next_tick + 1) % digest_every == 0
 	job.want_bot_lines = show_bots and (_next_tick + 1) % BOT_LINES_EVERY == 0
 	if not pump.post(job):
 		_read_failure()
