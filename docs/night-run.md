@@ -16,12 +16,12 @@ Runs while the user is reachable, at the PC or on the phone.
 6. Write the handoff to `~/projects/wargrid-private/docs/<task>-prompt.txt`: the task and its one page or plan, the backups in order, pre-approved actions (including which local commits are pre-authorized), the run's ledger path (resume record, rulings, morning summary beside it), run-specific rules, the deliverable and stops (`AGENTS.md` [How a package runs](../AGENTS.md#how-a-package-runs) step 6), and the start line:
 
    ```text
-   claude --remote-control --settings ~/projects/wargrid-overnight-work/night-settings.json --permission-mode auto
+   claude --model <model> --effort <level> --remote-control --settings ~/projects/wargrid-overnight-work/night-settings.json --permission-mode auto
    /start-night-run ~/projects/wargrid-private/docs/<task>-prompt.txt
    ```
 
 7. Commit the repository changes this preparation made (local commit, pre-authorized, user 2026-11-12); never push.
-8. End with the start line to paste.
+8. End with the start line to paste, always with the coordinator's model and effort spelled out (default `--model claude-opus-5-5 --effort high`; user, 2026-11-27).
 
 ## Start
 
