@@ -60,6 +60,7 @@ const FROM_LINK := "Filled in from your friend’s link."
 const NO_GAME := "No open game with code %s. Check the code, or ask your friend for a new one."
 const GAME_FULL := "That game is full or has already started. Ask your friend to host a new one."
 const BIGGER_MAP := "a bigger map fits more bots"
+const REOPEN := "open a closed start for more bots"
 const ONLINE_BOTS := "online games take up to %d bots"
 const NO_BOT := "Add a bot to play against."
 const FRIEND_WAIT := "Start match unlocks when your friend joins"
@@ -100,6 +101,15 @@ const LOOKALIKE := "Codes never use O, 0, I or 1. Check the code with your frien
 const TEAM_JOINED := " · you are on the host’s team now"
 const TEAM_SPLIT := " · you play against the host now"
 const MAP_TOO_SMALL := "This map has %d starts; your setup needs %d."
+const HINT_PICK := "Click a free start to take it."
+const HINT_CLOSE := " Right-click one to close it."
+const TIP_FREE := "Free start: click to start here"
+const TIP_CLOSE := ", right-click to close it"
+const TIP_YOURS := "Your start: click to give it back"
+const TIP_TAKEN := "Taken"
+const TIP_CLOSED := "Closed: right-click to open it"
+const TIP_CLOSED_GUEST := "Closed by the host"
+const STARTS_CHANGED := "Host changed the starts"
 var mode: String = "skirmish"
 # Bot factions in seat order; Random stays Random until the match starts.
 var lobby_bots: Array[String] = []
@@ -128,7 +138,12 @@ var _cue_msec: int = 0
 var _picks: Dictionary = {}
 var _pick_dirty: bool = false
 var _pick_msec: int = 0
-var _sent_pick: String = ""
+var _sent_pick: Dictionary = {}
+# Start seats by player (1 is you, offline and hosting); unpicked players are placed by the rule at the start.
+var _spots: Dictionary = {}
+var _closed: Array[int] = []
+# The guest's own start as last asked of the host; the settings show where it stands.
+var _own_start: int = 0
 var _lockstep: RefCounted
 var current_page: String = "Play"
 var _origin: String = "Play"
@@ -239,6 +254,8 @@ func _relay_url() -> String:
 	return url if not url.is_empty() else JoinLink.DEFAULT_RELAY
 
 func set_mode(kind: String) -> void:
+	# Host game keeps a start for the friend, so closed starts from another mode may no longer fit.
+	if kind != mode: _closed.clear()
 	mode = kind
 	_fit_bots()
 	_play_error = false
@@ -252,7 +269,9 @@ func _fit_bots() -> void:
 	if mode == "skirmish" and lobby_bots.is_empty(): lobby_bots.append(LauncherSettings.load_picks().bots[0])
 
 func _bot_cap() -> int:
-	var starts: int = _start_count(_map_id())
+	return _cap_for(_start_count(_map_id()) - _closed.size())
+
+func _cap_for(starts: int) -> int:
 	return mini(HOST_BOTS, starts - 2) if mode == "host" else starts - 1
 
 func _is_guest() -> bool:
@@ -289,8 +308,8 @@ func _refresh_play() -> void:
 	$Pages/Play/Body/MapColumn/Map.disabled = _asked
 	$Pages/Play/Body/MapColumn/MapName.visible = guest
 	$Pages/Play/Body/MapColumn/MapName.text = MatchSettings.PLAY_MAPS.get(id, id)
-	$Pages/Play/Body/MapColumn/MapHint.visible = guest or mode == "host"
 	$Pages/Play/Body/MapColumn/Preview.show_map(_map_data(id))
+	_refresh_starts(guest)
 	$Pages/Play/Body/MapColumn/MapInfo.text = _map_info(id)
 	_grey_maps()
 	_refresh_footer(guest)
@@ -300,22 +319,92 @@ func _refresh_count(starts: int) -> void:
 	var full: bool = lobby_bots.size() >= _bot_cap()
 	var line: String = "%d of %d starts used" % [_used(), starts]
 	if _kept() > 0: line += " · 1 kept for your friend"
-	if full: line += " · " + (ONLINE_BOTS % HOST_BOTS if mode == "host" and HOST_BOTS < starts - 2 else BIGGER_MAP)
+	if not _closed.is_empty(): line += " · %d closed" % _closed.size()
+	if full: line += " · " + _full_reason(starts)
 	var add: Button = $Pages/Play/Body/Players/Count/AddBot
 	$Pages/Play/Body/Players/Count/Line.text = line
 	add.disabled = full or _asked
 	add.tooltip_text = line if full else ""
+
+func _full_reason(starts: int) -> String:
+	if lobby_bots.size() < _cap_for(starts): return REOPEN
+	return ONLINE_BOTS % HOST_BOTS if mode == "host" and HOST_BOTS < starts - 2 else BIGGER_MAP
 
 func _refresh_mode_bar(guest: bool) -> void:
 	var why: String = "" if _transport == null else (STOP_FIRST if _origin == "Play" else LEAVE_FIRST)
 	for kind: String in MODES:
 		var button: Button = get_node(MODE_BAR + "/" + MODES[kind])
 		button.set_pressed_no_signal(mode == kind)
-		button.disabled = not why.is_empty() and mode != kind
+		button.disabled = not why.is_empty() and mode != kind and not _leaves_hosting(kind)
 		button.tooltip_text = why if button.disabled else ""
 	get_node(MODE_BAR + "/Invite").visible = not _code.is_empty()
 	get_node(MODE_BAR + "/Invite/Box/Copy").visible = not guest
 	get_node(MODE_BAR + "/Invite/Box/Code").text = _code.left(3) + " " + _code.right(3) if not _code.is_empty() else ""
+
+# The friend expected Skirmish to leave hosting, so it asks "Stop hosting?" like the footer's button.
+func _leaves_hosting(kind: String) -> bool:
+	return kind == "skirmish" and mode == "host"
+
+func _refresh_starts(guest: bool) -> void:
+	var spots: Dictionary = _spots_of(_settings) if guest else _spots
+	var closed: Array[int] = MatchSettings.closed_starts(_settings) if guest else _closed
+	var players: Dictionary = {}
+	for player: int in spots: players[spots[player]] = _hue(player)
+	var tips: Dictionary = {}
+	for seat: int in _start_seats(_shown_map()): tips[seat] = _start_tip(seat, spots, closed, guest)
+	$Pages/Play/Body/MapColumn/Preview.show_starts(players, closed, tips)
+	$Pages/Play/Body/MapColumn/MapHint.text = HINT_PICK if guest else HINT_PICK + HINT_CLOSE
+
+func _start_tip(seat: int, spots: Dictionary, closed: Array[int], guest: bool) -> String:
+	if spots.get(_seat if guest else 1, 0) == seat: return TIP_YOURS
+	if spots.values().has(seat): return TIP_TAKEN
+	if closed.has(seat): return TIP_CLOSED_GUEST if guest else TIP_CLOSED
+	return TIP_FREE if guest else TIP_FREE + TIP_CLOSE
+
+static func _spots_of(settings: Dictionary) -> Dictionary:
+	var spots: Dictionary = {}
+	for row: Dictionary in settings.get("chosen", []): spots[int(row.player)] = int(row.start)
+	return spots
+
+func _start_seats(id: String) -> Array:
+	return _map_data(id).starts.map(func(start: Dictionary) -> int: return int(start.seat))
+
+# Free for this player: not closed and nobody else starts there.
+func _free(seat: int, player: int) -> bool:
+	return not _closed.has(seat) and _spots.keys().all(func(other: int) -> bool: return other == player or _spots[other] != seat)
+
+func _on_start_pressed(seat: int, close: bool) -> void:
+	if _is_guest(): _guest_start(seat, close)
+	elif _asked: return
+	elif close: _toggle_closed(seat)
+	else: _take_start(seat)
+
+func _take_start(seat: int) -> void:
+	if _spots.get(1, 0) == seat: _spots.erase(1)
+	elif _free(seat, 1): _spots[1] = seat
+	else: return
+	_changed()
+
+# A start is closed only while everyone, and the start kept for the friend, still fits.
+func _toggle_closed(seat: int) -> void:
+	if _closed.has(seat): _closed.erase(seat)
+	elif _free(seat, 0) and _used() + _kept() + _closed.size() < _start_count(_map_id()): _closed.append(seat)
+	else: return
+	_changed()
+
+func _guest_start(seat: int, close: bool) -> void:
+	var taken: bool = _spots_of(_settings).values().has(seat) or MatchSettings.closed_starts(_settings).has(seat)
+	if close or (seat != _own_start and taken): return
+	_own_start = 0 if seat == _own_start else seat
+	_pick_dirty = true
+
+func _placement() -> Dictionary:
+	var placed: Dictionary = {}
+	var players: Array = _spots.keys()
+	players.sort()
+	if not players.is_empty(): placed["chosen"] = players.map(func(player: int) -> Dictionary: return {"player": player, "start": _spots[player]})
+	if not _closed.is_empty(): placed["closed"] = _closed.duplicate()
+	return placed
 
 func _refresh_footer(guest: bool) -> void:
 	var start: Button = $Pages/Play/Footer/Start
@@ -535,7 +624,9 @@ func _connect_play_controls() -> void:
 	for kind: String in MODES:
 		get_node(MODE_BAR + "/" + MODES[kind]).pressed.connect(func() -> void:
 			if _transport != null:
-				_refresh_play()
+				if not _leaves_hosting(kind): _refresh_play()
+				elif _code.is_empty(): _cancel()
+				else: _ask_stop()
 				return
 			set_mode(kind)
 			if kind == "host": _host())
@@ -546,7 +637,11 @@ func _connect_play_controls() -> void:
 	$Pages/Play/Footer/Leave.pressed.connect(func() -> void:
 		if not _is_guest(): _ask_stop()
 		elif _transport != null: _refuse(LEFT_GAME))
-	$Pages/Play/Body/MapColumn/Map.item_selected.connect(func(_index: int) -> void: _changed())
+	$Pages/Play/Body/MapColumn/Map.item_selected.connect(func(_index: int) -> void:
+		_spots.clear()
+		_closed.clear()
+		_changed())
+	$Pages/Play/Body/MapColumn/Preview.start_pressed.connect(_on_start_pressed)
 
 func _connect_join_card() -> void:
 	get_node(JOIN + "/Buttons/Join").pressed.connect(_join)
@@ -816,15 +911,16 @@ func _map_id() -> String:
 
 func _offline_setup() -> bool:
 	var id: String = _map_id()
-	if lobby_bots.size() + 1 > _start_count(id):
-		log_error.call("Offline start refused: %d bots do not fit the %d starts of %s" % [lobby_bots.size(), _start_count(id), id])
+	if lobby_bots.size() + 1 + _closed.size() > _start_count(id):
+		log_error.call("Offline start refused: %d bots and %d closed starts do not fit the %d starts of %s" % [lobby_bots.size(), _closed.size(), _start_count(id), id])
 		return false
 	LauncherSettings.save_picks(_lobby_picks(id).merged({"faction": _own_pick}))
 	SkirmishMain.factions = {1: _resolve(_own_pick)}
 	for i in lobby_bots.size(): SkirmishMain.factions[i + 2] = _resolve(lobby_bots[i])
 	SkirmishMain.map_path = MatchSettings.map_path(id)
 	SkirmishMain.match_seed = randi()
-	SkirmishMain.starts = MatchSettings.starts(id, SkirmishMain.match_seed, MatchSettings.teams(1, lobby_bots.size()))
+	SkirmishMain.placement = _placement()
+	SkirmishMain.starts = MatchSettings.starts(id, SkirmishMain.match_seed, MatchSettings.teams(1, lobby_bots.size()), SkirmishMain.placement)
 	return true
 
 # A host's 1v1 has no bots; the next Skirmish keeps the last bots instead of opening empty.
@@ -915,7 +1011,9 @@ func _reset_room() -> void:
 	_cue = ""
 	_picks.clear()
 	_pick_dirty = false
-	_sent_pick = ""
+	_sent_pick = {}
+	_own_start = 0
+	_spots = {1: _spots[1]} if _spots.has(1) else {}
 	get_node(MODE_BAR + "/Invite/CopyReset").stop()
 	_copy_reset()
 
@@ -980,23 +1078,35 @@ func _snapshot(reroll: bool = false) -> Dictionary:
 	var players: Array = [{"player": 1, "faction": _own_pick}]
 	for seat: int in _picks: players.append({"player": seat, "faction": _picks[seat]})
 	settings["players"] = players
+	settings.merge(_placement())
 	return settings
 
 func _send_pick(force: bool = false) -> void:
 	if not _pick_dirty or not _is_guest(): return
 	if not force and _now_msec() - _pick_msec < SETTINGS_GAP_MSEC: return
 	_pick_dirty = false
-	if _own_pick == _sent_pick: return
-	_sent_pick = _own_pick
+	var pick: Dictionary = {"faction": _own_pick}
+	if _own_start > 0: pick["start"] = _own_start
+	if pick == _sent_pick: return
+	_sent_pick = pick
 	_pick_msec = _now_msec()
-	_transport.send_text(Wire.encode({"type": "pick", "pick": {"faction": _own_pick}}))
+	_transport.send_text(Wire.encode({"type": "pick", "pick": pick}))
 
 func _take_pick(message: Dictionary) -> void:
+	if not message.has("seat"): return
+	var seat: int = int(message.seat)
 	var faction: Variant = message.pick.get("faction")
-	if not message.has("seat") or not (faction is String and (Registry.Factions.FACTIONS.has(faction) or faction == RANDOM)): return
-	_picks[int(message.seat)] = faction
+	if faction is String and (Registry.Factions.FACTIONS.has(faction) or faction == RANDOM): _picks[seat] = faction
+	if not _asked: _take_guest_start(seat, message.pick.get("start", 0))
 	_dirty = true
 	_refresh_live()
+
+# The host's settings are the truth: a clash or a bad value keeps the guest's last start, and the guest's view follows the settings.
+func _take_guest_start(seat: int, start: Variant) -> void:
+	if typeof(start) not in [TYPE_INT, TYPE_FLOAT] or start != floorf(start): return
+	var wanted: int = int(start)
+	if wanted == 0: _spots.erase(seat)
+	elif _start_seats(_map_id()).has(wanted) and _free(wanted, seat): _spots[seat] = wanted
 
 static func _host_pick(settings: Dictionary) -> String:
 	for row: Variant in settings.get("players", []):
@@ -1023,6 +1133,7 @@ func _handle(text: String) -> bool:
 		"left":
 			if message.seat == 1: return _refuse(HOST_GONE)
 			_picks.erase(message.seat)
+			_spots.erase(int(message.seat))
 			_dirty = true
 			_set_friend(false, FRIEND_LEFT)
 		"pick" when _seat == 1: _take_pick(message)
@@ -1079,6 +1190,10 @@ func _take_settings(settings: Dictionary) -> bool:
 	var line: String = "" if first else _change_line(_settings, settings)
 	if not line.is_empty(): _cue = line
 	_settings = settings
+	# A pick still waiting to go out must not be undone by settings sent before the host heard it; a welcome may still hold the last guest's start.
+	if not _pick_dirty and not first: _own_start = _spots_of(_settings).get(_seat, 0)
+	# The host dropped the start this guest asked for, so asking again must send.
+	if int(_sent_pick.get("start", 0)) != _own_start: _sent_pick.erase("start")
 	# The relay's expiry runs from the room's creation or last settings, not from this join, so no clock until a change.
 	_room_msec = -1 if first else _now_msec()
 	if not first: _refresh_live()
@@ -1112,6 +1227,8 @@ static func _change_line(before: Dictionary, after: Dictionary) -> String:
 	if new_bots.size() > old_bots.size(): changes.append(BOT_ADDED)
 	elif new_bots.size() < old_bots.size(): changes.append(BOT_REMOVED)
 	elif old_bots.map(faction) != new_bots.map(faction): changes.append(BOT_FACTION)
+	var same_map: bool = before.get("map") == after.get("map")
+	if same_map and (before.get("closed", []) != after.get("closed", []) or _spots_of(before).get(1) != _spots_of(after).get(1)): changes.append(STARTS_CHANGED)
 	if changes.is_empty(): return ""
 	return (SETUP_CHANGED if changes.size() > 1 else changes[0]) + team_line
 
@@ -1167,7 +1284,8 @@ func _open_match(start: Dictionary) -> void:
 	SkirmishMain.factions = factions
 	SkirmishMain.map_path = MatchSettings.map_path(id)
 	SkirmishMain.match_seed = start.seed
-	SkirmishMain.starts = MatchSettings.starts(id, start.seed, MatchSettings.teams(start.seats.size(), bots.size()))
+	SkirmishMain.placement = settings
+	SkirmishMain.starts = MatchSettings.starts(id, start.seed, MatchSettings.teams(start.seats.size(), bots.size()), settings)
 	set_process(false)
 	var game: Node = OnlineScene.instantiate()
 	game.setup(_transport, _lockstep, _seat, _resolve(_own_pick))

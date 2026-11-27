@@ -24,11 +24,12 @@ rows=$(${PYTHON:-python3} "$repo_root/tools/playtest_session.py" --replay-args "
 [ -n "$rows" ] || { echo "REPLAY FAILED: the session holds no matches"; exit 1; }
 status=0
 tab=$(printf '\t')
-while IFS=$tab read -r k cmd mode map seed factions end_tick end_digest marker_ticks controller build bots; do
+while IFS=$tab read -r k cmd mode map seed factions end_tick end_digest marker_ticks controller build bots starts; do
 	set -- --replay-log "$cmd" --map "$map" --seed "$seed" --oracle-ticks "$end_tick"
 	[ "$factions" = "-" ] || set -- "$@" --factions "$factions"
 	[ "$controller" = "-" ] || set -- "$@" --controller "$controller"
 	[ "$bots" = "-" ] || set -- "$@" --bots "$bots"
+	[ "$starts" = "-" ] || set -- "$@" --starts "$starts"
 	state_ticks=$marker_ticks
 	if [ -n "$tick" ]; then
 		state_ticks=$tick

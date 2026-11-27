@@ -26,4 +26,4 @@ Mode cards (remembered for when Quick play and public games exist), Quick play, 
 
 ## Answered for the second slice
 
-[Lobby after the friend match](../../reference/design-answers-2026-11-08.md#lobby-after-the-friend-match-user-2026-11-26) (user, 2026-11-26): each player places their own start on the preview; the friend's choice rides on the protocol 3 `pick` message, the host folds it into the settings.
+[Lobby after the friend match](../../reference/design-answers-2026-11-08.md#lobby-after-the-friend-match-user-2026-11-26) (user, 2026-11-26): each player places their own start on the preview; the friend's choice rides on the protocol 3 `pick` message, the host folds it into the settings. A Skirmish click while hosting asks "Stop hosting?" (user, 2026-11-27).

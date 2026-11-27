@@ -135,6 +135,17 @@ class ReplayFailureTests(BisectCase):
         self.assertEqual(run.call_args.kwargs["timeout"], desync_bisect.ORACLE_TIMEOUT_S)
         self.assertFalse((self.out / "oracle-a.log").exists())
 
+    def test_run_passes_starts(self):
+        done = subprocess.CompletedProcess([], 0, stdout="ORACLE FINAL", stderr="")
+        run = mock.Mock(return_value=done)
+        self.out.mkdir(parents=True)
+        with mock.patch.object(desync_bisect.subprocess, "run", new=run):
+            desync_bisect.replay(["godot"], {**report(1, LOCAL), "starts": [3.0, 1.0]}, self.out, "a", 64)
+            args = run.call_args.args[0]
+            desync_bisect.replay(["godot"], report(1, LOCAL), self.out, "b", 64)
+        self.assertEqual(args[args.index("--starts") + 1], "3,1")
+        self.assertNotIn("--starts", run.call_args.args[0], "an empty starts list (the test map) passes none")
+
     def test_nonzero_exit_writes_log(self):
         done = subprocess.CompletedProcess([], 1, stdout="out text", stderr="SCRIPT ERROR: x")
         self.assertFalse(self.replay(return_value=done))

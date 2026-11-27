@@ -26,6 +26,8 @@ var _present: int = 1
 var _joins: int = 0
 var _asked: bool = false
 var _picked: Dictionary = {}
+# Guests' --start picks by seat, folded into the host's last settings before its start_request.
+var _picked_starts: Dictionary = {}
 var _pending_code: String = ""
 var _pongs_before: int = 0
 var _sim: Simulation
@@ -136,7 +138,9 @@ func _welcome(message: Dictionary) -> void:
 		_write_code(message.match)
 	if _seat > 1:
 		_room_map(message.get("settings", {}))
-		_transport.send_text(Wire.encode({"type": "pick", "pick": {"faction": _args.get("faction", Skirmish.default_faction())}}))
+		var pick: Dictionary = {"faction": _args.get("faction", Skirmish.default_faction())}
+		if _args.has("start"): pick["start"] = _int_arg("start")
+		_transport.send_text(Wire.encode({"type": "pick", "pick": pick}))
 		if _args.has("leave-on-welcome"): _finish("left", "")
 
 func _write_code(match_code: String) -> void:
@@ -152,8 +156,15 @@ func _lobby_maps() -> PackedStringArray:
 	return str(_args.get("lobby-maps", "")).split(",", false)
 
 func _send_settings(id: String) -> void:
-	_transport.send_text(Wire.encode({"type": "settings", "settings": MatchSettings.for_map(id, _bots_arg())}))
+	_transport.send_text(Wire.encode({"type": "settings", "settings": MatchSettings.for_map(id, _bots_arg()).merged(_placement())}))
 	print("NETCLIENT SENT MAP ", id)
+
+# --start N on the host is its own pick; a guest's arrives in its pick.
+func _placement() -> Dictionary:
+	var rows: Array = []
+	if _args.has("start"): rows.append({"player": 1, "start": _int_arg("start")})
+	for seat: int in _picked_starts: rows.append({"player": seat, "start": _picked_starts[seat]})
+	return {"chosen": rows} if not rows.is_empty() else {}
 
 func _room_map(settings: Dictionary) -> void:
 	print("NETCLIENT ROOM MAP ", settings.get("map", "-"))
@@ -166,11 +177,13 @@ func _seat_change(seat: int, step: int) -> void:
 	else:
 		_asked = false # the relay ignored an ask sent before the room was full
 		_picked.erase(seat)
+		_picked_starts.erase(seat)
 	_try_start()
 
 func _take_pick(message: Dictionary) -> void:
 	print("NETCLIENT PICK SEAT ", message.get("seat", 0), " ", message.pick.get("faction", "-"))
 	_picked[int(message.get("seat", 0))] = message.pick.get("faction")
+	if message.pick.has("start"): _picked_starts[int(message.get("seat", 0))] = int(message.pick.start)
 	_try_start()
 
 # The host asks to start once --seats seats are in, --joins friends have joined in all and every guest's pick arrived:
@@ -180,6 +193,7 @@ func _try_start() -> void:
 	if _asked or _present < seats or _joins < _int_arg_or("joins", seats - 1) or _picked.size() < _present - 1: return
 	_asked = true
 	if _lobby_maps().size() > 1: _send_settings(_lobby_maps()[1])
+	elif not _placement().is_empty(): _send_settings(_map_id())
 	_transport.send_text(Wire.encode({"type": "start_request"}))
 
 func _map_id() -> String:
@@ -197,7 +211,7 @@ func _start(message: Dictionary) -> void:
 	_match_seed = _int_arg("seed") if _args.has("seed") else message.seed
 	var count: int = message.seats.size()
 	var bots: Dictionary = _bot_factions(settings.get("bots", []))
-	_chosen = MatchSettings.starts(id, _match_seed, MatchSettings.teams(count, bots.size()))
+	_chosen = MatchSettings.starts(id, _match_seed, MatchSettings.teams(count, bots.size()), settings)
 	print("NETCLIENT MAP ", id, " SEED ", _match_seed, " STARTS ", ",".join(_chosen.map(str)) if not _chosen.is_empty() else "-")
 	_sim = _match_sim(id, _chosen, count, bots)
 	_lockstep = Lockstep.for_start(_seat, message)
@@ -239,13 +253,20 @@ func _oracle_sim() -> Simulation:
 	var id: String = _map_id()
 	var match_seed: int = int(_args.get("seed", "0"))
 	var bots: Dictionary = _bot_factions(_bots_arg())
-	if not _args.has("factions"): return _match_sim(id, MatchSettings.starts(id, match_seed, MatchSettings.teams(2, bots.size())), 2, bots)
+	if not _args.has("factions"): return _match_sim(id, _oracle_starts(id, match_seed, MatchSettings.teams(2, bots.size())), 2, bots)
 	# An offline record lists every seat: you, then the bots on team 2.
 	var names: PackedStringArray = str(_args["factions"]).split(",")
 	var factions: Dictionary = {}
 	for i in names.size(): factions[i + 1] = names[i]
 	var teams: Array[int] = MatchSettings.teams(1, names.size() - 1)
-	return Skirmish.create(true, str(_args.get("controller", "ai")), factions, MatchSettings.map_path(id), MatchSettings.starts(id, match_seed, teams), names.size(), teams)
+	return Skirmish.create(true, str(_args.get("controller", "ai")), factions, MatchSettings.map_path(id), _oracle_starts(id, match_seed, teams), names.size(), teams)
+
+# --starts A,B,... replays a record's starts as played; records from before start pick have none and follow the rule.
+func _oracle_starts(id: String, match_seed: int, teams: Array[int]) -> Array[int]:
+	if not _args.has("starts"): return MatchSettings.starts(id, match_seed, teams)
+	var starts: Array[int] = []
+	for seat: String in str(_args.starts).split(","): starts.append(seat.to_int())
+	return starts
 
 func _run_steps(limit: int) -> void:
 	if _driver != null:
@@ -491,10 +512,15 @@ func _bots_error() -> String:
 	return ""
 
 func _lobby_error() -> String:
-	for key: String in ["seats", "joins"]:
+	for key: String in ["seats", "joins", "start"]:
 		if _args.has(key) and (not str(_args[key]).is_valid_int() or int(_args[key]) < 1): return "Bad --%s '%s'; expected a whole number above 0" % [key, _args[key]]
 	for id: String in _lobby_maps():
 		if not FileAccess.file_exists(MatchSettings.map_path(id)): return "Unknown --lobby-maps map '%s'" % id
+	if not _args.has("starts"): return ""
+	var starts: PackedStringArray = str(_args.starts).split(",", false)
+	var seats: int = str(_args.factions).split(",").size() if _args.has("factions") else 2 + _bots_arg().size()
+	if starts.size() != seats or Array(starts).any(func(seat: String) -> bool: return not seat.is_valid_int() or seat.to_int() < 1):
+		return "Bad --starts '%s'; expected %d start seats above 0, one per seat" % [_args.starts, seats]
 	return ""
 
 func _defeat_error() -> String:

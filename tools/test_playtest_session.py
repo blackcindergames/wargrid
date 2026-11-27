@@ -112,6 +112,7 @@ class PlaytestSessionTest(unittest.TestCase):
                 "-",
                 "0.11.0-dev+abc1234",
                 "-",
+                "-",
             ],
         )
         self.assertEqual(rows[1][5], "-", "online rows pass no --factions")
@@ -136,6 +137,14 @@ class PlaytestSessionTest(unittest.TestCase):
         rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
         self.assertEqual(rows[0][5], "usa,china,frc,usa", "an offline row passes every seat as --factions")
         self.assertEqual(rows[0][11], "-", "and no --bots, which the client refuses beside --factions")
+
+    def test_replay_rows_carry_starts(self):
+        data = session()
+        data["matches"][0]["starts"] = [2.0, 4.0, 1.0]
+        path = self._write(data)
+        rows = [r.split("\t") for r in ps.replay_rows(ps.load_session(path), path)]
+        self.assertEqual(rows[0][12], "2,4,1", "a record's starts replay as played, picks included")
+        self.assertEqual(rows[1][12], "-", "a record from before start pick follows the rule")
 
     def test_replay_rows_bots_from_a_resumed_sitting(self):
         data = session()

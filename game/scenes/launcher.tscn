@@ -307,7 +307,6 @@ visible = false
 [node name="Preview" type="Control" parent="Pages/Play/Body/MapColumn"]
 layout_mode = 2
 custom_minimum_size = Vector2(380, 130)
-mouse_filter = 2
 script = ExtResource("5")
 
 [node name="MapInfo" type="Label" parent="Pages/Play/Body/MapColumn"]
@@ -318,9 +317,8 @@ mouse_filter = 2
 [node name="MapHint" type="Label" parent="Pages/Play/Body/MapColumn"]
 layout_mode = 2
 theme_type_variation = &"Hint"
-text = "Starts are drawn when the match begins."
+autowrap_mode = 3
 mouse_filter = 2
-visible = false
 
 [node name="JoinCard" type="MarginContainer" parent="Pages/Play"]
 layout_mode = 2

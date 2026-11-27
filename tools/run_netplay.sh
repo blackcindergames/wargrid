@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: run_netplay.sh match|rematch|kill|left-mid|left-mid-pump|trio-play-on|trio-left-first|trio-result|team|team-guest-defeated|team-guest-quits|team-host-leaves|team-defeated-host-leaves|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole|lobby|lobby-left|lobby-host-leaves
+# usage: run_netplay.sh match|rematch|kill|left-mid|left-mid-pump|trio-play-on|trio-left-first|trio-result|team|team-guest-defeated|team-guest-quits|team-host-leaves|team-defeated-host-leaves|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole|lobby|lobby-left|lobby-host-leaves|lobby-pick
 scenario=$1
 # Headless clients and the oracle stay inline whatever the caller exports (SB5a Decided 9).
 unset WARGRID_SIM_THREAD
@@ -389,6 +389,15 @@ case $scenario in
     grep -q '^NETCLIENT WELCOME SEAT 2 ' "$out/s3.log" || fail "s3 did not take the freed seat 2"
     [ "$(grep -c '^NETCLIENT JOINED SEAT 2$' "$out/s1.log")" = 2 ] || fail "s1: expected two joins of seat 2"
     same_hashes "$out/s1.tsv" "$out/s3.tsv" ;;
+  lobby-pick)
+    # The host takes start 4 and the guest asks for start 3 in its pick (the rule would give it 2); the host folds it into the settings its start carries.
+    start_relay; start_pair "--map broken_crown --start 4 --stop-at-tick 300" "--start 3 --stop-at-tick 300"
+    wait_exit "$pid1" "$match_wait"; wait_exit "$pid2" "$match_wait"
+    expect_end s1 stopped; expect_end s2 stopped
+    grep -q '^NETCLIENT PICK SEAT 2 [a-z]' "$out/s1.log" || fail "s1: the host never saw the guest's pick"
+    for name in s1 s2; do grep -q '^NETCLIENT MAP broken_crown SEED [0-9]* STARTS 4,3$' "$out/$name.log" || fail "$name: no STARTS 4,3 line"; done
+    same_hashes "$out/s1.tsv" "$out/s2.tsv"
+    ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC" ;;
   lobby-host-leaves)
     start_relay; start_pair "--joins 2" ""
     wait_line s1 '^NETCLIENT JOINED SEAT 2$'

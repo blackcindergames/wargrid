@@ -140,16 +140,16 @@ flowchart TD
     linkStyle default stroke:#9aa4b2,stroke-width:2px
 ```
 
-The launcher calls `MatchSettings.starts(id, seed)`. Offline the seed is `randi()`; online it is the match seed the relay announces in `start`, so every peer computes the same answer.
+The launcher calls `MatchSettings.starts(id, seed, teams, settings)`; the settings carry the starts the players took in the lobby and the closed ones, and closed starts leave the map before the rule runs. Offline the seed is `randi()`; online it is the match seed the relay announces in `start`, so every peer computes the same answer.
 
-`StartSpots.assign` follows Zero Hour's rule ([converted maps plan](../superpowers/plans/2026-11-08-converted-maps-playable.md), header, with the EA source lines). Slots are placed in order:
+`StartSpots.assign` follows Zero Hour's rule ([converted maps plan](../superpowers/plans/2026-11-08-converted-maps-playable.md), header, with the EA source lines), with one change: allies start together. Slots are placed in order:
 
-1. Slots with a chosen spot take it first.
+1. Slots with a chosen spot take it first, and the first chosen spot of a team becomes that team's position (Zero Hour sends an unpicked ally to the farthest free start instead; [design answers](../reference/design-answers-2026-11-08.md#lobby-after-the-friend-match-user-2026-11-26), user, 2026-11-27).
 2. If nobody chose a spot, the first slot gets a random start (`RandomNumberGenerator` seeded with the match seed).
 3. Every later slot whose team already has a computed position gets the free start closest to it.
 4. Any other slot gets the free start with the largest summed distance to all taken starts.
 
-Distances are straight lines between start cells; ties go to the lowest index. The launcher passes teams `[1, 2]` and no chosen spots, so today only rules 2 and 4 run: on Dry Wells the seed decides which seat starts in the north.
+Distances are straight lines between start cells; ties go to the lowest index. Without picks only rules 2 to 4 run, exactly as before start pick: on Dry Wells the seed decides which seat starts in the north. With a pick, a host on Broken Crown's start 1 and an unpicked friend on the same team put the friend on start 4 beside it, not across on 3 (`test_allies_start_together`).
 
 `launcher._offline_setup → MatchSettings.starts → StartSpots.assign → Skirmish.create → MapData.with_starts` (online, `launcher._start` makes the same calls with the relay's seed)
 
@@ -205,4 +205,4 @@ Distances are straight lines between start cells; ties go to the lowest index. T
 - Next: [3. Entities](03-entities.md) puts units and buildings on this grid; [6. Movement](06-movement.md) walks routes over it.
 
 ---
-Checked against `60b6674`. Files: `game/scripts/simulation/map_data.gd`, `game/scripts/simulation/start_spots.gd`, `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/simulation/definitions/definitions.gd`, `game/scripts/presentation/isometric.gd`, `game/scripts/presentation/terrain_view.gd`, `game/scripts/presentation/world_view.gd`, `game/scripts/match_settings.gd`, `game/scripts/launcher.gd`, `game/scripts/match/match_screen.gd`, `game/scripts/match/orders.gd`, `tools/zh_map/convert.py`, `tools/zh_map/refpack.py`, `game/data/maps/NOTICE.md`, `game/data/maps/dry_wells.json`
+Checked against the P20 slice 2 fix round 1 working tree over `2d5bf56d` (branch `p20-lobby`, 2026-11-27) for the start rule and its settings; the rest against `60b6674`. Files: `game/scripts/simulation/map_data.gd`, `game/scripts/simulation/start_spots.gd`, `game/scripts/simulation/grid_navigation.gd`, `game/scripts/simulation/simulation.gd`, `game/scripts/simulation/skirmish.gd`, `game/scripts/simulation/definitions/definitions.gd`, `game/scripts/presentation/isometric.gd`, `game/scripts/presentation/terrain_view.gd`, `game/scripts/presentation/world_view.gd`, `game/scripts/match_settings.gd`, `game/scripts/launcher.gd`, `game/scripts/match/match_screen.gd`, `game/scripts/match/orders.gd`, `tools/zh_map/convert.py`, `tools/zh_map/refpack.py`, `game/data/maps/NOTICE.md`, `game/data/maps/dry_wells.json`

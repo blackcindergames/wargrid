@@ -137,6 +137,7 @@ def replay_rows(session: dict, path: Path) -> list[str]:
             m.get("controller") or "-",
             _build(session, m),
             _bots(m),
+            ",".join(str(int(seat)) for seat in m.get("starts") or []) or "-",
         ]
         rows.append("\t".join(row))
     return rows

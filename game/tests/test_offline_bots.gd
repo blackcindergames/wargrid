@@ -6,11 +6,12 @@ const MatchSettings = preload("res://scripts/match_settings.gd")
 const Client = preload("res://scripts/net/headless_client.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
+const MapData = preload("res://scripts/simulation/map_data.gd")
 const MAP := "broken_crown"
 const FACTIONS := {1: "usa", 2: "china", 3: "frc", 4: "usa"}
 
 func cases() -> Array[Callable]:
-	return [test_three_bots_seated, test_every_bot_plays, test_header_lists_every_seat, test_one_bot_header_unchanged, test_seats_follow_seat_numbers, test_replay_oracle_seats_every_faction, test_replay_oracle_one_bot_unchanged]
+	return [test_three_bots_seated, test_every_bot_plays, test_header_lists_every_seat, test_one_bot_header_unchanged, test_seats_follow_seat_numbers, test_replay_oracle_seats_every_faction, test_replay_oracle_one_bot_unchanged, test_replay_oracle_takes_recorded_starts]
 
 func _driver(bots: int):
 	var factions := {}
@@ -19,8 +20,11 @@ func _driver(bots: int):
 	driver.create(MatchSettings.map_path(MAP), MatchSettings.starts(MAP, 7, MatchSettings.teams(1, bots)), factions, 7)
 	return driver
 
+# A full worker pump drops the step, so each tick waits for the worker before the next.
 func _play(driver, ticks: int) -> void:
-	for i in ticks: driver.step()
+	for i in ticks:
+		driver.step()
+		while driver.pump.busy(): OS.delay_usec(200)
 	driver.drain()
 
 func test_three_bots_seated(runner) -> bool:
@@ -69,11 +73,11 @@ class OracleClient extends Client:
 	func _exit() -> void:
 		pass
 
-func _oracle(map: String, factions: String):
+func _oracle(map: String, factions: String, extra: Dictionary = {}):
 	var log_path := "user://ob_replay-%d.log" % OS.get_process_id()
 	FileAccess.open(log_path, FileAccess.WRITE).close()
 	var client = OracleClient.new()
-	client._args = {"map": map, "seed": "7", "replay-log": log_path, "oracle-ticks": "1", "factions": factions}
+	client._args = {"map": map, "seed": "7", "replay-log": log_path, "oracle-ticks": "1", "factions": factions}.merged(extra)
 	var error: String = client._faction_error()
 	if error.is_empty(): client._replay_oracle()
 	DirAccess.remove_absolute(log_path)
@@ -96,5 +100,18 @@ func test_replay_oracle_one_bot_unchanged(runner) -> bool:
 	var before = Skirmish.create(true, "ai", {1: "usa", 2: "china"}, MatchSettings.map_path("ashfall"), MatchSettings.starts("ashfall", 7))
 	before.step()
 	runner.check(client._sim != null and StateHash.digest(client._sim.snapshot()) == StateHash.digest(before.snapshot()), "OB7 a 1v1 record replays exactly as before: two seats, teams 1 and 2")
+	client.free()
+	return true
+
+func test_replay_oracle_takes_recorded_starts(runner) -> bool:
+	var got: Array = _oracle(MAP, "usa,china,frc", {"starts": "4,2,1"})
+	var client = got[0]
+	var map: Dictionary = MapData.load(MatchSettings.map_path(MAP))
+	var placed: bool = client._sim != null and [1, 2, 3].all(func(player: int) -> bool: return MapData.start_cell(client._sim.map_data(), player) == MapData.start_cell(map, [4, 2, 1][player - 1]))
+	runner.check(placed, "OB8 --starts replays a record's picked starts, not the rule's")
+	client._args["starts"] = "4,x"
+	runner.check(not client._lobby_error().is_empty(), "OB8 a bad --starts is refused")
+	client._args["starts"] = "4,2"
+	runner.check(not client._lobby_error().is_empty(), "OB8 --starts must name one start per seat")
 	client.free()
 	return true

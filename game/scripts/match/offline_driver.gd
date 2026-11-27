@@ -10,7 +10,7 @@ const HASH_EVERY: int = 30
 const BOT_LINES_EVERY: int = 30
 
 var pump: SimPump
-var bots: Array[int] = BOTS
+var bots: Array[int] = [2]
 var digest_every: int = 0
 var show_bots: bool = false:
 	set(value):
