@@ -51,16 +51,16 @@ func _run() -> void:
 	var method := "_case_" + _case
 	if not has_method(method):
 		print("FAULT CASE ", _case, " FAILED unknown case")
-		quit(2)
+		SimPump.finish_quit(self, 2)
 		return
 	var began: int = Time.get_ticks_msec()
 	var why: String = await call(method)
 	if why.is_empty():
 		print("FAULT CASE ", _case, " PASSED ", Time.get_ticks_msec() - began)
-		quit(0)
+		SimPump.finish_quit(self, 0)
 	else:
 		print("FAULT CASE ", _case, " FAILED ", why)
-		quit(1)
+		SimPump.finish_quit(self, 1)
 
 static func _wait_for(gate: Semaphore, limit_ms: int = 3000) -> bool:
 	var end: int = Time.get_ticks_msec() + limit_ms

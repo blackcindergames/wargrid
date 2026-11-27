@@ -122,6 +122,8 @@ static var _counts: Dictionary = {"worker": 0, "forced": 0, "fallback": 0, "inli
 static var _threads: Array[RefCounted] = []
 # Installed once, on main, before the first worker starts; Godot has no lock around its logger list, so it is never removed.
 static var _logger: PumpLogger
+# Tests take the process end in place of quit or kill: (code: int, kill: bool) -> void.
+static var end_for_test: Callable
 
 # requested: null follows the environment switch; a bool is the stored setting, captured on main once per pump.
 # keeps_log false (online) drops the recorder's log after each job; Lockstep.command_log() is the online log.
@@ -328,6 +330,16 @@ func gate_publish_for_test(gate: Semaphore, where: String) -> void:
 
 static func live_workers() -> int:
 	return _threads.size()
+
+# Engine teardown frees the bytecode a live abandoned worker is running and crashes (F62), so desktop then ends by SIGKILL; Web has no process to end.
+static func finish_quit(tree: SceneTree, code: int = 0, on_web: bool = OS.has_feature("web")) -> void:
+	for pump: RefCounted in _threads.duplicate():
+		if not pump.get("_abandoned"): pump.call("stop")
+	_reap_abandoned()
+	var kill: bool = live_workers() > 0 and not on_web
+	if kill: print("SimPump: killing the process at quit, %d abandoned workers live" % live_workers())
+	if end_for_test.is_valid(): end_for_test.call(code, kill)
+	elif not kill or OS.kill(OS.get_process_id()) != OK: tree.quit(code)
 
 static func stop_live_for_test() -> int:
 	var stopped: int = 0

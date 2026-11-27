@@ -9,6 +9,7 @@ const SoundPlayer = preload("res://scripts/presentation/sound_player.gd")
 const MusicPlayer = preload("res://scripts/presentation/music_player.gd")
 const VolumeSliders = preload("res://scripts/presentation/volume_sliders.gd")
 const SkirmishMain = preload("res://scripts/match/match_screen.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const LauncherSettings = preload("res://scripts/launcher_settings.gd")
 const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.gd")
@@ -156,7 +157,7 @@ var _play_error: bool = false
 static var code_applied: bool = false
 var prerelease: bool = PlaytestSettings.prerelease()
 var web: bool = OS.has_feature("web")
-var quit: Callable
+var quit: Callable = _quit
 var download: Callable = JavaScriptBridge.download_buffer
 var focus_cards: Array[Dictionary] = FocusCards.load_cards()
 var page: String = _page_value("location.origin + location.pathname")
@@ -180,7 +181,6 @@ func _ready() -> void:
 	_add_graphics()
 	if PlaytestSettings.enabled(): PlaytestSession.settle(PlaytestSettings.build_id(), web, download)
 	_add_playtest()
-	if not quit.is_valid(): quit = get_tree().quit
 	$Sidebar/Nav/Quit.visible = not web
 	$Sidebar/Nav/Quit.pressed.connect(func() -> void:
 		_close_sitting()
@@ -211,7 +211,12 @@ func _add_confirm() -> void:
 	add_child(_confirm)
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST and not web: _close_sitting() # web files at the next launcher open instead
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and not web: # web files at the next launcher open instead
+		_close_sitting()
+		quit.call()
+
+func _quit() -> void:
+	SimPump.finish_quit(get_tree())
 
 func _close_sitting() -> void:
 	if PlaytestSettings.enabled(): PlaytestSession.close_sitting(web, download)

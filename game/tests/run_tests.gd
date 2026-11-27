@@ -26,6 +26,9 @@ func check(condition: bool, message: String) -> void:
 # Cases whose pumps the runner stops by design (Task 1's "runner" marks), plus scene cases that queue_free their port, or run a StubDriver, before _exit_tree could stop the pump.
 const LEFT_TO_RUNNER: Array[String] = ["test_sb3_job0_starts", "test_sb3_freeze_covers_match", "test_sb4_ring_query", "test_th_pump_tick_hash_on_request", "test_ph_driver_matches_advance_peer", "test_pal_note_carries_survivors", "test_pump_bot_first_wave_at_5400", "test_setup_plans_no_bot_orders", "test_offline_driver_stamps_like_the_scene", "test_offline_driver_no_tick_hash_rows_after_the_end", "test_offline_driver_bot_memory_on_simulation", "test_sb1_submit_takes_no_snapshot", "test_desync_report_names_map_seed_starts", "test_result_panel_layout", "test_enter_in_text_field_keeps_match", "test_play_again_routes_by_driver", "test_2v2_end_texts_layout", "test_2v2_questions_layout", "test_online_leave_text_and_focus"]
 
+# A window close or Quit inside a case must not end the suite.
+static func _no_process_end(_code: int, _kill: bool) -> void: pass
+
 static func leaked_worker_line(case_name: String, stopped: int) -> String:
 	if stopped == 0 or LEFT_TO_RUNNER.has(case_name): return ""
 	return "FAIL: live sim worker after " + case_name
@@ -37,6 +40,7 @@ func _after_case(case_name: String) -> String:
 	SimPump.force_mode_for_test("")
 	# A case that errors before its own reset must not turn later pumps into stored-request ones.
 	SimSettings.available_in_tests = false
+	SimPump.end_for_test = _no_process_end
 	if not switch_on() or leak.is_empty(): return ""
 	failures += 1
 	return leak
@@ -118,6 +122,7 @@ func _run() -> void:
 	if current_scene != null: # exported builds also load the main scene (the launcher), whose UI swallows test clicks
 		current_scene.free()
 	_watchdog.start(_watch.bind(Time.get_ticks_msec() + WATCHDOG_SECONDS * 1000))
+	SimPump.end_for_test = _no_process_end
 	var suites: Array = [] # a Callable does not keep its RefCounted suite alive
 	var tests: Array[Callable] = []
 	var paths: Array[String] = []
