@@ -47,10 +47,10 @@ static func refusal(settings: Dictionary, seat_count: int = 2) -> String:
 	# Key presence, not a null value: a crafted "bots": null would pass and break the start.
 	var seats: Array = MapData.load(map_path(id)).starts.map(func(start: Dictionary) -> int: return int(start.seat))
 	var reason: String = _bots_refusal(settings.bots, seat_count) if settings.has("bots") else ""
-	if reason.is_empty() and (settings.has("chosen") or settings.has("closed")): reason = _starts_refusal(settings.get("chosen", []), settings.get("closed", []), seat_count, seats)
+	if reason.is_empty() and settings.has("chosen"): reason = _starts_refusal(settings.chosen, seat_count + settings.get("bots", []).size(), seats)
 	if reason.is_empty() and settings.has("players"): reason = _players_refusal(settings.players, seat_count)
 	if not reason.is_empty(): return reason
-	if seat_count + settings.get("bots", []).size() + settings.get("closed", []).size() > seats.size(): return TOO_SMALL
+	if seat_count + settings.get("bots", []).size() > seats.size(): return TOO_SMALL
 	return ""
 
 static func _bots_refusal(rows: Variant, seat_count: int) -> String:
@@ -72,15 +72,13 @@ static func _players_refusal(rows: Variant, seat_count: int) -> String:
 		if faction is not String or not (Factions.FACTIONS.has(faction) or faction == RANDOM): return BAD_PLAYERS
 	return ""
 
-# Only the human seats choose; a start is chosen or closed at most once.
-static func _starts_refusal(chosen: Variant, closed: Variant, seat_count: int, seats: Array) -> String:
-	if chosen is not Array or closed is not Array: return BAD_STARTS
+# Players and the host's bots choose; a start is chosen at most once.
+static func _starts_refusal(chosen: Variant, player_count: int, seats: Array) -> String:
+	if chosen is not Array: return BAD_STARTS
 	var used: Dictionary = {}
-	for start: Variant in closed:
-		if not _taken(used, start, seats): return BAD_STARTS
 	var players: Dictionary = {}
 	for row: Variant in chosen:
-		if row is not Dictionary or not _taken(players, row.get("player"), range(1, seat_count + 1)) or not _taken(used, row.get("start"), seats): return BAD_STARTS
+		if row is not Dictionary or not _taken(players, row.get("player"), range(1, player_count + 1)) or not _taken(used, row.get("start"), seats): return BAD_STARTS
 	return ""
 
 static func _taken(used: Dictionary, value: Variant, allowed: Array) -> bool:
@@ -97,21 +95,14 @@ static func chosen_starts(settings: Dictionary, count: int) -> Array[int]:
 		if int(row.player) <= count: result[int(row.player) - 1] = int(row.start)
 	return result
 
-static func closed_starts(settings: Dictionary) -> Array[int]:
-	var result: Array[int] = []
-	for start: Variant in settings.get("closed", []): result.append(int(start))
-	return result
-
 static func report_fields(id: String, match_seed: int, chosen: Array[int]) -> Dictionary:
 	return {"map": id, "seed": match_seed, "starts": chosen}
 
-# Settings may carry the players' chosen starts and the closed ones; a closed start leaves the map, so nobody is placed there.
+# Settings may carry the chosen starts of players and bots; the rest follow the fill rule.
 static func starts(id: String, match_seed: int, team_ids: Array[int] = [1, 2], settings: Dictionary = {}) -> Array[int]:
 	# The test map keeps seat N on start N so pinned traces hold.
 	if id == TEST_MAP: return []
-	var shut: Array[int] = closed_starts(settings)
-	var open: Array = MapData.load(map_path(id)).starts.filter(func(start: Dictionary) -> bool: return not shut.has(int(start.seat)))
-	return StartSpots.assign({"starts": open}, match_seed, team_ids, chosen_starts(settings, team_ids.size()))
+	return StartSpots.assign(MapData.load(map_path(id)), match_seed, team_ids, chosen_starts(settings, team_ids.size()))
 
 static func _valid_id(id: String) -> bool:
 	var pattern := RegEx.new()

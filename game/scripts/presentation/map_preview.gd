@@ -1,11 +1,10 @@
 extends Control
 
-signal start_pressed(seat: int, close: bool)
+signal start_pressed(seat: int)
 
 const Palette = preload("res://scripts/presentation/palette.gd")
 const BACK := Color("0c141a")
 const MARK := Color("eef3f5")
-const SHUT := Color("93a5b0")
 const LIGHT := Color("60e5ed")
 const PAD := 14.0
 # Half of the 32 px click-target rule.
@@ -16,7 +15,6 @@ var _starts: Array[Vector2] = []
 var _seats: Array[int] = []
 var _sources: Array[Vector2] = []
 var _colours: Dictionary = {}
-var _closed: Array[int] = []
 var _tips: Dictionary = {}
 var _asking: Dictionary = {}
 var _hovered: int = 0
@@ -30,9 +28,8 @@ func show_map(data: Dictionary) -> void:
 	queue_redraw()
 
 # colours: start seat -> the colour of the player there; pending: a start asked for but not yet in the host's settings.
-func show_starts(colours: Dictionary, closed: Array[int], tips: Dictionary, pending: Dictionary = {}) -> void:
+func show_starts(colours: Dictionary, tips: Dictionary, pending: Dictionary = {}) -> void:
 	_colours = colours
-	_closed = closed
 	_tips = tips
 	_asking = pending
 	queue_redraw()
@@ -56,13 +53,13 @@ func point_of(seat: int) -> Vector2:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion: _hover(seat_at(event.position))
 	var press := event as InputEventMouseButton
-	if press == null or not press.pressed or press.button_index not in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]: return
+	if press == null or not press.pressed or press.button_index != MOUSE_BUTTON_LEFT: return
 	var seat: int = seat_at(press.position)
 	if seat == 0: return
 	accept_event()
 	# The second press of a double-click would give the start straight back.
 	if press.double_click: return
-	start_pressed.emit(seat, press.button_index == MOUSE_BUTTON_RIGHT)
+	start_pressed.emit(seat)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_MOUSE_EXIT: _hover(0)
@@ -100,11 +97,6 @@ func _draw_start(at: Vector2, seat: int) -> void:
 	elif _colours.has(seat):
 		draw_circle(at, 10.0, _colours[seat])
 		draw_arc(at, 10.0, 0.0, TAU, 24, BACK, 2.0)
-	elif _closed.has(seat):
-		draw_circle(at, 9.0, BACK)
-		draw_arc(at, 9.0, 0.0, TAU, 24, SHUT, 1.5)
-		draw_line(at + Vector2(-4, -4), at + Vector2(4, 4), SHUT, 2.0)
-		draw_line(at + Vector2(4, -4), at + Vector2(-4, 4), SHUT, 2.0)
 	else:
 		_draw_dashed_ring(at, 8.0)
 

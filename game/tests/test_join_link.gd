@@ -160,7 +160,7 @@ func test_shim_only_on_web(runner) -> bool:
 	runner.root.add_child(launcher)
 	await runner.process_frame
 	await runner.process_frame
-	runner.check(launcher.get_node("Pages/Play/JoinCard/Card/Box/Code").is_in_group("join_code"), "PS5 the join field is in group join_code")
+	runner.check(launcher.get_node("Pages/Play/JoinPage/Row/Code").is_in_group("join_code"), "PS5 the join field is in group join_code")
 	runner.check(not runner.root.has_node("PasteShim"), "PS5 no shim off web")
 	launcher.free()
 	return true

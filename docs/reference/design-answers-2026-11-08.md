@@ -1857,3 +1857,23 @@ War Room round `battlefield-art` (`warroom/rounds/battlefield-art/`, pictures in
 
 - **Ground (A, cell shading):** the game keeps today's per-cell shades. The owner first picked B (broad warm and cool patches, `paintGroundWash` in `pics.js`), then flipped A and B in an uncommitted Art Lab slice at zoom 0.5 on sand and dark ground with the picked firm cliff: "infantry still visible, but the patches look strange; keep cell shading." The slice was dropped.
 - **Inspiration (E, hybrid):** illustrated ground that fades around armies and bases, colour kept at the edges, as the preferred study only; no note, so no detail is routed to a package. It is unproven in game, and the rejected patches were the same kind of wash; an in-game flip of the fade alone comes before any build.
+
+## Faction guide round (user, 2026-11-27)
+
+War Room round `faction-guide` (`warroom/rounds/faction-guide/`, pictures in `docs/images/faction-guide-round/`), blocking, for P21, after a player-experience pass.
+
+- **Layout (A, roster list and one detail card):** not the recommended C (cards); the owner judged cards infeasible once the roster grows later in the game. Owner's note: make it clearer that the China and FRC columns also belong under "Beats" and "Weak against"; the label "first weapon" was unclear to the owner (it means an FRC unit's base weapon before salvage upgrades), so the build words it plainly or explains it.
+- **Counter wording (B):** enemy units by name, grouped by faction.
+- **F44 handling (A):** print the counters as computed; no balance fix before P21.
+
+## P20 slice 2 look (user, 2026-11-27)
+
+The owner's look at the merged slice 2 on the web test. Checked against Zero Hour, OpenRA, 0 A.D., Warzone 2100 and the Recoil games (Beyond All Reason, Zero-K).
+
+- **Every mode leaves:** kept. Switching between Host game and Skirmish many times is safe. Each Host game opens a new room, and the relay deletes the old room as soon as its connection closes. More than about ten Host clicks in ten seconds from one address gets "too many joins", which fails safely.
+- **Closing starts dropped:** the host's right-click that closes a start on the preview goes. Zero Hour and Warzone 2100 close only whole player slots, and among these games only OpenRA closes a single start. It was also flaky: the preview ignores double-clicks (`map_preview.gd`), so a second right-click within about 0.4 s was dropped. That cause was found in the code, not reproduced.
+- **Host places bots:** following Zero Hour (`SkirmishGameOptionsMenu.cpp`, the start buttons on the map), the host clicks an empty start to put the next bot without a start there, and clicks that bot again to clear it. Bots nobody places keep Zero Hour's fill rule, shown on the preview. Under that rule a new team takes the free start farthest from all taken ones, and a teammate takes the free start nearest its team.
+- **Join game screen inline:** no card. It is left-aligned like the other modes: the title "Join a friend's game", one line of help, the INVITE CODE label, the code field and the Join game button on one row, and "You'll choose your faction after joining the lobby." below.
+- Rematch keeping picks was not tested; the owner expects it to work.
+- **Fill rule shown by the hint only** (user, 2026-11-27): the preview draws only placed starts; "The game places the rest" stands for the rule, because the seed decides it at the start.
+- **A click on a placed start only clears it** (user, 2026-11-27), without Zero Hour's hand-over to the next player without a start.

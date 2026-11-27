@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=58 format=3]
+[gd_resource type="Theme" load_steps=57 format=3]
 
 [ext_resource type="FontFile" path="res://fonts/PublicSans-Regular.ttf" id="font_regular"]
 [ext_resource type="FontFile" path="res://fonts/PublicSans-SemiBold.ttf" id="font_semibold"]
@@ -390,22 +390,6 @@ content_margin_left = 10.0
 content_margin_top = 12.0
 content_margin_bottom = 20.0
 
-[sub_resource type="StyleBoxFlat" id="join_card"]
-content_margin_left = 22.0
-content_margin_top = 22.0
-content_margin_right = 22.0
-content_margin_bottom = 22.0
-bg_color = Color(0.13333334, 0.196078435, 0.254901975, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.180392161, 0.247058824, 0.294117659, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-
 [sub_resource type="StyleBoxFlat" id="invite_box"]
 content_margin_left = 0.0
 content_margin_top = 0.0
@@ -681,8 +665,6 @@ OpenSlot/base_type = &"PanelContainer"
 OpenSlot/styles/panel = SubResource("open_slot")
 PlayerRow/base_type = &"PanelContainer"
 PlayerRow/styles/panel = SubResource("player_row")
-JoinCard/base_type = &"PanelContainer"
-JoinCard/styles/panel = SubResource("join_card")
 InviteBox/base_type = &"PanelContainer"
 InviteBox/styles/panel = SubResource("invite_box")
 InviteLabel/base_type = &"Label"
