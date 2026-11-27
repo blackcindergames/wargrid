@@ -79,6 +79,7 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 📋 | Hear the whole battlefield | Planned |
 | 📋 | Know why an order failed | Planned |
 | 📋 | Read the battlefield | Planned |
+| 📋 | Fog of war | Planned |
 | 📋 | See the whole map | Planned |
 | 📋 | Reconnect after a drop | Planned |
 | 📋 | More maps | Planned |
@@ -95,7 +96,6 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | 💡 | Order controls | Later |
 | 💡 | Smoother big moves | Later |
 | 💡 | Crowds that sort themselves | Later |
-| 💡 | Fog of war | Later |
 | 💡 | Ground batch A | Later |
 | 💡 | Fight over income points | Later |
 | 💡 | Wrecks | Later |
