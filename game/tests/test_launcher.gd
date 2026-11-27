@@ -2307,6 +2307,8 @@ func _popup_open(runner, selector: OptionButton) -> void:
 
 # A live change neither steals the focus nor rebuilds a row whose list is open; it lands when the list closes.
 func test_lobby_changes_wait_for_open_lists(runner) -> bool:
+	# Godot 4.7 Linux release templates miss the popup's disconnect on close (godotengine/godot#123998, fixed in 4.8); drop after the upgrade.
+	runner.root.gui_embed_subwindows = false
 	var saved: String = AudioSettings.path
 	var guest = await _launcher_with(runner, "lobby-popup-guest", {})
 	_restore(saved)
@@ -2338,6 +2340,7 @@ func test_lobby_changes_wait_for_open_lists(runner) -> bool:
 	runner.check(_row(host, 1, "Friend").get_node("Who/Name").text == "Your friend" and not host.get_node("Pages/Play/Footer/Start").disabled, "LL18 and fills the row when it closes")
 	host._transport = null
 	host.free()
+	runner.root.gui_embed_subwindows = true
 	return true
 
 func _players(settings: Dictionary) -> Array:
