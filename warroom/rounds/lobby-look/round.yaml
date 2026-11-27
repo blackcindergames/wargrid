@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../round.schema.json
+closed: 2026-11-26
 title: 'P20 Lobby look: remove control, invite code box, Join game'
 intro: >-
   This round blocks P20's look pass. Every picture is drawn in the navy look decided after the first

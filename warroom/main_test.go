@@ -236,6 +236,29 @@ func TestOpenCommandMarksAdvisoryRounds(t *testing.T) {
 	}
 }
 
+func TestOpenCommandSkipsClosedRounds(t *testing.T) {
+	dir := t.TempDir()
+	step := "kind: pictures\noptions:\n  A: {name: a}\n  B: {name: b}\n"
+	long := step + "look: " + strings.Repeat("x", 130) + "\n"
+	files := map[string]string{"index.yaml": "- {id: a, title: A}\n- {id: b, title: B}\n", "a/round.yaml": "closed: 2026-11-27\nsteps: [one]\n", "a/one.yaml": long, "b/round.yaml": "steps: [one]\n", "b/one.yaml": step}
+	for name, text := range files {
+		path := filepath.Join(dir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var out bytes.Buffer
+	if err := printOpen(&out, &web.Config{Picks: filepath.Join(dir, "picks.json"), Rounds: dir}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := out.String(), "b\t0 of 1 answered\n"; got != want {
+		t.Errorf("open printed %q, want %q", got, want)
+	}
+}
+
 func TestOpenCommandListsWarningsAsWarnings(t *testing.T) {
 	dir := t.TempDir()
 	step := "kind: pictures\nblind: true\nrec: B\noptions:\n  A: {name: a}\n  B: {name: b}\n"

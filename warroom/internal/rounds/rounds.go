@@ -253,6 +253,8 @@ type Round struct {
 	Controls *Controls `yaml:"controls"`
 	// Advisory rounds confirm defaults already built; they never block a merge.
 	Advisory bool `yaml:"advisory"`
+	// Closed is the date the picks went into the design answers; picks made on the deploy never reach the local file.
+	Closed string `yaml:"closed" jsonschema:"format=date"`
 	// Loaded holds the steps in order; a step whose file did not load has Kind "missing".
 	Loaded []Step `yaml:"-"`
 }
@@ -447,8 +449,11 @@ func (c *Catalog) validateRound(r *Round) {
 	for i := range r.Loaded {
 		c.validateStep(r, &r.Loaded[i])
 	}
-	c.checkBlindLetters(r)
-	c.checkLengths(r)
+	// Author warnings guide a round still being written; a closed round is history.
+	if r.Closed == "" {
+		c.checkBlindLetters(r)
+		c.checkLengths(r)
+	}
 }
 
 const (

@@ -113,7 +113,7 @@ func printToken(w io.Writer, secret string, args []string) error {
 	return err
 }
 
-// printOpen lists the rounds, demos left out, that still have unanswered steps.
+// printOpen lists the rounds, demos and closed rounds left out, that still have unanswered steps.
 func printOpen(w io.Writer, cfg *web.Config) error {
 	c := rounds.LoadCatalog(cfg.Rounds)
 	entries, err := store.NewStore(cfg.Picks).Entries()
@@ -122,7 +122,7 @@ func printOpen(w io.Writer, cfg *web.Config) error {
 	}
 	for _, e := range c.Index {
 		r := c.Rounds[e.ID]
-		if r == nil || e.Demo {
+		if r == nil || e.Demo || r.Closed != "" {
 			continue
 		}
 		total := 0

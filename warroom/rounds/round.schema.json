@@ -337,6 +337,10 @@
     },
     "advisory": {
       "type": "boolean"
+    },
+    "closed": {
+      "type": "string",
+      "format": "date"
     }
   },
   "additionalProperties": false,

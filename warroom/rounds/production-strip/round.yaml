@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../round.schema.json
+closed: 2026-11-23
 title: 'P16 production strip: chips right of POWER, and the panel''s open items'
 intro: >-
   This round blocks the production strip's build in P16. The panel slice is built beside it.
