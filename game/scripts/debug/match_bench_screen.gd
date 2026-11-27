@@ -304,7 +304,7 @@ func _close(t: int, reason: String) -> void:
 
 func _check_run(t: int) -> String:
 	var missing: Array[String] = []
-	if load_name != "team" and (_shots == 0 or _deaths == 0): missing.append("shots and deaths")
+	if _shots == 0 or _deaths == 0: missing.append("shots and deaths")
 	if load_name == "team" and _bot_commands == 0: missing.append("bot commands")
 	if holds.x > 0 and _holds_done < holds.x: missing.append("holds (%d of %d)" % [_holds_done, holds.x])
 	if _scripted == 0: missing.append("scripted inputs")

@@ -5,8 +5,8 @@ const CombatWorkload = preload("res://scripts/debug/combat_workload.gd")
 const TeamMatch = preload("res://scripts/debug/team_match.gd")
 
 const LOADS: Array[String] = ["skirmish3v3", "team", "hordes300", "late_game_3v3"]
-# Worker spike Task 0 rule: first 300-tick mark with at least 210 units (the goal row).
-const TEAM_START_TICK: int = 6300
+# The first shot falls near tick 10365; the window (start + warm-up, then WINDOW ticks) must hold combat.
+const TEAM_START_TICK: int = 10200
 const WARMUP: int = 300
 const WINDOW: int = 1800
 
