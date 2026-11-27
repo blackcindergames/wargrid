@@ -318,7 +318,10 @@ func _spawn() -> void:
 	assert(OS.has_feature("threads") and not Profiler.enabled, "a worker needs threads and no profiler")
 	_install_logger()
 	_thread = Thread.new()
-	_thread.start(_run_worker)
+	if _start_thread() != OK:
+		_thread = null
+		_set_failure("worker thread could not start")
+		return
 	_threads.append(self)
 	var began: int = Time.get_ticks_msec()
 	var running: bool = _started.try_wait()
@@ -327,6 +330,9 @@ func _spawn() -> void:
 		running = _started.try_wait()
 	_note_wait(began)
 	if not running: _abandon("stall: worker did not start")
+
+func _start_thread() -> Error:
+	return _thread.start(_run_worker)
 
 static func _install_logger() -> void:
 	if _logger != null or not OS.is_debug_build(): return
@@ -359,8 +365,10 @@ func _run_worker() -> void:
 func _run_next() -> bool:
 	_work.wait()
 	_mutex.lock()
-	if _quit or _queue.is_empty():
-		_exited = _quit
+	var failed: bool = not _marker.is_empty()
+	if failed: _unpublished -= _drop_waiting()
+	if _quit or failed or _queue.is_empty():
+		_exited = _quit or failed
 		_mutex.unlock()
 		return not _exited
 	var entry: RefCounted = _queue.pop_front()
@@ -409,6 +417,7 @@ func _publish(note: Note, slot: Slot) -> bool:
 	if _unread.size() < TIMING_CAP:
 		_timing.published = Time.get_ticks_usec()
 		_unread.append(_timing)
+		_timing = {}
 	_unpublished -= 1
 	_mutex.unlock()
 	return true
@@ -511,7 +520,10 @@ func stop() -> void:
 	var began: int = Time.get_ticks_msec()
 	while not _worker_gone() and Time.get_ticks_msec() - began < WAIT_MSEC: OS.delay_usec(200)
 	_note_wait(began)
-	if _worker_gone(): _join()
+	if _worker_gone():
+		_join()
+		var marker: String = _read_marker()
+		if not marker.is_empty(): _fail(marker)
 	else: _abandon("stall: stop waited %d ms" % WAIT_MSEC)
 
 func live() -> Simulation:
@@ -524,6 +536,7 @@ func _run_owned(job: Job, slot: Slot) -> Note:
 	if id != _owner_id:
 		push_error("sim pump job ran on thread %d, owner is %d" % [id, _owner_id])
 		_set_marker("owner thread")
+		_work.post()
 		return null
 	var watched: bool = _thread != null and _logger != null
 	var before: int = _logger.count_for(id) if watched else 0

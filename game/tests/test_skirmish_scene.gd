@@ -2593,13 +2593,14 @@ func _played_offline(mode: String) -> Dictionary:
 		var end: int = Time.get_ticks_msec() + 5000
 		while driver.pump.busy() and Time.get_ticks_msec() < end: OS.delay_usec(200)
 		driver.drain()
-	var played: Dictionary = {"log": driver.match_log(), "record": driver.record()}
+	var played: Dictionary = {"log": driver.match_log(), "record": driver.record(), "mode": driver.sim_mode()}
 	driver.stop()
 	return played
 
 func test_sb5a_offline_log_equals_inline_in_worker_mode(runner) -> bool:
 	var inline: Dictionary = _played_offline("inline")
 	var worker: Dictionary = _played_offline("worker")
+	runner.check(inline.mode == "inline" and worker.mode == "worker", "SB5A the two offline runs used the two pump modes, got %s and %s" % [inline.mode, worker.mode])
 	runner.check(inline.log.commands.size() > 5 and var_to_str(worker.log) == var_to_str(inline.log), "SB5A the offline match log through a worker pump equals the inline log (%d lines)" % inline.log.commands.size())
 	runner.check(worker.record.digest != "" and worker.record.digest == inline.record.digest and worker.record.tick == inline.record.tick and inline.record.tick == 200, "SB5A the offline record digest equals the inline one at tick %d" % worker.record.tick)
 	return true

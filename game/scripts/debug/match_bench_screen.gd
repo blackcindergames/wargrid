@@ -195,7 +195,7 @@ func _answered(note: SimPump.Note) -> void:
 
 func _window() -> void:
 	var t: int = driver.current().tick
-	var end: int = start_tick + BenchLoads.WARMUP + BenchLoads.WINDOW
+	var end: int = _window_end()
 	var now: int = Time.get_ticks_usec()
 	if t != _seen_tick:
 		_seen_tick = t
@@ -207,6 +207,9 @@ func _window() -> void:
 	if driver.over() and t < end: return _close(t, "match ended before the window end")
 	_sample_frame()
 	if t >= end: _close(t, "")
+
+func _window_end() -> int:
+	return _t_first + BenchLoads.WINDOW
 
 func _begin(t: int) -> void:
 	_frame_ms.clear()

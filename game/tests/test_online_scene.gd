@@ -2877,15 +2877,17 @@ func _started_online(runner, mode: String) -> Dictionary:
 	var online: Dictionary = await _online(runner, 2)
 	SimPump.force_mode_for_test("")
 	var sent: Array = online.transport.sent.duplicate()
+	var driver_mode: String = online.main.driver.sim_mode()
 	online.main.driver.stop()
 	online.main.free()
-	return {"sent": sent}
+	return {"sent": sent, "mode": driver_mode}
 
 func test_sb5a_online_start_digest_equals_inline_in_worker_mode(runner) -> bool:
 	var inline: Dictionary = await _started_online(runner, "inline")
 	var worker: Dictionary = await _started_online(runner, "worker")
 	var hashed: Array = inline.sent.filter(func(text: String) -> bool: return Wire.decode(text).message.has("hash"))
 	var value: String = Wire.decode(hashed[0]).message.hash.value if not hashed.is_empty() else ""
+	runner.check(inline.mode == "inline" and worker.mode == "worker", "SB5A the two online starts used the two pump modes, got %s and %s" % [inline.mode, worker.mode])
 	runner.check(value.length() == 16 and worker.sent == inline.sent, "SB5A the first frames of an online start through a worker pump equal the inline ones, startup digest '%s'" % value)
 	return true
 
