@@ -147,7 +147,7 @@ class TrioRelay extends RefCounted:
 			if end.seat != seat: end.inbox.append(text)
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays, test_sb5a_full_pump_leaves_next_tick_in_lockstep, test_sb5a_preview_waits_for_room, test_sb5a_two_notes_one_frame_pair_in_order, test_sb5a_hash_tick_note_carries_digest, test_sb5a_failure_between_room_and_post, test_sb5a_online_failure_ends_and_closes, test_sb5a_relay_loss_and_pump_failure_same_frame, test_sb5a_online_start_null_query, test_sb5a_job_zero_null_ends_online_match, test_sb5a_pairing_rejects_foreign_note, test_sb5a_notice_waiting_empty, test_sb5a_play_on_leave_with_jobs_in_flight, test_sb5a_ring_may_trail_desync_tick, test_sb5a_report_survives_failed_query, test_sb5a_suspend_is_no_stall, test_sb5a_lock_guards_publish, test_sb5a_publish_orders, test_sb5a_stop_and_post_same_frame, test_sb5a_free_running_equals_inline, test_sb5a_queue_stats_job_timings, test_sb5a_offline_digest_every_and_bots, test_sb5a_job_timing_rows_edges]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays, test_sb5a_full_pump_leaves_next_tick_in_lockstep, test_sb5a_preview_waits_for_room, test_sb5a_two_notes_one_frame_pair_in_order, test_sb5a_hash_tick_note_carries_digest, test_sb5a_failure_between_room_and_post, test_sb5a_online_failure_ends_and_closes, test_sb5a_relay_loss_and_pump_failure_same_frame, test_sb5a_online_start_null_query, test_sb5a_job_zero_null_ends_online_match, test_sb5a_pairing_rejects_foreign_note, test_sb5a_notice_waiting_empty, test_sb5a_play_on_leave_with_jobs_in_flight, test_sb5a_worker_host_bot_frames, test_sb5a_human_order_in_held_window_leads_the_bots, test_sb5a_ring_may_trail_desync_tick, test_sb5a_report_survives_failed_query, test_sb5a_suspend_is_no_stall, test_sb5a_lock_guards_publish, test_sb5a_publish_orders, test_sb5a_stop_and_post_same_frame, test_sb5a_free_running_equals_inline, test_sb5a_queue_stats_job_timings, test_sb5a_offline_digest_every_and_bots, test_sb5a_job_timing_rows_edges]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -2260,6 +2260,7 @@ func _sb5a_offline_digest_every_and_bots(runner, mode: String) -> void:
 				orders += note.bot_commands.size()
 				if not note.digest.is_empty(): asked.append(note.tick)
 		bot_orders.append(orders)
+		runner.check(driver.bot_players() == bots, "SB5A bot_players names the seats the job plans, got %s for %s" % [driver.bot_players(), bots])
 		driver.stop()
 	runner.check(asked == [5, 10], "SB5A digest_every asks a snapshot and digest on its multiples only, and 0 asks none, got %s [%s]" % [asked, mode])
 	runner.check(bot_orders[0] > 0 and bot_orders[1] == 0, "SB5A the driver's bots decide the seats the job names, got %s [%s]" % [bot_orders, mode])
@@ -2646,7 +2647,94 @@ func test_sb5a_play_on_leave_with_jobs_in_flight(runner) -> bool:
 		var inline: Dictionary = results.inline
 		runner.check(inline.status == ("running" if leaver == 2 else "ended_left") and inline.left == leaver, "SB5A the inline reference: seat %d leaving gives %s" % [leaver, inline])
 		for mode in results: runner.check(results[mode] == inline, "SB5A seat %d leaving with jobs in flight gives the inline result [%s], got %s against %s" % [leaver, mode, results[mode], inline])
+	for defeated in [false, true]:
+		var results: Dictionary = {}
+		for mode in _modes(): results[mode] = _host_leave_in_flight(mode, defeated)
+		var inline: Dictionary = results.inline
+		runner.check(inline.pending == "running" and inline.status == "ended_left" and inline.left == 1, "SB5A the inline reference: the verdict waits for the notes in flight, then a host with bots alive leaving ends the match (defeated %s), got %s" % [defeated, inline])
+		for mode in results: runner.check(results[mode] == inline, "SB5A the host leaving with bots alive and jobs in flight gives the inline result [%s] (defeated %s), got %s against %s" % [mode, defeated, results[mode], inline])
 	return true
+
+# The guest has jobs taken and undrained when the host's leave arrives; the host's bots 3 and 4 are alive.
+func _host_leave_in_flight(mode: String, host_defeated: bool) -> Dictionary:
+	var pair: Dictionary = _quad_drivers(4, mode)
+	var host = pair.drivers[0]
+	var guest = pair.drivers[1]
+	_trio_until(pair.drivers, 40, true)
+	if host_defeated:
+		for driver in pair.drivers: SeatFixture.defeat(driver.pump.live(), 1)
+	var a: int = host._transport.order._last
+	pair.transports[1].inbox.append(Wire.encode({"type": "left", "seat": 1, "after_tick": a}))
+	for guard in 30:
+		if guest.current().tick >= a - 1: break
+		_single(guest)
+	var gate: Semaphore = _gate_worker(guest, mode)
+	for i in 2:
+		guest._credit = 4
+		guest.step()
+	var pending: String = guest._lockstep.status()
+	if gate != null: _release(gate, 4)
+	_idle(guest.pump)
+	guest.drain()
+	for guard in 30:
+		if guest.over() or guest._lockstep.status().begins_with("ended"): break
+		_single(guest)
+	var result := {"pending": pending, "status": guest._lockstep.status(), "tick": guest.current().tick, "left": guest._lockstep.left_seat()}
+	_unpair(pair)
+	return result
+
+func test_sb5a_worker_host_bot_frames(runner) -> bool:
+	var runs: Dictionary = {}
+	for mode in _modes():
+		runs[mode] = _host_bot_run(mode, false)
+		_stop_built()
+	var inline: Dictionary = runs.inline
+	var bot_ticks: Array = inline.host.filter(func(m: Dictionary) -> bool: return m.player > 2).map(func(m: Dictionary) -> int: return m.tick)
+	runner.check(not bot_ticks.is_empty() and bot_ticks.min() > 33 and not inline.ended, "SB5A fixture: the host's bots order after empty decisions, first at %s, ended %s" % [bot_ticks.min() if not bot_ticks.is_empty() else -1, inline.ended])
+	for mode in runs:
+		var run: Dictionary = runs[mode]
+		runner.check(run.sent == inline.sent, "SB5A the host's packet ticks equal inline [%s], got %s against %s" % [mode, run.sent, inline.sent])
+		runner.check(run.host == inline.host and run.guest == inline.guest, "SB5A packet ticks, players, sequences and command logs equal inline on both seats [%s]" % mode)
+		runner.check(run.rows == inline.rows and run.peers_equal and not run.ended, "SB5A the peer hashes equal inline and each other [%s], ended %s" % [mode, run.ended])
+	return true
+
+func test_sb5a_human_order_in_held_window_leads_the_bots(runner) -> bool:
+	for mode in _modes():
+		var run: Dictionary = _host_bot_run(mode, true)
+		_stop_built()
+		var by_tick: Dictionary = {}
+		for command: Dictionary in run.host: by_tick.get_or_add(command.tick, []).append(command.player)
+		var shared: Array = by_tick.values().filter(func(players: Array) -> bool: return players.has(1) and players.any(func(player: int) -> bool: return player > 2))
+		runner.check(not shared.is_empty(), "SB5A fixture: a frame holds a human order and bot orders [%s]" % mode)
+		runner.check(shared.all(func(players: Array) -> bool: return players.slice(0, players.find(1)).all(func(player: int) -> bool: return player <= 2)), "SB5A the human order leads the bot orders in its open frame [%s], got %s" % [mode, shared])
+		runner.check(run.peers_equal and not run.ended, "SB5A the peer hashes stay equal [%s], ended %s" % [mode, run.ended])
+	return true
+
+# Seat one takes two ticks per round and drains both at once; a human order goes in at a drain boundary, or inside the held window.
+func _host_bot_run(mode: String, in_window: bool) -> Dictionary:
+	var pair: Dictionary = _quad_drivers(4, mode)
+	var host = pair.drivers[0]
+	var guest = pair.drivers[1]
+	_trio_until(pair.drivers, 33, true)
+	var unit: int = _own_unit(host.pump.live())
+	var gate: Semaphore = _gate_worker(host, mode)
+	var sent: Array = []
+	for frame in 80:
+		host._credit = 1
+		host.step()
+		if in_window: host.submit(_move(unit))
+		if gate != null: _release(gate, host._taken.size())
+		_idle(host.pump)
+		host.drain()
+		if not in_window and frame % 4 == 0: host.submit(_move(unit))
+		_cycle(guest)
+		sent.append(host._transport.order._last)
+	var rows: PackedStringArray = host._lockstep.hash_rows()
+	var other: PackedStringArray = guest._lockstep.hash_rows()
+	var common: int = mini(rows.size(), other.size())
+	var result := {"host": host._lockstep.command_log(), "guest": guest._lockstep.command_log(), "sent": sent, "rows": rows.slice(0, common), "peers_equal": common >= 4 and rows.slice(0, common) == other.slice(0, common), "ended": _ended_any(pair.drivers)}
+	_unpair(pair)
+	return result
 
 # Seat one has three jobs taken and undrained when the leave's turn comes, so its verdict waits for the drain.
 func _leave_in_flight(mode: String, leaver: int) -> Dictionary:

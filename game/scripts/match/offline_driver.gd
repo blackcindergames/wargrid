@@ -203,7 +203,7 @@ func take_pings() -> Array[Dictionary]:
 	return []
 
 func bot_players() -> Array[int]:
-	return BOTS
+	return bots
 
 func take_rematch() -> int:
 	return -1
