@@ -4,8 +4,7 @@ extends SceneTree
 # --window=<from>,<to> reruns that window per tick in both modes and names the first difference. --inject-divergence changes one worker command.
 
 const SimPump = preload("res://scripts/match/sim_pump.gd")
-const CombatWorkload = preload("res://scripts/debug/combat_workload.gd")
-const TeamMatch = preload("res://scripts/debug/team_match.gd")
+const BenchLoads = preload("res://scripts/debug/bench_loads.gd")
 const Simulation = preload("res://scripts/simulation/simulation.gd")
 
 const EVERY: int = 30
@@ -46,15 +45,6 @@ func _run() -> void:
 	SimPump.force_mode_for_test("")
 	quit(0 if ok else 1)
 
-func _create() -> Simulation:
-	return TeamMatch.create() if _layout == "team" else CombatWorkload.create(_layout)
-
-func _seats() -> Array[int]:
-	var seats: Array[int] = []
-	if _layout != "team": return seats
-	for entry: Dictionary in TeamMatch.SEATS: seats.append(entry.seat)
-	return seats
-
 # Two human orders for the lowest unit, so every load has a command stream that a divergence can corrupt.
 func _inputs(sim: Simulation, inject: bool) -> Dictionary:
 	var unit: Dictionary = sim.snapshot().entities[0]
@@ -67,9 +57,9 @@ func _inputs(sim: Simulation, inject: bool) -> Dictionary:
 
 func _drive(mode: String, inject: bool, window: Vector2i) -> Run:
 	var run := Run.new()
-	var sim: Simulation = _create()
+	var sim: Simulation = BenchLoads.create(_layout)
 	run.inputs = _inputs(sim, inject)
-	run.seats = _seats()
+	run.seats = BenchLoads.bots(_layout)
 	run.window = window
 	SimPump.force_mode_for_test(mode)
 	run.pump = SimPump.new(sim)

@@ -15,9 +15,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 147% | ➖ same | 2026-11-27 |
 | **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 127% | ➖ same | 2026-11-27 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 2% worse | 2026-11-27 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔻 1% better | 2026-11-27 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 73% | 🔻 6% better | 2026-11-25 |
-| Drawing the screen | 🟢 OK | ██████░░░░ 68% | 🔻 10% better | 2026-11-25 |
+| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 6% worse | 2026-11-27 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 1% better | 2026-11-27 |
 | Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 2% worse | 2026-11-27 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔻 1% better | 2026-11-27 |
@@ -34,8 +34,8 @@ Details:
 - combat stress p95: 165% of budget, exceeded (Sim boundary SB5a, 2026-11-27), 2% slower than auto c6030abe (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 147% of budget, exceeded (Sim boundary SB5a, 2026-11-27), unchanged vs auto c6030abe (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 218% of budget, exceeded (Sim boundary SB5a, 2026-11-27), unchanged vs auto c6030abe (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 68% of budget (P7 part 2 Team online, 2026-11-25), 10% faster than P18 A short Esc menu (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 73% of budget (P7 part 2 Team online, 2026-11-25), 6% faster than P18 A short Esc menu (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 72% of budget (Sim boundary SB5a, 2026-11-27), 6% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 74% of budget (Sim boundary SB5a, 2026-11-27), 2% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (Sim boundary SB5a, 2026-11-27), 1% slower than auto c6030abe (worst vs worst); run-to-run spread not measured
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured

@@ -8,8 +8,7 @@ const SimPump = preload("res://scripts/match/sim_pump.gd")
 const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
 const OnlineDriver = preload("res://scripts/match/online_driver.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
-const Wire = preload("res://scripts/net/wire.gd")
-const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
+const PumpTests = preload("res://tests/test_sim_pump.gd")
 const FACTIONS := {1: "usa", 2: "china"}
 const HOLD_MSEC: int = 12000 # a held job is finite, so an abandoned worker ends before the process does
 const FRAME_LIMIT: int = 400
@@ -27,28 +26,6 @@ class HookPump extends "res://scripts/match/sim_pump.gd":
 			var end: int = Time.get_ticks_msec() + HOLD_MSEC
 			while not hold.try_wait() and Time.get_ticks_msec() < end: OS.delay_usec(1000)
 		return super(job, slot)
-
-# One end of a two-driver relay: ticks reach the peer, and the first close tells it this seat left after its last tick.
-class RelayEnd extends RefCounted:
-	var peer
-	var seat: int = 0
-	var inbox := PackedStringArray()
-	var order := RelayFrameOrder.new()
-	var closes: int = 0
-	var patient: bool = false
-	func poll() -> PackedStringArray:
-		var out := inbox
-		inbox = PackedStringArray()
-		return out
-	func send_text(text: String) -> void:
-		if Wire.decode(text).message.get("type") == "tick" and order.accepts(text): peer.inbox.append(text)
-	func closed() -> bool: return false
-	func refused() -> bool: return false
-	func silent(_now: int) -> bool: return false
-	func close() -> void:
-		closes += 1
-		if closes == 1: peer.inbox.append(Wire.encode({"type": "left", "seat": seat, "after_tick": order._last}))
-	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 # A worker thread that returns at once, with a job still unpublished.
 class DeadPump extends "res://scripts/match/sim_pump.gd":
@@ -364,12 +341,14 @@ func _case_stall_offline() -> String:
 	return why if not why.is_empty() else finished
 
 func _case_stall_online() -> String:
-	var a := RelayEnd.new()
-	var b := RelayEnd.new()
+	var a := PumpTests.RelayEnd.new()
+	var b := PumpTests.RelayEnd.new()
 	a.peer = b
 	b.peer = a
 	a.seat = 1
 	b.seat = 2
+	a.tell_peer = true
+	b.tell_peer = true
 	var one = OnlineDriver.new(a, Lockstep.new(1, [1, 2] as Array[int]), "usa", 1)
 	var two = OnlineDriver.new(b, Lockstep.new(2, [1, 2] as Array[int]), "china", 2)
 	one.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
