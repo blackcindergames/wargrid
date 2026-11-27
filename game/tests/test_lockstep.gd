@@ -105,7 +105,7 @@ func _pair(_runner, max_delay: int = 0) -> Net:
 	return net
 
 func cases() -> Array[Callable]:
-	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_leave_during_setup_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal, test_for_start_allowed_from_settings, test_host_frame_carries_bot_commands, test_guest_command_for_bot_ends_bad_stamp, test_host_leave_frame_with_bot_orders, test_guest_leave_tick_bot_order_applies, test_submit_refuses_player_not_allowed, test_bot_sequences_rise, test_bot_submit_times_erased, test_bot_refusal_never_reaches_host_answers, test_bot_commands_not_in_latency, test_defeated_host_leave_ends_while_bots_live, test_two_seat_bots_guest_leave_no_opponent_left, test_seat_sim_submits_as_command_player, test_seat_sim_validates_at_issue_time, test_seat_sim_full_frame_refusal_recovers]
+	return [test_delay_and_prefill, test_two_clients_equal_hashes, test_own_command_uses_wire_form, test_cross_seat_same_tick, test_many_commands_one_tick, test_desync_detected, test_left_after_tick, test_protocol_errors, test_latency_samples, test_left_with_missing_packets, test_rejections_reported, test_submit_before_start, test_relay_lost_keeps_earlier_end, test_left_before_start, test_hash_ring_names_injected_tick, test_hash_ring_shape, test_hash_ring_outside_snapshot, test_tick_hash_matches_ring_row, test_tick_hash_reads_do_not_change_outcome, test_received_any, test_guest_buffers_host_frames_before_its_start, test_session_handler, test_for_start, test_match_stats_mirror_and_replay, test_opponent_left, test_opponent_left_two_seats_only, test_left_on_normal_end_tick, test_pending_frame_cap, test_own_frame_checked, test_pal_two_leaves_never_hang, test_pal_same_after_tick_ends, test_pal_arrival_order_irrelevant, test_pal_undefeated_first_ends, test_pal_repeated_left_protocol_error, test_pal_hash_tick_after_play_on, test_pal_no_fact_ends, test_pal_alive_leave_ends, test_pal_before_start_ends, test_pal_leave_during_setup_ends, test_pal_bot_players_play_on, test_pal_removed_in_step_a_plays_on, test_pal_build_site_at_a_ends, test_pal_refused_build_at_a_plays_on, test_pal_cancel_last_site_at_a_plays_on, test_pal_other_commands_keep_verdict, test_pal_frc_hole_counts_ends, test_pal_match_end_at_a_is_normal, test_for_start_allowed_from_settings, test_host_frame_carries_bot_commands, test_guest_command_for_bot_ends_bad_stamp, test_host_leave_frame_with_bot_orders, test_guest_leave_tick_bot_order_applies, test_submit_refuses_player_not_allowed, test_bot_sequences_rise, test_bot_submit_times_erased, test_bot_refusal_never_reaches_host_answers, test_bot_commands_not_in_latency, test_defeated_host_leave_ends_while_bots_live, test_two_seat_bots_guest_leave_no_opponent_left, test_seat_sim_submits_as_command_player, test_seat_sim_validates_at_issue_time, test_seat_sim_full_frame_refusal_recovers]
 
 func test_seat_sim_validates_at_issue_time(runner) -> bool:
 	var net := _quad_net([40, 40])
@@ -574,6 +574,41 @@ func test_received_any(runner) -> bool:
 	runner.check(not pair[1].received_any(), "L9 false after own tick")
 	pair[1].receive(_tick_frame(2, 4))
 	runner.check(pair[1].received_any(), "L9 true after a peer tick")
+	return true
+
+func test_guest_buffers_host_frames_before_its_start(runner) -> bool:
+	var host_sim = Skirmish.create(true, "human")
+	var guest_sim = Skirmish.create(true, "human")
+	var seats: Array[int] = [1, 2]
+	var host = Lockstep.new(1, seats)
+	var guest = Lockstep.new(2, seats)
+	var host_frames: Array[String] = []
+	var guest_frames: Array[String] = []
+	host.send = func(text: String) -> void: host_frames.append(text)
+	guest.send = func(text: String) -> void: guest_frames.append(text)
+	host.submit({"type": "choose_faction", "faction": "usa"})
+	guest.submit({"type": "choose_faction", "faction": "usa"})
+	host.start(host_sim.snapshot())
+	while host.advance(host_sim): host.finish_tick(host_sim.tick(), null)
+	runner.check(host_sim.tick() == 4 and host_frames.size() == 5 and host.waiting_for() == [2], "L9b host alone runs the input delay, sends ticks 4 to 8 (the relay lead bound), then waits for the guest")
+	for text: String in host_frames: guest.receive(text)
+	host_frames.clear()
+	runner.check(guest.received_any() and guest.status() == "running" and guest_frames.is_empty(), "L9b guest holds the host's ticks 4 to 8 before its own start and sends nothing")
+	guest.start(guest_sim.snapshot())
+	for i in 20000:
+		for text: String in host_frames: guest.receive(text)
+		for text: String in guest_frames: host.receive(text)
+		host_frames.clear()
+		guest_frames.clear()
+		var progressed: bool = false
+		for pair: Array in [[host, host_sim], [guest, guest_sim]]:
+			if pair[1].tick() < 300 and pair[0].advance(pair[1]):
+				pair[0].finish_tick(pair[1].tick(), pair[1].snapshot() if pair[0].wants_snapshot(pair[1].tick()) else null)
+				progressed = true
+		if not progressed: break
+	runner.check(host_sim.tick() == 300 and guest_sim.tick() == 300 and host.status() == "running" and guest.status() == "running", "L9b both reach tick 300 after the late start")
+	runner.check(host.hash_rows().size() > 1 and host.hash_rows() == guest.hash_rows(), "L9b hash rows equal")
+	runner.check(host_sim.snapshot().match.status == "ongoing" and guest_sim.snapshot().match.status == "ongoing", "L9b both factions chosen")
 	return true
 
 func test_session_handler(runner) -> bool:

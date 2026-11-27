@@ -4,13 +4,13 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
-const BOTS: Array[int] = [2]
+const MatchSettings = preload("res://scripts/match_settings.gd")
 const FREEZE_NOTICE := "Match stopped"
 const HASH_EVERY: int = 30
 const BOT_LINES_EVERY: int = 30
 
 var pump: SimPump
-var bots: Array[int] = BOTS
+var bots: Array[int] = [2]
 var digest_every: int = 0
 var show_bots: bool = false:
 	set(value):
@@ -37,8 +37,11 @@ func _init(player: int) -> void:
 
 func create(map_path: String, starts: Array[int], factions: Dictionary, _match_seed: int) -> void:
 	_factions = factions
+	var seated: Array[int] = []
+	seated.assign(_seats().filter(func(seat: int) -> bool: return seat > 1))
+	bots = seated
 	if pump != null: pump.stop()
-	adopt(Skirmish.create(true, "human", factions, map_path, starts))
+	adopt(Skirmish.create(true, "human", factions, map_path, starts, factions.size(), teams()))
 
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
@@ -205,6 +208,9 @@ func take_pings() -> Array[Dictionary]:
 func bot_players() -> Array[int]:
 	return bots
 
+func teams() -> Array[int]:
+	return MatchSettings.teams(1, bots.size())
+
 func take_rematch() -> int:
 	return -1
 
@@ -223,8 +229,14 @@ func stop() -> void:
 func detach() -> void:
 	pass
 
+func _seats() -> Array:
+	var seats: Array = _factions.keys()
+	seats.sort()
+	return seats
+
 func match_header() -> Dictionary:
-	return {"mode": "offline", "factions": [_factions[1], _factions[2]], "teams": [1, 2], "bots": []}
+	var factions: Array = _seats().map(func(seat: int) -> String: return _factions[seat])
+	return {"mode": "offline", "factions": factions, "teams": teams(), "bots": []}
 
 func match_log() -> Dictionary:
 	var played: Dictionary = pump.record()

@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: run_netplay.sh match|rematch|kill|left-mid|left-mid-pump|trio-play-on|trio-left-first|trio-result|team|team-guest-defeated|team-guest-quits|team-host-leaves|team-defeated-host-leaves|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole
+# usage: run_netplay.sh match|rematch|kill|left-mid|left-mid-pump|trio-play-on|trio-left-first|trio-result|team|team-guest-defeated|team-guest-quits|team-host-leaves|team-defeated-host-leaves|stall|silent|spike|perturb|version|maps|map-mismatch|relay-down|relay-term|proxy-clean|proxy-burst|proxy-reset|proxy-blackhole|lobby|lobby-left|lobby-host-leaves|lobby-pick
 scenario=$1
 # Headless clients and the oracle stay inline whatever the caller exports (SB5a Decided 9).
 unset WARGRID_SIM_THREAD
@@ -126,12 +126,8 @@ start_pair() { # EXTRA_SEAT1 ... -- EXTRA_SEAT2 ...
 
 # shellcheck disable=SC2086 # $1 to $3 are flag lists, split on purpose
 start_trio() { # EXTRA_SEAT1 EXTRA_SEAT2 EXTRA_SEAT3 (each one quoted word)
-  start_pair "--map broken_crown --seat-script idle $1" "--map broken_crown --seat-script idle $2"
-  i=0
-  until grep -q '^NETCLIENT WELCOME SEAT 2 ' "$out/s2.log"; do
-    i=$((i + 1)); [ $i -lt 100 ] || fail "seat 2 did not join"
-    sleep 0.2
-  done
+  start_pair "--map broken_crown --seat-script idle --seats 3 $1" "--map broken_crown --seat-script idle $2"
+  wait_line s2 '^NETCLIENT WELCOME SEAT 2 '
   start_client s3 --match "$(cat "$out/code")" --map broken_crown --seat-script idle $3
   pid3=$pid
 }
@@ -147,6 +143,15 @@ trio_checks() { # NAME... (clients that reach tick 300)
   same_prefix "$out/s1.tsv" "$out/s2.tsv"; same_prefix "$out/s1.tsv" "$out/s3.tsv"; same_prefix "$out/s2.tsv" "$out/s3.tsv"
   ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC"
   ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
+}
+
+# wait_line NAME PATTERN: until NAME's log has a line matching PATTERN
+wait_line() {
+  i=0
+  until grep -q "$2" "$out/$1.log"; do
+    i=$((i + 1)); [ $i -lt 150 ] || fail "$1: no line '$2'"
+    sleep 0.2
+  done
 }
 
 # Host runs the two bots through the real driver (--pump); both clients fix the map seed so the starts and the pin hold.
@@ -261,11 +266,7 @@ case $scenario in
     second=$(grep '^NETCLIENT MAP' "$out/s1.log" | tail -n 1)
     [ "$(grep '^NETCLIENT MAP' "$out/s2.log" | tail -n 1)" = "$second" ] || fail "second MAP lines differ across seats"
     [ "$(grep -c 'INFO rematch' "$out/relay.log")" = 1 ] || fail "expected one rematch line in relay.log"
-    i=0
-    until grep -q 'MATCH END' "$out/relay.log"; do
-      i=$((i + 1)); [ $i -lt 25 ] || fail "no MATCH END within 5 s"
-      sleep 0.2
-    done
+    wait_line relay 'MATCH END'
     [ "$(grep -c 'MATCH END' "$out/relay.log")" = 1 ] || fail "expected one MATCH END"
     ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC in a clean match"
     ! grep -q 'lead bound' "$out/relay.log" || fail "relay refused a frame as too far ahead"
@@ -365,6 +366,44 @@ case $scenario in
     for name in s1 s2; do grep -q '^NETCLIENT DEFEAT 1 AT 300$' "$out/$name.log" || fail "$name: no DEFEAT 1 AT 300"; done
     team_checks s1 s2
     same_prefix "$out/s1.tsv" "$out/s2.tsv" ;;
+  lobby)
+    # The host opens on broken_crown, moves to ashfall before the friend joins and to the test map just before its start_request.
+    start_relay; start_pair "--map broken_crown --lobby-maps ashfall,skirmish" ""
+    wait_exit "$pid1" "$match_wait"; wait_exit "$pid2" "$match_wait"
+    expect_end s1 match_over; expect_end s2 match_over
+    [ "$(grep '^NETCLIENT ROOM MAP' "$out/s2.log" | tr '\n' ' ')" = "NETCLIENT ROOM MAP ashfall NETCLIENT ROOM MAP skirmish " ] || fail "s2 room maps: $(grep '^NETCLIENT ROOM MAP' "$out/s2.log" | tr '\n' ' ')"
+    for name in s1 s2; do grep -q '^NETCLIENT MAP skirmish ' "$out/$name.log" || fail "$name: the match is not on the host's last map"; done
+    grep -q '^NETCLIENT PICK SEAT 2 [a-z]' "$out/s1.log" || fail "s1: the host never saw the guest's faction"
+    [ "$(end_tick s1)" = 9746 ] && [ "$(end_tick s2)" = 9746 ] || fail "terminal ticks $(end_tick s1) / $(end_tick s2), pinned 9746"
+    oracle; same_hashes "$out/s1.tsv" "$out/s2.tsv" "$out/oracle.tsv"
+    ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC"
+    echo "lobby terminal tick $(end_tick s1)" ;;
+  lobby-left)
+    start_relay; start_pair "--joins 2 --stop-at-tick 900" "--leave-on-welcome"
+    wait_exit "$pid2" 30; expect_end s2 left
+    wait_line s1 '^NETCLIENT LEFT SEAT 2$'
+    start_client s3 --match "$(cat "$out/code")" --seat-script opponent --stop-at-tick 900
+    pid3=$pid
+    wait_exit "$pid1" 120; wait_exit "$pid3" 120
+    expect_end s1 stopped; expect_end s3 stopped
+    grep -q '^NETCLIENT WELCOME SEAT 2 ' "$out/s3.log" || fail "s3 did not take the freed seat 2"
+    [ "$(grep -c '^NETCLIENT JOINED SEAT 2$' "$out/s1.log")" = 2 ] || fail "s1: expected two joins of seat 2"
+    same_hashes "$out/s1.tsv" "$out/s3.tsv" ;;
+  lobby-pick)
+    # The host takes start 4 and the guest asks for start 3 in its pick (the rule would give it 2); the host folds it into the settings its start carries.
+    start_relay; start_pair "--map broken_crown --start 4 --stop-at-tick 300" "--start 3 --stop-at-tick 300"
+    wait_exit "$pid1" "$match_wait"; wait_exit "$pid2" "$match_wait"
+    expect_end s1 stopped; expect_end s2 stopped
+    grep -q '^NETCLIENT PICK SEAT 2 [a-z]' "$out/s1.log" || fail "s1: the host never saw the guest's pick"
+    for name in s1 s2; do grep -q '^NETCLIENT MAP broken_crown SEED [0-9]* STARTS 4,3$' "$out/$name.log" || fail "$name: no STARTS 4,3 line"; done
+    same_hashes "$out/s1.tsv" "$out/s2.tsv"
+    ! grep -q ' DESYNC ' "$out/relay.log" || fail "relay logged a DESYNC" ;;
+  lobby-host-leaves)
+    start_relay; start_pair "--joins 2" ""
+    wait_line s1 '^NETCLIENT JOINED SEAT 2$'
+    { kill -9 "$pid1"; wait "$pid1"; } 2>/dev/null
+    wait_exit "$pid2" 20
+    expect_end s2 ended_relay; end_reason_has s2 "host left" ;;
   stall)
     start_relay; start_pair "" "--stall-at-tick 300 --stall-seconds 3"
     wait_exit "$pid1" 180; wait_exit "$pid2" 180

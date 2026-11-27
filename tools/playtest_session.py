@@ -106,6 +106,13 @@ def compare_hashes(recorded: Path, ring: Path) -> tuple[int, str]:
     return 0, ""
 
 
+def _bots(match: dict) -> str:
+    """An offline record's factions already name every bot seat, so only online rows pass --bots."""
+    if match["mode"] != "online":
+        return "-"
+    return ",".join(f"{int(bot['player'])}:{bot['faction']}" for bot in match.get("bots") or []) or "-"
+
+
 def replay_rows(session: dict, path: Path) -> list[str]:
     rows = []
     for k, m in enumerate(session["matches"], 1):
@@ -129,7 +136,8 @@ def replay_rows(session: dict, path: Path) -> list[str]:
             ticks,
             m.get("controller") or "-",
             _build(session, m),
-            ",".join(f"{int(bot['player'])}:{bot['faction']}" for bot in m.get("bots") or []) or "-",
+            _bots(m),
+            ",".join(str(int(seat)) for seat in m.get("starts") or []) or "-",
         ]
         rows.append("\t".join(row))
     return rows

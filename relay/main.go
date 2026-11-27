@@ -206,6 +206,12 @@ func (h *relay) OnMessage(s *gws.Conn, msg *gws.Message) {
 		c.room.post(overMsg{c.seat})
 	case "again":
 		c.room.post(againMsg{c.seat})
+	case "settings":
+		c.room.post(settingsMsg{c.seat, e.raw})
+	case "pick":
+		c.room.post(pickMsg{c.seat, e.raw})
+	case "start_request":
+		c.room.post(startRequestMsg{c.seat})
 	case "ping":
 		c.send([]byte(`{"type":"pong","t":`+e.t+`}`), 0)
 	}
@@ -219,6 +225,7 @@ func main() {
 		hello:     time.Duration(envInt("WARGRID_HELLO_MS", 5000)) * time.Millisecond,
 		silence:   time.Duration(envInt("WARGRID_SILENCE_MS", 10000)) * time.Millisecond,
 		lobby:     time.Duration(envInt("WARGRID_LOBBY_MS", 900000)) * time.Millisecond,
+		lobbyCap:  time.Duration(envInt("WARGRID_LOBBY_CAP_MS", 3600000)) * time.Millisecond,
 	}
 	drain := time.Duration(envInt("WARGRID_DRAIN_MS", 3500)) * time.Millisecond
 	ipHeader := os.Getenv("WARGRID_CLIENT_IP_HEADER")

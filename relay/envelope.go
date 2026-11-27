@@ -11,6 +11,7 @@ import (
 const (
 	maxMessageBytes  = 65536
 	maxSettingsBytes = 4096
+	maxPickBytes     = 512
 )
 
 var hashRe = regexp.MustCompile(`^[0-9a-f]{16}$`)
@@ -24,7 +25,7 @@ type envelope struct {
 	build    string
 	match    string
 	t        string // raw JSON number token, echoed byte-exact
-	settings []byte // raw JSON object of a hello, nil when absent
+	raw      []byte // raw JSON object of a hello, settings or pick; nil when absent
 	// badSettings is kept off the parse so join can answer protocol mismatch first.
 	badSettings bool
 }
@@ -65,18 +66,21 @@ func parseHash(o map[string]any) (h hashMsg, valid bool) {
 	return hashMsg{tick, value, valid}, valid
 }
 
-// rawSettings returns the exact bytes of the top-level "settings" value (nil when absent) and whether it is a valid one.
-func rawSettings(text []byte) ([]byte, bool) {
+func rawSettings(text []byte) ([]byte, bool) { return rawObject(text, "settings", maxSettingsBytes) }
+
+// rawObject returns the exact bytes of the top-level key's value (nil when absent) and whether it is a valid one:
+// a JSON object within limit bytes.
+func rawObject(text []byte, key string, limit int) ([]byte, bool) {
 	var raw map[string]json.RawMessage
 	if json.Unmarshal(text, &raw) != nil {
 		return nil, false
 	}
-	v, present := raw["settings"]
+	v, present := raw[key]
 	if !present {
 		return nil, true
 	}
 	var obj map[string]json.RawMessage
-	return v, len(v) <= maxSettingsBytes && json.Unmarshal(v, &obj) == nil && obj != nil
+	return v, len(v) <= limit && json.Unmarshal(v, &obj) == nil && obj != nil
 }
 
 // parseEnvelope returns nil for anything a client may not send.
@@ -101,7 +105,7 @@ func parseEnvelope(text []byte) *envelope {
 			settings = nil
 		}
 		if ok1 && ok2 && ok3 {
-			return &envelope{typ: typ, protocol: p, build: b, match: m, settings: settings, badSettings: !ok4}
+			return &envelope{typ: typ, protocol: p, build: b, match: m, raw: settings, badSettings: !ok4}
 		}
 	case "tick":
 		s, ok1 := asInt(o["seat"])
@@ -110,8 +114,16 @@ func parseEnvelope(text []byte) *envelope {
 		if h, ok4 := parseHash(o); ok1 && ok2 && ok3 && ok4 {
 			return &envelope{typ: typ, seat: s, tick: t, hash: h}
 		}
-	case "over", "again":
+	case "over", "again", "start_request":
 		return &envelope{typ: typ}
+	case "settings":
+		if v, ok := rawSettings(text); ok && v != nil {
+			return &envelope{typ: typ, raw: v}
+		}
+	case "pick":
+		if v, ok := rawObject(text, "pick", maxPickBytes); ok && v != nil {
+			return &envelope{typ: typ, raw: v}
+		}
 	case "ping":
 		if n, ok := o["t"].(json.Number); ok {
 			if _, err := n.Float64(); err == nil {

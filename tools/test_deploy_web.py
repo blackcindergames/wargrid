@@ -7,7 +7,7 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parent / "deploy_web.sh"
 STUB = '#!/bin/sh\necho "{name} $*" >> "$STUB_LOG"\n'
-FAKE_EXPORT = '#!/bin/sh\nmkdir -p "$(dirname "$2")" && echo "export $*" >> "$STUB_LOG"\n'
+FAKE_EXPORT = '#!/bin/sh\nmkdir -p "$(dirname "$2")" && echo "export synth=$WARGRID_SYNTH_AUDIO $*" >> "$STUB_LOG"\n'
 
 
 class DeployWebTest(unittest.TestCase):
@@ -66,6 +66,12 @@ class DeployWebTest(unittest.TestCase):
         self.assertEqual(len(fly), 1)
         self.assertIn(" -a wargrid-web-test ", fly[0])
         self.assertIn("https://wargrid-web-test.fly.dev/health", self.calls()[-1])
+
+    def test_deploy_never_skips_the_licensed_audio(self) -> None:
+        self.env["WARGRID_SYNTH_AUDIO"] = "1"
+        result = self.run_script("0.7.0-dev", "test")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("export synth= Web", self.calls()[0])
 
     def test_production_deploys_the_production_app(self) -> None:
         result = self.run_script("0.7.0")

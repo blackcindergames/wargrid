@@ -68,6 +68,16 @@ func test_decode_rejects(runner) -> bool:
 		"start settings not object": '{"type":"start","seats":[1,2],"delay":4,"seed":1,"settings":[1]}',
 		"fractional seed": '{"type":"start","seats":[1,2],"delay":4,"seed":1.5,"settings":{}}',
 		"hello settings not object": '{"type":"hello","protocol":2,"build":"a","match":"","settings":"x"}',
+		"settings missing": '{"type":"settings"}',
+		"settings not object": '{"type":"settings","settings":[1]}',
+		"joined fractional seat": '{"type":"joined","seat":1.5}',
+		"welcome match not text": '{"type":"welcome","seat":1,"match":5}',
+		"welcome seat 0": '{"type":"welcome","seat":0,"match":"ABC234"}',
+		"welcome seat 9": '{"type":"welcome","seat":9,"match":"ABC234"}',
+		"welcome settings not object": '{"type":"welcome","seat":1,"match":"ABC234","settings":"x"}',
+		"pick missing": '{"type":"pick"}',
+		"pick not object": '{"type":"pick","pick":[1]}',
+		"pick fractional seat": '{"type":"pick","seat":1.5,"pick":{}}',
 		"again fractional seat": '{"type":"again","seat":1.5}',
 		"hello settings null": '{"type":"hello","protocol":2,"build":"a","match":"","settings":null}',
 	}
@@ -86,7 +96,7 @@ func test_vectors(runner) -> bool:
 	# Exports have no ../protocol next to res://, so CI points the exported suite at the checkout.
 	var dir: String = OS.get_environment("WARGRID_VECTORS") if OS.has_environment("WARGRID_VECTORS") else ProjectSettings.globalize_path("res://").path_join("../protocol/vectors")
 	var files: PackedStringArray = DirAccess.get_files_at(dir)
-	runner.check(files.size() == 19, "W3 vector files found, got %d" % files.size())
+	runner.check(files.size() == 32, "W3 vector files found, got %d" % files.size())
 	for file in files:
 		var vector: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join(file)))
 		runner.check(vector is Dictionary and vector.has("text"), "W3 vector parses " + file)

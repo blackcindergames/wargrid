@@ -23,7 +23,7 @@ window/stretch/aspect="expand"
 
 [gui]
 
-theme/custom="res://ui/launcher_theme.tres"
+theme/custom="res://ui/game_theme.tres"
 theme/custom.editor_hint=""
 
 [input]

@@ -1,6 +1,6 @@
 // Command conformance runs the black-box relay protocol suite against a running relay.
 // Profiles need the server started with matching settings: default (none), silence (any silence,
-// hello and lobby timeouts, passed as -silence, -hello and -lobby), delay (WARGRID_TEST_DELAY_MS=250),
+// hello, lobby and lobby cap timeouts, passed as -silence, -hello, -lobby and -lobbycap), delay (WARGRID_TEST_DELAY_MS=250),
 // limits and global (WARGRID_CLIENT_IP_HEADER=X-Wargrid-Test-Ip, default timeouts).
 package main
 
@@ -15,6 +15,7 @@ func main() {
 	flag.DurationVar(&silence, "silence", silence, "server silence timeout (silence profile)")
 	flag.DurationVar(&helloLimit, "hello", helloLimit, "server hello deadline (silence profile)")
 	flag.DurationVar(&lobbyLimit, "lobby", lobbyLimit, "server lobby expiry and start window (silence profile)")
+	flag.DurationVar(&lobbyCap, "lobbycap", lobbyCap, "server hard cap on a lobby kept alive by settings (silence profile)")
 	flag.Parse()
 	os.Exit(runConform(*url, *profile))
 }

@@ -170,8 +170,7 @@ func test_launcher_focus_card(runner) -> bool:
 		runner.root.add_child(port)
 		var view := Rect2(Vector2.ZERO, Vector2(size))
 		var label := str(size)
-		for page_name: String in ["Play", "Join"]:
-			await _check_this_build(runner, port, view, "%s %s" % [page_name, label], page_name)
+		await _check_this_build(runner, port, view, "Play %s" % label, "Play")
 		port.free()
 	_end(saved)
 	return true
@@ -209,7 +208,7 @@ func _check_this_build(runner, port: SubViewport, view: Rect2, label: String, pa
 	var box: Control = launcher.get_node("Pages/Settings/Body/Playtest")
 	var kept: Array = []
 	for child in box.get_children(): kept.append(str(child.name))
-	runner.check(kept == ["GraphicsHeader", "Quality", "Neon", "Smooth", "Destinations", "PlaytestHeader", "PlaytestSwitch", "PlaytestHint"], "PT6 the Playtest column keeps only Graphics, then the switch and its hint at %s, got %s" % [label, kept])
+	runner.check(kept == ["GraphicsHeader", "Quality", "Neon", "Smooth", "Destinations", "PlaytestHeader", "PlaytestSwitch", "PlaytestHint", "Online"], "PT6 the Playtest column keeps Graphics, then the switch and its hint, then the Online group at %s, got %s" % [label, kept])
 	var toggle: CheckButton = launcher.get_node_or_null("Pages/Settings/Body/Playtest/PlaytestSwitch")
 	runner.check(toggle != null and not toggle.button_pressed, "PT6 PlaytestSwitch shows and starts off at %s" % label)
 	button = launcher.get_node_or_null("Pages/%s/ThisBuild" % page_name)

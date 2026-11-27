@@ -1053,6 +1053,7 @@ func test_header_has_no_digest(runner) -> bool:
 	var header: Dictionary = main.playtest_header()
 	runner.check(not header.has("end_digest") and header.has_all(keys), "PO28 the mid-match header has no digest and every header field, got %s" % [header.keys()])
 	runner.check(not header.has("tick_hashes"), "PO28 the mid-match header has no tick_hashes")
+	runner.check(header.get("starts") == main.starts, "PO28 the header carries the starts as played, so a replay keeps picked starts, got %s" % [header.get("starts")])
 	_mark(overlay, "bad", "cut short")
 	var stored: Variant = JSON.parse_string(_current_text())
 	var entry: Dictionary = stored.matches[0] if stored is Dictionary and not stored.matches.is_empty() else {}

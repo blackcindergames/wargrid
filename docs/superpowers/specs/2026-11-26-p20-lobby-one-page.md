@@ -14,14 +14,16 @@ Play opens on one lobby page for both Skirmish and Host game: a Mode row, player
 
 ## First playable slice
 
-Skirmish and Host game on the new page with what exists today: Mode row, team-grouped rows with swatches, inline faction and map dropdowns with Random, the count line, the code in the Mode row, Start match after the friend joins, the guest's text view; headless layout tests at 1280x720, 1280x800 and 1920x1080. Then start pick on the preview (host and guest, closing a start) as the second slice, test-first for the chosen-starts rule. The owner plays one bot match and one match with a friend.
+Skirmish, Host game and Join game on the new page in the prototype's navy look: Mode row (Join game is the third mode; the Join page goes), team-grouped rows with swatches and an aligned action column with a grey X to remove a bot, inline faction and map dropdowns with Random, the count line naming why + Add enemy bot is greyed, the code shown at once on Host game in the invite box ("Invite code", code, fixed-width "Copy code"/"Copied" segment), a live room (the friend sees each host change with one line naming it, the host sees the friend join and leave, Start match after the friend joins), the guest's text view with their own faction; headless layout tests at 1280x720, 1280x800 and 1920x1080. Then start pick on the preview (host and guest, closing a start) as the second slice, test-first for the chosen-starts rule. The owner plays one bot match and one match with a friend.
 
 ## Out
 
 Mode cards (remembered for when Quick play and public games exist), Quick play, public games, Private or public, match settings, bot levels (all hidden, room kept), colour pick, ready-up and humans on both sides (P11), lobby chat, spectators, a launcher results page, a separate Invite button.
 
-## Open for the build
+## Answered for the build
 
-- Which team a bot added with + Add bot joins; allied bots stay the Later item Team up with a bot, so the default is the side without humans.
-- Whether the host may change the map, the teams or the starts after the friend joined without a new protocol message: the start flow answer says no relay or protocol change, so if the settings cannot reach the guest before Start match, they lock once the friend is in, and P11 unlocks them.
-- Start pick online: the chosen starts must reach the guest with the match start (a new field in the start settings), and a guest taking their own start needs a guest-to-host message. If either counts as the protocol change the answers rule out, P20 ships the host placing every start and the guest's own pick waits for P11; ask the owner before the build.
+[Lobby build answers](../../reference/design-answers-2026-11-08.md#lobby-build-answers-user-2026-11-26), [lobby look after the first bot match](../../reference/design-answers-2026-11-08.md#lobby-look-after-the-first-bot-match-user-2026-11-26), [lobby look round](../../reference/design-answers-2026-11-08.md#lobby-look-round-user-2026-11-26) and [live room in P20](../../reference/design-answers-2026-11-08.md#live-room-in-p20-user-2026-11-26) (user, 2026-11-26): + Add bot adds an enemy bot (offline 1 against several bots; no team move); protocol 3 live room on the relay (host-only `settings`, `joined`, `start_request`, `welcome` with settings), served beside protocol 2; hold C and the lock at Get invite code retire.
+
+## Answered for the second slice
+
+[Lobby after the friend match](../../reference/design-answers-2026-11-08.md#lobby-after-the-friend-match-user-2026-11-26) (user, 2026-11-26): each player places their own start on the preview; the friend's choice rides on the protocol 3 `pick` message, the host folds it into the settings. A Skirmish click while hosting asks "Stop hosting?" (user, 2026-11-27).

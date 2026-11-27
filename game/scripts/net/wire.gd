@@ -1,16 +1,19 @@
 extends RefCounted
 
-const PROTOCOL: int = 2
+const PROTOCOL: int = 3
 const MAX_FRAME_BYTES: int = 65536
 const MAX_SAFE_INT: float = 9007199254740992.0
+# The relay's largest room; seat numbers index per-seat tables such as the player colours.
+const MAX_SEATS: int = 8
 const _INT_FIELDS := {
 	"hello": ["protocol"], "welcome": ["seat"], "start": ["delay", "seed"], "tick": ["seat", "tick"],
 	"ping": ["t"], "pong": ["t"], "left": ["seat", "after_tick"], "error": [], "over": [], "again": [],
+	"joined": ["seat"], "settings": [], "start_request": [], "pick": [],
 }
 const _REQUIRED := {
 	"hello": ["protocol", "build", "match"], "welcome": ["seat", "match"], "start": ["seats", "delay", "seed", "settings"],
 	"tick": ["seat", "tick", "commands"], "ping": ["t"], "pong": ["t"], "left": ["seat", "after_tick"], "error": ["reason"],
-	"over": [], "again": [],
+	"over": [], "again": [], "joined": ["seat"], "settings": ["settings"], "start_request": [], "pick": ["pick"],
 }
 const _COMMAND_INTS := ["tick", "player", "sequence", "builder_id", "building_id", "production_id", "source_id", "target_id"]
 
@@ -37,10 +40,12 @@ static func decode(text: String) -> Dictionary:
 		if not message.has(key): return _fail("missing " + key)
 	for key: Variant in _INT_FIELDS[type]:
 		if not _to_int(message, key): return _fail("non-integer " + key)
-	if type == "again" and message.has("seat") and not _to_int(message, "seat"): return _fail("non-integer seat")
+	if type == "pick" and message.pick is not Dictionary: return _fail("invalid pick")
+	if (type == "again" or type == "pick") and message.has("seat") and not _to_int(message, "seat"): return _fail("non-integer seat")
 	if type == "error" and message.reason is not String: return _fail("non-string reason")
+	if type == "welcome" and (message.match is not String or message.seat < 1 or message.seat > MAX_SEATS): return _fail("invalid welcome")
 	if type == "start" and not _ints_in(message, "seats"): return _fail("non-integer seats")
-	if (type == "start" or type == "hello") and message.has("settings") and message.settings is not Dictionary: return _fail("invalid settings")
+	if (type == "start" or type == "hello" or type == "welcome" or type == "settings") and message.has("settings") and message.settings is not Dictionary: return _fail("invalid settings")
 	if type == "tick" and not _tick_extras(message): return _fail("invalid tick message")
 	return {"ok": true, "error": "", "message": message}
 

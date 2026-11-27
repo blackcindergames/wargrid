@@ -16,11 +16,12 @@ import (
 )
 
 const (
-	codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-	protocol     = 2
-	inputDelay   = 4
-	maxDelay     = inputDelay  // the highest delay a seat may use; the lead bound allows it, adaptive input delay raises it
-	expiryGrace  = time.Second // the socket backstop sits after the room timer, so the error frame lands before the close
+	codeAlphabet  = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	protocol      = 2
+	lobbyProtocol = 3
+	inputDelay    = 4
+	maxDelay      = inputDelay  // the highest delay a seat may use; the lead bound allows it, adaptive input delay raises it
+	expiryGrace   = time.Second // the socket backstop sits after the room timer, so the error frame lands before the close
 )
 
 type config struct {
@@ -30,22 +31,24 @@ type config struct {
 	hello     time.Duration
 	silence   time.Duration
 	lobby     time.Duration // lobby expiry and start window
+	lobbyCap  time.Duration
 }
 
 type seat struct {
-	n        int
-	c        *conn
-	r        *room
-	lastTick int
-	frames   int
-	bytes    int
-	maxFrame int
-	peak     int // most bytes in one tumbling second
-	winBytes int
-	winStart time.Time
-	dead     bool // rejected: ignore further input, still counts until the socket closes
-	over     bool
-	again    bool
+	n              int
+	c              *conn
+	r              *room
+	lastTick       int
+	frames         int
+	bytes          int
+	maxFrame       int
+	peak           int // most bytes in one tumbling second
+	winBytes       int
+	winStart       time.Time
+	dead           bool // rejected: ignore further input, still counts until the socket closes
+	over           bool
+	again          bool
+	settingsBucket bucket
 }
 
 type joinReq struct {
@@ -67,6 +70,18 @@ type tickMsg struct {
 	hash hashMsg
 }
 
+type settingsMsg struct {
+	s   *seat
+	raw []byte
+}
+
+type startRequestMsg struct{ s *seat }
+
+type pickMsg struct {
+	s   *seat
+	raw []byte
+}
+
 type leaveMsg struct{ s *seat }
 
 type overMsg struct{ s *seat }
@@ -84,6 +99,8 @@ type room struct {
 	done     chan struct{}
 	seats    map[int]*seat
 	started  bool
+	protocol int
+	created  time.Time
 	settings []byte
 	stats    map[int]string
 	// hashes holds comparisons still waiting for a seat: hash tick -> seat -> value.
@@ -142,6 +159,12 @@ func (r *room) run() {
 				r.onOver(ev.s)
 			case againMsg:
 				r.onAgain(ev.s)
+			case settingsMsg:
+				r.onSettings(ev.s, ev.raw)
+			case pickMsg:
+				r.onPick(ev.s, ev.raw)
+			case startRequestMsg:
+				r.onStartRequest(ev.s)
 			case leaveMsg:
 				if r.leave(ev.s) {
 					return
@@ -197,11 +220,16 @@ func (r *room) expire() {
 	if r.started {
 		return
 	}
+	slog.Info("lobby expired", "code", r.code)
+	r.closeLobby("lobby expired")
+}
+
+// closeLobby ends a room that never started and rejects its seats; with seat 1 gone the next joiner would become host.
+func (r *room) closeLobby(reason string) {
 	r.expired = true
 	r.reg.remove(r.code, r)
-	slog.Info("lobby expired", "code", r.code)
-	for _, s := range r.seats {
-		s.c.reject("lobby expired")
+	for _, o := range r.seats {
+		o.c.reject(reason)
 	}
 }
 
@@ -212,6 +240,9 @@ func (r *room) join(j joinReq) joinResult {
 	}
 	if r.build != h.build {
 		return joinResult{reason: "build mismatch"}
+	}
+	if r.protocol != h.protocol {
+		return joinResult{reason: "protocol mismatch"}
 	}
 	if r.started || len(r.seats) >= r.cfg.seats {
 		return joinResult{reason: "match full"}
@@ -227,6 +258,17 @@ func (r *room) admit(c *conn) *seat {
 	s := &seat{n: n, c: c, r: r}
 	r.seats[n] = s
 	slog.Info("seat joined", "code", r.code, "seat", n)
+	if r.protocol == lobbyProtocol {
+		c.send([]byte(fmt.Sprintf(`{"type":"welcome","seat":%d,"match":%q,"settings":%s}`, n, r.code, r.settings)), 0)
+		joined := []byte(fmt.Sprintf(`{"type":"joined","seat":%d}`, n))
+		for _, o := range r.seats {
+			if o != s {
+				o.c.send(joined, 0)
+			}
+		}
+		c.dl.hold(r.expiresAt.Add(expiryGrace))
+		return s
+	}
 	c.send([]byte(fmt.Sprintf(`{"type":"welcome","seat":%d,"match":%q}`, n, r.code)), 0)
 	if len(r.seats) == r.cfg.seats {
 		r.start()
@@ -238,16 +280,94 @@ func (r *room) admit(c *conn) *seat {
 
 func (r *room) start() {
 	r.started = true
-	list := make([]string, r.cfg.seats)
-	for i := range list {
-		list[i] = fmt.Sprint(i + 1)
+	var list []string
+	for _, n := range slices.Sorted(maps.Keys(r.seats)) {
+		list = append(list, fmt.Sprint(n))
 	}
-	slog.Info("match start", "code", r.code, "seats", r.cfg.seats)
+	slog.Info("match start", "code", r.code, "seats", len(list))
 	start := []byte(fmt.Sprintf(`{"type":"start","seats":[%s],"delay":%d,"seed":%d,"settings":%s}`, strings.Join(list, ","), inputDelay, randomSeed(), r.settings))
 	window := time.Now().Add(r.cfg.lobby)
 	for _, s := range r.seats {
 		s.c.dl.hold(window)
 		s.c.send(start, 0)
+	}
+}
+
+func (r *room) onSettings(s *seat, raw []byte) {
+	if s.dead || r.expired {
+		return
+	}
+	if r.protocol != lobbyProtocol || s.n != 1 || r.started {
+		r.refuse(s)
+		return
+	}
+	if !r.allowSettings(s) {
+		return
+	}
+	r.settings = raw
+	frame := []byte(`{"type":"settings","settings":` + string(raw) + `}`)
+	for _, o := range r.seats {
+		if o != s {
+			o.c.send(frame, 0)
+		}
+	}
+	r.extendLobby()
+}
+
+// allowSettings draws from the seat's bucket for settings and picks alike; an empty bucket ends the seat.
+func (r *room) allowSettings(s *seat) bool {
+	if s.settingsBucket.allow(time.Now(), settingsBurst, settingsPeriod) {
+		return true
+	}
+	s.dead = true
+	slog.Info("settings rate limit", "code", r.code, "seat", s.n)
+	s.c.reject("too many settings")
+	return false
+}
+
+// onPick tells the host what a guest chose; it is neither stored nor echoed and does not extend the lobby (the host's settings that follow do).
+func (r *room) onPick(s *seat, raw []byte) {
+	if s.dead || r.expired {
+		return
+	}
+	if r.protocol != lobbyProtocol || s.n == 1 {
+		r.refuse(s)
+		return
+	}
+	if r.started { // a guest cannot order its pick against the host's start_request, so a late one is not an error
+		return
+	}
+	if !r.allowSettings(s) {
+		return
+	}
+	if host := r.seats[1]; host != nil {
+		host.c.send([]byte(fmt.Sprintf(`{"type":"pick","seat":%d,"pick":%s}`, s.n, raw)), 0)
+	}
+}
+
+// extendLobby keeps a lobby alive while the host is setting up, never past lobbyCap from creation.
+func (r *room) extendLobby() {
+	until := time.Now().Add(r.cfg.lobby)
+	if hardStop := r.created.Add(r.cfg.lobbyCap); until.After(hardStop) {
+		until = hardStop
+	}
+	r.expiresAt = until
+	r.expiry.Reset(time.Until(until))
+	for _, o := range r.seats {
+		o.c.dl.hold(until.Add(expiryGrace))
+	}
+}
+
+func (r *room) onStartRequest(s *seat) {
+	if s.dead || r.expired {
+		return
+	}
+	if r.protocol != lobbyProtocol || s.n != 1 || r.started {
+		r.refuse(s)
+		return
+	}
+	if len(r.seats) == r.cfg.seats { // a guest's left may still be in flight; the host clicks again
+		r.start()
 	}
 }
 
@@ -437,6 +557,9 @@ func (r *room) rematch() {
 // leave reports whether the room is now empty and has been removed.
 func (r *room) leave(s *seat) bool {
 	delete(r.seats, s.n)
+	if r.protocol == lobbyProtocol && !r.started && s.n == 1 {
+		r.closeLobby("host left")
+	}
 	left := []byte(fmt.Sprintf(`{"type":"left","seat":%d,"after_tick":%d}`, s.n, max(s.lastTick, inputDelay-1)))
 	for _, o := range r.seats {
 		o.c.send(left, 0)
@@ -505,14 +628,14 @@ func (g *registry) remove(code string, r *room) {
 }
 
 func (g *registry) join(h *envelope, c *conn) joinResult {
-	if h.protocol != protocol {
+	if h.protocol != protocol && h.protocol != lobbyProtocol {
 		return joinResult{reason: "protocol mismatch"}
 	}
 	if h.badSettings {
 		return joinResult{reason: "invalid message"}
 	}
 	if h.match == "" {
-		if h.settings == nil {
+		if h.raw == nil {
 			return joinResult{reason: "missing settings"}
 		}
 		return g.create(h, c)
@@ -544,7 +667,7 @@ func (g *registry) create(h *envelope, c *conn) joinResult {
 		code = randomCode()
 	}
 	r := &room{
-		code: code, cfg: g.cfg, reg: g, build: h.build, settings: h.settings,
+		code: code, cfg: g.cfg, reg: g, build: h.build, settings: h.raw, protocol: h.protocol, created: time.Now(),
 		joins: make(chan joinReq), events: make(chan any, 64), done: make(chan struct{}),
 		seats: map[int]*seat{}, stats: map[int]string{}, expiresAt: time.Now().Add(g.cfg.lobby),
 		hashes: map[int]map[int]string{}, peaks: map[int][2]int{},

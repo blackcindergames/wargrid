@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How does the bot row's remove control look?
+why: >-
+  Drawn as the host before the press, with the open slot kept for your friend and two bots. The X
+  replaces the ••• menu (decided); the outside suggestion you shared (16 to 18 px borderless X, a
+  40 x 40 hit area, grey at rest, muted red on hover and press, tooltip "Remove bot") is B. The
+  player-experience reviewer's concern: red is a player colour, and Bot 1's red swatch sits in the
+  same row, so a red X can read as "this player" rather than "remove". N flips the states on Bot 1:
+  rest, hover (with the tooltip), pressed, keyboard focus. Every row keeps a 40 px action column (96
+  px for D), so the faction dropdowns line up on every row.
+look: Whether the X reads as "remove this bot" at rest, and whether hover says it is safe to click.
+controls:
+  state: [rest, hover, press, focus]
+rec: A
+recWhy: >-
+  grey that brightens is calm at rest and clearly live on hover, and it keeps red for player colours
+  and errors. B is the outside suggestion and fine on its own, but its red hover sits beside Bot 1's
+  red swatch. C hides the control until the pointer is on the row, so a newcomer never learns that a
+  bot can be removed. D is the plainest, but its 96 px column narrows every name, and bot level will
+  want that room later.
+neutral: None of these
+ref:
+  label: 'Today: the slice-1 page, ••• menu and misaligned dropdowns'
+  img: docs/images/lobby-look-round/today-rows.webp
+options:
+  A:
+    name: Grey X that brightens
+    render: {params: {remove: x}}
+    sees: A grey 16 px X in a 40 px square; hover lightens the square and the X turns white; focus draws a cyan frame.
+    notes: The player-experience reviewer's pick; no red.
+  B:
+    name: Grey X, muted red on hover and press
+    render: {params: {remove: red}}
+    sees: The same X at rest; hover gives a dark red square with a salmon X, pressed a deeper red.
+    notes: The outside suggestion you shared.
+  C:
+    name: Ghost X, only on row hover or focus
+    render: {params: {remove: ghost}}
+    sees: No X at rest; it appears when the pointer is on the row or the keyboard focus reaches it.
+    notes: Quietest page; the control is invisible until you look for it.
+  D:
+    name: '"⊖ Remove" text button'
+    render: {params: {remove: text}}
+    sees: A circled minus and the word Remove in grey on each bot row; a wider action column on every row.
+    notes: Says what it does; costs 56 px of row width.

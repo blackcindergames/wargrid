@@ -21,3 +21,7 @@ static func save_enabled(on: bool) -> void:
 static func build_id(version: String = str(ProjectSettings.get_setting("application/config/version")), commit_path: String = COMMIT_PATH) -> String:
 	var commit: String = FileAccess.get_file_as_string(commit_path).strip_edges() if FileAccess.file_exists(commit_path) else ""
 	return "%s+%s" % [version, commit if not commit.is_empty() else "unknown"]
+
+# What the hello sends as build: a test build adds its commit, so two different test builds never share a room.
+static func hello_build(version: String = str(ProjectSettings.get_setting("application/config/version")), commit_path: String = COMMIT_PATH) -> String:
+	return build_id(version, commit_path) if prerelease(version) else version

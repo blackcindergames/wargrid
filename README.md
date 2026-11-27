@@ -40,7 +40,7 @@ Wargrid is an isometric RTS written in Godot 4 and typed GDScript. It is inspire
 
 - **In the browser:** https://wargrid.blackcindergames.com (verified in Safari; Chrome and Firefox untested).
 - **Desktop:** Linux, Windows and macOS zips on the [Releases](https://github.com/blackcindergames/wargrid/releases) page. Builds are unsigned: on macOS 15 and later open System Settings > Privacy & Security > Open Anyway after the first blocked start (or run `xattr -dr com.apple.quarantine Wargrid.app` once); on Windows, SmartScreen needs More info, Run anyway.
-- **Online with a friend:** one player clicks *Create match* and shares the match code; the other enters it and clicks *Join*. The host chooses the map; the other player's game checks it. Both need the same version.
+- **Online with a friend:** one player picks *Host game* and shares the code that appears; the other enters it under *Join game*. The host can keep changing the map and the bots, and the friend sees each change. Once the friend is in, the host clicks *Start match*. Both need the same version.
 - **From source:** Godot 4.7.2, see [setup and commands](docs/development.md#setup-and-commands).
 
 ## Status
@@ -50,7 +50,7 @@ Early development; the latest build is on the [Releases](https://github.com/blac
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**18 of 48 parts done**
+**19 of 48 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | Know what your factory is making | Done |
 | ✅ | A short Esc menu | Done |
 | ⏭ | Team up against bots | Next |
-| 📋 | A lobby for every match | Planned |
+| ✅ | A lobby for every match | Done |
 | 📋 | Know what beats what | Planned |
 | 📋 | First new units | Planned |
 | 📋 | Hear the whole battlefield | Planned |
@@ -113,13 +113,13 @@ Performance against the low-end budget (generated):
 | --- | --- | --- | --- | --- |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame** | 🔴 Over | ██████████▶ 188% | 🆕 first run | 2026-11-22 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 1% worse (busy host) | 2026-11-27 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 2% worse | 2026-11-27 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔻 1% better | 2026-11-27 |
 | Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 6% worse | 2026-11-27 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 1% worse (busy host) | 2026-11-27 |
-| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔺 1% worse (busy host) | 2026-11-27 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same (busy host) | 2026-11-27 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 3% worse (busy host) | 2026-11-27 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | ➖ same | 2026-11-27 |
+| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔻 1% better | 2026-11-27 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same | 2026-11-27 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 3% better | 2026-11-27 |
 
 Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
@@ -131,16 +131,14 @@ These areas are over their limit and no known change brings them under it yet, s
 
 | Area | Latest on this Mac | Recent runs → | vs recent runs | As of |
 | --- | --- | --- | --- | --- |
-| Background upkeep, huge crowds (stress) | mean 1.97 ms | ▄▆▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
+| Background upkeep, huge crowds (stress) | mean 1.98 ms | ▆▄▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
 | Combat, huge battles (stress) | p95 2.94 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
 | Background upkeep, armies on the move (stress) | mean 1.33 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
 | Combat, big armies in the open (stress) | p95 1.91 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
-| Combat, big armies packed close (stress) | p95 1.88 ms | ▄▄▄▄▄▄▄▄ | ➖ same, +1% (noise ±41%) | 2026-11-27 |
+| Combat, big armies packed close (stress) | p95 1.86 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
 | 3v3 match, background upkeep (real 3v3) | mean 1.15 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
-| 3v3 match, simulation (real 3v3) | p95 2.67 ms | ▄▄▅▄▄▄▄▄ | ➖ same | 2026-11-27 |
-| 3v3 match, bots and simulation (real 3v3) | p95 3.24 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
-
-The latest run of every tracked area was on a busy host.
+| 3v3 match, simulation (real 3v3) | p95 2.68 ms | ▄▅▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
+| 3v3 match, bots and simulation (real 3v3) | p95 3.25 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-27 |
 
 Details: [performance ledger](docs/reference/performance.md).
 <!-- perf-table:end -->

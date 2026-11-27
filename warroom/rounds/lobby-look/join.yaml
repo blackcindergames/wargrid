@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: Where does Join game take the code?
+why: >-
+  Join game is the third mode; the sidebar has no Join (decided, your sketch is Today). N flips the
+  states: the empty page (the code field has the focus), from a join link, connecting, two errors,
+  and the joined view after the relay's start, which is the same in every option: title Play,
+  "Joined your friend's game · the host sets up the match", the host's setup as text, only your
+  faction open, "Invite code K7Q2XD" in the host's box shape without the Copy segment at the Mode
+  row's right end, the other modes greyed ("Leave first"), Leave at the bottom. A join link
+  (?code=) lands in Join game with the code filled and the focus on Join match (second state), so
+  Enter joins. Your faction can still change after joining, until Start match. The two error texts
+  are proposals; today the relay's reasons show raw. "unknown match" (also sent for an expired or
+  crashed room): "No open game with code K7Q2X8. Check the code, or ask your friend for a new
+  one." "match full" (also sent for a game that already started): "That game is full or has
+  already started. Ask your friend to host a new one."
+look: Whether someone who got a code in a chat message finds where it goes and what to press.
+controls:
+  state: [entry, link, connecting, error, full, joined]
+rec: C
+recWhy: >-
+  one card with three things, code, faction, Join match, leaves no doubt what to do, the error sits
+  under the field it is about, and the full lobby appearing after the join says "you are in". A
+  mirrors the host's code at the Mode row's right end, which is tidy, but a text field in a toolbar
+  is easy to miss, its error has to go to the footer, and the eye lands on an empty body. B puts the
+  field where the eye lands and keeps the layout steady when the lobby fills in, but the greyed slot
+  list reads as something broken or still loading.
+neutral: None of these
+ref:
+  label: 'Your sketch: three modes, no Join in the sidebar'
+  img: docs/images/lobby-look-round/sketch-join.webp
+options:
+  A:
+    name: In the Mode row's right end
+    render: {params: {entry: row}}
+    sees: Right of the modes, an "Invite code" box with the field, where the host's code sits; your row and greyed placeholders below; Join match bottom right.
+    notes: Mirrors Host game; messages in the footer.
+  B:
+    name: In the body above the teams
+    render: {params: {entry: body}}
+    sees: INVITE CODE and the field at the top of the players column, your row under it, the host's rows and map greyed as "appear here when you join".
+    notes: Layout stays when the lobby fills in.
+  C:
+    name: A centred card, no slot list until joined
+    render: {params: {entry: card}}
+    sees: '"Join a friend''s game": the code field, the message line under it, Your faction, a wide Join match; nothing else until you join.'
+    notes: One task on the page; the lobby appears on join.

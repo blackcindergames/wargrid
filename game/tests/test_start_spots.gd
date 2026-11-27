@@ -7,7 +7,7 @@ const StartSpots = preload("res://scripts/simulation/start_spots.gd")
 const SS6_PINNED := "8-4,2-6,3-7,5-1,6-2,2-6,7-3,4-8,1-5,3-7,2-6,6-2,6-2,8-4,6-2,5-1"
 
 func cases() -> Array[Callable]:
-	return [test_first_random, test_farthest, test_summed, test_teammates, test_chosen, test_pinned, test_ties, test_no_team, test_summed_not_nearest]
+	return [test_first_random, test_farthest, test_summed, test_teammates, test_chosen, test_pinned, test_ties, test_no_team, test_summed_not_nearest, test_allies_start_together]
 
 func _ashfall() -> Dictionary:
 	return MapData.load("res://data/maps/ashfall.json")
@@ -84,7 +84,7 @@ func test_ties(runner) -> bool:
 		ok = ok and a[1] == near[a[0]]
 	runner.check(ok, "SS7 ties go to the lowest seat")
 	runner.check(StartSpots.assign(map, 0, _ints([0, 0, 0]), _ints([1, 0, 0])) == _ints([1, 3, 2]), "SS7 summed tie goes to the lowest seat")
-	runner.check(StartSpots.assign(map, 0, _ints([1, 1]), _ints([1, 0])) == _ints([1, 3]), "SS7 a chosen spot is not its team's position")
+	runner.check(StartSpots.assign(map, 0, _ints([1, 1]), _ints([1, 0])) == _ints([1, 2]), "SS7 a teammate of a chosen spot takes the closest start, the tie to the lowest seat")
 	return true
 
 func test_no_team(runner) -> bool:
@@ -101,4 +101,12 @@ func test_summed_not_nearest(runner) -> bool:
 	var ok := true
 	for s in 32: ok = ok and StartSpots.assign(_ashfall(), s, _ints([1, 2, 3, 4]), _ints([1, 4, 0, 0])) == _ints([1, 4, 7, 5])
 	runner.check(ok, "SS9 the farthest start maximises the summed distance, not the distance to the nearest taken one")
+	return true
+
+# Allies start together (user, 2026-11-27): a chosen start anchors its team like the first random one.
+func test_allies_start_together(runner) -> bool:
+	var crown := MapData.load("res://data/maps/broken_crown.json")
+	var ok := true
+	for s in 32: ok = ok and StartSpots.assign(crown, s, _ints([1, 1, 2]), _ints([1, 0, 0])) == _ints([1, 4, 2])
+	runner.check(ok, "SS10 the host picks 1, the unpicked guest on its team lands next to it on 4, not across on 3")
 	return true

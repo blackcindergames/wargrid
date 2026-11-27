@@ -11,11 +11,12 @@ import (
 
 const wait = 3 * time.Second
 
-// The relay's timeouts (WARGRID_SILENCE_MS, WARGRID_HELLO_MS, WARGRID_LOBBY_MS); set by -silence, -hello, -lobby.
+// The relay's timeouts (WARGRID_SILENCE_MS, WARGRID_HELLO_MS, WARGRID_LOBBY_MS, WARGRID_LOBBY_CAP_MS); set by -silence, -hello, -lobby, -lobbycap.
 var (
 	silence    = 10 * time.Second
 	helloLimit = 5 * time.Second
 	lobbyLimit = 15 * time.Minute
+	lobbyCap   = time.Hour
 )
 
 type failure struct{ msg string }
@@ -237,11 +238,11 @@ func defaultCases() []tcase {
 			p.say(`{"type":"hello","protocol":1,"build":"abc","match":""}`)
 			expect(p, `{"type":"error","reason":"protocol mismatch"}`)
 			expectClosed(p)
-			p3 := must(dial(url))
-			defer p3.close()
-			p3.say(hello("", "abc", 3))
-			expect(p3, `{"type":"error","reason":"protocol mismatch"}`)
-			expectClosed(p3)
+			p4 := must(dial(url))
+			defer p4.close()
+			p4.say(hello("", "abc", 4))
+			expect(p4, `{"type":"error","reason":"protocol mismatch"}`)
+			expectClosed(p4)
 			a := must(dial(url))
 			defer a.close()
 			a.say(hello("", "abc", 2))
@@ -368,7 +369,7 @@ func defaultCases() []tcase {
 		{"protocol_beats_bad_settings", func(url string) {
 			for _, bad := range []string{`"x"`, `{"k":"` + strings.Repeat("x", 4090) + `"}`} {
 				cl := must(dial(url))
-				cl.say(helloSettings("", "abc", 3, bad))
+				cl.say(helloSettings("", "abc", 4, bad))
 				expect(cl, `{"type":"error","reason":"protocol mismatch"}`)
 				expectClosed(cl)
 				cl.close()
@@ -901,7 +902,7 @@ func globalCases() []tcase {
 }
 
 func runConform(url, profile string) int {
-	cases := map[string][]tcase{"default": defaultCases(), "silence": silenceCases(), "delay": delayCases(), "limits": limitsCases(), "global": globalCases()}[profile]
+	cases := map[string][]tcase{"default": append(defaultCases(), lobbyCases()...), "silence": append(silenceCases(), lobbySilenceCases()...), "delay": delayCases(), "limits": limitsCases(), "global": globalCases()}[profile]
 	if len(cases) == 0 {
 		fmt.Println("unknown profile", profile)
 		return 2

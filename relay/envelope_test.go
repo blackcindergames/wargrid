@@ -24,7 +24,7 @@ func TestVectors(t *testing.T) {
 			t.Fatal(err)
 		}
 		e := parseEnvelope([]byte(v.Text))
-		clientType := map[string]bool{"hello": true, "tick": true, "ping": true, "over": true, "again": true}[v.Message.Type]
+		clientType := map[string]bool{"hello": true, "tick": true, "ping": true, "over": true, "again": true, "settings": true, "start_request": true, "pick": true}[v.Message.Type]
 		want := v.Valid == nil && clientType
 		if (e != nil) != want {
 			t.Errorf("%s: parsed=%v want=%v", filepath.Base(f), e != nil, want)
@@ -65,7 +65,7 @@ func TestParseRules(t *testing.T) {
 	if e := parseEnvelope([]byte(`{"type":"hello","protocol":2,"build":"a","match":"","settings":{}}`)); e == nil || e.badSettings {
 		t.Errorf("good settings flagged: %v", e)
 	}
-	if e := parseEnvelope([]byte(`{"type":"hello","protocol":2,"build":"a","match":"","settings":{ "map" : "x" }}`)); e == nil || string(e.settings) != `{ "map" : "x" }` {
+	if e := parseEnvelope([]byte(`{"type":"hello","protocol":2,"build":"a","match":"","settings":{ "map" : "x" }}`)); e == nil || string(e.raw) != `{ "map" : "x" }` {
 		t.Errorf("settings bytes %v", e)
 	}
 	if e := parseEnvelope([]byte(`{"type":"ping","t":9007199254740993}`)); e.t != "9007199254740993" {
@@ -91,8 +91,10 @@ func TestJoinProtocolBeatsSettings(t *testing.T) {
 		e      envelope
 		reason string
 	}{
-		{"protocol 3 bad settings", envelope{protocol: 3, badSettings: true}, "protocol mismatch"},
-		{"protocol 3 missing settings", envelope{protocol: 3}, "protocol mismatch"},
+		{"protocol 3 bad settings", envelope{protocol: lobbyProtocol, badSettings: true}, "invalid message"},
+		{"protocol 3 missing settings", envelope{protocol: lobbyProtocol}, "missing settings"},
+		{"protocol 4 bad settings", envelope{protocol: 4, badSettings: true}, "protocol mismatch"},
+		{"protocol 4 missing settings", envelope{protocol: 4}, "protocol mismatch"},
 		{"protocol 2 bad settings", envelope{protocol: protocol, badSettings: true}, "invalid message"},
 		{"protocol 2 bad settings joiner", envelope{protocol: protocol, badSettings: true, match: "ABC234"}, "invalid message"},
 		{"protocol 2 missing settings", envelope{protocol: protocol}, "missing settings"},

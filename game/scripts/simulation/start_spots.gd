@@ -10,15 +10,17 @@ static func assign(map: Dictionary, match_seed: int, teams: Array[int], chosen: 
 	placed.resize(teams.size())
 	placed.fill(-1)
 	var picked := false
+	var team_spot := {}
 	for k in teams.size():
 		var index := _index_of(starts, chosen[k])
 		if chosen[k] > 0 and index >= 0:
 			placed[k] = index
 			taken[index] = true
 			picked = true
+			# Allies start together (user, 2026-11-27): the first chosen start of a team anchors its unpicked teammates.
+			if teams[k] > 0 and not team_spot.has(teams[k]): team_spot[teams[k]] = index
 	var rng := RandomNumberGenerator.new()
 	rng.seed = match_seed
-	var team_spot := {}
 	for k in teams.size():
 		if placed[k] >= 0: continue
 		var team := teams[k]

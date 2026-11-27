@@ -43,6 +43,8 @@ const JUMP_NEAR_PX: float = 24.0
 static var factions: Dictionary = Registry.Factions.DEFAULT_SKIRMISH
 static var map_path: String = Skirmish.MAP_PATH
 static var starts: Array[int] = []
+# The chosen and closed starts the match began with, so a rematch keeps them.
+static var placement: Dictionary = {}
 static var match_seed: int = 0
 var driver: RefCounted
 var orders: RefCounted = Orders.new(self)
@@ -233,7 +235,7 @@ func playtest_header() -> Dictionary:
 	return _header(played)
 
 func _header(played: Dictionary) -> Dictionary:
-	return {"mode": played.mode, "map": _map_id(), "seed": match_seed, "factions": played.factions, "teams": played.teams, "bots": played.bots, "seat": local_player, "controller": "human", "sim": driver.sim_mode(), "build": PlaytestSettings.build_id()}
+	return {"mode": played.mode, "map": _map_id(), "seed": match_seed, "starts": starts, "factions": played.factions, "teams": played.teams, "bots": played.bots, "seat": local_player, "controller": "human", "sim": driver.sim_mode(), "build": PlaytestSettings.build_id()}
 
 func _map_id() -> String:
 	return map_path.get_file().get_basename()
@@ -737,7 +739,7 @@ func _restart() -> void:
 
 func _rematch(match_seed_value: int) -> void:
 	match_seed = match_seed_value
-	starts = MatchSettings.starts(map_path.get_file().get_basename(), match_seed_value, driver.teams())
+	starts = MatchSettings.starts(map_path.get_file().get_basename(), match_seed_value, driver.teams(), placement)
 	_restart_world()
 
 func _restart_world() -> void:
