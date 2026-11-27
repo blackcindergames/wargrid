@@ -1007,6 +1007,7 @@ func test_restart_keeps_map_and_starts(runner) -> bool:
 	var main = load(LauncherScript.OFFLINE_SCENE).instantiate()
 	runner.root.add_child(main)
 	await runner.process_frame
+	BaseScene.settle(main)
 	var old_sim = main.driver.pump.live()
 	main._restart()
 	runner.check(not is_same(old_sim, main.driver.pump.live()), "N12 Restart builds a new simulation")
@@ -1929,6 +1930,7 @@ func test_sb3_online_two_notes(runner) -> bool:
 	main._visuals = visuals
 	main._view.set_visuals(visuals)
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	main._drain_notes()
 	var ticks: Array[int] = director.collected_ticks().slice(before)
 	runner.check(ticks == [5, 6] and main.driver.current().tick == 6, "SB3 one drain collects both catch-up ticks in order, got %s and tick %d" % [ticks, main.driver.current().tick])
@@ -2320,6 +2322,7 @@ func test_ph_preview_on_last_job_of_catch_up(runner) -> bool:
 	var tick: int = _preview_fixture(online)
 	_peer_packets(online.transport, 2, 9, PEER_TICKS)
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	var previews: int = notes.filter(func(note: SimPump.Note) -> bool: return not note.preview.is_empty()).size()
 	runner.check(notes.size() == 2 and previews == 2, "PH a two-tick step call asks for the preview on both jobs, got %d notes and %d previews at tick %d" % [notes.size(), previews, tick])
@@ -2355,6 +2358,7 @@ func test_ph_preview_on_single_job_when_next_tick_waits(runner) -> bool:
 	var tick: int = _preview_fixture(online)
 	_peer_packets(online.transport, 2, tick, tick)
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	runner.check(notes.size() == 1 and not notes[0].preview.is_empty(), "PH a one-tick step call carries the preview, got %d notes" % notes.size())
 	main.free()
@@ -2365,6 +2369,7 @@ func test_ph_preview_on_steady_step(runner) -> bool:
 	var main = online.main
 	_preview_fixture(online, PEER_TICKS)
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	var notes: Array[SimPump.Note] = main.driver.drain()
 	runner.check(notes.size() == 1 and not notes[0].preview.is_empty(), "PH a steady one-credit step call carries the preview, got %d notes" % notes.size())
 	main.free()

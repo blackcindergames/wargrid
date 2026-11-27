@@ -1464,6 +1464,7 @@ func _mode() -> String:
 func test_sb5a_mode_from_switch(runner) -> bool:
 	var saved: String = OS.get_environment("WARGRID_SIM_THREAD")
 	var threads: bool = OS.has_feature("threads")
+	var counted: Dictionary = SimPump.pump_counts()
 	SimPump.reset_process_latch_for_test()
 	SimPump.force_mode_for_test("worker")
 	runner.check(_mode() == "worker", "SB5A forced worker names worker")
@@ -1481,6 +1482,7 @@ func test_sb5a_mode_from_switch(runner) -> bool:
 	SimPump.force_mode_for_test("")
 	SimPump.reset_process_latch_for_test()
 	runner.check(SimPump.worker_wanted() == threads and _mode() == ("worker" if threads else "inline"), "SB5A a reset latch gives the worker back")
+	SimPump._counts = counted # the probes name the mode, they are not the suite's pumps
 	if saved.is_empty(): OS.unset_environment("WARGRID_SIM_THREAD")
 	else: OS.set_environment("WARGRID_SIM_THREAD", saved)
 	return true

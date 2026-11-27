@@ -22,8 +22,8 @@ func check(condition: bool, message: String) -> void:
 		failures += 1
 		print("FAIL: ", message)
 
-# Cases whose pumps the runner stops by design (Task 1's "runner" marks).
-const LEFT_TO_RUNNER: Array[String] = ["test_sb3_job0_starts", "test_sb3_freeze_covers_match", "test_sb4_ring_query", "test_th_pump_tick_hash_on_request", "test_ph_driver_matches_advance_peer", "test_pal_note_carries_survivors", "test_pump_bot_first_wave_at_5400", "test_setup_plans_no_bot_orders", "test_offline_driver_stamps_like_the_scene", "test_offline_driver_no_tick_hash_rows_after_the_end", "test_offline_driver_bot_memory_on_simulation", "test_sb1_submit_takes_no_snapshot", "test_desync_report_names_map_seed_starts"]
+# Cases whose pumps the runner stops by design (Task 1's "runner" marks), plus scene cases that queue_free their port, or run a StubDriver, before _exit_tree could stop the pump.
+const LEFT_TO_RUNNER: Array[String] = ["test_sb3_job0_starts", "test_sb3_freeze_covers_match", "test_sb4_ring_query", "test_th_pump_tick_hash_on_request", "test_ph_driver_matches_advance_peer", "test_pal_note_carries_survivors", "test_pump_bot_first_wave_at_5400", "test_setup_plans_no_bot_orders", "test_offline_driver_stamps_like_the_scene", "test_offline_driver_no_tick_hash_rows_after_the_end", "test_offline_driver_bot_memory_on_simulation", "test_sb1_submit_takes_no_snapshot", "test_desync_report_names_map_seed_starts", "test_result_panel_layout", "test_enter_in_text_field_keeps_match", "test_play_again_routes_by_driver", "test_2v2_end_texts_layout", "test_2v2_questions_layout", "test_online_leave_text_and_focus"]
 
 static func leaked_worker_line(case_name: String, stopped: int) -> String:
 	if stopped == 0 or LEFT_TO_RUNNER.has(case_name): return ""
@@ -37,6 +37,26 @@ func _after_case(case_name: String) -> String:
 	if not switch_on() or leak.is_empty(): return ""
 	failures += 1
 	return leak
+
+# Cases that batch several physics frames before one drain (a catch-up callback is a settle, not a batch), and the Profiler cases (a worker asserts no profiler); suite plus method.
+const INLINE_UNDER_SWITCH: Array[String] = [
+	"test_base_scene.gd:test_f33_red_ghost_refused_after_a_two_step_frame", "test_base_scene.gd:test_preview_once_per_physics_step",
+	"test_online_scene.gd:test_sb4_three_callbacks_one_drain", "test_online_scene.gd:test_sb4_no_send_after_end",
+	"test_online_scene.gd:test_sb4_foreign_note_ends_match", "test_online_scene.gd:test_ph_receive_ends_lockstep_with_undrained_job",
+	"test_online_scene.gd:test_f33_online_red_ghost_refused_after_two_callbacks",
+	"test_skirmish_scene.gd:test_offline_driver_no_tick_hash_rows_after_the_end", "test_skirmish_scene.gd:test_sb3_restart_drops_old_notes",
+	"test_skirmish_scene.gd:test_sb3_process_drains", "test_skirmish_scene.gd:test_sb3_record_reads_live_without_queue",
+	"test_base_scene.gd:test_one_snapshot_per_refresh", "test_base_scene.gd:test_ticks_take_no_snapshot", "test_online_scene.gd:test_sb1_online_snapshot_per_hash_tick",
+	"test_skirmish_scene.gd:test_one_snapshot_per_refresh", "test_skirmish_scene.gd:test_sb1_idle_offline_ticks_take_no_snapshot", "test_skirmish_scene.gd:test_sb1_submit_takes_no_snapshot",
+	"test_skirmish_scene.gd:test_sb1_economy_input_reads_shown", "test_skirmish_scene.gd:test_sb1_combat_input_reads_shown", "test_skirmish_scene.gd:test_sb3_over_stops_refreshing",
+	"test_skirmish_scene.gd:test_sb3_one_view_per_tick",
+]
+
+static func case_mode(on: bool, suite_path: String, method: String) -> String:
+	return "inline" if on and INLINE_UNDER_SWITCH.has(suite_path.get_file() + ":" + method) else ""
+
+static func pumps_line(counts: Dictionary) -> String:
+	return "SIM PUMPS worker=%d forced=%d fallback=%d inline=%d" % [counts.worker, counts.forced, counts.fallback, counts.inline]
 
 static func switch_on() -> bool:
 	return OS.get_environment("WARGRID_SIM_THREAD") == "1"
@@ -97,6 +117,7 @@ func _run() -> void:
 	_watchdog.start(_watch.bind(Time.get_ticks_msec() + WATCHDOG_SECONDS * 1000))
 	var suites: Array = [] # a Callable does not keep its RefCounted suite alive
 	var tests: Array[Callable] = []
+	var paths: Array[String] = []
 	var only: String = only_filter(OS.get_cmdline_user_args())
 	for suite_script in SUITES:
 		if not suite_script.can_instantiate():
@@ -113,6 +134,7 @@ func _run() -> void:
 		for test in selected:
 			if only.is_empty() or suite_script.resource_path.contains(only) or test.get_method().contains(only):
 				tests.append(test)
+				paths.append(suite_script.resource_path)
 	var stats: bool = stats_enabled(OS.get_environment("WARGRID_CASE_STATS"))
 	if stats and not only.is_empty():
 		print("CASE_FILTER ", only) # tools/case_times.py refuses to regenerate the table from a filtered run
@@ -128,6 +150,7 @@ func _run() -> void:
 		DirAccess.remove_absolute(AudioSettings.path) # remembered launcher picks must not leak into the next case
 		var before: int = checks
 		var started: int = Time.get_ticks_msec()
+		SimPump.force_mode_for_test(case_mode(switch_on(), paths[i], test.get_method()))
 		var completed: Variant = await test.call(self)
 		var leak: String = _after_case(test.get_method())
 		if not leak.is_empty(): print(leak)
@@ -141,6 +164,7 @@ func _run() -> void:
 		print("FAIL: zero tests/checks")
 	remove_dir(PlaytestSession.dir)
 	await create_timer(0.5).timeout # the audio thread frees stopped playbacks asynchronously; quitting sooner leaks them
+	print(pumps_line(SimPump.pump_counts()))
 	if switch_on(): print("SIM PUMPS LIVE ", SimPump.live_workers())
 	print("CASES ", case_count, " CHECKS ", checks, " FAILURES ", failures)
 	if failures == 0:

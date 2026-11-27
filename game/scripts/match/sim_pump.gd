@@ -102,6 +102,8 @@ var _stats: Dictionary = _zero_stats()
 # A failed pump turns every later pump inline for the rest of the process.
 static var _latched: bool = false
 static var _forced: String = ""
+# Pumps built per way of getting their mode, for the suite's SIM PUMPS line.
+static var _counts: Dictionary = {"worker": 0, "forced": 0, "fallback": 0, "inline": 0}
 # Pumps whose thread is started and not joined, abandoned ones included; the reference keeps a running pump alive.
 static var _threads: Array[RefCounted] = []
 # Installed once, on main, before the first worker starts; Godot has no lock around its logger list, so it is never removed.
@@ -202,9 +204,14 @@ static func worker_wanted() -> bool:
 	return _switch_on() and not _latched
 
 static func _mode_for() -> String:
-	if not _forced.is_empty(): return _forced
-	if worker_wanted(): return "worker"
-	return "inline-fallback" if _switch_on() else "inline"
+	if not _forced.is_empty(): return _counted("forced", _forced)
+	if worker_wanted(): return _counted("worker", "worker")
+	if _switch_on(): return _counted("fallback", "inline-fallback")
+	return _counted("inline", "inline")
+
+static func _counted(kind: String, named: String) -> String:
+	_counts[kind] += 1
+	return named
 
 static func force_mode_for_test(forced: String) -> void:
 	_forced = forced
@@ -294,7 +301,7 @@ static func stop_live_for_test() -> int:
 		stopped += 1
 	return stopped
 
-static func pump_counts() -> Dictionary: return {}
+static func pump_counts() -> Dictionary: return _counts.duplicate()
 
 func _spawn() -> void:
 	assert(OS.has_feature("threads") and not Profiler.enabled, "a worker needs threads and no profiler")

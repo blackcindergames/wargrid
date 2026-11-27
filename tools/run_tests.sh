@@ -40,16 +40,22 @@ status=0
 i=0
 for pid in $pids; do
 	wait "$pid" || status=1
-	grep -Ev '^(CASES|TESTS PASSED) ' "$log_dir/tests.$i.log"
+	grep -Ev '^(CASES|TESTS PASSED|SIM PUMPS) ' "$log_dir/tests.$i.log"
 	i=$((i + 1))
 done
 if cat "$log_dir"/tests.*.log | grep -E 'ERROR:|SCRIPT ERROR:' >/dev/null; then status=1; fi
 cat "$log_dir"/tests.*.log | awk -v shards="$shards" -v status="$status" '
 	/^CASES / { cases += $2; checks += $4; failures += $6; done++ }
+	/^SIM PUMPS worker=/ { for (f = 3; f <= 6; f++) { split($f, kv, "="); pumps[kv[1]] += kv[2] }; counted = 1 }
+	/^SIM PUMPS LIVE / { live += $4; lives = 1 }
 	END {
 		print "CASES " cases " CHECKS " checks " FAILURES " failures
+		if (counted) print "SIM PUMPS worker=" pumps["worker"] " forced=" pumps["forced"] " fallback=" pumps["fallback"] " inline=" pumps["inline"]
+		if (lives) print "SIM PUMPS LIVE " live
+		bad = ENVIRON["WARGRID_SIM_THREAD"] == "1" && ENVIRON["WARGRID_TEST_ONLY"] == "" && (pumps["worker"] == 0 || pumps["inline"] > 0 || live > 0)
+		if (bad) print "FAIL: SIM PUMPS under the worker switch need worker > 0, inline == 0 and LIVE 0"
 		if (done != shards) print "FAIL: " shards - done " of " shards " shards did not finish"
-		else if (status == 0 && failures == 0 && checks > 0) print "TESTS PASSED " checks
+		else if (!bad && status == 0 && failures == 0 && checks > 0) print "TESTS PASSED " checks
 	}' >"$log_dir/summary.log"
 cat "$log_dir/summary.log"
 grep -Eq '^TESTS PASSED [1-9][0-9]*$' "$log_dir/summary.log" || exit 1

@@ -1205,6 +1205,7 @@ func test_offline_driver_stamps_like_the_scene(runner) -> bool:
 	var stamps: Array = queued.map(func(command: Dictionary) -> Array: return [command.tick, command.player, command.sequence])
 	runner.check(first.ok and refused.ok and second.ok and stamps == [[tick, 1, 0], [tick, 1, 1]] and driver.record().commands.size() == 2, "OD1 offline driver stamps tick, player and sequence like main._submit")
 	driver.step()
+	BaseScene.settle(driver)
 	driver.drain()
 	var answers: Array = driver.take_answers().map(func(answer: Dictionary) -> Array: return [answer.command.type, answer.command.sequence, answer.ok, not answer.error.is_empty()])
 	runner.check(answers == [["stop", 0, true, false], ["attack", 1, false, true], ["stop", 1, true, false]], "OD1 the next step answers all three in order, got %s" % [answers])
@@ -1250,6 +1251,7 @@ func test_offline_driver_bot_memory_on_simulation(runner) -> bool:
 	driver.adopt(Skirmish.create())
 	while driver.pump.live().tick() < Skirmish.next_decision(Skirmish.FIRST_WAVE_TICK, 2): driver.pump.live().step()
 	driver.step()
+	BaseScene.settle(driver)
 	runner.check(driver.pump.live().has_meta(Skirmish.BOT_META) and not driver.has_meta(Skirmish.BOT_META), "OD2 bot memory lives on the simulation, not the driver")
 	return true
 
@@ -1676,6 +1678,7 @@ func test_sb3_refusal_waits_in_queue(runner) -> bool:
 	var queued: Array = main.driver.queued()
 	runner.check(queued.size() == 1 and queued[0].type == "move" and queued[0].target == [-5.0, -5.0] and not queued[0].has("sequence") and main.hud.refusal.is_empty() and _error_cues(main) == 0, "SB3 a refusable order waits unissued in the queue, got %s" % [queued])
 	main._physics_process(1.0 / 30.0)
+	BaseScene.settle(main)
 	runner.check(main.hud.refusal.is_empty() and _error_cues(main) == 0, "SB3 the refusal stays silent until the drain, got '%s'" % main.hud.refusal)
 	main._drain_notes()
 	var errors: int = _error_cues(main)
@@ -2695,6 +2698,11 @@ func test_sb5a_failure_clears_pending_build(runner) -> bool:
 	main.free()
 	return true
 
+# The gate holds the job on purpose, so the settle of BaseScene.tick would only time out.
+func _gated_tick(main) -> void:
+	main._physics_process(1.0 / 30.0)
+	main._drain_notes()
+
 func test_sb5a_pause_posts_nothing(runner) -> bool:
 	for mode in _scene_modes():
 		SimPump.force_mode_for_test(mode)
@@ -2702,10 +2710,10 @@ func test_sb5a_pause_posts_nothing(runner) -> bool:
 		SimPump.force_mode_for_test("")
 		var gate := Semaphore.new()
 		if mode == "worker": main.driver.pump.gate_publish_for_test(gate, "before_publish")
-		BaseScene.tick(main)
+		_gated_tick(main)
 		var posted: int = main.driver.pump.queue_stats().posts_attempted
 		main._pause.open()
-		for i in 4: BaseScene.tick(main)
+		for i in 4: _gated_tick(main)
 		if mode == "worker": gate.post()
 		_settle_pump(main.driver.pump)
 		BaseScene.tick(main)

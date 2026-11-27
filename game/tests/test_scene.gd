@@ -185,6 +185,7 @@ func test_driver(runner) -> bool:
 	var before: int = main.driver.pump.live().snapshot().tick
 	await runner.physics_frame
 	await runner.process_frame
+	BaseScene.settle(main)
 	runner.check(main.driver.pump.live().snapshot().tick > before, "S5 live driver advances")
 	main.set_physics_process(false)
 	main.set_process(false)
