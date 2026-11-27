@@ -263,7 +263,23 @@ jobs:
         run: |
           mkdir -p web/site
           for f in index.wasm index.pck index.js index.html; do echo placeholder > "web/site/$f"; done
-          docker build web
+          docker build --build-arg SWS_CONFIG=sws-threads.toml -t wg-web-threads web
+          docker build -t wg-web-default web
+      - name: Serve each web image and check its isolation headers
+        run: |
+          check() { # image, expected COOP+COEP match count
+            docker run -d --rm --name "$1" -p 8080:8080 "$1"
+            curl -sS -o /dev/null --retry 15 --retry-delay 1 --retry-all-errors http://127.0.0.1:8080/health
+            for path in index.html missing; do
+              headers=$(curl -sSI "http://127.0.0.1:8080/$path")
+              coop=$(printf '%s' "$headers" | grep -ci '^cross-origin-opener-policy: same-origin' || true)
+              coep=$(printf '%s' "$headers" | grep -ci '^cross-origin-embedder-policy: require-corp' || true)
+              [ "$coop$coep" = "$2" ] || { echo "$1 /$path: COOP/COEP matches $coop$coep, want $2"; docker stop "$1"; exit 1; }
+            done
+            docker stop "$1"
+          }
+          check wg-web-threads 11
+          check wg-web-default 00
   relay-lint:
     name: Relay / Lint
     runs-on: ubuntu-latest

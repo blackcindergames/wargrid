@@ -1,0 +1,19 @@
+# Godot's exported file names never change; revalidate so a redeploy can't pair a new .wasm with an old .pck.
+[advanced]
+
+[[advanced.headers]]
+source = "**"
+[advanced.headers.headers]
+Cache-Control = "no-cache"
+Cross-Origin-Opener-Policy = "same-origin"
+Cross-Origin-Embedder-Policy = "require-corp"
+Strict-Transport-Security = "max-age=31536000"
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
+
+# The first address stays as a redirect so old links keep working.
+[[advanced.redirects]]
+host = "wargrid.pdstuber.dev"
+source = "/{**}"
+destination = "https://wargrid.blackcindergames.com/$1"
+kind = 301
