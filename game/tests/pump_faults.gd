@@ -12,6 +12,11 @@ const PumpTests = preload("res://tests/test_sim_pump.gd")
 const FACTIONS := {1: "usa", 2: "china"}
 const HOLD_MSEC: int = 12000 # a held job is finite, so an abandoned worker ends before the process does
 const FRAME_LIMIT: int = 400
+# Probe mode, never in the gate: a stall case quits while its worker is still inside the held job (F62).
+static var hold_at_exit: bool = OS.get_environment("WARGRID_FAULT_HOLD_AT_EXIT") == "1"
+const EXIT_HOLD_MSEC: int = 60000
+# Probe only: the pump's logger is built but never handed to OS.add_logger, to see whether it adds to the aborts.
+static var logger_off: bool = OS.get_environment("WARGRID_FAULT_NO_LOGGER") == "1"
 
 # Inside the worker's job window, before the simulation steps: pushes an error (only in a query, if asked) and holds the job.
 class HookPump extends "res://scripts/match/sim_pump.gd":
@@ -19,11 +24,12 @@ class HookPump extends "res://scripts/match/sim_pump.gd":
 	var error_in_query_only: bool = false
 	var hold: Semaphore
 	var entered := Semaphore.new()
+	var hold_msec: int = HOLD_MSEC
 	func _note_for(job: Job, slot: Slot) -> Note:
 		if not error_text.is_empty() and (job.want_tick_hash or not error_in_query_only): push_error(error_text)
 		if hold != null:
 			entered.post()
-			var end: int = Time.get_ticks_msec() + HOLD_MSEC
+			var end: int = Time.get_ticks_msec() + hold_msec
 			while not hold.try_wait() and Time.get_ticks_msec() < end: OS.delay_usec(1000)
 		return super(job, slot)
 
@@ -36,6 +42,7 @@ class DeadPump extends "res://scripts/match/sim_pump.gd":
 var _case: String = ""
 
 func _initialize() -> void:
+	if logger_off: SimPump._logger = preload("res://scripts/match/pump_logger.gd").new()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--case="): _case = arg.trim_prefix("--case=")
 	_run.call_deferred()
@@ -170,6 +177,7 @@ func _await_gone(pump) -> void:
 
 # Releases the held job and waits for the abandoned worker to exit and be joined, so no thread is inside a job at process exit.
 func _finish_stalled(pump) -> String:
+	if hold_at_exit: return ""
 	pump.hold.post()
 	await _await_gone(pump)
 	SimPump._reap_abandoned()
@@ -177,6 +185,7 @@ func _finish_stalled(pump) -> String:
 	return ""
 
 func _live_asserts(pump) -> bool:
+	if logger_off: return true
 	var me: int = OS.get_thread_caller_id()
 	var before: int = SimPump._logger.count_for(me)
 	pump.live()
@@ -199,6 +208,7 @@ func _stalled(with_log: bool = false) -> Array:
 		if pump.busy(): return [null, "the first job never finished"]
 		pump.drain()
 	pump.hold = Semaphore.new()
+	if hold_at_exit: pump.hold_msec = EXIT_HOLD_MSEC
 	pump.post(_job())
 	if not _wait_for(pump.entered): return [null, "the worker never entered the held job"]
 	return [pump, ""]
