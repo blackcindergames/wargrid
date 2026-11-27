@@ -113,9 +113,9 @@ Performance against the low-end budget (generated):
 | --- | --- | --- | --- | --- |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame** | 🔴 Over | ██████████▶ 188% | 🆕 first run | 2026-11-22 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
+| Drawing the screen | 🟢 OK | ███████░░░ 76% | 🔺 6% worse | 2026-11-27 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 75% | 🔺 1% worse | 2026-11-27 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 75% | 🔺 1% worse | 2026-11-27 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 2% worse | 2026-11-27 |
-| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 6% worse | 2026-11-27 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | ➖ same | 2026-11-27 |
 | Unit movement | 🟢 OK | ████░░░░░░ 46% | 🔺 5% worse | 2026-11-27 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 26% | 🔺 3% worse | 2026-11-27 |

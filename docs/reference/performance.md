@@ -15,9 +15,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 147% | ➖ same | 2026-11-27 |
 | **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 126% | ➖ same | 2026-11-27 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
+| Drawing the screen | 🟢 OK | ███████░░░ 76% | 🔺 6% worse | 2026-11-27 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 75% | 🔺 1% worse | 2026-11-27 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 75% | 🔺 1% worse | 2026-11-27 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 74% | 🔺 2% worse | 2026-11-27 |
-| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔺 6% worse | 2026-11-27 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | ➖ same | 2026-11-27 |
 | Unit movement | 🟢 OK | ████░░░░░░ 46% | 🔺 5% worse | 2026-11-27 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 26% | 🔺 3% worse | 2026-11-27 |
@@ -34,8 +34,8 @@ Details:
 - combat stress p95: 165% of budget, exceeded (auto bc27c4af, 2026-11-27), 2% slower than P20 lobby (worst vs worst); run-to-run spread up to 41%
 - plumbing, movement layouts: 147% of budget, exceeded (auto bc27c4af, 2026-11-27), unchanged vs P20 lobby (worst vs worst); run-to-run spread not measured
 - plumbing, horde: 216% of budget, exceeded (auto bc27c4af, 2026-11-27), 1% faster than P20 lobby (worst vs worst); run-to-run spread not measured
-- rendered tick-frame p95: 72% of budget (Sim boundary SB5a, 2026-11-27), 6% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured
-- Ashfall tick-frame p95: 74% of budget (Sim boundary SB5a, 2026-11-27), 2% slower than P7 part 2 Team online (worst vs worst); run-to-run spread not measured
+- rendered tick-frame p95: 76% of budget (P20 merge, 2026-11-27), 6% slower than Sim boundary SB5a (worst vs worst); run-to-run spread not measured
+- Ashfall tick-frame p95: 75% of budget (P20 merge, 2026-11-27), 1% slower than Sim boundary SB5a (worst vs worst); run-to-run spread not measured
 - lockstep p99: 11% of budget (auto bc27c4af, 2026-11-27), 3% slower than P20 lobby (worst vs worst); run-to-run spread not measured
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
