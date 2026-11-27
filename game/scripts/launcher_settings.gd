@@ -6,7 +6,7 @@ const MatchSettings = preload("res://scripts/match_settings.gd")
 const JoinLink = preload("res://scripts/join_link.gd")
 const SECTION := "launcher"
 # Picked when the match starts; never reaches the simulation.
-const RANDOM := "random"
+const RANDOM := MatchSettings.RANDOM
 
 static func load_picks() -> Dictionary:
 	var config := ConfigFile.new()

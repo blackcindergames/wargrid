@@ -7,11 +7,13 @@ const Client = preload("res://scripts/net/headless_client.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const MapData = preload("res://scripts/simulation/map_data.gd")
+const OnlineTests = preload("res://tests/test_online_scene.gd")
+const Wire = preload("res://scripts/net/wire.gd")
 const MAP := "broken_crown"
 const FACTIONS := {1: "usa", 2: "china", 3: "frc", 4: "usa"}
 
 func cases() -> Array[Callable]:
-	return [test_three_bots_seated, test_every_bot_plays, test_header_lists_every_seat, test_one_bot_header_unchanged, test_seats_follow_seat_numbers, test_replay_oracle_seats_every_faction, test_replay_oracle_one_bot_unchanged, test_replay_oracle_takes_recorded_starts]
+	return [test_three_bots_seated, test_every_bot_plays, test_header_lists_every_seat, test_one_bot_header_unchanged, test_seats_follow_seat_numbers, test_replay_oracle_seats_every_faction, test_replay_oracle_one_bot_unchanged, test_replay_oracle_takes_recorded_starts, test_lobby_start_keeps_the_lobby_map]
 
 func _driver(bots: int):
 	var factions := {}
@@ -113,5 +115,21 @@ func test_replay_oracle_takes_recorded_starts(runner) -> bool:
 	runner.check(not client._lobby_error().is_empty(), "OB8 a bad --starts is refused")
 	client._args["starts"] = "4,2"
 	runner.check(not client._lobby_error().is_empty(), "OB8 --starts must name one start per seat")
+	client._args["starts"] = "4,,2,1"
+	runner.check(not client._lobby_error().is_empty(), "OB8 an empty --starts entry is refused, not skipped")
+	client.free()
+	return true
+
+func test_lobby_start_keeps_the_lobby_map(runner) -> bool:
+	var client = OracleClient.new()
+	client._args = {"map": "broken_crown", "lobby-maps": "ashfall", "start": "4"}
+	client._transport = OnlineTests.FakeTransport.new()
+	client._seat = 1
+	client._present = 2
+	client._joins = 1
+	client._picked = {2: "usa"}
+	client._try_start()
+	var maps: Array = client._transport.sent.map(func(text: String) -> Variant: return Wire.decode(text).message.get("settings", {}).get("map"))
+	runner.check(maps == ["ashfall", null], "OB9 the host's start pick goes out on its lobby map, not the --map it opened on, got %s" % [maps])
 	client.free()
 	return true

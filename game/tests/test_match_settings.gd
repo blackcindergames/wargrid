@@ -10,7 +10,7 @@ const StateHash = preload("res://scripts/simulation/state_hash.gd")
 const JoinLink = preload("res://scripts/join_link.gd")
 
 func cases() -> Array[Callable]:
-	return [test_names, test_line_endings, test_refusals, test_test_map, test_seeded_starts, test_bots_round_trip, test_refusal_rejects_bad_bots, test_teams_from_bots, test_team_starts_side_by_side, test_invite_link_carries_no_settings, test_chosen_start_honoured, test_closed_start_excluded, test_starts_same_through_the_wire, test_refusal_rejects_bad_starts, test_chosen_starts_pinned_trace]
+	return [test_names, test_line_endings, test_refusals, test_test_map, test_seeded_starts, test_bots_round_trip, test_refusal_rejects_bad_bots, test_teams_from_bots, test_team_starts_side_by_side, test_invite_link_carries_no_settings, test_chosen_start_honoured, test_closed_start_excluded, test_starts_same_through_the_wire, test_refusal_rejects_bad_starts, test_chosen_starts_pinned_trace, test_refusal_rejects_bad_players, test_refusal_counts_seats_without_bots]
 
 func test_names(runner) -> bool:
 	for id: String in MatchSettings.PLAY_MAPS:
@@ -174,4 +174,17 @@ func test_chosen_starts_pinned_trace(runner) -> bool:
 		if run == 1: runner.check(StateHash.digest(sim.snapshot()) == digests[-1], "MS15 two runs from the same settings agree at tick 300")
 	runner.check(chosen == MS15_STARTS, "MS15 chosen starts pinned, got %s" % [chosen])
 	runner.check(digests == MS15_DIGESTS, "MS15 digests at ticks 0, 150 and 300 pinned, got %s" % [digests])
+	return true
+
+func test_refusal_rejects_bad_players(runner) -> bool:
+	var base: Dictionary = MatchSettings.for_map("broken_crown")
+	var bad := {"players that is no list": 5, "null players": null, "a row that is no dictionary": [1], "an unknown faction": [{"player": 1, "faction": "bogus"}], "player 0": [{"player": 0, "faction": "usa"}], "a player past the seats": [{"player": 3, "faction": "usa"}], "a duplicate player": [{"player": 1, "faction": "usa"}, {"player": 1, "faction": "china"}], "a faction that is no text": [{"player": 1, "faction": 5}]}
+	for what: String in bad:
+		runner.check(MatchSettings.refusal(base.merged({"players": bad[what]}), 2) == MatchSettings.BAD_PLAYERS, "MS16 refused: %s, got '%s'" % [what, MatchSettings.refusal(base.merged({"players": bad[what]}), 2)])
+	runner.check(MatchSettings.refusal(base.merged({"players": [{"player": 1, "faction": "random"}, {"player": 2, "faction": "frc"}]}), 2).is_empty(), "MS16 accepted: the host's Random and the friend's faction")
+	return true
+
+func test_refusal_counts_seats_without_bots(runner) -> bool:
+	runner.check(MatchSettings.refusal(MatchSettings.for_map("dry_wells"), 3) == MatchSettings.TOO_SMALL, "MS17 three seats do not fit Dry Wells' two starts even without bots")
+	runner.check(MatchSettings.refusal(MatchSettings.for_map("dry_wells"), 2).is_empty(), "MS17 two seats fit")
 	return true

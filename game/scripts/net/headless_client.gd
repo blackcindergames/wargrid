@@ -193,7 +193,7 @@ func _try_start() -> void:
 	if _asked or _present < seats or _joins < _int_arg_or("joins", seats - 1) or _picked.size() < _present - 1: return
 	_asked = true
 	if _lobby_maps().size() > 1: _send_settings(_lobby_maps()[1])
-	elif not _placement().is_empty(): _send_settings(_map_id())
+	elif not _placement().is_empty(): _send_settings(_lobby_maps()[0] if not _lobby_maps().is_empty() else _map_id())
 	_transport.send_text(Wire.encode({"type": "start_request"}))
 
 func _map_id() -> String:
@@ -517,7 +517,7 @@ func _lobby_error() -> String:
 	for id: String in _lobby_maps():
 		if not FileAccess.file_exists(MatchSettings.map_path(id)): return "Unknown --lobby-maps map '%s'" % id
 	if not _args.has("starts"): return ""
-	var starts: PackedStringArray = str(_args.starts).split(",", false)
+	var starts: PackedStringArray = str(_args.starts).split(",")
 	var seats: int = str(_args.factions).split(",").size() if _args.has("factions") else 2 + _bots_arg().size()
 	if starts.size() != seats or Array(starts).any(func(seat: String) -> bool: return not seat.is_valid_int() or seat.to_int() < 1):
 		return "Bad --starts '%s'; expected %d start seats above 0, one per seat" % [_args.starts, seats]

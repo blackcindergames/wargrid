@@ -404,13 +404,16 @@ func _can_close(seat: int) -> bool:
 	return _free(seat, 0) and _used() + _kept() + _closed.size() < _start_count(_map_id())
 
 func _guest_start(seat: int, close: bool) -> void:
-	var others: Dictionary = _spots_of(_settings)
-	others.erase(_seat)
-	var taken: bool = others.values().has(seat) or MatchSettings.closed_starts(_settings).has(seat)
-	if close or (seat != _own_start and taken): return
+	if close or (seat != _own_start and _blocked(seat)): return
 	_own_start = 0 if seat == _own_start else seat
 	_pick_dirty = true
 	_refresh_starts(true)
+
+# For the guest: another player starts there or the host closed it.
+func _blocked(seat: int) -> bool:
+	var others: Dictionary = _spots_of(_settings)
+	others.erase(_seat)
+	return others.values().has(seat) or MatchSettings.closed_starts(_settings).has(seat)
 
 func _placement() -> Dictionary:
 	var placed: Dictionary = {}
@@ -720,7 +723,7 @@ func _apply_picks() -> void:
 
 func _set_own(id: String) -> void:
 	_own_pick = id
-	if _seat == 1: _dirty = true
+	_dirty = true
 	if _is_guest(): _pick_dirty = true
 	var own: OptionButton = _own_selector()
 	if own != null: _select_id(own, id)
@@ -1134,7 +1137,8 @@ func _send_pick(force: bool = false) -> void:
 	_transport.send_text(Wire.encode({"type": "pick", "pick": pick}))
 
 func _take_pick(message: Dictionary) -> void:
-	if not message.has("seat"): return
+	# The launcher's room holds one friend, on seat 2.
+	if message.get("seat") != 2: return
 	var seat: int = int(message.seat)
 	var faction: Variant = message.pick.get("faction")
 	if faction is String and (Registry.Factions.FACTIONS.has(faction) or faction == RANDOM): _picks[seat] = faction
@@ -1230,9 +1234,12 @@ func _take_settings(settings: Dictionary) -> bool:
 	var first: bool = _settings.is_empty()
 	var line: String = "" if first else _change_line(_settings, settings)
 	if not line.is_empty(): _cue = line
+	var new_map: bool = _settings.get("map") != settings.get("map")
 	_settings = settings
+	# An ask on the old map, or on a start now taken or closed, is dropped even while it waits, so it never lands on the wrong map or hides the host's marker.
+	if _own_start > 0 and (new_map or _blocked(_own_start)): _own_start = 0
 	# A pick still waiting to go out must not be undone by settings sent before the host heard it; a welcome may still hold the last guest's start.
-	if not _pick_dirty and not first: _own_start = _spots_of(_settings).get(_seat, 0)
+	elif not _pick_dirty and not first: _own_start = _spots_of(_settings).get(_seat, 0)
 	# The host dropped the start this guest asked for, so asking again must send.
 	if int(_sent_pick.get("start", 0)) != _own_start: _sent_pick.erase("start")
 	# The relay's expiry runs from the room's creation or last settings, not from this join, so no clock until a change.

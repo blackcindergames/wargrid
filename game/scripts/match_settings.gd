@@ -10,6 +10,9 @@ const NOT_IN_BUILD := "The host's map is not in your build"
 const BAD_BOTS := "The host's bot setup is not valid"
 const TOO_SMALL := "The host's map has too few starting places for this match"
 const BAD_STARTS := "The host's start setup is not valid"
+const BAD_PLAYERS := "The host's player setup is not valid"
+# Picked when the match starts, so the lobby shows it as Random.
+const RANDOM := "random"
 
 static func map_path(id: String) -> String:
 	return "res://data/maps/%s.json" % id
@@ -42,11 +45,10 @@ static func refusal(settings: Dictionary, seat_count: int = 2) -> String:
 	var theirs: Variant = settings.get("map_hash")
 	if not theirs is String or theirs != map_hash(map_path(id)): return "Your copy of %s differs from the host's" % PLAY_MAPS.get(id, id)
 	# Key presence, not a null value: a crafted "bots": null would pass and break the start.
-	var placed: bool = settings.has("chosen") or settings.has("closed")
-	if not settings.has("bots") and not placed: return ""
 	var seats: Array = MapData.load(map_path(id)).starts.map(func(start: Dictionary) -> int: return int(start.seat))
 	var reason: String = _bots_refusal(settings.bots, seat_count) if settings.has("bots") else ""
-	if reason.is_empty() and placed: reason = _starts_refusal(settings.get("chosen", []), settings.get("closed", []), seat_count, seats)
+	if reason.is_empty() and (settings.has("chosen") or settings.has("closed")): reason = _starts_refusal(settings.get("chosen", []), settings.get("closed", []), seat_count, seats)
+	if reason.is_empty() and settings.has("players"): reason = _players_refusal(settings.players, seat_count)
 	if not reason.is_empty(): return reason
 	if seat_count + settings.get("bots", []).size() + settings.get("closed", []).size() > seats.size(): return TOO_SMALL
 	return ""
@@ -58,6 +60,16 @@ static func _bots_refusal(rows: Variant, seat_count: int) -> String:
 		if row is not Dictionary or not Factions.FACTIONS.has(row.get("faction")): return BAD_BOTS
 		var player: Variant = row.get("player")
 		if typeof(player) not in [TYPE_INT, TYPE_FLOAT] or player != seat_count + 1 + i: return BAD_BOTS
+	return ""
+
+# Display rows, one per human seat at most; a bad faction would crash the guest's row text.
+static func _players_refusal(rows: Variant, seat_count: int) -> String:
+	if rows is not Array: return BAD_PLAYERS
+	var players: Dictionary = {}
+	for row: Variant in rows:
+		if row is not Dictionary or not _taken(players, row.get("player"), range(1, seat_count + 1)): return BAD_PLAYERS
+		var faction: Variant = row.get("faction")
+		if faction is not String or not (Factions.FACTIONS.has(faction) or faction == RANDOM): return BAD_PLAYERS
 	return ""
 
 # Only the human seats choose; a start is chosen or closed at most once.

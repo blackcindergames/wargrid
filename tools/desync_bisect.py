@@ -41,6 +41,8 @@ def replay(
     log = out / "commands.log"
     log.write_text("".join(f"{line}\n" for line in wire_lines(report["command_log"])))
     args = ["--netclient", "--replay-log", str(log), "--map", str(report["map"]), "--seed", str(report["seed"])]
+    if report.get("bots"):
+        args += ["--bots", ",".join(f"{int(bot['player'])}:{bot['faction']}" for bot in report["bots"])]
     if report.get("starts"):
         args += ["--starts", ",".join(str(int(seat)) for seat in report["starts"])]
     args += ["--oracle-ticks", str(ticks), "--ring-log", str(out / f"ring-{tag}.tsv")]

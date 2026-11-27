@@ -146,6 +146,22 @@ class ReplayFailureTests(BisectCase):
         self.assertEqual(args[args.index("--starts") + 1], "3,1")
         self.assertNotIn("--starts", run.call_args.args[0], "an empty starts list (the test map) passes none")
 
+    def test_run_passes_bots(self):
+        done = subprocess.CompletedProcess([], 0, stdout="ORACLE FINAL", stderr="")
+        run = mock.Mock(return_value=done)
+        self.out.mkdir(parents=True)
+        bots = [{"player": 3.0, "faction": "china"}, {"player": 4.0, "faction": "frc"}]
+        with mock.patch.object(desync_bisect.subprocess, "run", new=run):
+            desync_bisect.replay(
+                ["godot"], {**report(1, LOCAL), "starts": [1, 2, 3, 4], "bots": bots}, self.out, "a", 64
+            )
+        args = run.call_args.args[0]
+        self.assertEqual(
+            args[args.index("--bots") + 1],
+            "3:china,4:frc",
+            "a team desync replays with its bots, so --starts names four seats",
+        )
+
     def test_nonzero_exit_writes_log(self):
         done = subprocess.CompletedProcess([], 1, stdout="out text", stderr="SCRIPT ERROR: x")
         self.assertFalse(self.replay(return_value=done))

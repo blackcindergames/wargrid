@@ -28,6 +28,7 @@ var _lockstep: RefCounted
 var _own_faction: String
 var _map_path: String = ""
 var _starts: Array[int] = []
+var _bot_rows: Array[Dictionary] = []
 var _seed: int = 0
 var _report_path: String = ""
 var _finished: bool = false
@@ -83,6 +84,7 @@ func create(map_path: String, starts: Array[int], factions: Dictionary, match_se
 	var bot_factions := {}
 	for bot: int in bots:
 		if factions.has(bot): bot_factions[bot] = factions[bot]
+	_bot_rows.assign(bots.map(func(bot: int) -> Dictionary: return {"player": bot, "faction": bot_factions.get(bot, "")}))
 	adopt(Skirmish.create(true, "human", bot_factions, map_path, starts, _lockstep.seat_ids().size() + bots.size(), teams()))
 
 func adopt(value: Simulation) -> void:
@@ -415,6 +417,8 @@ func _report() -> Dictionary:
 	report.hash_ring = ring_note.ring if ring_note != null else []
 	report.merge(MatchSettings.report_fields(_map_path.get_file().get_basename(), _seed, _starts))
 	report["sim"] = sim_mode()
+	# A team desync replays on four seats only with its bots (desync_bisect.py passes them as --bots).
+	if not _bot_rows.is_empty(): report["bots"] = _bot_rows
 	return report
 
 func net_line() -> String:
