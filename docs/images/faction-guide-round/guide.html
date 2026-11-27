@@ -1,0 +1,319 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Wargrid · Faction guide study</title>
+<!-- P21 faction guide round: states and variants as hash or query params; the defaults are the round's recommendations. -->
+<style>
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Regular.ttf)}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-SemiBold.ttf);font-weight:600}
+@font-face{font-family:Public;src:url(../../../game/fonts/PublicSans-Bold.ttf);font-weight:700}
+/* The Esc menu pages' look: game/ui/game_theme.tres HudSmallPanel, HudSmallButton, HudSmallToggle, HudLabel, HudTitle, HudHint (as ../esc-round/esc.html), the guide panel opaque; owner blue from palette.gd OWNER_BASE; no text under 12 px. */
+:root{--text:#eef3f5;--muted:#93a5b0;--well:#0c141a;--line:#2e3f4b;--small:rgba(26,26,26,.6);--small-hov:rgba(57,57,57,.6);--btn-text:#dfdfdf;--focus:#ccc;--on:#d4d4d4;--glyph:#bacbd5;--up:#60e5ed;--down:#f7c871;--card:#0c141a;--page:#161616;--owner:#628ffa}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:var(--text);font:400 12px/15px Public,sans-serif;overflow:hidden}
+main{position:relative;transform-origin:top left;overflow:hidden}
+main.world{background:url(../hud-v5/source/worlds/w-factory.png) center/cover}
+.under{position:absolute;left:0;top:0;border:0}
+.over{position:absolute;inset:0}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+/* The guide is pinned 16 px from the top, so its tab row holds one place on every tab and option. */
+.center.top{align-items:flex-start;padding-top:16px}
+.panel{background:var(--small);padding:8px 12px}
+.col{display:flex;flex-direction:column;gap:4px;width:220px}
+.btn{height:22px;padding:4px;font:600 12px/14px Public;color:var(--btn-text);background:var(--small);text-align:center;white-space:nowrap}
+.btn.focus{background:var(--small-hov);color:#f2f2f2;box-shadow:0 0 0 2px var(--focus)}
+.btn.auto{padding:4px 8px}
+.seg{display:flex}
+.seg span{width:64px;height:22px;padding:4px;text-align:center;font:600 12px/14px Public;color:var(--btn-text);background:var(--small)}
+.seg span.on{background:var(--on);color:#1a1a1a}
+.lab{font:700 12px/15px Public;letter-spacing:1px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.hint,.meta,.mute{color:var(--muted)}
+.title{font:700 14px/17px Public;letter-spacing:1px}
+.guide{display:flex;flex-direction:column;gap:8px;background:var(--page);box-shadow:inset 3px 0 var(--owner)}
+.head{display:flex;align-items:center;gap:12px}
+.head .hint{margin-left:auto;padding-left:24px}
+.fline{display:flex;align-items:baseline;gap:8px}
+.fline b{font:700 14px/17px Public}
+.foot{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--muted)}
+.foot .mk{display:inline-flex;align-items:center;gap:4px}
+svg.g{fill:var(--glyph);flex:none}
+svg.m{width:12px;height:12px;flex:none;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.m.beats{stroke:var(--up)}.m.weak{stroke:var(--down)}.m.even{stroke:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);padding:8px 10px;display:flex;flex-direction:column;gap:6px;min-width:0;overflow:hidden}
+.top{display:flex;gap:8px;align-items:center;min-width:0}
+.top svg.g{width:40px;height:40px}
+.name{font:700 14px/17px Public;white-space:nowrap}
+.stats{display:flex;justify-content:space-between;gap:6px}
+.stat{display:flex;flex-direction:column}
+.stat b{font:600 12px/15px Public;white-space:nowrap}
+.from{white-space:nowrap}
+.role{color:var(--text)}
+/* Counter blocks: three enemy-faction columns; a verdict label spans them (card, detail) or sits left of them (table). */
+.cn{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:8px;row-gap:1px;align-content:start}
+.cn .vl{grid-column:1/-1;margin-top:5px;color:var(--text)}
+.cn .names{display:flex;flex-direction:column;min-width:0}
+.cn.side{grid-template-columns:108px repeat(3,minmax(0,1fr))}
+.cn.side .vl{grid-column:auto;margin-top:0}
+.cn.side>*{padding-top:2px}
+.cn .cell{display:flex;gap:4px;align-items:center;white-space:nowrap}
+.cn .cell.even,.cn .cell.f44{color:var(--muted)}
+.fh{font:600 12px/15px Public;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:2px;white-space:nowrap}
+.fh.you{color:var(--text);border-bottom:2px solid var(--owner);padding-bottom:1px}
+.fh i{font-style:normal;color:var(--muted);font-weight:400}
+.cn.big{row-gap:2px}
+.cn.big .cell{font:600 14px/17px Public;gap:6px;padding:2px 0}
+.cn.big .cell svg.g{width:28px;height:28px}
+.cn.big .vl{margin-top:10px}
+.line{white-space:normal}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start}
+.cards .card{align-self:stretch}
+.cards .div,.detail .div{height:1px;background:var(--line);margin:2px 0}
+/* Builder and collector: one strip, as tall as its content. */
+.cards .workers{grid-column:span 2;align-self:start;gap:8px}
+.worker{display:grid;grid-template-columns:200px 300px minmax(0,1fr);column-gap:16px;align-items:center}
+.worker+.worker{border-top:1px solid var(--line);padding-top:8px}
+.worker .top svg.g{width:32px;height:32px}
+/* Layout A: roster and one detail card. */
+.split{display:grid;grid-template-columns:280px minmax(0,1fr);gap:8px}
+.roster{display:flex;flex-direction:column;gap:4px}
+.ritem{display:flex;gap:8px;align-items:center;padding:4px 8px;background:var(--card);border:1px solid var(--line);min-height:50px}
+.ritem svg.g{width:36px;height:36px}
+.ritem.on{background:#2a2f33;box-shadow:inset 3px 0 var(--up);border-color:#405563}
+.detail{gap:10px;padding:12px 16px}
+.detail .top svg.g{width:72px;height:72px}
+.detail .name{font-size:18px;line-height:22px}
+.detail .stats{justify-content:flex-start;gap:28px}
+.detail .stat b{font:700 14px/17px Public}
+/* Layout B: one table per faction; rules run the full row, numbers sit on the unit name's line. */
+table.tbl{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line)}
+.tbl th,.tbl td{padding:6px 6px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl th{padding-bottom:4px;font-weight:400}
+.tbl td.num,.tbl th.num{text-align:right;white-space:nowrap}
+.tbl td.num{font:600 12px/16px Public}
+.tbl .unit{display:flex;gap:6px;align-items:flex-start}
+.tbl .unit svg.g{width:30px;height:30px}
+.tbl .unit .name{font-size:13px;line-height:16px}
+#mtab{position:fixed;left:0;top:0;z-index:99;background:#fff;color:#000;font:400 13px/17px Public;padding:6px 8px;white-space:pre}
+</style>
+<main></main>
+<script src="../hud-v5/source/glyphs3.js"></script>
+<script>
+const P=new URLSearchParams(location.hash.length>1?location.hash.slice(1):location.search);
+const opt=(k,d,allowed)=>{const v=P.get(k);return v!=null&&allowed.includes(v)?v:d};
+// menu: the Esc menu with the new button; usa/china/frc: the guide from the Esc menu (you play USA) on that tab; guide: on `faction`;
+// lobby: the lobby with its Guide button; lobby-guide: the guide over it, you picked `faction` (China); lobby-random: you picked Random, so it opens on USA and nothing is yours.
+const view=opt('view','usa',['menu','guide','usa','china','frc','lobby','lobby-guide','lobby-random']);
+const layout=opt('layout','cards',['list','table','cards']);
+const counters=opt('counters','named',['class','named','marks']);
+const f44=opt('f44','print',['print','muted','fix']);
+const size=opt('size','1280x720',['1280x720','1280x800','1920x1080']);
+const LOBBY=view.startsWith('lobby');
+const PICK=view==='lobby-random'?'random':LOBBY?opt('faction','china',['usa','china','frc']):'usa';
+const MINE=PICK==='random'?null:PICK;
+const faction=['usa','china','frc'].includes(view)?view:view==='guide'?opt('faction','usa',['usa','china','frc']):MINE||'usa';
+const OPEN=!['menu','lobby'].includes(view);
+// The game stretches canvas_items from 1280x720 with aspect "expand" (project.godot): UI scales by the smaller ratio.
+const [WW,WH]=size.split('x').map(Number),GK=Math.min(WW/1280,WH/720),LW=Math.round(WW/GK),LH=Math.round(WH/GK);
+const main=document.querySelector('main');
+main.style.width=LW+'px';main.style.height=LH+'px';
+
+// data:start
+// game/scripts/simulation/definitions/shared.gd ARMOR and WEAPONS (first weapon tier; the rotary ramp at its last percent, as test CL1).
+const ARMOR={human:{small_arms:100,armor_piercing:10,infantry_missile:10,rapid_fire:100,gattling:100},tank:{small_arms:25,armor_piercing:100,infantry_missile:100,rapid_fire:25,gattling:10},light_vehicle:{small_arms:50,armor_piercing:100,infantry_missile:50,rapid_fire:50,gattling:50}};
+const WEAPONS={rifle:{damage:5000,type:'small_arms',range:4,delay:4,clip:3,reload:22},cannon:{damage:60000,type:'armor_piercing',range:6,delay:60},rocket:{damage:40000,type:'infantry_missile',range:7,delay:30},
+ militia_gun:{damage:15000,type:'small_arms',range:4,delay:30},rotary_gun:{damage:15000,type:'gattling',range:6,delay:12,ramp:300},scout_gun:{damage:10000,type:'rapid_fire',range:6,delay:6},
+ pickup_gun:{damage:10000,type:'gattling',range:6,delay:6},light_tank_gun:{damage:20000,type:'armor_piercing',range:6,delay:30}};
+// definitions/{usa,china,frc}.gd: cost, ticks (30 a second), max_hp, speed (cells/s), armor, weapon, vision, quantity; `at` and `needs` from produces and prerequisite; glyph keys of glyphs3.js after unit_glyphs.gd ROLES.
+const U={
+ usa_rifle_infantry:{name:'Rifleman',cls:'Infantry',cost:225,ticks:150,hp:180000,speed:.8,armor:'human',weapon:'rifle',vision:4,at:'Barracks',g:'china_rifle_infantry'},
+ usa_rocket_infantry:{name:'Rocket Trooper',cls:'Infantry',cost:300,ticks:150,hp:100000,speed:.8,armor:'human',weapon:'rocket',vision:6,at:'Barracks',g:'china_rocket_infantry'},
+ usa_light_vehicle:{name:'Scout Car',cls:'Vehicle',cost:700,ticks:300,hp:240000,speed:2.4,armor:'light_vehicle',weapon:'scout_gun',vision:6,at:'Vehicle Factory',needs:'Supply Depot',g:'usa_light_vehicle'},
+ usa_tank:{name:'Battle Tank',cls:'Vehicle',cost:900,ticks:300,hp:480000,speed:1.2,armor:'tank',weapon:'cannon',vision:6,at:'Vehicle Factory',needs:'Supply Depot',g:'china_light_vehicle'},
+ usa_builder:{name:'Bulldozer',cls:'Vehicle',cost:1000,ticks:150,hp:250000,speed:1.2,at:'Headquarters',role:'Builds your base',g:'china_builder'},
+ usa_collector:{name:'Supply Helicopter',cls:'Aircraft',cost:1200,ticks:300,hp:300000,speed:6,at:'Supply Depot',needs:'Power Plant',role:'Gathers supplies · one comes with each Supply Depot',g:'usa_collector'},
+ china_rifle_infantry:{name:'Militia',cls:'Infantry',cost:300,ticks:300,hp:120000,speed:1,armor:'human',weapon:'militia_gun',vision:4,qty:2,at:'Barracks',g:'china_rifle_infantry'},
+ china_rocket_infantry:{name:'Anti-Tank Trooper',cls:'Infantry',cost:300,ticks:150,hp:100000,speed:.8,armor:'human',weapon:'rocket',vision:6,at:'Barracks',g:'china_rocket_infantry'},
+ china_light_vehicle:{name:'Medium Tank',cls:'Vehicle',cost:800,ticks:300,hp:400000,speed:1,armor:'tank',weapon:'cannon',vision:6,at:'Vehicle Factory',needs:'Supply Depot',g:'china_light_vehicle'},
+ china_tank:{name:'Rotary Gun Tank',cls:'Vehicle',cost:800,ticks:300,hp:300000,speed:1.6,armor:'light_vehicle',weapon:'rotary_gun',vision:6,at:'Vehicle Factory',needs:'Supply Depot',g:'china_tank'},
+ china_builder:{name:'Bulldozer',cls:'Vehicle',cost:1000,ticks:150,hp:250000,speed:1.2,at:'Headquarters',role:'Builds your base',g:'china_builder'},
+ china_collector:{name:'Supply Truck',cls:'Vehicle',cost:600,ticks:300,hp:300000,speed:1.6,at:'Supply Depot',needs:'Power Plant',role:'Gathers supplies · one comes with each Supply Depot',g:'china_collector'},
+ frc_rifle_infantry:{name:'Insurgent',cls:'Infantry',cost:150,ticks:150,hp:120000,speed:.8,armor:'human',weapon:'rifle',vision:6,at:'Barracks',g:'china_rifle_infantry'},
+ frc_rocket_infantry:{name:'Rocket Fighter',cls:'Infantry',cost:300,ticks:150,hp:100000,speed:.8,armor:'human',weapon:'rocket',vision:6,at:'Barracks',g:'china_rocket_infantry'},
+ frc_light_vehicle:{name:'Armed Pickup',cls:'Vehicle',cost:500,ticks:150,hp:180000,speed:3.6,armor:'light_vehicle',weapon:'pickup_gun',vision:6,at:'Vehicle Yard',needs:'Supply Cache',g:'frc_light_vehicle'},
+ frc_tank:{name:'Light Tank',cls:'Vehicle',cost:600,ticks:210,hp:370000,speed:1.6,armor:'tank',weapon:'light_tank_gun',vision:5,at:'Vehicle Yard',needs:'Supply Cache',g:'china_light_vehicle'},
+ frc_builder:{name:'Laborer',cls:'Infantry',cost:200,ticks:90,hp:100000,speed:1,vision:4,at:'Headquarters or Supply Cache',role:'Builds your base · Gathers supplies',g:'frc_builder'}};
+const FACTIONS={usa:{tab:'USA',name:'United States'},china:{tab:'China',name:'China'},frc:{tab:'FRC',name:'Free Resistance Coalition'}};
+const COMBAT_ORDER=['rifle_infantry','rocket_infantry','light_vehicle','tank'];
+const roster=f=>[...COMBAT_ORDER,'builder','collector'].map(k=>f+'_'+k).filter(k=>U[k]);
+// test_hud.gd CL1: the sustained rate, equal-credit time to kill, ratio = ours over theirs; <=0.5 Beats, >=2 Weak against, else even.
+// ratio(b,a) is 1/ratio(a,b), so A beats B exactly when B is weak against A (check_counters.js); the guide drops CL1's Good against.
+function rate(a,b){const w=WEAPONS[U[a].weapon],d=w.damage*(w.ramp||100)/100,r=w.clip?w.clip*d/((w.clip-1)*w.delay+w.reload):d/w.delay;return r*ARMOR[U[b].armor][w.type]/100}
+const unitCost=k=>U[k].cost/(U[k].qty||1);
+const ttk=(a,b)=>U[b].hp*unitCost(a)/(rate(a,b)*unitCost(b));
+const ratio=(a,b)=>ttk(a,b)/ttk(b,a);
+const verdict=(a,b)=>{const r=ratio(a,b);return r<=.5?'beats':r>=2?'weak':'even'};
+// hud_model.gd COUNTER_LINES, verbatim.
+const CLASS_LINES={usa_rocket_infantry:'Beats tanks · Weak against infantry',china_rocket_infantry:'Beats tanks · Weak against infantry',frc_rocket_infantry:'Beats tanks · Weak against infantry',
+ usa_light_vehicle:'Weak against tanks',frc_light_vehicle:'Weak against tanks',china_tank:'Good against infantry at full spin · Weak against tanks',
+ usa_tank:'Beats light vehicles',china_light_vehicle:'Beats light vehicles',frc_tank:'Beats light vehicles'};
+// data:end
+
+const glyph=(k,px)=>'<svg class="g" viewBox="0 0 48 48" width="'+px+'" height="'+px+'" aria-hidden="true">'+GLYPH3[U[k].g]+'</svg>';
+const MARK={beats:'M2 6.5 6 2.5l4 4M2 10.5l4-4 4 4',even:'M3 6.5h6',weak:'M2 4.5l4 4 4-4'};
+const mark=v=>'<svg class="m '+v+'" viewBox="0 0 12 12" aria-hidden="true"><path d="'+MARK[v]+'"/></svg>';
+const VERB={beats:'Beats',weak:'Weak against',even:'Even'};
+const secs=k=>Math.ceil(U[k].ticks/30)+' s';
+const enemies=f=>COMBAT_ORDER.map(c=>f+'_'+c);
+// F44 (STATUS): rifle infantry against the tanks class of test CL1's COUNTER_CLASSES; option B of the f44 step mutes these pairs.
+const RIFLES=['usa_rifle_infantry','china_rifle_infantry','frc_rifle_infantry'],TANKS=['usa_tank','china_light_vehicle','frc_tank'];
+const muted=(a,b)=>f44==='muted'&&(RIFLES.includes(a)&&TANKS.includes(b)||TANKS.includes(a)&&RIFLES.includes(b));
+const fhead=f=>'<span class="fh'+(f===MINE?' you':'')+'">'+FACTIONS[f].tab+(f===MINE?' · you':'')+(f==='frc'?' <i>· first weapon</i>':'')+'</span>';
+
+function counterBlock(k,{side=false,heads=true,big=false}={}){
+ const u=U[k];
+ if(!u.weapon)return '<div class="role">'+u.role+'</div>';
+ if(counters==='class')return CLASS_LINES[k]?'<div class="line">'+CLASS_LINES[k]+'</div>':'<div class="mute">No counter line yet</div>';
+ const cls='cn'+(side?' side':'')+(big?' big':'');
+ const head=!heads?'':(side?'<span></span>':'')+Object.keys(FACTIONS).map(fhead).join('');
+ const cell=(e,v,marked)=>'<span class="cell'+(marked?' '+v:'')+(muted(k,e)?' f44':'')+'">'+(big?glyph(e,28):'')+(marked?mark(v):'')+U[e].name+'</span>';
+ if(counters==='marks'){
+  const rows=[0,1,2,3].map(i=>(side?'<span></span>':'')+Object.keys(FACTIONS).map(f=>{const e=enemies(f)[i],v=verdict(k,e);return cell(e,v,true)}).join('')).join('');
+  return '<div class="'+cls+'" data-block>'+head+rows+'</div>';
+ }
+ const parts=['beats','weak'].map(v=>{
+  const cols=Object.keys(FACTIONS).map(f=>enemies(f).filter(e=>verdict(k,e)===v));
+  if(!cols.some(c=>c.length))return '';
+  return '<span class="lab vl">'+VERB[v]+'</span>'+cols.map(c=>'<span class="names">'+(c.length?c.map(e=>cell(e,v,false)).join(''):'<span class="cell mute">–</span>')+'</span>').join('');
+ }).join('');
+ return '<div class="'+cls+'" data-block>'+head+(parts||'<span class="mute" style="grid-column:1/-1">Only close fights</span>')+'</div>';
+}
+const metaLine=k=>U[k].cls+(U[k].qty?' · '+U[k].qty+' per order':'');
+const fromLine=k=>'<div class="from">Trained at '+U[k].at+(U[k].needs?' <span class="mute">· needs '+U[k].needs+'</span>':'')+'</div>';
+// Builders and collectors without a vision key (usa/china builder and collector) show a dash, as range does without a weapon.
+const statList=k=>{const u=U[k],w=u.weapon&&WEAPONS[u.weapon];return [['Cost',u.cost],['Time',secs(k)],['Health',u.hp/1000],['Speed',u.speed.toFixed(1)],['Range',w?w.range:'–'],['Vision',u.vision||'–']]};
+const stats=k=>'<div class="stats">'+statList(k).map(([l,v])=>'<span class="stat"><span class="lab">'+l+'</span><b>'+v+'</b></span>').join('')+'</div>';
+const head40=k=>'<div class="top">'+glyph(k,40)+'<div style="min-width:0"><div class="name">'+U[k].name+'</div><div class="meta">'+metaLine(k)+'</div></div></div>';
+
+const card=k=>'<div class="card" data-card>'+head40(k)+stats(k)+fromLine(k)+'<div class="div"></div>'+counterBlock(k)+'</div>';
+const worker=k=>'<div class="worker"><div class="top">'+glyph(k,32)+'<div style="min-width:0"><div class="name">'+U[k].name+'</div><div class="meta">'+metaLine(k)+'</div></div></div>'+stats(k)+
+ '<div style="min-width:0">'+fromLine(k)+'<div class="role">'+U[k].role+'</div></div></div>';
+function cardsBody(f){
+ const all=roster(f),fighters=all.filter(k=>U[k].weapon),workers=all.filter(k=>!U[k].weapon);
+ return '<div class="cards">'+fighters.map(card).join('')+'<div class="card workers" data-card><span class="lab">Workers</span>'+workers.map(worker).join('')+'</div></div>';
+}
+
+// The roster's rocket infantry is the one selected: it has both a Beats and a Weak against line.
+function listBody(f){
+ const sel=f+'_rocket_infantry';
+ const items=roster(f).map(k=>'<div class="ritem'+(k===sel?' on':'')+'">'+glyph(k,36)+'<div style="min-width:0"><div class="name">'+U[k].name+'</div><div class="meta">'+metaLine(k)+' · '+U[k].cost+'</div></div></div>').join('');
+ const detail='<div class="card detail" data-card><div class="top">'+glyph(sel,72)+'<div><div class="name">'+U[sel].name+'</div><div class="meta">'+metaLine(sel)+'</div></div></div>'+stats(sel)+fromLine(sel)+'<div class="div"></div>'+counterBlock(sel,{big:true})+'</div>';
+ return '<div class="split"><div class="roster">'+items+'<div class="hint" style="padding:4px 2px">Click a unit, or ↑ ↓</div></div>'+detail+'</div>';
+}
+
+function tableBody(f){
+ const cols=[['Unit','width:180px'],['Cost'],['Time'],['Health'],['Speed'],['Range'],['Vision'],['Trained at','width:150px']];
+ const ch=counters==='class'?'<span class="lab">Counters</span>':'<div class="cn side"><span class="lab">Counters</span>'+Object.keys(FACTIONS).map(fhead).join('')+'</div>';
+ const head='<tr>'+cols.map(([c,w],i)=>'<th class="'+(i>0&&i<7?'num':'')+'"'+(w?' style="'+w+'"':'')+'><span class="lab">'+c+'</span></th>').join('')+'<th>'+ch+'</th></tr>';
+ const rows=roster(f).map(k=>'<tr><td><div class="unit">'+glyph(k,30)+'<div style="min-width:0"><div class="name">'+U[k].name+'</div><div class="meta">'+metaLine(k)+'</div></div></div></td>'+
+  statList(k).map(([,v])=>'<td class="num">'+v+'</td>').join('')+
+  '<td>'+U[k].at+(U[k].needs?'<br><span class="mute">needs '+U[k].needs+'</span>':'')+'</td>'+
+  '<td>'+counterBlock(k,{side:true,heads:false})+'</td></tr>').join('');
+ return '<table class="tbl" data-card>'+head+rows+'</table>';
+}
+
+function footLine(f){
+ const parts=['Counters: who wins a straight fight when both sides spend the same credits. Not listed: close fights. Range, splash and groups not counted.',
+  'Rotary Gun Tank counted once its guns spin up (1.6 s).','Speed in cells a second; range and vision in cells.'];
+ if(counters==='marks')parts.unshift(['beats','even','weak'].map(v=>'<span class="mk">'+mark(v)+VERB[v]+'</span>').join(''));
+ if(counters==='class'&&f==='frc')parts.push('FRC counters are for the first weapon, before salvage upgrades.');
+ if(f44==='muted')parts.push('Rifle infantry beat tanks today; balance under test.');
+ return '<div class="foot">'+parts.map(p=>'<span class="mk">'+p+'</span>').join('')+'</div>';
+}
+// f44 option C has no guide picture: its numbers do not exist until a balance change.
+const fixPanel=()=>'<div class="panel guide" data-name="note" style="width:560px;padding:16px 20px;gap:8px"><span class="title">NO PICTURE FOR THIS OPTION</span><span>A balance change comes first (for example cannon damage to infantry, or crushing). The guide then shows the new counters, computed the same way as today.</span><span class="hint">P21 waits for that balance package and its playtests.</span></div>';
+function guidePanel(f){
+ if(f44==='fix')return fixPanel();
+ const tabs='<span class="seg">'+Object.keys(FACTIONS).map(x=>'<span class="'+(x===f?'on':'')+'">'+FACTIONS[x].tab+'</span>').join('')+'</span>';
+ // In an online match the game runs on behind the guide, as behind Settings.
+ const head='<div class="head" data-tabs><div class="btn auto">‹ Back</div><span class="title">FACTION GUIDE</span>'+tabs+(LOBBY?'':'<span class="hint">Match continues</span>')+'</div>';
+ const fl='<div class="fline"><b>'+FACTIONS[f].name+'</b>'+(f===MINE?'<span class="hint">your faction</span>':'')+'</div>';
+ const body=layout==='cards'?cardsBody(f):layout==='list'?listBody(f):tableBody(f);
+ return '<div class="panel guide" data-name="guide" style="width:'+Math.min(1248,LW-32)+'px">'+head+fl+body+footLine(f)+'</div>';
+}
+const MENU=['Resume','Settings','Controls','Faction guide','Leave match','Quit'];
+const menuPanel=()=>'<div class="panel" data-name="menu"><div class="col">'+MENU.map(n=>'<div class="btn'+(n==='Resume'?' focus':'')+'">'+n+'</div>').join('')+'</div></div>';
+
+// The lobby states lay ../lobby-look-round/lobby-look.html underneath and add the Guide button to your row's action column.
+function lobbyFrame(){
+ const fr=document.createElement('iframe');
+ fr.className='under';fr.width=LW;fr.height=LH;fr.style.width=LW+'px';fr.style.height=LH+'px';
+ fr.src='../lobby-look-round/lobby-look.html#view=rest&size='+LW+'x'+LH;
+ fr.onload=()=>{
+  const d=fr.contentDocument;
+  const st=d.createElement('style');st.textContent=':root{--act:64px}.gd{padding:5px 8px}';d.head.appendChild(st);
+  const add=()=>{
+   const you=[...d.querySelectorAll('.slot')].find(s=>s.querySelector('.name')?.textContent==='You');
+   if(!you||you.querySelector('.gd'))return;
+   you.querySelector('.act').innerHTML='<span class="b small gd" title="Faction guide: what each unit beats">Guide</span>';
+   you.querySelector('.dd').firstChild.textContent=MINE?FACTIONS[MINE].name:'Random';
+   measure();
+  };
+  new MutationObserver(add).observe(d.querySelector('main'),{childList:true,subtree:true});
+  add();
+ };
+ return fr;
+}
+
+const scaleK=()=>Math.min(innerWidth/LW,innerHeight/LH);
+function box(el){const r=el.getBoundingClientRect(),m=main.getBoundingClientRect(),k=scaleK();return {x:(r.left-m.left)/k,y:(r.top-m.top)/k,w:r.width/k,h:r.height/k}}
+// Rows for War Room's measurement table: panel size and fit, tab row position, text cut off, smallest text; in the lobby the Guide button's column.
+function measure(){
+ const out=[['window',WW+'×'+WH+(GK!==1?' (UI ×'+GK+', '+LW+'×'+LH+' logical)':'')]];
+ const pan=main.querySelector('.panel');
+ if(pan){
+  const b=box(pan),over=Math.max(16-b.x,16-b.y,b.x+b.w-(LW-16),b.y+b.h-(LH-16));
+  out.push([pan.dataset.name+' panel',Math.round(b.w)+'×'+Math.round(b.h)]);
+  out.push(['fits with 16 px margin, no scrolling',over<=0.5?'yes, '+Math.round(LH-16-b.y-b.h)+' px spare below':'no, over by '+Math.ceil(over)+' px',over<=0.5]);
+  const tabs=pan.querySelector('.seg');
+  if(tabs)out.push(['tab row top',Math.round(box(tabs).y)+' px (pinned: 24 on every tab and option)',Math.round(box(tabs).y)===24]);
+  const els=[...pan.querySelectorAll('*')];
+  const cut=els.filter(e=>(e.scrollWidth>e.clientWidth+1||e.scrollHeight>e.clientHeight+1)&&getComputedStyle(e).overflow==='hidden'||(e.children.length===0&&e.scrollWidth>e.clientWidth+1&&e.clientWidth>0));
+  out.push(['text cut off',cut.length?cut.length+' elements':'none',cut.length===0]);
+  const sizes=els.filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())).map(e=>parseFloat(getComputedStyle(e).fontSize));
+  const min=Math.min(...sizes);
+  out.push(['smallest text',min+' px (×'+GK+' = '+(min*GK)+' px on screen)',min>=12]);
+  const wraps=[...pan.querySelectorAll('.cn .cell')].filter(e=>e.getBoundingClientRect().height/scaleK()>(e.closest('.big')?34:16)).length;
+  if(counters!=='class'&&wraps)out.push(['counter names on two lines',wraps]);
+ }
+ const fr=main.querySelector('iframe');
+ if(fr&&fr.contentDocument){
+  const d=fr.contentDocument,g=d.querySelector('.gd');
+  if(g){const a=g.parentElement.getBoundingClientRect(),r=g.getBoundingClientRect();out.push(['Guide button fits its column',r.width<=a.width+0.5?'yes, '+Math.round(r.width)+' of '+Math.round(a.width)+' px':'no, '+Math.round(r.width)+' px in '+Math.round(a.width),r.width<=a.width+0.5]);
+   const xs=[...d.querySelectorAll('.slot .dd,.slot .ft')].map(e=>Math.round(e.getBoundingClientRect().left));
+   out.push(['faction column',new Set(xs).size===1?'aligned on '+xs.length+' rows':'not aligned: '+xs.join(', '),new Set(xs).size===1]);}
+ }
+ parent.postMessage({type:'wr:measure',rows:out},location.origin);
+ if(P.get('measure')==='1'){const t=document.getElementById('mtab')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'mtab'}));t.textContent=out.map(x=>x[0]+': '+x[1]).join('\n');t.style.background=out.some(x=>x[2]===false)?'#f99':'#fff'}
+}
+let frame=null;
+function render(){
+ main.style.transform='scale('+scaleK()+')';
+ const center=c=>'<div class="center'+(OPEN?' top':'')+'">'+c+'</div>';
+ if(LOBBY){
+  if(!frame){frame=lobbyFrame();main.appendChild(frame)}
+  main.querySelector('.over')?.remove();
+  if(OPEN)main.insertAdjacentHTML('beforeend','<div class="over"><div class="dim"></div>'+center(guidePanel(faction))+'</div>');
+ }else{
+  main.className='world';
+  main.innerHTML='<div class="dim"></div>'+center(OPEN?guidePanel(faction):menuPanel());
+ }
+ measure();
+}
+render();
+// Again once Public Sans is in, so the measurements are in it.
+Promise.all(['400','600','700'].map(w=>document.fonts.load(w+' 12px Public'))).then(render);
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='wr:ask-measure')measure()});
+onresize=render;
+onhashchange=()=>location.reload();
+</script>

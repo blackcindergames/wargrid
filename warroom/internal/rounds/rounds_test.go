@@ -50,8 +50,8 @@ func TestShippedRoundsLoadClean(t *testing.T) {
 	if len(c.Errors) > 0 {
 		t.Fatalf("errors:\n%s", strings.Join(c.Errors, "\n"))
 	}
-	if len(c.Index) != 14 || len(c.Rounds) != 14 {
-		t.Fatalf("index %d, rounds %d, want 14 and 14", len(c.Index), len(c.Rounds))
+	if len(c.Index) != 15 || len(c.Rounds) != 15 {
+		t.Fatalf("index %d, rounds %d, want 15 and 15", len(c.Index), len(c.Rounds))
 	}
 }
 

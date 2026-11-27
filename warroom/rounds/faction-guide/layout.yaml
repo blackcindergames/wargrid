@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How is the guide page laid out?
+why: >-
+  The guide shows each of a faction's units with its stats, where it is trained (and what that building
+  needs) and what it beats or is weak against, here in step 2's recommended wording (enemy units by
+  name in USA, China and FRC columns, your faction's column marked "· you" in your colour). N flips the
+  states: from the Esc menu on USA (you play USA), the China tab, the FRC tab (the Laborer both builds
+  and gathers), from the lobby on China (your pick), from the lobby with Random (opens on USA, nothing
+  marked yours), then the two entries, the Esc menu with Faction guide and the lobby with Guide, the
+  same in every option. The panel is pinned 16 px from the top, so the tabs stay at one place on every
+  tab and option (the measurement table checks it). Every option fits 1280 x 720 without scrolling,
+  and no text is under 12 px.
+look: Whether you find what beats a Medium Tank quickly, and whether the page reads at a glance.
+controls:
+  state: [usa, china, frc, lobby-guide, lobby-random, menu, lobby]
+rec: C
+recWhy: >-
+  every unit's counters are on screen at once, each card reads as one unit (picture, name, numbers,
+  where from, counters), and the builder and collector shrink to one Workers strip. To find what beats
+  a Medium Tank in C you scan your own cards' Beats rows under China (no click), or click once to the
+  China tab and read the Medium Tank's Weak against under your column. B is the same count of clicks,
+  denser and best for comparing numbers down a column, but it reads like a spreadsheet and puts most of
+  the text in a strip on the right. A is the calmest and draws the counters largest, with enemy
+  pictures, but shows one unit at a time: two clicks (China tab, then Medium Tank), or up to four
+  clicks through your own roster.
+neutral: None of these
+options:
+  A:
+    name: Roster list and one detail card
+    render: {params: {layout: list}}
+    sees: Left, the six units as rows (picture, name, class and cost); right, the selected unit large with its numbers, where it is trained and its counters as enemy pictures with names.
+    notes: One unit at a time; the rocket infantry is selected.
+  B:
+    name: One table per faction
+    render: {params: {layout: table}}
+    sees: A row per unit with full-width rules, numbers on the unit name's line, Trained at, and the counters with USA, China and FRC as sub-columns.
+    notes: Densest; numbers compare down a column.
+  C:
+    name: Unit cards and a Workers strip
+    render: {params: {layout: cards}}
+    sees: Four combat cards (three across, then one) with picture, name, the six numbers, Trained at and counters; builder and collector share one strip beside the fourth.
+    notes: Every counter visible at once.

@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: "F44: rifle infantry beat every tank today. What does the guide do?"
+why: >-
+  F44 (STATUS, open since 2026-11-23): at equal credits Riflemen, Militia and Insurgents kill any tank
+  in 0.09 to 0.15 of the time the tank needs, because cannon does 10 % to infantry and nothing crushes;
+  so every tank card says "Weak against" all six infantry units. It is a balance gap waiting for
+  playtests and then a balance package (user, 2026-11-21), not a P21 bug. The cell card's line hides it
+  because it prints only intended claims; a guide that names units cannot hide it without a special
+  case. Drawn in the recommended cards and wording; N flips USA and China.
+look: Whether a newcomer would learn something true and useful, and a Zero Hour player trust the page.
+controls:
+  state: [usa, china]
+rec: A
+recWhy: >-
+  the guide computes every line from the same numbers the match runs on, so it is true today and stays
+  true when a balance package changes them, with no special case to remove later. Your own match plays
+  these numbers: if riflemen really beat tanks, the guide saying so is the fastest way a playtest
+  shows it. Risk: a Zero Hour player reads "Rifleman beats Battle Tank" as a bug in the guide. B keeps
+  the pairs and adds the footer, but muted text reads as "less important", not "under test", and the
+  pair list is a special case. C is the right fix for the game, but it moves a balance decision and its
+  playtests in front of P21, which is scope for you to decide.
+neutral: None of these
+options:
+  A:
+    name: Print it as computed
+    render: {params: {f44: print}}
+    sees: Every tank card lists the six infantry under Weak against; every rifle infantry card lists the three tanks under Beats.
+    notes: True to today's numbers; no special case.
+  B:
+    name: Keep the pairs, muted, with a footer
+    render: {params: {f44: muted}}
+    sees: The rifle-infantry-against-tank names in grey on both sides, and the footer line "Rifle infantry beat tanks today; balance under test."
+    notes: Says it is under test; a pair list to remove later.
+  C:
+    name: Fix F44 before P21's build
+    render: {params: {f44: fix}}
+    sees: No guide picture, since the new numbers do not exist yet; a note says a balance change (for example cannon damage to infantry, or crushing) comes first, then the guide shows the new counters.
+    notes: Moves a balance package and its playtests before P21.

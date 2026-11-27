@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=../step.schema.json
+kind: pictures
+question: How does a unit's card say what it beats and what beats it?
+why: >-
+  Drawn in step 1's recommended layout. N flips USA, China and FRC. All three wordings come from the
+  same math: equal credits on both sides; Beats when ours is at most half their time to kill, Weak
+  against when theirs is at most half ours, a close fight otherwise. Good against is gone from the
+  guide: it is the only verdict without a mirror (if A is good against B, B is not "weak against" A),
+  so a card could say one thing and the enemy's card nothing; Beats and Weak against always mirror
+  (a self-check covers all 144 pairs). A is the cell card's counter line as it is today: it prints
+  only claims Zero Hour's roles intend, so Riflemen, Militia and Insurgents have none, and the Rotary
+  Gun Tank counts as a light vehicle. B and C name enemy units and so also show F44 (step 3). The math
+  leaves out range, splash and groups; the Rotary Gun Tank is counted once its guns spin up (1.6 s of
+  firing, test R1), FRC at its first weapon (both said on the page).
+look: Find what beats a Medium Tank, on your cards or on the China tab, and how long it takes.
+controls:
+  state: [usa, china, frc]
+rec: B
+recWhy: >-
+  you see an enemy's name when you select it, so the answer reads in words on either card: a Medium
+  Tank's card says "Weak against" and lists Rifleman and Rocket Trooper under your column, and your
+  Rocket Trooper's card says "Beats" Medium Tank under China. A asks a newcomer to know that a Medium
+  Tank is a tank and a Rotary Gun Tank a light vehicle, and leaves three units without a line. C is
+  complete and keeps each enemy at the same spot on every card, but its marks need the legend, 44 %
+  of its cells (64 of 144) are close fights that decide nothing, and its amber Weak marks break the
+  rule that amber means you must act.
+neutral: None of these
+options:
+  A:
+    name: The cell card's class line
+    render: {params: {counters: class}}
+    sees: One line, as on the build cell's card today, such as "Beats tanks · Weak against infantry" (its words verbatim, "at full spin" included); rifle infantry show a muted "No counter line yet".
+    notes: Today's words; three units have no line.
+  B:
+    name: Enemy units by name, grouped by faction
+    render: {params: {counters: named}}
+    sees: USA, China and FRC columns, yours marked "· you"; under BEATS and WEAK AGAINST the enemy units by name, a dash where a faction has none.
+    notes: Plain words; close fights are left out.
+  C:
+    name: A grid of marks against every enemy unit
+    render: {params: {counters: marks}}
+    sees: All twelve enemy units in the three columns, each with a mark (two cyan up chevrons Beats, a grey dash Even, an amber down chevron Weak) and a legend in the footer. Amber elsewhere means you must act; here it marks a fight to avoid. A down chevron beside an enemy's name may read as "that enemy is weak", the opposite of what it says.
+    notes: 'Complete; amber Weak breaks the act-now rule, and ▼ may read "that enemy is weak".'

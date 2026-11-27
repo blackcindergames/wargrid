@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=../round.schema.json
+title: 'P21 Faction guide: layout, counter wording, F44'
+intro: >-
+  Judge it as a newcomer facing a Medium Tank: how fast do you find what beats it, and does the page
+  read at a glance? This round blocks P21's build. Step 1 asks the page layout, step 2 the counter
+  wording, step 3 what the guide does about F44: in today's numbers rifle infantry beat every tank at
+  equal credits (a balance gap for playtests). Decided, not asked: "Faction guide" on the Esc menu
+  between Controls and Leave match, and a "Guide" button right of your faction dropdown in the lobby;
+  the guide opens on your faction (Random opens USA), with tabs USA, China and FRC, and Back or Esc
+  returns where you came from; in an online match the game keeps running ("Match continues"). Units
+  only: builder and collector show stats and their job, no counters. Stats: cost, build time, health,
+  speed, range, vision. The guide lists only Beats and Weak against, which mirror each other: if your
+  unit beats theirs, theirs is weak against yours. Every number comes from the unit definitions and
+  every counter from the cell card's counter-line math (test CL1, equal credits). Out: buildings,
+  abilities and upgrades, counters on the inspected-enemy panel (user, 2026-11-12). Pictures are at
+  1280 x 720; S switches to 1280 x 800 and 1920 x 1080. Each step changes one thing and draws the
+  others as Claude recommends. A neutral answer records no winner, and the build waits for your note.
+  Source: docs/images/faction-guide-round/.
+steps: [layout, counters, f44]
+render:
+  page: docs/images/faction-guide-round/guide.html
+  w: 1280
+  h: 720
+  hash: view={state}
+  pass:
+    size: size
+controls:
+  size: [1280x720, 1280x800, 1920x1080]
+  fit: true
