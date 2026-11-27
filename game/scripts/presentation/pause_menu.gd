@@ -3,6 +3,7 @@ extends Control
 const GraphicsSettings = preload("res://scripts/presentation/graphics_settings.gd")
 const VolumeSliders = preload("res://scripts/presentation/volume_sliders.gd")
 const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
+const SimSettings = preload("res://scripts/presentation/sim_settings.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
 signal resume_requested
@@ -32,7 +33,7 @@ var _quality: HBoxContainer
 # Each switch with its stored value's reader, so `open()` can show what another screen saved.
 var _switches: Array = []
 
-func _init(web: bool = OS.has_feature("web")) -> void:
+func _init(web: bool = OS.has_feature("web"), worker_row: bool = SimSettings.available()) -> void:
 	name = "PauseMenu"
 	visible = false
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -63,7 +64,7 @@ func _init(web: bool = OS.has_feature("web")) -> void:
 	box.add_child(_question)
 	_confirm_button = _button(box, "", func() -> void: _on_confirm.call())
 	_cancel = _button(box, "Cancel", _show_main)
-	_settings = _page(center, "SettingsPage", "SETTINGS", _settings_body())
+	_settings = _page(center, "SettingsPage", "SETTINGS", _settings_body(worker_row))
 	_controls = _page(center, "ControlsPage", "CONTROLS", _controls_list())
 	_read_settings()
 	_show(_menu, null)
@@ -203,7 +204,7 @@ func _page(parent: Control, page_name: String, title: String, body: Control) -> 
 	page.add_child(body)
 	return _panel(parent, page_name, page)
 
-func _settings_body() -> VBoxContainer:
+func _settings_body(worker_row: bool) -> VBoxContainer:
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 4)
 	_section(body, "GRAPHICS")
@@ -224,6 +225,10 @@ func _settings_body() -> VBoxContainer:
 	body.add_child(sliders)
 	_section(body, "GAME")
 	_row(body, "Playtest helper", _switch("Playtest", PlaytestSettings.enabled, PlaytestSettings.save_enabled, playtest_changed.emit))
+	if worker_row:
+		# The next pump reads the stored value; the running match keeps its mode.
+		_row(body, "Simulation worker", _switch("Worker", SimSettings.load_worker, SimSettings.save_worker, func(_on: bool) -> void: pass))
+		body.add_child(_label("Takes effect after a restart", &"HudHint"))
 	return body
 
 func _section(body: VBoxContainer, title: String) -> void:

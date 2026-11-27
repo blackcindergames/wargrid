@@ -7,6 +7,7 @@ const Wire = preload("res://scripts/net/wire.gd")
 const TimingStats = preload("res://scripts/debug/timing_stats.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const SimSettings = preload("res://scripts/presentation/sim_settings.gd")
 const ResultPanel = preload("res://scripts/match/result_panel.gd")
 const Registry = preload("res://scripts/simulation/definitions/definitions.gd")
 const CATCH_UP_STEPS: int = 2
@@ -90,7 +91,7 @@ func create(map_path: String, starts: Array[int], factions: Dictionary, match_se
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
 	_stopped = false
-	pump = SimPump.new(value)
+	pump = SimPump.new(value, SimSettings.request())
 	first_note = pump.start()
 	_last = first_note
 	_next_tick = first_note.tick

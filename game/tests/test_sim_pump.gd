@@ -24,6 +24,7 @@ const MATCH_TICKS: int = 900
 const RelayFrameOrder = preload("res://tests/relay_frame_order.gd")
 const SeatFixture = preload("res://tests/seat_fixture.gd")
 const HeadlessClient = preload("res://scripts/net/headless_client.gd")
+const SimSettings = preload("res://scripts/presentation/sim_settings.gd")
 const DIGEST_EVERY: int = 30
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
 const VIEW_COLUMNS: Array[String] = ["id", "owner", "kind", "hp", "max_hp", "target", "queue", "container", "x", "y", "heading_x", "heading_y", "order_x", "order_y", "status", "tier", "mode", "phase", "flags", "kinds", "modes", "phases"]
@@ -168,7 +169,7 @@ func test_sb5a_team_bench_requires_combat(runner) -> bool:
 	return true
 
 func cases() -> Array[Callable]:
-	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5b_headless_pump_refuses_the_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_stop_reads_failure_marker, test_sb5a_thread_start_failure_fails_pump, test_sb5a_stopped_pump_keeps_timing_rows, test_sb5a_owner_marker_stops_the_worker, test_sb5a_window_end_follows_the_first_tick, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays, test_sb5a_full_pump_leaves_next_tick_in_lockstep, test_sb5a_preview_waits_for_room, test_sb5a_two_notes_one_frame_pair_in_order, test_sb5a_hash_tick_note_carries_digest, test_sb5a_failure_between_room_and_post, test_sb5a_online_failure_ends_and_closes, test_sb5a_relay_loss_and_pump_failure_same_frame, test_sb5a_online_start_null_query, test_sb5a_job_zero_null_ends_online_match, test_sb5a_pairing_rejects_foreign_note, test_sb5a_notice_waiting_empty, test_sb5a_play_on_leave_with_jobs_in_flight, test_sb5a_worker_host_bot_frames, test_sb5a_human_order_in_held_window_leads_the_bots, test_sb5a_ring_may_trail_desync_tick, test_sb5a_report_survives_failed_query, test_sb5a_suspend_is_no_stall, test_sb5a_lock_guards_publish, test_sb5a_publish_orders, test_sb5a_stop_and_post_same_frame, test_sb5a_free_running_equals_inline, test_sb5a_queue_stats_job_timings, test_sb5a_offline_digest_every_and_bots, test_sb5a_job_timing_rows_edges, test_sb5a_team_bench_requires_combat]
+	return [test_sb3_pump_digests_equal_direct, test_sb3_two_notes_one_drain, test_sb3_slot_invariant, test_sb3_sequence_stamp, test_sb3_refusal_one_tick_later, test_sb3_preview_answer, test_sb3_query_leaves_slots, test_sb3_job0_starts, test_sb3_freeze_rejects_late_insert, test_sb3_freeze_covers_match, test_sb3_ring_off_same_digest, test_sb4_two_drivers_loopback, test_sb4_two_drivers_match_end, test_sb4_take_record_equals_advance, test_sb4_quiet_take_keeps_status, test_sb4_finish_tick_uses_given_digest, test_sb4_ring_query, test_th_pump_tick_hash_on_request, test_ph_fresh_slot_per_job, test_ph_null_job_fails_pump, test_ph_sequence_stamp_only_on_request, test_ph_record_returns_command_log, test_ph_pair_drivers_send_legal_frames, test_ph_finish_tick_refuses_after_end, test_ph_start_after_end_sends_nothing, test_ph_finish_tick_refuses_out_of_order, test_ph_take_checks_next_tick, test_ph_driver_matches_advance_peer, test_ph_nested_cache_freeze, test_pal_survivors_query, test_pal_note_carries_survivors, test_pal_three_drivers_play_on, test_pal_driver_quiet_defers_verdict, test_pal_played_on_catches_up, test_pal_driver_play_on_then_end_closes_room, test_trio_leave_has_no_match_ended_heading, test_pump_bot_first_wave_at_5400, test_pump_bot_lines_on_request, test_shot_carries_its_building_target, test_plan_bots_leaves_sim_untouched, test_planned_bot_commands_not_in_pump_record, test_planner_drops_invalid_bot_order, test_setup_plans_no_bot_orders, test_host_submits_bot_commands_after_human, test_bot_refusal_not_in_driver_answers, test_guest_runs_no_bot, test_bot_refused_submit_recovers_next_decision, test_sb5a_mode_from_switch, test_sb5b_headless_pump_refuses_the_switch, test_sb5a_null_job_marker_fails_pump, test_sb5a_idle_is_no_stall, test_sb5a_abandoned_worker_takes_no_more_jobs, test_sb5a_post_refused_when_full, test_sb5a_empty_drain_keeps_slots, test_sb5a_drain_at_publish_boundary, test_sb5a_held_view_never_changes, test_sb5a_queue_stats_counts, test_sb5a_undrained_notes_bounded, test_sb5a_worker_runs_off_main, test_sb5a_payload_is_values, test_sb5a_query_never_touches_slots, test_sb5a_query_waits_behind_jobs, test_sb5a_record_waits_for_queue, test_sb5a_query_after_stop_runs_inline, test_sb5a_query_null_on_failed_pump, test_sb5a_record_keeps_commands, test_sb5a_record_on_stalled_worker_is_empty, test_sb5a_query_null_job_fails_worker_pump, test_sb5a_query_behind_a_failing_job_answers_null, test_sb5a_stop_idle_worker, test_sb5a_stop_with_job_in_flight, test_sb5a_stop_is_idempotent, test_sb5a_stop_reads_failure_marker, test_sb5a_thread_start_failure_fails_pump, test_sb5a_stopped_pump_keeps_timing_rows, test_sb5a_owner_marker_stops_the_worker, test_sb5a_window_end_follows_the_first_tick, test_sb5a_job_zero_null_fails_pump, test_sb5a_create_stops_old_pump_first, test_sb5a_restart_drops_old_notes, test_sb5a_leave_record_replays, test_sb5a_end_record_replays, test_sb5a_full_pump_leaves_next_tick_in_lockstep, test_sb5a_preview_waits_for_room, test_sb5a_two_notes_one_frame_pair_in_order, test_sb5a_hash_tick_note_carries_digest, test_sb5a_failure_between_room_and_post, test_sb5a_online_failure_ends_and_closes, test_sb5a_relay_loss_and_pump_failure_same_frame, test_sb5a_online_start_null_query, test_sb5a_job_zero_null_ends_online_match, test_sb5a_pairing_rejects_foreign_note, test_sb5a_notice_waiting_empty, test_sb5a_play_on_leave_with_jobs_in_flight, test_sb5a_worker_host_bot_frames, test_sb5a_human_order_in_held_window_leads_the_bots, test_sb5a_ring_may_trail_desync_tick, test_sb5a_report_survives_failed_query, test_sb5a_suspend_is_no_stall, test_sb5a_lock_guards_publish, test_sb5a_publish_orders, test_sb5a_stop_and_post_same_frame, test_sb5a_free_running_equals_inline, test_sb5a_queue_stats_job_timings, test_sb5a_offline_digest_every_and_bots, test_sb5a_job_timing_rows_edges, test_sb5a_team_bench_requires_combat, test_sb5b_request_reaches_the_next_pump_only, test_sb5b_restart_after_failure_falls_back]
 
 func _sim():
 	return Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int])
@@ -3145,4 +3146,71 @@ func test_sb5a_free_running_equals_inline(runner) -> bool:
 	if idle: runner.check(StateHash.digest(pump.live().snapshot()) == baseline.digest and pump.failure().is_empty(), "SB5A the free-running worker ends on the inline digest, '%s'" % pump.failure())
 	print("SB5A free run: %d notes in %d drains, drain longest call %d us (lock wait included)" % [seen, drains, widest])
 	_stop_built()
+	return true
+
+func _drained_ticks(driver) -> Array:
+	_idle(driver.pump)
+	return driver.drain().map(func(note) -> int: return note.tick)
+
+func _in_order(ticks: Array) -> bool:
+	return ticks.size() == 3 and ticks == range(ticks[0], ticks[0] + 3)
+
+# A click with a note pending keeps the running pump and its mode, the notes drain in order, and only the next create (Restart, rematch) follows the click.
+func test_sb5b_request_reaches_the_next_pump_only(runner) -> bool:
+	SimSettings.available_in_tests = true
+	var offline = _offline_driver()
+	offline.create(Skirmish.MAP_PATH, [] as Array[int], FACTIONS, 0)
+	for want in ["worker", "inline"]:
+		var pump = offline.pump
+		var before: String = offline.sim_mode()
+		offline.step()
+		SimSettings.save_worker(want == "worker")
+		for i in 2: offline.step()
+		var ticks: Array = _drained_ticks(offline)
+		runner.check(is_same(offline.pump, pump) and offline.sim_mode() == before and ticks == [1, 2, 3], "SB5B offline: a click with a note pending keeps the %s pump and drains in order, got %s %s" % [before, offline.sim_mode(), ticks])
+		offline.create(Skirmish.MAP_PATH, [] as Array[int], FACTIONS, 0)
+		runner.check(offline.sim_mode() == want, "SB5B offline: the restart's pump runs %s, got %s" % [want, offline.sim_mode()])
+	offline.stop()
+	SimSettings.save_worker(false)
+	var seat: Dictionary = _seat_two("")
+	var online = seat.driver
+	online.start()
+	_seat_one_packets(seat.transport, 4, 30, -1, -1)
+	_frames_to(online, 8)
+	var first = online.pump
+	_take_one(online)
+	SimSettings.save_worker(true)
+	for i in 2: _take_one(online)
+	var played: Array = _drained_ticks(online)
+	runner.check(is_same(online.pump, first) and online.sim_mode() == "inline" and _in_order(played), "SB5B online: a click while ticks step keeps the inline pump and drains in order, got %s %s" % [online.sim_mode(), played])
+	online.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
+	runner.check(online.sim_mode() == "worker", "SB5B online: the rematch's pump runs worker, got %s" % online.sim_mode())
+	SimSettings.save_worker(false)
+	runner.check(online.sim_mode() == "worker", "SB5B online: switching off keeps the running worker")
+	online.create(Skirmish.MAP_PATH, [] as Array[int], {}, 7)
+	runner.check(online.sim_mode() == "inline", "SB5B online: the next rematch runs inline, got %s" % online.sim_mode())
+	online.stop()
+	SimSettings.available_in_tests = false
+	return true
+
+# Restart and rematch stop the old pump before the next one is built, so a failure that stop finds still turns the stored on into inline-fallback.
+func test_sb5b_restart_after_failure_falls_back(runner) -> bool:
+	SimSettings.available_in_tests = true
+	SimSettings.save_worker(true)
+	for kind in ["offline", "online"]:
+		var driver = _offline_driver() if kind == "offline" else _seat_two("").driver
+		var args: Array = [Skirmish.MAP_PATH, [] as Array[int], FACTIONS if kind == "offline" else {}, 7]
+		if kind == "offline": driver.callv("create", args)
+		runner.check(driver.sim_mode() == "worker", "SB5B fixture: the stored on gives the %s match a worker, got %s" % [kind, driver.sim_mode()])
+		_swap_pump(driver, "worker", NullJobPump)
+		driver.pump.fail_next = true
+		driver.pump.post(_job())
+		_idle(driver.pump)
+		runner.check(not SimPump._latched, "SB5B fixture: the %s failure waits in the pump until its stop" % kind)
+		driver.callv("create", args)
+		runner.check(SimPump._latched and driver.sim_mode() == "inline-fallback" and SimSettings.load_worker(), "SB5B the %s match after a failed one runs inline-fallback and keeps the stored on, got %s" % [kind, driver.sim_mode()])
+		driver.stop()
+		_built.clear()
+		SimPump.reset_process_latch_for_test()
+	SimSettings.available_in_tests = false
 	return true

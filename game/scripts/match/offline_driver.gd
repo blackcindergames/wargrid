@@ -4,6 +4,7 @@ const Simulation = preload("res://scripts/simulation/simulation.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 const Lockstep = preload("res://scripts/net/lockstep.gd")
 const SimPump = preload("res://scripts/match/sim_pump.gd")
+const SimSettings = preload("res://scripts/presentation/sim_settings.gd")
 const MatchSettings = preload("res://scripts/match_settings.gd")
 const FREEZE_NOTICE := "Match stopped"
 const HASH_EVERY: int = 30
@@ -46,7 +47,7 @@ func create(map_path: String, starts: Array[int], factions: Dictionary, _match_s
 func adopt(value: Simulation) -> void:
 	if pump != null: pump.stop()
 	value.set_hash_ring(false)
-	pump = SimPump.new(value)
+	pump = SimPump.new(value, SimSettings.request())
 	first_note = pump.start()
 	_last = first_note
 	_next_tick = first_note.tick

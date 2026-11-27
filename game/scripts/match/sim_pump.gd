@@ -113,9 +113,10 @@ static var _threads: Array[RefCounted] = []
 # Installed once, on main, before the first worker starts; Godot has no lock around its logger list, so it is never removed.
 static var _logger: PumpLogger
 
-func _init(sim: Simulation) -> void:
+# requested: null follows the environment switch; a bool is the stored setting, captured on main once per pump.
+func _init(sim: Simulation, requested: Variant = null) -> void:
 	_sim = sim
-	_mode = _mode_for()
+	_mode = _mode_for(requested)
 	_recorder = CommandRecorder.new(sim)
 
 func start() -> Note:
@@ -210,8 +211,10 @@ static func _switch_on() -> bool:
 static func worker_wanted() -> bool:
 	return _switch_on() and not _latched
 
-static func _mode_for() -> String:
+static func _mode_for(requested: Variant) -> String:
 	if not _forced.is_empty(): return _counted("forced", _forced)
+	# Counted as forced, so the worker suite's inline == 0 holds with the setting off.
+	if requested != null: return _counted("forced", ("inline-fallback" if _latched else "worker") if requested else "inline")
 	if worker_wanted(): return _counted("worker", "worker")
 	if _switch_on(): return _counted("fallback", "inline-fallback")
 	return _counted("inline", "inline")
