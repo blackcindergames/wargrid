@@ -112,8 +112,8 @@ const TIP_HOSTS := "Host's start"
 const TIP_BOT := "%s's start"
 const TIP_BOT_HOST := "%s's start: click to let the game place it"
 const HOST_MOVED := "Host moved their start"
-const HOST_PLACED := "Host placed a bot"
-const HOST_FREED := "Host let the game place a bot"
+const HOST_PLACED := "Host placed %s"
+const HOST_FREED := "%s's start is open again"
 var mode: String = "skirmish"
 # Bot factions in seat order; Random stays Random until the match starts.
 var lobby_bots: Array[String] = []
@@ -346,7 +346,7 @@ func _refresh_starts(guest: bool) -> void:
 	var seats: Array = _start_seats(_shown_map())
 	var tips: Dictionary = {}
 	for seat: int in seats: tips[seat] = _start_tip(seat, spots, guest)
-	$Pages/Play/Body/MapColumn/Preview.show_starts(players, tips, pending)
+	$Pages/Play/Body/MapColumn/Preview.show_starts(players, tips, pending, _hue(_seat if guest else _next_placed()))
 	$Pages/Play/Body/MapColumn/MapHint.text = HINT_BOTS if not guest and not lobby_bots.is_empty() else HINT_PICK
 
 # The settings' starts, with the guest's own as it last asked.
@@ -1047,7 +1047,7 @@ func _reset_room() -> void:
 	_pick_dirty = false
 	_sent_pick = {}
 	_own_start = 0
-	_spots.erase(2)
+	if mode == "host": _spots.erase(2)
 	get_node(MODE_BAR + "/Invite/CopyReset").stop()
 	_copy_reset()
 
@@ -1282,8 +1282,7 @@ static func _start_changes(before: Dictionary, after: Dictionary) -> Array[Strin
 	var bots: Array[int] = MatchSettings.bot_players(after)
 	if bots != MatchSettings.bot_players(before): return changes
 	var moved: Array[int] = bots.filter(func(player: int) -> bool: return _spots_of(before).get(player) != _spots_of(after).get(player))
-	if moved.any(func(player: int) -> bool: return _spots_of(after).has(player)): changes.append(HOST_PLACED)
-	elif not moved.is_empty(): changes.append(HOST_FREED)
+	for player: int in moved: changes.append((HOST_PLACED if _spots_of(after).has(player) else HOST_FREED) % ("Bot %d" % (bots.find(player) + 1)))
 	return changes
 
 func _relay_reason(reason: String) -> String:

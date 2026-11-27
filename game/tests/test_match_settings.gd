@@ -143,11 +143,12 @@ func test_refusal_rejects_bad_starts(runner) -> bool:
 	var base: Dictionary = MatchSettings.for_map("broken_crown", _bots(3, ["china"]))
 	var bad := {
 		"chosen that is no list": {"chosen": {"player": 1, "start": 2}}, "a null chosen": {"chosen": null}, "a row that is no dictionary": {"chosen": [[1, 2]]},
-		"player 0": _placed([[0, 2]]), "a player beyond the bots": _placed([[4, 2]]), "a duplicate player": _placed([[1, 2], [1, 3]]), "a fractional player": _placed([[1.5, 2]]),
+		"player 0": _placed([[0, 2]]), "a player beyond the bots": _placed([[4, 2]]), "a player and a bot on one start": _placed([[1, 2], [3, 2]]), "a duplicate player": _placed([[1, 2], [1, 3]]), "a fractional player": _placed([[1.5, 2]]),
 		"a start not on the map": _placed([[1, 5]]), "start 0": _placed([[1, 0]]), "a fractional start": _placed([[1, 2.5]]), "a start as text": _placed([[1, "2"]]), "a start taken twice": _placed([[1, 2], [2, 2]]),
 	}
 	for what: String in bad:
 		runner.check(MatchSettings.refusal(base.merged(bad[what]), 2) == MatchSettings.BAD_STARTS, "MS14 refused: %s, got '%s'" % [what, MatchSettings.refusal(base.merged(bad[what]), 2)])
+	runner.check(MatchSettings.refusal(MatchSettings.for_map("broken_crown").merged(_placed([[3, 2]])), 2) == MatchSettings.BAD_STARTS, "MS14 refused: a bot's start without bots")
 	runner.check(MatchSettings.refusal(base.merged(_placed([[1, 2], [2, 4], [3, 1]])), 2).is_empty(), "MS14 accepted: two picks and the bot's start")
 	return true
 

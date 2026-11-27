@@ -2919,7 +2919,7 @@ func test_start_pick_guest_view(runner) -> bool:
 	guest._handle(Wire.encode({"type": "settings", "settings": two.merged({"chosen": [{"player": 1, "start": 1}, {"player": 4, "start": 4}]})}))
 	guest._handle(Wire.encode({"type": "settings", "settings": _team_settings("broken_crown", ["frc"]).merged({"chosen": [{"player": 1, "start": 1}, {"player": 3, "start": 4}]})}))
 	cues.append(_cue(guest).text)
-	runner.check(cues.slice(1) == ["Host placed a bot", "Host changed the setup", "Host let the game place a bot", LauncherScript.BOT_REMOVED], "SP3 placing and clearing a bot name themselves, a removal that renumbers bots reads as the removal, got %s" % [cues])
+	runner.check(cues.slice(1) == ["Host placed Bot 1", "Host changed the setup", "Bot 1's start is open again", LauncherScript.BOT_REMOVED], "SP3 placing and clearing a bot name themselves, a removal that renumbers bots reads as the removal, got %s" % [cues])
 	guest._handle(Wire.encode({"type": "settings", "settings": room.merged({"chosen": [{"player": 4, "start": 1}]}, true)}))
 	runner.check(guest._transport == null, "SP3 settings placing a player that does not exist are refused like other bad settings")
 	OnlineTests._restore_statics(before)
@@ -3052,6 +3052,9 @@ func test_start_pick_hover(runner) -> bool:
 	preview._hovered = 3
 	preview.notification(Control.NOTIFICATION_MOUSE_EXIT)
 	runner.check(preview._hovered == 0, "SP9 leaving the preview clears the light")
+	runner.check(preview.ring(2) == launcher._hue(1), "SP9 before you have a start, a free start lights in your colour")
+	_click_start(launcher, 1)
+	runner.check(preview.ring(2) == launcher._hue(2) and preview.ring(1) == preview.LIGHT, "SP9 then a free start lights in Bot 1's colour, your own start in plain light")
 	launcher.free()
 	return true
 

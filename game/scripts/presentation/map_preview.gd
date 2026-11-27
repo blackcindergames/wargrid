@@ -18,6 +18,7 @@ var _colours: Dictionary = {}
 var _tips: Dictionary = {}
 var _asking: Dictionary = {}
 var _hovered: int = 0
+var _next := LIGHT
 
 # The map file's size, start cells and supply origins, drawn as the isometric diamond the match shows.
 func show_map(data: Dictionary) -> void:
@@ -28,8 +29,10 @@ func show_map(data: Dictionary) -> void:
 	queue_redraw()
 
 # colours: start seat -> the colour of the player there; pending: a start asked for but not yet in the host's settings.
-func show_starts(colours: Dictionary, tips: Dictionary, pending: Dictionary = {}) -> void:
+# next: the colour of whoever a click on a free start would place.
+func show_starts(colours: Dictionary, tips: Dictionary, pending: Dictionary = {}, next: Color = LIGHT) -> void:
 	_colours = colours
+	_next = next
 	_tips = tips
 	_asking = pending
 	queue_redraw()
@@ -70,6 +73,9 @@ func _hover(seat: int) -> void:
 	_hovered = seat
 	queue_redraw()
 
+func ring(seat: int) -> Color:
+	return LIGHT if _colours.has(seat) or _asking.has(seat) else _next
+
 func _get_tooltip(at: Vector2) -> String:
 	return _tips.get(seat_at(at), "")
 
@@ -90,7 +96,7 @@ func _draw() -> void:
 
 # Marker shapes from the lobby round picture (docs/images/lobby-round/lobby.html).
 func _draw_start(at: Vector2, seat: int) -> void:
-	if seat == _hovered: draw_arc(at, 13.0, 0.0, TAU, 32, LIGHT, 2.0)
+	if seat == _hovered: draw_arc(at, 13.0, 0.0, TAU, 32, ring(seat), 2.0)
 	if _asking.has(seat):
 		draw_circle(at, 8.0, BACK)
 		draw_arc(at, 9.0, 0.0, TAU, 24, _asking[seat], 2.0)
