@@ -116,7 +116,7 @@ var _unread: Array[Dictionary] = []
 # A failed pump turns every later pump inline for the rest of the process.
 static var _latched: bool = false
 static var _forced: String = ""
-# Pumps built per way of getting their mode, for the suite's SIM PUMPS line.
+# Mode assignments per way of getting them (a fallen-back pump counts again as fallback), for the suite's SIM PUMPS line.
 static var _counts: Dictionary = {"worker": 0, "forced": 0, "fallback": 0, "inline": 0}
 # Pumps whose thread is started and not joined, abandoned ones included; the reference keeps a running pump alive.
 static var _threads: Array[RefCounted] = []
@@ -213,7 +213,7 @@ func record() -> Dictionary:
 		if note != null: return {"tick": note.tick, "digest": note.digest, "match": note.snapshot.match, "commands": note.log}
 	# A failed simulation cannot be trusted for a digest, so the record keeps what was last shown; a living worker may still write the log.
 	var commands: Array[Dictionary] = []
-	if _thread == null or _worker_gone(): commands.assign(_recorder.commands().duplicate(true))
+	if _thread == null or _worker_gone() or _owner_id == OS.get_thread_caller_id(): commands.assign(_recorder.commands().duplicate(true))
 	return {"tick": _current.tick, "digest": "", "match": _current.view.match, "commands": commands}
 
 func failure() -> String:
@@ -344,9 +344,10 @@ static func finish_quit(tree: SceneTree, code: int = 0, on_web: bool = OS.has_fe
 static func stop_live_for_test() -> int:
 	var stopped: int = 0
 	for pump: RefCounted in _threads.duplicate():
-		if pump.get("_abandoned"): continue
+		if pump.get("_abandoned") or pump.get("_released"): continue
 		pump.call("stop")
 		stopped += 1
+	_reap_abandoned()
 	return stopped
 
 static func pump_counts() -> Dictionary: return _counts.duplicate()
@@ -357,10 +358,11 @@ func _spawn() -> void:
 	_thread = Thread.new()
 	if _start_thread() != OK:
 		_thread = null
-		_set_failure("worker thread could not start")
+		if web: _fall_back()
+		else: _set_failure("worker thread could not start")
 		return
 	_threads.append(self)
-	# A Web pthread only starts once the page returns to the event loop, so the handshake is polled across frames.
+	# A pooled Web pthread runs at once, an unpooled one only after the event loop turns, so the handshake is polled across frames.
 	if web:
 		_starting = true
 		_start_frame = frame_source.call()
@@ -378,19 +380,26 @@ func _spawn() -> void:
 
 # Main owns the simulation until the worker has said it runs.
 func _worker_owns() -> bool:
-	return _thread != null and not _starting
+	return _thread != null and not _starting and not _released
 
 func _poll_start() -> void:
 	if not _starting or _stopped: return
 	var frames: int = int(frame_source.call()) - _start_frame
 	var waited: int = int(clock.call()) - _start_msec
-	var running: bool = frames > _hold_frames and _started.try_wait()
+	var running: bool = (_hold_frames <= 0 or frames > _hold_frames) and _started.try_wait()
 	if not running and waited < WAIT_MSEC: return
 	_starting = false
 	_start_frames = frames
 	_start_ms = waited
 	if running: _owner_id = _worker_id
-	else: _abandon("stall: worker did not start")
+	else:
+		_release()
+		_fall_back()
+
+# Main still owns the simulation, so the match goes on inline and later matches start inline.
+func _fall_back() -> void:
+	_latched = true
+	_mode = _counted("fallback", "inline-fallback")
 
 func _start_thread() -> Error:
 	return _thread.start(_run_worker)
@@ -610,7 +619,7 @@ func _run_owned(job: Job, slot: Slot) -> Note:
 		_set_marker("owner thread")
 		_work.post()
 		return null
-	var watched: bool = _thread != null and _logger != null
+	var watched: bool = _worker_owns() and _logger != null
 	var before: int = _logger.count_for(id) if watched else 0
 	var note: Note = _note_for(job, slot)
 	if watched and note != null and _logger.count_for(id) > before:

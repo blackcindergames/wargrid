@@ -163,7 +163,6 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	music.play_match(rng, MusicPlayer.GAP_SECONDS)
-	_perf.mode = driver.sim_mode()
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
 	if driver.has_method("bot_line"):
 		_perf.extra = driver.bot_line
@@ -608,6 +607,7 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	# A repaint leaves the note unshown, so a refusal's sound gets its fresh refresh next frame even while lockstep waits.
 	if fresh: _shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
+	_perf.mode = driver.sim_mode()
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()
 	orders.prune(state)
@@ -751,7 +751,6 @@ func _restart_world() -> void:
 	_playtest.begin_match()
 	_create_world()
 	_failure_cleared = false
-	_perf.mode = driver.sim_mode()
 	_clock = PresentationClock.new()
 	_sound.director.reset()
 	_sound._unit_voice.stop()

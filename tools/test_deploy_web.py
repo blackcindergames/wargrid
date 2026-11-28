@@ -203,10 +203,10 @@ class DeployWebTest(unittest.TestCase):
         }
         for name, break_it in fixtures.items():
             with self.subTest(name):
+                self.setUp()
                 break_it()
                 preset, arg = self.route("0.7.0-dev", "test")
                 self.assertNotEqual(pairing_problems(self.root, preset, arg, want_threads=True), [])
-                self.setUp()
 
     def test_a_single_threaded_route_with_a_broken_pairing_is_rejected(self) -> None:
         fixtures = {
@@ -217,11 +217,11 @@ class DeployWebTest(unittest.TestCase):
         }
         for name, break_it in fixtures.items():
             with self.subTest(name):
+                self.setUp()
                 break_it()
                 preset, arg = self.route("0.7.0-dev", "test-nothreads")
                 self.assertNotEqual(pairing_problems(self.root, preset, arg, want_threads=False), [])
                 self.assertNotEqual(pairing_problems(self.root, preset, None, want_threads=False), [])
-                self.setUp()
 
     def test_a_release_workflow_that_ships_the_threaded_pair_is_rejected(self) -> None:
         workflow = (self.root / ".github/workflows/release.yml").read_text()

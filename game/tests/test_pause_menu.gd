@@ -22,7 +22,7 @@ const PumpTests = preload("res://tests/test_sim_pump.gd")
 const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
 const SkirmishRules = preload("res://scripts/simulation/skirmish.gd")
 const WORKER_LABEL := "Simulation worker"
-const WORKER_HINT := "Takes effect after a restart"
+const WORKER_HINT := "Takes effect from the next match"
 
 class FakeTransport extends RefCounted:
 	var patient: bool = false
@@ -40,7 +40,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_host_questions_after_friend_left, test_2v2_guest_questions, test_2v2_questions_layout, test_sb5b_worker_switch, test_sb5b_switch_sets_next_match, test_sb5b_fallback_match_keeps_its_mode]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_host_questions_after_friend_left, test_2v2_guest_questions, test_2v2_questions_layout, test_sb5b_worker_switch, test_sb5b_switch_sets_next_match, test_sb5b_start_fallback_reaches_f3_and_header, test_sb5b_fallback_match_keeps_its_mode]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -768,7 +768,10 @@ func test_sb5b_worker_switch(runner) -> bool:
 	fresh.free()
 	switch.button_pressed = false
 	runner.check(_stored_worker() == false and SimSettings.request() == false, "SB5B switching off saves worker = false")
-	for bad: Variant in ["yes", 1]:
+	var off = PauseMenu.new(false)
+	runner.check(not (off.find_child("Worker", true, false) as CheckButton).button_pressed, "SB5B a new menu reads the off from the settings file")
+	off.free()
+	for bad: Variant in ["yes", 1, 0, ""]:
 		var config := ConfigFile.new()
 		config.set_value("simulation", "worker", bad)
 		config.save(AudioSettings.path)
@@ -783,6 +786,27 @@ func test_sb5b_worker_switch(runner) -> bool:
 	runner.check(switch.button_pressed, "SB5B after a failed save the reopened switch shows the default on")
 	AudioSettings.path = saved
 	menu.free()
+	SimSettings.available_in_tests = false
+	return true
+
+# The pump falls back after the screen was built: the F3 word and the playtest header say so from then on.
+func test_sb5b_start_fallback_reaches_f3_and_header(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	SimSettings.available_in_tests = true
+	var main = await _scene(runner, Skirmish)
+	var helper = PumpTests.new()
+	var clock := PumpTests.StartClock.new()
+	var pump = helper._swap_web_pump(main.driver, PumpTests.SleepyStartPump, clock)
+	runner.check(_shown_mode(main) == "worker" and main.playtest_header().sim == "worker", "SB5B fixture: F3 and the header say worker while the start waits, got F3 %s" % _shown_mode(main))
+	clock.advance(SimPump.WAIT_MSEC)
+	for i in 3: BaseScene.tick(main)
+	runner.check(main.driver.failure().is_empty() and main.driver.sim_mode() == "inline-fallback" and main.playtest_header().sim == "inline-fallback" and _shown_mode(main) == "inline (fallback)", "SB5B after the start timed out F3 reads inline (fallback) and the header inline-fallback, got %s / %s" % [_shown_mode(main), main.playtest_header().sim])
+	pump.let_go = true
+	helper._gone(pump)
+	main.free()
+	SimPump._reap_abandoned()
+	helper._stop_built()
+	SimPump.reset_process_latch_for_test()
 	SimSettings.available_in_tests = false
 	return true
 

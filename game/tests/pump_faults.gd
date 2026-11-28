@@ -39,6 +39,13 @@ class DeadPump extends "res://scripts/match/sim_pump.gd":
 		_worker_id = OS.get_thread_caller_id()
 		_started.post()
 
+# A worker that starts only when told to, as a late one.
+class SleepyHookPump extends HookPump:
+	var let_go: bool = false
+	func _run_worker() -> void:
+		while not let_go: OS.delay_usec(500)
+		super()
+
 var _case: String = ""
 
 func _initialize() -> void:
@@ -136,6 +143,29 @@ func _case_main_error_control() -> String:
 	if not pump.failure().is_empty(): why = "a main-thread error faulted the worker job: '%s'" % pump.failure()
 	elif notes.size() != 1: why = "expected the job's note, drained %d" % notes.size()
 	pump.stop()
+	return why
+
+# After a start timeout main runs the jobs, so an error one of them logs is no worker fault.
+func _case_start_fallback_error_is_no_fault() -> String:
+	if not Engine.print_error_messages: return "print_error_messages is off, the logger would hear nothing"
+	var clock: Array[int] = [0]
+	var pump := SleepyHookPump.new(Skirmish.create(true, "ai", FACTIONS, Skirmish.MAP_PATH, [] as Array[int]))
+	if pump.mode() != "worker": return "the pump is %s, not worker: run with WARGRID_SIM_THREAD=1" % pump.mode()
+	pump.web = true
+	pump.clock = func() -> int: return clock[0]
+	pump.start()
+	clock[0] = SimPump.WAIT_MSEC
+	pump.drain()
+	pump.error_text = "fault probe: start_fallback_error_is_no_fault"
+	var posted: bool = pump.post(_job())
+	var why := ""
+	if pump.mode() != "inline-fallback": why = "mode is %s, not inline-fallback" % pump.mode()
+	elif not posted or not pump.failure().is_empty(): why = "an error logged on main after the fallback failed the pump: '%s'" % pump.failure()
+	pump.let_go = true
+	var end: int = Time.get_ticks_msec() + 3000
+	while pump._thread.is_alive() and Time.get_ticks_msec() < end: OS.delay_usec(500)
+	SimPump._reap_abandoned()
+	if why.is_empty() and SimPump.live_workers() != 0: why = "the released worker was not reaped"
 	return why
 
 func _case_wrong_thread() -> String:

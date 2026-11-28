@@ -228,7 +228,7 @@ func _settings_body(worker_row: bool) -> VBoxContainer:
 	if worker_row:
 		# The next pump reads the stored value; the running match keeps its mode.
 		_row(body, "Simulation worker", _switch("Worker", SimSettings.load_worker, SimSettings.save_worker, func(_on: bool) -> void: pass))
-		body.add_child(_label("Takes effect after a restart", &"HudHint"))
+		body.add_child(_label("Takes effect from the next match", &"HudHint"))
 	return body
 
 func _section(body: VBoxContainer, title: String) -> void:
