@@ -53,6 +53,7 @@ func _ready() -> void:
 	if arg_error == "": arg_error = _controller_error()
 	if arg_error == "": arg_error = _bots_error()
 	if arg_error == "": arg_error = _lobby_error()
+	if arg_error == "": arg_error = _pump_error()
 	if arg_error != "":
 		printerr(arg_error)
 		get_tree().quit(2)
@@ -522,6 +523,10 @@ func _lobby_error() -> String:
 	if starts.size() != seats or Array(starts).any(func(seat: String) -> bool: return not seat.is_valid_int() or seat.to_int() < 1):
 		return "Bad --starts '%s'; expected %d start seats above 0, one per seat" % [_args.starts, seats]
 	return ""
+
+# --pump hooks read the live simulation between steps, which a worker would own.
+func _pump_error() -> String:
+	return "--pump runs the pump inline; unset WARGRID_SIM_THREAD" if _args.has("pump") and OS.get_environment("WARGRID_SIM_THREAD") == "1" else ""
 
 func _defeat_error() -> String:
 	if not _args.has("defeat"): return ""

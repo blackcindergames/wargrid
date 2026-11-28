@@ -105,7 +105,8 @@ PUMP_COUNTS: dict[str, int] = {
     # +1 each: step reads has_room() before it builds a job or takes a tick (SB5a Task 7).
     # +3 online: step reads failure(), _end_on_failure() reads it, failure() passes it on (SB5a Task 7).
     "game/scripts/match/offline_driver.gd": 13,
-    "game/scripts/match/online_driver.gd": 17,
+    # -1 online: start() reads job zero's digest from first_note, no pump.query (SB5b Task 4).
+    "game/scripts/match/online_driver.gd": 16,
 }
 
 

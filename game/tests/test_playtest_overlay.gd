@@ -50,7 +50,7 @@ class Camera extends RefCounted:
 		return image
 
 func cases() -> Array[Callable]:
-	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_or_played, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states, test_match_end_keeps_field_focus, test_new_scene_starts_new_entry, test_resumed_sitting_lists_markers, test_match_end_keeps_marker_draft, test_mute_key_stays_in_field, test_match_end_scrolls_to_markers, test_ph_header_builds_no_log, test_ph_every_exit_stops_pump_before_record]
+	return [test_marker_pauses_offline, test_marker_does_not_pause_online, test_capture_before_dialog, test_note_typing_is_not_a_hotkey, test_marker_ignored_when_menu_or_over, test_checklist_triggers, test_helper_off_changes_nothing, test_overlay_layout, test_leave_flow, test_match_end_opens_review_once, test_back_to_menu_from_result_panel, test_leave_after_closed_sitting, test_two_match_session_file, test_web_save_downloads, test_desktop_write_error_keeps_session, test_window_close_files_typed_text, test_quit_with_write_error_still_quits, test_each_exit_files_filled_or_played, test_failed_save_says_not_saved, test_window_close_keeps_marker_draft, test_form_layout, test_resume_uses_stored_card, test_restart_keeps_markers, test_scale_legend, test_sb2_checklist_waits_for_answer, test_sb2_review_form_and_pending_answer, test_open_panel_never_holds, test_match_end_shows_panel_without_focus, test_marker_list_this_and_last, test_typing_is_text_not_keys, test_field_saves_on_submit_and_exit, test_world_click_releases_field, test_escape_in_field, test_toggles_take_no_focus, test_header_has_no_digest, test_modifier_keys_stay_in_field, test_arrows_do_not_pan_while_typing, test_world_click_keeps_dialog_text, test_panel_shrinks_on_resize, test_focused_text_survives_rebuilds, test_enter_in_field_then_play_again, test_empty_marker_states, test_match_end_keeps_field_focus, test_new_scene_starts_new_entry, test_resumed_sitting_lists_markers, test_match_end_keeps_marker_draft, test_mute_key_stays_in_field, test_match_end_scrolls_to_markers, test_ph_header_builds_no_log, test_ph_every_exit_stops_pump_before_record, test_t0b_every_quit_path_goes_through_the_helper]
 
 func _begin(helper_on: bool = true, card: String = CARD_ECONOMY) -> String:
 	var saved: String = AudioSettings.path
@@ -1421,5 +1421,29 @@ func test_match_end_scrolls_to_markers(runner) -> bool:
 	var title: Control = _panel(main).find_child("MarkersTitle", true, false)
 	runner.check(scroll.get_global_rect().encloses(title.get_global_rect()), "PO42 match end scrolls the markers title into view, title %s, scroll %s" % [title.get_global_rect(), scroll.get_global_rect()])
 	port.free()
+	_end(saved)
+	return true
+
+func test_t0b_every_quit_path_goes_through_the_helper(runner) -> bool:
+	var saved: String = _begin()
+	var ends: Array = []
+	SimPump.end_for_test = func(code: int, kill: bool) -> void: ends.append([code, kill, _session_files().size() == 1 and _current_text().is_empty()])
+	for path: String in ["pause quit", "match window close"]:
+		WargridTestRunner.remove_dir(sessions)
+		var main = await _scene(runner)
+		if path == "pause quit": main.get_node("HUD/PauseMenu").quit_requested.emit()
+		else: _close_window(main)
+		main.free()
+	for path: String in ["launcher quit", "launcher window close"]:
+		WargridTestRunner.remove_dir(sessions)
+		_store_sitting(PlaytestSettings.build_id(), true)
+		var launcher = load(LAUNCHER).instantiate()
+		launcher.web = false
+		runner.root.add_child(launcher)
+		await runner.process_frame
+		if path == "launcher quit": launcher.get_node("Sidebar/Nav/Quit").pressed.emit()
+		else: _close_window(launcher)
+		launcher.free()
+	runner.check(ends == [[0, false, true], [0, false, true], [0, false, true], [0, false, true]], "T0B pause Quit, a match window close, launcher Quit and a launcher window close each end through SimPump.finish_quit after the sitting is filed, got %s" % [ends])
 	_end(saved)
 	return true

@@ -57,10 +57,26 @@ func test_sb5a_runner_flags_live_worker(runner) -> bool:
 		var stopped: int = SimPump.stop_live_for_test()
 		runner.check(stopped == 1 and SimPump.live_workers() == 0, "R7 the runner stops the worker a case left, got %d" % stopped)
 		runner.check(Runner.leaked_worker_line("test_x", stopped) == "FAIL: live sim worker after test_x", "R7 a case that leaves a worker is named, got '%s'" % Runner.leaked_worker_line("test_x", stopped))
+	_released_start_is_no_leak(runner)
 	_leak_per_case(runner)
 	runner.check(Runner.leaked_worker_line("test_sb3_job0_starts", 1).is_empty(), "R7 a case on the left-to-the-runner list is not named")
 	runner.check(Runner.leaked_worker_line("test_x", 0).is_empty(), "R7 a case that leaves nothing is not named")
 	return true
+
+# A Web pump stopped before its worker was ready is waiting to be joined, not running.
+func _released_start_is_no_leak(runner) -> void:
+	if not OS.has_feature("threads"): return
+	SimPump.force_mode_for_test("worker")
+	var pump := SimPump.new(Skirmish.create(true, "ai", {1: "usa", 2: "china"}, Skirmish.MAP_PATH, [] as Array[int]))
+	SimPump.force_mode_for_test("")
+	pump.web = true
+	pump.hold_start_for_test(1000)
+	pump.start()
+	pump.stop()
+	var end: int = Time.get_ticks_msec() + 3000
+	while pump._thread.is_alive() and Time.get_ticks_msec() < end: OS.delay_usec(500)
+	var stopped: int = SimPump.stop_live_for_test()
+	runner.check(stopped == 0 and SimPump.live_workers() == 0, "R7 a start released before ready is no live worker and is reaped, got %d stopped, %d live" % [stopped, SimPump.live_workers()])
 
 # The runner's own per-case step: with the switch a leak is named and counted, without it only cleaned up; either way the forced mode is cleared.
 func _leak_per_case(runner) -> void:

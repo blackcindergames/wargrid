@@ -130,4 +130,4 @@ func _finish(line: String, code: int) -> void:
 	if _terminal: return
 	_terminal = true
 	print(line)
-	get_tree().quit(code)
+	SimPump.finish_quit(get_tree(), code)

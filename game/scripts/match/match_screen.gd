@@ -73,7 +73,7 @@ var _pause: Control
 var _result_panel: Control
 var change_scene: Callable = _change_scene
 var outside_probe: Callable = _outside_probe
-var quit: Callable
+var quit: Callable = _quit
 @onready var _selection_box: ReferenceRect = $HUD/SelectionBox
 var _sound: SoundPlayer = null
 var _auto_samples := PackedFloat32Array()
@@ -136,7 +136,6 @@ func _ready() -> void:
 	_pause.opened.connect(func() -> void: _pause.faction = HudModel.player(shown_state, local_player).get("faction", "") if shown_state.has("players") else "")
 	hud.menu_pressed.connect(_pause.open)
 	_pause.leave_requested.connect(_leave)
-	if not quit.is_valid(): quit = get_tree().quit
 	_pause.quit_requested.connect(func() -> void:
 		close_match(true)
 		quit.call())
@@ -165,7 +164,6 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	music.play_match(rng, MusicPlayer.GAP_SECONDS)
-	_perf.mode = driver.sim_mode()
 	if driver.has_method("net_line"): _perf.extra = driver.net_line
 	if driver.has_method("bot_line"):
 		_perf.extra = driver.bot_line
@@ -314,12 +312,17 @@ func close_match(file_sitting: bool) -> void:
 func _notification(what: int) -> void:
 	match what:
 		NOTIFICATION_WM_CLOSE_REQUEST:
-			if not _playtest.web: close_match(true) # web files at the next launcher open instead
+			if not _playtest.web: # web files at the next launcher open instead
+				close_match(true)
+				quit.call()
 		NOTIFICATION_WM_MOUSE_EXIT: _pointer_in = false
 		NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_FOCUS_OUT:
 			_focused = false
 			mouse_pan.drop()
 		NOTIFICATION_WM_WINDOW_FOCUS_IN, NOTIFICATION_APPLICATION_FOCUS_IN: _focused = true
+
+func _quit() -> void:
+	SimPump.finish_quit(get_tree())
 
 func _change_scene(path: String) -> void:
 	get_tree().change_scene_to_file(path)
@@ -605,6 +608,7 @@ func _show(state: Dictionary, fresh: bool = true) -> void:
 	# A repaint leaves the note unshown, so a refusal's sound gets its fresh refresh next frame even while lockstep waits.
 	if fresh: _shown_note = _note()
 	_perf.set_counts(state.units.size(), state.get("buildings", []).size(), state.tick)
+	_perf.mode = driver.sim_mode()
 	_perf.split_share = _clock.split_share()
 	var zone: int = Profiler.begin()
 	orders.prune(state)
@@ -748,7 +752,6 @@ func _restart_world() -> void:
 	_playtest.begin_match()
 	_create_world()
 	_failure_cleared = false
-	_perf.mode = driver.sim_mode()
 	_clock = PresentationClock.new()
 	_sound.director.reset()
 	_sound._unit_voice.stop()

@@ -16,6 +16,13 @@ const HudModel = preload("res://scripts/match/hud_model.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
 const OnlineTests = preload("res://tests/test_online_scene.gd")
 const SeatFixture = preload("res://tests/seat_fixture.gd")
+const SimSettings = preload("res://scripts/presentation/sim_settings.gd")
+const SimPump = preload("res://scripts/match/sim_pump.gd")
+const PumpTests = preload("res://tests/test_sim_pump.gd")
+const OfflineDriver = preload("res://scripts/match/offline_driver.gd")
+const SkirmishRules = preload("res://scripts/simulation/skirmish.gd")
+const WORKER_LABEL := "Simulation worker"
+const WORKER_HINT := "Takes effect from the next match"
 
 class FakeTransport extends RefCounted:
 	var patient: bool = false
@@ -33,7 +40,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_faction_guide_page, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_host_questions_after_friend_left, test_2v2_guest_questions, test_2v2_questions_layout]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_faction_guide_page, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_host_questions_after_friend_left, test_2v2_guest_questions, test_2v2_questions_layout, test_sb5b_worker_switch, test_sb5b_switch_sets_next_match, test_sb5b_start_fallback_reaches_f3_and_header, test_sb5b_fallback_match_keeps_its_mode]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -381,8 +388,15 @@ func test_playtest_switch(runner) -> bool:
 static func _leaves(page: Control) -> Array:
 	return page.find_children("*", "Control", true, false).filter(func(control: Control) -> bool: return control.is_visible_in_tree() and (control is Label or control is BaseButton or control is Range))
 
-# The brief's three sizes and the ultrawide one: each page 16 px inside the view, its words whole and apart.
+# The brief's three sizes and the ultrawide one: each page 16 px inside the view, its words whole and apart; with and without the worker row.
 func test_pages_layout(runner) -> bool:
+	for available: bool in [false, true]:
+		SimSettings.available_in_tests = available
+		await _pages_layout(runner, available)
+	SimSettings.available_in_tests = false
+	return true
+
+func _pages_layout(runner, available: bool) -> void:
 	for pair: Array in BaseScene.HUD_SIZES:
 		var size: Vector2i = pair[1]
 		var inner := Rect2(Vector2.ZERO, Vector2(size)).grow(-16.0)
@@ -395,7 +409,7 @@ func test_pages_layout(runner) -> bool:
 			await runner.process_frame
 			await runner.process_frame
 			var page: Control = main.get_node("HUD/PauseMenu").find_child(step[1], true, false)
-			var at: String = "%s at %s" % [step[1], size]
+			var at: String = "%s at %s, worker row %s" % [step[1], size, available]
 			runner.check(main.get_viewport().get_visible_rect().size == Vector2(size), "L1 the viewport really is %s" % size)
 			runner.check(page.is_visible_in_tree() and inner.encloses(page.get_global_rect()), "L1 %s: the panel %s 16 px inside the view" % [at, page.get_global_rect()])
 			var leaves: Array = _leaves(page)
@@ -407,7 +421,11 @@ func test_pages_layout(runner) -> bool:
 					if rect.intersects(leaves[j].get_global_rect()): bad.append("%s over %s" % [leaves[i].name, leaves[j].name])
 			runner.check(leaves.size() >= 3 and bad.is_empty(), "L1 %s: %d words and controls whole and apart, got %s" % [at, leaves.size(), bad.slice(0, 4)])
 			if step[1] == "SettingsPage":
-				runner.check(leaves.filter(func(control: Control) -> bool: return control is Range).size() == 3 and leaves.filter(func(control: Control) -> bool: return control is CheckButton).size() == 5, "L1 %s: three volume sliders, four switches and Mute" % at)
+				var checks: int = 6 if available else 5
+				runner.check(leaves.filter(func(control: Control) -> bool: return control is Range).size() == 3 and leaves.filter(func(control: Control) -> bool: return control is CheckButton).size() == checks, "L1 %s: three volume sliders, %d switches and Mute" % [at, checks - 1])
+				runner.check((page.find_child("Worker", true, false) != null) == available and leaves.any(func(control: Control) -> bool: return control is Label and control.text == WORKER_HINT) == available, "L1 %s: the worker switch and its hint only where available" % at)
+				var focus: Control = main.get_viewport().gui_get_focus_owner()
+				runner.check(focus != null and focus.name == "Back", "L1 %s: Back keeps the first focus on the page, got %s" % [at, focus])
 				var switches: Array = leaves.filter(func(control: Control) -> bool: return control is CheckButton and control.name != "Mute")
 				runner.check(switches.all(func(control: Control) -> bool: return control.size.y == 22.0), "L1 %s: the switches are 22 px high as in the mock-up, got %s" % [at, switches.map(func(control: Control) -> float: return control.size.y)])
 				runner.check(page.find_child("Volume", true, false).get_theme_constant("h_separation") == 24, "L1 %s: the sliders sit 24 px from their words" % at)
@@ -419,7 +437,6 @@ func test_pages_layout(runner) -> bool:
 					if not above.is_empty(): gaps.append(title.get_global_rect().position.y - above.map(func(control: Control) -> float: return control.get_global_rect().end.y).max())
 				runner.check(gaps.size() == 3 and gaps.all(func(gap: float) -> bool: return is_equal_approx(gap, 12.0)), "L1 %s: 12 px above each later section title, got %s" % [at, gaps])
 		port.free()
-	return true
 
 const PAD_ROWS: Array = [["Two-finger swipe", "Pan (trackpad)"], ["Pinch", "Zoom (trackpad)"]]
 const MOUSE_ROWS: Array = [["Left-click", "Select a unit or a building"], ["Left-drag", "Select the units in a box"], ["Shift+click", "Add or remove a unit"], ["Double-click", "Select that kind on screen"], ["Alt+double-click", "Select that kind on the map"], ["Left-click", "Place the building (right-click cancels)"], ["Right-click", "Move, attack, gather or enter"], ["Right-click", "Set the rally point (factory or barracks selected)"], ["Right-click", "Cancel the last queued of that unit (on its button)"], ["Right-drag", "Pan, faster the farther you drag"], ["Middle-drag", "Drag the map along"], ["Wheel", "Zoom"]]
@@ -774,4 +791,135 @@ func test_2v2_questions_layout(runner) -> bool:
 				main._pause.close()
 			port.queue_free()
 	online_tests._restore_statics(before)
+	return true
+
+func _row_words(menu: Control) -> Array:
+	return menu.find_child("SettingsPage", true, false).find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
+
+func _stored_worker() -> Variant:
+	var config := ConfigFile.new()
+	return config.get_value("simulation", "worker", null) if config.load(AudioSettings.path) == OK else null
+
+func _next_pump_mode() -> String:
+	var driver = OfflineDriver.new(1)
+	driver.create(SkirmishRules.MAP_PATH, [] as Array[int], {1: "usa", 2: "china"}, 0)
+	var mode: String = driver.sim_mode()
+	driver.stop()
+	return mode
+
+func test_sb5b_worker_switch(runner) -> bool:
+	var saved: String = AudioSettings.path
+	SimSettings.save_worker(true)
+	var absent = PauseMenu.new(false)
+	runner.check(absent.find_child("Worker", true, false) == null and not _row_words(absent).has(WORKER_LABEL) and SimSettings.request() == null, "SB5B a build without the threaded Web export shows no worker row and ignores a saved on")
+	absent.free()
+	DirAccess.remove_absolute(AudioSettings.path)
+	SimSettings.available_in_tests = true
+	var menu = PauseMenu.new(false)
+	runner.root.add_child(menu)
+	var switch: CheckButton = menu.find_child("Worker", true, false)
+	var words: Array = _row_words(menu)
+	runner.check(switch != null and words.has(WORKER_LABEL) and words.has(WORKER_HINT) and switch.text.is_empty(), "SB5B the GAME section has '%s' with the hint '%s', got %s" % [WORKER_LABEL, WORKER_HINT, words])
+	runner.check(switch.button_pressed and SimSettings.request() == true and _next_pump_mode() == "worker", "SB5B the worker switch is on by default and the next pump a worker")
+	switch.button_pressed = false
+	switch.button_pressed = true
+	runner.check(_stored_worker() == true and SimSettings.request() == true, "SB5B switching on saves worker = true in [simulation], got %s" % _stored_worker())
+	menu.open()
+	runner.check(switch.button_pressed, "SB5B reopening the menu shows the stored on")
+	var fresh = PauseMenu.new(false)
+	runner.check((fresh.find_child("Worker", true, false) as CheckButton).button_pressed, "SB5B a new menu reads the on from the settings file")
+	fresh.free()
+	switch.button_pressed = false
+	runner.check(_stored_worker() == false and SimSettings.request() == false, "SB5B switching off saves worker = false")
+	var off = PauseMenu.new(false)
+	runner.check(not (off.find_child("Worker", true, false) as CheckButton).button_pressed, "SB5B a new menu reads the off from the settings file")
+	off.free()
+	for bad: Variant in ["yes", 1, 0, ""]:
+		var config := ConfigFile.new()
+		config.set_value("simulation", "worker", bad)
+		config.save(AudioSettings.path)
+		menu.open()
+		runner.check(switch.button_pressed and SimSettings.request() == true, "SB5B an invalid stored value (%s) reads as the default on" % [bad])
+	DirAccess.remove_absolute(AudioSettings.path)
+	AudioSettings.path = "user://no-such-dir-%d/settings.cfg" % OS.get_process_id()
+	menu.open()
+	switch.button_pressed = false
+	runner.check(SimSettings.request() == true and _next_pump_mode() == "worker", "SB5B after a failed save the next pump keeps the default on")
+	menu.open()
+	runner.check(switch.button_pressed, "SB5B after a failed save the reopened switch shows the default on")
+	AudioSettings.path = saved
+	menu.free()
+	SimSettings.available_in_tests = false
+	return true
+
+# The pump falls back after the screen was built: the F3 word and the playtest header say so from then on.
+func test_sb5b_start_fallback_reaches_f3_and_header(runner) -> bool:
+	if not OS.has_feature("threads"): return true
+	SimSettings.available_in_tests = true
+	var main = await _scene(runner, Skirmish)
+	var helper = PumpTests.new()
+	var clock := PumpTests.StartClock.new()
+	var pump = helper._swap_web_pump(main.driver, PumpTests.SleepyStartPump, clock)
+	runner.check(_shown_mode(main) == "worker" and main.playtest_header().sim == "worker", "SB5B fixture: F3 and the header say worker while the start waits, got F3 %s" % _shown_mode(main))
+	clock.advance(SimPump.WAIT_MSEC)
+	for i in 3: BaseScene.tick(main)
+	runner.check(main.driver.failure().is_empty() and main.driver.sim_mode() == "inline-fallback" and main.playtest_header().sim == "inline-fallback" and _shown_mode(main) == "inline (fallback)", "SB5B after the start timed out F3 reads inline (fallback) and the header inline-fallback, got %s / %s" % [_shown_mode(main), main.playtest_header().sim])
+	pump.let_go = true
+	helper._gone(pump)
+	main.free()
+	SimPump._reap_abandoned()
+	helper._stop_built()
+	SimPump.reset_process_latch_for_test()
+	SimSettings.available_in_tests = false
+	return true
+
+func _worker_switch(main) -> CheckButton:
+	main._pause.open()
+	_click(main, "Settings")
+	return main.get_node("HUD/PauseMenu").find_child("Worker", true, false)
+
+func _shown_mode(main) -> String:
+	main._perf.refresh_text()
+	return main._perf.text.get_slice("\n", 0).get_slice("Sim: ", 1)
+
+# Offline: a click changes nothing in the running match, the next one (Restart, the result panel's Play again) follows it both ways.
+func test_sb5b_switch_sets_next_match(runner) -> bool:
+	SimSettings.available_in_tests = true
+	var config := ConfigFile.new()
+	config.set_value("audio", "master", 0.5)
+	config.save(AudioSettings.path)
+	var main = await _scene(runner, Skirmish)
+	runner.check(main.driver.sim_mode() == "worker" and _shown_mode(main) == "worker", "SB5B on by default: the first match runs worker, F3 says %s" % _shown_mode(main))
+	for want: String in ["inline", "worker"]:
+		var before: String = main.driver.sim_mode()
+		var pump = main.driver.pump
+		_worker_switch(main).button_pressed = want == "worker"
+		main._pause.close()
+		for i in 3: BaseScene.tick(main)
+		runner.check(is_same(main.driver.pump, pump) and main.driver.sim_mode() == before and _shown_mode(main) == before, "SB5B a click keeps the running %s match %s, F3 %s" % [before, before, _shown_mode(main)])
+		main._restart()
+		BaseScene.tick(main)
+		runner.check(main.driver.sim_mode() == want and _shown_mode(main) == want and main.playtest_header().sim == want, "SB5B the match after Restart runs %s, got %s, F3 %s" % [want, main.driver.sim_mode(), _shown_mode(main)])
+	main.free()
+	SimSettings.available_in_tests = false
+	return true
+
+# A latched failure wins over the stored on; switching off shows in the next match only, and reopening keeps the latch.
+func test_sb5b_fallback_match_keeps_its_mode(runner) -> bool:
+	SimSettings.available_in_tests = true
+	SimSettings.save_worker(true)
+	PumpTests.latch_for_test()
+	var online: Dictionary = await _online(runner)
+	var main = online.main
+	runner.check(main.driver.sim_mode() == "inline-fallback", "SB5B fixture: a latched process runs the stored on as inline-fallback, got %s" % main.driver.sim_mode())
+	var switch: CheckButton = _worker_switch(main)
+	runner.check(switch.button_pressed, "SB5B the switch shows the stored on in a fallback match")
+	switch.button_pressed = false
+	runner.check(_shown_mode(main) == "inline (fallback)" and main.playtest_header().sim == "inline-fallback" and main.driver._report().sim == "inline-fallback", "SB5B after switching off, F3 '%s', header and desync report still name inline-fallback" % _shown_mode(main))
+	main._pause.close()
+	switch = _worker_switch(main)
+	runner.check(not switch.button_pressed and SimPump._latched and main.driver.sim_mode() == "inline-fallback", "SB5B reopening Settings shows the stored off and keeps the latch")
+	main.free()
+	SimPump.reset_process_latch_for_test()
+	SimSettings.available_in_tests = false
 	return true
