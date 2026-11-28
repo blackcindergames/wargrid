@@ -239,7 +239,7 @@ These checks are all text-level: lint and warnings find style and typing problem
 
 ## CI: what a push triggers
 
-`.github/workflows/ci.yml` runs on push (except docs-only changes and Dependabot branches), pull request, manual start and as a reusable workflow. Godot is pinned to one version, downloaded with a checksum check. The jobs:
+`.github/workflows/ci.yml` runs on push (except docs-only and War Room-only changes, which `warroom.yml` covers with the public and shell checks, and Dependabot branches), pull request, manual start and as a reusable workflow. Godot is pinned to one version, downloaded with a checksum check. The jobs:
 
 ```mermaid
 flowchart TD
