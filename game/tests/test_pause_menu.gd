@@ -306,6 +306,12 @@ func test_faction_guide_page(runner) -> bool:
 	await runner.process_frame
 	var words: Array = guide.find_child("Counters", true, false).find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
 	runner.check(words.has("BEATS") and words.has("WEAK AGAINST") and words.has("Medium Tank") and words.has("China · you") and words.has("Militia"), "G1 the Rocket Trooper's card names the Medium Tank under Beats, columns marked yours, got %s" % [words])
+	var strip: Array = guide.find_child("DamageAgainst", true, false).get_children().map(func(label: Label) -> String: return label.text)
+	runner.check(strip == ["DAMAGE AGAINST", "Infantry", "Barely", "Light vehicles", "Half", "Tanks", "Full", "Buildings", "Half"], "G1 the Rocket Trooper's damage strip reads the armour table, got %s" % [strip])
+	guide.find_child("Tab_frc", true, false).pressed.emit()
+	await runner.process_frame
+	var empty: Array = guide.find_child("Counters", true, false).find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
+	runner.check(empty.count("None cleanly. Closest:") == 3 and empty.has("Rifleman") and not empty.has("–"), "G1 the Insurgent's empty Weak against names the closest unit per faction, got %s" % [empty])
 	guide.find_child("Tab_china", true, false).pressed.emit()
 	(guide.find_child("Roster", true, false).get_node("china_builder") as Button).pressed.emit()
 	await runner.process_frame

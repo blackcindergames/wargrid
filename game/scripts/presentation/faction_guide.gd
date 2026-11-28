@@ -173,6 +173,7 @@ func _fill_card(kind: String) -> void:
 	var trained: Label = _label("Trained at %s%s" % [facts.trained_at, " · needs " + facts.needs if not facts.needs.is_empty() else ""], &"HudSmallLabel")
 	trained.name = "Trained"
 	_card.add_child(trained)
+	if not Model.damage_against(kind).is_empty(): _card.add_child(_damage_strip(kind))
 	_card.add_child(HSeparator.new())
 	if Model.is_worker(kind):
 		_card.add_child(_label(" · ".join(["Builds your base", "Gathers supplies"].filter(func(job: String) -> bool: return Registry.is_builder(kind) if job.begins_with("Builds") else not Registry.collects(kind).is_empty())), &"HudSmallLabel"))
@@ -196,19 +197,37 @@ func _counter_grid(counters: Dictionary) -> GridContainer:
 		verb.name = part[1].capitalize()
 		verb.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		grid.add_child(verb)
-		for id: String in Model.FACTIONS: grid.add_child(_unit_list(counters[part[1]][id]))
+		for id: String in Model.FACTIONS: grid.add_child(_unit_list(counters[part[1]][id], counters["closest_" + part[1]][id]))
 	return grid
 
-func _unit_list(kinds: Array) -> VBoxContainer:
+# The damage the weapon does to each armour class, in words, so the counters' reason shows (director, user pick 2026-11-28).
+func _damage_strip(kind: String) -> HBoxContainer:
+	var strip := HBoxContainer.new()
+	strip.name = "DamageAgainst"
+	strip.add_theme_constant_override("separation", 8)
+	strip.add_child(_label("DAMAGE AGAINST", &"HudLabel"))
+	for pair: Array in Model.damage_against(kind):
+		strip.add_child(_label(pair[0], &"HudHint"))
+		var word: Label = _label(pair[1], &"HudNumber")
+		word.custom_minimum_size.x = 56
+		strip.add_child(word)
+	return strip
+
+# An empty side names its closest unit, muted, so the row never reads as missing.
+func _unit_list(kinds: Array, closest: String) -> VBoxContainer:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
-	if kinds.is_empty(): list.add_child(_label("–", &"HudHint"))
-	for kind: String in kinds:
-		var line := HBoxContainer.new()
-		line.add_child(_glyph(kind, 20))
-		line.add_child(_label(Registry.kind(kind).display_name, &"HudRow"))
-		list.add_child(line)
+	if kinds.is_empty() and not closest.is_empty():
+		list.add_child(_label("None cleanly. Closest:", &"HudHint"))
+		list.add_child(_unit_line(closest, &"HudHint"))
+	for kind: String in kinds: list.add_child(_unit_line(kind, &"HudRow"))
 	return list
+
+func _unit_line(kind: String, variation: StringName) -> HBoxContainer:
+	var line := HBoxContainer.new()
+	line.add_child(_glyph(kind, 20))
+	line.add_child(_label(Registry.kind(kind).display_name, variation))
+	return line
 
 func _glyph(kind: String, edge: float) -> TextureRect:
 	var glyph := TextureRect.new()

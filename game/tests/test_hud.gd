@@ -3314,6 +3314,11 @@ func test_faction_guide_counters(runner) -> bool:
 	runner.check(pairs == 144, "FG1 144 combat pairs checked, got %d" % pairs)
 	runner.check(GuideModel.roster("usa") == ["usa_rifle_infantry", "usa_rocket_infantry", "usa_light_vehicle", "usa_tank", "usa_builder", "usa_collector"], "FG1 USA roster cheapest first, workers last, got %s" % [GuideModel.roster("usa")])
 	runner.check(GuideModel.roster("frc").count("frc_builder") == 1 and GuideModel.roster("frc").size() == 5, "FG1 the Laborer builds and gathers: listed once, got %s" % [GuideModel.roster("frc")])
+	var insurgent: Dictionary = GuideModel.counters("frc_rifle_infantry")
+	runner.check(insurgent.weak.usa.is_empty() and insurgent.closest_weak.usa == "usa_rifle_infantry" and insurgent.closest_weak.china == "china_tank", "FG1 the Insurgent's empty Weak against names the Rifleman and the Rotary Gun Tank as closest, got %s" % insurgent.closest_weak)
+	var beats: Array = GuideModel.counters("usa_rifle_infantry").beats.china
+	runner.check(beats.size() >= 2 and GuideModel.ratio("usa_rifle_infantry", beats[0]) <= GuideModel.ratio("usa_rifle_infantry", beats[1]), "FG1 the strongest counter comes first, got %s" % [beats])
+	runner.check(GuideModel.damage_against("usa_tank") == [["Infantry", "Barely"], ["Light vehicles", "Full"], ["Tanks", "Full"], ["Buildings", "Full"]] and GuideModel.damage_against("china_tank")[2] == ["Tanks", "Barely"] and GuideModel.damage_against("usa_builder").is_empty(), "FG1 damage against reads the armour table: Battle Tank barely hurts infantry, got %s" % [GuideModel.damage_against("usa_tank")])
 	var rocket: Dictionary = GuideModel.facts("usa_rocket_infantry")
 	runner.check(rocket.cost == "300" and rocket.time == "5 s" and rocket.health == "100" and rocket.speed == "0.8" and rocket.range == "7" and rocket.vision == "6" and rocket.trained_at == "Barracks" and rocket.needs == "", "FG1 Rocket Trooper facts, got %s" % rocket)
 	runner.check(GuideModel.facts("china_light_vehicle").needs == "Supply Depot" and GuideModel.facts("usa_builder").range == "–", "FG1 the Medium Tank's factory needs a Supply Depot; the Bulldozer has no range")

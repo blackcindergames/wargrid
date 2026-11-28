@@ -27,19 +27,33 @@ static func ratio(kind: String, other: String) -> float:
 static func is_worker(kind: String) -> bool:
 	return Registry.is_builder(kind) or not Registry.collects(kind).is_empty()
 
-# {"beats": {faction: [kinds]}, "weak": {faction: [kinds]}}; close fights are left out, workers have none.
+const ARMOR_CLASSES: Array = [["Infantry", "human"], ["Light vehicles", "light_vehicle"], ["Tanks", "tank"], ["Buildings", "structure"]]
+
+# {"beats": {faction: [kinds]}, "weak": {faction: [kinds]}, "closest_beats"/"closest_weak": {faction: kind}}: strongest first;
+# close fights are left out, but an empty side names its closest unit; workers have none.
 static func counters(kind: String) -> Dictionary:
-	var found: Dictionary = {"beats": {}, "weak": {}}
+	var found: Dictionary = {"beats": {}, "weak": {}, "closest_beats": {}, "closest_weak": {}}
 	for faction: String in FACTIONS:
-		found.beats[faction] = []
-		found.weak[faction] = []
-		if is_worker(kind): continue
-		for other: String in roster(faction):
-			if is_worker(other): continue
-			var r: float = ratio(kind, other)
-			if r <= 0.5: found.beats[faction].append(other)
-			elif r >= 2.0: found.weak[faction].append(other)
+		var armed: Array = [] if is_worker(kind) else roster(faction).filter(func(other: String) -> bool: return not is_worker(other))
+		armed.sort_custom(func(a: String, b: String) -> bool: return ratio(kind, a) < ratio(kind, b))
+		found.beats[faction] = armed.filter(func(other: String) -> bool: return ratio(kind, other) <= 0.5)
+		found.weak[faction] = armed.filter(func(other: String) -> bool: return ratio(kind, other) >= 2.0)
+		found.weak[faction].reverse()
+		found.closest_beats[faction] = armed.front() if not armed.is_empty() else ""
+		found.closest_weak[faction] = armed.back() if not armed.is_empty() else ""
 	return found
+
+# [[class words, damage words]] from the armour table: how hard this unit's weapon hits each armour class.
+static func damage_against(kind: String) -> Array:
+	var weapon: Dictionary = _weapon(kind)
+	if weapon.is_empty(): return []
+	return ARMOR_CLASSES.map(func(pair: Array) -> Array: return [pair[0], _damage_word(Shared.ARMOR[pair[1]][weapon.damage_type])])
+
+static func _damage_word(percent: int) -> String:
+	if percent >= 80: return "Full"
+	if percent >= 50: return "Half"
+	if percent >= 25: return "Quarter"
+	return "Barely"
 
 # Combat units cheapest first, then the builder and the collector.
 static func roster(faction: String) -> Array[String]:
