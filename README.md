@@ -50,7 +50,7 @@ Early development; the latest build is on the [Releases](https://github.com/blac
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**19 of 48 parts done**
+**19 of 49 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -75,12 +75,13 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ⏭ | Team up against bots | Next |
 | ✅ | A lobby for every match | Done |
 | 📋 | Know what beats what | Planned |
+| 📋 | Straight routes | Planned |
 | 📋 | First new units | Planned |
+| 📋 | Fog of war | Planned |
+| 📋 | See the whole map | Planned |
 | 📋 | Hear the whole battlefield | Planned |
 | 📋 | Know why an order failed | Planned |
 | 📋 | Read the battlefield | Planned |
-| 📋 | Fog of war | Planned |
-| 📋 | See the whole map | Planned |
 | 📋 | Reconnect after a drop | Planned |
 | 📋 | More maps | Planned |
 | 📋 | Desync reports that send themselves | Planned |
