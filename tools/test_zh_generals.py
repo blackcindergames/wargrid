@@ -552,6 +552,299 @@ class MainTest(unittest.TestCase):
             self.assertEqual(zg.main(["report", "--dump", str(Path(d) / "none.jsonl"), "--out", d]), 1)
 
 
+# Invented port-sheet fixture: one tank with upgrade modules, weapon sets, a command set swapped in by an upgrade
+# (CommandSetUpgrade), an empty module (leaves no record) and an upgrade defined twice.
+PORT_FIXTURE = """Upgrade Upgrade_BlueShield
+  Type = OBJECT
+  BuildCost = 500
+  BuildTime = 5.0
+End
+Upgrade Upgrade_BlueShield
+  Type = OBJECT
+  BuildCost = 600
+  BuildTime = 5.0
+End
+Upgrade Upgrade_BlueRam
+  Type = PLAYER
+  BuildCost = 300
+  BuildTime = 10.0
+End
+Object BlueTank
+  BuildCost = 900
+  CommandSet = BlueTankSet
+  WeaponSet
+    Conditions = None
+    Weapon = PRIMARY BlueCannon
+  End
+  WeaponSet
+    Conditions = PLAYER_UPGRADE
+    Weapon = PRIMARY BlueCannonPlus
+    Weapon = SECONDARY BlueGun
+  End
+  ArmorSet
+    Conditions = None
+    Armor = BlueArmor
+  End
+  Body = ActiveBody ModuleTag_01
+    MaxHealth = 480
+  End
+  Behavior = ObjectCreationUpgrade ModuleTag_05
+    UpgradeObject = OCL_BlueDrone
+    TriggeredBy = Upgrade_BlueShield
+    ConflictsWith = Upgrade_BlueRam
+  End
+  Behavior = CommandSetUpgrade ModuleTag_06
+    CommandSet = BlueTankRamSet
+    TriggeredBy = Upgrade_BlueRam
+  End
+  Behavior = EmptyUpdate ModuleTag_07
+  End
+End
+Object BlueDrone
+  Behavior = SlavedUpdate ModuleTag_01
+    GuardMaxRange = 50
+  End
+  Behavior = UpgradeDie ModuleTag_02
+    UpgradeToRemove = Upgrade_BlueShield
+  End
+End
+Object BlueFieldMaker
+  Behavior = FireWeaponUpdate ModuleTag_01
+    Weapon = BlueFieldWeapon
+  End
+  Behavior = LifetimeUpdate ModuleTag_02
+    MinLifetime = 5000
+  End
+End
+Object BlueJammer
+  Behavior = FireWeaponUpdate ModuleTag_01
+    Weapon = BlueJamWeapon
+  End
+End
+Object BlueHorde
+  Behavior = HordeUpdate ModuleTag_01
+    Radius = 10
+  End
+End
+Object Lzr_BlueHorde
+  Behavior = HordeUpdate ModuleTag_01
+    Radius = 10
+  End
+End
+Object GC_BlueHorde
+  Behavior = HordeUpdate ModuleTag_01
+    Radius = 10
+  End
+End
+Object Boss_BlueHorde
+  Behavior = HordeUpdate ModuleTag_01
+    Radius = 10
+  End
+End
+ObjectCreationList OCL_BlueDrone
+  CreateObject
+    ObjectNames = BlueDrone
+    Count = 1
+  End
+End
+Weapon BlueCannon
+  PrimaryDamage = 60
+  AttackRange = 150
+  DamageType = ARMOR_PIERCING
+End
+Weapon BlueCannonPlus
+  PrimaryDamage = 80
+  AttackRange = 160
+End
+Weapon BlueGun
+  PrimaryDamage = 5
+End
+Weapon BlueFieldWeapon
+  DamageType = POISON
+End
+Weapon BlueJamWeapon
+  DamageType = SUBDUAL_MISSILE
+End
+CommandSet BlueTankSet
+  1 = Command_BlueShield
+  2 = Command_BlueFire
+  4 = Command_Missing
+End
+CommandSet BlueTankRamSet
+  1 = Command_BlueFire
+End
+CommandButton Command_BlueShield
+  Command = OBJECT_UPGRADE
+  Upgrade = Upgrade_BlueShield
+End
+CommandButton Command_BlueFire
+  Command = FIRE_WEAPON
+  WeaponSlot = SECONDARY
+End
+"""
+
+
+def port_blocks(text: str = PORT_FIXTURE) -> list[zg.Block]:
+    return [dict(b) for b in zh_ini.parse_entry("data\\ini\\object\\blue.ini", text)] + blocks()
+
+
+def sheet(name: str = "BlueTank", text: str = PORT_FIXTURE) -> dict:
+    return zg.port_sheet(zg.Index(port_blocks(text)), name)
+
+
+def module(sheet_: dict, cls: str) -> dict:
+    (found,) = [m for m in sheet_["modules"] if m["class"] == cls]
+    return found
+
+
+class PortSheetTest(unittest.TestCase):
+    def test_modules_list_keys_values_and_lines(self) -> None:
+        found = module(sheet(), "ObjectCreationUpgrade")
+        self.assertEqual(found["tag"], "ModuleTag_05")
+        keys = {f["key"]: (f["value"], f["line"]) for f in found["fields"]}
+        self.assertEqual(keys["TriggeredBy"], ("Upgrade_BlueShield", 37))
+        self.assertEqual(keys["ConflictsWith"][0], "Upgrade_BlueRam")
+        self.assertEqual(sheet()["entry"], "blue.ini")
+
+    def test_command_sets_resolve_to_slots_including_upgrade_swaps(self) -> None:
+        sets = {s["name"]: s for s in sheet()["command_sets"]}
+        self.assertEqual(sets["BlueTankSet"]["via"], "CommandSet")
+        self.assertEqual(sets["BlueTankRamSet"]["via"], "Behavior = CommandSetUpgrade ModuleTag_06")
+        slot1, slot2 = sets["BlueTankSet"]["slots"]
+        self.assertEqual(
+            (slot1["slot"], slot1["command"], slot1["upgrade"]), ("1", "OBJECT_UPGRADE", "Upgrade_BlueShield")
+        )
+        self.assertEqual((slot2["slot"], slot2["command"], slot2["weapon_slot"]), ("2", "FIRE_WEAPON", "SECONDARY"))
+        self.assertEqual(sets["BlueTankSet"]["missing"], ["CommandButton Command_Missing"])
+
+    def test_upgrades_carry_roles_and_the_upgrade_block(self) -> None:
+        upgrades = {u["name"]: u for u in sheet()["upgrades"]}
+        ram = upgrades["Upgrade_BlueRam"]
+        self.assertEqual(sorted(r["role"] for r in ram["roles"]), ["ConflictsWith", "TriggeredBy"])
+        self.assertEqual((ram["type"], ram["cost"], ram["time"]), ("PLAYER", "300", "10.0"))
+        self.assertEqual(sorted(r["role"] for r in upgrades["Upgrade_BlueShield"]["roles"]), ["TriggeredBy", "button"])
+
+    def test_upgrade_reacted_to_by_a_die_module_is_listed(self) -> None:
+        roles = [r["role"] for u in sheet("BlueDrone")["upgrades"] for r in u["roles"]]
+        self.assertEqual(roles, ["UpgradeToRemove"])
+
+    def test_duplicate_upgrade_lists_both_definitions(self) -> None:
+        shield = {u["name"]: u for u in sheet()["upgrades"]}["Upgrade_BlueShield"]
+        self.assertTrue(shield["duplicate"])
+        self.assertEqual(shield["definitions"], ["blue.ini:1", "blue.ini:6"])
+        self.assertTrue(any("Upgrade_BlueShield" in x and "twice" in x for x in sheet()["limits"]))
+
+    def test_empty_module_leaves_no_record_and_the_limit_is_reported(self) -> None:
+        self.assertEqual([m["class"] for m in sheet()["modules"]].count("EmptyUpdate"), 0)
+        self.assertTrue(any("no fields" in x for x in sheet()["limits"]))
+
+    def test_weapon_and_armor_sets_with_conditions(self) -> None:
+        found = sheet()
+        self.assertEqual(
+            [(w["conditions"], w["slots"]) for w in found["weapon_sets"]],
+            [
+                ("None", {"PRIMARY": "BlueCannon"}),
+                ("PLAYER_UPGRADE", {"PRIMARY": "BlueCannonPlus", "SECONDARY": "BlueGun"}),
+            ],
+        )
+        self.assertEqual([(a["conditions"], a["armor"]) for a in found["armor_sets"]], [("None", "BlueArmor")])
+
+    def test_weapons_show_key_fields(self) -> None:
+        weapons = sheet()["weapons"]
+        self.assertEqual(sorted(weapons), ["BlueCannon", "BlueCannonPlus", "BlueGun"])
+        self.assertEqual(weapons["BlueCannon"]["PrimaryDamage"], "60")
+        self.assertEqual(weapons["BlueCannon"]["DamageType"], "ARMOR_PIERCING")
+        self.assertEqual(weapons["BlueCannon"]["cite"], "blue.ini:94")
+
+    def test_ocl_resolves_one_level_to_created_objects_and_their_modules(self) -> None:
+        (ocl,) = sheet()["ocls"]
+        self.assertEqual(ocl["name"], "OCL_BlueDrone")
+        (created,) = ocl["creates"]
+        self.assertEqual(created["object"], "BlueDrone")
+        self.assertEqual(sorted(m["class"] for m in created["modules"]), ["SlavedUpdate", "UpgradeDie"])
+
+    def test_unknown_object_raises(self) -> None:
+        with self.assertRaises(KeyError):
+            sheet("NoSuchObject")
+
+    def test_markdown_cites_entry_and_line(self) -> None:
+        text = zg.port_markdown([sheet()])
+        self.assertIn("## BlueTank (blue.ini:", text)
+        self.assertIn("TriggeredBy = Upgrade_BlueShield (blue.ini:37)", text)
+        self.assertIn("Limits", text)
+
+    def test_roster_sheets_cover_the_base_roster(self) -> None:
+        sheets = zg.roster_sheets(zg.Index(port_blocks()), "red")
+        self.assertIn("RedTank", [s["object"] for s in sheets])
+        self.assertNotIn("Lzr_RedTank", [s["object"] for s in sheets])
+        with self.assertRaises(KeyError):
+            zg.roster_sheets(zg.Index(port_blocks()), "purple")
+
+
+class CensusTest(unittest.TestCase):
+    def census(self, base_only: bool = False) -> dict:
+        return zg.census(zg.Index(port_blocks()), base_only)
+
+    def test_counts_objects_per_mechanic_not_per_module(self) -> None:
+        mechanics = self.census()["mechanics"]
+        self.assertEqual(mechanics["Ground field (timed FireWeaponUpdate)"], ["BlueFieldMaker"])
+        self.assertEqual(mechanics["Missile deflection (FireWeaponUpdate firing SUBDUAL_MISSILE)"], ["BlueJammer"])
+        self.assertEqual(mechanics["Drone (SlavedUpdate)"], ["BlueDrone"])
+        self.assertEqual(mechanics["Drone host (ObjectCreationUpgrade creating a SlavedUpdate object)"], ["BlueTank"])
+
+    def test_base_only_drops_general_boss_and_campaign_copies(self) -> None:
+        horde = "Horde (HordeUpdate)"
+        self.assertEqual(
+            self.census()["mechanics"][horde], ["BlueHorde", "Boss_BlueHorde", "GC_BlueHorde", "Lzr_BlueHorde"]
+        )
+        self.assertEqual(self.census(True)["mechanics"][horde], ["BlueHorde"])
+        self.assertEqual(self.census(True)["filter"], "base-only")
+
+    def test_lists_duplicate_upgrade_names_with_both_citations(self) -> None:
+        self.assertEqual(self.census()["duplicate_upgrades"], {"Upgrade_BlueShield": ["blue.ini:1", "blue.ini:6"]})
+
+    def test_reports_the_empty_module_limit(self) -> None:
+        self.assertTrue(any("no fields" in x for x in self.census()["limits"]))
+
+
+class PortMainTest(unittest.TestCase):
+    def run_main(self, argv: list[str], text: str = PORT_FIXTURE) -> tuple[int, str, Path]:
+        d = tempfile.mkdtemp()
+        dump = Path(d) / "dump.jsonl"
+        dump.write_text("".join(json.dumps(b) + "\n" for b in port_blocks(text)), encoding="utf-8")
+        out = io.StringIO()
+        code = zg.main([*argv, "--dump", str(dump), "--out", d], out)
+        return code, out.getvalue(), Path(d)
+
+    def test_port_object_writes_markdown_and_json(self) -> None:
+        code, out, d = self.run_main(["port", "BlueTank"])
+        self.assertEqual(code, 0)
+        self.assertIn("ZH_PORT objects=1", out)
+        self.assertEqual(json.loads((d / "port-BlueTank.json").read_text())[0]["object"], "BlueTank")
+        self.assertIn("## BlueTank", (d / "port-BlueTank.md").read_text())
+
+    def test_port_roster_writes_every_roster_object(self) -> None:
+        code, out, d = self.run_main(["port", "--roster", "red"])
+        self.assertEqual(code, 0)
+        self.assertIn("ZH_PORT objects=", out)
+        names = [s["object"] for s in json.loads((d / "port-roster-red.json").read_text())]
+        self.assertIn("RedFactory", names)
+
+    def test_port_fails_on_unknown_object_and_on_no_target(self) -> None:
+        with mock.patch("sys.stderr", io.StringIO()):
+            self.assertEqual(self.run_main(["port", "NoSuchObject"])[0], 1)
+            self.assertEqual(self.run_main(["port"])[0], 1)
+            self.assertEqual(self.run_main(["port", "--roster", "purple"])[0], 1)
+
+    def test_census_writes_files_and_honours_base_only(self) -> None:
+        code, out, d = self.run_main(["census", "--base-only"])
+        self.assertEqual(code, 0)
+        self.assertIn("ZH_CENSUS filter=base-only", out)
+        data = json.loads((d / "census-base-only.json").read_text())
+        self.assertEqual(data["mechanics"]["Horde (HordeUpdate)"], ["BlueHorde"])
+        self.assertIn("| Horde (HordeUpdate) | 1 |", (d / "census-base-only.md").read_text())
+
+
 REAL_DUMP = Path(os.environ.get("ZH_INI_DUMP", zg.DEFAULT_DUMP))
 
 
@@ -568,6 +861,54 @@ class RealDumpTest(unittest.TestCase):
             self.assertEqual(g["missing"], [], g["template"])
         for side, faction in report["factions"].items():
             self.assertEqual(faction["missing"], [], side)
+
+    def real_index(self) -> zg.Index:
+        return zg.Index(zg.load_dump(REAL_DUMP))
+
+    def test_overlord_add_ons_conflict_with_each_other(self) -> None:
+        found = zg.port_sheet(self.real_index(), "ChinaTankOverlord")
+        by_tag = {m["tag"]: {f["key"]: f for f in m["fields"]} for m in found["modules"] if m["tag"] != "-"}
+        gattling = by_tag["ModuleTag_07"]
+        self.assertEqual(
+            (gattling["TriggeredBy"]["value"], gattling["TriggeredBy"]["line"]),
+            ("Upgrade_ChinaOverlordGattlingCannon", 348),
+        )
+        self.assertEqual(
+            gattling["ConflictsWith"]["value"], "Upgrade_ChinaOverlordPropagandaTower Upgrade_ChinaOverlordBattleBunker"
+        )
+        self.assertEqual(by_tag["ModuleTag_13"]["CommandSet"]["line"], 379)
+        sets = {s["name"]: s["via"] for s in found["command_sets"]}
+        self.assertEqual(sets["ChinaTankOverlordBattleBunkerCommandSet"], "Behavior = CommandSetUpgrade ModuleTag_13")
+        upgrade = {u["name"]: u for u in found["upgrades"]}["Upgrade_ChinaOverlordGattlingCannon"]
+        self.assertEqual((upgrade["type"], upgrade["cost"], upgrade["time"]), ("OBJECT", "1200", "20.0"))
+        ocl = {o["name"]: o for o in found["ocls"]}["OCL_OverlordGattlingCannon"]
+        self.assertEqual([c["object"] for c in ocl["creates"]], ["ChinaTankOverlordGattlingCannon"])
+
+    def test_crusader_drones_and_their_upgrade_die(self) -> None:
+        found = zg.port_sheet(self.real_index(), "AmericaTankCrusader")
+        drones = [m for m in found["modules"] if m["class"] == "ObjectCreationUpgrade"]
+        self.assertEqual([m["fields"][0]["line"] for m in drones], [1487, 1492, 1497])
+        battle = {o["name"]: o for o in found["ocls"]}["OCL_AmericanBattleDrone"]
+        (drone,) = battle["creates"]
+        die = [m for m in drone["modules"] if m["class"] == "UpgradeDie"]
+        self.assertEqual([f["line"] for f in die[0]["fields"]], [938, 939])
+
+    def test_duplicate_point_defense_upgrade_names_both_citations(self) -> None:
+        data = zg.census(self.real_index())
+        self.assertEqual(
+            data["duplicate_upgrades"]["SupW_Upgrade_AmericaPointDefenseDrone"], ["upgrade.ini:724", "upgrade.ini:796"]
+        )
+
+    def test_census_base_only_is_a_subset_of_all(self) -> None:
+        everything, base = zg.census(self.real_index()), zg.census(self.real_index(), True)
+        for label, names in base["mechanics"].items():
+            self.assertTrue(set(names) <= set(everything["mechanics"][label]), label)
+        self.assertGreater(
+            len(everything["mechanics"]["Horde (HordeUpdate)"]), len(base["mechanics"]["Horde (HordeUpdate)"])
+        )
+        self.assertFalse(
+            any(zg.prefix_of(n) in {"Boss", "GC", "CINE"} for names in base["mechanics"].values() for n in names)
+        )
 
 
 if __name__ == "__main__":

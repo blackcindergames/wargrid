@@ -80,6 +80,7 @@ python3 -m unittest discover -s tools -p 'test_*.py'
 python3 tools/zh_ini.py dump   # Zero Hour INI blocks to build/zh_ini/inizh.jsonl (gitignored, never committed); needs the local retail archive
 python3 tools/zh_w3d.py dump   # Zero Hour model sizes (mesh boxes, body box, bone positions) to build/zh_w3d/w3d.jsonl (gitignored, never committed); needs the local retail archives
 python3 tools/zh_generals.py report   # what each Zero Hour general adds, removes and changes, from the INI dump, to build/zh_generals/ (gitignored, never committed)
+python3 tools/zh_generals.py port ChinaTankOverlord   # one object's port sheet (modules, command card, upgrades, weapon sets, OCLs); `port --roster usa|china|gla` for a faction; `census [--base-only]` counts objects per mechanic; all to build/zh_mechanics/ (gitignored, never committed)
 # In a worktree without its own dump: --dump ~/projects/wargrid/build/zh_ini/inizh.jsonl, and ZH_INI_DUMP=<same path> for tools/test_zh_generals.py, whose real-data test otherwise skips
 sh tools/run_python_checks.sh   # ruff format + lint, mypy, Python tests; creates `tools/.venv` with uv on the first run and updates it when `tools/requirements-dev.txt` changes (`tools/ensure_venv.sh`)
 sh tools/run_shell_checks.sh   # ShellCheck on every tracked *.sh (shellcheck-py from the same venv; .shellcheckrc)

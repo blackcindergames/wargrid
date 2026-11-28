@@ -73,35 +73,35 @@ Categories:
 
 ### Module census for the catalogue
 
-Objects using each module in the dump. Counts include every general's prefixed copy and campaign objects. A count is the total use of the module, not the number of objects that serve the mechanic: `FireWeaponUpdate` (36) serves ECM, Microwave and every field object; `PoisonedBehavior` (156) sits on the *victims*, while only about 20 poison field objects exist. The point of the table is generic versus bespoke. The port-sheet census (preparation item 1) should count objects per mechanic.
+Objects per mechanic from `python3 tools/zh_generals.py census`, run on the local INI dump with the tool of the `spike-missing-mechanics` working tree over `c82e5f64`. Each cell is two counts: all 2115 objects / `--base-only`. The filter `--base-only` drops general-prefixed copies (`AirF_`, `Lazr_`, `SupW_`, `Infa_`, `Nuke_`, `Tank_`, `Demo_`, `Slth_`, `Chem_`, `AFG_`), `Boss_` and campaign copies (`GC_`, `CINE_`, `Cin_`, `MISSION_`) and leaves 1408 objects. A count is objects, not module uses: `FireWeaponUpdate` serves ECM, Microwave and every field object, so the rows below name the object kind, not the module total. Reskins count with their source object's modules. The point of the table is generic versus bespoke. The census, the `port` sheets and their limits (an empty module leaves no record in the dump; `SupW_Upgrade_AmericaPointDefenseDrone` is defined twice, `upgrade.ini:724` and `:796`) are described in the [testing and tooling guide](../guide/13-testing-and-tooling.md).
 
-| Mechanic in the catalogue | Zero Hour module(s) | Uses | Kind |
+| Mechanic in the catalogue | Zero Hour module(s) | Objects, all / base only | Kind |
 |---|---|---:|---|
-| Drones on vehicles | `ObjectCreationUpgrade` on the host, `SlavedUpdate` and `UpgradeDie` on the drone | 46 / 13 | generic |
-| Overlord add-ons | `OverlordContain` + `ObjectCreationUpgrade` + `CommandSetUpgrade` | 10 / 46 / 94 | bespoke contain, generic glue |
-| Propaganda aura | `PropagandaTowerBehavior` (radius, heal % per second, weapon bonus) | 14 | generic |
-| Point-defence laser | `PointDefenseLaserUpdate` (weapon, primary and secondary target types, scan rate and range, lead factor) | 17 | generic |
-| Missile deflection (ECM tank) | `FireWeaponUpdate` firing `ECMTankMissileJammer` (`chinavehicle.ini:2441`; `weapon.ini:5850`, `SUBDUAL_MISSILE`) | 36 | generic |
-| Flares (aircraft) | `CountermeasuresBehavior` | 40 | generic |
-| Salvage tiers | `SalvageCrateCollide` (weapon, level or money chance) + `CreateCrateDie` | 1 | generic |
-| Fire wall, fire fields | The weapon creates `FireWallSegment` / `FireFieldSmall` objects that carry `FireWeaponUpdate` and a timed `DeletionUpdate` (`system.ini:1636-1637`, `:1719-1720`) | 36 | generic |
-| Toxin and radiation fields | `Chem_PoisonField*` objects with `FireWeaponUpdate` + `LifetimeUpdate` (`system.ini:1911-1912`). A unit that is hit gets `PoisonedBehavior` | 36 / 156 | generic |
-| Burning | `FlammableUpdate`, `FireSpreadUpdate` | 827 / 4 | generic |
-| Weapon upgrades (Black Napalm, Anthrax, TOW, Uranium) | `WeaponSetUpgrade` | 115 | generic |
-| Armor, health, speed upgrades | `ArmorUpgrade`, `MaxHealthUpgrade`, `LocomotorSetUpgrade` | 154 / 49 / 18 | generic |
-| Weapon bonus upgrades (Nationalism, etc.) | `WeaponBonusUpgrade` | 62 | generic |
-| Death effects (nuclear tanks, Demolition) | `FireWeaponWhenDeadBehavior`, optionally `TriggeredBy` an upgrade | 122 | generic |
-| Battle Bus second life | `BattleBusSlowDeathBehavior` | 6 | bespoke |
-| Combat Cycle riders | `RiderChangeContain` | 11 | bespoke |
-| Self-heal (Junk Repair, heroic) | `AutoHealBehavior` | 85 | generic |
-| Horde | `HordeUpdate` | 13 | generic |
-| Stealth / detection | `StealthUpdate`, `StealthDetectorUpdate` | 130 / 103 | generic |
-| Transports / garrison | `TransportContain`, `GarrisonContain` | 73 / 200 | generic |
-| Deploy to fire (Nuke Cannon) | `DeployStyleAIUpdate` | 10 | generic |
-| Gattling ramp | Weapon fields `ContinuousFireOne/Two/Coast` + weapon bonus | – | weapon data |
-| Kill pilot, hijack | `DamageType = KILL_PILOT` (`weapon.ini:6289`); `ConvertToHijackedVehicleCrateCollide` | – | generic |
-| Veterancy | `ExperienceTracker` (built in, not a module); `WEAPONSET_VETERAN/ELITE/HERO` | – | generic |
-| Power dependency | `Energy` (built in); `DISABLED_UNDERPOWERED` | – | generic |
+| Drones on vehicles | `ObjectCreationUpgrade` on the host (an OCL that creates a `SlavedUpdate` object), `SlavedUpdate` and `UpgradeDie` on the drone | hosts 36 / 7, drones 13 / 3, `UpgradeDie` 13 / 3 | generic |
+| Overlord add-ons | `OverlordContain` + `ObjectCreationUpgrade` + `CommandSetUpgrade` | 10 / 2 (contain); 96 / 15 (any `CommandSetUpgrade`) | bespoke contain, generic glue |
+| Propaganda aura | `PropagandaTowerBehavior` (radius, heal % per second, weapon bonus) | 14 / 3 | generic |
+| Point-defence laser | `PointDefenseLaserUpdate` (weapon, primary and secondary target types, scan rate and range, lead factor) | 17 / 2 | generic |
+| Missile deflection (ECM tank) | `FireWeaponUpdate` firing `ECMTankMissileJammer` (`chinavehicle.ini:2441`; `weapon.ini:5850`, `SUBDUAL_MISSILE`) | 4 / 1 | generic |
+| Flares (aircraft) | `CountermeasuresBehavior` | 40 / 10 | generic |
+| Salvage tiers | `SalvageCrateCollide` (weapon, level or money chance) + `CreateCrateDie` | crates 1 / 1; `CreateCrateDie` 184 / 43 | generic |
+| Fire wall, fire fields | The weapon creates `FireWallSegment` / `FireFieldSmall` objects that carry `FireWeaponUpdate` and a timed `DeletionUpdate` (`system.ini:1636-1637`, `:1719-1720`) | 4 / 4 (damage type `FLAME`) | generic |
+| Toxin and radiation fields | `Chem_PoisonField*` objects with `FireWeaponUpdate` + `LifetimeUpdate` (`system.ini:1911-1912`). A unit that is hit gets `PoisonedBehavior` | fields 14 / 8 (`POISON`), 5 / 4 (`RADIATION`); victims 168 / 49 | generic |
+| Burning | `FlammableUpdate`, `FireSpreadUpdate` | 845 / 441; 10 / 10 | generic |
+| Weapon upgrades (Black Napalm, Anthrax, TOW, Uranium) | `WeaponSetUpgrade` | 127 / 26 | generic |
+| Armor, health, speed upgrades | `ArmorUpgrade`, `MaxHealthUpgrade`, `LocomotorSetUpgrade` | 154 / 32; 49 / 12; 18 / 4 | generic |
+| Weapon bonus upgrades (Nationalism, etc.) | `WeaponBonusUpgrade` | 76 / 21 | generic |
+| Death effects (nuclear tanks, Demolition) | `FireWeaponWhenDeadBehavior`, optionally `TriggeredBy` an upgrade | 127 / 49 | generic |
+| Battle Bus second life | `BattleBusSlowDeathBehavior` | 6 / 2 | bespoke |
+| Combat Cycle riders | `RiderChangeContain` | 11 / 3 | bespoke |
+| Self-heal (Junk Repair, heroic) | `AutoHealBehavior` | 97 / 25 | generic |
+| Horde | `HordeUpdate` | 13 / 3 | generic |
+| Stealth / detection | `StealthUpdate`, `StealthDetectorUpdate` | 132 / 26; 103 / 23 | generic |
+| Transports / garrison | `TransportContain`, `GarrisonContain` | 85 / 21; 200 / 184 | generic |
+| Deploy to fire (Nuke Cannon) | `DeployStyleAIUpdate` | 10 / 2 | generic |
+| Gattling ramp | Weapon fields `ContinuousFireOne/Two/Coast` + weapon bonus | objects with such a weapon 31 / 7 | weapon data |
+| Kill pilot, hijack | `DamageType = KILL_PILOT` (`weapon.ini:6289`); `ConvertToHijackedVehicleCrateCollide` | 18 / 4; 6 / 1 | generic |
+| Veterancy | `ExperienceTracker` (built in, not a module); the `ExperienceRequired` key | 312 / 67 | generic |
+| Power dependency | `Energy` (built in); `DISABLED_UNDERPOWERED`; the `EnergyProduction` key | 268 / 62 | generic |
 
 ## What Wargrid has today
 
@@ -369,6 +369,7 @@ Precedent: `tools/zh_generals.py` turned "nine generals" into a generated, diffa
    - A `census` subcommand counts objects per mechanic.
    - Known dump limits must be reported, not hidden: a module opener with no fields leaves no record (`zh_ini.py:154-158`), and some upgrade names are defined twice (`upgrade.ini:724`, `:796`).
    - Output goes under `build/` (never committed).
+   - *Built* (2026-11-28): `port`, `port --roster` and `census [--base-only]` exist in the tool; usage in the [development notes](../development.md) and the [testing guide](../guide/13-testing-and-tooling.md).
 2. **One design-input note per shared system.** It holds the Zero Hour behaviour from the source with citations, Wargrid's hook points (file, function, tick slot, snapshot and hash fields), randomness draws, performance cost, and recorded departures. It is input for the A1 design, not the design itself.
 3. **A question file** (`docs/questions/`) for design points the blueprint and design answers do not settle, each with the Zero Hour default and a recommendation.
 4. **A War Room seed list:** one planned round per visual family, with the mechanics it serves, blocking or advisory, War Room page or lab, and the tier it must precede.
