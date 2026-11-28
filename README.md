@@ -50,7 +50,7 @@ Early development; the latest build is on the [Releases](https://github.com/blac
 What is done and what comes next (generated from [packages](docs/packages.md) and [STATUS](docs/STATUS.md)):
 
 <!-- roadmap:begin -->
-**19 of 49 parts done**
+**20 of 49 parts done**
 
 | | What | State |
 | --- | --- | --- |
@@ -74,7 +74,7 @@ What is done and what comes next (generated from [packages](docs/packages.md) an
 | ✅ | A short Esc menu | Done |
 | ⏭ | Team up against bots | Next |
 | ✅ | A lobby for every match | Done |
-| 📋 | Know what beats what | Planned |
+| ✅ | Know what beats what | Done |
 | 📋 | Straight routes | Planned |
 | 📋 | First new units | Planned |
 | 📋 | Fog of war | Planned |
