@@ -15,9 +15,9 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 | **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 150% | 🔺 2% worse (busy host) | 2026-11-28 |
 | **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 130% | 🔺 3% worse (busy host) | 2026-11-28 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
-| Drawing the screen | 🟡 Close | ████████░░ 86% | 🔺 13% worse (busy host) | 2026-11-27 |
+| Drawing the screen | 🟢 OK | ████████░░ 80% | 🔻 7% better (busy host) | 2026-11-28 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 79% | 🔺 2% worse (busy host) | 2026-11-28 |
 | Combat, normal fights | 🟢 OK | ███████░░░ 77% | 🔺 5% worse (busy host) | 2026-11-28 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 77% | 🔺 3% worse (busy host) | 2026-11-27 |
 | Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | ➖ same (busy host) | 2026-11-28 |
 | Unit movement | 🟢 OK | ████░░░░░░ 47% | 🔺 6% worse (busy host) | 2026-11-28 |
 | Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 27% | 🔺 9% worse (busy host) | 2026-11-28 |
@@ -34,8 +34,8 @@ Details:
 - combat stress p95: 168% of budget, exceeded (Sim boundary SB5b, 2026-11-28), 4% slower than auto 202d7dcf (worst vs worst); run-to-run spread up to 41%, busy host (load 2.9)
 - plumbing, movement layouts: 150% of budget, exceeded (Sim boundary SB5b, 2026-11-28), 2% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 2.9)
 - plumbing, horde: 234% of budget, exceeded (Sim boundary SB5b, 2026-11-28), 8% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 2.9)
-- rendered tick-frame p95: 86% of budget (P20 follow-up, 2026-11-27), 13% slower than P20 merge (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
-- Ashfall tick-frame p95: 77% of budget (P20 follow-up, 2026-11-27), 3% slower than P20 merge (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
+- rendered tick-frame p95: 80% of budget (Sim boundary SB5b, 2026-11-28), 7% faster than P20 follow-up (worst vs worst); run-to-run spread not measured, busy host (load 3.6)
+- Ashfall tick-frame p95: 79% of budget (Sim boundary SB5b, 2026-11-28), 2% slower than P20 follow-up (worst vs worst); run-to-run spread not measured, busy host (load 3.6)
 - lockstep p99: 11% of budget (Sim boundary SB5b, 2026-11-28), 3% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 2.9)
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
