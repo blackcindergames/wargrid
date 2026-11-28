@@ -20,7 +20,7 @@ Runs while the user is reachable, at the PC or on the phone.
    /start-night-run ~/projects/wargrid-private/docs/<task>-prompt.txt
    ```
 
-7. Commit the repository changes this preparation made (local commit, pre-authorized, user 2026-11-12); never push.
+7. Commit the repository changes this preparation made (pre-authorized, user 2026-11-12); a branch may be pushed, `main` never (user, 2026-11-28).
 8. End with the start line to paste, always with the coordinator's model and effort spelled out (default `--model claude-opus-5-5 --effort high`; user, 2026-11-27).
 
 ## Start

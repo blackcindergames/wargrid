@@ -7,41 +7,41 @@ Status: **UPDATE 2026-11-11 (PERFORMANCE NEXT, see the History rows at the end):
 
 | Area | Status | Budget used | vs last run | As of |
 | --- | --- | --- | --- | --- |
-| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 217% | 🔻 3% better | 2026-11-27 |
+| **Background upkeep, huge crowds** | 🔴 Over | ██████████▶ 222% | 🔺 2% worse (busy host) | 2026-11-28 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame** | 🔴 Over | ██████████▶ 188% | 🆕 first run | 2026-11-22 |
-| **3v3 match, bots and simulation (real 3v3)** | 🔴 Over | ██████████▶ 178% | 🔻 1% better | 2026-11-27 |
-| **Combat, huge battles** | 🔴 Over | ██████████▶ 161% | 🔻 1% better | 2026-11-27 |
-| **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 147% | 🔻 1% better | 2026-11-27 |
-| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 146% | 🔻 1% better | 2026-11-27 |
-| **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 126% | 🔻 1% better | 2026-11-27 |
+| **3v3 match, bots and simulation (real 3v3)** | 🔴 Over | ██████████▶ 186% | 🔺 5% worse (busy host) | 2026-11-28 |
+| **Combat, huge battles** | 🔴 Over | ██████████▶ 165% | 🔺 2% worse (busy host) | 2026-11-28 |
+| **3v3 match, simulation (real 3v3)** | 🔴 Over | ██████████▶ 153% | 🔺 4% worse (busy host) | 2026-11-28 |
+| **Background upkeep, armies on the move** | 🔴 Over | ██████████▶ 149% | 🔺 2% worse (busy host) | 2026-11-28 |
+| **3v3 match, background upkeep (real 3v3)** | 🔴 Over | ██████████▶ 131% | 🔺 4% worse (busy host) | 2026-11-28 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
 | Drawing the screen | 🟡 Close | ████████░░ 86% | 🔺 13% worse (busy host) | 2026-11-27 |
 | Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 77% | 🔺 3% worse (busy host) | 2026-11-27 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔺 1% worse | 2026-11-27 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 1% worse | 2026-11-27 |
-| Unit movement | 🟢 OK | ████░░░░░░ 44% | ➖ same | 2026-11-27 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔻 4% better | 2026-11-27 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 4% better | 2026-11-27 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 75% | 🔺 2% worse (busy host) | 2026-11-28 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 1% worse (busy host) | 2026-11-28 |
+| Unit movement | 🟢 OK | █████░░░░░ 53% | 🔺 20% worse (busy host) | 2026-11-28 |
+| Unit movement, slowest moments | 🟢 OK | ███░░░░░░░ 34% | 🔺 35% worse (busy host) | 2026-11-28 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 12% | 🔺 10% worse (busy host) | 2026-11-28 |
 
 Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
 Details:
 
-- movement p95: 44% of budget (auto 202d7dcf, 2026-11-27), unchanged vs P20 follow-up (worst vs worst); run-to-run spread up to 50%
-- movement p99: 25% of budget (auto 202d7dcf, 2026-11-27), 4% faster than P20 follow-up (worst vs worst); run-to-run spread up to 50%
-- combat gated p95: 74% of budget (auto 202d7dcf, 2026-11-27), 1% slower than P20 follow-up (worst vs worst); run-to-run spread up to 58%
-- combat gated p99: 59% of budget (auto 202d7dcf, 2026-11-27), 1% slower than P20 follow-up (worst vs worst); run-to-run spread up to 58%
-- combat stress p95: 161% of budget, exceeded (auto 202d7dcf, 2026-11-27), 1% faster than P20 follow-up (worst vs worst); run-to-run spread up to 41%
-- plumbing, movement layouts: 146% of budget, exceeded (auto 202d7dcf, 2026-11-27), 1% faster than P20 follow-up (worst vs worst); run-to-run spread not measured
-- plumbing, horde: 217% of budget, exceeded (auto 202d7dcf, 2026-11-27), 3% faster than P20 follow-up (worst vs worst); run-to-run spread not measured
+- movement p95: 53% of budget (P21 faction guide, 2026-11-28), 20% slower than auto 202d7dcf (worst vs worst); run-to-run spread up to 50%, busy host (load 3.2)
+- movement p99: 34% of budget (P21 faction guide, 2026-11-28), 35% slower than auto 202d7dcf (worst vs worst); run-to-run spread up to 50%, busy host (load 3.2)
+- combat gated p95: 75% of budget (P21 faction guide, 2026-11-28), 2% slower than auto 202d7dcf (worst vs worst); run-to-run spread up to 58%, busy host (load 3.2)
+- combat gated p99: 59% of budget (P21 faction guide, 2026-11-28), 1% slower than auto 202d7dcf (worst vs worst); run-to-run spread up to 58%, busy host (load 3.2)
+- combat stress p95: 165% of budget, exceeded (P21 faction guide, 2026-11-28), 2% slower than auto 202d7dcf (worst vs worst); run-to-run spread up to 41%, busy host (load 3.2)
+- plumbing, movement layouts: 149% of budget, exceeded (P21 faction guide, 2026-11-28), 2% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- plumbing, horde: 222% of budget, exceeded (P21 faction guide, 2026-11-28), 2% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
 - rendered tick-frame p95: 86% of budget (P20 follow-up, 2026-11-27), 13% slower than P20 merge (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
 - Ashfall tick-frame p95: 77% of budget (P20 follow-up, 2026-11-27), 3% slower than P20 merge (worst vs worst); run-to-run spread not measured, busy host (load 2.6)
-- lockstep p99: 11% of budget (auto 202d7dcf, 2026-11-27), 4% faster than P20 follow-up (worst vs worst); run-to-run spread not measured
+- lockstep p99: 12% of budget (P21 faction guide, 2026-11-28), 10% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
 - deck frame p95: 188% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
 - deck frame p99: 108% of budget, exceeded (Deck frame goal main, 2026-11-22), no previous run; run-to-run spread not measured
-- 3v3 upkeep: 126% of budget, exceeded (auto 202d7dcf, 2026-11-27), 1% faster than P20 follow-up (worst vs worst); run-to-run spread not measured
-- 3v3 sim p95: 147% of budget, exceeded (auto 202d7dcf, 2026-11-27), 1% faster than P20 follow-up (worst vs worst); run-to-run spread not measured
-- 3v3 bots + sim p95: 178% of budget, exceeded (auto 202d7dcf, 2026-11-27), 1% faster than P20 follow-up (worst vs worst); run-to-run spread not measured
+- 3v3 upkeep: 131% of budget, exceeded (P21 faction guide, 2026-11-28), 4% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- 3v3 sim p95: 153% of budget, exceeded (P21 faction guide, 2026-11-28), 4% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
+- 3v3 bots + sim p95: 186% of budget, exceeded (P21 faction guide, 2026-11-28), 5% slower than auto 202d7dcf (worst vs worst); run-to-run spread not measured, busy host (load 3.2)
 <!-- perf-charts:end -->
 
 ## Target device (measured 2026-11-06)

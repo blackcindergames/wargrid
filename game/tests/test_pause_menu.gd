@@ -33,7 +33,7 @@ class FakeTransport extends RefCounted:
 	func rtt_samples() -> PackedInt64Array: return PackedInt64Array()
 
 func cases() -> Array[Callable]:
-	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_host_questions_after_friend_left, test_2v2_guest_questions, test_2v2_questions_layout]
+	return [test_esc_toggles_and_defers_to_cancel, test_offline_pauses_sim, test_offline_leave_and_quit, test_online_keeps_running, test_online_leave_confirm, test_online_leave_cancel, test_online_leave_text_and_focus, test_online_quit_asks_first, test_menu_buttons, test_faction_guide_page, test_pages_and_back, test_playtest_switch, test_pages_layout, test_mouse_rows_in_button_order, test_controls_list_shows_every_row, test_controls_list_digits_and_platform_words, test_controls_list_keys_work, test_defeated_host_leave_question, test_host_questions_after_friend_left, test_2v2_guest_questions, test_2v2_questions_layout]
 
 var helper_scratch: String = "user://test-pause-settings-%d.cfg" % OS.get_process_id()
 
@@ -47,6 +47,13 @@ func _helper_off() -> String:
 func _helper_restore(saved: String) -> void:
 	DirAccess.remove_absolute(helper_scratch)
 	AudioSettings.path = saved
+
+func _arrow(code: Key) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.keycode = code
+	event.pressed = true
+	return event
 
 func _esc(main) -> void:
 	var event := InputEventKey.new()
@@ -265,13 +272,13 @@ func test_online_quit_asks_first(runner) -> bool:
 	main.free()
 	return true
 
-const MENU_BUTTONS: Array[String] = ["Resume", "Settings", "Controls", "Leave match", "Quit"]
+const MENU_BUTTONS: Array[String] = ["Resume", "Settings", "Controls", "Faction guide", "Leave match", "Quit"]
 
 func test_menu_buttons(runner) -> bool:
 	for web: bool in [false, true]:
 		var menu = PauseMenu.new(web)
 		var texts: Array = menu.find_child("Menu", true, false).find_children("*", "Button", true, false).map(func(button: Button) -> String: return button.text)
-		var want: Array = MENU_BUTTONS.slice(0, 4) if web else MENU_BUTTONS
+		var want: Array = MENU_BUTTONS.slice(0, 5) if web else MENU_BUTTONS
 		runner.check(texts == want, "M1 web=%s: the menu holds only %s, got %s" % [web, want, texts])
 		menu.free()
 	return true
@@ -280,13 +287,69 @@ static func _shown(menu: Control, part: String) -> bool:
 	var node: Control = menu.find_child(part, true, false)
 	return node != null and node.is_visible_in_tree()
 
+# P21: the guide opens on your faction, tabs switch it, a roster row fills the card with counters by enemy name; no text under 12 px.
+func test_faction_guide_page(runner) -> bool:
+	var main = await _scene(runner, Skirmish)
+	var menu: Control = main.get_node("HUD/PauseMenu")
+	_open_menu(main)
+	var own: String = HudModel.player(main.shown_state, main.local_player).faction
+	runner.check(not own.is_empty() and menu.faction == own, "G1 opening the menu hands it your faction, got '%s'" % menu.faction)
+	menu.faction = "china"
+	_click(main, "Faction guide")
+	await runner.process_frame
+	var guide: Control = menu.find_child("FactionGuide", true, false)
+	(guide.find_child("Roster", true, false).get_child(0) as Button).grab_focus()
+	main.get_viewport().push_input(_arrow(KEY_DOWN))
+	runner.check(guide.selected == "china_rocket_infantry", "G1 the down arrow moves to the next unit in a match, got %s" % guide.selected)
+	main.get_viewport().push_input(_arrow(KEY_UP))
+	var outside: Array = []
+	for i: int in 12:
+		main.get_viewport().push_input(_arrow(KEY_TAB))
+		var owner: Control = main.get_viewport().gui_get_focus_owner()
+		if owner == null or not guide.is_ancestor_of(owner): outside.append(owner)
+	runner.check(outside.is_empty(), "G1 Tab stays inside the guide in a match, reached %s" % [outside])
+	guide.show_faction("china", "china")
+	runner.check(guide.faction == "china" and guide.find_child("Tab_china", true, false).button_pressed and _shown(guide, "Roster"), "G1 the guide opens on your faction's tab, got %s" % guide.faction)
+	runner.check(guide.selected == "china_rifle_infantry" and guide.find_child("Name", true, false).text == "Militia", "G1 the first roster row is shown, got %s" % guide.selected)
+	var sizes: Array = []
+	for id: String in ["usa", "china", "frc"]:
+		guide.find_child("Tab_" + id, true, false).pressed.emit()
+		for row: Button in guide.find_child("Roster", true, false).get_children():
+			row.pressed.emit()
+			await runner.process_frame
+			if not sizes.has(guide.size): sizes.append(guide.size)
+	runner.check(sizes.size() == 1, "G1 the guide keeps one size on every tab and unit, got %s" % [sizes])
+	guide.find_child("Tab_usa", true, false).pressed.emit()
+	await runner.process_frame
+	runner.check(guide.faction == "usa" and not guide.find_child("Tab_china", true, false).button_pressed and guide.find_child("Roster", true, false).get_child_count() == 6, "G1 the USA tab shows USA's six units")
+	(guide.find_child("Roster", true, false).get_node("usa_rocket_infantry") as Button).pressed.emit()
+	await runner.process_frame
+	var words: Array = guide.find_child("Counters", true, false).find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
+	runner.check(words.has("BEATS") and words.has("WEAK AGAINST") and words.find("BEATS") < words.find("Medium Tank") and words.find("Medium Tank") < words.find("WEAK AGAINST") and words.has("China · you") and words.has("Militia"), "G1 the Rocket Trooper's card names the Medium Tank under Beats, columns marked yours, got %s" % [words])
+	var tiny: Array = guide.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.get_theme_font_size(&"font_size") < 12)
+	runner.check(tiny.is_empty(), "G1 no text under 12 px on a card with counters, got %s" % [tiny.map(func(label: Label) -> String: return label.text)])
+	var strip: Array = guide.find_child("DamageAgainst", true, false).get_children().map(func(label: Label) -> String: return label.text)
+	runner.check(strip == ["DAMAGE AGAINST", "Infantry", "Barely", "Light vehicles", "Half", "Tanks", "Full", "Buildings", "Half"], "G1 the Rocket Trooper's damage strip reads the armour table, got %s" % [strip])
+	guide.find_child("Tab_frc", true, false).pressed.emit()
+	await runner.process_frame
+	var empty: Array = guide.find_child("Counters", true, false).find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
+	runner.check(empty.count("None cleanly. Closest:") == 1 and empty.count("None cleanly.") == 2 and empty.has("Rotary Gun Tank") and not empty.has("Rifleman") and not empty.has("–"), "G1 the Insurgent's empty Weak against names a closest unit only where one wins, got %s" % [empty])
+	guide.find_child("Tab_china", true, false).pressed.emit()
+	(guide.find_child("Roster", true, false).get_node("china_builder") as Button).pressed.emit()
+	await runner.process_frame
+	runner.check(guide.find_child("Counters", true, false) == null and guide.find_children("*", "Label", true, false).any(func(label: Label) -> bool: return label.text == "Builds your base"), "G1 the Bulldozer shows no counters, only what it does")
+	var small: Array = guide.find_children("*", "Control", true, false).filter(func(control: Control) -> bool: return (control is Label or control is Button) and control.get_theme_font_size(&"font_size") < 12)
+	runner.check(small.is_empty(), "G1 no text under 12 px, got %s" % [small.map(func(control: Control) -> String: return control.name)])
+	main.free()
+	return true
+
 func test_pages_and_back(runner) -> bool:
 	var main = await _scene(runner, Skirmish)
 	var menu: Control = main.get_node("HUD/PauseMenu")
 	_open_menu(main)
 	var focus: Control = main.get_viewport().gui_get_focus_owner()
 	runner.check(focus is Button and (focus as Button).text == "Resume", "M2 Resume has the focus on open, got %s" % focus)
-	for page: Array in [["Settings", "SettingsPage"], ["Controls", "ControlsPage"]]:
+	for page: Array in [["Settings", "SettingsPage"], ["Controls", "ControlsPage"], ["Faction guide", "FactionGuide"]]:
 		for way: String in ["Esc", "‹ Back"]:
 			_click(main, page[0])
 			runner.check(_shown(menu, page[1]) and not _shown(menu, "Menu"), "M2 %s replaces the menu with its page" % page[0])
@@ -327,7 +390,7 @@ func test_pages_layout(runner) -> bool:
 		var main = await _scene(runner, Skirmish, port)
 		main.get_node("HUD/PauseMenu").confirm_leave = true
 		_open_menu(main)
-		for step: Array in [["", "Menu"], ["Settings", "SettingsPage"], ["‹ Back", "Menu"], ["Controls", "ControlsPage"], ["‹ Back", "Menu"], ["Leave match", "Confirm"]]:
+		for step: Array in [["", "Menu"], ["Settings", "SettingsPage"], ["‹ Back", "Menu"], ["Controls", "ControlsPage"], ["‹ Back", "Menu"], ["Faction guide", "FactionGuide"], ["‹ Back", "Menu"], ["Leave match", "Confirm"]]:
 			if not step[0].is_empty(): _click(main, step[0])
 			await runner.process_frame
 			await runner.process_frame

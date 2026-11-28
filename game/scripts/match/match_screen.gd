@@ -133,6 +133,7 @@ func _ready() -> void:
 	_pause.confirm_leave = driver.confirm_leave()
 	_pause.resume_requested.connect(_pause.close)
 	_pause.opened.connect(_fill_questions)
+	_pause.opened.connect(func() -> void: _pause.faction = HudModel.player(shown_state, local_player).get("faction", "") if shown_state.has("players") else "")
 	hud.menu_pressed.connect(_pause.open)
 	_pause.leave_requested.connect(_leave)
 	if not quit.is_valid(): quit = get_tree().quit
@@ -340,7 +341,7 @@ func _input(event: InputEvent) -> void:
 		if _result_panel.takes_enter(event) and not _typing() and not _playtest.holds_match(): _play_again()
 		# Space is ui_accept: hammered in a base fight it must not press the card's focused Back to menu.
 		elif not (_result_panel.visible and not _typing() and event.physical_keycode == KEY_SPACE): return
-	elif event.is_action_pressed("ui_accept"): return
+	elif event.is_action_pressed("ui_accept") or _pause.navigates(event): return
 	get_viewport().set_input_as_handled()
 
 # The bars past a stretch cap show no map: a click there is nobody's, a drag ending there stops at the picture's edge.
