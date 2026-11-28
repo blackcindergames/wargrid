@@ -6,6 +6,7 @@ on:
       - '**'
       - '!docs/**'
       - '!**.md'
+      - '!warroom/**' # warroom.yml tests it
       - 'game/**' # exports ship game/data/maps/NOTICE.md
   pull_request:
     paths: *code
@@ -70,16 +71,6 @@ jobs:
         run: |
           set -o pipefail
           sh tools/run_tests.sh 2>&1 | tee test-results.log
-      - name: Test with the simulation on a worker thread
-        env: # the inline traces above stay intact
-          WARGRID_SIM_THREAD: "1"
-          WARGRID_REPLAY_TRACE: ""
-          WARGRID_ECONOMY_REPLAY_TRACE: ""
-          WARGRID_COMBAT_REPLAY_TRACE: ""
-          WARGRID_TEAM_REPLAY_TRACE: ""
-        run: |
-          set -o pipefail
-          sh tools/run_tests.sh 2>&1 | tee test-results-worker.log
       - name: Pump fault processes
         run: |
           set -o pipefail
@@ -102,8 +93,41 @@ jobs:
           name: test-results-${{ matrix.platform }}
           path: |
             test-results.log
-            test-results-worker.log
             pump-faults.log
+  godot-tests-worker:
+    name: Godot / Tests on a worker thread (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include: *platforms
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    env:
+      GODOT_ZIP: ${{ matrix.zip }}
+      GODOT_SHA256: ${{ matrix.sha256 }}
+      GODOT_EXECUTABLE: ${{ matrix.executable }}
+      PYTHON: ${{ matrix.python }}
+      WARGRID_SIM_THREAD: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/${{ matrix.zip }}
+          key: godot-${{ matrix.sha256 }}
+      - name: Install pinned Godot
+        run: '"$PYTHON" tools/install_godot.py'
+      - name: Test with the simulation on a worker thread
+        run: |
+          set -o pipefail
+          sh tools/run_tests.sh 2>&1 | tee test-results-worker.log
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: test-results-worker-${{ matrix.platform }}
+          path: test-results-worker.log
   godot-export:
     name: Godot / Exported build (${{ matrix.platform }})
     strategy:
