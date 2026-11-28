@@ -79,6 +79,10 @@ class StartSpy extends "res://scripts/match/sim_pump.gd":
 	func _note_for(job: Job, slot: Slot) -> Note:
 		ids.append(OS.get_thread_caller_id())
 		return super(job, slot)
+	# A slow OS thread start, as on CI runners, so a case cannot rely on the worker reporting in at once.
+	func _run_worker() -> void:
+		OS.delay_msec(50)
+		super()
 
 # A worker that never reports in, so the polled start has to time out.
 class NeverStartsPump extends "res://scripts/match/sim_pump.gd":
@@ -3256,6 +3260,7 @@ func test_sb5b_start_polls_readiness_across_frames(runner) -> bool:
 	var inline = pump.query(_job())
 	runner.check(inline != null and inline.tick == 1 and pump.ids == [main_id, main_id], "SB5B a query before the worker is ready runs inline on main")
 	runner.check(not pump.post(_job()) and pump.queue_stats().posts_attempted == 0, "SB5B a post before the worker is ready is refused and queues nothing")
+	_await_worker(runner, pump)
 	var posted: Array[int] = []
 	var asked: Array[bool] = []
 	for frame in 5:
@@ -3297,6 +3302,7 @@ func test_sb5b_start_driver_waits_for_ready(runner) -> bool:
 		pump.hold_start_for_test(2)
 		driver._last = pump.start()
 		driver.pump = pump
+		_await_worker(runner, pump)
 	var before: Array[int] = []
 	var after: Array[int] = []
 	for frame in 4:
@@ -3334,7 +3340,7 @@ func test_sb5b_start_cancelled_before_ready(runner) -> bool:
 	runner.check(next.mode() == "worker" and SimPump.live_workers() == threads + 1 and pump._thread == null, "SB5B the next pump is a worker and its start joined the old thread, got %s with %d live" % [next.mode(), SimPump.live_workers() - threads])
 	var started = _web_pump(StartSpy, clock, 0)
 	started.start()
-	_await_worker_id(started)
+	_await_worker(runner, started)
 	started.stop()
 	clock.advance()
 	started.drain()
@@ -3353,16 +3359,22 @@ func test_sb5b_start_late_poll_is_no_stall(runner) -> bool:
 	var clock := StartClock.new()
 	var pump = _web_pump(StartSpy, clock, 0)
 	pump.start()
-	_await_worker_id(pump)
+	_await_worker(runner, pump)
 	clock.advance(SimPump.WAIT_MSEC + 1)
 	pump.drain()
 	runner.check(pump.failure().is_empty() and not SimPump._latched and pump._owner_id == pump._worker_id and pump.has_room(), "SB5B a started worker first polled after WAIT_MSEC gets the simulation, got '%s'" % pump.failure())
 	_stop_built()
 	return true
 
-func _await_worker_id(pump) -> void:
+# Waits on the start semaphore itself (the worker sets its id just before posting it) and puts the post back for the pump.
+func _await_worker(runner, pump) -> void:
 	var end: int = Time.get_ticks_msec() + 3000
-	while pump._worker_id == 0 and Time.get_ticks_msec() < end: OS.delay_usec(500)
+	while Time.get_ticks_msec() < end:
+		if pump._started.try_wait():
+			pump._started.post()
+			return
+		OS.delay_usec(500)
+	runner.check(false, "SB5B the worker reported in within 3 s")
 
 func test_sb5b_start_times_out(runner) -> bool:
 	if not _modes().has("worker"): return true

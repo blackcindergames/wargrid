@@ -1258,7 +1258,7 @@ Tree: `b1bff532` plus T0b in the working tree (2026-11-28 night); logs `t0b/` un
 
 ### Task 6: the candidate gate (evidence sheet)
 
-Candidate: `e1ed18c7` (branch `sim-boundary-sb5b`, clean tree, `config/version="0.19.0-dev"`), 2026-11-28 night; logs `t6/` under the night logs (private); host load 1.2 to 3.4. The gate passes when `sed -n '/^## SB5b/,$p' docs/reference/sim-boundary-verification.md | rg -c 'Pending|Fail'` finds nothing.
+Candidate: `e1ed18c7` (branch `sim-boundary-sb5b`, clean tree, `config/version="0.19.0-dev"`), 2026-11-28 night; logs `t6/` under the night logs (private); host load 1.2 to 3.4. `f1e61763` adds only this sheet over it, so both name the same game tree; the next candidate is the commit with the CI fix and the Web worker default (below). The gate passes when `sed -n '/^## SB5b/,$p' docs/reference/sim-boundary-verification.md | rg -c 'Pending|Fail'` finds nothing.
 
 **Local checks before the ask** (all on `e1ed18c7`, each exit 0):
 
@@ -1284,11 +1284,16 @@ Candidate: `e1ed18c7` (branch `sim-boundary-sb5b`, clean tree, `config/version="
 - **Task 4 review fix round** (`b1bff532`; each mutation red in `WARGRID_TEST_ONLY=test_sb5b_`, CASES 15 CHECKS 82, then reverted; fixed tree 0 failures in both modes, `PUMP FAULTS PASSED 12`, `CHECKS PASSED 5`): `test_sb5b_start_cancelled_before_ready` guards `_poll_start`'s `or _stopped` (removed: 1 failure, a stopped start hands the simulation over and the next query stalls); `test_sb5b_start_late_poll_is_no_stall` guards a started worker first polled after `WAIT_MSEC` (timing it out: 2 failures); `test_sb5b_start_polls_readiness_across_frames` checks `post()` is refused while starting (not refused: 3 failures).
 - **Task 0b probe** (Task 0b's fix-round tree, committed as `e1ed18c7`): `WARGRID_FAULT_HOLD_AT_EXIT=1` on `stall_restart`, `stall_leave`, `stall_stop`, `stall_query`, 10 of 10 each, exit 137, marker `PASSED`, the kill line, no crash line; the unfixed copy failed 20 of 20 under the flagged gate.
 
+**CI fix and Web worker default (2026-11-28, attended):**
+
+- **CI red on `f1e61763`** (run 46117374400: Linux worker pass, Windows editor and exported build; the Windows editor job also hit the F67 watchdog in another shard, fixed on `main` by `ec928d69`, not by this): `test_sb5b_start_polls_readiness_across_frames` and `test_sb5b_start_driver_waits_for_ready` advance a fake frame clock in a tight loop, so they needed the OS to start the worker thread within microseconds of `start()`; on CI it had not, the pump stayed starting, `stop()` released the thread, and the next case's live-worker count was one short (`the dead thread was reaped`). The pump was right: a late worker is polled on a later frame. Not reproduced on the Mac (idle and with 24 busy processes) nor in a 4-CPU Linux arm64 container; reproduced on the Mac with a 50 ms delay in the test spy's `_run_worker` (CI's four messages and three cascades, CASES 6 CHECKS 27 FAILURES 7). Fix in the tests only: both wait in real time for the worker to report in (`_await_worker_id`) before the first fake frame, on the start semaphore itself, and fail with their own line if it never comes; the spy keeps the 50 ms delay as the guard. `WARGRID_TEST_ONLY=test_sb5b_start` 0 failures in both modes; full suite 1837/0 inline (166267 checks) and under `WARGRID_SIM_THREAD=1` (166260, `LIVE 0`); lint and warnings exit 0.
+- **Web worker default** (rider, user, 2026-11-28): `SimSettings.load_worker` reads a missing file or key as on; an invalid stored value still reads as off; desktop never reads it (`available()`). `test_sb5b_switch_sets_next_match` starts from a settings file without the key, the common case of a player who never touched the switch. `test_sb5b_worker_switch` and `test_sb5b_switch_sets_next_match` were red first (3 and 1 failures), then green.
+
 **Owed, not run tonight** (they need an approval, a browser or a window):
 
 | Item | Result |
 |---|---|
-| `sh tools/deploy_web.sh test` at `e1ed18c7` (owner approval) | Pending |
+| `sh tools/deploy_web.sh test` at `f1e61763` (owner approval) | Done 2026-11-28, worker off by default; the redeploy at the next candidate is Pending |
 | Deployed-origin response check (document and every static asset under `identity`, `gzip`, `br`; 304 with both headers; 404 with both headers) | Pending |
 | Release `Web Threads` warm-up in a browser (no warm-up error, F3 `Sim: worker`) | Pending |
 | Branch push, CI on Linux and Windows, `sh tools/compare_local_traces.sh "$RUN_ID"` | Pending |

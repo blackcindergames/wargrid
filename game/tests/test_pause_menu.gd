@@ -757,7 +757,8 @@ func test_sb5b_worker_switch(runner) -> bool:
 	var switch: CheckButton = menu.find_child("Worker", true, false)
 	var words: Array = _row_words(menu)
 	runner.check(switch != null and words.has(WORKER_LABEL) and words.has(WORKER_HINT) and switch.text.is_empty(), "SB5B the GAME section has '%s' with the hint '%s', got %s" % [WORKER_LABEL, WORKER_HINT, words])
-	runner.check(not switch.button_pressed and SimSettings.request() == false and _next_pump_mode() == "inline", "SB5B the worker switch is off by default and the next pump inline")
+	runner.check(switch.button_pressed and SimSettings.request() == true and _next_pump_mode() == "worker", "SB5B the worker switch is on by default and the next pump a worker")
+	switch.button_pressed = false
 	switch.button_pressed = true
 	runner.check(_stored_worker() == true and SimSettings.request() == true, "SB5B switching on saves worker = true in [simulation], got %s" % _stored_worker())
 	menu.open()
@@ -775,10 +776,11 @@ func test_sb5b_worker_switch(runner) -> bool:
 		runner.check(not switch.button_pressed and SimSettings.request() == false, "SB5B an invalid stored value (%s) reads as off" % [bad])
 	DirAccess.remove_absolute(AudioSettings.path)
 	AudioSettings.path = "user://no-such-dir-%d/settings.cfg" % OS.get_process_id()
-	switch.button_pressed = true
-	runner.check(SimSettings.request() == false and _next_pump_mode() == "inline", "SB5B after a failed save the next pump uses the stored off")
 	menu.open()
-	runner.check(not switch.button_pressed, "SB5B after a failed save the reopened switch shows the stored off")
+	switch.button_pressed = false
+	runner.check(SimSettings.request() == true and _next_pump_mode() == "worker", "SB5B after a failed save the next pump keeps the default on")
+	menu.open()
+	runner.check(switch.button_pressed, "SB5B after a failed save the reopened switch shows the default on")
 	AudioSettings.path = saved
 	menu.free()
 	SimSettings.available_in_tests = false
@@ -796,9 +798,12 @@ func _shown_mode(main) -> String:
 # Offline: a click changes nothing in the running match, the next one (Restart, the result panel's Play again) follows it both ways.
 func test_sb5b_switch_sets_next_match(runner) -> bool:
 	SimSettings.available_in_tests = true
+	var config := ConfigFile.new()
+	config.set_value("audio", "master", 0.5)
+	config.save(AudioSettings.path)
 	var main = await _scene(runner, Skirmish)
-	runner.check(main.driver.sim_mode() == "inline" and _shown_mode(main) == "inline", "SB5B off by default: the first match runs inline, F3 says %s" % _shown_mode(main))
-	for want: String in ["worker", "inline"]:
+	runner.check(main.driver.sim_mode() == "worker" and _shown_mode(main) == "worker", "SB5B on by default: the first match runs worker, F3 says %s" % _shown_mode(main))
+	for want: String in ["inline", "worker"]:
 		var before: String = main.driver.sim_mode()
 		var pump = main.driver.pump
 		_worker_switch(main).button_pressed = want == "worker"
