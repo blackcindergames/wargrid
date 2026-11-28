@@ -773,7 +773,7 @@ func test_sb5b_worker_switch(runner) -> bool:
 		config.set_value("simulation", "worker", bad)
 		config.save(AudioSettings.path)
 		menu.open()
-		runner.check(not switch.button_pressed and SimSettings.request() == false, "SB5B an invalid stored value (%s) reads as off" % [bad])
+		runner.check(switch.button_pressed and SimSettings.request() == true, "SB5B an invalid stored value (%s) reads as the default on" % [bad])
 	DirAccess.remove_absolute(AudioSettings.path)
 	AudioSettings.path = "user://no-such-dir-%d/settings.cfg" % OS.get_process_id()
 	menu.open()

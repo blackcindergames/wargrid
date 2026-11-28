@@ -14,7 +14,7 @@ static func load_worker() -> bool:
 	var config := ConfigFile.new()
 	if config.load(AudioSettings.path) != OK: return true
 	var value: Variant = config.get_value(SECTION, "worker", true)
-	return value is bool and value
+	return value if value is bool else true
 
 static func save_worker(on: bool) -> void:
 	var config := ConfigFile.new()
