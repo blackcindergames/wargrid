@@ -220,7 +220,7 @@ func _unit_list(kinds: Array, closest: String) -> VBoxContainer:
 	list.add_theme_constant_override("separation", 4)
 	if kinds.is_empty():
 		list.add_child(_label("None cleanly." + (" Closest:" if not closest.is_empty() else ""), &"HudHint"))
-	if kinds.is_empty() and not closest.is_empty(): list.add_child(_unit_line(closest, &"HudHint"))
+		if not closest.is_empty(): list.add_child(_unit_line(closest, &"HudHint"))
 	for kind: String in kinds: list.add_child(_unit_line(kind, &"HudRow"))
 	return list
 
