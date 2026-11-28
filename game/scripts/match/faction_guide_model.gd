@@ -30,7 +30,7 @@ static func is_worker(kind: String) -> bool:
 const ARMOR_CLASSES: Array = [["Infantry", "human"], ["Light vehicles", "light_vehicle"], ["Tanks", "tank"], ["Buildings", "structure"]]
 
 # {"beats": {faction: [kinds]}, "weak": {faction: [kinds]}, "closest_beats"/"closest_weak": {faction: kind}}: strongest first;
-# close fights are left out, but an empty side names its closest unit; workers have none.
+# close fights are left out, but an empty side names its closest unit when that one still wins its side; workers have none.
 static func counters(kind: String) -> Dictionary:
 	var found: Dictionary = {"beats": {}, "weak": {}, "closest_beats": {}, "closest_weak": {}}
 	for faction: String in FACTIONS:
@@ -39,8 +39,8 @@ static func counters(kind: String) -> Dictionary:
 		found.beats[faction] = armed.filter(func(other: String) -> bool: return ratio(kind, other) <= 0.5)
 		found.weak[faction] = armed.filter(func(other: String) -> bool: return ratio(kind, other) >= 2.0)
 		found.weak[faction].reverse()
-		found.closest_beats[faction] = armed.front() if not armed.is_empty() else ""
-		found.closest_weak[faction] = armed.back() if not armed.is_empty() else ""
+		found.closest_beats[faction] = armed.front() if not armed.is_empty() and ratio(kind, armed.front()) < 1.0 else ""
+		found.closest_weak[faction] = armed.back() if not armed.is_empty() and ratio(kind, armed.back()) > 1.0 else ""
 	return found
 
 # [[class words, damage words]] from the armour table: how hard this unit's weapon hits each armour class.

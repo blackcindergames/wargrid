@@ -341,7 +341,7 @@ func _input(event: InputEvent) -> void:
 		if _result_panel.takes_enter(event) and not _typing() and not _playtest.holds_match(): _play_again()
 		# Space is ui_accept: hammered in a base fight it must not press the card's focused Back to menu.
 		elif not (_result_panel.visible and not _typing() and event.physical_keycode == KEY_SPACE): return
-	elif event.is_action_pressed("ui_accept"): return
+	elif event.is_action_pressed("ui_accept") or _pause.navigates(event): return
 	get_viewport().set_input_as_handled()
 
 # The bars past a stretch cap show no map: a click there is nobody's, a drag ending there stops at the picture's edge.

@@ -3315,7 +3315,19 @@ func test_faction_guide_counters(runner) -> bool:
 	runner.check(GuideModel.roster("usa") == ["usa_rifle_infantry", "usa_rocket_infantry", "usa_light_vehicle", "usa_tank", "usa_builder", "usa_collector"], "FG1 USA roster cheapest first, workers last, got %s" % [GuideModel.roster("usa")])
 	runner.check(GuideModel.roster("frc").count("frc_builder") == 1 and GuideModel.roster("frc").size() == 5, "FG1 the Laborer builds and gathers: listed once, got %s" % [GuideModel.roster("frc")])
 	var insurgent: Dictionary = GuideModel.counters("frc_rifle_infantry")
-	runner.check(insurgent.weak.usa.is_empty() and insurgent.closest_weak.usa == "usa_rifle_infantry" and insurgent.closest_weak.china == "china_tank", "FG1 the Insurgent's empty Weak against names the Rifleman and the Rotary Gun Tank as closest, got %s" % insurgent.closest_weak)
+	runner.check(insurgent.weak.usa.is_empty() and insurgent.closest_weak.usa == "" and insurgent.closest_weak.china == "china_tank", "FG1 the Insurgent's empty Weak against names the Rotary Gun Tank as closest, not the Rifleman it beats, got %s" % insurgent.closest_weak)
+	var rotary: Dictionary = GuideModel.counters("china_tank")
+	runner.check(rotary.beats.usa.has("usa_rocket_infantry") and not rotary.beats.usa.has("usa_rifle_infantry") and GuideModel.counters("usa_rocket_infantry").weak.china.has("china_tank"), "FG1 Beats stops at 0.5: the Rotary Gun Tank beats the Rocket Trooper (0.42), not the Rifleman (0.51), got %s" % [rotary.beats.usa])
+	var weak: Array = GuideModel.counters("china_light_vehicle").weak.usa
+	runner.check(weak.size() >= 2 and GuideModel.ratio("china_light_vehicle", weak[0]) >= GuideModel.ratio("china_light_vehicle", weak[1]), "FG1 the worst threat comes first under Weak against, got %s" % [weak])
+	for faction: String in GuideModel.FACTIONS:
+		for kind: String in GuideModel.roster(faction):
+			var near: Dictionary = GuideModel.counters(kind)
+			for other_faction: String in GuideModel.FACTIONS:
+				var closest_weak: String = near.closest_weak[other_faction]
+				var closest_beats: String = near.closest_beats[other_faction]
+				runner.check(closest_weak.is_empty() or GuideModel.ratio(kind, closest_weak) > 1.0, "FG1 %s's closest threat %s really wins, got %s" % [kind, closest_weak, GuideModel.ratio(kind, closest_weak) if not closest_weak.is_empty() else 0.0])
+				runner.check(closest_beats.is_empty() or GuideModel.ratio(kind, closest_beats) < 1.0, "FG1 %s's closest prey %s really loses, got %s" % [kind, closest_beats, GuideModel.ratio(kind, closest_beats) if not closest_beats.is_empty() else 0.0])
 	var beats: Array = GuideModel.counters("usa_rifle_infantry").beats.china
 	runner.check(beats.size() >= 2 and GuideModel.ratio("usa_rifle_infantry", beats[0]) <= GuideModel.ratio("usa_rifle_infantry", beats[1]), "FG1 the strongest counter comes first, got %s" % [beats])
 	runner.check(GuideModel.damage_against("usa_tank") == [["Infantry", "Barely"], ["Light vehicles", "Full"], ["Tanks", "Full"], ["Buildings", "Full"]] and GuideModel.damage_against("china_tank")[2] == ["Tanks", "Barely"] and GuideModel.damage_against("usa_builder").is_empty(), "FG1 damage against reads the armour table: Battle Tank barely hurts infantry, got %s" % [GuideModel.damage_against("usa_tank")])

@@ -48,6 +48,13 @@ func _helper_restore(saved: String) -> void:
 	DirAccess.remove_absolute(helper_scratch)
 	AudioSettings.path = saved
 
+func _arrow(code: Key) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.keycode = code
+	event.pressed = true
+	return event
+
 func _esc(main) -> void:
 	var event := InputEventKey.new()
 	event.physical_keycode = KEY_ESCAPE
@@ -285,10 +292,23 @@ func test_faction_guide_page(runner) -> bool:
 	var main = await _scene(runner, Skirmish)
 	var menu: Control = main.get_node("HUD/PauseMenu")
 	_open_menu(main)
+	var own: String = HudModel.player(main.shown_state, main.local_player).faction
+	runner.check(not own.is_empty() and menu.faction == own, "G1 opening the menu hands it your faction, got '%s'" % menu.faction)
 	menu.faction = "china"
 	_click(main, "Faction guide")
 	await runner.process_frame
 	var guide: Control = menu.find_child("FactionGuide", true, false)
+	(guide.find_child("Roster", true, false).get_child(0) as Button).grab_focus()
+	main.get_viewport().push_input(_arrow(KEY_DOWN))
+	runner.check(guide.selected == "china_rocket_infantry", "G1 the down arrow moves to the next unit in a match, got %s" % guide.selected)
+	main.get_viewport().push_input(_arrow(KEY_UP))
+	var outside: Array = []
+	for i: int in 12:
+		main.get_viewport().push_input(_arrow(KEY_TAB))
+		var owner: Control = main.get_viewport().gui_get_focus_owner()
+		if owner == null or not guide.is_ancestor_of(owner): outside.append(owner)
+	runner.check(outside.is_empty(), "G1 Tab stays inside the guide in a match, reached %s" % [outside])
+	guide.show_faction("china", "china")
 	runner.check(guide.faction == "china" and guide.find_child("Tab_china", true, false).button_pressed and _shown(guide, "Roster"), "G1 the guide opens on your faction's tab, got %s" % guide.faction)
 	runner.check(guide.selected == "china_rifle_infantry" and guide.find_child("Name", true, false).text == "Militia", "G1 the first roster row is shown, got %s" % guide.selected)
 	var sizes: Array = []
@@ -305,13 +325,15 @@ func test_faction_guide_page(runner) -> bool:
 	(guide.find_child("Roster", true, false).get_node("usa_rocket_infantry") as Button).pressed.emit()
 	await runner.process_frame
 	var words: Array = guide.find_child("Counters", true, false).find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
-	runner.check(words.has("BEATS") and words.has("WEAK AGAINST") and words.has("Medium Tank") and words.has("China · you") and words.has("Militia"), "G1 the Rocket Trooper's card names the Medium Tank under Beats, columns marked yours, got %s" % [words])
+	runner.check(words.has("BEATS") and words.has("WEAK AGAINST") and words.find("BEATS") < words.find("Medium Tank") and words.find("Medium Tank") < words.find("WEAK AGAINST") and words.has("China · you") and words.has("Militia"), "G1 the Rocket Trooper's card names the Medium Tank under Beats, columns marked yours, got %s" % [words])
+	var tiny: Array = guide.find_children("*", "Label", true, false).filter(func(label: Label) -> bool: return label.get_theme_font_size(&"font_size") < 12)
+	runner.check(tiny.is_empty(), "G1 no text under 12 px on a card with counters, got %s" % [tiny.map(func(label: Label) -> String: return label.text)])
 	var strip: Array = guide.find_child("DamageAgainst", true, false).get_children().map(func(label: Label) -> String: return label.text)
 	runner.check(strip == ["DAMAGE AGAINST", "Infantry", "Barely", "Light vehicles", "Half", "Tanks", "Full", "Buildings", "Half"], "G1 the Rocket Trooper's damage strip reads the armour table, got %s" % [strip])
 	guide.find_child("Tab_frc", true, false).pressed.emit()
 	await runner.process_frame
 	var empty: Array = guide.find_child("Counters", true, false).find_children("*", "Label", true, false).map(func(label: Label) -> String: return label.text)
-	runner.check(empty.count("None cleanly. Closest:") == 3 and empty.has("Rifleman") and not empty.has("–"), "G1 the Insurgent's empty Weak against names the closest unit per faction, got %s" % [empty])
+	runner.check(empty.count("None cleanly. Closest:") == 1 and empty.count("None cleanly.") == 2 and empty.has("Rotary Gun Tank") and not empty.has("Rifleman") and not empty.has("–"), "G1 the Insurgent's empty Weak against names a closest unit only where one wins, got %s" % [empty])
 	guide.find_child("Tab_china", true, false).pressed.emit()
 	(guide.find_child("Roster", true, false).get_node("china_builder") as Button).pressed.emit()
 	await runner.process_frame

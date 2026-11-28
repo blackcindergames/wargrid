@@ -6,8 +6,9 @@ const UnitGlyphs = preload("res://scripts/presentation/unit_glyphs.gd")
 const GAME_THEME = preload("res://ui/game_theme.tres")
 signal back_requested
 const STATS: Array = [["COST", "cost"], ["TIME", "time"], ["HEALTH", "health"], ["SPEED", "speed"], ["RANGE", "range"], ["VISION", "vision"]]
-const CLASSES := {"infantry": "Infantry", "vehicle": "Vehicle", "air": "Aircraft"}
-const NOTE := "Counters: who wins a straight fight when both sides spend the same credits; close fights are not listed. Range, splash, crushing and groups are not counted. The Rotary Gun Tank is counted once its guns spin up (1.6 s); FRC units with their base weapon, before salvage upgrades. Speed in cells a second; range and vision in cells."
+# By armour, so the roster speaks the damage strip's words: the Rotary Gun Tank is a light vehicle.
+const CLASSES := {"human": "Infantry", "light_vehicle": "Light vehicle", "tank": "Tank", "helicopter": "Aircraft", "builder_vehicle": "Vehicle"}
+const NOTE := "Counters: who wins a straight fight when both sides spend the same credits; close fights show only as Closest. Range, splash and groups are not counted; tanks do not crush infantry yet. The Rotary Gun Tank is counted once its guns spin up (1.6 s); FRC units with their base weapon, before salvage upgrades. Speed in cells a second; range and vision in cells."
 var faction: String = Model.FACTIONS[0]
 var yours: String = ""
 var selected: String = ""
@@ -46,7 +47,7 @@ func _init() -> void:
 	_roster.name = "Roster"
 	_roster.add_theme_constant_override("separation", 4)
 	left.add_child(_roster)
-	left.add_child(_label("Click a unit, or ↑ ↓", &"HudHint"))
+	left.add_child(_label("Click a unit, or use the arrow keys", &"HudHint"))
 	body.add_child(left)
 	var card_panel := PanelContainer.new()
 	card_panel.theme_type_variation = &"HudSmallPanel"
@@ -217,9 +218,9 @@ func _damage_strip(kind: String) -> HBoxContainer:
 func _unit_list(kinds: Array, closest: String) -> VBoxContainer:
 	var list := VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
-	if kinds.is_empty() and not closest.is_empty():
-		list.add_child(_label("None cleanly. Closest:", &"HudHint"))
-		list.add_child(_unit_line(closest, &"HudHint"))
+	if kinds.is_empty():
+		list.add_child(_label("None cleanly." + (" Closest:" if not closest.is_empty() else ""), &"HudHint"))
+	if kinds.is_empty() and not closest.is_empty(): list.add_child(_unit_line(closest, &"HudHint"))
 	for kind: String in kinds: list.add_child(_unit_line(kind, &"HudRow"))
 	return list
 
@@ -238,7 +239,7 @@ func _glyph(kind: String, edge: float) -> TextureRect:
 	return glyph
 
 static func _class_words(kind: String) -> String:
-	return CLASSES.get(Registry.kind(kind)["class"], "")
+	return CLASSES.get(Registry.kind(kind).armor, "")
 
 func _label(text: String, variation: StringName) -> Label:
 	var label := Label.new()

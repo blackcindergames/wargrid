@@ -1006,6 +1006,11 @@ func open_guide() -> void:
 	guide.show_faction(own if not own.is_empty() else Registry.Factions.DEFAULT_FACTION, own)
 	_guide_overlay.visible = true
 	guide.focus_tab()
+	if not get_viewport().gui_focus_changed.is_connected(_keep_guide_focus): get_viewport().gui_focus_changed.connect(_keep_guide_focus)
+
+# The overlay only blocks the mouse: arrows and Tab would walk on into the lobby behind it.
+func _keep_guide_focus(control: Control) -> void:
+	if _guide_overlay.visible and not _guide_overlay.is_ancestor_of(control): (_guide_overlay.get_node("Center/FactionGuide") as Control).focus_tab()
 
 func close_guide() -> void:
 	_guide_overlay.visible = false
@@ -1111,6 +1116,7 @@ func _fail(reason: String) -> void:
 	_transport = null
 	_reset_room()
 	_confirm.hide()
+	if _guide_overlay != null: _guide_overlay.visible = false
 	var chosen: bool = reason in [HOST_CANCELLED, JOIN_CANCELLED, HOSTING_STOPPED, LEFT_GAME]
 	var next: String = _next_mode if chosen else ""
 	_next_mode = ""

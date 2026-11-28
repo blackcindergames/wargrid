@@ -153,6 +153,10 @@ func open() -> void:
 	_show_main()
 	opened.emit()
 
+# The guide's roster is walked with the arrow keys and Tab; the match eats every other key while the menu is up.
+func navigates(event: InputEvent) -> bool:
+	return _guide.visible and ["ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"].any(func(action: String) -> bool: return event.is_action_pressed(action))
+
 func close() -> void:
 	visible = false
 
