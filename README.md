@@ -114,13 +114,13 @@ Performance against the low-end budget (generated):
 | --- | --- | --- | --- | --- |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame** | 🔴 Over | ██████████▶ 188% | 🆕 first run | 2026-11-22 |
 | **Steam Deck in Firefox, 3v3 match: CPU time per frame, slowest moments** | 🔴 Over | ██████████▶ 108% | 🆕 first run | 2026-11-22 |
-| Drawing the screen | 🟢 OK | ████████░░ 80% | 🔻 7% better (busy host) | 2026-11-28 |
-| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 79% | 🔺 2% worse (busy host) | 2026-11-28 |
-| Combat, normal fights | 🟢 OK | ███████░░░ 75% | ➖ same | 2026-11-28 |
-| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 59% | 🔺 1% worse | 2026-11-28 |
-| Unit movement | 🟢 OK | ████░░░░░░ 44% | 🔻 17% better | 2026-11-28 |
-| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | 🔻 26% better | 2026-11-28 |
-| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔻 9% better | 2026-11-28 |
+| Drawing the screen, big map (Ashfall) | 🟢 OK | ███████░░░ 77% | 🔻 2% better | 2026-11-28 |
+| Combat, normal fights | 🟢 OK | ███████░░░ 74% | 🔻 2% better | 2026-11-28 |
+| Drawing the screen | 🟢 OK | ███████░░░ 72% | 🔻 10% better | 2026-11-28 |
+| Combat, normal fights, slowest moments | 🟢 OK | █████░░░░░ 58% | 🔻 2% better | 2026-11-28 |
+| Unit movement | 🟢 OK | ████░░░░░░ 44% | ➖ same | 2026-11-28 |
+| Unit movement, slowest moments | 🟢 OK | ██░░░░░░░░ 25% | ➖ same | 2026-11-28 |
+| Online play overhead | 🟢 OK | █░░░░░░░░░ 11% | 🔺 1% worse | 2026-11-28 |
 
 Percent of the limit for a low-end device, estimated from this Mac, except the Steam Deck rows, which are measured on the Deck (see the ledger for how). 🔺 = used more of the limit than last run. Small changes can be run-to-run noise. As of = when that area was last measured; areas drawn from rendered runs update only at milestone gates.
 
@@ -132,14 +132,14 @@ These areas are over their limit and no known change brings them under it yet, s
 
 | Area | Latest on this Mac | Recent runs → | vs recent runs | As of |
 | --- | --- | --- | --- | --- |
-| Background upkeep, huge crowds (stress) | mean 1.98 ms | ▄▄▄▅▄▆▄▄ | 🔻 2% faster | 2026-11-28 |
-| Combat, huge battles (stress) | p95 2.97 ms | ▄▄▄▄▄▅▄▄ | ➖ same, -1% (noise ±41%) | 2026-11-28 |
-| Background upkeep, armies on the move (stress) | mean 1.35 ms | ▄▄▄▄▄▄▄▄ | ➖ same | 2026-11-28 |
-| Combat, big armies in the open (stress) | p95 2.14 ms | ▄▄▅▄▄▄▄▆ | ➖ same, +10% (noise ±41%) | 2026-11-28 |
-| Combat, big armies packed close (stress) | p95 1.89 ms | ▄▄▄▄▄▄▆▄ | ➖ same, -2% (noise ±41%) | 2026-11-28 |
-| 3v3 match, background upkeep (real 3v3) | mean 1.16 ms | ▄▄▄▄▄▅▅▄ | 🔻 2% faster | 2026-11-28 |
-| 3v3 match, simulation (real 3v3) | p95 2.71 ms | ▄▄▄▄▄▅▅▄ | 🔻 2% faster | 2026-11-28 |
-| 3v3 match, bots and simulation (real 3v3) | p95 3.28 ms | ▄▄▄▄▄▅▅▄ | 🔻 3% faster | 2026-11-28 |
+| Background upkeep, huge crowds (stress) | mean 1.98 ms | ▄▄▅▄▅▄▄▄ | 🔻 2% faster | 2026-11-28 |
+| Combat, huge battles (stress) | p95 2.93 ms | ▄▄▄▄▅▄▄▄ | ➖ same, -2% (noise ±41%) | 2026-11-28 |
+| Background upkeep, armies on the move (stress) | mean 1.34 ms | ▄▄▄▄▄▄▄▄ | 🔻 1% faster | 2026-11-28 |
+| Combat, big armies in the open (stress) | p95 1.91 ms | ▄▅▄▄▄▄▆▄ | ➖ same, -2% (noise ±41%) | 2026-11-28 |
+| Combat, big armies packed close (stress) | p95 1.86 ms | ▄▄▄▄▄▆▄▄ | ➖ same, -3% (noise ±41%) | 2026-11-28 |
+| 3v3 match, background upkeep (real 3v3) | mean 1.15 ms | ▄▄▄▄▅▅▄▄ | 🔻 3% faster | 2026-11-28 |
+| 3v3 match, simulation (real 3v3) | p95 2.68 ms | ▄▄▄▄▅▅▄▄ | 🔻 4% faster | 2026-11-28 |
+| 3v3 match, bots and simulation (real 3v3) | p95 3.25 ms | ▄▄▄▄▅▅▄▄ | 🔻 4% faster | 2026-11-28 |
 
 Details: [performance ledger](docs/reference/performance.md).
 <!-- perf-table:end -->
