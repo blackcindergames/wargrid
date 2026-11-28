@@ -39,7 +39,9 @@ done
 status=0
 i=0
 for pid in $pids; do
-	wait "$pid" || status=1
+	code=0
+	wait "$pid" || { code=$?; status=1; }
+	grep -q '^CASES ' "$log_dir/tests.$i.log" || echo "shard $i/$shards exit=$code" # a Windows watchdog kill exits 0
 	grep -Ev '^(CASES|TESTS PASSED|SIM PUMPS) ' "$log_dir/tests.$i.log"
 	i=$((i + 1))
 done

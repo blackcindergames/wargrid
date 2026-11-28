@@ -9,7 +9,8 @@ var checks: int = 0
 var failures: int = 0
 var case_count: int = 0
 var _active_case: String = "startup"
-const WATCHDOG_SECONDS: int = 480 # real time, not frames: a case that blocks between frames must still be caught
+var _case_started_ms: int = 0
+const WATCHDOG_SECONDS: int = 480 # per case, real time, not frames: a case that blocks between frames must still be caught
 var _watchdog := Thread.new()
 var _watchdog_stop: bool = false
 var _case_lock := Mutex.new()
@@ -114,7 +115,8 @@ func _run() -> void:
 	root.size = Vector2i(1280, 720) # the headless root starts at 64x64, which the match's stretch caps would read as a 1:1 window
 	if current_scene != null: # exported builds also load the main scene (the launcher), whose UI swallows test clicks
 		current_scene.free()
-	_watchdog.start(_watch.bind(Time.get_ticks_msec() + WATCHDOG_SECONDS * 1000))
+	_case_started_ms = Time.get_ticks_msec()
+	_watchdog.start(_watch)
 	var suites: Array = [] # a Callable does not keep its RefCounted suite alive
 	var tests: Array[Callable] = []
 	var paths: Array[String] = []
@@ -145,6 +147,7 @@ func _run() -> void:
 		var test: Callable = tests[i]
 		_case_lock.lock()
 		_active_case = test.get_method()
+		_case_started_ms = Time.get_ticks_msec()
 		_case_lock.unlock()
 		case_count += 1
 		DirAccess.remove_absolute(AudioSettings.path) # remembered launcher picks must not leak into the next case
@@ -159,6 +162,10 @@ func _run() -> void:
 		if completed is not bool or completed != true or checks == before:
 			failures += 1
 			print("FAIL: incomplete/empty case ", test.get_method())
+	_case_lock.lock()
+	_active_case = "summary"
+	_case_started_ms = Time.get_ticks_msec()
+	_case_lock.unlock()
 	if checks == 0 or case_count == 0:
 		failures += 1
 		print("FAIL: zero tests/checks")
@@ -181,14 +188,20 @@ func _stop_watchdog() -> void:
 	_watchdog_stop = true
 	_watchdog.wait_to_finish()
 
-func _watch(deadline_ms: int) -> void:
-	while not _watchdog_stop and Time.get_ticks_msec() < deadline_ms:
+static func timed_out(now_ms: int, case_started_ms: int) -> bool:
+	return now_ms - case_started_ms >= WATCHDOG_SECONDS * 1000
+
+func _watch() -> void:
+	var active: String = ""
+	while not _watchdog_stop:
+		_case_lock.lock()
+		active = _active_case
+		var late: bool = timed_out(Time.get_ticks_msec(), _case_started_ms)
+		_case_lock.unlock()
+		if late: break
 		OS.delay_msec(200)
 	if _watchdog_stop:
 		return
-	_case_lock.lock()
-	var active: String = _active_case
-	_case_lock.unlock()
 	print("FAIL: watchdog timeout in ", active)
 	remove_dir(PlaytestSession.dir)
 	OS.kill(OS.get_process_id())
