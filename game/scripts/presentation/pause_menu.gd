@@ -6,6 +6,7 @@ const PlaytestSettings = preload("res://scripts/playtest/playtest_settings.gd")
 const SimSettings = preload("res://scripts/presentation/sim_settings.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
 const ControlGroups = preload("res://scripts/match/control_groups.gd")
+const FactionGuide = preload("res://scripts/presentation/faction_guide.gd")
 signal resume_requested
 signal leave_requested
 signal quit_requested
@@ -24,6 +25,9 @@ var _menu: Control
 var _confirm: Control
 var _settings: Control
 var _controls: Control
+var _guide: Control
+# The local player's faction, which the guide opens on.
+var faction: String = ""
 var _resume: Button
 var _cancel: Button
 var _question: Label
@@ -52,6 +56,9 @@ func _init(web: bool = OS.has_feature("web"), worker_row: bool = SimSettings.ava
 	_resume = _button(buttons, "Resume", resume_requested.emit)
 	_button(buttons, "Settings", func() -> void: _show(_settings, _settings.find_child("Back", true, false)))
 	_button(buttons, "Controls", func() -> void: _show(_controls, _controls.find_child("Back", true, false)))
+	_button(buttons, "Faction guide", func() -> void:
+		_guide.show_faction(faction, faction)
+		_show(_guide, _guide.find_child("Back", true, false)))
 	_button(buttons, "Leave match", func() -> void: _ask(leave_question, "Leave", leave_requested.emit))
 	# The browser tab cannot be closed by the game.
 	if not web: _button(buttons, "Quit", func() -> void: _ask(quit_question, "Quit", quit_requested.emit))
@@ -66,6 +73,9 @@ func _init(web: bool = OS.has_feature("web"), worker_row: bool = SimSettings.ava
 	_cancel = _button(box, "Cancel", _show_main)
 	_settings = _page(center, "SettingsPage", "SETTINGS", _settings_body(worker_row))
 	_controls = _page(center, "ControlsPage", "CONTROLS", _controls_list())
+	_guide = FactionGuide.new()
+	_guide.back_requested.connect(_show_main)
+	center.add_child(_guide)
 	_read_settings()
 	_show(_menu, null)
 
@@ -144,6 +154,10 @@ func open() -> void:
 	_show_main()
 	opened.emit()
 
+# The guide's roster is walked with the arrow keys and Tab; the match eats every other key while the menu is up.
+func navigates(event: InputEvent) -> bool:
+	return _guide.visible and ["ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"].any(func(action: String) -> bool: return event.is_action_pressed(action))
+
 func close() -> void:
 	visible = false
 
@@ -156,7 +170,7 @@ func _show_main() -> void:
 	_show(_menu, _resume)
 
 func _show(part: Control, focus: Control) -> void:
-	for each: Control in [_menu, _confirm, _settings, _controls]: each.visible = each == part
+	for each: Control in [_menu, _confirm, _settings, _controls, _guide]: each.visible = each == part
 	if focus != null: focus.grab_focus()
 
 func _ask(question: String, verb: String, action: Callable) -> void:

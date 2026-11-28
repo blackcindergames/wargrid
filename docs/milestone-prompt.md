@@ -40,7 +40,7 @@ Granted by the user on 2026-11-03 for milestone runs:
 - dispatching the gate review subagent at each stop gate;
 - closing any window or background process the run started.
 
-Still require explicit approval: push, PR, merge, visible game windows, design changes, relaxing any budget or assertion.
+Still require explicit approval: anything on `main`, PR, merge, visible game windows, design changes, relaxing any budget or assertion.
 
 ## Engineering lessons
 

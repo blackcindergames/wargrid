@@ -40,7 +40,7 @@ const SIZES: Array[Vector2i] = [Vector2i(1280, 720), Vector2i(1920, 1080), Vecto
 const STRETCHED: Array[Array] = [[Vector2i(1920, 1080), Vector2i(1280, 720)], [Vector2i(2576, 1145), Vector2i(1620, 720)]]
 
 func cases() -> Array[Callable]:
-	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_picks_bot_list_and_old_files, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_launcher_effective_sizes, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_offline_setup_seats_extra_bots, test_relay_in_settings, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_takes_a_pasted_line, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits, test_mode_row_two_modes, test_team_mode_shows_bot_rows, test_team_bot_factions_remembered, test_team_hello_carries_bots, test_team_changes_while_connecting, test_waiting_lists_bot_slots, test_waiting_edges_neon, test_start_sets_bot_factions_and_teams, test_version_mismatch_plain_line, test_team_layout_hud_sizes, test_guest_start_matches_host, test_lobby_one_click_bot_match, test_lobby_add_bot_up_to_starts, test_lobby_host_caps_bots, test_lobby_remove_bot, test_lobby_random_faction, test_lobby_code_at_host_game, test_lobby_settings_coalesced, test_lobby_friend_joins_and_leaves, test_lobby_start_request_when_full, test_lobby_guest_live_view, test_lobby_guest_change_lines, test_lobby_host_left, test_lobby_stop_hosting, test_lobby_countdown_resets, test_lobby_hour_cap, test_lobby_expiry_texts, test_lobby_changes_wait_for_open_lists, test_lobby_picks_both_ways, test_relay_reasons, test_prerelease_build_in_hello, test_join_lookalike_letters, test_lobby_guest_team_move_line, test_lobby_small_px, test_lobby_guest_random_resolved, test_lobby_copy_turns_copied, test_launcher_theme_stays_in_the_launcher, test_lobby_layout_sizes, test_join_card_placement, test_lobby_look_lines_up, test_start_pick_offline, test_start_pick_host_folds_guest, test_start_pick_guest_view, test_start_pick_guest_repicks, test_start_pick_bots_stay_in_skirmish, test_start_pick_host_removes_bot, test_start_pick_rejoin_adopts_nothing, test_start_pick_offline_refuses_overflow, test_start_pick_hint, test_start_pick_hover, test_every_mode_leaves, test_start_pick_ask_follows_the_room, test_host_trusts_only_the_guest_seat, test_own_faction_before_welcome]
+	return [test_picks_defaults, test_picks_fallback_per_field, test_picks_keep_other_sections, test_picks_bot_list_and_old_files, test_fullscreen_target, test_fullscreen_switch, test_this_build_line, test_graphics_group, test_graphics_shows_stored, test_graphics_mirror_esc_menu, test_no_selection_colour_on_switches, test_primary_button_is_amber_with_dark_ink, test_mute_is_a_switch, test_public_sans_font, test_launcher_effective_sizes, test_font_rendering, test_dropdown_arrow, test_control_heights, test_round4_minors, test_long_dropdown_text_keeps_a_gap, test_footer_error_hugs_text, test_waiting_bold_codes_and_dashed_slots, test_sidebar_switches_pages, test_aspect_expand_and_restore, test_layout_every_page, test_opens_on_bot_with_picks, test_toggle_friend, test_map_info_and_summary, test_own_faction_shared, test_start_saves_picks, test_offline_setup_seats_extra_bots, test_relay_in_settings, test_link_opens_join, test_lock_while_connecting, test_waiting_view, test_join_error_footer, test_join_takes_a_pasted_line, test_join_needs_code, test_relay_fields_follow, test_column_widths, test_player_rows_padded, test_footer_status_style, test_vertical_rhythm, test_waiting_two_columns, test_enter_submits_join_code, test_enter_joins_after_link, test_connecting_footers_fit, test_connecting_elapsed_and_cancel, test_lobby_countdown_and_expiry, test_hidden_host_survives_lobby, test_ticking_texts_through_process, test_default_focus, test_stray_enter_does_nothing, test_enter_after_faction_pick, test_click_targets_32, test_quit_button, test_invite_label, test_focus_differs_from_hover, test_focus_ring_fits, test_mode_row_two_modes, test_team_mode_shows_bot_rows, test_team_bot_factions_remembered, test_team_hello_carries_bots, test_team_changes_while_connecting, test_waiting_lists_bot_slots, test_waiting_edges_neon, test_start_sets_bot_factions_and_teams, test_version_mismatch_plain_line, test_team_layout_hud_sizes, test_guest_start_matches_host, test_lobby_one_click_bot_match, test_lobby_add_bot_up_to_starts, test_lobby_host_caps_bots, test_lobby_remove_bot, test_lobby_guide, test_lobby_random_faction, test_lobby_code_at_host_game, test_lobby_settings_coalesced, test_lobby_friend_joins_and_leaves, test_lobby_start_request_when_full, test_lobby_guest_live_view, test_lobby_guest_change_lines, test_lobby_host_left, test_lobby_stop_hosting, test_lobby_countdown_resets, test_lobby_hour_cap, test_lobby_expiry_texts, test_lobby_changes_wait_for_open_lists, test_lobby_picks_both_ways, test_relay_reasons, test_prerelease_build_in_hello, test_join_lookalike_letters, test_lobby_guest_team_move_line, test_lobby_small_px, test_lobby_guest_random_resolved, test_lobby_copy_turns_copied, test_launcher_theme_stays_in_the_launcher, test_lobby_layout_sizes, test_join_card_placement, test_lobby_look_lines_up, test_start_pick_offline, test_start_pick_host_folds_guest, test_start_pick_guest_view, test_start_pick_guest_repicks, test_start_pick_bots_stay_in_skirmish, test_start_pick_host_removes_bot, test_start_pick_rejoin_adopts_nothing, test_start_pick_offline_refuses_overflow, test_start_pick_hint, test_start_pick_hover, test_every_mode_leaves, test_start_pick_ask_follows_the_room, test_host_trusts_only_the_guest_seat, test_own_faction_before_welcome]
 
 func _picked(selector: OptionButton) -> String:
 	return selector.get_item_metadata(selector.selected)
@@ -1925,8 +1925,45 @@ func test_lobby_remove_bot(runner) -> bool:
 	runner.check(_count_line(launcher) == "2 of 4 starts used", "LL3 the count follows, got '%s'" % _count_line(launcher))
 	_row(launcher, 2, "Bot1").get_node("Remove").pressed.emit()
 	runner.check(launcher.lobby_bots.is_empty() and launcher.get_node("Pages/Play/Footer/Start").disabled, "LL3 Skirmish without a bot cannot start")
-	runner.check(_row(launcher, 1, "You").get_node_or_null("Remove") == null and _row(launcher, 1, "You").get_node("Action").custom_minimum_size.x == LauncherScript.ACTION_WIDTH, "LL3 your own row has no X but keeps the action column")
+	runner.check(_row(launcher, 1, "You").get_node_or_null("Remove") == null and _row(launcher, 1, "You").get_node("Guide").custom_minimum_size.x == LauncherScript.ACTION_COLUMN, "LL3 your own row has no X; its action column holds Guide")
 	launcher.free()
+	return true
+
+# P21: Guide in your row opens the faction guide on your pick; Random opens USA with nothing marked yours; Esc and Back close it.
+func test_lobby_guide(runner) -> bool:
+	var saved: String = AudioSettings.path
+	var launcher = await _launcher_with(runner, "lobby-guide", {"map": "broken_crown"})
+	_pick(launcher._own_selector(), "frc")
+	_row(launcher, 1, "You").get_node("Guide").pressed.emit()
+	var guide: Control = launcher.find_child("FactionGuide", true, false)
+	runner.check(guide != null and guide.is_visible_in_tree() and guide.faction == "frc" and guide.yours == "frc", "LG1 Guide opens the guide on your pick")
+	var overlay: Control = launcher.find_child("GuideOverlay", true, false)
+	var rows: Node = guide.find_child("Roster", true, false)
+	(rows.get_child(rows.get_child_count() - 1) as Button).grab_focus()
+	var escaped: Array = []
+	for code: Key in [KEY_DOWN, KEY_DOWN, KEY_TAB, KEY_TAB, KEY_TAB, KEY_TAB, KEY_TAB, KEY_TAB, KEY_TAB, KEY_TAB, KEY_TAB, KEY_TAB]:
+		launcher.get_viewport().push_input(_key(code, true))
+		launcher.get_viewport().push_input(_key(code, false))
+		var owner: Control = launcher.get_viewport().gui_get_focus_owner()
+		if owner == null or not overlay.is_ancestor_of(owner): escaped.append(owner)
+	runner.check(escaped.is_empty(), "LG1 the arrows and Tab stay inside the guide, reached %s" % [escaped])
+	launcher._unhandled_input(_esc())
+	runner.check(not guide.is_visible_in_tree() and launcher.current_page == "Play", "LG1 Esc closes the guide and stays in the lobby")
+	var back: Control = launcher.get_viewport().gui_get_focus_owner()
+	runner.check(back != null and back.name == "Guide", "LG1 closing gives the focus back to Guide, got %s" % back)
+	_pick(launcher._own_selector(), "random")
+	_row(launcher, 1, "You").get_node("Guide").pressed.emit()
+	runner.check(guide.is_visible_in_tree() and guide.faction == "usa" and guide.yours == "", "LG1 Random opens USA with nothing marked yours, got %s/%s" % [guide.faction, guide.yours])
+	guide.find_child("Back", true, false).pressed.emit()
+	runner.check(not guide.is_visible_in_tree(), "LG1 Back closes the guide")
+	launcher.open_guide()
+	launcher._fail("Cannot connect to relay")
+	runner.check(not guide.is_visible_in_tree(), "LG1 a room failure closes the guide so its message shows")
+	var columns: Array = [_row(launcher, 1, "You").get_node("Guide"), _row(launcher, 2, "Bot1").get_node("Remove")].map(func(control: Control) -> float: return control.get_global_rect().end.x)
+	await runner.process_frame
+	runner.check(is_equal_approx(_row(launcher, 1, "You").get_node("Faction").get_global_rect().end.x, _row(launcher, 2, "Bot1").get_node("Faction").get_global_rect().end.x), "LG1 your dropdown lines up with the bot's, got %s" % [columns])
+	launcher.free()
+	_restore(saved)
 	return true
 
 func test_lobby_random_faction(runner) -> bool:
