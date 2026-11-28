@@ -129,10 +129,12 @@ jobs:
           name: test-results-worker-${{ matrix.platform }}
           path: test-results-worker.log
   godot-export:
-    name: Godot / Exported build (${{ matrix.platform }})
+    name: Godot / Exported ${{ matrix.part }} (${{ matrix.platform }})
     strategy:
       fail-fast: false
       matrix:
+        platform: [linux, windows]
+        part: [suite, netplay] # parallel halves; each exports only what it runs
         include: *platforms
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
@@ -147,13 +149,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
+        if: matrix.part == 'netplay'
         with:
           go-version-file: relay/go.mod
           cache-dependency-path: relay/go.sum
       - name: Build relay for the netplay step
+        if: matrix.part == 'netplay'
         working-directory: relay
         run: CGO_ENABLED=0 go build -trimpath -o "../relay-bin/relay-${{ matrix.platform }}${{ matrix.platform == 'windows' && '.exe' || '' }}" .
       - name: Build fault proxy
+        if: matrix.part == 'netplay'
         working-directory: tools/netfault
         run: CGO_ENABLED=0 go build -trimpath -o "../../relay-bin/netfault-${{ matrix.platform }}${{ matrix.platform == 'windows' && '.exe' || '' }}" .
       - uses: actions/cache@v6
@@ -168,14 +173,18 @@ jobs:
           key: export-templates-desktop-web-${{ runner.os }}-${{ env.TEMPLATES_SHA256 }}
       - name: Install pinned export templates
         run: '"$PYTHON" tools/install_export_templates.py "$TEMPLATES_SHA256" "$GODOT_VERSION"'
-      - name: Export test build and game
+      - name: Export ${{ matrix.part == 'suite' && 'test build' || 'game' }}
         env:
           WARGRID_SYNTH_AUDIO: "1"
         run: |
           "$GODOT_BIN" --headless --path game --import
-          sh tools/export_build.sh "${{ matrix.test_preset }}" "build/test/${{ matrix.platform }}/WargridTests${{ matrix.platform == 'windows' && '.exe' || '' }}"
-          sh tools/export_build.sh "${{ matrix.preset }}" "build/game/${{ matrix.platform }}/Wargrid${{ matrix.platform == 'windows' && '.exe' || '.x86_64' }}"
+          if [ "${{ matrix.part }}" = suite ]; then
+            sh tools/export_build.sh "${{ matrix.test_preset }}" "build/test/${{ matrix.platform }}/WargridTests${{ matrix.platform == 'windows' && '.exe' || '' }}"
+          else
+            sh tools/export_build.sh "${{ matrix.preset }}" "build/game/${{ matrix.platform }}/Wargrid${{ matrix.platform == 'windows' && '.exe' || '.x86_64' }}"
+          fi
       - name: Exported suite and replay traces
+        if: matrix.part == 'suite'
         env:
           WARGRID_TEST_EXE: build/test/${{ matrix.platform }}/WargridTests${{ matrix.platform == 'windows' && '.console.exe' || '' }}
           WARGRID_VECTORS: ${{ github.workspace }}/protocol/vectors
@@ -187,6 +196,7 @@ jobs:
           set -o pipefail
           sh tools/run_tests.sh 2>&1 | tee exported-results.log
       - name: Exported netplay scenarios
+        if: matrix.part == 'netplay'
         run: |
           set -o pipefail
           root=$(pwd -W 2>/dev/null || pwd)
@@ -201,6 +211,7 @@ jobs:
           done
           cp netplay/match/s1.tsv netplay-${{ matrix.platform }}.tsv
       - uses: actions/upload-artifact@v7
+        if: matrix.part == 'suite'
         with:
           name: replay-export-${{ matrix.platform }}
           path: |
@@ -210,12 +221,13 @@ jobs:
             ${{ github.workspace }}/export-team-${{ matrix.platform }}.tsv
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
+        if: matrix.part == 'netplay'
         with:
           name: netplay-${{ matrix.platform }}
           path: netplay-${{ matrix.platform }}.tsv
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
-        if: matrix.platform == 'windows'
+        if: matrix.platform == 'windows' && matrix.part == 'netplay'
         with:
           name: wargrid-windows
           retention-days: 1
@@ -226,7 +238,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: logs-export-${{ matrix.platform }}
+          name: logs-export-${{ matrix.part }}-${{ matrix.platform }}
           path: |
             exported-results.log
             netplay/
