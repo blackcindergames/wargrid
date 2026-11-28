@@ -17,6 +17,7 @@ const OnlineTests = preload("res://tests/test_online_scene.gd")
 const Iso = preload("res://scripts/presentation/isometric.gd")
 const Orders = preload("res://scripts/match/orders.gd")
 const HudModel = preload("res://scripts/match/hud_model.gd")
+const GuideModel = preload("res://scripts/match/faction_guide_model.gd")
 const Economy = preload("res://scripts/simulation/economy_definitions.gd")
 const Palette = preload("res://scripts/presentation/palette.gd")
 const ViewRows = preload("res://scripts/simulation/view_rows.gd")
@@ -32,7 +33,7 @@ const BUTTON_STATES: Array[String] = ["normal", "hover", "pressed", "hover_press
 const SMALL: int = 12
 
 func cases() -> Array[Callable]:
-	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_cell_cost_clear_of_chip, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_held_now_release_and_mark, test_after_next_forgets_a_hidden_hover, test_shift_counts_orders_in_flight, test_rematch_forgets_cancels, test_glyphs_warm_with_the_hud, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies, test_ping_key_then_click_pings, test_ping_button_then_click_pings, test_armed_ping_esc_disarms, test_alt_click_ground_pings, test_alt_double_click_unit_sends_no_ping, test_ping_replaces_own_older, test_enemy_ping_not_shown, test_ping_expires_30s, test_edge_arrow_click_jumps, test_edge_arrow_outside_edge_band, test_ping_button_only_with_teammate, test_ping_full_frame_refusal_silent, test_ping_invalid_target_silent, test_ping_hud_layout, test_ping_in_dock_band_gets_arrow, test_accepted_ping_keeps_refusal_line, test_ping_hidden_after_teammate_left, test_alt_double_click_ground_pings_once, test_ping_in_leave_tick_applies, test_ping_esc_backs_out_one_layer, test_modes_disarm_ping, test_ping_chip_key_follows_layout, test_edge_arrow_jumps_on_release, test_own_ping_silent_teammate_heard]
+	return [test_theme_tokens, test_type_scale, test_no_rounding_or_shadow, test_match_surfaces_keep_their_size, test_hud_reads_only_its_input, test_side_effects_live_in_the_screen, test_power_reads_used_over_available, test_forecast_forms, test_hover_previews_the_purchase, test_build_button_hover_inset, test_swatch_slot_colour, test_strip_anchor_without_tick, test_strip_patches_values, test_strip_holds_while_on_the_card, test_strip_skips_refused_purchases, test_chip_stack, test_esc_chip_only_when_esc_opens_the_menu, test_menu_chip_keeps_its_width, test_menu_chip_opens_the_menu, test_online_notice_top_centre, test_stack_follows_size_changes, test_slab_rect, test_slab_china_with_overlays, test_armed_button_look, test_slab_order_buttons, test_slab_buttons_hold_still, test_production_runs, test_production_time_left, test_now_producing_reads, test_now_holds_under_pointer, test_hold_ends_with_another_producer, test_queue_fresh_after_kind_rows, test_after_next_list, test_unit_glyphs, test_cell_cost_clear_of_chip, test_newest_of_kind_skips_pending, test_shift_batch_size, test_shift_queues_five, test_pending_cancels_pick_distinct, test_now_cancels_on_either_click, test_held_now_after_a_lost_cancel, test_held_now_release_and_mark, test_after_next_forgets_a_hidden_hover, test_shift_counts_orders_in_flight, test_rematch_forgets_cancels, test_glyphs_warm_with_the_hud, test_cell_card_teaches_cancel, test_accidental_cancels_and_next_clicks, test_next_hover_hint, test_cancel_flashes, test_cancel_while_the_note_is_open, test_cells_count_without_a_bar, test_queue_full_at_9, test_right_click_cell_cancels_newest_of_kind, test_queue_cancels_in_one_frame, test_production_panel_layout, test_unload_row_above_the_orders, test_unload_needs_its_own_rider, test_card_by_selection, test_card_click_equals_key, test_card_lattice, test_cell_names_fit, test_cell_costs_by_credits, test_blocked_cells, test_blocked_press_equals_key, test_build_click_sounds, test_cell_card_timing, test_open_cell_card_waits_for_a_change, test_cell_card_lines, test_prerequisite_hint, test_counter_lines_match_damage, test_faction_guide_counters, test_counter_line_on_the_cell_card, test_right_labels_on_the_name_line, test_key_labels, test_floor_follows_a_resize, test_panel_states_layout, test_panel_values, test_panel_edge_colours, test_owner_colours_contrast, test_side_band_contrast, test_panel_edge_is_the_body_colour, test_kind_rows, test_six_kinds_at_most, test_roster_fits, test_row_click_narrows_and_shift_removes, test_rows_hold_under_the_pointer, test_rows_let_go_when_the_pointer_leaves_the_window, test_fresh_selection_over_the_panel_drops_the_hold, test_row_bar_is_the_health_sum, test_row_hover, test_rows_footer, test_collector_label_table, test_no_drop_off_label, test_collector_labels_in_a_mixed_army, test_idle_header, test_rebuild_count, test_unchanged_refresh_keeps_layout, test_refusal_line_place, test_refusal_timer_and_replace, test_accepted_answer_clears, test_placement_refusal_after_the_click_only, test_local_hints_on_the_line, test_esc_placement_layer, test_esc_attack_move_layer, test_esc_sub_grid_layer, test_esc_selection_layer, test_esc_inspection_layer, test_esc_layers_in_order, test_esc_in_the_frame_of_a_card_key, test_esc_and_back_in_one_frame, test_esc_during_a_drag_with_the_sub_grid_open, test_esc_as_the_builder_dies, test_ping_key_then_click_pings, test_ping_button_then_click_pings, test_armed_ping_esc_disarms, test_alt_click_ground_pings, test_alt_double_click_unit_sends_no_ping, test_ping_replaces_own_older, test_enemy_ping_not_shown, test_ping_expires_30s, test_edge_arrow_click_jumps, test_edge_arrow_outside_edge_band, test_ping_button_only_with_teammate, test_ping_full_frame_refusal_silent, test_ping_invalid_target_silent, test_ping_hud_layout, test_ping_in_dock_band_gets_arrow, test_accepted_ping_keeps_refusal_line, test_ping_hidden_after_teammate_left, test_alt_double_click_ground_pings_once, test_ping_in_leave_tick_applies, test_ping_esc_backs_out_one_layer, test_modes_disarm_ping, test_ping_chip_key_follows_layout, test_edge_arrow_jumps_on_release, test_own_ping_silent_teammate_heard]
 
 # The match scene's economy column as skirmish.tscn has it; the Hud adds the rest.
 static func _economy() -> VBoxContainer:
@@ -3239,23 +3240,9 @@ const INTENDED := HudModel.COUNTER_INTENDED
 const COUNTER_VERBS: Array[String] = ["Beats", "Good against", "Weak against"]
 const SPIN := " at full spin"
 
-# combat.gd's sustained rate per tick: a clip's shots over its delays and reload, a ramp weapon at its last percent, FRC at its base tier, scaled by the target's armour.
-static func _counter_rate(attacker: String, target: String) -> float:
-	var row: Dictionary = Registry.kind(attacker)
-	if row.get("weapon", "").is_empty(): return 0.0
-	var weapon: Dictionary = Shared.WEAPONS[row.get("weapon_tiers", [row.weapon])[0]]
-	var damage: float = weapon.damage * (weapon.ramp.percent[-1] / 100.0 if weapon.has("ramp") else 1.0)
-	var rate: float = weapon.clip_size * damage / ((weapon.clip_size - 1) * weapon.delay_ticks + weapon.reload_ticks) if weapon.clip_size > 0 else damage / weapon.delay_ticks
-	return rate * Shared.ARMOR[Registry.kind(target).armor][weapon.damage_type] / 100.0
-
-# Equal credits on both sides: the time the attackers need to kill the targets (a squad's cost split over its quantity).
+# The faction guide's formula, so the cell card and the guide print one math.
 static func _counter_time(attacker: String, target: String) -> float:
-	var rate: float = _counter_rate(attacker, target)
-	if rate == 0.0: return INF
-	return Registry.kind(target).max_hp * _unit_cost(attacker) / (rate * _unit_cost(target))
-
-static func _unit_cost(kind: String) -> float:
-	return Registry.kind(kind).cost / float(Registry.kind(kind).get("quantity", 1))
+	return GuideModel.counter_time(attacker, target)
 
 # [verb, rank]: Beats when every representative falls in at most half the time it needs against us, Good against when we win each, Weak against when each needs at most half ours; a lower rank is the stronger claim.
 static func _counter_verdict(kind: String, against: String) -> Array:
@@ -3304,6 +3291,33 @@ static func _counter_gaps(kind: String) -> Array[String]:
 		for intended: int in 2:
 			if INTENDED[kind][intended].has(against) and (verb.is_empty() or side != intended): gaps.append("intended, refuted: %s %s" % ["Weak against" if intended == 1 else "Strong against", against])
 	return gaps
+
+# P21: the faction guide names enemy units under Beats (ratio at most 0.5) and Weak against (at least 2), mirrored over every pair.
+func test_faction_guide_counters(runner) -> bool:
+	var medium: Dictionary = GuideModel.counters("china_light_vehicle")
+	runner.check(medium.weak.usa.has("usa_rocket_infantry") and GuideModel.counters("usa_rocket_infantry").beats.china.has("china_light_vehicle"), "FG1 the Rocket Trooper beats the Medium Tank and the Medium Tank lists it under Weak against, got %s" % medium)
+	runner.check(GuideModel.counters("usa_rifle_infantry").beats.china.has("china_rocket_infantry"), "FG1 Riflemen get a line too: they beat the Anti-Tank Trooper")
+	var pairs: int = 0
+	for faction: String in GuideModel.FACTIONS:
+		for kind: String in GuideModel.roster(faction):
+			if GuideModel.is_worker(kind):
+				var none: Dictionary = GuideModel.counters(kind)
+				runner.check(GuideModel.FACTIONS.all(func(f: String) -> bool: return none.beats[f].is_empty() and none.weak[f].is_empty()), "FG1 worker %s has no counters" % kind)
+				continue
+			var mine: Dictionary = GuideModel.counters(kind)
+			for other_faction: String in GuideModel.FACTIONS:
+				for other: String in GuideModel.roster(other_faction):
+					if GuideModel.is_worker(other): continue
+					pairs += 1
+					var theirs: Dictionary = GuideModel.counters(other)
+					runner.check(mine.beats[other_faction].has(other) == theirs.weak[faction].has(kind), "FG1 %s beats %s exactly when %s lists it under Weak against" % [kind, other, other])
+	runner.check(pairs == 144, "FG1 144 combat pairs checked, got %d" % pairs)
+	runner.check(GuideModel.roster("usa") == ["usa_rifle_infantry", "usa_rocket_infantry", "usa_light_vehicle", "usa_tank", "usa_builder", "usa_collector"], "FG1 USA roster cheapest first, workers last, got %s" % [GuideModel.roster("usa")])
+	runner.check(GuideModel.roster("frc").count("frc_builder") == 1 and GuideModel.roster("frc").size() == 5, "FG1 the Laborer builds and gathers: listed once, got %s" % [GuideModel.roster("frc")])
+	var rocket: Dictionary = GuideModel.facts("usa_rocket_infantry")
+	runner.check(rocket.cost == "300" and rocket.time == "5 s" and rocket.health == "100" and rocket.speed == "0.8" and rocket.range == "7" and rocket.vision == "6" and rocket.trained_at == "Barracks" and rocket.needs == "", "FG1 Rocket Trooper facts, got %s" % rocket)
+	runner.check(GuideModel.facts("china_light_vehicle").needs == "Supply Depot" and GuideModel.facts("usa_builder").range == "–", "FG1 the Medium Tank's factory needs a Supply Depot; the Bulldozer has no range")
+	return true
 
 func test_counter_lines_match_damage(runner) -> bool:
 	for kind: String in Registry.units():

@@ -20,6 +20,7 @@ const FocusCardView = preload("res://scripts/playtest/focus_card_view.gd")
 const PasteShim = preload("res://scripts/presentation/paste_shim.gd")
 const ViewCaps = preload("res://scripts/presentation/view_caps.gd")
 const Palette = preload("res://scripts/presentation/palette.gd")
+const FactionGuide = preload("res://scripts/presentation/faction_guide.gd")
 const OFFLINE_SCENE: String = "res://scenes/skirmish.tscn"
 const HEADLESS_FLAGS: Array[String] = ["--netclient", "--relay", "--replay-log", "--probe-relay"]
 const DashedPanel = preload("res://scripts/presentation/dashed_panel.gd")
@@ -39,6 +40,8 @@ const RANDOM := LauncherSettings.RANDOM
 # Fits "Free Resistance Coalition" at 13 px with the arrow; every row reserves it, so the columns line up.
 const FACTION_WIDTH := 224.0
 const ACTION_WIDTH := 40.0
+# Wide enough for your row's Guide button; a bot's X keeps its 40 px square at the column's right edge.
+const ACTION_COLUMN := 72.0
 const REMOVE_ICON = preload("res://ui/remove_x.svg")
 const COPY_ICON = preload("res://ui/copy.svg")
 const CHECK_ICON = preload("res://ui/check.svg")
@@ -151,6 +154,7 @@ var _spots: Dictionary = {}
 var _own_start: int = 0
 var _lockstep: RefCounted
 var current_page: String = "Play"
+var _guide_overlay: Control
 var _origin: String = "Play"
 var _play_error: bool = false
 static var code_applied: bool = false
@@ -507,7 +511,9 @@ func _make_row(entry: Dictionary) -> PanelContainer:
 	if entry.get("own", false): row.add_child(_own_row_selector())
 	elif entry.has("bot"): row.add_child(_bot_selector(entry.bot))
 	elif entry.has("text"): row.add_child(_text_cell(entry.text))
-	row.add_child(_remove_button(entry.bot) if entry.has("bot") else _action_space())
+	if entry.has("bot"): row.add_child(_action_space(ACTION_COLUMN - ACTION_WIDTH - row.get_theme_constant("separation"), "Gap"))
+	if entry.get("own", false): row.add_child(_guide_button())
+	else: row.add_child(_remove_button(entry.bot) if entry.has("bot") else _action_space(ACTION_COLUMN))
 	return panel
 
 func _dashed() -> PanelContainer:
@@ -574,10 +580,10 @@ func _remove_button(index: int) -> Button:
 	button.pressed.connect(_remove_bot.bind(index))
 	return button
 
-func _action_space() -> Control:
+func _action_space(width: float, space_name: String = "Action") -> Control:
 	var space := Control.new()
-	space.name = "Action"
-	space.custom_minimum_size = Vector2(ACTION_WIDTH, 0)
+	space.name = space_name
+	space.custom_minimum_size = Vector2(width, 0)
 	space.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return space
 
@@ -982,7 +988,56 @@ func _join() -> void:
 func _cancel() -> void:
 	if _transport != null: _refuse(HOST_CANCELLED if _origin == "Play" else JOIN_CANCELLED)
 
+func _guide_button() -> Button:
+	var button := Button.new()
+	button.name = "Guide"
+	button.text = "Guide"
+	button.tooltip_text = "Faction guide: what each unit beats and is weak against"
+	button.custom_minimum_size = Vector2(ACTION_COLUMN, 0)
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	button.pressed.connect(open_guide)
+	return button
+
+# The guide opens on your pick; Random opens USA with nothing marked yours.
+func open_guide() -> void:
+	if _guide_overlay == null: _guide_overlay = _make_guide_overlay()
+	var own: String = _own_pick if _own_pick != RANDOM else ""
+	var guide: Control = _guide_overlay.get_node("Center/FactionGuide")
+	guide.show_faction(own if not own.is_empty() else Registry.Factions.DEFAULT_FACTION, own)
+	_guide_overlay.visible = true
+	guide.focus_tab()
+
+func close_guide() -> void:
+	_guide_overlay.visible = false
+	var button: Node = find_child("Guide", true, false)
+	if button != null: (button as Control).grab_focus()
+
+func _make_guide_overlay() -> Control:
+	var overlay := Control.new()
+	overlay.name = "GuideOverlay"
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.6)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(dim)
+	var center := CenterContainer.new()
+	center.name = "Center"
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(center)
+	var guide: Control = FactionGuide.new()
+	guide.back_requested.connect(close_guide)
+	center.add_child(guide)
+	add_child(overlay)
+	return overlay
+
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and _guide_overlay != null and _guide_overlay.visible:
+		close_guide()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("ui_cancel") and current_page == "Play" and _transport != null and _code.is_empty():
 		_cancel()
 		get_viewport().set_input_as_handled()

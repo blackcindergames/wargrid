@@ -133,6 +133,7 @@ func _ready() -> void:
 	_pause.confirm_leave = driver.confirm_leave()
 	_pause.resume_requested.connect(_pause.close)
 	_pause.opened.connect(_fill_questions)
+	_pause.opened.connect(func() -> void: _pause.faction = HudModel.player(shown_state, local_player).get("faction", "") if shown_state.has("players") else "")
 	hud.menu_pressed.connect(_pause.open)
 	_pause.leave_requested.connect(_leave)
 	if not quit.is_valid(): quit = get_tree().quit
