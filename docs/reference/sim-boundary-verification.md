@@ -1255,3 +1255,53 @@ Tree: `b1bff532` plus T0b in the working tree (2026-11-28 night); logs `t0b/` un
 - **Decided for you (reversible):** "live" at quit is `live_workers() > 0` after the reap, as every caller stops its driver first, so only abandoned workers remain; the kill line is printed in tests too; the helper sits on `SimPump` with the Web check as an argument; the window-close handlers call `quit` themselves although `auto_accept_quit` would also quit.
 - **Fix round 1 (per-task Opus review):** (1) `finish_quit` first stops every live pump that is not abandoned (a caller that skipped `driver.stop()` quits cleanly), so the kill counts only abandoned workers; `test_t0b_quit_helper_kills_only_a_live_worker_off_the_web` gained a running stand-in that must be stopped once and not killed (red without the stop loop: `[[0, true]], 0 stops`) and a check that an abandoned one is not stopped again. (2) The crash pattern also matches `Internal script error` (the freed-bytecode line), and the gate runs Godot with `--disable-crash-handler`: on the unfixed copy the flagged gate failed 20 of 20 hold-mode runs (`stall_stop`, `stall_restart`, 10 each, all exit 139; crash text in 18), with the fix the probe stays 10 of 10 per case and the 12 normal cases exit 0 with no crash line; in CI a crash now shows as a signal exit without a backtrace. (3) `match_bench.gd`'s `_finish` ends through `finish_quit`. `headless_client.gd` keeps `get_tree().quit`: its only pump is the `--pump` one, refused under `WARGRID_SIM_THREAD=1`, and native builds have no stored request (`SimSettings.available()` is Web-threads or tests only), so it never holds a worker. (4) `test_t0b_every_quit_path_goes_through_the_helper` records at each end whether the sitting was already filed (one session file, no `current.json`): red when the match window close calls `quit` before `close_match(true)` (`[0, false, false]` second) and when the launcher window close calls it before `_close_sitting()` (fourth), each reverted with Edit. Fix-round gate: probe 10 of 10 per case (exit 137), `PUMP FAULTS PASSED 12`, `CHECKS PASSED 5`, `SUITE` CASES 1837 CHECKS 166267 FAILURES 0, `WSUITE` CASES 1837 CHECKS 166260 FAILURES 0 (`worker=1197 forced=466 fallback=4 inline=0`, `LIVE 0`).
 - **Desktop-default gate items still owed:** a `template_release` export probe (the debug build's crash handler is not in release), the probe on Linux and Windows (`OS.kill` gives 137 on Linux and exit 0 on Windows, read in source, not run), and the relay's reaction to the missing close frame.
+
+### Task 6: the candidate gate (evidence sheet)
+
+Candidate: `e1ed18c7` (branch `sim-boundary-sb5b`, clean tree, `config/version="0.19.0-dev"`), 2026-11-28 night; logs `t6/` under the night logs (private); host load 1.2 to 3.4. The gate passes when `sed -n '/^## SB5b/,$p' docs/reference/sim-boundary-verification.md | rg -c 'Pending|Fail'` finds nothing.
+
+**Local checks before the ask** (all on `e1ed18c7`, each exit 0):
+
+| Check | Result |
+|---|---|
+| `python3 -I tools/test_deploy_web.py` | 14 tests OK |
+| `sh tools/run_python_checks.sh` | `PYTHON TESTS PASSED` |
+| `sh tools/run_shell_checks.sh` | no findings |
+| `WARGRID_TEST_ONLY=test_pause_menu sh tools/run_tests.sh` | CASES 23 CHECKS 517 FAILURES 0 |
+| `WARGRID_TEST_ONLY=test_sb5b_`, inline and `WARGRID_SIM_THREAD=1` | CASES 15 CHECKS 82 FAILURES 0 each; worker run `worker=2`, `LIVE 0` |
+| `WARGRID_TEST_ONLY=test_sim_pump`, inline and `WARGRID_SIM_THREAD=1` | CASES 117 CHECKS 818 FAILURES 0 each; worker run `worker=2 forced=330 fallback=1 inline=0`, `LIVE 0` |
+| `sh tools/export_build.sh 'Web Threads' web/site/index.html` | exported, `GODOT_THREADS_ENABLED = true`, `ensureCrossOriginIsolationHeaders` true |
+| Threaded image (`container build --build-arg SWS_CONFIG=sws-threads.toml`, port 8099) | `/index.html` 200 and `/missing` 404, each with `cross-origin-opener-policy: same-origin` and `cross-origin-embedder-policy: require-corp`; container stopped |
+| Default image (`sh tools/export_build.sh Web`, `GODOT_THREADS_ENABLED = false`, plain `container build`, port 8098) | `/index.html` 200 and `/missing` 404, neither header; container stopped |
+| `sh tools/run_tests.sh` | CASES 1837 CHECKS 166267 FAILURES 0, `SIM PUMPS worker=0 forced=424 fallback=0 inline=1246` |
+| `WARGRID_SIM_THREAD=1 sh tools/run_tests.sh` | CASES 1837 CHECKS 166260 FAILURES 0, `SIM PUMPS worker=1197 forced=466 fallback=4 inline=0`, `SIM PUMPS LIVE 0` |
+| `sh tools/run_checks.sh` | `CHECKS PASSED 5` (again after this edit) |
+| `sh tools/run_pump_faults.sh` | `PUMP FAULTS PASSED 12`, 12 cases exit 0, no crash line |
+| `sh tools/run_netplay.sh match` and `rematch` | `NETPLAY PASSED match` (16.0 s), `NETPLAY PASSED rematch` (30.2 s) |
+
+**Carried in from earlier tasks:**
+
+- **Task 4 review fix round** (`b1bff532`; each mutation red in `WARGRID_TEST_ONLY=test_sb5b_`, CASES 15 CHECKS 82, then reverted; fixed tree 0 failures in both modes, `PUMP FAULTS PASSED 12`, `CHECKS PASSED 5`): `test_sb5b_start_cancelled_before_ready` guards `_poll_start`'s `or _stopped` (removed: 1 failure, a stopped start hands the simulation over and the next query stalls); `test_sb5b_start_late_poll_is_no_stall` guards a started worker first polled after `WAIT_MSEC` (timing it out: 2 failures); `test_sb5b_start_polls_readiness_across_frames` checks `post()` is refused while starting (not refused: 3 failures).
+- **Task 0b probe** (Task 0b's fix-round tree, committed as `e1ed18c7`): `WARGRID_FAULT_HOLD_AT_EXIT=1` on `stall_restart`, `stall_leave`, `stall_stop`, `stall_query`, 10 of 10 each, exit 137, marker `PASSED`, the kill line, no crash line; the unfixed copy failed 20 of 20 under the flagged gate.
+
+**Owed, not run tonight** (they need an approval, a browser or a window):
+
+| Item | Result |
+|---|---|
+| `sh tools/deploy_web.sh test` at `e1ed18c7` (owner approval) | Pending |
+| Deployed-origin response check (document and every static asset under `identity`, `gzip`, `br`; 304 with both headers; 404 with both headers) | Pending |
+| Release `Web Threads` warm-up in a browser (no warm-up error, F3 `Sim: worker`) | Pending |
+| Branch push, CI on Linux and Windows, `sh tools/compare_local_traces.sh "$RUN_ID"` | Pending |
+| After the owner's match: `run_worker_digests.sh`, `run_conformance.sh`, `PERF_LABEL="Sim boundary SB5b" sh tools/run_benchmark.sh`, the rendered benchmark window, the reviews | Pending |
+
+**Chat gate [owner, 2026-11-18]** (no app list given, so one generic row; the owner adds one per app and route):
+
+| App / OS / browser version | In-app or automatic external handoff | Isolated / SAB | Launcher / Join code | Manual recovery if needed | Result |
+|---|---|---|---|---|---|
+| One per app and route | | | | | Pending |
+
+**Listen check [owner, 2026-11-18]:**
+
+| Device / browser | F3 through match and rematch | Music and overlapping combat heard | Silence, delay or crackle | Private browsing reload | Result |
+|---|---|---|---|---|---|
+| | | | | | Pending |
