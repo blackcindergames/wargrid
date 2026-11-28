@@ -1293,10 +1293,10 @@ Candidate: `e1ed18c7` (branch `sim-boundary-sb5b`, clean tree, `config/version="
 
 | Item | Result |
 |---|---|
-| `sh tools/deploy_web.sh test` at `f1e61763` (owner approval) | Done 2026-11-28, worker off by default; the redeploy at the next candidate is Pending |
-| Deployed-origin response check (document and every static asset under `identity`, `gzip`, `br`; 304 with both headers; 404 with both headers) | Pending |
+| `sh tools/deploy_web.sh test` at `f1e61763` (owner approval) | Done 2026-11-28, worker off by default; redeployed 2026-11-28 at `48fb8003` (worker on by default in the web build): `/`, `/index.html` 200 and `/missing` 404, each with both headers, `GODOT_THREADS_ENABLED = true` |
+| Deployed-origin response check (document and every static asset under `identity`, `gzip`, `br`; 304 with both headers; 404 with both headers) | `48fb8003` on `test`, 2026-11-28: `index.html`, `.js`, `.wasm`, `.pck`, both audio worklets and the three icons 200 under each encoding with both headers (text assets served `gzip` and `br` as asked, images uncompressed); `If-Modified-Since` on `index.wasm` 304 with both headers; `/missing` 404 with both headers |
 | Release `Web Threads` warm-up in a browser (no warm-up error, F3 `Sim: worker`) | Pending |
-| Branch push, CI on Linux and Windows, `sh tools/compare_local_traces.sh "$RUN_ID"` | Pending |
+| Branch push, CI on Linux and Windows, `sh tools/compare_local_traces.sh "$RUN_ID"` | `48fb8003` (with `main` merged in): run 46124470982 green after one rerun (the Windows exported job's netplay step first exited 2304 within 0.26 s of starting `lobby`, after every test and earlier scenario passed; green on the rerun, not reproduced); macOS traces REPLAYS MATCHED replay 1200, economy 1200, combat 1200, team 100, netplay 325 |
 | After the owner's match: `run_worker_digests.sh`, `run_conformance.sh`, `PERF_LABEL="Sim boundary SB5b" sh tools/run_benchmark.sh`, the rendered benchmark window, the reviews | Pending |
 
 **Chat gate [owner, 2026-11-18]** (no app list given, so one generic row; the owner adds one per app and route):
