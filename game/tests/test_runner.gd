@@ -6,7 +6,7 @@ const SimPump = preload("res://scripts/match/sim_pump.gd")
 const Skirmish = preload("res://scripts/simulation/skirmish.gd")
 
 func cases() -> Array[Callable]:
-	return [test_shards_cover_every_suite_once, test_no_shard_runs_everything, test_bad_shard_runs_nothing, test_only_filter, test_shards_by_cost, test_case_stat_line, test_sb5a_runner_flags_live_worker, test_sb5a_runner_inline_list_and_pump_counts]
+	return [test_shards_cover_every_suite_once, test_no_shard_runs_everything, test_bad_shard_runs_nothing, test_only_filter, test_shards_by_cost, test_case_stat_line, test_sb5a_runner_flags_live_worker, test_sb5a_runner_inline_list_and_pump_counts, test_watchdog_clock_is_per_case]
 
 func test_shards_cover_every_suite_once(runner) -> bool:
 	var seen: Array[int] = []
@@ -118,3 +118,10 @@ func _count_modes(runner) -> void:
 
 func _pump() -> SimPump:
 	return SimPump.new(Skirmish.create(true, "ai", {1: "usa", 2: "china"}, Skirmish.MAP_PATH, [] as Array[int]))
+
+func test_watchdog_clock_is_per_case(runner) -> bool:
+	var limit: int = Runner.WATCHDOG_SECONDS * 1000
+	runner.check(not Runner.timed_out(limit - 1, 0) and Runner.timed_out(limit, 0), "R9 the watchdog fires at its limit, not before")
+	runner.check(not Runner.timed_out(10 * limit, 10 * limit - 1), "R9 a long run does not time out a case that just started")
+	runner.check(Time.get_ticks_msec() - runner._case_started_ms < 5000, "R9 the runner restarted the watchdog clock for this case")
+	return true
