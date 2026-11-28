@@ -38,6 +38,7 @@ func _init() -> void:
 	page.add_child(line)
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 8)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	page.add_child(body)
 	var left := VBoxContainer.new()
 	left.custom_minimum_size.x = 240
@@ -65,6 +66,17 @@ func _init() -> void:
 	show_faction(faction, yours)
 
 # Random picks open on USA with nothing marked yours.
+# One size for every tab and unit, so the panel never jumps: the tallest card and roster set it.
+func _ready() -> void:
+	var tallest: float = 0.0
+	for id: String in Model.FACTIONS:
+		show_faction(id)
+		for kind: String in Model.roster(id):
+			select(kind)
+			tallest = maxf(tallest, get_combined_minimum_size().y)
+	custom_minimum_size.y = tallest
+	show_faction(Model.FACTIONS[0])
+
 func show_faction(shown: String, own: String = yours) -> void:
 	faction = shown if Model.FACTIONS.has(shown) else Model.FACTIONS[0]
 	yours = own

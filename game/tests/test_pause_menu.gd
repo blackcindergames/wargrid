@@ -291,6 +291,14 @@ func test_faction_guide_page(runner) -> bool:
 	var guide: Control = menu.find_child("FactionGuide", true, false)
 	runner.check(guide.faction == "china" and guide.find_child("Tab_china", true, false).button_pressed and _shown(guide, "Roster"), "G1 the guide opens on your faction's tab, got %s" % guide.faction)
 	runner.check(guide.selected == "china_rifle_infantry" and guide.find_child("Name", true, false).text == "Militia", "G1 the first roster row is shown, got %s" % guide.selected)
+	var sizes: Array = []
+	for id: String in ["usa", "china", "frc"]:
+		guide.find_child("Tab_" + id, true, false).pressed.emit()
+		for row: Button in guide.find_child("Roster", true, false).get_children():
+			row.pressed.emit()
+			await runner.process_frame
+			if not sizes.has(guide.size): sizes.append(guide.size)
+	runner.check(sizes.size() == 1, "G1 the guide keeps one size on every tab and unit, got %s" % [sizes])
 	guide.find_child("Tab_usa", true, false).pressed.emit()
 	await runner.process_frame
 	runner.check(guide.faction == "usa" and not guide.find_child("Tab_china", true, false).button_pressed and guide.find_child("Roster", true, false).get_child_count() == 6, "G1 the USA tab shows USA's six units")
